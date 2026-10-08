@@ -30,6 +30,14 @@ void main() {
       expect(DivineIconName.users.assetPath, 'assets/icon/users.svg');
     });
 
+    test('squaresFour maps to the four-square grid glyph', () {
+      expect(DivineIconName.squaresFour.fileName, 'squares_four');
+      expect(
+        DivineIconName.squaresFour.assetPath,
+        'assets/icon/squares_four.svg',
+      );
+    });
+
     test('microphone maps to the voice-over capture glyph', () {
       expect(DivineIconName.microphone.fileName, 'microphone');
       expect(DivineIconName.microphone.assetPath, 'assets/icon/microphone.svg');

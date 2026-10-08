@@ -22,6 +22,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/profile_tab_index_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -366,6 +367,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         case ProfileTabKind.lists:
           final service = ref.read(curatedListsStateProvider.notifier).service;
           if (service == null) break;
+          ref.invalidate(myListsWithThumbnailsProvider);
           // Forced: the service syncs once per session, so an unforced call
           // returns without querying and a list made on another device would
           // stay invisible until the next cold start.
@@ -541,7 +543,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       ProfileTabKind.lists => (
         semanticId: SemanticIds.profileListsTab,
         label: l10n.profileListsLabel,
-        icon: DivineIconName.playlist,
+        icon: DivineIconName.squaresFour,
       ),
       ProfileTabKind.comments => (
         semanticId: SemanticIds.profileCommentsTab,

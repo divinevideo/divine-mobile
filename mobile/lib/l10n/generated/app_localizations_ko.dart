@@ -12469,4 +12469,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get peopleListsSearchConnectionsHint => '팔로워 및 팔로우 중인 사람 검색';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, 비공개, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

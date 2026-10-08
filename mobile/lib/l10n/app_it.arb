@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "Persone",
   "peopleListsPeopleNone": "Nessuna persona aggiunta",
   "peopleListsSessionChanged": "Il tuo account o l’accesso alla lista è cambiato. Riapri questa pagina per continuare.",
-  "peopleListsSearchConnectionsHint": "Cerca tra follower e persone che segui"
+  "peopleListsSearchConnectionsHint": "Cerca tra follower e persone che segui",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privata, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -13047,4 +13047,19 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get peopleListsSearchConnectionsHint =>
       'Tìm người theo dõi và người bạn đang theo dõi';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Riêng tư, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

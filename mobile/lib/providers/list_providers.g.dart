@@ -626,6 +626,65 @@ final class PublicCuratedListFamily extends $Family
   String toString() => r'publicCuratedListProvider';
 }
 
+/// The viewer's own video lists with card-fan thumbnails resolved.
+///
+/// The profile's My Lists gallery renders instantly from the service's
+/// lists (placeholder fans) and swaps to these enriched copies when the
+/// resolver returns.
+
+@ProviderFor(myListsWithThumbnails)
+final myListsWithThumbnailsProvider = MyListsWithThumbnailsProvider._();
+
+/// The viewer's own video lists with card-fan thumbnails resolved.
+///
+/// The profile's My Lists gallery renders instantly from the service's
+/// lists (placeholder fans) and swaps to these enriched copies when the
+/// resolver returns.
+
+final class MyListsWithThumbnailsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<CuratedList>>,
+          List<CuratedList>,
+          FutureOr<List<CuratedList>>
+        >
+    with
+        $FutureModifier<List<CuratedList>>,
+        $FutureProvider<List<CuratedList>> {
+  /// The viewer's own video lists with card-fan thumbnails resolved.
+  ///
+  /// The profile's My Lists gallery renders instantly from the service's
+  /// lists (placeholder fans) and swaps to these enriched copies when the
+  /// resolver returns.
+  MyListsWithThumbnailsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'myListsWithThumbnailsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$myListsWithThumbnailsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<CuratedList>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<CuratedList>> create(Ref ref) {
+    return myListsWithThumbnails(ref);
+  }
+}
+
+String _$myListsWithThumbnailsHash() =>
+    r'6e5be792fb9f7125ca0d9c7c70496a8116307ccf';
+
 /// Provider that fetches actual VideoEvent objects for a curated list
 /// Streams videos as they are fetched from cache or relays
 ///

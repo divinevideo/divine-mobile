@@ -12456,4 +12456,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get peopleListsSearchConnectionsHint => 'フォロワーとフォロー中のユーザーを検索';
+
+  @override
+  String get listMemberNamesSeparator => '、';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name、非公開、$count',
+        'other': '$name、$count',
+      },
+    );
+    return '$_temp0';
+  }
 }

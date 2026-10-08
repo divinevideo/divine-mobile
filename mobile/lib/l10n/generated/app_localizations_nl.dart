@@ -13172,4 +13172,19 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get peopleListsSearchConnectionsHint =>
       'Zoek in volgers en mensen die je volgt';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privé, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

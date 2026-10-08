@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -25,6 +27,10 @@ const _videoEventId2 =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _videoEventId3 =
     '3333333333333333333333333333333333333333333333333333333333333333';
+const _lowerTieEventId =
+    '4444444444444444444444444444444444444444444444444444444444444441';
+const _higherTieEventId =
+    '4444444444444444444444444444444444444444444444444444444444444442';
 const _blockedPubkey =
     'ffffffffffffffffffffffffffffffff'
     'ffffffffffffffffffffffffffffffff';
@@ -52,12 +58,12 @@ Event _makeEvent({
 
 /// Creates a kind 34236 (addressable short video) Nostr event with a
 /// thumbnail tag.
-Event _makeVideoEvent({String? thumbnail}) {
+Event _makeVideoEvent({String? thumbnail, String dTag = 'test-video'}) {
   return Event(
     _testPubkey,
     34236,
     [
-      ['d', 'test-video'],
+      ['d', dTag],
       ['title', 'Test Video'],
       ['url', 'https://example.com/video.mp4'],
       if (thumbnail != null) ['thumb', thumbnail],
@@ -69,22 +75,51 @@ Event _makeVideoEvent({String? thumbnail}) {
 
 /// Creates a kind 34236 video event with a specific [id] for relay
 /// batching tests where the returned event must match the queried hex ID.
-Event _makeVideoEventWithId(String id, {String? thumbnail}) {
+Event _makeVideoEventWithId(
+  String id, {
+  String? thumbnail,
+  String dTag = 'test-video',
+  String pubkey = _testPubkey,
+  int kind = 34236,
+  int createdAt = 1718400000,
+  List<List<String>> extraTags = const [],
+}) {
   return Event.fromJson({
     'id': id,
-    'pubkey': _testPubkey,
-    'created_at': 1718400000,
-    'kind': 34236,
+    'pubkey': pubkey,
+    'created_at': createdAt,
+    'kind': kind,
     'tags': [
-      ['d', 'test-video'],
+      ['d', dTag],
       ['title', 'Test Video'],
       ['url', 'https://example.com/video.mp4'],
       if (thumbnail != null) ['thumb', thumbnail],
+      ...extraTags,
     ],
     'content': '',
     'sig': '',
   });
 }
+
+VideoStats _previewStats({
+  String pubkey = _testPubkey,
+  List<String> labels = const [],
+  String thumbnail = 'https://example.com/preview.jpg',
+}) => VideoStats(
+  id: _videoEventId,
+  pubkey: pubkey,
+  createdAt: DateTime(2025),
+  kind: 34236,
+  dTag: 'video',
+  title: 'Preview',
+  thumbnail: thumbnail,
+  videoUrl: 'https://example.com/video.mp4',
+  reactions: 0,
+  comments: 0,
+  reposts: 0,
+  engagementScore: 0,
+  contentWarningLabels: labels,
+);
 
 void main() {
   group(CuratedListRepository, () {
@@ -119,6 +154,7 @@ void main() {
     }
 
     setUp(() {
+      registerFallbackValue(Duration.zero);
       nostrClient = _MockNostrClient();
       funnelcakeApiClient = _MockFunnelcakeApiClient();
       repository = CuratedListRepository(
@@ -581,7 +617,567 @@ void main() {
       });
     });
 
+    group('resolveListThumbnails', () {
+      test('filters REST metadata before exposing a thumbnail', () async {
+        repository = CuratedListRepository(
+          nostrClient: nostrClient,
+          funnelcakeApiClient: funnelcakeApiClient,
+          videoFilter: (video) => video.contentWarningLabels.contains('nudity'),
+        );
+        when(
+          () => funnelcakeApiClient.getVideoStats(_videoEventId),
+        ).thenAnswer((_) async => _previewStats(labels: ['nudity']));
+
+        final [hidden] = await repository.resolveListThumbnails([
+          createList(id: 'list', videoEventIds: [_videoEventId]),
+        ]);
+        expect(hidden.thumbnailUrls, isEmpty);
+        verifyNever(() => nostrClient.queryEvents(any()));
+
+        when(
+          () => funnelcakeApiClient.getVideoStats(_videoEventId),
+        ).thenAnswer((_) async => _previewStats());
+        final [allowed] = await repository.resolveListThumbnails([hidden]);
+        expect(allowed.thumbnailUrls, ['https://example.com/preview.jpg']);
+      });
+
+      test(
+        'does not discard denied REST metadata before relay fallback',
+        () async {
+          var hideLabeled = true;
+          repository = CuratedListRepository(
+            nostrClient: nostrClient,
+            funnelcakeApiClient: funnelcakeApiClient,
+            videoFilter: (video) =>
+                hideLabeled && video.contentWarningLabels.contains('nudity'),
+          );
+          when(
+            () => funnelcakeApiClient.getVideoStats(_videoEventId),
+          ).thenAnswer(
+            (_) async => _previewStats(labels: ['nudity'], thumbnail: ''),
+          );
+          when(() => nostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _makeVideoEventWithId(
+                _videoEventId,
+                thumbnail: 'https://example.com/permitted-relay.jpg',
+              ),
+            ],
+          );
+          final [denied] = await repository.resolveListThumbnails([
+            createList(id: 'list', videoEventIds: [_videoEventId]),
+          ]);
+          expect(denied.thumbnailUrls, isEmpty);
+          verifyNever(() => nostrClient.queryEvents(any()));
+
+          hideLabeled = false;
+          final [retried] = await repository.resolveListThumbnails([denied]);
+          expect(retried.thumbnailUrls, [
+            'https://example.com/permitted-relay.jpg',
+          ]);
+          verify(() => nostrClient.queryEvents(any())).called(1);
+        },
+      );
+
+      test('applies the author block filter to REST video authors', () async {
+        repository = CuratedListRepository(
+          nostrClient: nostrClient,
+          funnelcakeApiClient: funnelcakeApiClient,
+          blockFilter: (pubkey) => pubkey == _blockedPubkey,
+        );
+        when(
+          () => funnelcakeApiClient.getVideoStats(_videoEventId),
+        ).thenAnswer((_) async => _previewStats(pubkey: _blockedPubkey));
+        final [result] = await repository.resolveListThumbnails([
+          createList(id: 'list', videoEventIds: [_videoEventId]),
+        ]);
+        expect(result.thumbnailUrls, isEmpty);
+      });
+
+      test('rechecks live policy after an outstanding REST read', () async {
+        var hidden = false;
+        final response = Completer<VideoStats?>();
+        repository = CuratedListRepository(
+          nostrClient: nostrClient,
+          funnelcakeApiClient: funnelcakeApiClient,
+          videoFilter: (_) => hidden,
+        );
+        when(
+          () => funnelcakeApiClient.getVideoStats(_videoEventId),
+        ).thenAnswer((_) => response.future);
+        final resolving = repository.resolveListThumbnails([
+          createList(id: 'list', videoEventIds: [_videoEventId]),
+        ]);
+        hidden = true;
+        response.complete(_previewStats());
+        expect((await resolving).single.thumbnailUrls, isEmpty);
+      });
+
+      test(
+        'matches relay coordinates before filtering sibling videos',
+        () async {
+          repository = CuratedListRepository(
+            nostrClient: nostrClient,
+            funnelcakeApiClient: funnelcakeApiClient,
+            videoFilter: (video) => video.addressableDTag == 'hidden',
+          );
+          Event video(String dTag) => Event(
+            _testPubkey,
+            34236,
+            [
+              ['d', dTag],
+              ['url', 'https://example.com/video.mp4'],
+              ['thumb', 'https://example.com/$dTag.jpg'],
+            ],
+            '',
+          );
+          when(() => nostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [video('allowed'), video('hidden')],
+          );
+          final [result] = await repository.resolveListThumbnails([
+            createList(
+              id: 'list',
+              videoEventIds: [
+                '34236:$_testPubkey:hidden',
+                '34236:$_testPubkey:allowed',
+              ],
+            ),
+          ]);
+          expect(result.thumbnailUrls, ['https://example.com/allowed.jpg']);
+        },
+      );
+
+      for (final policy in [
+        (decision: 'Hide', label: 'nudity'),
+        (decision: 'Warn', label: 'flashing-lights'),
+      ]) {
+        for (final newestFirst in [true, false]) {
+          test(
+            'uses the newest ${policy.decision} coordinate revision '
+            'when newest arrives ${newestFirst ? 'first' : 'last'}',
+            () async {
+              repository = CuratedListRepository(
+                nostrClient: nostrClient,
+                funnelcakeApiClient: funnelcakeApiClient,
+                // Both decisions suppress a list-card image; the app owns
+                // the distinction between Hide and Warn preferences.
+                videoFilter: (video) =>
+                    video.contentWarningLabels.contains(policy.label),
+              );
+              final older = _makeVideoEventWithId(
+                _videoEventId,
+                thumbnail: 'https://example.com/older.jpg',
+              );
+              final newest = _makeVideoEventWithId(
+                _videoEventId2,
+                createdAt: 1718400100,
+                thumbnail: 'https://example.com/newest.jpg',
+                extraTags: [
+                  ['content-warning', policy.label],
+                ],
+              );
+              final allowed = _makeVideoEventWithId(
+                _videoEventId3,
+                pubkey: _otherPubkey,
+                createdAt: 1718400200,
+                thumbnail: 'https://example.com/allowed.jpg',
+              );
+              when(() => nostrClient.queryEvents(any())).thenAnswer(
+                (_) async => [
+                  if (newestFirst) newest,
+                  older,
+                  if (!newestFirst) newest,
+                  allowed,
+                ],
+              );
+
+              final [result] = await repository.resolveListThumbnails([
+                createList(
+                  id: 'list',
+                  videoEventIds: [
+                    '34236:$_testPubkey:test-video',
+                    '34236:$_otherPubkey:test-video',
+                  ],
+                ),
+              ]);
+
+              expect(result.thumbnailUrls, ['https://example.com/allowed.jpg']);
+            },
+          );
+        }
+      }
+
+      for (final newestFirst in [true, false]) {
+        test(
+          'does not revive an older image for a thumbnail-less revision '
+          'when newest arrives ${newestFirst ? 'first' : 'last'}',
+          () async {
+            final older = _makeVideoEventWithId(
+              _videoEventId,
+              thumbnail: 'https://example.com/older.jpg',
+            );
+            final newest = _makeVideoEventWithId(
+              _videoEventId2,
+              createdAt: 1718400100,
+            );
+            final allowed = _makeVideoEventWithId(
+              _videoEventId3,
+              dTag: 'allowed',
+              thumbnail: 'https://example.com/allowed.jpg',
+            );
+            when(() => nostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                if (newestFirst) newest,
+                older,
+                if (!newestFirst) newest,
+                allowed,
+              ],
+            );
+
+            final [result] = await repository.resolveListThumbnails([
+              createList(
+                id: 'list',
+                videoEventIds: [
+                  '34236:$_testPubkey:test-video',
+                  '34236:$_testPubkey:allowed',
+                ],
+              ),
+            ]);
+
+            expect(result.thumbnailUrls, ['https://example.com/allowed.jpg']);
+          },
+        );
+
+        test(
+          'does not revive an older image for an unparseable revision '
+          'when newest arrives ${newestFirst ? 'first' : 'last'}',
+          () async {
+            final older = _makeVideoEventWithId(
+              _videoEventId,
+              thumbnail: 'https://example.com/older.jpg',
+            );
+            final newest = _makeVideoEventWithId(
+              _videoEventId2,
+              createdAt: 1718400100,
+              thumbnail: 'https://example.com/newest.jpg',
+              // Out-of-range published metadata cannot be parsed as a date.
+              extraTags: const [
+                ['published_at', '8640000000001'],
+              ],
+            );
+            when(() => nostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                if (newestFirst) newest,
+                older,
+                if (!newestFirst) newest,
+              ],
+            );
+
+            final [result] = await repository.resolveListThumbnails([
+              createList(
+                id: 'list',
+                videoEventIds: ['34236:$_testPubkey:test-video'],
+              ),
+            ]);
+
+            expect(result.thumbnailUrls, isEmpty);
+          },
+        );
+
+        test(
+          'uses the lowest full event ID for equal-time revisions '
+          'when the lowest ID arrives ${newestFirst ? 'first' : 'last'}',
+          () async {
+            final lowest = _makeVideoEventWithId(
+              _lowerTieEventId,
+              thumbnail: 'https://example.com/lowest.jpg',
+            );
+            final higher = _makeVideoEventWithId(
+              _higherTieEventId,
+              thumbnail: 'https://example.com/higher.jpg',
+            );
+            when(() => nostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                if (newestFirst) lowest,
+                higher,
+                if (!newestFirst) lowest,
+              ],
+            );
+
+            final [result] = await repository.resolveListThumbnails([
+              createList(
+                id: 'list',
+                videoEventIds: ['34236:$_testPubkey:test-video'],
+              ),
+            ]);
+
+            expect(result.thumbnailUrls, ['https://example.com/lowest.jpg']);
+          },
+        );
+
+        test(
+          'keeps an exact hex event separate from a newer hidden revision '
+          'when newest arrives ${newestFirst ? 'first' : 'last'}',
+          () async {
+            repository = CuratedListRepository(
+              nostrClient: nostrClient,
+              funnelcakeApiClient: funnelcakeApiClient,
+              videoFilter: (video) => video.hasContentWarning,
+            );
+            when(
+              () => funnelcakeApiClient.getVideoStats(_videoEventId),
+            ).thenAnswer((_) async => null);
+            final requested = _makeVideoEventWithId(
+              _videoEventId,
+              thumbnail: 'https://example.com/requested.jpg',
+            );
+            final newest = _makeVideoEventWithId(
+              _videoEventId2,
+              createdAt: 1718400100,
+              thumbnail: 'https://example.com/newest.jpg',
+              extraTags: const [
+                ['content-warning', 'nudity'],
+              ],
+            );
+            when(() => nostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                if (newestFirst) newest,
+                requested,
+                if (!newestFirst) newest,
+              ],
+            );
+
+            final [result] = await repository.resolveListThumbnails([
+              createList(
+                id: 'list',
+                videoEventIds: [
+                  _videoEventId,
+                  '34236:$_testPubkey:test-video',
+                ],
+              ),
+            ]);
+
+            expect(result.thumbnailUrls, ['https://example.com/requested.jpg']);
+          },
+        );
+      }
+
+      test(
+        'does not substitute a coordinate sibling for an absent hex ID',
+        () async {
+          when(
+            () => funnelcakeApiClient.getVideoStats(_videoEventId),
+          ).thenAnswer((_) async => null);
+          when(() => nostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _makeVideoEventWithId(
+                _videoEventId2,
+                thumbnail: 'https://example.com/sibling.jpg',
+              ),
+            ],
+          );
+
+          final [result] = await repository.resolveListThumbnails([
+            createList(id: 'list', videoEventIds: [_videoEventId]),
+          ]);
+
+          expect(result.thumbnailUrls, isEmpty);
+        },
+      );
+
+      test(
+        'matches the full coordinate including kind and colon-bearing d-tag',
+        () async {
+          when(() => nostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _makeVideoEventWithId(
+                _videoEventId,
+                dTag: 'video:part:one',
+                thumbnail: 'https://example.com/short.jpg',
+              ),
+              _makeVideoEventWithId(
+                _videoEventId2,
+                kind: 34235,
+                dTag: 'video:part:one',
+                createdAt: 1718400100,
+                thumbnail: 'https://example.com/normal.jpg',
+              ),
+              _makeVideoEventWithId(
+                _videoEventId3,
+                pubkey: _otherPubkey,
+                dTag: 'video:part:one',
+                createdAt: 1718400200,
+                thumbnail: 'https://example.com/unrequested.jpg',
+              ),
+            ],
+          );
+
+          final [result] = await repository.resolveListThumbnails([
+            createList(
+              id: 'list',
+              videoEventIds: [
+                '34236:$_testPubkey:video:part:one',
+                '34235:$_testPubkey:video:part:one',
+              ],
+            ),
+          ]);
+
+          expect(result.thumbnailUrls, [
+            'https://example.com/short.jpg',
+            'https://example.com/normal.jpg',
+          ]);
+        },
+      );
+
+      for (final newestFirst in [true, false]) {
+        test(
+          'contradictory parsed coordinate metadata stays neutral '
+          'when newest arrives ${newestFirst ? 'first' : 'last'}',
+          () async {
+            final older = _makeVideoEventWithId(
+              _videoEventId,
+              dTag: 'first',
+              thumbnail: 'https://example.com/older.jpg',
+            );
+            final newest = _makeVideoEventWithId(
+              _videoEventId2,
+              dTag: 'first',
+              createdAt: 1718400100,
+              thumbnail: 'https://example.com/contradictory.jpg',
+              extraTags: const [
+                ['d', 'later'],
+              ],
+            );
+            final allowed = _makeVideoEventWithId(
+              _videoEventId3,
+              dTag: 'allowed',
+              thumbnail: 'https://example.com/allowed.jpg',
+            );
+            when(
+              () => funnelcakeApiClient.getVideoStats(_videoEventId2),
+            ).thenAnswer((_) async => null);
+            when(() => nostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                if (newestFirst) newest,
+                older,
+                if (!newestFirst) newest,
+                allowed,
+              ],
+            );
+
+            final [first, later, exact] = await repository
+                .resolveListThumbnails([
+                  createList(
+                    id: 'first-list',
+                    videoEventIds: [
+                      '34236:$_testPubkey:first',
+                      '34236:$_testPubkey:allowed',
+                    ],
+                  ),
+                  createList(
+                    id: 'later-list',
+                    videoEventIds: ['34236:$_testPubkey:later'],
+                  ),
+                  createList(
+                    id: 'immutable-list',
+                    videoEventIds: [_videoEventId2],
+                  ),
+                ]);
+
+            expect(first.thumbnailUrls, ['https://example.com/allowed.jpg']);
+            expect(later.thumbnailUrls, isEmpty);
+            // An exact ID does not choose a coordinate revision.
+            expect(exact.thumbnailUrls, [
+              'https://example.com/contradictory.jpg',
+            ]);
+          },
+        );
+      }
+
+      test(
+        'clears prefilled thumbnails when no videos can be resolved',
+        () async {
+          final list = createList(
+            id: 'empty',
+          ).copyWith(thumbnailUrls: ['https://example.com/stale.jpg']);
+          expect(
+            (await repository.resolveListThumbnails([
+              list,
+            ])).single.thumbnailUrls,
+            isEmpty,
+          );
+        },
+      );
+      test('enriches lists with resolved thumbnail URLs', () async {
+        when(() => funnelcakeApiClient.getVideoStats(_videoEventId)).thenAnswer(
+          (_) async => VideoStats(
+            id: _videoEventId,
+            pubkey: _testPubkey,
+            createdAt: DateTime(2025),
+            kind: 34236,
+            dTag: 'd',
+            title: 'Test',
+            thumbnail: 'https://example.com/thumb.jpg',
+            videoUrl: 'https://example.com/video.mp4',
+            reactions: 0,
+            comments: 0,
+            reposts: 0,
+            engagementScore: 0,
+          ),
+        );
+
+        final enriched = await repository.resolveListThumbnails([
+          createList(id: 'list-1', videoEventIds: [_videoEventId]),
+        ]);
+
+        expect(enriched, hasLength(1));
+        expect(
+          enriched.single.thumbnailUrls,
+          equals(['https://example.com/thumb.jpg']),
+        );
+      });
+
+      test('leaves a list without videos untouched', () async {
+        final list = createList(id: 'list-1');
+
+        final enriched = await repository.resolveListThumbnails([list]);
+
+        expect(enriched.single.thumbnailUrls, isEmpty);
+        verifyNever(() => funnelcakeApiClient.getVideoStats(any()));
+      });
+    });
+
     group('searchAllLists', () {
+      test('never emits cached or resolved hidden preview URLs', () async {
+        repository =
+            CuratedListRepository(
+              nostrClient: nostrClient,
+              funnelcakeApiClient: funnelcakeApiClient,
+              videoFilter: (_) => true,
+            )..setOwnLists([
+              createList(
+                id: 'dance',
+                name: 'Dance',
+                videoEventIds: [_videoEventId],
+              ).copyWith(thumbnailUrls: ['https://example.com/stale.jpg']),
+            ]);
+        when(
+          () => funnelcakeApiClient.getVideoStats(_videoEventId),
+        ).thenAnswer((_) async => _previewStats());
+        when(
+          () => nostrClient.queryEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final emissions = await repository.searchAllLists('dance').toList();
+        expect(emissions, hasLength(4));
+        for (final lists in emissions) {
+          expect(lists.single.id, 'dance');
+          expect(lists.single.thumbnailUrls, isEmpty);
+        }
+      });
       setUp(() {
         registerFallbackValue(<Filter>[]);
       });
@@ -886,7 +1482,10 @@ void main() {
 
         when(() => nostrClient.queryEvents(any())).thenAnswer(
           (_) async => [
-            _makeVideoEvent(thumbnail: 'https://relay.com/addr-thumb.jpg'),
+            _makeVideoEvent(
+              dTag: 'my-video',
+              thumbnail: 'https://relay.com/addr-thumb.jpg',
+            ),
           ],
         );
 
@@ -1056,7 +1655,7 @@ void main() {
 
           // Relay returns an event with kind 1 (text note) which causes
           // VideoEvent.fromNostrEvent to throw — exercises the on Exception
-          // catch in _batchRelayThumbnails.
+          // catch in _batchRelayVideos.
           when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) {
             final filters = invocation.positionalArguments[0] as List<dynamic>;
             final filter = filters.first;

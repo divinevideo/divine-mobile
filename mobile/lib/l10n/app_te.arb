@@ -8455,5 +8455,20 @@
   "peopleListsPeopleLabel": "వ్యక్తులు",
   "peopleListsPeopleNone": "ఇంకా ఎవరినీ జోడించలేదు",
   "peopleListsSessionChanged": "మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.",
-  "peopleListsSearchConnectionsHint": "అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి"
+  "peopleListsSearchConnectionsHint": "అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, ప్రైవేట్, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

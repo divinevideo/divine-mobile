@@ -320,7 +320,7 @@ final class VideoEventServiceProvider
   }
 }
 
-String _$videoEventServiceHash() => r'1cf4e4bd5c70b75f9ae5d4070ad1c5d0a2e730ff';
+String _$videoEventServiceHash() => r'087ad8bcbbf30271e5ce29399829dc56cedc0736';
 
 /// Video event publisher for publishing video events to Nostr relays
 
@@ -1099,7 +1099,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'3fe5fac790ee761f89781a7db49d0d07fd316c72';
+String _$videosRepositoryHash() => r'0cfffe6cadfcb46e3d36327a3d3327279b230186';
 
 /// Provider for LikesRepository instance
 ///

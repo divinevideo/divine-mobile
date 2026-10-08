@@ -4490,5 +4490,20 @@
   "peopleListsPeopleLabel": "사람",
   "peopleListsPeopleNone": "추가된 사람이 없어요",
   "peopleListsSessionChanged": "계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.",
-  "peopleListsSearchConnectionsHint": "팔로워 및 팔로우 중인 사람 검색"
+  "peopleListsSearchConnectionsHint": "팔로워 및 팔로우 중인 사람 검색",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, 비공개, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

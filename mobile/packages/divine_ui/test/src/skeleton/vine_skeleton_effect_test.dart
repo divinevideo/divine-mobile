@@ -1,5 +1,5 @@
 // ABOUTME: Verifies the shared skeleton effect follows Divine appearance.
-// ABOUTME: Covers semantic colors and reduced-motion behavior.
+// ABOUTME: Covers semantic colors, caller overrides and reduced motion.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +11,10 @@ void main() {
     required bool disableAnimations,
     ThemeData? theme,
     Brightness platformBrightness = Brightness.light,
+    Color? baseColor,
+    AlignmentGeometry? begin,
+    AlignmentGeometry? end,
+    List<double>? stops,
   }) {
     return MaterialApp(
       theme: theme,
@@ -21,7 +25,19 @@ void main() {
         ),
         child: Builder(
           builder: (context) => Skeletonizer(
-            effect: vineSkeletonEffectOf(context),
+            effect: begin == null || end == null
+                ? vineSkeletonEffectOf(
+                    context,
+                    baseColor: baseColor,
+                    stops: stops,
+                  )
+                : vineSkeletonEffectOf(
+                    context,
+                    baseColor: baseColor,
+                    begin: begin,
+                    end: end,
+                    stops: stops,
+                  ),
             child: const Text('Loading'),
           ),
         ),
@@ -89,6 +105,81 @@ void main() {
       final effect = skeletonizer.effect! as ShimmerEffect;
       final base = VineTheme.lightColors.skeleton;
       expect(effect.colors, [base, base.withValues(alpha: 0.6), base]);
+    });
+
+    testWidgets('sweeps in the direction the caller asks for', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        subject(
+          disableAnimations: false,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      );
+
+      final shimmer =
+          tester
+                  .widget<Skeletonizer>(
+                    find.byWidgetPredicate((widget) => widget is Skeletonizer),
+                  )
+                  .effect!
+              as ShimmerEffect;
+      expect(shimmer.begin, Alignment.topCenter);
+      expect(shimmer.end, Alignment.bottomCenter);
+    });
+
+    testWidgets('spreads the highlight over the stops the caller gives', (
+      tester,
+    ) async {
+      const base = Color(0xFF123456);
+      await tester.pumpWidget(
+        subject(
+          disableAnimations: false,
+          baseColor: base,
+          stops: const [0, 0.5, 1],
+        ),
+      );
+
+      final shimmer =
+          tester
+                  .widget<Skeletonizer>(
+                    find.byWidgetPredicate((widget) => widget is Skeletonizer),
+                  )
+                  .effect!
+              as ShimmerEffect;
+      expect(shimmer.stops, [0, 0.5, 1]);
+      expect(shimmer.colors.first, base);
+      expect(shimmer.colors.last, base);
+      expect(shimmer.colors[1], base.withValues(alpha: 0.6));
+    });
+
+    testWidgets('paints a caller-supplied base colour in both modes', (
+      tester,
+    ) async {
+      const base = Color(0xFF123456);
+
+      await tester.pumpWidget(
+        subject(disableAnimations: false, baseColor: base),
+      );
+      final shimmer = tester
+          .widget<Skeletonizer>(
+            find.byWidgetPredicate((widget) => widget is Skeletonizer),
+          )
+          .effect;
+      expect(shimmer, isA<ShimmerEffect>());
+      expect((shimmer! as ShimmerEffect).colors.first, base);
+
+      await tester.pumpWidget(
+        subject(disableAnimations: true, baseColor: base),
+      );
+      final solid = tester
+          .widget<Skeletonizer>(
+            find.byWidgetPredicate((widget) => widget is Skeletonizer),
+          )
+          .effect;
+      expect(solid, isA<SolidColorEffect>());
+      expect((solid! as SolidColorEffect).color, base);
     });
   });
 }

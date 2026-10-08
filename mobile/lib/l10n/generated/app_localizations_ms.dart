@@ -13102,4 +13102,19 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get peopleListsSearchConnectionsHint =>
       'Cari pengikut dan orang yang diikuti';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Peribadi, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,7 +10,10 @@ import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
+import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -35,6 +40,8 @@ class _MockPeopleListsRepository extends Mock
 
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
+final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
+final _profileReadinessSelection = StateProvider<int>((ref) => 0);
 
 void main() {
   setUpAll(() {
@@ -60,6 +67,8 @@ void main() {
     Widget createTestWidget({
       Override? profileRepositoryOverride,
       Override? videosRepositoryOverride,
+      Override? curatedRepositoryOverride,
+      Override? listThumbnailPolicyOverride,
       List<Override> flagOverrides = const [],
     }) {
       return testMaterialApp(
@@ -71,17 +80,325 @@ void main() {
           videosRepositoryOverride ??
               videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           hashtagRepositoryProvider.overrideWithValue(mockHashtagRepository),
-          curatedListRepositoryProvider.overrideWithValue(
-            mockCuratedListRepository,
-          ),
+          curatedRepositoryOverride ??
+              curatedListRepositoryProvider.overrideWithValue(
+                mockCuratedListRepository,
+              ),
           peopleListsRepositoryProvider.overrideWithValue(
             mockPeopleListsRepository,
           ),
           ?profileRepositoryOverride,
+          listThumbnailPolicyOverride ??
+              curatedListThumbnailFilterProvider.overrideWith(
+                (ref) =>
+                    (_) => false,
+              ),
           ...flagOverrides,
         ],
       );
     }
+
+    testWidgets(
+      'policy and readiness replacements preserve typed query and category',
+      (
+        tester,
+      ) async {
+        final replacement = _MockCuratedListRepository();
+        final replacementProfile = createMockProfileRepository();
+        final pending = StreamController<List<CuratedList>>.broadcast();
+        addTearDown(pending.close);
+        final now = DateTime.utc(2026);
+        final row = CuratedList(
+          id: 'dance',
+          name: 'Dance',
+          pubkey: 'a' * 64,
+          videoEventIds: ['b' * 64],
+          thumbnailUrls: const ['https://example.com/visible.jpg'],
+          createdAt: now,
+          updatedAt: now,
+        );
+        when(() => mockCuratedListRepository.searchAllLists(any()))
+            .thenAnswer((_) => Stream.value([row]));
+        when(() => replacement.searchAllLists(any()))
+            .thenAnswer((_) => pending.stream);
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <VideoEvent>[]));
+        when(
+          () => mockHashtagRepository.searchHashtags(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const <String>[]);
+        for (final profile in [mockProfileRepository, replacementProfile]) {
+          when(
+            () => profile.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+        }
+        await tester.pumpWidget(
+          createTestWidget(
+            profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+              (ref) => switch (ref.watch(_profileReadinessSelection)) {
+                0 => mockProfileRepository,
+                1 => null,
+                _ => replacementProfile,
+              },
+            ),
+            curatedRepositoryOverride: curatedListRepositoryProvider
+                .overrideWith(
+                  (ref) => ref.watch(_curatedRepositorySelection) == 0
+                      ? mockCuratedListRepository
+                      : replacement,
+                ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'dance');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        final oldBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        final oldResults = [
+          oldBloc,
+          BlocProvider.of<VideoSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<UserSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<HashtagSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+        ];
+        expect(
+          oldBloc.state.videoResults.single.thumbnailUrls,
+          row.thumbnailUrls,
+        );
+        final category = BlocProvider.of<SearchResultsFilterCubit>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        category.filterChanged(SearchResultsFilter.lists);
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SearchResultsPage)),
+        );
+        container.read(_curatedRepositorySelection.notifier).state = 1;
+        await tester.pump();
+        final newBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        for (final result in oldResults) {
+          expect(result.isClosed, isTrue);
+        }
+        final nextResults = [
+          newBloc,
+          BlocProvider.of<VideoSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<UserSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<HashtagSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+        ];
+        expect(
+          BlocProvider.of<SearchResultsFilterCubit>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          same(category),
+        );
+        expect(category.state, SearchResultsFilter.lists);
+        expect(newBloc.state.videoResults, isEmpty);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'dance',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        verify(() => replacement.searchAllLists('dance')).called(1);
+        expect(newBloc.state.query, 'dance');
+        expect(newBloc.state.videoResults, isEmpty);
+        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        await tester.pump();
+        expect(newBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+
+        container.read(_profileReadinessSelection.notifier).state = 1;
+        await tester.pump();
+        expect(find.byType(TextField), findsNothing);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        for (final result in nextResults) {
+          expect(result.isClosed, isTrue);
+        }
+        expect(category.isClosed, isFalse);
+        expect(category.state, SearchResultsFilter.lists);
+
+        container.read(_profileReadinessSelection.notifier).state = 2;
+        await tester.pump();
+        final readyBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        expect(readyBloc, isNot(same(newBloc)));
+        expect(readyBloc.state.videoResults, isEmpty);
+        expect(
+          BlocProvider.of<SearchResultsFilterCubit>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          same(category),
+        );
+        expect(category.state, SearchResultsFilter.lists);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'dance',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        verify(() => replacement.searchAllLists('dance')).called(1);
+        expect(readyBloc.state.query, 'dance');
+        expect(readyBloc.state.videoResults, isEmpty);
+        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        await tester.pump();
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(category.isClosed, isTrue);
+        expect(readyBloc.isClosed, isTrue);
+      },
+    );
+
+    testWidgets(
+      'current list policy refreshes search without replacing the repository',
+      (tester) async {
+        final original = StreamController<List<CuratedList>>.broadcast();
+        addTearDown(original.close);
+        final pending = StreamController<List<CuratedList>>.broadcast();
+        addTearDown(pending.close);
+        final row = CuratedList(
+          id: 'dance',
+          name: 'Dance',
+          pubkey: 'a' * 64,
+          videoEventIds: ['b' * 64],
+          thumbnailUrls: const ['https://example.com/visible.jpg'],
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+        var policyChanged = false;
+        when(() => mockCuratedListRepository.searchAllLists(any())).thenAnswer(
+          (_) => policyChanged ? pending.stream : original.stream,
+        );
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <VideoEvent>[]));
+        when(
+          () => mockHashtagRepository.searchHashtags(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const <String>[]);
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+            boostPubkeys: any(named: 'boostPubkeys'),
+            cancellationToken: any(named: 'cancellationToken'),
+          ),
+        ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+        await tester.pumpWidget(
+          createTestWidget(
+            listThumbnailPolicyOverride: curatedListThumbnailFilterProvider
+                .overrideWith((ref) {
+                  final generation = ref.watch(blocklistVersionProvider);
+                  return (_) => generation != 0;
+                }),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'dance');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        var context = tester.element(find.byType(SearchResultsView));
+        original.add([row]);
+        await tester.pump();
+        final oldBloc = BlocProvider.of<ListSearchBloc>(context);
+        final oldVideoBloc = BlocProvider.of<VideoSearchBloc>(context);
+        await tester.showKeyboard(find.byType(TextField));
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        final category = BlocProvider.of<SearchResultsFilterCubit>(context);
+        category.filterChanged(SearchResultsFilter.lists);
+        await tester.pump();
+        expect(
+          oldBloc.state.videoResults.single.thumbnailUrls,
+          row.thumbnailUrls,
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SearchResultsPage)),
+        );
+        policyChanged = true;
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        context = tester.element(find.byType(SearchResultsView));
+        final current = BlocProvider.of<ListSearchBloc>(context);
+        expect(
+          tester.state<EditableTextState>(find.byType(EditableText)),
+          same(editable),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        expect(BlocProvider.of<VideoSearchBloc>(context), same(oldVideoBloc));
+        expect(current, isNot(same(oldBloc)));
+        expect(oldBloc.isClosed, isTrue);
+        expect(
+          container.read(curatedListRepositoryProvider),
+          same(mockCuratedListRepository),
+        );
+        expect(current.state.videoResults, isEmpty);
+        original.add([row]);
+        await tester.pump();
+        expect(current.state.videoResults, isEmpty);
+        expect(
+          BlocProvider.of<SearchResultsFilterCubit>(context),
+          same(category),
+        );
+        expect(category.state, SearchResultsFilter.lists);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'dance',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        verify(() => mockCuratedListRepository.searchAllLists('dance'))
+            .called(2);
+        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        await tester.pump();
+        expect(current.state.videoResults.single.thumbnailUrls, isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(current.isClosed, isTrue);
+      },
+    );
 
     for (final master in [false, true]) {
       for (final profile in [false, true]) {

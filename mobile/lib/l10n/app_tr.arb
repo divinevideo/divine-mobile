@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "Kişiler",
   "peopleListsPeopleNone": "Henüz kimse eklenmedi",
   "peopleListsSessionChanged": "Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.",
-  "peopleListsSearchConnectionsHint": "Takipçilerin ve takip ettiklerin arasında ara"
+  "peopleListsSearchConnectionsHint": "Takipçilerin ve takip ettiklerin arasında ara",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Özel, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

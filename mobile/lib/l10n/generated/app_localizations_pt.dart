@@ -13206,4 +13206,19 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get peopleListsSearchConnectionsHint =>
       'Buscar seguidores e pessoas que você segue';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privada, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }
