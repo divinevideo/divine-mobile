@@ -493,7 +493,10 @@ void main() {
         ),
       ).thenAnswer((_) async => created);
       when(
-        () => mockListService.addVideoToList(created.id, testVideo.id),
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
       ).thenAnswer((_) async => false);
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -521,7 +524,10 @@ void main() {
         ),
       ).called(1);
       verify(
-        () => mockListService.addVideoToList(created.id, testVideo.id),
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
       ).called(1);
     });
 
@@ -548,7 +554,10 @@ void main() {
         ),
       ).thenAnswer((_) => pending.future);
       when(
-        () => mockListService.addVideoToList(created.id, testVideo.id),
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
       ).thenAnswer((_) async => false);
       final navigator = GlobalKey<NavigatorState>();
       await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -617,7 +626,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
           ),
         ).thenAnswer((_) async => pending.copyWith(videoEventIds: const []));
-        when(() => mockListService.getListById(pending.id)).thenReturn(pending);
+        when(
+          () => mockListService.getListById(pending.authorScopedId),
+        ).thenReturn(pending);
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await tester.pumpWidget(buildSubject());
@@ -629,7 +640,10 @@ void main() {
           curatedListsStateProvider.notifier,
         ) as _FakeCuratedListsState;
         when(
-          () => mockListService.addVideoToList(pending.id, testVideo.id),
+          () => mockListService.addVideoToList(
+            pending.authorScopedId,
+            testVideo.id,
+          ),
         ).thenAnswer((_) async {
           notifier.replaceLists([pending]);
           return false;
