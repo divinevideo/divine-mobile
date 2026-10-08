@@ -66,7 +66,16 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
   final formKey = GlobalKey();
   final recoverySubscription = container.listen(
     curatedListsStateProvider,
-    (_, _) => cubit.refreshRecoveryReadOnly(),
+    (_, current) => cubit.refreshRecoveryReadOnly(
+      // Loading, failed and empty snapshots may still change the recovery
+      // hold, but cannot authoritatively replace this list's saved baseline.
+      refreshSavedList:
+          existingList != null &&
+          (current.asData?.value.any(
+                (list) => list.authorScopedId == existingList.authorScopedId,
+              ) ??
+              false),
+    ),
   );
 
   try {
