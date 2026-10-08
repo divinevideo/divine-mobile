@@ -190,6 +190,8 @@ class _Fixture {
       nostrClient: client,
       localStorage: _Storage(),
       blockFilter: blocks.shouldFilterFromFeeds,
+      deletedFilter: videoService.isVideoEventKnownDeleted,
+      removedVideoIds: videoService.removedVideoIds,
       contentFilter: nsfw,
       feedShapeFilter: aspect.shouldHideVideo,
       warningLabelsResolver: createNsfwWarnLabels(
@@ -460,6 +462,21 @@ void main() {
         );
       }
     }
+
+    test('a completed preview retires when its video is deleted', () async {
+      final fixture = await _Fixture.open();
+      expect((await fixture.read()).single.thumbnailUrls, [_thumbnail]);
+      fixture.container
+          .read(videoEventServiceProvider)
+          .removeVideoEventCompletely(fixture.stats.toVideoEvent());
+      await fixture.container.pump();
+      expect((await fixture.read()).single.thumbnailUrls, isEmpty);
+      final repository = fixture.container.read(curatedListRepositoryProvider);
+      expect(
+        (await repository.searchAllLists('dance').last).single.thumbnailUrls,
+        isEmpty,
+      );
+    });
 
     test('block sync preserves the repository and its list listener', () async {
       final fixture = await _Fixture.open();

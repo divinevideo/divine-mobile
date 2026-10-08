@@ -294,6 +294,22 @@ CuratedListRepository curatedListRepository(Ref ref) {
   return repository;
 }
 
+/// Counts deletions the video service learns, so resolved previews retire.
+final videoDeletionVersionProvider =
+    NotifierProvider<VideoDeletionVersion, int>(VideoDeletionVersion.new);
+
+class VideoDeletionVersion extends Notifier<int> {
+  @override
+  int build() {
+    final subscription = ref
+        .watch(videoEventServiceProvider)
+        .removedVideoIds
+        .listen((_) => state++);
+    ref.onDispose(subscription.cancel);
+    return 0;
+  }
+}
+
 /// Shared preview policy for My Lists and public list search.
 ///
 /// A retired callback fails closed. The stable curated-list repository reads
@@ -307,6 +323,7 @@ CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
   ref.watch(divineHostFilterVersionProvider);
   ref.watch(videoProvenanceFilterVersionProvider);
   ref.watch(adultContentVerificationVersionProvider);
+  ref.watch(videoDeletionVersionProvider);
   final videoService = ref.watch(videoEventServiceProvider);
   final videos = ref.watch(videosRepositoryProvider);
   var disposed = false;

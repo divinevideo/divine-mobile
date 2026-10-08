@@ -274,7 +274,7 @@ final class CuratedListThumbnailFilterProvider
 }
 
 String _$curatedListThumbnailFilterHash() =>
-    r'b6947373860c166f1c2960649c1297da5da01bd8';
+    r'c5b5b18384ba0750ca64df3993868bb42570195a';
 
 /// Settles persisted preview policy before consumers start metadata hydration.
 ///
