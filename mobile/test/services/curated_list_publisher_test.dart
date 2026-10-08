@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
@@ -2012,16 +2013,39 @@ void main() {
       'partially corrupt row',
     ]) {
       for (final destructive in [false, true]) {
+        final unknownOwner = form != 'partially corrupt row';
+        final incompleteDeletion = destructive && unknownOwner;
         test(
-          '${destructive ? 'destructive A cleanup' : 'ordinary logout'} preserves unknown-owner $form legacy evidence and healthy B recovery',
+          '${destructive ? 'destructive A cleanup' : 'ordinary logout'} ${incompleteDeletion ? 'reports incomplete deletion and preserves unknown-owner' : 'preserves ${unknownOwner ? 'unknown-owner' : 'proven B-owned'}'} $form legacy evidence and readable B recovery',
           () async {
             const other =
                 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+            const unrelated =
+                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
             final list = (await seed()).copyWith(pubkey: other);
             final journal = CuratedListRecoveryJournal(
               prefs: prefs,
               runCurrent: (op) => op(),
             );
+            if (destructive) {
+              expect(
+                await journal.accepted(
+                  owner: _owner,
+                  listId: list.id,
+                  visibility: const CuratedListVisibility(
+                    isPublic: false,
+                    isCollaborative: false,
+                    allowedCollaborators: [],
+                    relayAccepted: true,
+                  ),
+                  eventId: _oldEvent,
+                  acceptedAt: clock.now(),
+                  plaintextEventIds: [_video],
+                ),
+                isTrue,
+              );
+              expect(journal.record(_owner, list.id), isNotNull);
+            }
             expect(
               await journal.accepted(
                 owner: other,
@@ -2042,11 +2066,19 @@ void main() {
             await storeMalformedLegacy(raw);
             final cleanup = UserDataCleanupService(prefs);
             if (destructive) {
-              await cleanup.deleteAccountData(
+              final deletion = cleanup.deleteAccountData(
                 _owner,
                 userNpub: 'npub-A',
                 preserveActiveSession: false,
               );
+              if (incompleteDeletion) {
+                await expectLater(
+                  deletion,
+                  throwsA(isA<CuratedListRecoveryException>()),
+                );
+              } else {
+                await deletion;
+              }
             } else {
               await cleanup.clearUserSpecificData(userPubkey: _owner);
             }
@@ -2065,6 +2097,16 @@ void main() {
             ]);
             expect(archive['normalized'], isTrue);
             expect(archive['needsRepair'], isTrue);
+            expect(archive['originalLiveValue'], raw);
+            final pending = PendingAccountCleanup.read(prefs);
+            if (incompleteDeletion) {
+              expect(pending, isNotNull);
+              expect(pending!.userPubkey, _owner);
+              expect(pending.deleteUserData, isTrue);
+              expect(pending.isIdentityChange, isFalse);
+            } else {
+              expect(pending, isNull);
+            }
             final recovered = CuratedListRecoveryJournal(
               prefs: prefs,
               runCurrent: (op) => op(),
@@ -2080,6 +2122,16 @@ void main() {
               prefs.containsKey(CuratedListRecoveryJournal.storageKey(_owner)),
               isFalse,
             );
+            expect(recovered.record(_owner, list.id), isNull);
+            if (destructive) {
+              expect(
+                prefs.getInt(CuratedListRecoveryStorage.generationKey(_owner)),
+                1,
+              );
+            }
+            expect(recovered.needsRepair(other), isTrue);
+            expect(recovered.needsRepair(_owner), unknownOwner);
+            expect(recovered.needsRepair(unrelated), unknownOwner);
             expect(sent, isEmpty);
           },
         );
