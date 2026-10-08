@@ -29,10 +29,12 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
@@ -52,10 +54,12 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
@@ -77,10 +81,12 @@ void main() {
 
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
@@ -107,17 +113,20 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
       // Set up specific flag value
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-      when(() => mockPrefs.containsKey('ff_enhancedAnalytics'))
-          .thenReturn(true);
+      when(
+        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+      ).thenReturn(true);
 
       final container = ProviderContainer(
         overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
@@ -140,10 +149,12 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
-            .thenAnswer((_) async => true);
-        when(() => mockPrefs.remove('ff_${flag.name}'))
-            .thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.setBool('ff_${flag.name}', any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockPrefs.remove('ff_${flag.name}'),
+        ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
