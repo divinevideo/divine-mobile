@@ -68,5 +68,114 @@ void main() {
       );
       expect(index.subscriptionId('missing', {}), 'missing');
     });
+
+    group('cache queries', () {
+      final video = 'd' * 64;
+      final owned = list(owner).copyWith(
+        nostrEventId: 'e' * 64,
+        name: 'Sea otters',
+        description: 'Rocks and shells',
+        tags: const ['nature', 'ocean'],
+        videoEventIds: [video],
+      );
+      final foreign = list(author).copyWith(
+        nostrEventId: 'f' * 64,
+        name: 'Ocean walks',
+        tags: const ['walks', 'nature'],
+        videoEventIds: [video],
+      );
+      final private = list(owner, id: 'private').copyWith(
+        isPublic: false,
+        nostrEventId: '1' * 64,
+        name: 'Secret sea otters',
+        description: 'Hidden rocks',
+        tags: const ['secret', 'nature'],
+        videoEventIds: [video],
+      );
+      final local = list(null, id: 'draft').copyWith(isPublic: false);
+      final index = CuratedListCacheIndex(
+        [foreign, owned, private, local],
+        ownerPubkey: owner,
+      );
+
+      test(
+        'public discovery excludes private names, descriptions and tags',
+        () {
+          expect(index.publicListsByTag('NATURE'), [foreign, owned]);
+          expect(index.publicListsByTag('SECRET'), isEmpty);
+          expect(index.publicTags, ['nature', 'ocean', 'walks']);
+          expect(index.searchPublic('SEA OTTERS'), [owned]);
+          expect(index.searchPublic('ROCKS'), [owned]);
+          expect(index.searchPublic('WALKS'), [foreign]);
+          expect(index.searchPublic('secret'), isEmpty);
+          expect(index.searchPublic('   '), isEmpty);
+          // Preserve the existing typed-query contract: only case folds.
+          expect(index.searchPublic(' sea otters '), isEmpty);
+        },
+      );
+
+      test('membership preserves both authors and private owned records', () {
+        expect(index.containingVideo(video), [foreign, owned, private]);
+        expect(index.containingVideo('2' * 64), isEmpty);
+      });
+
+      test(
+        'owned query uses the supplied authenticated account and drafts',
+        () {
+          expect(index.unpublishedOrOwnedBy(owner), [owned, private, local]);
+          expect(index.unpublishedOrOwnedBy(author), [foreign, local]);
+          expect(index.unpublishedOrOwnedBy(null), [local]);
+          expect(index.isOwnedBy(owned.authorScopedId, owner), isTrue);
+          expect(index.isOwnedBy(foreign.authorScopedId, owner), isFalse);
+          expect(index.isOwnedBy('missing', owner), isFalse);
+          expect(index.isOwnedBy('private', null), isFalse);
+          expect(index.isOwnedBy('private', ''), isFalse);
+          expect(index.isOwnedBy('draft', owner), isFalse);
+        },
+      );
+
+      test('collaboration resolves the full coordinate and retains policy', () {
+        final collaborative = foreign.copyWith(
+          isCollaborative: true,
+          allowedCollaborators: [third],
+        );
+        final collaborators = CuratedListCacheIndex(
+          [collaborative, owned],
+          ownerPubkey: owner,
+        );
+        expect(collaborators.canCollaborate('missing', owner), isFalse);
+        expect(
+          collaborators.canCollaborate(owned.authorScopedId, owner),
+          isTrue,
+        );
+        expect(
+          collaborators.canCollaborate(collaborative.authorScopedId, third),
+          isTrue,
+        );
+        expect(
+          collaborators.canCollaborate(owned.authorScopedId, third),
+          isFalse,
+        );
+        expect(
+          collaborators.canCollaborate(collaborative.authorScopedId, author),
+          isFalse,
+        );
+      });
+
+      test('same-millisecond local IDs cannot replace any cached author', () {
+        final now = DateTime.utc(2026);
+        final first = 'list_${now.millisecondsSinceEpoch}';
+        final collisions = CuratedListCacheIndex(
+          [
+            list(owner, id: first),
+            list(author, id: '${first}_1'),
+            list(null, id: '${first}_2'),
+          ],
+          ownerPubkey: owner,
+        );
+        expect(collisions.nextLocalId(now), '${first}_3');
+        expect(index.nextLocalId(now), first);
+      });
+    });
   });
 }

@@ -18,6 +18,7 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 enum UnsealItemTagsStatus { notSealed, unsealed, failed }
@@ -78,62 +79,17 @@ class CuratedListRelayGateway {
     required Duration timeout,
     required Future<void> cancelled,
   }) async {
-    final completer = Completer<bool>();
-    final events = <Event>[];
-    StreamSubscription<Event>? relaySubscription;
-    Timer? timeoutTimer;
-    // Stops listening before the caller resumes, so no event lands in
-    // [events] while the caller is still reading it.
-    void finish({required bool completedNormally}) {
-      if (completer.isCompleted) return;
-      timeoutTimer?.cancel();
-      unawaited(relaySubscription?.cancel());
-      relaySubscription = null;
-      completer.complete(completedNormally);
-    }
-
-    unawaited(cancelled.then((_) => finish(completedNormally: false)));
-    try {
-      Log.debug(
-        '📋 Subscribing with filter: authors=[${pubkeyForLogs(ownerPubkey)}], kinds=[30005]',
-        name: 'CuratedListRelayGateway',
-        category: LogCategory.system,
-      );
-      final filter = Filter(authors: [ownerPubkey], kinds: [30005]);
-      final subscription = _nostrService.subscribe([filter]);
-      timeoutTimer = Timer(timeout, () {
-        Log.debug(
-          'Relay sync timeout reached, processing received events',
-          name: 'CuratedListRelayGateway',
-          category: LogCategory.system,
-        );
-        finish(completedNormally: false);
-      });
-      relaySubscription = subscription.listen(
-        (event) {
-          events.add(event);
-          Log.debug(
-            'Received list event from relay: ${event.id}',
-            name: 'CuratedListRelayGateway',
-            category: LogCategory.system,
-          );
-        },
-        onDone: () => finish(completedNormally: true),
-        onError: (Object error) {
-          Log.error(
-            'Error fetching lists from relay: $error',
-            name: 'CuratedListRelayGateway',
-            category: LogCategory.system,
-          );
-          finish(completedNormally: false);
-        },
-        cancelOnError: true,
-      );
-      final completedNormally = await completer.future;
-      return (events: events, completedNormally: completedNormally);
-    } finally {
-      finish(completedNormally: false);
-    }
+    final snapshot = await CuratedListRelaySnapshotReader(
+      nostrClient: _nostrService,
+    ).read(
+      ownerPubkey: ownerPubkey,
+      timeout: timeout,
+      cancelled: cancelled,
+    );
+    return (
+      events: snapshot.events,
+      completedNormally: snapshot.completedNormally,
+    );
   }
 
   /// NIP-44 encrypts [list]'s item tags to their owner.

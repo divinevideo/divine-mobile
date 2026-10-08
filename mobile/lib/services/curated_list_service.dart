@@ -250,16 +250,9 @@ class CuratedListService extends ChangeNotifier {
   /// Owned lists keep showing here after a successful publish — filtering
   /// only on a null [CuratedList.nostrEventId] made lists vanish from the
   /// "My Lists" UI the moment they reached the relay.
-  List<CuratedList> get myLists {
-    final currentPubkey = _relayGateway.currentAuthenticatedPubkey();
-    return _lists
-        .where(
-          (list) =>
-              list.nostrEventId == null ||
-              (currentPubkey != null && list.pubkey == currentPubkey),
-        )
-        .toList();
-  }
+  List<CuratedList> get myLists => _cacheIndex.unpublishedOrOwnedBy(
+    _relayGateway.currentAuthenticatedPubkey(),
+  );
 
   /// Initialize the service and create default list if needed.
   ///
@@ -376,16 +369,7 @@ class CuratedListService extends ChangeNotifier {
   /// Two lists created within the same millisecond would otherwise share an
   /// ID, and ID-based lookups (e.g. the post-publish copyWith) would then
   /// overwrite the wrong list.
-  String _generateListId(DateTime now) {
-    final base = 'list_${now.millisecondsSinceEpoch}';
-    var listId = base;
-    var suffix = 1;
-    while (_lists.any((list) => list.id == listId)) {
-      listId = '${base}_$suffix';
-      suffix++;
-    }
-    return listId;
-  }
+  String _generateListId(DateTime now) => _cacheIndex.nextLocalId(now);
 
   /// Internal method to create a list with optional explicit ID
   Future<CuratedList?> _createList({
@@ -1194,60 +1178,23 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Check if a user can collaborate on a list
-  bool canCollaborate(String listId, String pubkey) {
-    final list = getListById(listId);
-    if (list == null) return false;
-
-    // List owner can always collaborate
-    if (_authService.currentPublicKeyHex == pubkey) return true;
-
-    // Check if collaborative and user is allowed
-    return list.isCollaborative && list.allowedCollaborators.contains(pubkey);
-  }
+  bool canCollaborate(String listId, String pubkey) =>
+      _cacheIndex.canCollaborate(listId, pubkey);
 
   /// Get lists by tag for discovery
-  List<CuratedList> getListsByTag(String tag) {
-    return _lists
-        .where((list) => list.isPublic && list.tags.contains(tag.toLowerCase()))
-        .toList();
-  }
+  List<CuratedList> getListsByTag(String tag) =>
+      _cacheIndex.publicListsByTag(tag);
 
   /// Get all unique tags across all lists
-  List<String> getAllTags() {
-    final allTags = <String>{};
-    for (final list in _lists) {
-      if (list.isPublic) {
-        allTags.addAll(list.tags);
-      }
-    }
-    return allTags.toList()..sort();
-  }
+  List<String> getAllTags() => _cacheIndex.publicTags;
 
   /// Search lists by name or description
-  List<CuratedList> searchLists(String query) {
-    if (query.trim().isEmpty) return [];
-
-    final lowerQuery = query.toLowerCase();
-    return _lists
-        .where(
-          (list) =>
-              list.isPublic &&
-              (list.name.toLowerCase().contains(lowerQuery) ||
-                  (list.description?.toLowerCase().contains(lowerQuery) ??
-                      false) ||
-                  list.tags.any(
-                    (tag) => tag.toLowerCase().contains(lowerQuery),
-                  )),
-        )
-        .toList();
-  }
+  List<CuratedList> searchLists(String query) =>
+      _cacheIndex.searchPublic(query);
 
   /// Get all lists that contain a specific video
-  List<CuratedList> getListsContainingVideo(String videoEventId) {
-    return _lists
-        .where((list) => list.videoEventIds.contains(videoEventId))
-        .toList();
-  }
+  List<CuratedList> getListsContainingVideo(String videoEventId) =>
+      _cacheIndex.containingVideo(videoEventId);
 
   // === SUBSCRIPTION MANAGEMENT ===
 
@@ -1375,24 +1322,8 @@ class CuratedListService extends ChangeNotifier {
       _cacheIndex.subscriptionId(listId, _subscribedListIds);
 
   /// Check whether the current user owns a locally cached curated list.
-  bool isOwnedList(String listId) {
-    final currentPubkey = _relayGateway.currentAuthenticatedPubkey();
-    if (currentPubkey == null || currentPubkey.isEmpty) {
-      return false;
-    }
-
-    final list = getListById(listId);
-    if (list == null) {
-      return false;
-    }
-
-    final ownerPubkey = list.pubkey;
-    if (ownerPubkey == null) {
-      return false;
-    }
-
-    return ownerPubkey == currentPubkey;
-  }
+  bool isOwnedList(String listId) =>
+      _cacheIndex.isOwnedBy(listId, _relayGateway.currentAuthenticatedPubkey());
 
   /// Get readable summary of lists containing a video
   String getVideoListSummary(String videoEventId) {
@@ -1615,26 +1546,19 @@ class CuratedListService extends ChangeNotifier {
     final cancel = Completer<void>();
     _relaySyncCancels.add(cancel);
     try {
-      final (events: receivedEvents, :completedNormally) = await _relayGateway
-          .readOwnedLists(
-            userPubkey,
-            timeout: _relaySyncTimeout,
-            cancelled: cancel.future,
-          );
-
-      Log.info(
-        '📋 Received ${receivedEvents.length} raw list events from relays',
-        name: 'CuratedListService',
-        category: LogCategory.system,
+      final snapshot = await _relayGateway.readOwnedLists(
+        userPubkey,
+        timeout: _relaySyncTimeout,
+        cancelled: cancel.future,
       );
-
+      final receivedEvents = snapshot.events;
       if (!isReadyForMutations || !_isCurrent(userPubkey)) return;
       // Process received events
       if (receivedEvents.isNotEmpty) {
         await _processReceivedListEvents(receivedEvents);
       }
 
-      if (!completedNormally) {
+      if (!snapshot.completedNormally) {
         Log.warning(
           'Relay sync was incomplete; partial events were merged but local '
           'lists will not be backfilled until a complete sync',
