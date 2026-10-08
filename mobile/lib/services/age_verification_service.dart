@@ -59,6 +59,10 @@ class AgeVerificationService {
 
   bool get isAgeVerified => _readBool(_ageVerifiedKey);
 
+  /// Whether the account is known to be a protected minor, independently of
+  /// whether an ordinary account has completed adult self-attestation.
+  bool get isProtectedMinor => _isProtectedMinor();
+
   DateTime? get verificationDate => _readDate(_verificationDateKey);
 
   bool get isAdultContentVerified =>

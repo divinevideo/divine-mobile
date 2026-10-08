@@ -77,28 +77,23 @@ class ContentFilterService extends ChangeNotifier {
   };
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
-  /// age-verified. The narrow creator-only exception is defined separately in
-  /// [creatorSelfLabelWarningCategories]; adult content remains behind the age
-  /// gate. See #5303 for the gate and #5062/#8063 for creator visibility.
+  /// self-attested as an adult. Known minors also stay hidden when viewing
+  /// their own videos. Ordinary creators retain warnings for the legacy
+  /// alcohol, tobacco, profanity and gambling exception before attestation.
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
     ContentLabel.alcohol,
     ContentLabel.tobacco,
     ContentLabel.profanity,
     ContentLabel.gambling,
+    ContentLabel.drugs,
   };
 
-  /// Creator-applied labels that remain visible to the creator behind a
-  /// warning even when age verification would otherwise hide them.
-  ///
-  /// Adult and always-filtered categories deliberately stay hidden. This
-  /// narrow carve-out covers the non-adult labels creators can apply during
-  /// publishing without weakening the protected-media policy from #5303.
-  static const Set<ContentLabel> creatorSelfLabelWarningCategories = {
-    ContentLabel.alcohol,
-    ContentLabel.tobacco,
-    ContentLabel.profanity,
-    ContentLabel.gambling,
+  /// Age-restricted categories that stay hidden until an adult has attested and
+  /// then opted in, instead of being promoted to a warning on attestation.
+  static const Set<ContentLabel> _adultOptInCategories = {
+    ...adultCategories,
+    ContentLabel.drugs,
   };
 
   /// Categories that Divine always filters out and does not expose as toggles.
@@ -107,7 +102,6 @@ class ContentFilterService extends ChangeNotifier {
     ContentLabel.violence,
     ContentLabel.selfHarm,
     ContentLabel.porn,
-    ContentLabel.drugs,
     ContentLabel.hate,
     ContentLabel.harassment,
     ContentLabel.aiGenerated,
@@ -122,12 +116,12 @@ class ContentFilterService extends ChangeNotifier {
     // opt in per category via Content Filters.
     ContentLabel.nudity: ContentFilterPreference.hide,
     ContentLabel.sexual: ContentFilterPreference.hide,
+    ContentLabel.drugs: ContentFilterPreference.hide,
     // Always-filtered categories are not user-configurable.
     ContentLabel.graphicMedia: ContentFilterPreference.hide,
     ContentLabel.violence: ContentFilterPreference.hide,
     ContentLabel.selfHarm: ContentFilterPreference.hide,
     ContentLabel.porn: ContentFilterPreference.hide,
-    ContentLabel.drugs: ContentFilterPreference.hide,
     ContentLabel.hate: ContentFilterPreference.hide,
     ContentLabel.harassment: ContentFilterPreference.hide,
     ContentLabel.aiGenerated: ContentFilterPreference.hide,
@@ -238,14 +232,29 @@ class ContentFilterService extends ChangeNotifier {
   }
 
   /// Resolves a creator-applied label for the current viewer.
+  ///
+  /// Known minors cannot bypass age restrictions on their own uploads.
+  /// Self-attested adults keep their chosen age-restricted preference, including
+  /// hide. Adult content and drug use require attestation even for creators.
+  /// Other self-labels keep the creator's video behind a warning rather than
+  /// hiding it, including before ordinary adult self-attestation. Trusted
+  /// labelers and server-side moderation do not go through here and still hide
+  /// the video for everyone.
   ContentFilterPreference getCreatorSelfLabelPreference(
     ContentLabel label, {
     required bool isOwner,
   }) {
     final preference = getPreference(label);
-    if (isOwner &&
-        preference == ContentFilterPreference.hide &&
-        creatorSelfLabelWarningCategories.contains(label)) {
+    if (isOwner && ageRestrictedCategories.contains(label)) {
+      if (ageVerificationService.isProtectedMinor) {
+        return ContentFilterPreference.hide;
+      }
+      if (ageVerificationService.isAdultContentVerified) return preference;
+      if (_adultOptInCategories.contains(label)) {
+        return ContentFilterPreference.hide;
+      }
+    }
+    if (isOwner && preference == ContentFilterPreference.hide) {
       return ContentFilterPreference.warn;
     }
     return preference;
@@ -378,7 +387,8 @@ class ContentFilterService extends ChangeNotifier {
   /// content stays hidden until the user opts in per category via Content
   /// Filters.
   ///
-  /// Non-adult age-restricted categories (alcohol, tobacco, profanity,
+  /// Drug use also stays hidden until the adult explicitly opts in.
+  /// Other age-restricted categories (alcohol, tobacco, profanity,
   /// gambling) still at [ContentFilterPreference.hide] are promoted to
   /// [ContentFilterPreference.warn]. Categories the user has already
   /// explicitly changed to [warn] or [show] are left untouched, so this
@@ -386,7 +396,7 @@ class ContentFilterService extends ChangeNotifier {
   Future<void> unlockAdultCategories() async {
     for (final label in ageRestrictedCategories) {
       if (alwaysFilteredCategories.contains(label)) continue;
-      if (adultCategories.contains(label)) continue;
+      if (_adultOptInCategories.contains(label)) continue;
       if ((_preferences[label] ?? _defaultFor(label)) ==
           ContentFilterPreference.hide) {
         _preferences[label] = ContentFilterPreference.warn;
