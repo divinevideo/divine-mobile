@@ -94,7 +94,6 @@ void main() {
         await serviceA.disposal;
         expect(serviceA.isDisposed, isTrue);
 
-        await Future<void>.delayed(Duration.zero);
         deepLinkSource.add(
           const DeepLink(type: DeepLinkType.video, videoRef: 'late-a'),
         );
@@ -121,7 +120,7 @@ void main() {
         );
         addTearDown(subscriptionB.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         deepLinkSource.add(
           const DeepLink(type: DeepLinkType.video, videoRef: 'late-b'),
         );
@@ -168,22 +167,14 @@ void main() {
       final service = DeepLinkService();
       addTearDown(service.dispose);
 
-      final received = <DeepLink>[];
-      final sub = service.linkStream.listen(received.add);
-      addTearDown(sub.cancel);
-
       const link = DeepLink(
         type: DeepLinkType.video,
         videoRef: 'test-event-id',
         autoOpenComments: true,
       );
+      final emission = expectLater(service.linkStream, emits(same(link)));
       service.pushLink(link);
-
-      await Future<void>.delayed(Duration.zero);
-
-      expect(received, hasLength(1));
-      expect(received.first.videoRef, equals('test-event-id'));
-      expect(received.first.autoOpenComments, isTrue);
+      await emission;
     });
   });
 }
