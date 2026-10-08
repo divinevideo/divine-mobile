@@ -54,7 +54,9 @@ void main() {
     });
 
     test('failed unseal preserves cached private items', () {
+      lists[0] = lists.single.copyWith(isPublic: false);
       final original = lists.single;
+      expect(original.isPublic, isFalse);
       expect(original.videoEventIds, [localVideo]);
       merger.merge(
         relayEvent(),
