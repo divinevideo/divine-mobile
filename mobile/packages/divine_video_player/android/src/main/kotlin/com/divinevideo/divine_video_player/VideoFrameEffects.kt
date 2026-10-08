@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.IdentityHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
+import kotlin.math.roundToLong
 
 /**
  * An effect the app draws on the player's frames, registered by id with
@@ -116,19 +117,59 @@ internal class FrameEffectsState {
     class Reposition(val generation: Int, val timelineUs: Long?)
 
     /**
-     * The player's timeline as its frames step through it: [lengthUs] long,
-     * starting over at the end when [looping].
+     * The player's timeline as its frames step through it: its [clips] one
+     * after the other, starting over at the end when [looping].
+     *
+     * Frames step through each clip's media time, which a clip at a speed
+     * of its own plays faster or slower than the timeline.
      */
-    data class Timeline(val lengthUs: Long, val looping: Boolean)
+    class Timeline(val clips: List<Clip>, val looping: Boolean) {
+        /** A clip [mediaUs] of media long, played at [speed]. */
+        data class Clip(val mediaUs: Long, val speed: Float) {
+            /** How long the clip lasts on the timeline. */
+            val timelineUs: Long = (mediaUs / speed.toDouble()).roundToLong()
+        }
+
+        /** How long the timeline lasts. */
+        val lengthUs: Long = clips.sumOf { it.timelineUs }
+
+        /** How much media the frames of one pass through the timeline span. */
+        val mediaLengthUs: Long = clips.sumOf { it.mediaUs }
+
+        /** How far into the media of all clips [timelineUs] lies. */
+        fun mediaUsAt(timelineUs: Long): Long {
+            var timelineStartUs = 0L
+            var mediaStartUs = 0L
+            for ((index, clip) in clips.withIndex()) {
+                if (timelineUs < timelineStartUs + clip.timelineUs || index == clips.lastIndex) {
+                    return mediaStartUs + ((timelineUs - timelineStartUs) * clip.speed.toDouble()).roundToLong()
+                }
+                timelineStartUs += clip.timelineUs
+                mediaStartUs += clip.mediaUs
+            }
+            return timelineUs
+        }
+
+        /** Where on the timeline [mediaUs] into the media of all clips lies. */
+        fun timelineUsAt(mediaUs: Long): Long {
+            var timelineStartUs = 0L
+            var mediaStartUs = 0L
+            for ((index, clip) in clips.withIndex()) {
+                if (mediaUs < mediaStartUs + clip.mediaUs || index == clips.lastIndex) {
+                    return timelineStartUs + ((mediaUs - mediaStartUs) / clip.speed.toDouble()).roundToLong()
+                }
+                timelineStartUs += clip.timelineUs
+                mediaStartUs += clip.mediaUs
+            }
+            return mediaUs
+        }
+    }
 
     /** The last move of the player, see [repositionTo]. */
     @Volatile var reposition = Reposition(0, null)
         private set
 
-    /**
-     * The timeline frames step through, or null while a clip plays at a
-     * speed of its own: its frames then step through the clip's media time.
-     */
+    /** The timeline frames step through, or null while it is not known. */
     @Volatile var timeline: Timeline? = null
 
     /** Where the main thread last saw the playhead, in µs on the timeline. */
@@ -566,9 +607,10 @@ internal fun nearestDecodedFrame(frames: List<Pair<Long, Long>>, sourceUs: Long)
         .minByOrNull { abs(frames[it].first - sourceUs) }
 
 /**
- * Where a frame lies on the player's timeline: [anchorTimelineUs], where the
- * anchoring frame lies, plus how far the frame's presentation time is past
- * that frame's, wrapped at the end of a looping [timeline].
+ * Where a frame lies on the player's timeline: as far into the clips' media
+ * past [anchorTimelineUs], where the anchoring frame lies, as the frame's
+ * presentation time is past that frame's, wrapped at the end of a looping
+ * [timeline].
  */
 internal fun frameTimelineUs(
     presentationTimeUs: Long,
@@ -576,12 +618,13 @@ internal fun frameTimelineUs(
     anchorTimelineUs: Long,
     timeline: FrameEffectsState.Timeline,
 ): Long {
-    val timelineUs = anchorTimelineUs + (presentationTimeUs - anchorPresentationUs)
-    return if (timeline.looping && timeline.lengthUs > 0) {
-        Math.floorMod(timelineUs, timeline.lengthUs)
+    val mediaUs = timeline.mediaUsAt(anchorTimelineUs) + (presentationTimeUs - anchorPresentationUs)
+    val wrappedUs = if (timeline.looping && timeline.mediaLengthUs > 0) {
+        Math.floorMod(mediaUs, timeline.mediaLengthUs)
     } else {
-        timelineUs
+        mediaUs
     }
+    return timeline.timelineUsAt(wrappedUs)
 }
 
 /**

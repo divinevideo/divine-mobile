@@ -1686,22 +1686,22 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * The timeline the player's frames step through, or null while it is
-     * not known: until every clip's length is, and while a clip plays at a
-     * speed of its own, whose frames step through its media time instead.
+     * The timeline the player's frames step through, or null until every
+     * clip's length is known.
      */
     private fun frameEffectsTimeline(exoPlayer: ExoPlayer): FrameEffectsState.Timeline? {
-        if (clipSpeeds.any { it != 1.0f }) return null
         val timeline = exoPlayer.currentTimeline
         if (timeline.isEmpty || timeline.windowCount != exoPlayer.mediaItemCount) return null
         val window = androidx.media3.common.Timeline.Window()
-        var lengthUs = 0L
-        for (i in 0 until timeline.windowCount) {
+        val clips = (0 until timeline.windowCount).map { i ->
             val durationUs = timeline.getWindow(i, window).durationUs
             if (durationUs == C.TIME_UNSET || durationUs <= 0) return null
-            lengthUs += durationUs
+            FrameEffectsState.Timeline.Clip(
+                durationUs,
+                clipSpeeds.getOrElse(i) { 1.0f }.coerceAtLeast(MIN_PLAYBACK_SPEED),
+            )
         }
-        return FrameEffectsState.Timeline(lengthUs, isLooping)
+        return FrameEffectsState.Timeline(clips, isLooping)
     }
 
     /**

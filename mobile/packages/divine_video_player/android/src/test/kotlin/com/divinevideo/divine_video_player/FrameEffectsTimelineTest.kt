@@ -13,8 +13,30 @@ import org.junit.Test
  */
 class FrameEffectsTimelineTest {
 
-    private val looping = FrameEffectsState.Timeline(lengthUs = 5_324_000L, looping = true)
-    private val once = FrameEffectsState.Timeline(lengthUs = 5_324_000L, looping = false)
+    private val oneClip = listOf(FrameEffectsState.Timeline.Clip(mediaUs = 5_324_000L, speed = 1f))
+    private val looping = FrameEffectsState.Timeline(oneClip, looping = true)
+    private val once = FrameEffectsState.Timeline(oneClip, looping = false)
+
+    /** 2 s at normal speed, then 1 s of media slowed to 2 s, then 3 s of media sped up to 1.5 s. */
+    private val mixedSpeeds = FrameEffectsState.Timeline(
+        listOf(
+            FrameEffectsState.Timeline.Clip(mediaUs = 2_000_000L, speed = 1f),
+            FrameEffectsState.Timeline.Clip(mediaUs = 1_000_000L, speed = 0.5f),
+            FrameEffectsState.Timeline.Clip(mediaUs = 3_000_000L, speed = 2f),
+        ),
+        looping = true,
+    )
+
+    /** Where frames 30 a second through the media from timeline position 0 lie on [timeline]. */
+    private fun framesFromStart(timeline: FrameEffectsState.Timeline, count: Int) =
+        (0 until count).map { frame ->
+            frameTimelineUs(
+                presentationTimeUs = 7_000_000L + frame * 1_000_000L / 30,
+                anchorPresentationUs = 7_000_000L,
+                anchorTimelineUs = 0L,
+                timeline = timeline,
+            )
+        }
 
     private fun config(startUs: Long?, endUs: Long?) =
         FrameEffectsState.Config(id = "effect", params = emptyMap(), startUs = startUs, endUs = endUs)
@@ -55,6 +77,70 @@ class FrameEffectsTimelineTest {
         )
 
         assertEquals(5_400_000L, timelineUs)
+    }
+
+    @Test
+    fun `a frame in a clip at a speed of its own lies as far into it as its media time at that speed`() {
+        // 0.25 s past the slowed clip's start in media time is 0.5 s on the timeline.
+        val timelineUs = frameTimelineUs(
+            presentationTimeUs = 2_250_000L,
+            anchorPresentationUs = 0L,
+            anchorTimelineUs = 0L,
+            timeline = mixedSpeeds,
+        )
+
+        assertEquals(2_500_000L, timelineUs)
+    }
+
+    @Test
+    fun `a frame anchored in a sped-up clip lies past the anchor at that clip's speed`() {
+        // A seek to 4.2 s lands 0.4 s of media into the sped-up clip.
+        val timelineUs = frameTimelineUs(
+            presentationTimeUs = 1_300_000L,
+            anchorPresentationUs = 1_000_000L,
+            anchorTimelineUs = 4_200_000L,
+            timeline = mixedSpeeds,
+        )
+
+        assertEquals(4_350_000L, timelineUs)
+    }
+
+    @Test
+    fun `a looping timeline with clips at speeds of their own starts over after one pass of media`() {
+        assertEquals(5_500_000L, mixedSpeeds.lengthUs)
+        assertEquals(6_000_000L, mixedSpeeds.mediaLengthUs)
+
+        // 8.6 s of media is 2.6 s into the second pass: 0.6 s into the slowed clip.
+        val timelineUs = frameTimelineUs(
+            presentationTimeUs = 8_600_000L,
+            anchorPresentationUs = 0L,
+            anchorTimelineUs = 0L,
+            timeline = mixedSpeeds,
+        )
+
+        assertEquals(3_200_000L, timelineUs)
+    }
+
+    @Test
+    fun `a short window covers its frames in each clip of a timeline with speeds of their own`() {
+        // 100 ms windows in the normal-speed, the slowed and the sped-up clip.
+        val configs = listOf(
+            config(1_050_000L, 1_150_000L),
+            config(2_500_000L, 2_600_000L),
+            config(4_300_000L, 4_400_000L),
+        )
+        val frames = framesFromStart(mixedSpeeds, 150)
+
+        val covered = configs.indices.map { i -> frames.filter { effectWindowsAt(configs, it)[i] } }
+
+        assertEquals(listOf(1_066_666L, 1_100_000L, 1_133_333L), covered[0])
+        // The slowed clip shows its 30 frames a second over twice the time.
+        assertEquals(listOf(2_533_332L), covered[1])
+        // The sped-up clip shows its 30 frames a second in half the time.
+        assertEquals(
+            listOf(4_300_000L, 4_316_667L, 4_333_333L, 4_350_000L, 4_366_667L, 4_383_333L),
+            covered[2],
+        )
     }
 
     @Test
