@@ -18,6 +18,27 @@ enum ContentFilterReason {
   other,
 }
 
+/// The reasons a list can be reported for: 8 of the 11, in display order.
+///
+/// Left out on purpose:
+/// - [ContentFilterReason.underageUser] opens an age review of the reported
+///   account, which for a list would be its author, not anyone in it.
+/// - [ContentFilterReason.copyright] and [ContentFilterReason.aiGenerated]
+///   are about a video itself; a list's videos are reported one by one.
+///
+/// A list built to target someone files under
+/// [ContentFilterReason.harassment].
+const List<ContentFilterReason> listReportReasons = [
+  ContentFilterReason.spam,
+  ContentFilterReason.harassment,
+  ContentFilterReason.violence,
+  ContentFilterReason.sexualContent,
+  ContentFilterReason.falseInformation,
+  ContentFilterReason.childSafety,
+  ContentFilterReason.csam,
+  ContentFilterReason.other,
+];
+
 /// NIP-32 namespace for Divine's report labels, used as the `L` tag and as
 /// each `l` tag's third element.
 const String kReportLabelNamespace = 'social.nos.ontology';

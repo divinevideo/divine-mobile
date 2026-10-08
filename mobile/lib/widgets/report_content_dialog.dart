@@ -34,6 +34,19 @@ import 'package:openvine/widgets/support_capped_text_field.dart';
 ///   userPubkey: pubkey,
 /// );
 /// ```
+/// The kinds of list that can be reported, with their NIP-51 event kinds.
+enum ReportedListKind {
+  /// A people list: a NIP-51 follow set.
+  people(30000),
+
+  /// A video list: a NIP-51 curation set of videos.
+  videos(30005);
+
+  const ReportedListKind(this.nostrKind);
+
+  final int nostrKind;
+}
+
 class ReportContentDialog extends ConsumerWidget {
   ReportContentDialog({
     super.key,
@@ -43,6 +56,9 @@ class ReportContentDialog extends ConsumerWidget {
     this.userPubkey,
     this.moderationKindLabel = 'Content Report',
     this.moderationEventLabel = 'Event',
+    this.reasons = ContentFilterReason.values,
+    this.additionalContext,
+    this.addressableCoordinate,
     this.isFromShareMenu = false,
     this.draggableController,
     this.scrollController,
@@ -83,6 +99,17 @@ class ReportContentDialog extends ConsumerWidget {
   /// Label preceding the event id in the moderation DM body (e.g.
   /// "Event", "Message ID"). Internal-only — not user-visible.
   final String moderationEventLabel;
+
+  /// The reasons offered, in display order. Every reason by default; a list
+  /// offers [listReportReasons].
+  final List<ContentFilterReason> reasons;
+
+  /// Extra text for the report, such as a reported list's title.
+  final String? additionalContext;
+
+  /// Coordinate of a reported addressable event, such as a list, published
+  /// as an `a` tag beside the NIP-56 targets.
+  final String? addressableCoordinate;
 
   final bool isFromShareMenu;
 
@@ -175,6 +202,45 @@ class ReportContentDialog extends ConsumerWidget {
         .whenComplete(controller.dispose);
   }
 
+  /// Shows the bottom sheet for reporting someone else's video or people
+  /// list.
+  ///
+  /// [eventId] is the list's current event and [authorPubkey] its author.
+  /// The report also names the list's NIP-01 address,
+  /// `<kind>:<author>:<dTag>`, which stays the same when an edit republishes
+  /// the list under a new event id. The [title] goes into the report so a
+  /// moderator can tell which list it is.
+  static Future<void> showForList(
+    BuildContext context, {
+    required ReportedListKind kind,
+    required String eventId,
+    required String authorPubkey,
+    required String dTag,
+    required String title,
+  }) {
+    final coordinate = '${kind.nostrKind}:$authorPubkey:$dTag';
+    final controller = DraggableScrollableController();
+    return context
+        .showVideoPausingVineBottomSheet<void>(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: VineTheme.bottomSheetDismissFloor,
+          draggableController: controller,
+          buildScrollBody: (scrollController) => ReportContentDialog(
+            eventId: eventId,
+            authorPubkey: authorPubkey,
+            moderationKindLabel: 'List Report',
+            moderationEventLabel: 'List Event',
+            reasons: listReportReasons,
+            additionalContext: 'Reported list: "$title" ($coordinate)',
+            addressableCoordinate: coordinate,
+            draggableController: controller,
+            scrollController: scrollController,
+          ),
+        )
+        .whenComplete(controller.dispose);
+  }
+
   /// What this report targets, derived from the mutually exclusive
   /// constructor shapes the `show*` factories use.
   ReportTarget get _target {
@@ -188,6 +254,8 @@ class ReportContentDialog extends ConsumerWidget {
       videoUrl: video?.videoUrl,
       moderationKindLabel: moderationKindLabel,
       moderationEventLabel: moderationEventLabel,
+      additionalContext: additionalContext,
+      addressableCoordinate: addressableCoordinate,
     );
   }
 
@@ -203,6 +271,7 @@ class ReportContentDialog extends ConsumerWidget {
         target: _target,
       ),
       child: _ReportContentView(
+        reasons: reasons,
         isFromShareMenu: isFromShareMenu,
         draggableController: draggableController,
         scrollController: scrollController,
@@ -215,11 +284,13 @@ class ReportContentDialog extends ConsumerWidget {
 /// submission itself lives in [ReportSubmissionCubit].
 class _ReportContentView extends StatefulWidget {
   const _ReportContentView({
+    required this.reasons,
     required this.isFromShareMenu,
     this.draggableController,
     this.scrollController,
   });
 
+  final List<ContentFilterReason> reasons;
   final bool isFromShareMenu;
   final DraggableScrollableController? draggableController;
   final ScrollController? scrollController;
@@ -344,6 +415,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
             child: submitted
                 ? const ReportConfirmationBody()
                 : _ReportFormBody(
+                    reasons: widget.reasons,
                     selectedReason: _selectedReason,
                     onReasonSelected: _onReasonSelected,
                     detailsController: _detailsController,
@@ -471,6 +543,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
 
 class _ReportFormBody extends StatelessWidget {
   const _ReportFormBody({
+    required this.reasons,
     required this.selectedReason,
     required this.onReasonSelected,
     required this.detailsController,
@@ -482,6 +555,7 @@ class _ReportFormBody extends StatelessWidget {
     required this.onImageInserted,
   });
 
+  final List<ContentFilterReason> reasons;
   final ContentFilterReason? selectedReason;
   final ValueChanged<ContentFilterReason> onReasonSelected;
   final TextEditingController detailsController;
@@ -524,7 +598,7 @@ class _ReportFormBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...ContentFilterReason.values.map(
+        ...reasons.map(
           (reason) => Padding(
             key: reason == ContentFilterReason.other ? otherCardKey : null,
             padding: const EdgeInsets.only(bottom: 8),
