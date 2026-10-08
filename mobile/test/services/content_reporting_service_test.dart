@@ -1458,6 +1458,62 @@ void main() {
       expect(reportTags, isEmpty);
     });
 
+    test('names a reported list by its coordinate in an a tag', () async {
+      List<List<String>>? capturedTags;
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((invocation) async {
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>?;
+        final event = Event(
+          testPublicKey,
+          EventKind.report,
+          capturedTags ?? [],
+          'test',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        event.id = 'test_id';
+        event.sig = 'test_sig';
+        return event;
+      });
+      when(
+        () => mockNostrService.publishEvent(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => PublishSuccess(
+          event: Event(
+            testPublicKey,
+            EventKind.report,
+            [],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+        ),
+      );
+      // Full-length hex, never truncated.
+      final listEventId = _validEventId('7');
+      final listAuthor = 'b' * 64;
+      final coordinate = '30005:$listAuthor:faves';
+
+      final _ = await service.reportContent(
+        eventId: listEventId,
+        authorPubkey: listAuthor,
+        reason: ContentFilterReason.harassment,
+        details: 'Targets someone',
+        addressableCoordinate: coordinate,
+      );
+
+      expect(capturedTags, contains(equals(['a', coordinate])));
+      // The NIP-56 targets stay: the list's current event and its author.
+      expect(capturedTags, contains(equals(['e', listEventId, 'profanity'])));
+      expect(capturedTags, contains(equals(['p', listAuthor, 'profanity'])));
+    });
+
     test('reportUser() without related events omits e tags', () async {
       const reportedPubkey =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

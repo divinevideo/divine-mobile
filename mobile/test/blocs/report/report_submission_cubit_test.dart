@@ -89,6 +89,39 @@ void main() {
       },
     );
 
+    test('reports a list with its coordinate and title context', () async {
+      // Full-length hex, never truncated.
+      final listAuthor = 'd' * 64;
+      final coordinate = '30000:$listAuthor:crew';
+      final cubit = build(
+        reportTarget: ReportTarget(
+          eventId: 'e' * 64,
+          authorPubkey: listAuthor,
+          moderationKindLabel: 'List Report',
+          moderationEventLabel: 'List Event',
+          addressableCoordinate: coordinate,
+          additionalContext: 'Reported list: Crew',
+        ),
+      );
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+
+      verify(
+        () => service.reportContent(
+          eventId: 'e' * 64,
+          authorPubkey: listAuthor,
+          reason: ContentFilterReason.aiGenerated,
+          details: 'My report',
+          sourceRelay: any(named: 'sourceRelay'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          additionalContext: 'Reported list: Crew',
+          addressableCoordinate: coordinate,
+        ),
+      ).called(1);
+    });
+
     test(
       'coalesces rapid taps and cannot resubmit an accepted report',
       () async {
