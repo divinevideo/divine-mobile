@@ -32,7 +32,7 @@ class CuratedListRecoveryTicket {
 /// The account-session owner supplies the device-wide storage barrier.
 ///
 /// Ordinary logout preserves these scoped buckets. Explicit deletion of an
-/// account's local data removes only that account's bucket.
+/// account's local data removes its buckets and every provably owned raw copy.
 class CuratedListRecoveryJournal {
   CuratedListRecoveryJournal({
     required SharedPreferences prefs,
@@ -55,10 +55,12 @@ class CuratedListRecoveryJournal {
 
   /// Destructive local account deletion also forgets its unsaved ACK evidence.
   static void discardPendingAccepted(SharedPreferences prefs, String owner) {
-    _pendingOwners(prefs).remove(owner);
+    _pendingOwners(prefs)
+        .removeWhere((key, _) => key.toLowerCase() == owner.toLowerCase());
   }
 
-  static String storageKey(String ownerPubkey) => '$storagePrefix$ownerPubkey';
+  static String storageKey(String ownerPubkey) =>
+      '$storagePrefix${ownerPubkey.toLowerCase()}';
 
   final SharedPreferences _prefs;
   final Future<bool> Function(Future<bool> Function()) _runCurrent;
@@ -71,11 +73,9 @@ class CuratedListRecoveryJournal {
   void validateLegacy() => CuratedListRecoveryStorage.legacyRows(_prefs);
 
   bool needsRepair(String owner) =>
-      legacyNeedsRepair ||
-      CuratedListRecoveryStorage.needsRepair(
-        _prefs,
-        storageKey(owner),
-        owner,
+      CuratedListRecoveryStorage.legacyNeedsRepair(_prefs, owner: owner) ||
+      CuratedListRecoveryStorage.ownerKeys(_prefs, storagePrefix, owner).any(
+        (key) => CuratedListRecoveryStorage.needsRepair(_prefs, key, owner),
       );
 
   /// Preserves malformed bytes before reads can resume with a publication hold.
@@ -88,6 +88,12 @@ class CuratedListRecoveryJournal {
         legacyOwner: _prefs.getString('current_user_pubkey_hex'),
       );
       _generation(_prefs, owner);
+      await CuratedListRecoveryStorage.normalizeOwnerAliases(
+        _prefs,
+        storagePrefix,
+        owner,
+        records(owner),
+      );
       await CuratedListRecoveryStorage.normalize(
         _prefs,
         storageKey(owner),
@@ -123,13 +129,20 @@ class CuratedListRecoveryJournal {
   }
 
   static int _generation(SharedPreferences prefs, String owner) {
-    final key = CuratedListRecoveryStorage.generationKey(owner);
-    final value = prefs.get(key);
-    if (value == null) return 0;
-    if (value is! int || value < 0) {
-      throw const CuratedListRecoveryException();
+    var generation = 0;
+    for (final key in CuratedListRecoveryStorage.ownerKeys(
+      prefs,
+      CuratedListRecoveryStorage.generationPrefix,
+      owner,
+    )) {
+      final value = prefs.get(key);
+      if (value == null) continue;
+      if (value is! int || value < 0) {
+        throw const CuratedListRecoveryException();
+      }
+      if (value > generation) generation = value;
     }
-    return value;
+    return generation;
   }
 
   /// Runs under the cleanup barrier before deleting an owner's local data.
@@ -140,9 +153,10 @@ class CuratedListRecoveryJournal {
     final key = CuratedListRecoveryStorage.generationKey(owner);
     final next = _generation(prefs, owner) + 1;
     if (!await CuratedListRecoveryStorage.persist(
-      prefs,
-      () => prefs.setInt(key, next),
-    )) {
+          prefs,
+          () => prefs.setInt(key, next),
+        ) ||
+        !await CuratedListRecoveryStorage.verifyValue(prefs, key, next)) {
       throw const CuratedListRecoveryException();
     }
   }
@@ -154,20 +168,25 @@ class CuratedListRecoveryJournal {
     String owner,
   ) async {
     final removed = <String>[];
-    for (final key in [
-      storageKey(owner),
-      CuratedListRecoveryStorage.quarantineKey(owner),
-    ]) {
-      if (!prefs.containsKey(key)) continue;
-      if (!await CuratedListRecoveryStorage.persist(
+    for (final key in {
+      ...CuratedListRecoveryStorage.ownerKeys(prefs, storagePrefix, owner),
+      ...CuratedListRecoveryStorage.ownerKeys(
         prefs,
-        () => prefs.remove(key),
-      )) {
+        CuratedListRecoveryStorage.quarantinePrefix,
+        owner,
+      ),
+    }) {
+      if (!prefs.containsKey(key)) continue;
+      if (!await CuratedListRecoveryStorage.removeVerified(prefs, key)) {
         throw const CuratedListRecoveryException();
       }
       removed.add(key);
     }
     discardPendingAccepted(prefs, owner);
+    await CuratedListRecoveryStorage.removeOwnerFromSharedEvidence(
+      prefs,
+      owner,
+    );
     return removed;
   }
 
@@ -179,7 +198,7 @@ class CuratedListRecoveryJournal {
 
   /// Reattaches only the current owner's recovery evidence to its cache row.
   CuratedList recover(CuratedList list, String owner) {
-    if (list.pubkey != owner) return list;
+    if (list.pubkey?.toLowerCase() != owner.toLowerCase()) return list;
     final saved = record(owner, list.id);
     if (saved == null) return list;
     if (saved.permissionsRetired) {
@@ -257,7 +276,7 @@ class CuratedListRecoveryJournal {
     final run = ticket == null ? _runCurrent : _runEvidence;
     return run(() async {
       if (ticket != null &&
-          (ticket.owner != owner ||
+          (ticket.owner.toLowerCase() != owner.toLowerCase() ||
               ticket.listId != listId ||
               ticket.ownerGeneration != _generation(_prefs, owner) ||
               ticket.permissionEpoch !=
@@ -265,7 +284,8 @@ class CuratedListRecoveryJournal {
         return false;
       }
       final previous = record(owner, listId);
-      final pending = _pendingOwners(_prefs).putIfAbsent(owner, () => {});
+      final pending = _pendingOwners(_prefs)
+          .putIfAbsent(owner.toLowerCase(), () => {});
       pending[listId] = CuratedListRecoveryRecord(
         plaintextEventIds: {
           ...?pending[listId]?.plaintextEventIds,
@@ -392,14 +412,17 @@ class CuratedListRecoveryJournal {
     }
     final groups = <String, List<CuratedList>>{};
     for (final list in CuratedListRecoveryStorage.legacyRows(prefs)) {
-      final owner = list.pubkey ?? legacyOwner;
+      final rawOwner = list.pubkey ?? legacyOwner;
+      final owner = rawOwner != null && NostrHexUtils.isValidPubkey(rawOwner)
+          ? rawOwner.toLowerCase()
+          : null;
       if (deletingOwner != null && owner == deletingOwner) continue;
       if (list.pendingPlaintextEventIds.isEmpty &&
           !list.hasPendingPermissionRecovery &&
           (owner == null || _read(prefs, owner)[list.id] == null)) {
         continue;
       }
-      if (owner == null || !RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(owner)) {
+      if (owner == null) {
         throw StateError('Could not attribute curated-list recovery');
       }
       (groups[owner] ??= []).add(list);
@@ -428,7 +451,10 @@ class CuratedListRecoveryJournal {
     });
     final entries = _mergePending(prefs, owner, stored);
     for (final list in lists) {
-      if (list.pubkey != owner && list.pubkey != null) continue;
+      if (list.pubkey != null &&
+          list.pubkey!.toLowerCase() != owner.toLowerCase()) {
+        continue;
+      }
       final prior = entries[list.id];
       if (retireSuperseded &&
           prior != null &&
@@ -471,7 +497,8 @@ class CuratedListRecoveryJournal {
     final after = jsonEncode({
       for (final e in entries.entries) e.key: e.value.toJson(),
     });
-    final needsDrain = _pendingOwners(prefs)[owner]?.isNotEmpty == true;
+    final needsDrain =
+        _pendingOwners(prefs)[owner.toLowerCase()]?.isNotEmpty == true;
     final repair = CuratedListRecoveryStorage.needsRepair(
       prefs,
       storageKey(owner),
@@ -487,7 +514,7 @@ class CuratedListRecoveryJournal {
     }
     final saved =
         (!needsDrain && before == after) || await _write(prefs, owner, entries);
-    if (saved) _pendingOwners(prefs).remove(owner);
+    if (saved) discardPendingAccepted(prefs, owner);
     return saved;
   }
 
@@ -496,7 +523,8 @@ class CuratedListRecoveryJournal {
     String owner,
     Map<String, CuratedListRecoveryRecord> entries,
   ) {
-    for (final entry in (_pendingOwners(prefs)[owner] ?? {}).entries) {
+    for (final entry
+        in (_pendingOwners(prefs)[owner.toLowerCase()] ?? {}).entries) {
       final accepted = entry.value;
       final stored = entries[entry.key];
       final selected = stored != null && _preferStored(stored, accepted)
@@ -541,19 +569,48 @@ class CuratedListRecoveryJournal {
     SharedPreferences prefs,
     String owner,
   ) {
-    final read = CuratedListRecoveryStorage.read(prefs, storageKey(owner));
-    try {
-      return {
-        ...read.records,
-        ...CuratedListRecoveryStorage.preservedRecords(
-          prefs,
-          owner,
-          liveKey: storageKey(owner),
-        ),
-      };
-    } on CuratedListRecoveryException {
-      return read.records;
+    final entries = <String, CuratedListRecoveryRecord>{};
+    for (final key in CuratedListRecoveryStorage.ownerKeys(
+      prefs,
+      storagePrefix,
+      owner,
+    )) {
+      final read = CuratedListRecoveryStorage.read(prefs, key);
+      final scopedOwner = key.substring(storagePrefix.length);
+      final candidates = {...read.records};
+      try {
+        candidates.addAll(
+          CuratedListRecoveryStorage.preservedRecords(
+            prefs,
+            owner,
+            liveKey: key,
+            archiveKey:
+                '${CuratedListRecoveryStorage.quarantinePrefix}$scopedOwner',
+          ),
+        );
+      } on CuratedListRecoveryException {
+        // The malformed archive still holds this owner; readable siblings stay.
+      }
+      for (final entry in candidates.entries) {
+        final current = entries[entry.key];
+        final selected = current != null && _preferStored(current, entry.value)
+            ? current
+            : entry.value;
+        entries[entry.key] = CuratedListRecoveryRecord(
+          plaintextEventIds: {
+            ...?current?.plaintextEventIds,
+            ...entry.value.plaintextEventIds,
+          }.toList(growable: false),
+          visibility: selected.visibility,
+          acceptedEventId: selected.acceptedEventId,
+          acceptedAt: selected.acceptedAt,
+          requiresPrivateCommit: selected.requiresPrivateCommit,
+          permissionEpoch: selected.permissionEpoch,
+          permissionsRetired: selected.permissionsRetired,
+        );
+      }
     }
+    return entries;
   }
 
   static Future<bool> _write(
@@ -562,6 +619,12 @@ class CuratedListRecoveryJournal {
     Map<String, CuratedListRecoveryRecord> entries, {
     bool verify = false,
   }) async {
+    await CuratedListRecoveryStorage.normalizeOwnerAliases(
+      prefs,
+      storagePrefix,
+      owner,
+      entries,
+    );
     final json = {
       for (final entry in entries.entries)
         if (!entry.value.isEmpty) entry.key: entry.value.toJson(),
@@ -596,7 +659,7 @@ class CuratedListRecoveryJournal {
       await prefs.reload();
       saved = !prefs.containsKey(storageKey(owner));
     }
-    if (saved) _pendingOwners(prefs).remove(owner);
+    if (saved) discardPendingAccepted(prefs, owner);
     return saved;
   }
 }
