@@ -436,4 +436,135 @@ void main() {
     expect(cubit.state.needsSync, isFalse);
     expect(cubit.state.name, 'Unsaved name');
   });
+
+  test('a privacy draft survives matching intermediate saved visibility', () {
+    final service = _Service();
+    final saved = list();
+    var current = saved;
+    when(() => service.getListById(saved.authorScopedId))
+        .thenAnswer((_) => current);
+    final cubit = editor(service, saved);
+    addTearDown(cubit.close);
+    cubit.visibilityChanged(isPublic: false);
+    current = list(isPublic: false);
+    cubit.refreshRecoveryReadOnly();
+    expect(cubit.state.isPublic, isFalse);
+    expect(cubit.state.visibilityWillChange, isFalse);
+    current = list();
+
+    cubit.refreshRecoveryReadOnly();
+
+    expect(cubit.state.isPublic, isFalse);
+    expect(cubit.state.wasPublic, isTrue);
+    expect(cubit.state.visibilityWillChange, isTrue);
+    verifyNever(() => service.updateList(listId: any(named: 'listId')));
+  });
+
+  test('a collaborator draft survives matching intermediate saved choices', () {
+    final service = _Service();
+    final saved = list(collaborators: [bob]);
+    var current = saved;
+    when(() => service.getListById(saved.authorScopedId))
+        .thenAnswer((_) => current);
+    final cubit = editor(service, saved);
+    addTearDown(cubit.close);
+    cubit.collaboratorsPicked(offered: {bob, carol}, picked: {carol});
+    current = list(collaborators: [carol]);
+    cubit.refreshRecoveryReadOnly();
+    expect(cubit.state.collaboratorPubkeys, [carol]);
+    current = list(collaborators: [bob]);
+
+    cubit.refreshRecoveryReadOnly();
+
+    expect(cubit.state.collaboratorPubkeys, [carol]);
+    verifyNever(() => service.updateList(listId: any(named: 'listId')));
+  });
+
+  test('an explicit return to the opening privacy choice remains a draft', () {
+    final service = _Service();
+    final saved = list();
+    var current = saved;
+    when(() => service.getListById(saved.authorScopedId))
+        .thenAnswer((_) => current);
+    final cubit = editor(service, saved);
+    addTearDown(cubit.close);
+    cubit
+      ..visibilityChanged(isPublic: false)
+      ..visibilityChanged(isPublic: true);
+    current = list(isPublic: false);
+
+    cubit.refreshRecoveryReadOnly();
+
+    expect(cubit.state.isPublic, isTrue);
+    expect(cubit.state.wasPublic, isFalse);
+    expect(cubit.state.visibilityWillChange, isTrue);
+  });
+
+  test(
+    'explicitly keeping the opening collaborator choice survives later saves',
+    () {
+      final service = _Service();
+      final saved = list(collaborators: [bob]);
+      var current = saved;
+      when(() => service.getListById(saved.authorScopedId))
+          .thenAnswer((_) => current);
+      final cubit = editor(service, saved);
+      addTearDown(cubit.close);
+      cubit.collaboratorsPicked(offered: {bob, carol}, picked: {bob});
+      current = list(collaborators: [carol]);
+
+      cubit.refreshRecoveryReadOnly();
+
+      expect(cubit.state.collaboratorPubkeys, [bob]);
+    },
+  );
+
+  for (final accepted in [false, true]) {
+    test(
+      accepted
+          ? 'an accepted Save consumes explicit permission draft intent'
+          : 'a rejected Save preserves explicit permission draft intent',
+      () async {
+        final service = _Service();
+        final saved = list(collaborators: [bob]);
+        var current = saved;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(
+          () => service.updateList(
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+            onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          ),
+        ).thenAnswer((_) async {
+          if (accepted) current = list(isPublic: false, pending: false);
+          return accepted;
+        });
+        final cubit = editor(service, saved);
+        addTearDown(cubit.close);
+        cubit
+          ..visibilityChanged(isPublic: false)
+          ..collaboratorsPicked(offered: {bob, carol}, picked: {carol});
+        await cubit.submitted();
+        expect(
+          cubit.state.status,
+          accepted
+              ? CuratedListInfoStatus.saved
+              : CuratedListInfoStatus.failure,
+        );
+        current = list(isPublic: false);
+        cubit.refreshRecoveryReadOnly();
+        current = saved;
+
+        cubit.refreshRecoveryReadOnly();
+
+        expect(cubit.state.isPublic, accepted);
+        expect(cubit.state.collaboratorPubkeys, accepted ? [bob] : [carol]);
+      },
+    );
+  }
 }
