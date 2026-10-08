@@ -56,9 +56,26 @@ Future<void> _open(
   required double scale,
   Size surface = const Size(390, 844),
 }) async {
-  tester.view.physicalSize = surface;
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
+  final devicePixelRatio = tester.view.devicePixelRatio;
+  final padding = EdgeInsets.fromViewPadding(
+    tester.view.padding,
+    devicePixelRatio,
+  );
+  final viewPadding = EdgeInsets.fromViewPadding(
+    tester.view.viewPadding,
+    devicePixelRatio,
+  );
+  final viewInsets = EdgeInsets.fromViewPadding(
+    tester.view.viewInsets,
+    devicePixelRatio,
+  );
+  // Keep native physical insets and the logical test surface in the same scale.
+  tester.view.physicalSize = surface * devicePixelRatio;
+  await tester.binding.setSurfaceSize(surface);
+  addTearDown(() async {
+    tester.view.reset();
+    await tester.binding.setSurfaceSize(null);
+  });
   final video = VideoEvent(
     id: _videoId,
     pubkey: _owner,
@@ -98,6 +115,11 @@ Future<void> _open(
       ),
     ),
   );
+  final mediaQuery = MediaQuery.of(tester.element(find.text(_openLabel)));
+  expect(mediaQuery.size, surface);
+  expect(mediaQuery.padding, padding);
+  expect(mediaQuery.viewPadding, viewPadding);
+  expect(mediaQuery.viewInsets, viewInsets);
   await tester.tap(find.text(_openLabel));
   await tester.pumpAndSettle();
   expect(find.byType(SelectListSheetBody), findsOneWidget);
@@ -116,12 +138,13 @@ Future<void> _reach(WidgetTester tester, Finder target) async {
   );
   expect(scrollable, findsOneWidget);
   expect(tester.getSize(_rows()).height, greaterThan(0));
-  await tester.scrollUntilVisible(
-    target,
-    60,
-    scrollable: scrollable,
-    maxScrolls: 30,
-  );
+  // Cached rows can exist offscreen. Real drags also expand the picker.
+  var drags = 0;
+  while (target.hitTestable().evaluate().isEmpty && drags < 30) {
+    await tester.drag(scrollable, const Offset(0, -60));
+    await tester.pumpAndSettle();
+    drags++;
+  }
   await tester.pumpAndSettle();
   expect(target.hitTestable(), findsOneWidget);
   expect(tester.getSize(target).width, greaterThan(0));
