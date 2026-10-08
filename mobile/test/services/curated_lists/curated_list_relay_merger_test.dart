@@ -55,6 +55,7 @@ void main() {
 
     test('failed unseal preserves cached private items', () {
       final original = lists.single;
+      expect(original.videoEventIds, [localVideo]);
       merger.merge(
         relayEvent(),
         const UnsealedItemTags.failed(),
