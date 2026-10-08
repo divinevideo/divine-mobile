@@ -42,13 +42,14 @@ NostrClient.queryUsers                      mobile/packages/nostr_client/
 
 ## Matching and profile revisions
 
-Progressive people search matches visible identity: name, display name, NIP-05,
-and the whole public key (including a decoded npub query). Bio-only matches from
+The app uses progressive people search with server sorting (`sortBy` is set).
+That path matches visible identity: name, display name, NIP-05, and the whole
+public key (including a decoded npub query). Bio-only matches from
 REST or NIP-50 are excluded even when they are the only server results. This
 keeps broader server search from filling people results with accounts whose
 visible identity does not match. Other callers of `SearchUtils.matchProfile`
-can still use that helper's broader bio matching; it is not the progressive
-people-search contract.
+can still use that helper's broader bio matching. Callers without `sortBy`
+retain their configured filter, or the display-name fallback when none is set.
 
 Reconcile each REST profile before matching. A cached profile wins only with a
 canonical event ID and an event timestamp strictly newer than the server's
