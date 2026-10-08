@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -38,6 +39,7 @@ void main() {
   late _MockConversationsDao conversationsDao;
   late StreamController<Map<String, RelayConnectionStatus>> relayStatus;
   late DmSyncState syncState;
+  late DebugPrintCallback originalDebugPrint;
 
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
@@ -45,6 +47,9 @@ void main() {
   });
 
   setUp(() async {
+    originalDebugPrint = debugPrint;
+    // Keep diagnostic logging from arming a throttle timer inside FakeAsync.
+    debugPrint = debugPrintSynchronously;
     SharedPreferences.setMockInitialValues({
       'dm.oldestSyncedAt.$_pubkey': 100,
       'dm.historyDrainVersion.$_pubkey': DmSyncState.currentDrainVersion,
@@ -88,6 +93,7 @@ void main() {
   });
 
   tearDown(() async {
+    debugPrint = originalDebugPrint;
     await relayStatus.close();
   });
 
@@ -1056,6 +1062,20 @@ void main() {
 
         unawaited(repository.stopListening());
         async.flushMicrotasks();
+      });
+    });
+  });
+
+  group('diagnostic logging', () {
+    test('console output leaves no throttle timer pending in fake time', () {
+      fakeAsync((async) {
+        // Well past the console throttle's per-second byte budget, which is
+        // what arms the timer the retry assertions would otherwise trip on.
+        for (var i = 0; i < 100; i++) {
+          Log.info('x' * 200, name: 'DmRefusalConfirmationBudgetTest');
+        }
+
+        expect(async.pendingTimers, isEmpty);
       });
     });
   });
