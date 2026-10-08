@@ -67,60 +67,127 @@ void main() {
     );
   }
 
-  for (final label in ['ownerPubkey', 'authorPubkey']) {
-    test('null primary $label conflict is held before normalization', () async {
-      final raw = await load(label: label);
-      expect(journal.needsRepair(_alice), isTrue);
-      expect(journal.needsRepair(_bob), isTrue);
-      expect(prefs.getString('curated_lists'), raw);
-    });
+  group('prepare ambiguous owner labels', () {
+    for (final label in ['ownerPubkey', 'authorPubkey']) {
+      test(
+        'null primary $label conflict is held before normalization',
+        () async {
+          final raw = await load(label: label);
+          expect(journal.needsRepair(_alice), isTrue);
+          expect(journal.needsRepair(_bob), isTrue);
+          expect(prefs.getString('curated_lists'), raw);
+        },
+      );
 
-    test(
-      'null primary $label conflict remains raw after preparation',
-      () async {
-        final raw = await load(label: label);
-        await journal.prepare(_alice);
-        expect(journal.record(_alice, 'legacy-private'), isNull);
-        expect(journal.record(_bob, 'legacy-private'), isNull);
-        expect(journal.needsRepair(_alice), isTrue);
-        expect(journal.needsRepair(_bob), isTrue);
-        final archive = jsonDecode(
-          prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
-        ) as Map;
-        expect(archive['rawBuckets'], contains(raw));
-        expect(archive['originalLiveValue'], raw);
-      },
-    );
-
-    test(
-      'null primary $label conflict cannot migrate to the marker owner',
-      () async {
-        final raw = await load(label: label);
-        final sessions = CuratedListSessionCoordinator.forPreferences(prefs);
-        await sessions.writes.runExclusive(
-          () => CuratedListRecoveryJournal.migrateEmbeddedRecords(
-            prefs,
-            legacyOwner: _alice,
-          ),
-        );
-        expect(journal.record(_alice, 'legacy-private'), isNull);
-        expect(journal.record(_bob, 'legacy-private'), isNull);
-        expect(journal.needsRepair(_alice), isTrue);
-        expect(journal.needsRepair(_bob), isTrue);
-        expect(
-          (jsonDecode(
+      test(
+        'null primary $label conflict remains raw after preparation',
+        () async {
+          final raw = await load(label: label);
+          await journal.prepare(_alice);
+          expect(journal.record(_alice, 'legacy-private'), isNull);
+          expect(journal.record(_bob, 'legacy-private'), isNull);
+          expect(journal.needsRepair(_alice), isTrue);
+          expect(journal.needsRepair(_bob), isTrue);
+          final archive = jsonDecode(
             prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
-          ) as Map)['rawBuckets'],
-          contains(raw),
+          ) as Map;
+          expect(archive['rawBuckets'], contains(raw));
+          expect(archive['originalLiveValue'], raw);
+        },
+      );
+
+      test(
+        'null primary $label conflict cannot migrate to the marker owner',
+        () async {
+          final raw = await load(label: label);
+          final sessions = CuratedListSessionCoordinator.forPreferences(prefs);
+          await sessions.writes.runExclusive(
+            () => CuratedListRecoveryJournal.migrateEmbeddedRecords(
+              prefs,
+              legacyOwner: _alice,
+            ),
+          );
+          expect(journal.record(_alice, 'legacy-private'), isNull);
+          expect(journal.record(_bob, 'legacy-private'), isNull);
+          expect(journal.needsRepair(_alice), isTrue);
+          expect(journal.needsRepair(_bob), isTrue);
+          expect(
+            (jsonDecode(
+              prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
+            ) as Map)['rawBuckets'],
+            contains(raw),
+          );
+        },
+      );
+
+      test(
+        'null primary $label conflict cannot be erased as marker-owned data',
+        () async {
+          final raw = await load(label: label);
+          await journal.prepare(_alice);
+          await expectLater(
+            UserDataCleanupService(prefs).deleteAccountData(
+              _alice,
+              userNpub: 'synthetic-alice-npub',
+              preserveActiveSession: true,
+            ),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          await restart();
+          final archive = jsonDecode(
+            prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
+          ) as Map;
+          expect(archive['rawBuckets'], contains(raw));
+          expect(archive['originalLiveValue'], raw);
+          expect(PendingAccountCleanup.read(prefs)?.userPubkey, _alice);
+          expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
+          expect(journal.needsRepair(_bob), isTrue);
+        },
+      );
+    }
+  });
+
+  group('prepare legacy marker compatibility', () {
+    test(
+      'unlabelled readable legacy row keeps accepted marker compatibility',
+      () async {
+        await load();
+        await journal.prepare(_alice);
+        expect(journal.needsRepair(_alice), isFalse);
+        expect(journal.record(_alice, 'legacy-private')?.plaintextEventIds, [
+          _pending,
+        ]);
+        expect(
+          prefs.containsKey(CuratedListRecoveryStorage.sharedQuarantineKey),
+          isFalse,
         );
       },
     );
+  });
 
+  group('deleteAccountData missing provenance', () {
     test(
-      'null primary $label conflict cannot be erased as marker-owned data',
+      'missing-provenance archive keeps deletion explicitly incomplete',
       () async {
-        final raw = await load(label: label);
-        await journal.prepare(_alice);
+        await load();
+        await prefs.setString('curated_lists', '[]');
+        final raw = jsonEncode({
+          'version': 2,
+          'rawBuckets': <String>[],
+          'recordBackups': <String>[],
+          'records': <String, dynamic>{},
+          'originalLiveValue': null,
+          'normalized': true,
+          'needsRepair': true,
+          'ownerWide': true,
+          'unresolvedCoordinates': <String>[],
+        });
+        await prefs.setString(
+          CuratedListRecoveryStorage.sharedQuarantineKey,
+          raw,
+        );
+        expect(journal.needsRepair(_alice), isTrue);
+        expect(journal.needsRepair(_bob), isTrue);
         await expectLater(
           UserDataCleanupService(prefs).deleteAccountData(
             _alice,
@@ -130,72 +197,14 @@ void main() {
           throwsA(isA<CuratedListRecoveryException>()),
         );
         await restart();
-        final archive = jsonDecode(
-          prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
-        ) as Map;
-        expect(archive['rawBuckets'], contains(raw));
-        expect(archive['originalLiveValue'], raw);
+        expect(
+          prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey),
+          raw,
+        );
         expect(PendingAccountCleanup.read(prefs)?.userPubkey, _alice);
         expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
         expect(journal.needsRepair(_bob), isTrue);
       },
     );
-  }
-
-  test(
-    'unlabelled readable legacy row keeps accepted marker compatibility',
-    () async {
-      await load();
-      await journal.prepare(_alice);
-      expect(journal.needsRepair(_alice), isFalse);
-      expect(journal.record(_alice, 'legacy-private')?.plaintextEventIds, [
-        _pending,
-      ]);
-      expect(
-        prefs.containsKey(CuratedListRecoveryStorage.sharedQuarantineKey),
-        isFalse,
-      );
-    },
-  );
-
-  test(
-    'missing-provenance archive keeps deletion explicitly incomplete',
-    () async {
-      await load();
-      await prefs.setString('curated_lists', '[]');
-      final raw = jsonEncode({
-        'version': 2,
-        'rawBuckets': <String>[],
-        'recordBackups': <String>[],
-        'records': <String, dynamic>{},
-        'originalLiveValue': null,
-        'normalized': true,
-        'needsRepair': true,
-        'ownerWide': true,
-        'unresolvedCoordinates': <String>[],
-      });
-      await prefs.setString(
-        CuratedListRecoveryStorage.sharedQuarantineKey,
-        raw,
-      );
-      expect(journal.needsRepair(_alice), isTrue);
-      expect(journal.needsRepair(_bob), isTrue);
-      await expectLater(
-        UserDataCleanupService(prefs).deleteAccountData(
-          _alice,
-          userNpub: 'synthetic-alice-npub',
-          preserveActiveSession: true,
-        ),
-        throwsA(isA<CuratedListRecoveryException>()),
-      );
-      await restart();
-      expect(
-        prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey),
-        raw,
-      );
-      expect(PendingAccountCleanup.read(prefs)?.userPubkey, _alice);
-      expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
-      expect(journal.needsRepair(_bob), isTrue);
-    },
-  );
+  });
 }
