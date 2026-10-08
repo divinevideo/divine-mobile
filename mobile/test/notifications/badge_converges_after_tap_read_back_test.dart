@@ -135,9 +135,12 @@ void main() {
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
         addTearDown(badge.close);
+        final badgeCounts = <int>[];
+        final subscription = badge.stream.listen(badgeCounts.add);
+        addTearDown(subscription.cancel);
 
         // Wait for the initial snapshot to flow into both consumers.
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(badge.state, equals(3));
         expect(bloc.state.notifications, hasLength(3));
         expect(
@@ -146,7 +149,7 @@ void main() {
         );
 
         bloc.add(const NotificationFeedItemTapped('n1'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(
           repository.markedReadCalls,
@@ -159,6 +162,7 @@ void main() {
           bloc.state.notifications.where((n) => !n.isRead).length,
           equals(2),
         );
+        expect(badgeCounts, [3, 2]);
         // Row identity is preserved — same id, just flagged read.
         expect(
           bloc.state.notifications.singleWhere((n) => n.id == 'n1').isRead,
@@ -180,14 +184,18 @@ void main() {
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
         addTearDown(badge.close);
+        final badgeCounts = <int>[];
+        final subscription = badge.stream.listen(badgeCounts.add);
+        addTearDown(subscription.cancel);
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(badge.state, equals(2));
 
         bloc.add(const NotificationFeedItemTapped('n2'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(badge.state, equals(2));
+        expect(badgeCounts, [2]);
         expect(
           repository.markedReadCalls,
           equals([
@@ -207,18 +215,24 @@ void main() {
       addTearDown(bloc.close);
       final badge = NotificationBadgeCubit(repository: repository);
       addTearDown(badge.close);
+      final badgeCounts = <int>[];
+      final subscription = badge.stream.listen(badgeCounts.add);
+      addTearDown(subscription.cancel);
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(badge.state, equals(3));
 
       bloc.add(const NotificationFeedItemTapped('n1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
+      expect(badgeCounts, [3, 2]);
       bloc.add(const NotificationFeedItemTapped('n2'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
+      expect(badgeCounts, [3, 2, 1]);
       bloc.add(const NotificationFeedItemTapped('n3'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(badge.state, equals(0));
+      expect(badgeCounts, [3, 2, 1, 0]);
       expect(
         repository.markedReadCalls,
         equals([
