@@ -777,6 +777,7 @@ DmRepository dmRepository(Ref ref) {
     pendingGiftWrapsDao: db.pendingGiftWrapsDao,
     processedGiftWrapsDao: db.processedGiftWrapsDao,
     removedConversationsDao: db.removedConversationsDao,
+    removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),
     reactionsRepository: reactionsRepository,
     // Identity is sufficient to scope local storage. Signing, publishing, and

@@ -811,6 +811,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'removedConversations',
             () => db.removedConversationsDao.clearAllForUser(userPubkey),
           );
+          await requiredCleanup(
+            'removedMessageIds',
+            () => db.removedMessageIdsDao.clearAllForUser(userPubkey),
+          );
         }
         // Reaction rows keep decrypted rumor payloads (rumor_event_json). Most
         // are re-fetchable DM data and should be wiped with direct_messages,

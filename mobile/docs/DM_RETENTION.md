@@ -14,6 +14,7 @@ Trust & Safety; see [The open decision](#the-open-decision).
 |---|---|---|---|
 | `direct_messages`, `conversations` (Drift) | the device | decrypted rumors | until the user removes the thread, or the account is switched or signed out |
 | `removed_conversations` (Drift) | the device | tombstones | the account's lifetime; cleared only on a full data delete |
+| `removed_message_ids` (Drift) | the device | ids of messages and reactions removed with a conversation | the account's lifetime; cleared only on a full data delete |
 | `processed_gift_wraps` (Drift) | the device | wrap-id dedup ledger | unbounded — see [Client tables](#client-tables) |
 | relay (`kind:1059` gift wraps) | funnelcake | the encrypted wraps | at the relay's discretion; **destroyed on a NIP-62 vanish** |
 | `dm_log` (D1, `divine-moderation-service`) | Divine | a plaintext copy of every moderation DM | indefinite — nothing deletes it |
@@ -58,6 +59,7 @@ Every DM table on the device, and what bounds it. Only one is bounded by code.
 | `direct_messages` | no | user removal or account teardown only. A NIP-09 "delete for everyone" is a **soft** delete: the row and its content stay so gift-wrap dedup keeps working |
 | `conversations` | no | same |
 | `removed_conversations` | no | deliberately. The tombstone must outlive relay replay, so it is kept for the account's lifetime and cleared only when the user deletes their data |
+| `removed_message_ids` | no | deliberately. A rumor id is exact evidence that a message is gone for good, so a later NIP-09 retraction naming it can be settled and a replay of it is not stored again. Kept for the account's lifetime and cleared only when the user deletes their data. Ids and a timestamp only, no content |
 | `outgoing_dms` | partly | deleted on successful send or user cancel; a permanently failed row is marked `failed` and kept for manual retry |
 | `dm_message_reactions` | no | removed with their conversation; NIP-09 and own-supersede are soft deletes |
 | `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass |

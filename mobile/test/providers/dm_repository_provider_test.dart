@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -219,6 +220,53 @@ void main() {
         ),
         isFalse,
         reason: 'an ordinary peer stays removable',
+      );
+    });
+
+    // #8179: the repository records the ids of a removed conversation only
+    // when it is handed the DAO, and it defaults to none. A forgotten
+    // injection here leaves every unit test green while the fix does nothing
+    // in the app.
+    test('injects the DAO that records removed message ids', () async {
+      const conversationId = 'removable-conversation';
+      const messageId =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      await database.conversationsDao.upsertConversation(
+        id: conversationId,
+        participantPubkeys: '["$testPubkey","$_ordinaryPeerPubkey"]',
+        isGroup: false,
+        createdAt: 1,
+        ownerPubkey: testPubkey,
+      );
+      final inserted = await database.directMessagesDao.insertMessage(
+        id: messageId,
+        conversationId: conversationId,
+        senderPubkey: _ordinaryPeerPubkey,
+        content: 'removed with its conversation',
+        createdAt: 1,
+        giftWrapId: 'wrap-removable',
+        ownerPubkey: testPubkey,
+      );
+      expect(inserted, isTrue, reason: 'the fixture row must really exist');
+      final container = createContainer(
+        readiness: const NostrSessionReadiness.identityKnown(
+          pubkey: testPubkey,
+        ),
+      );
+      addTearDown(container.dispose);
+      final repository = container.read(dmRepositoryProvider);
+
+      expect(
+        await repository.removeConversation(conversationId),
+        ConversationRemovalOutcome.removed,
+      );
+
+      expect(
+        await database.removedMessageIdsDao.contains(
+          rumorId: messageId,
+          ownerPubkey: testPubkey,
+        ),
+        isTrue,
       );
     });
 
