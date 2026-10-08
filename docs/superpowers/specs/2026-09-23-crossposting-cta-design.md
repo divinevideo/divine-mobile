@@ -267,3 +267,23 @@ Ship behind the existing feature surfaces; no new flag is required because the
 feature already ships. If a kill switch is wanted, gate the benefit card and the
 share-menu row on a `FeatureFlag` entry, consistent with the Bluesky publishing
 toggle in `general_settings_screen.dart`.
+
+## Addendum (2026-10-09): crossposting on the post-publish confirmation
+
+The owner decided to offer crossposting on the post-publish confirmation after
+all. The Share button and its OS share sheet are untouched; the crossposting
+prompt is a separate, recessive card below View and Share:
+
+- A platform connected in manual mode: suggest crossposting this video, opening
+  the existing crosspost sheet for the just-published event.
+- Nothing connected: a setup call to action, routed through
+  `openCrosspostingSetup` (native settings or the web fallback).
+- A lapsed connection: a reconnect prompt, through the same routing.
+- Automatic mode: a one-line note, no call to action.
+- Ineligible, or a signer that can prompt per signature (Amber, NIP-46 bunker,
+  NIP-07): nothing, and crossposting state is never loaded.
+
+Its events are `crosspost_cta_shown` / `crosspost_cta_tapped` with
+`surface: post_publish`, never `post_publish_*_tapped`. The confirmation only
+exists on the `viewShare` arm, so the card adds an option to that arm alone;
+read the arm's View/Share tap rates with that in mind.

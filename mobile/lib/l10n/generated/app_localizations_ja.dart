@@ -4249,6 +4249,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '公開したばかりの動画のサムネイル';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'このループを$platformsにも送りますか？';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '一度の投稿で$platformにも届けよう。';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platformsに自動で投稿されます。';
+  }
+
+  @override
   String get userSearchNoResults => 'ユーザーが見つからない';
 
   @override

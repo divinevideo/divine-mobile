@@ -2930,6 +2930,33 @@
   "@postPublishConfirmationThumbnailLabel": {
     "description": "Screen reader label for the preview image on the post-publish confirmation."
   },
+  "postPublishCrosspostSuggest": "Send this loop to {platforms} too?",
+  "@postPublishCrosspostSuggest": {
+    "description": "Shown on the post-publish confirmation when the creator has a platform connected in manual crossposting mode. {platforms} is a comma-separated list of platform brand names, such as Instagram.",
+    "placeholders": {
+      "platforms": {
+        "type": "String"
+      }
+    }
+  },
+  "postPublishCrosspostSetUp": "Post once, show up on {platform} too.",
+  "@postPublishCrosspostSetUp": {
+    "description": "Shown on the post-publish confirmation when crossposting is not set up yet. {platform} is a platform brand name, such as Instagram.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "postPublishCrosspostAutomatic": "Heading to {platforms} automatically.",
+  "@postPublishCrosspostAutomatic": {
+    "description": "Shown on the post-publish confirmation when every connected platform crossposts automatically. {platforms} is a comma-separated list of platform brand names.",
+    "placeholders": {
+      "platforms": {
+        "type": "String"
+      }
+    }
+  },
   "userSearchNoResults": "No users found",
   "userPickerFilterByNameHint": "Filter by name...",
   "userPickerSearchByNameHint": "Search by name...",

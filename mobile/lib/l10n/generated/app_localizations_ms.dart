@@ -4518,6 +4518,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Lakaran kecil video yang baru anda terbitkan';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Hantar loop ini ke $platforms juga?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Siar sekali, muncul juga di $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Sedang ke $platforms secara automatik.';
+  }
+
+  @override
   String get userSearchNoResults => 'Tiada pengguna ditemui';
 
   @override

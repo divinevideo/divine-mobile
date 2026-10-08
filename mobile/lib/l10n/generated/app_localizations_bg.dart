@@ -4574,6 +4574,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Миниатюра на видеото, което току-що публикува';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Да пратим ли този лууп и в $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Публикувай веднъж, появи се и в $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Отива в $platforms автоматично.';
+  }
+
+  @override
   String get userSearchNoResults => 'Няма намерени потребители';
 
   @override

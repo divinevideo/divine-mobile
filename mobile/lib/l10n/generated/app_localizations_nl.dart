@@ -4541,6 +4541,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'Miniatuur van de video die je zojuist hebt gepubliceerd';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Deze loop ook naar $platforms sturen?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Eén keer posten, ook verschijnen op $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Gaat automatisch naar $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Geen gebruikers gevonden';
 
   @override

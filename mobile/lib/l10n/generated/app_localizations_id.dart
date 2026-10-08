@@ -4450,6 +4450,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Thumbnail video yang baru saja kamu publikasikan';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Kirim loop ini ke $platforms juga?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Posting sekali, muncul juga di $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Otomatis menuju $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Tidak ada pengguna ditemukan';
 
   @override

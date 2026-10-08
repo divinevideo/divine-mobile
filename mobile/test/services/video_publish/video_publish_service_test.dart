@@ -492,6 +492,64 @@ void main() {
         );
       });
 
+      test('reports the confirmed event id on success', () async {
+        // The post-publish crosspost suggestion addresses the exact event,
+        // which the publisher records on the upload once relays confirm it.
+        final eventId = 'e' * 64;
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+        var published = false;
+        when(
+          () => mockVideoEventPublisher.publishVideoEvent(
+            upload: any(named: 'upload'),
+            title: any(named: 'title'),
+            description: any(named: 'description'),
+            hashtags: any(named: 'hashtags'),
+            expirationTimestamp: any(named: 'expirationTimestamp'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            mentionedPubkeys: any(named: 'mentionedPubkeys'),
+            inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+            inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+            inspiredByNpubs: any(named: 'inspiredByNpubs'),
+            clipSourceCredits: any(named: 'clipSourceCredits'),
+            selectedAudio: any(named: 'selectedAudio'),
+            audioShareAttribution: any(named: 'audioShareAttribution'),
+            selectedAudioEventId: any(named: 'selectedAudioEventId'),
+            selectedAudioRelay: any(named: 'selectedAudioRelay'),
+            language: any(named: 'language'),
+            contentWarning: any(named: 'contentWarning'),
+            thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            replyContext: any(named: 'replyContext'),
+            addReplyToFeed: any(named: 'addReplyToFeed'),
+            textTrackRefs: any(named: 'textTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            onEventSigned: any(named: 'onEventSigned'),
+            onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+          ),
+        ).thenAnswer((_) async {
+          published = true;
+          return true;
+        });
+        final upload = _createPendingUpload(
+          status: UploadStatus.readyToPublish,
+        );
+        when(() => mockUploadManager.getUpload(any())).thenAnswer(
+          (_) => published ? upload.copyWith(nostrEventId: eventId) : upload,
+        );
+
+        final result = await service.publishVideo(draft: _createTestDraft());
+
+        expect(
+          result,
+          isA<PublishSuccess>().having((r) => r.eventId, 'eventId', eventId),
+        );
+      });
+
       test('reports no d tag when the upload carried an empty one', () async {
         // An empty videoId is as unusable as a missing one — it would route
         // to `/video/` and share `divine.video/video/`. Reporting it as null

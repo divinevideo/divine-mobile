@@ -790,6 +790,11 @@ const _knownUntranslatedDebt = <String>{
   'crosspostingAutoTitle',
   'crosspostingAutoBody',
   'crosspostingAutoEnable',
+  // Post-publish crossposting prompt, deferred for Amharic and Telugu for the
+  // same speaker pass as the crossposting CTA copy above.
+  'postPublishCrosspostSuggest',
+  'postPublishCrosspostSetUp',
+  'postPublishCrosspostAutomatic',
 };
 
 const _profileBadgeSheetKeys = <String>{

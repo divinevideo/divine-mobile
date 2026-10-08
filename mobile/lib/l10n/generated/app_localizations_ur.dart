@@ -4536,6 +4536,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس ویڈیو کا تھمب نیل جو آپ نے ابھی شائع کی';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'کیا یہ لوپ $platforms پر بھی بھیجیں؟';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'ایک بار پوسٹ کریں، $platform پر بھی نظر آئیں۔';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'خودکار طور پر $platforms پر جا رہا ہے۔';
+  }
+
+  @override
   String get userSearchNoResults => 'کوئی صارف نہیں ملا';
 
   @override

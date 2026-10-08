@@ -17,6 +17,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
     required this.onView,
     required this.onShare,
     this.thumbnailBytes,
+    this.crosspostSection,
     super.key,
   });
 
@@ -31,6 +32,10 @@ class PostPublishConfirmationSheet extends StatelessWidget {
   final VoidCallback onView;
   final VoidCallback onShare;
 
+  /// Optional crossposting prompt rendered below View and Share, so it never
+  /// displaces or restyles the buttons the post-publish experiment measures.
+  final Widget? crosspostSection;
+
   /// Shows the confirmation over [context]'s navigator.
   ///
   /// [onView] and [onShare] pop the sheet and then fire. `Navigator.pop` only
@@ -42,6 +47,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
     required VoidCallback onView,
     required VoidCallback onShare,
     Uint8List? thumbnailBytes,
+    Widget? crosspostSection,
   }) {
     final navigator = Navigator.of(context);
     return VineBottomSheet.show<void>(
@@ -62,6 +68,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
       ),
       body: PostPublishConfirmationSheet(
         thumbnailBytes: thumbnailBytes,
+        crosspostSection: crosspostSection,
         onView: () {
           navigator.pop();
           onView();
@@ -112,6 +119,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
               ),
             ],
           ),
+          ?crosspostSection,
         ],
       ),
     );

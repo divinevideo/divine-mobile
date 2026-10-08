@@ -20,18 +20,23 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
+import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 // ---------------------------------------------------------------------------
 // Test doubles
@@ -59,6 +64,12 @@ class _FakeDraft extends Fake implements DivineVideoDraft {
 }
 
 class _MockGoRouter extends Mock implements GoRouter {}
+
+class _MockCrosspostingRepository extends Mock
+    implements CrosspostingRepository {}
+
+class _MockCrosspostingApiClient extends Mock
+    implements CrosspostingApiClient {}
 
 class _MockRouteInformationProvider extends Mock
     implements GoRouteInformationProvider {}
@@ -116,6 +127,7 @@ Widget _buildHarness({
   bool wireRootNavigatorKey = true,
   PostPublishExperiment? experiment,
   GoRouter? router,
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderScope(
     overrides: [
@@ -123,6 +135,7 @@ Widget _buildHarness({
       if (experiment != null)
         postPublishExperimentProvider.overrideWithValue(experiment),
       if (router != null) goRouterProvider.overrideWithValue(router),
+      ...extraOverrides,
     ],
     child: BlocProvider<BackgroundPublishBloc>.value(
       value: publishBloc,
@@ -199,12 +212,14 @@ BackgroundPublishState _succeededState(
   String id, {
   String? secondId,
   String? stableId = _publishedStableId,
+  String? eventId,
   Uint8List? thumbnailBytes,
 }) => BackgroundPublishState(
   recentlyPublished: [
     PublishedVideo(
       draftId: id,
       stableId: stableId,
+      eventId: eventId,
       thumbnailBytes: thumbnailBytes,
     ),
     if (secondId != null)
@@ -213,6 +228,17 @@ BackgroundPublishState _succeededState(
 );
 
 const _publishedStableId = 'published-d-tag';
+
+final AppLocalizations _l10nEn = lookupAppLocalizations(const Locale('en'));
+
+const _publishedEventId =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+const _instagramConnected = CrosspostingConnection(
+  id: 'conn-instagram',
+  platform: CrosspostingPlatform.instagram,
+  status: CrosspostingConnectionStatus.connected,
+);
 
 /// A [BackgroundPublishState] where upload [id] disappeared without a success
 /// signal — mirrors what the bloc emits on [BackgroundPublishVanished].
@@ -482,6 +508,112 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+    });
+
+    group('crosspost prompt', () {
+      late _MockCrosspostingRepository repository;
+
+      setUp(() {
+        repository = _MockCrosspostingRepository();
+        when(() => repository.loadSettings()).thenAnswer(
+          (_) async => const [
+            CrosspostingPlatformSettings(
+              platform: CrosspostingPlatform.instagram,
+              supportsAutomatic: true,
+              mode: CrosspostingMode.manual,
+              connection: _instagramConnected,
+            ),
+          ],
+        );
+        when(() => authService.isAuthenticated).thenReturn(true);
+        when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
+      });
+
+      Future<void> pumpPublished(
+        WidgetTester tester, {
+        required AuthenticationSource source,
+        CrosspostingAvailability availability = CrosspostingAvailability.native,
+      }) async {
+        stubPublishBloc(const BackgroundPublishState());
+        when(() => authService.authenticationSource).thenReturn(source);
+        final experiment = await _treatmentExperiment('draft-treatment');
+
+        await tester.pumpWidget(
+          _buildHarness(
+            publishBloc: publishBloc,
+            authService: authService,
+            experiment: experiment,
+            router: _routerAt(_ownProfileLocation),
+            extraOverrides: [
+              crosspostingAvailabilityProvider.overrideWithValue(availability),
+              crosspostingRepositoryProvider.overrideWithValue(repository),
+              crosspostingApiClientProvider.overrideWithValue(
+                _MockCrosspostingApiClient(),
+              ),
+              analyticsEventSinkProvider.overrideWithValue(_NoOpAnalytics()),
+            ],
+          ),
+        );
+
+        publishStream.add(
+          _succeededState('draft-treatment', eventId: _publishedEventId),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('suggests crossposting below view and share', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
+        expect(
+          find.text(l10n.postPublishCrosspostSuggest('Instagram')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('crosspost swaps the confirmation for the crosspost sheet', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.crosspostSubmit));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.postPublishConfirmationTitle), findsNothing);
+        expect(find.text(l10n.crosspostSheetTitle), findsOneWidget);
+      });
+
+      testWidgets('stays out of the way of a signer that may prompt', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.amber);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
+        expect(
+          find.text(l10n.postPublishCrosspostSuggest('Instagram')),
+          findsNothing,
+        );
+        verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('offers nothing to an ineligible account', (tester) async {
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.divineOAuth,
+          availability: CrosspostingAvailability.unavailable,
+        );
+
+        expect(
+          find.text(_l10nEn.postPublishConfirmationShare),
+          findsOneWidget,
+        );
+        verifyNever(() => repository.loadSettings());
+      });
     });
 
     testWidgets('falls back to the snackbar once the user has moved on', (

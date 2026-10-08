@@ -4687,6 +4687,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీరు ఇప్పుడే ప్రచురించిన వీడియో యొక్క సూక్ష్మచిత్రం';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override

@@ -4520,6 +4520,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Miniatyr av videon du precis publicerade';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Skicka den här loopen till $platforms också?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Posta en gång, syns på $platform också.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Skickas automatiskt till $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Inga användare hittades';
 
   @override

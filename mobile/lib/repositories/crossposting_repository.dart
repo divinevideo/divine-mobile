@@ -5,7 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
 export 'package:openvine/services/crossposting_api_client.dart'
-    show CrosspostingMode, CrosspostingPlatform;
+    show CrosspostingConnection, CrosspostingMode, CrosspostingPlatform;
 
 /// User-visible crossposting state for one enabled platform.
 class CrosspostingPlatformSettings extends Equatable {

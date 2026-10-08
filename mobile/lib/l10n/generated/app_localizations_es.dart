@@ -4575,6 +4575,21 @@ class AppLocalizationsEs extends AppLocalizations {
       'Miniatura del video que acabas de publicar';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '¿Mandas este loop también a $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Publica una vez y aparece también en $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Va a $platforms automáticamente.';
+  }
+
+  @override
   String get userSearchNoResults => 'No se encontraron usuarios';
 
   @override

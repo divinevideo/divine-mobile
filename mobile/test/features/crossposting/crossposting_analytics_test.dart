@@ -65,6 +65,23 @@ void main() {
     });
   });
 
+  group(CrosspostCtaSurface, () {
+    test('names the post-publish surface distinctly', () {
+      expect(CrosspostCtaSurface.postPublish.wireName, equals('post_publish'));
+      expect(
+        CrosspostCtaSurface.values.map((surface) => surface.wireName).toSet(),
+        hasLength(CrosspostCtaSurface.values.length),
+      );
+    });
+  });
+
+  group(CrosspostCta, () {
+    test('names the post-publish CTAs', () {
+      expect(CrosspostCta.crosspostVideo.wireName, equals('crosspost_video'));
+      expect(CrosspostCta.reconnect.wireName, equals('reconnect'));
+    });
+  });
+
   group(logCrosspostCtaTapped, () {
     test('logs the event with the surface and the CTA', () async {
       final sink = _RecordingSink();

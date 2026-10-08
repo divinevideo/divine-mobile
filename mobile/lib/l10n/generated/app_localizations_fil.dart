@@ -4554,6 +4554,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Thumbnail ng video na kaka-publish mo lang';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Ipadala rin ang loop na ito sa $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Mag-post nang isang beses, lumabas din sa $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Papunta sa $platforms nang awtomatiko.';
+  }
+
+  @override
   String get userSearchNoResults => 'Walang nahanap na user';
 
   @override

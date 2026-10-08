@@ -4466,6 +4466,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Az önce yayınladığın videonun küçük resmi';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Bu loop\'u $platforms hesabına da gönderelim mi?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Bir kez paylaş, $platform hesabında da görün.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Otomatik olarak $platforms hesabına gidiyor.';
+  }
+
+  @override
   String get userSearchNoResults => 'Kullanıcı bulunamadı';
 
   @override

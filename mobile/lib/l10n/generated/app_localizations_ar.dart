@@ -4515,6 +4515,21 @@ class AppLocalizationsAr extends AppLocalizations {
       'صورة مصغرة للفيديو الذي نشرته للتو';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'أرسل هذا التكرار إلى $platforms أيضًا؟';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'انشر مرة واحدة، واظهر على $platform أيضًا.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'في الطريق إلى $platforms تلقائيًا.';
+  }
+
+  @override
   String get userSearchNoResults => 'لم يُعثر على مستخدمين';
 
   @override

@@ -4230,6 +4230,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '你刚发布的视频缩略图';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '也把这个循环发到 $platforms 吗？';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '发布一次，也出现在 $platform 上。';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '正在自动发布到 $platforms。';
+  }
+
+  @override
   String get userSearchNoResults => '没有找到用户';
 
   @override

@@ -4265,6 +4265,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '방금 게시한 영상의 썸네일';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '이 루프를 $platforms에도 보낼까요?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '한 번 올리고 $platform에도 나타나요.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platforms에 자동으로 올라가요.';
+  }
+
+  @override
   String get userSearchNoResults => '사용자를 찾을 수 없어요';
 
   @override

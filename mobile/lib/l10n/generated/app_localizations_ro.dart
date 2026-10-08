@@ -4664,6 +4664,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Miniatura videoclipului pe care tocmai l-ai publicat';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Trimiți bucla asta și pe $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Postează o dată, apari și pe $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Pleacă automat pe $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Niciun utilizator găsit';
 
   @override

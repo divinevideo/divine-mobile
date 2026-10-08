@@ -4425,6 +4425,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => 'አሁን ያሳተሙት ቪዲዮ ድንክዬ';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'ምንም ተጠቃሚዎች አልተገኙም።';
 
   @override

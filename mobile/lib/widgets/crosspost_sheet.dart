@@ -22,12 +22,26 @@ import 'package:url_launcher/url_launcher.dart';
 /// sheet, so the platform picker renders immediately.
 Future<void> showCrosspostSheet({
   required BuildContext context,
-  required WidgetRef ref,
   required VideoEvent video,
   required List<CrosspostingConnection> connections,
+}) => showCrosspostSheetForEvent(
+  context: context,
+  container: ProviderScope.containerOf(context, listen: false),
+  eventId: video.id,
+  connections: connections,
+);
+
+/// Shows the crosspost flow for the current user's own event [eventId].
+///
+/// For callers that hold the event id but no [VideoEvent] yet, such as the
+/// post-publish confirmation while the event is still propagating.
+Future<void> showCrosspostSheetForEvent({
+  required BuildContext context,
+  required ProviderContainer container,
+  required String eventId,
+  required List<CrosspostingConnection> connections,
 }) {
-  final client = ref.read(crosspostingApiClientProvider);
-  final container = ProviderScope.containerOf(context, listen: false);
+  final client = container.read(crosspostingApiClientProvider);
   // Resolved while the opener is mounted: it may be gone by the time the
   // reconnect button is tapped, and Navigator.of on a defunct element throws.
   final navigator = Navigator.of(context);
@@ -37,7 +51,7 @@ Future<void> showCrosspostSheet({
     body: BlocProvider(
       create: (_) => VideoCrosspostCubit(
         client: client,
-        eventId: video.id,
+        eventId: eventId,
         initialConnections: connections,
       ),
       child: CrosspostSheetView(
