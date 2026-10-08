@@ -871,6 +871,56 @@ void main() {
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
+    testWidgets(
+      'delete dialog rebuilds after the list disappears without deleting',
+      (tester) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList();
+        final states = StreamController<PeopleListsState>.broadcast();
+        addTearDown(states.close);
+        whenListen(
+          bloc,
+          states.stream,
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+        await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
+        await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listDeleteAction));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+
+        // A relay update can remove the list while its dialog stays open.
+        states.add(
+          const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(PeopleListHeroHeader), findsNothing);
+
+        final dialogRoute = ModalRoute.of(
+          tester.element(find.byType(AlertDialog)),
+        )!;
+        dialogRoute.changedExternalState();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.peopleListsDeleteConfirmTitle), findsOneWidget);
+
+        await tester.tap(find.text(l10n.commonDelete));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.text(l10n.peopleListsListNotFoundTitle), findsOneWidget);
+        verifyNever(() => bloc.submit(any()));
+      },
+    );
+
     testWidgets('delete confirmation cancel does not dispatch', (tester) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(
