@@ -440,7 +440,10 @@ class CuratedListService extends ChangeNotifier {
   /// Only an explicitly owned row or an unpublished local draft can change.
   /// Remembered owners may edit offline; relay signing still requires auth.
   bool _canMutateCachedList(CuratedList list) {
-    if (!isReadyForMutations) return false;
+    if (!isReadyForMutations ||
+        !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
+      return false;
+    }
     if (list.pubkey != null) {
       final owner = _authService.currentPublicKeyHex;
       return owner != null && owner.isNotEmpty && list.pubkey == owner;
@@ -455,7 +458,8 @@ class CuratedListService extends ChangeNotifier {
   bool _isUnpublishedLocalList(CuratedList list) {
     if (list.pubkey != null ||
         list.nostrEventId != null ||
-        !_hasLoadedSubscriptionIds) {
+        !_hasLoadedSubscriptionIds ||
+        !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
       return false;
     }
     // A local draft keeps its null coordinate for guests. Claiming it on
@@ -871,7 +875,8 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final list = _lists[listIndex];
-      if (!isOwnedList(listId)) {
+      if (!isOwnedList(listId) ||
+          !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
         Log.warning(
           'Cannot delete list not owned by current user: $listId',
           name: 'CuratedListService',
@@ -1672,6 +1677,7 @@ class CuratedListService extends ChangeNotifier {
         if (!_isCurrent(owner)) return;
         var current = getListById(list.authorScopedId);
         if (current == null) return;
+        if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return;
         if (current.nostrEventId != null && !current.pendingRepublish) return;
         if (_isUnpublishedLocalList(current)) {
           final currentId = current.id;
