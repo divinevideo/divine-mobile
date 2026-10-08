@@ -24,6 +24,8 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../packages/people_lists_repository/test/helpers/in_memory_followed_people_lists_store.dart';
+
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
 
