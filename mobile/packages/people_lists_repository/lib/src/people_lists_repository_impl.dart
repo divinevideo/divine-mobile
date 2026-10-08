@@ -847,6 +847,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) => _followedListsWriteCoordinator.refresh(
     viewerPubkey: viewerPubkey,
     isCancelled: isCancelled,
+    isOperationUnavailable: () => _nostrClient.isDisposed,
     operation: (isCancelled) =>
         _refreshFollowedLists(viewerPubkey, isCancelled),
   );
