@@ -106,8 +106,9 @@ class OAuthSessionCoordinator {
   /// Returns the refreshed session on success, or `null` when refresh is not
   /// possible or the server rejects the token.
   ///
-  /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast or
-  /// times out. The refresh token is preserved for a later retry in that case.
+  /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast,
+  /// times out, or gets a temporary server error. The refresh token is
+  /// preserved for a later retry in that case.
   Future<KeycastSession?> refreshSession({
     String? expectedOwnerPubkey,
     Duration? timeout,
