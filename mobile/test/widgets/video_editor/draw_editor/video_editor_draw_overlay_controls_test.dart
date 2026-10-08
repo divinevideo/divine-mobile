@@ -1,15 +1,18 @@
 // ABOUTME: Tests for VideoEditorDrawOverlayControls widget.
-// ABOUTME: Validates top bar buttons (Close, Undo, Redo, Done) and the sliders.
+// ABOUTME: Validates top bar buttons (Close, Undo, Redo, Done), the sliders
+// ABOUTME: and the brush preview.
 
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_brush_preview.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
@@ -39,14 +42,25 @@ void main() {
       when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
     });
 
-    Widget buildWidget() {
+    Widget buildWidget({
+      GlobalKey? canvasBodyKey,
+      Widget canvas = const SizedBox.shrink(),
+      bool disableAnimations = false,
+    }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: disableAnimations),
+          child: child!,
+        ),
         home: Scaffold(
           body: VideoEditorScope(
             editorKey: GlobalKey(),
             removeAreaKey: GlobalKey(),
+            canvasBodyKey: canvasBodyKey,
             originalClipAspectRatio: 9 / 16,
             bodySizeNotifier: ValueNotifier(const Size(400, 600)),
             zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
@@ -63,10 +77,15 @@ void main() {
             onAddEditTextLayer: ([layer]) async => null,
             child: BlocProvider<VideoEditorDrawBloc>.value(
               value: mockBloc,
-              child: const SizedBox(
-                width: 400,
-                height: 600,
-                child: VideoEditorDrawOverlayControls(),
+              child: Stack(
+                children: [
+                  canvas,
+                  const SizedBox(
+                    width: 400,
+                    height: 600,
+                    child: VideoEditorDrawOverlayControls(),
+                  ),
+                ],
               ),
             ),
           ),
@@ -261,6 +280,119 @@ void main() {
         verify(
           () => mockBloc.add(const VideoEditorDrawBrushSizeChanged(0.3)),
         ).called(1);
+      });
+    });
+
+    group('Brush preview', () {
+      final preview = find.byType(VideoEditorDrawBrushPreview);
+
+      Future<TestGesture> dragSlider(WidgetTester tester) async {
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(VideoEditorVerticalSlider)),
+        );
+        await gesture.moveBy(const Offset(0, -40));
+        await tester.pump();
+        return gesture;
+      }
+
+      BoxDecoration previewDecoration(WidgetTester tester) =>
+          tester
+                  .widget<DecoratedBox>(
+                    find.descendant(
+                      of: preview,
+                      matching: find.byType(DecoratedBox),
+                    ),
+                  )
+                  .decoration
+              as BoxDecoration;
+
+      testWidgets(
+        'shows a dot as thick as the next stroke in the middle of the canvas',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            const VideoEditorDrawState(
+              selectedTool: DrawToolType.marker,
+              selectedColor: VineTheme.vineGreen,
+              strokeWidths: {DrawToolType.marker: 20.0},
+            ),
+          );
+          final canvasBodyKey = GlobalKey();
+          // Laid out apart from the controls, as in the editor.
+          final canvas = Positioned(
+            top: 80,
+            width: 400,
+            height: 600,
+            child: SizedBox.expand(key: canvasBodyKey),
+          );
+          await tester.pumpWidget(
+            buildWidget(canvasBodyKey: canvasBodyKey, canvas: canvas),
+          );
+          expect(preview, findsNothing);
+
+          final gesture = await dragSlider(tester);
+
+          expect(tester.getSize(preview), const Size.square(20));
+          expect(
+            tester.getCenter(preview),
+            tester.getCenter(find.byKey(canvasBodyKey)),
+          );
+          expect(
+            previewDecoration(tester).color,
+            VineTheme.vineGreen.withValues(alpha: 0.7),
+          );
+          await gesture.up();
+        },
+      );
+
+      testWidgets('outlines the area the eraser erases', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          const VideoEditorDrawState(selectedTool: DrawToolType.eraser),
+        );
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await dragSlider(tester);
+
+        final decoration = previewDecoration(tester);
+        expect(decoration.color, isNull);
+        expect(decoration.border, isNotNull);
+        await gesture.up();
+      });
+
+      testWidgets('fades out after the slider is released', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        final gesture = await dragSlider(tester);
+
+        await gesture.up();
+        await tester.pump();
+        expect(preview, findsOneWidget);
+
+        await tester.pumpAndSettle();
+        expect(preview, findsNothing);
+      });
+
+      testWidgets('disappears at once under reduced motion', (tester) async {
+        await tester.pumpWidget(buildWidget(disableAnimations: true));
+        final gesture = await dragSlider(tester);
+        expect(preview, findsOneWidget);
+
+        await gesture.up();
+        await tester.pump();
+
+        expect(preview, findsNothing);
+      });
+
+      testWidgets('is not shown while the censor strength changes', (
+        tester,
+      ) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(const VideoEditorDrawState(selectedTool: .blur));
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await dragSlider(tester);
+
+        expect(preview, findsNothing);
+        await gesture.up();
       });
     });
 
