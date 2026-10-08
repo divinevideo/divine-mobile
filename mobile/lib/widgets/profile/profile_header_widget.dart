@@ -54,6 +54,7 @@ import 'package:openvine/widgets/profile/profile_following_stat.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_support_sheet.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
+import 'package:openvine/widgets/profile/supporter_halo_wings.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/profile_badge_explanation_sheet.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
@@ -415,6 +416,8 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                     showSkeleton: showIdentitySkeleton,
                     profileColor: profileColor,
                     pendingActions: pendingActions,
+                    showSupporterTreatment:
+                        supporterHaloPreview && widget.isOwnProfile,
                     onActionTap: pendingActions.isEmpty
                         ? null
                         : pendingActions.first ==

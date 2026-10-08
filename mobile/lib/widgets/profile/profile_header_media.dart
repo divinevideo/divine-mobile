@@ -443,6 +443,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
     required this.showSkeleton,
     this.profileColor,
     this.pendingActions = const [],
+    this.showSupporterTreatment = false,
     this.onActionTap,
   });
 
@@ -465,6 +466,9 @@ class _ProfileAvatarWithColor extends StatelessWidget {
   /// Called when the label or avatar is tapped.
   final VoidCallback? onActionTap;
 
+  /// Whether to surround the avatar with the supporter halo and wings.
+  final bool showSupporterTreatment;
+
   @override
   Widget build(BuildContext context) {
     const avatarSize = _headerAvatarSize;
@@ -478,7 +482,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         size: avatarSize,
       );
       final hasAvatar = imageUrl != null && imageUrl!.isNotEmpty;
-      avatar = hasAvatar
+      final tappableAvatar = hasAvatar
           ? GestureDetector(
               onTap: () => _showAvatarLightbox(
                 context,
@@ -496,6 +500,9 @@ class _ProfileAvatarWithColor extends StatelessWidget {
               ),
             )
           : avatarWidget;
+      avatar = showSupporterTreatment
+          ? SupporterHaloWings(avatarSize: avatarSize, child: tappableAvatar)
+          : tappableAvatar;
     }
 
     if (pendingActions.isEmpty) return avatar;
