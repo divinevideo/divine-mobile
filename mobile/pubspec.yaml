@@ -161,8 +161,8 @@ dependencies:
   # c2pa_flutter is intentionally git-pinned: the guardianproject plugin Divine
   # uses is not published on pub.dev. (pub.dev's same-named package is an
   # unrelated third-party FFI rewrite — different author, c2pa-rs 0.75.x, no
-  # RemoteSigner.) Pinned by immutable commit (tag 0.0.3) so a moved tag cannot
-  # silently change the build.
+  # RemoteSigner.) Pinned by immutable commit so a moved tag cannot silently
+  # change the build.
   # Moving off this pin requires a compatible, differently named pub package:
   # guardianproject cannot publish as `c2pa_flutter` (name permanently taken),
   # so this would be a rename plus API migration, not a constraint swap. Both
@@ -170,7 +170,9 @@ dependencies:
   c2pa_flutter:
     git:
       url: https://github.com/guardianproject/c2pa-flutter.git
-      ref: 847d0c0183c9c09946ce321c107decd3fd9f56b2 # tag 0.0.3
+      # Head of guardianproject/c2pa-flutter#7 (file-based ManifestBuilder),
+      # which the clip edit signing needs; repin to its upstream merge commit.
+      ref: 96f2b08873d21babe06e61d54f3e7b05f8a4fedd
   divine_camera:
     path: packages/divine_camera
   divine_device_attestation:
