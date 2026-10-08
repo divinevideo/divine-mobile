@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
+import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -210,10 +211,10 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
             initialPubkey: widget.initialPubkey,
             l10n: l10n,
           ),
-          if (_result == PeopleListsOperationResult.failed)
-            Text(l10n.listCreateFailed),
-          if (_result == PeopleListsOperationResult.cancelled)
-            Text(l10n.peopleListsSessionChanged),
+          PeopleListResultNotice(
+            result: _result,
+            failedMessage: l10n.listCreateFailed,
+          ),
           const SizedBox(height: 16),
           if (_submitting)
             const Center(child: DivineCircularProgressIndicator()),

@@ -13,6 +13,7 @@ import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dar
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
+import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -366,10 +367,10 @@ class _AddButtonBarState extends State<_AddButtonBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_result == PeopleListsOperationResult.failed)
-            Text(l10n.listUpdateFailed),
-          if (_result == PeopleListsOperationResult.cancelled)
-            Text(l10n.peopleListsSessionChanged),
+          PeopleListResultNotice(
+            result: _result,
+            failedMessage: l10n.listUpdateFailed,
+          ),
           if (_pending) const DivineCircularProgressIndicator(),
           DivineButton(
             label: label,

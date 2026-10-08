@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
+import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -178,14 +179,12 @@ class _CreatePeopleListPageState extends ConsumerState<CreatePeopleListPage> {
                   ),
                 ),
               ),
-              if (_result == PeopleListsOperationResult.failed)
-                Text(
-                  widget.editingList == null
-                      ? context.l10n.listCreateFailed
-                      : context.l10n.listUpdateFailed,
-                ),
-              if (_result == PeopleListsOperationResult.cancelled)
-                Text(context.l10n.peopleListsSessionChanged),
+              PeopleListResultNotice(
+                result: _result,
+                failedMessage: widget.editingList == null
+                    ? context.l10n.listCreateFailed
+                    : context.l10n.listUpdateFailed,
+              ),
               if (_submitting)
                 const Center(child: DivineCircularProgressIndicator()),
               _CreateButton(
