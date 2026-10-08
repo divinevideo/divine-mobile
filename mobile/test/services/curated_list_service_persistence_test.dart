@@ -207,10 +207,11 @@ void main() {
         expect(savedData, contains('shuffle'));
       });
 
-      test('replaces corrupted SharedPreferences data', () async {
+      test('preserves corrupted data and refuses replacement writes', () async {
+        const raw = 'invalid json {{{';
         await prefs.setString(
           CuratedListService.listsStorageKey,
-          'invalid json {{{',
+          raw,
         );
         final service = CuratedListService(
           nostrService: mockNostr,
@@ -218,53 +219,69 @@ void main() {
           prefs: prefs,
         );
 
-        await service.createList(name: 'After Corruption');
+        addTearDown(service.dispose);
+        expect(await service.createList(name: 'After Corruption'), isNull);
+        expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        verifyNever(() => mockNostr.publishEvent(any()));
 
         final recreated = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
           prefs: prefs,
         );
-        expect(recreated.lists.map((list) => list.name), ['After Corruption']);
+        addTearDown(recreated.dispose);
+        expect(recreated.lists, isEmpty);
       });
 
-      test('keeps the lists it loaded before a row it cannot decode', () async {
-        final original = CuratedListService(
-          nostrService: mockNostr,
-          authService: mockAuth,
-          prefs: prefs,
-        );
-        await original.createList(name: 'Kept');
-        final rows = jsonDecode(
-          prefs.getString(CuratedListService.listsStorageKey)!,
-        ) as List<dynamic>;
-        await prefs.setString(
-          CuratedListService.listsStorageKey,
-          jsonEncode([...rows, 'not a row']),
-        );
-        final service = CuratedListService(
-          nostrService: mockNostr,
-          authService: mockAuth,
-          prefs: prefs,
-        );
-        expect(
-          service.lists.map((list) => list.name),
-          ['Kept'],
-          reason: 'the loader keeps the rows that decode before the bad one',
-        );
+      test(
+        'keeps readable lists without replacing an unreadable row',
+        () async {
+          final original = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          await original.createList(name: 'Kept');
+          addTearDown(original.dispose);
+          final rows = jsonDecode(
+            prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List<dynamic>;
+          final raw = jsonEncode([...rows, 'not a row']);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            raw,
+          );
+          final service = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          expect(
+            service.lists.map((list) => list.name),
+            ['Kept'],
+            reason: 'the loader keeps the rows that decode before the bad one',
+          );
 
-        await service.createList(name: 'Added');
+          addTearDown(service.dispose);
+          clearInteractions(mockNostr);
+          expect(await service.createList(name: 'Added'), isNull);
+          expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          verifyNever(() => mockNostr.publishEvent(any()));
 
-        final recreated = CuratedListService(
-          nostrService: mockNostr,
-          authService: mockAuth,
-          prefs: prefs,
-        );
-        expect(
-          recreated.lists.map((list) => list.name),
-          unorderedEquals(['Kept', 'Added']),
-        );
-      });
+          final recreated = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          addTearDown(recreated.dispose);
+          expect(
+            recreated.lists.map((list) => list.name),
+            ['Kept'],
+          );
+        },
+      );
     });
 
     group('Load from Preferences', () {
