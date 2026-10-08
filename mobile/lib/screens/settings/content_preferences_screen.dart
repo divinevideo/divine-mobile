@@ -158,31 +158,47 @@ class _ContentLanguageSettingTile extends StatelessWidget {
       contentTitle: context.l10n.contentPreferencesContentLanguage,
       buildScrollBody: (scrollController) => _LanguagePickerContent(
         scrollController: scrollController,
-        currentCode: state.currentCode,
-        isCustomLanguageSet: state.isCustomLanguageSet,
-        onUseDeviceLanguage: cubit.clearLanguage,
+        header: context.l10n.contentPreferencesTagYourVideos,
+        defaultTitle: context.l10n.contentPreferencesUseDeviceLanguage,
+        defaultSubtitle: LanguagePreferenceService.displayNameFor(
+          PlatformDispatcher.instance.locale.languageCode,
+        ),
+        selectedCode: state.isCustomLanguageSet ? state.currentCode : null,
+        onUseDefault: cubit.clearLanguage,
         onSelectLanguage: cubit.setLanguage,
       ),
     );
   }
 }
 
+/// Single-choice language list: a first row that falls back to a default,
+/// then every supported language.
 class _LanguagePickerContent extends StatelessWidget {
   const _LanguagePickerContent({
     required this.scrollController,
-    required this.currentCode,
-    required this.isCustomLanguageSet,
-    required this.onUseDeviceLanguage,
+    required this.defaultTitle,
+    required this.defaultSubtitle,
+    required this.selectedCode,
+    required this.onUseDefault,
     required this.onSelectLanguage,
+    this.header,
   });
 
   /// The sheet's own controller — without it the drag never reaches the
   /// [DraggableScrollableSheet], so the sheet cannot be resized or flung shut
   /// from the list.
   final ScrollController scrollController;
-  final String currentCode;
-  final bool isCustomLanguageSet;
-  final Future<void> Function() onUseDeviceLanguage;
+
+  /// Explanation shown above the rows, when the picker needs one.
+  final String? header;
+
+  /// Title and subtitle of the first row, which clears an explicit choice.
+  final String defaultTitle;
+  final String defaultSubtitle;
+
+  /// The explicitly chosen language, or `null` while the default applies.
+  final String? selectedCode;
+  final Future<void> Function() onUseDefault;
   final Future<void> Function(String code) onSelectLanguage;
 
   /// Runs [mutate], then closes the sheet from inside it. The guard is the
@@ -206,26 +222,27 @@ class _LanguagePickerContent extends StatelessWidget {
       itemCount: languages.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
+          final defaultRow = DivineSelectableRow(
+            title: defaultTitle,
+            subtitle: defaultSubtitle,
+            isSelected: selectedCode == null,
+            onTap: () => _applyAndClose(context, onUseDefault),
+          );
+          final header = this.header;
+          if (header == null) return defaultRow;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
-                  context.l10n.contentPreferencesTagYourVideos,
+                  header,
                   style: VineTheme.bodySmallFont(
                     color: context.vineColors.mutedText,
                   ),
                 ),
               ),
-              DivineSelectableRow(
-                title: context.l10n.contentPreferencesUseDeviceLanguage,
-                subtitle: LanguagePreferenceService.displayNameFor(
-                  PlatformDispatcher.instance.locale.languageCode,
-                ),
-                isSelected: !isCustomLanguageSet,
-                onTap: () => _applyAndClose(context, onUseDeviceLanguage),
-              ),
+              defaultRow,
             ],
           );
         }
@@ -233,7 +250,7 @@ class _LanguagePickerContent extends StatelessWidget {
         return DivineSelectableRow(
           title: entry.value,
           subtitle: entry.key.toUpperCase(),
-          isSelected: isCustomLanguageSet && currentCode == entry.key,
+          isSelected: selectedCode == entry.key,
           onTap: () => _applyAndClose(
             context,
             () => onSelectLanguage(entry.key),
@@ -591,17 +608,16 @@ class _SubtitleTranslationSettingState
     await VineBottomSheet.show<void>(
       context: context,
       contentTitle: context.l10n.contentPreferencesSubtitleLanguage,
-      buildScrollBody: (scrollController) => _SubtitleTargetPickerContent(
+      buildScrollBody: (scrollController) => _LanguagePickerContent(
         scrollController: scrollController,
-        currentTarget: _targetLanguage,
-        onUseAppLanguage: () async {
-          await _setTarget(null);
-          if (context.mounted) Navigator.pop(context);
-        },
-        onSelect: (code) async {
-          await _setTarget(code);
-          if (context.mounted) Navigator.pop(context);
-        },
+        defaultTitle: context.l10n.contentPreferencesSubtitleLanguageFollowApp,
+        // Translation follows the UI language, not the device's.
+        defaultSubtitle: LanguagePreferenceService.displayNameFor(
+          Localizations.localeOf(context).languageCode,
+        ),
+        selectedCode: _targetLanguage,
+        onUseDefault: () => _setTarget(null),
+        onSelectLanguage: _setTarget,
       ),
     );
   }
@@ -615,50 +631,6 @@ class _SubtitleTranslationSettingState
         keptLanguages: _keepOriginal,
         onChanged: _setKeepOriginal,
       ),
-    );
-  }
-}
-
-class _SubtitleTargetPickerContent extends StatelessWidget {
-  const _SubtitleTargetPickerContent({
-    required this.scrollController,
-    required this.currentTarget,
-    required this.onUseAppLanguage,
-    required this.onSelect,
-  });
-
-  final ScrollController scrollController;
-  final String? currentTarget;
-  final Future<void> Function() onUseAppLanguage;
-  final Future<void> Function(String code) onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final languages = LanguagePreferenceService.supportedLanguages.entries
-        .toList(growable: false);
-    return ListView.builder(
-      controller: scrollController,
-      padding: EdgeInsets.zero,
-      itemCount: languages.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return DivineSelectableRow(
-            title: context.l10n.contentPreferencesSubtitleLanguageFollowApp,
-            subtitle: LanguagePreferenceService.displayNameFor(
-              PlatformDispatcher.instance.locale.languageCode,
-            ),
-            isSelected: currentTarget == null,
-            onTap: onUseAppLanguage,
-          );
-        }
-        final entry = languages[index - 1];
-        return DivineSelectableRow(
-          title: entry.value,
-          subtitle: entry.key.toUpperCase(),
-          isSelected: currentTarget == entry.key,
-          onTap: () => onSelect(entry.key),
-        );
-      },
     );
   }
 }
