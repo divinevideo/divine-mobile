@@ -76,162 +76,180 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   }
 
-  test('record acknowledges only the exact durable intent', () async {
-    await intent.record(prefs);
-    await restart();
-    expect(
-      PendingAccountCleanup.read(prefs)?.covers(
-        userPubkey: _owner,
-        isIdentityChange: false,
-        deleteUserData: true,
-      ),
-      isTrue,
-    );
-  });
-
-  for (final failure in ['lying', 'refused', 'throwing']) {
-    test(
-      '$failure intent write cannot be acknowledged or remain only in cache',
-      () async {
-        store.lieAboutWrite = failure == 'lying';
-        store.refuseWrite = failure == 'refused';
-        store.throwWrite = failure == 'throwing';
-        await expectLater(intent.record(prefs), throwsStateError);
-        expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
-        await restart();
-        expect(PendingAccountCleanup.read(prefs), isNull);
-      },
-    );
-  }
-
-  test(
-    'unavailable record readback cannot authorize destructive work',
-    () async {
-      await prefs.setString('curated_lists', '[]');
-      final cleanup = UserDataCleanupService(prefs);
-      var databaseAttempts = 0;
-      cleanup.onDatabaseCleanup = ({
-        userPubkey,
-        deleteUserData = false,
-        preserveActiveSession = false,
-      }) async => databaseAttempts++;
-      store.failReadback = true;
-      await expectLater(
-        cleanup.clearUserSpecificData(userPubkey: _owner, deleteUserData: true),
-        throwsA(isA<UserDataCleanupException>()),
-      );
-      expect(databaseAttempts, 0);
-      expect(prefs.getString('curated_lists'), '[]');
-      expect(PendingAccountCleanup.readbackUnknown(prefs), isTrue);
-      store.failReadback = false;
+  group('record', () {
+    test('record acknowledges only the exact durable intent', () async {
+      await intent.record(prefs);
       await restart();
-      expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
-    },
-  );
+      expect(
+        PendingAccountCleanup.read(prefs)?.covers(
+          userPubkey: _owner,
+          isIdentityChange: false,
+          deleteUserData: true,
+        ),
+        isTrue,
+      );
+    });
 
-  test('complete acknowledges only durable absence', () async {
-    await intent.record(prefs);
-    await intent.complete(prefs);
-    await restart();
-    expect(PendingAccountCleanup.read(prefs), isNull);
-  });
+    for (final failure in ['lying', 'refused', 'throwing']) {
+      test(
+        '$failure intent write cannot be acknowledged or remain only in cache',
+        () async {
+          store.lieAboutWrite = failure == 'lying';
+          store.refuseWrite = failure == 'refused';
+          store.throwWrite = failure == 'throwing';
+          await expectLater(intent.record(prefs), throwsStateError);
+          expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
+          await restart();
+          expect(PendingAccountCleanup.read(prefs), isNull);
+        },
+      );
+    }
 
-  for (final failure in ['lying', 'refused', 'throwing']) {
     test(
-      '$failure intent removal retains the original retry obligation',
+      'unavailable record readback cannot authorize destructive work',
       () async {
-        await intent.record(prefs);
-        store.lieAboutRemoval = failure == 'lying';
-        store.refuseRemoval = failure == 'refused';
-        store.throwAfterRemoval = failure == 'throwing';
-        await expectLater(intent.complete(prefs), throwsStateError);
-        expect(PendingAccountCleanup.read(prefs)?.userPubkey, _owner);
+        await prefs.setString('curated_lists', '[]');
+        final cleanup = UserDataCleanupService(prefs);
+        var databaseAttempts = 0;
+        cleanup.onDatabaseCleanup = ({
+          userPubkey,
+          deleteUserData = false,
+          preserveActiveSession = false,
+        }) async => databaseAttempts++;
+        store.failReadback = true;
+        await expectLater(
+          cleanup.clearUserSpecificData(
+            userPubkey: _owner,
+            deleteUserData: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(databaseAttempts, 0);
+        expect(prefs.getString('curated_lists'), '[]');
+        expect(PendingAccountCleanup.readbackUnknown(prefs), isTrue);
+        store.failReadback = false;
         await restart();
         expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
       },
     );
-  }
+  });
 
-  test(
-    'unavailable completion readback preserves intent for a verified retry',
-    () async {
+  group('complete', () {
+    test('complete acknowledges only durable absence', () async {
       await intent.record(prefs);
-      store.failReadback = true;
-      await expectLater(intent.complete(prefs), throwsStateError);
-      expect(PendingAccountCleanup.readbackUnknown(prefs), isTrue);
-      store.failReadback = false;
-      await restart();
-      expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
       await intent.complete(prefs);
       await restart();
       expect(PendingAccountCleanup.read(prefs), isNull);
-    },
-  );
+    });
 
-  test(
-    'lying sign-out intent write stops before any cache or database deletion',
-    () async {
-      await prefs.setString('curated_lists', '[]');
-      await prefs.setString('current_user_pubkey_hex', _owner);
-      store.lieAboutWrite = true;
-      var databaseAttempts = 0;
-      final cleanup = UserDataCleanupService(prefs)
-        ..onDatabaseCleanup = ({
-          userPubkey,
-          deleteUserData = false,
-          preserveActiveSession = false,
-        }) async => databaseAttempts++;
-      await expectLater(
-        cleanup.clearUserSpecificData(userPubkey: _owner, deleteUserData: true),
-        throwsA(isA<UserDataCleanupException>()),
+    for (final failure in ['lying', 'refused', 'throwing']) {
+      test(
+        '$failure intent removal retains the original retry obligation',
+        () async {
+          await intent.record(prefs);
+          store.lieAboutRemoval = failure == 'lying';
+          store.refuseRemoval = failure == 'refused';
+          store.throwAfterRemoval = failure == 'throwing';
+          await expectLater(intent.complete(prefs), throwsStateError);
+          expect(PendingAccountCleanup.read(prefs)?.userPubkey, _owner);
+          await restart();
+          expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
+        },
       );
-      expect(databaseAttempts, 0);
-      await restart();
-      expect(prefs.getString('curated_lists'), '[]');
-      expect(prefs.getString('current_user_pubkey_hex'), _owner);
-    },
-  );
+    }
 
-  test(
-    'lying sign-out intent removal cannot report completed cleanup',
-    () async {
-      await prefs.setString('curated_lists', '[]');
-      store.lieAboutRemoval = true;
-      var databaseAttempts = 0;
-      final cleanup = UserDataCleanupService(prefs)
-        ..onDatabaseCleanup = ({
-          userPubkey,
-          deleteUserData = false,
-          preserveActiveSession = false,
-        }) async => databaseAttempts++;
-      await expectLater(
-        cleanup.clearUserSpecificData(userPubkey: _owner, deleteUserData: true),
-        throwsA(isA<UserDataCleanupException>()),
-      );
-      expect(databaseAttempts, 1);
-      await restart();
-      expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
-    },
-  );
+    test(
+      'unavailable completion readback preserves intent for a verified retry',
+      () async {
+        await intent.record(prefs);
+        store.failReadback = true;
+        await expectLater(intent.complete(prefs), throwsStateError);
+        expect(PendingAccountCleanup.readbackUnknown(prefs), isTrue);
+        store.failReadback = false;
+        await restart();
+        expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
+        await intent.complete(prefs);
+        await restart();
+        expect(PendingAccountCleanup.read(prefs), isNull);
+      },
+    );
+  });
 
-  test(
-    'honest destructive intent survives failed database cleanup and restart',
-    () async {
-      await prefs.setString('curated_lists', '[]');
-      final cleanup = UserDataCleanupService(prefs)
-        ..onDatabaseCleanup = ({
-          userPubkey,
-          deleteUserData = false,
-          preserveActiveSession = false,
-        }) async => throw StateError('synthetic database unavailable');
-      await expectLater(
-        cleanup.clearUserSpecificData(userPubkey: _owner, deleteUserData: true),
-        throwsA(isA<UserDataCleanupException>()),
-      );
-      await restart();
-      final pending = PendingAccountCleanup.read(prefs)!;
-      expect(pending.userPubkey, _owner);
-      expect(pending.deleteUserData, isTrue);
-    },
-  );
+  group('clearUserSpecificData', () {
+    test(
+      'lying sign-out intent write stops before any cache or database deletion',
+      () async {
+        await prefs.setString('curated_lists', '[]');
+        await prefs.setString('current_user_pubkey_hex', _owner);
+        store.lieAboutWrite = true;
+        var databaseAttempts = 0;
+        final cleanup = UserDataCleanupService(prefs)
+          ..onDatabaseCleanup = ({
+            userPubkey,
+            deleteUserData = false,
+            preserveActiveSession = false,
+          }) async => databaseAttempts++;
+        await expectLater(
+          cleanup.clearUserSpecificData(
+            userPubkey: _owner,
+            deleteUserData: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(databaseAttempts, 0);
+        await restart();
+        expect(prefs.getString('curated_lists'), '[]');
+        expect(prefs.getString('current_user_pubkey_hex'), _owner);
+      },
+    );
+
+    test(
+      'lying sign-out intent removal cannot report completed cleanup',
+      () async {
+        await prefs.setString('curated_lists', '[]');
+        store.lieAboutRemoval = true;
+        var databaseAttempts = 0;
+        final cleanup = UserDataCleanupService(prefs)
+          ..onDatabaseCleanup = ({
+            userPubkey,
+            deleteUserData = false,
+            preserveActiveSession = false,
+          }) async => databaseAttempts++;
+        await expectLater(
+          cleanup.clearUserSpecificData(
+            userPubkey: _owner,
+            deleteUserData: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(databaseAttempts, 1);
+        await restart();
+        expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
+      },
+    );
+
+    test(
+      'honest destructive intent survives failed database cleanup and restart',
+      () async {
+        await prefs.setString('curated_lists', '[]');
+        final cleanup = UserDataCleanupService(prefs)
+          ..onDatabaseCleanup = ({
+            userPubkey,
+            deleteUserData = false,
+            preserveActiveSession = false,
+          }) async => throw StateError('synthetic database unavailable');
+        await expectLater(
+          cleanup.clearUserSpecificData(
+            userPubkey: _owner,
+            deleteUserData: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        await restart();
+        final pending = PendingAccountCleanup.read(prefs)!;
+        expect(pending.userPubkey, _owner);
+        expect(pending.deleteUserData, isTrue);
+      },
+    );
+  });
 }
