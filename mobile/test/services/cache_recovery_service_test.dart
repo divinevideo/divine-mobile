@@ -183,6 +183,7 @@ void main() {
         );
         addTearDown(store.dispose);
         final nostrClient = _MockNostrClient();
+        when(() => nostrClient.isDisposed).thenReturn(false);
         when(
           () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer(
