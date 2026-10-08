@@ -172,6 +172,26 @@ class PeopleListsUpdateRequested extends PeopleListsMutationRequested {
   List<Object?> get props => [expectedOwnerPubkey, listId, name, description];
 }
 
+/// Requests a metadata-only update without reconstructing member tags.
+class PeopleListsInfoUpdateRequested extends PeopleListsMutationRequested {
+  const PeopleListsInfoUpdateRequested({
+    required this.expectedOwnerPubkey,
+    required this.listId,
+    required this.name,
+    this.description,
+  });
+
+  final String expectedOwnerPubkey;
+  final String listId;
+  final String name;
+
+  /// Absent or blank removes the description tag, matching the repository API.
+  final String? description;
+
+  @override
+  List<Object?> get props => [expectedOwnerPubkey, listId, name, description];
+}
+
 /// Requests deletion of a people list.
 class PeopleListsDeleteRequested extends PeopleListsMutationRequested {
   /// Creates a delete-list request.

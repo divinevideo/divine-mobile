@@ -103,6 +103,27 @@ void main() {
         final copy = userList.copyWith();
         expect(copy, equals(userList));
       });
+
+      test('keeps the description when none is given', () {
+        final described = userList.copyWith(description: 'The crew');
+        expect(described.description, equals('The crew'));
+
+        expect(described.copyWith(name: 'Renamed').description, 'The crew');
+      });
+
+      test('drops the description with clearDescription', () {
+        final described = userList.copyWith(description: 'The crew');
+        expect(described.description, isNotNull);
+
+        expect(described.copyWith(clearDescription: true).description, isNull);
+      });
+
+      test('refuses a description alongside clearDescription', () {
+        expect(
+          () => userList.copyWith(description: 'x', clearDescription: true),
+          throwsArgumentError,
+        );
+      });
     });
 
     group('Equatable', () {
