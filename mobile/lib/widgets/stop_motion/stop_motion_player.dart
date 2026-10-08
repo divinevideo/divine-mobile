@@ -6,7 +6,9 @@ import 'dart:io';
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Plays a stop-motion clip by looping through its captured stills, holding
 /// each for its own [StopMotionClipFrame.duration].
@@ -119,18 +121,23 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
     if (_precached) return;
     _precached = true;
     for (final frame in widget.frames) {
-      precacheImage(
-        ResizeImage.resizeIfNeeded(
-          null,
-          widget.cacheHeight,
-          FileImage(File(frame.path)),
+      runDetached(
+        precacheImage(
+          ResizeImage.resizeIfNeeded(
+            null,
+            widget.cacheHeight,
+            FileImage(File(frame.path)),
+          ),
+          context,
+          // The recorder deletes frame files on undo, discard and reset, so a
+          // missing still is expected. precacheImage reports through its own
+          // listener, so without this it stays a fatal FlutterError even though
+          // _StopMotionFrame renders the placeholder (#5796's class).
+          onError: (_, _) {},
         ),
-        context,
-        // The recorder deletes frame files on undo, discard and reset, so a
-        // missing still is expected. precacheImage reports through its own
-        // listener, so without this it stays a fatal FlutterError even though
-        // _StopMotionFrame renders the placeholder (#5796's class).
-        onError: (_, _) {},
+        'precache stop-motion frame',
+        logName: 'StopMotionPlayer',
+        category: LogCategory.ui,
       );
     }
   }
