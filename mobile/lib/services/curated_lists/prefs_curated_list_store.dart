@@ -59,6 +59,8 @@ class PrefsCuratedListStore {
   final _pendingOwnershipClaims = <String, CuratedList>{};
   var _pendingLists = 0;
   var _pendingSubscriptions = 0;
+  String? _ownerEvidenceJson;
+  _RawListOwnerEvidence? _ownerEvidence;
 
   /// Sets [lists], as just loaded from storage, as the baseline the next
   /// [saveLists] diffs against.
@@ -76,7 +78,7 @@ class PrefsCuratedListStore {
   /// keeping lists another writer stored in the meantime. Returns whether
   /// every change was stored.
   ///
-  /// Stored lists that cannot be decoded are logged and replaced by [lists].
+  /// Unreadable lists fall back to [lists]; raw ownership evidence is retained.
   Future<bool> saveLists(List<CuratedList> lists) async =>
       (await saveListsWithResult(lists)).succeeded;
 
@@ -112,6 +114,7 @@ class PrefsCuratedListStore {
             claim.key: claim.value,
       };
       var storedListsReadable = true;
+      var ownerEvidence = const _RawListOwnerEvidence(readable: true);
       final result = await _writes.saveListsWithResult(
         baseline: baseline,
         current: requested,
@@ -122,16 +125,20 @@ class PrefsCuratedListStore {
           fallback: baseline,
           onUnreadable: () => storedListsReadable = false,
         ),
-        preflightConflicts: activeClaims.isEmpty
-            ? null
-            : (acknowledged) => storedListsReadable
+        preflightConflicts: (acknowledged) {
+          // This runs inside the shared barrier after earlier writers finish.
+          ownerEvidence = _rawOwnerEvidence();
+          return {
+            ...ownerEvidence.mutationConflicts(baseline, requested),
+            if (activeClaims.isNotEmpty)
+              ...(storedListsReadable && ownerEvidence.readable
                   ? _ownershipClaimConflicts(activeClaims, acknowledged)
-                  : activeClaims.keys.toSet(),
+                  : activeClaims.keys.toSet()),
+          };
+        },
         write: (merged) => _writeString(
           _listsKey,
-          jsonEncode(
-            merged.map((list) => list.toJson()).toList(growable: false),
-          ),
+          jsonEncode(ownerEvidence.encode(merged)),
         ),
       );
       _savedLists = result.nextBaseline;
@@ -183,6 +190,27 @@ class PrefsCuratedListStore {
         _ownershipClaimConflicts({destination: source}, acknowledged).isEmpty;
   }
 
+  /// Secondary labels cannot establish an absent or contradictory primary.
+  /// The cache model intentionally does not decode those raw ownership fields.
+  bool hasUnambiguousOwnerEvidence(CuratedList source) {
+    final evidence = _rawOwnerEvidence();
+    return evidence.readable && !evidence.isUncertain(source.authorScopedId);
+  }
+
+  _RawListOwnerEvidence _rawOwnerEvidence() {
+    final String? raw;
+    try {
+      raw = _prefs.getString(_listsKey);
+    } on Object {
+      return const _RawListOwnerEvidence(readable: false);
+    }
+    if (_ownerEvidence != null && raw == _ownerEvidenceJson) {
+      return _ownerEvidence!;
+    }
+    _ownerEvidenceJson = raw;
+    return _ownerEvidence = _RawListOwnerEvidence.fromJson(raw);
+  }
+
   /// Author stamping may only consume the exact acknowledged local draft.
   /// Timestamp precedence cannot establish ownership of an existing coordinate.
   Set<String> _ownershipClaimConflicts(
@@ -207,6 +235,7 @@ class PrefsCuratedListStore {
         (list) => list.authorScopedId == source.authorScopedId,
       );
       if (!followsReadable ||
+          !hasUnambiguousOwnerEvidence(source) ||
           source.pubkey != null ||
           source.nostrEventId != null ||
           storedSources.length != 1 ||
@@ -479,8 +508,7 @@ class PrefsCuratedListStore {
   void _logUnreadable(String what, Object error, StackTrace stackTrace) {
     // The error is left out: FormatException.toString() quotes the stored text.
     Log.error(
-      'Stored curated $what cannot be read (${error.runtimeType}) and will be '
-      'replaced',
+      'Stored curated $what cannot be read (${error.runtimeType})',
       name: 'PrefsCuratedListStore',
       category: LogCategory.system,
       stackTrace: stackTrace,
@@ -515,5 +543,86 @@ class PrefsCuratedListStore {
       return const {};
     }
     return coordinates.toSet();
+  }
+}
+
+/// Retains ownership fields that the typed cache row does not represent.
+class _RawListOwnerEvidence {
+  const _RawListOwnerEvidence({required this.readable, this.rows = const {}});
+
+  factory _RawListOwnerEvidence.fromJson(String? raw) {
+    if (raw == null) return const _RawListOwnerEvidence(readable: true);
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      final rows = <String, List<Map<String, dynamic>>>{};
+      for (final value in decoded) {
+        final fields = value as Map<String, dynamic>;
+        if (!fields.containsKey('ownerPubkey') &&
+            !fields.containsKey('authorPubkey')) {
+          continue;
+        }
+        final id = fields['id'] as String;
+        final primary = fields['pubkey'] as String?;
+        final coordinate = '${primary ?? ''}:$id';
+        (rows[coordinate] ??= []).add(Map.unmodifiable(fields));
+      }
+      return _RawListOwnerEvidence(readable: true, rows: rows);
+    } on Object {
+      return const _RawListOwnerEvidence(readable: false);
+    }
+  }
+
+  final bool readable;
+  final Map<String, List<Map<String, dynamic>>> rows;
+
+  bool isUncertain(String coordinate) =>
+      rows[coordinate]?.any(_hasUncertainOwner) ?? false;
+
+  static bool _hasUncertainOwner(Map<String, dynamic> row) {
+    final primary = row['pubkey'];
+    if (primary is! String || !NostrHexUtils.isValidPubkey(primary)) {
+      return true;
+    }
+    for (final field in ['ownerPubkey', 'authorPubkey']) {
+      if (!row.containsKey(field)) continue;
+      final secondary = row[field];
+      if (secondary is! String ||
+          !NostrHexUtils.isValidPubkey(secondary) ||
+          secondary.toLowerCase() != primary.toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Set<String> mutationConflicts(
+    List<CuratedList> baseline,
+    List<CuratedList> requested,
+  ) {
+    final before = {for (final list in baseline) list.authorScopedId: list};
+    final after = {for (final list in requested) list.authorScopedId: list};
+    return {
+      for (final coordinate in rows.keys)
+        if (isUncertain(coordinate) && before[coordinate] != after[coordinate])
+          coordinate,
+    };
+  }
+
+  List<Map<String, dynamic>> encode(List<CuratedList> lists) {
+    final coordinates = lists.map((list) => list.authorScopedId).toSet();
+    return [
+      for (final list in lists)
+        if (isUncertain(list.authorScopedId))
+          // Preconditions prohibit editing these rows; preserve every raw copy.
+          ...rows[list.authorScopedId]!
+        else if (rows[list.authorScopedId] case final evidence?)
+          {...evidence.last, ...list.toJson()}
+        else
+          list.toJson(),
+      for (final entry in rows.entries)
+        // Invalid title/date fields can keep raw evidence out of typed lists.
+        if (!coordinates.contains(entry.key) && isUncertain(entry.key))
+          ...entry.value,
+    ];
   }
 }
