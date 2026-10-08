@@ -33,7 +33,7 @@ class TrendingHashtagsSection extends StatelessWidget {
   final Widget? leading;
 
   /// Optional callback when a hashtag is tapped.
-  /// If not provided, defaults to navigating via goHashtag.
+  /// If not provided, tapping pushes the hashtag's feed route.
   final void Function(String hashtag)? onHashtagTap;
 
   @override
