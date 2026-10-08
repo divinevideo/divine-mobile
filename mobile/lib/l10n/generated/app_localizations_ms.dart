@@ -13514,10 +13514,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Akaun atau akses anda kepada senarai telah berubah. Buka semula halaman ini untuk meneruskan.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Cari pengikut dan orang yang diikuti';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
