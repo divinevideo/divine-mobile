@@ -1873,10 +1873,7 @@ void main() {
               ),
             );
             await started.future;
-            final queuedOutcome = bloc.stream.firstWhere(
-              (state) => state.lastPicksOutcome?.requestId == 'queued',
-            );
-            bloc.add(
+            final queuedCompletion = bloc.submit(
               const PeopleListsPicksApplied(
                 requestId: 'queued',
                 ownerPubkey: _ownerA,
@@ -1907,7 +1904,13 @@ void main() {
               await _flush();
             }
             pending.complete(submitted);
-            await queuedOutcome;
+            expect(
+              await queuedCompletion,
+              transition == 'none'
+                  ? PeopleListsOperationResult.succeeded
+                  : PeopleListsOperationResult.cancelled,
+            );
+            await _flush();
           },
           verify: (bloc) {
             Future<PeopleListPublishResult> addCall() => repository.addPubkey(
@@ -1929,8 +1932,12 @@ void main() {
               verifyNever(removeCall);
               expect(bloc.state.listIdsByPubkey[_memberBob], {'list-3'});
             }
-            expect(bloc.state.lastPicksOutcome?.requestId, 'queued');
-            expect(bloc.state.lastPicksOutcome?.refused, 0);
+            if (transition == 'none') {
+              expect(bloc.state.lastPicksOutcome?.requestId, 'queued');
+              expect(bloc.state.lastPicksOutcome?.refused, 0);
+            } else {
+              expect(bloc.state.lastPicksOutcome, isNull);
+            }
             expect(bloc.state.ownerPubkey, _ownerA);
             expect(bloc.state.pendingMutations, isEmpty);
           },
