@@ -4649,6 +4649,39 @@ void main() {
         );
       }
 
+      test(
+        'progressive search preserves cleared server media fields',
+        () async {
+          final cached = UserProfile(
+            pubkey: pkCachedVine,
+            name: 'sam',
+            picture: 'https://example.com/old-avatar.jpg',
+            banner: 'https://example.com/old-banner.jpg',
+            createdAt: DateTime(2025),
+            eventId: 'a' * 64,
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached]);
+          when(
+            () => mockUserProfilesDao.getProfile(pkCachedVine),
+          ).thenAnswer((_) async => cached);
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pkCachedVine,
+              name: 'sam',
+              createdAt: DateTime(2026),
+            ),
+          ]);
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+              .last;
+          expect(result.profiles.single.picture, isNull);
+          expect(result.profiles.single.banner, isNull);
+        },
+      );
+
       for (final clearedName in <String?>[null, '']) {
         test(
           'progressive search does not restore cleared server names '

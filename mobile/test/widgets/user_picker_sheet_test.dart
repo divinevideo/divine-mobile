@@ -1535,80 +1535,108 @@ void main() {
         // so we distinguish by asserting the tile is present above.
       });
 
-      testWidgets('offers the next page when the first page has no matches', (
-        tester,
-      ) async {
-        final profile = UserProfile(
-          pubkey: 'a' * 64,
-          displayName: 'Sam Match',
-          createdAt: DateTime(2026),
-          eventId: 'event_match',
-          rawData: const {},
-        );
-        final mockProfileRepo = _createMockProfileRepository();
-        when(
-          () => mockProfileRepo.searchUsersProgressive(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-            sortBy: any(named: 'sortBy'),
-            hasVideos: any(named: 'hasVideos'),
-            boostPubkeys: any(named: 'boostPubkeys'),
-            cancellationToken: any(named: 'cancellationToken'),
-          ),
-        ).thenAnswer((invocation) {
-          final offset = invocation.namedArguments[#offset] as int;
-          return Stream.value(
-            ProgressiveSearchResult(
-              profiles: offset == 0 ? [] : [profile],
-              sources: const {},
-              isComplete: true,
-              nextRestOffset: offset == 0 ? 50 : 51,
-              restHasMore: offset == 0,
-            ),
-          );
-        });
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              _noVanishedProfiles,
-              profileRepositoryProvider.overrideWithValue(mockProfileRepo),
-              profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
-              followRepositoryProvider.overrideWithValue(
-                _createMockFollowRepository(),
+      for (final hasFirstMatch in [false, true]) {
+        testWidgets(
+          'offers the next page with a short first page ($hasFirstMatch)',
+          (
+            tester,
+          ) async {
+            final profile = UserProfile(
+              pubkey: 'a' * 64,
+              displayName: 'Sam Match',
+              createdAt: DateTime(2026),
+              eventId: 'event_match',
+              rawData: const {},
+            );
+            final mockProfileRepo = _createMockProfileRepository();
+            when(
+              () => mockProfileRepo.searchUsersProgressive(
+                query: any(named: 'query'),
+                limit: any(named: 'limit'),
+                offset: any(named: 'offset'),
+                sortBy: any(named: 'sortBy'),
+                hasVideos: any(named: 'hasVideos'),
+                boostPubkeys: any(named: 'boostPubkeys'),
+                cancellationToken: any(named: 'cancellationToken'),
               ),
-            ],
-            child: const MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: UserPickerSheet(
-                  title: 'Title',
-                  filterMode: UserPickerFilterMode.allUsers,
+            ).thenAnswer((invocation) {
+              final offset = invocation.namedArguments[#offset] as int;
+              return Stream.value(
+                ProgressiveSearchResult(
+                  profiles: offset == 0
+                      ? [
+                          if (hasFirstMatch)
+                            UserProfile(
+                              pubkey: 'b' * 64,
+                              displayName: 'Sam First',
+                              createdAt: DateTime(2026),
+                              eventId: 'c' * 64,
+                              rawData: const {},
+                            ),
+                        ]
+                      : [profile],
+                  sources: const {},
+                  isComplete: true,
+                  nextRestOffset: offset == 0 ? 50 : 51,
+                  restHasMore: offset == 0,
+                ),
+              );
+            });
+
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  _noVanishedProfiles,
+                  profileRepositoryProvider.overrideWithValue(mockProfileRepo),
+                  profileReadRepositoryProvider.overrideWithValue(
+                    mockProfileRepo,
+                  ),
+                  followRepositoryProvider.overrideWithValue(
+                    _createMockFollowRepository(),
+                  ),
+                ],
+                child: MaterialApp(
+                  theme: ThemeData(platform: TargetPlatform.android),
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: const Scaffold(
+                    body: UserPickerSheet(
+                      title: 'Title',
+                      filterMode: UserPickerFilterMode.allUsers,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+
+            await tester.enterText(find.byType(TextField), 'sam');
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.runAsync(pumpEventQueue);
+            await tester.pumpAndSettle();
+            if (hasFirstMatch) {
+              expect(find.text('Sam First'), findsOneWidget);
+              final list = tester.state<ScrollableState>(
+                find.byType(Scrollable).last,
+              );
+              expect(list.position.maxScrollExtent, 0);
+            }
+            expect(find.text('Show more'), findsOneWidget);
+            await tester.tap(find.text('Show more'));
+            await tester.pumpAndSettle();
+
+            verify(
+              () => mockProfileRepo.searchUsersProgressive(
+                query: 'sam',
+                limit: 50,
+                offset: 50,
+                sortBy: any(named: 'sortBy'),
+              ),
+            ).called(1);
+            expect(find.text('Sam Match'), findsOneWidget);
+            expect(find.text('Show more'), findsNothing);
+          },
         );
-
-        await tester.enterText(find.byType(TextField), 'sam');
-        await tester.pump(const Duration(milliseconds: 400));
-        await tester.runAsync(pumpEventQueue);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Show more'));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockProfileRepo.searchUsersProgressive(
-            query: 'sam',
-            limit: 50,
-            offset: 50,
-            sortBy: any(named: 'sortBy'),
-          ),
-        ).called(1);
-        expect(find.text('Sam Match'), findsOneWidget);
-      });
+      }
 
       testWidgets('loads the next people page when scrolled to the end', (
         tester,

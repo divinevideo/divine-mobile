@@ -941,6 +941,8 @@ class _ResultsList extends StatelessWidget {
     required this.results,
     required this.onUserSelected,
     this.onNearEnd,
+    this.onShowMore,
+    this.isLoadingMore = false,
     this.excludePubkeys = const {},
     this.selectedPubkeys = const {},
     this.hidePubkeys = const {},
@@ -950,6 +952,8 @@ class _ResultsList extends StatelessWidget {
   final List<UserProfile> results;
   final ValueChanged<UserProfile> onUserSelected;
   final VoidCallback? onNearEnd;
+  final VoidCallback? onShowMore;
+  final bool isLoadingMore;
   final Set<String> excludePubkeys;
   final Set<String> selectedPubkeys;
   final Set<String> hidePubkeys;
@@ -970,7 +974,7 @@ class _ResultsList extends StatelessWidget {
       },
       child: ListView.separated(
         controller: scrollController,
-        itemCount: visible.length,
+        itemCount: visible.length + (onShowMore == null ? 0 : 1),
         padding: EdgeInsets.fromLTRB(
           0,
           32,
@@ -983,6 +987,17 @@ class _ResultsList extends StatelessWidget {
           color: context.vineColors.outlineDisabled,
         ),
         itemBuilder: (context, index) {
+          if (index == visible.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: DivineButton(
+                label: context.l10n.profileShowMore,
+                type: DivineButtonType.secondary,
+                onPressed: isLoadingMore ? null : onShowMore,
+                isLoading: isLoadingMore,
+              ),
+            );
+          }
           final profile = visible[index];
           final isDisabled = excludePubkeys.contains(profile.pubkey);
           return _UserSearchTile(
@@ -1051,6 +1066,10 @@ class _NetworkResults extends StatelessWidget {
             onNearEnd: state.hasMore && !state.isLoadingMore
                 ? () => searchBloc.add(const UserSearchLoadMore())
                 : null,
+            onShowMore: state.hasMore
+                ? () => searchBloc.add(const UserSearchLoadMore())
+                : null,
+            isLoadingMore: state.isLoadingMore,
             excludePubkeys: excludePubkeys,
             selectedPubkeys: selectedPubkeys,
             hidePubkeys: hidePubkeys,
