@@ -17,6 +17,12 @@ class PendingAccountCleanup {
 
   static const storageKey = 'pending_account_data_cleanup';
 
+  static final _unknownReadbacks = Expando<bool>();
+
+  /// Callers must not release shared storage holds while readback is unknown.
+  static bool readbackUnknown(SharedPreferences preferences) =>
+      _unknownReadbacks[preferences] ?? false;
+
   /// Device-wide security coordination, removed only after successful cleanup.
   /// Clearing this as ordinary account data would erase the retry obligation.
   static const List<String> deviceScopedPrefsKeys = [storageKey];
@@ -57,17 +63,57 @@ class PendingAccountCleanup {
       (!deleteUserData || this.deleteUserData);
 
   Future<void> record(SharedPreferences preferences) async {
-    if (!await preferences.setString(storageKey, _encoded)) {
+    final encoded = _encoded;
+    var saved = false;
+    try {
+      saved = await preferences.setString(storageKey, encoded);
+    } on Object {
+      // A platform throw can still leave an optimistic value in the cache.
+      try {
+        await _reload(preferences);
+      } on Object {
+        // No destructive work is authorized without verified readback.
+      }
+      throw StateError('Could not record required account cleanup');
+    }
+    await _reload(preferences);
+    if (!saved || preferences.get(storageKey) != encoded) {
       throw StateError('Could not record required account cleanup');
     }
   }
 
   Future<void> complete(SharedPreferences preferences) async {
-    if (!await preferences.remove(storageKey)) {
-      // SharedPreferences removes its in-memory entry before the backend
-      // acknowledges removal. Restore the retry obligation in memory too.
-      await record(preferences);
+    var removed = false;
+    try {
+      removed = await preferences.remove(storageKey);
+    } on Object {
+      // Even a throw can occur after removal; retain the original obligation.
+    }
+    try {
+      await _reload(preferences);
+    } on Object {
+      // Restore before reporting failure; a restart must not infer completion
+      // from an unavailable readback of the marker's optimistic removal.
+      try {
+        await record(preferences);
+      } on Object {
+        // The caller remains failed closed when restoration is unverified.
+      }
+      throw StateError('Could not verify completed account cleanup');
+    }
+    if (!removed || preferences.containsKey(storageKey)) {
+      if (!preferences.containsKey(storageKey)) await record(preferences);
       throw StateError('Could not finish required account cleanup');
+    }
+  }
+
+  static Future<void> _reload(SharedPreferences preferences) async {
+    try {
+      await preferences.reload();
+      _unknownReadbacks[preferences] = false;
+    } on Object {
+      _unknownReadbacks[preferences] = true;
+      throw StateError('Could not verify required account cleanup');
     }
   }
 
