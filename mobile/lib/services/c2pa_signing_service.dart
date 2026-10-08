@@ -7,10 +7,13 @@ import 'dart:io';
 import 'package:c2pa_flutter/c2pa.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/c2pa_identity_manifest_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+export 'package:openvine/models/c2pa_edit_source.dart';
 
 /// C2PA edit actions recorded when carrying a manifest forward onto a
 /// re-encoded ("derived") video via [C2paSigningService.resignDerived].
@@ -24,32 +27,6 @@ abstract class C2paEditActions {
   /// wrong — the spec defines it as a non-editorial transformation, and a
   /// visible overlay is editorial.
   static const String edited = 'c2pa.edited';
-}
-
-/// What kind of media an edited video was made from.
-enum C2paSourceKind {
-  /// Footage. It must carry its own manifest: a video without one cannot be
-  /// shown to be a camera capture, so an edit of it is not signed at all.
-  video,
-
-  /// A still, such as a chroma-key backdrop or a placeholder fill.
-  image,
-
-  /// A sound, such as a track from the sound library or a voice-over.
-  audio,
-}
-
-/// A file an edited video was made from.
-@immutable
-class C2paEditSource {
-  /// Creates a [C2paEditSource] for the file at [path].
-  const C2paEditSource({required this.path, this.kind = C2paSourceKind.video});
-
-  /// Path of the source file.
-  final String path;
-
-  /// What the source is.
-  final C2paSourceKind kind;
 }
 
 /// High-level reason a C2PA signing operation failed.

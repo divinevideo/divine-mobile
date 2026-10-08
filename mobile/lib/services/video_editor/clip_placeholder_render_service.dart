@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
@@ -151,6 +152,12 @@ class ClipPlaceholderRenderService {
       // volume on its layer, so muting here does not silence anything the user
       // could still hear.
       volume: 0,
+      // A photo goes into the video as a declared still; a colour the editor
+      // drew is no source media at all.
+      derivedFrom: [
+        if (fill is ClipPlaceholderImageFill)
+          C2paEditSource(path: imagePath, kind: C2paSourceKind.image),
+      ],
     );
   }
 

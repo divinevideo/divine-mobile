@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show ClipSourceCredit;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/services/video_editor/freeze_frame_render_service.dart';
@@ -242,6 +243,10 @@ void main() {
         );
 
         expect(freeze!.sourceCredits, [credit]);
+        // Signed against the footage the frame was taken from.
+        expect(freeze.derivedFrom, const [
+          C2paEditSource(path: '/documents/footage.mp4'),
+        ]);
         // A freeze in front of the first clip inherits the canvas coordinate
         // system, while the file itself is already cropped to the target.
         expect(freeze.originalAspectRatio, 1);

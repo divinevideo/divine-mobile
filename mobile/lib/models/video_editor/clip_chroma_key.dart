@@ -5,6 +5,7 @@
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -60,6 +61,14 @@ class ClipChromaKey {
 
   /// Path of the background image, or `null` when there is none.
   String? get backgroundImagePath => key.backgroundImage?.file?.path;
+
+  /// The backdrop media this key composites behind the subject, as sources
+  /// of the keyed video.
+  List<C2paEditSource> get backdropSources => [
+    if (backgroundVideoPath case final path?) C2paEditSource(path: path),
+    if (backgroundImagePath case final path?)
+      C2paEditSource(path: path, kind: C2paSourceKind.image),
+  ];
 
   /// Which background this key fills the removed area with.
   ClipChromaKeyBackgroundType get backgroundType {
