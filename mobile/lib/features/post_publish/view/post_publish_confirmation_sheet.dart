@@ -32,7 +32,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
   final VoidCallback onView;
   final VoidCallback onShare;
 
-  /// Optional crossposting prompt rendered below View and Share.
+  /// Optional crossposting prompt rendered above View and Share.
   /// The section owns its spacing so hidden prompts leave no empty gap.
   final Widget? crosspostSection;
 
@@ -99,6 +99,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
+          ?crosspostSection,
           const SizedBox(height: 24),
           Row(
             spacing: 12,
@@ -120,7 +121,6 @@ class PostPublishConfirmationSheet extends StatelessWidget {
               ),
             ],
           ),
-          ?crosspostSection,
         ],
       ),
     );

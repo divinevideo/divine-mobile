@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
@@ -94,6 +95,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            isProtectedMinorProvider.overrideWithValue(false),
             authServiceProvider.overrideWithValue(auth),
             crosspostingAvailabilityProvider.overrideWithValue(
               CrosspostingAvailability.native,
@@ -210,6 +212,40 @@ void main() {
 
         expect(
           find.text(_l10n.crosspostReconnectPrompt('Instagram')),
+          findsOneWidget,
+        );
+        expect(find.text(_l10n.crosspostReconnect), findsOneWidget);
+      });
+
+      testWidgets('names each lapsed platform in its own reconnect message', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          settings: [
+            _instagram(
+              connection: _instagramNeedsReauth,
+              mode: CrosspostingMode.manual,
+            ),
+            const CrosspostingPlatformSettings(
+              platform: CrosspostingPlatform.tiktok,
+              supportsAutomatic: true,
+              mode: CrosspostingMode.manual,
+              connection: CrosspostingConnection(
+                id: 'lapsed-tiktok',
+                platform: CrosspostingPlatform.tiktok,
+                status: CrosspostingConnectionStatus.needsReauth,
+              ),
+            ),
+          ],
+        );
+
+        expect(
+          find.textContaining(_l10n.crosspostReconnectPrompt('Instagram')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(_l10n.crosspostReconnectPrompt('TikTok')),
           findsOneWidget,
         );
         expect(find.text(_l10n.crosspostReconnect), findsOneWidget);

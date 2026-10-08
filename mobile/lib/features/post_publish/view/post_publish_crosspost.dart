@@ -12,6 +12,7 @@ import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 
 /// Whether the post-publish confirmation may load crossposting state for a
@@ -63,6 +64,7 @@ class PostPublishCrosspost extends ConsumerWidget {
     )) {
       return const SizedBox.shrink();
     }
+    if (ref.watch(isProtectedMinorProvider)) return const SizedBox.shrink();
     final repository = ref.watch(crosspostingRepositoryProvider);
     final analytics = ref.watch(analyticsEventSinkProvider);
     return BlocProvider<PostPublishCrosspostCubit>(

@@ -65,7 +65,7 @@ void main() {
       expect(find.text(_l10n.libraryRecordVideo), findsNothing);
     });
 
-    testWidgets('places a crosspost section below view and share', (
+    testWidgets('places a crosspost section above view and share', (
       tester,
     ) async {
       var shared = 0;
@@ -78,7 +78,7 @@ void main() {
 
       expect(
         tester.getTopLeft(find.text('crosspost-slot')).dy,
-        greaterThan(
+        lessThan(
           tester
               .getBottomLeft(find.text(_l10n.postPublishConfirmationShare))
               .dy,

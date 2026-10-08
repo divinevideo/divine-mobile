@@ -137,6 +137,29 @@ void main() {
       );
 
       blocTest<PostPublishCrosspostCubit, PostPublishCrosspostState>(
+        'does not pitch setup after a deliberate disconnect',
+        setUp: () => when(() => repository.loadSettings()).thenAnswer(
+          (_) async => [
+            _settings(
+              connection: const CrosspostingConnection(
+                id: 'disconnected-instagram',
+                platform: CrosspostingPlatform.instagram,
+                status: CrosspostingConnectionStatus.disconnected,
+              ),
+            ),
+          ],
+        ),
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const PostPublishCrosspostState(
+            prompt: PostPublishCrosspostPrompt.none,
+          ),
+        ],
+        verify: (_) => expect(analytics.events, isEmpty),
+      );
+
+      blocTest<PostPublishCrosspostCubit, PostPublishCrosspostState>(
         'notes automatic crossposting without a CTA',
         setUp: () => when(() => repository.loadSettings()).thenAnswer(
           (_) async => [

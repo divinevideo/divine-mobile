@@ -1,4 +1,4 @@
-// ABOUTME: Crossposting prompt under the post-publish confirmation's buttons:
+// ABOUTME: Crossposting prompt above the post-publish confirmation's buttons:
 // ABOUTME: crosspost this video, set crossposting up, reconnect, or a note.
 
 import 'dart:async';
@@ -13,7 +13,7 @@ import 'package:openvine/repositories/crossposting_repository.dart';
 /// Renders the [PostPublishCrosspostCubit]'s prompt.
 ///
 /// Deliberately recessive — a neutral card with a small secondary button — so
-/// it sits below View and Share without competing with them.
+/// it keeps View and Share as the primary actions.
 class PostPublishCrosspostSection extends StatelessWidget {
   const PostPublishCrosspostSection({
     required this.onCrosspost,
@@ -66,7 +66,11 @@ class PostPublishCrosspostSection extends StatelessWidget {
         ),
       ),
       PostPublishCrosspostPrompt.reconnect => _PromptCard(
-        message: l10n.crosspostReconnectPrompt(names),
+        message: state.platforms
+            .map(
+              (platform) => l10n.crosspostReconnectPrompt(platform.displayName),
+            )
+            .join('\n'),
         action: (
           label: l10n.crosspostReconnect,
           onPressed: () => tapped(onReconnect),

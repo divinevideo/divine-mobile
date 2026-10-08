@@ -272,14 +272,19 @@ toggle in `general_settings_screen.dart`.
 
 The owner decided to offer crossposting on the post-publish confirmation after
 all. The Share button and its OS share sheet are untouched; the crossposting
-prompt is a separate, recessive card below View and Share:
+prompt is a separate, recessive card above View and Share. In the bottom-anchored
+sheet this keeps the two buttons stationary when the card loads:
 
 - A platform connected in manual mode: suggest crossposting this video, opening
   the existing crosspost sheet for the just-published event.
-- Nothing connected: a setup call to action, routed through
+- No current or previous connection: a setup call to action, routed through
   `openCrosspostingSetup` (native settings or the web fallback).
-- A lapsed connection: a reconnect prompt, through the same routing.
+- A lapsed connection still switched on: a reconnect prompt, through the same
+  routing, naming each affected platform separately.
 - Automatic mode: a one-line note, no call to action.
+- A deliberately disconnected or switched-off platform does not trigger a setup
+  pitch. This differs intentionally from the user-opened Settings screen.
+- Protected minors: no unsolicited card and no crossposting settings request.
 - Ineligible, or a signer that can prompt per signature (Amber, NIP-46 bunker,
   NIP-07): nothing, and crossposting state is never loaded.
 

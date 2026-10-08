@@ -27,6 +27,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -574,6 +575,8 @@ void main() {
         CrosspostingAvailability availability = CrosspostingAvailability.native,
         String? eventId = _publishedEventId,
         List<Override> gateOverrides = const [],
+        bool useRealAvailability = false,
+        bool protectedMinor = false,
       }) async {
         stubPublishBloc(const BackgroundPublishState());
         when(() => authService.authenticationSource).thenReturn(source);
@@ -589,13 +592,14 @@ void main() {
             experiment: experiment,
             router: router,
             extraOverrides: [
-              if (gateOverrides.isEmpty)
+              if (!useRealAvailability)
                 crosspostingAvailabilityProvider.overrideWithValue(
                   availability,
                 ),
               crosspostingRepositoryProvider.overrideWithValue(repository),
               crosspostingApiClientProvider.overrideWithValue(apiClient),
               analyticsEventSinkProvider.overrideWithValue(analytics),
+              isProtectedMinorProvider.overrideWithValue(protectedMinor),
               ...gateOverrides,
             ],
           ),
@@ -617,7 +621,7 @@ void main() {
         when(() => authService.isRegistered).thenReturn(true);
       }
 
-      testWidgets('suggests crossposting below view and share', (
+      testWidgets('suggests crossposting above view and share', (
         tester,
       ) async {
         await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
@@ -698,6 +702,7 @@ void main() {
         await pumpPublished(
           tester,
           source: AuthenticationSource.importedKeys,
+          useRealAvailability: true,
           gateOverrides: [
             appOAuthSupportProvider.overrideWith((ref) => oauthSupport.future),
           ],
@@ -712,6 +717,47 @@ void main() {
           findsOneWidget,
         );
         verify(() => repository.loadSettings()).called(1);
+      });
+
+      testWidgets('keeps View and Share still when the card arrives', (
+        tester,
+      ) async {
+        final settings = Completer<List<CrosspostingPlatformSettings>>();
+        when(() => repository.loadSettings())
+            .thenAnswer((_) => settings.future);
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+        final view = find.text(_l10nEn.postPublishConfirmationView);
+        final share = find.text(_l10nEn.postPublishConfirmationShare);
+        final beforeView = tester.getCenter(view);
+        final beforeShare = tester.getCenter(share);
+
+        settings.complete(const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.manual,
+            connection: _instagramConnected,
+          ),
+        ]);
+        await tester.pumpAndSettle();
+
+        expect(find.text(_l10nEn.crosspostSubmit), findsOneWidget);
+        expect(tester.getCenter(view), beforeView);
+        expect(tester.getCenter(share), beforeShare);
+      });
+
+      testWidgets('offers no unsolicited prompt to a protected minor', (
+        tester,
+      ) async {
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.divineOAuth,
+          protectedMinor: true,
+        );
+
+        expect(find.text(_l10nEn.postPublishConfirmationShare), findsOneWidget);
+        expect(find.text(_l10nEn.crosspostSubmit), findsNothing);
+        verifyNever(() => repository.loadSettings());
       });
 
       testWidgets('crosspost submits the just-published event', (

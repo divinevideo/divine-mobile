@@ -103,10 +103,10 @@ class PostPublishCrosspostCubit extends Cubit<PostPublishCrosspostState>
       );
     }
 
-    // A platform switched off is a choice, not a gap to fill, whether its
-    // account is still connected or has lapsed.
+    // Unlike Settings, this unsolicited pitch respects any previous connection,
+    // including one the creator deliberately disconnected.
     final anyAccount = settings.any(
-      (platform) => platform.isConnected || platform.needsReauth,
+      (platform) => platform.connection != null,
     );
     if (settings.isEmpty || anyAccount) {
       return const PostPublishCrosspostState(
