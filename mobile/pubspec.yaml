@@ -141,6 +141,7 @@ dependencies:
 
   # Networking
   http: ^1.5.0
+  http_parser: ^4.1.2
   web_socket_channel: ^3.0.3
   connectivity_plus: ^7.3.0
   device_info_plus: ^10.1.2

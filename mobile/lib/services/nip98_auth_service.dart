@@ -48,7 +48,7 @@ class Nip98Token {
   final DateTime expiresAt;
 
   /// Check if the token is expired
-  bool get isExpired => clock.now().isAfter(expiresAt);
+  bool get isExpired => !clock.now().isBefore(expiresAt);
 
   /// Get the authorization header value
   String get authorizationHeader => 'Nostr $token';
@@ -77,19 +77,43 @@ class Nip98AuthService {
   static const Duration _cacheCleanupInterval = Duration(minutes: 15);
 
   Timer? _cleanupTimer;
+  final Map<String, Duration> _serverOffsets = {};
+  String? _cacheOwner;
+  bool _disposed = false;
+
+  /// Records a fresh server time supplied by the trusted HTTP transport.
+  /// Offsets are isolated by origin; a correction invalidates signed tokens.
+  void updateServerTime(Uri uri, DateTime serverTime) {
+    if (_disposed || uri.scheme != 'https') return;
+    final offset = serverTime.toUtc().difference(clock.now().toUtc());
+    final previous = _serverOffsets[uri.origin];
+    // HTTP dates have second precision. Avoid churning the cache for rounding
+    // differences while still noticing actual clock corrections.
+    if (previous != null && (previous - offset).inMilliseconds.abs() < 1000) {
+      return;
+    }
+    _serverOffsets[uri.origin] = offset;
+    clearTokenCache();
+  }
+
+  int _timestamp(String url) {
+    final offset = _serverOffsets[Uri.parse(url).origin] ?? Duration.zero;
+    return clock.now().add(offset).millisecondsSinceEpoch ~/ 1000;
+  }
 
   /// Create a NIP-98 authentication token for an HTTP request
   ///
-  /// A cached token can be up to 45 s old when it is sent, so a device clock
-  /// running more than ~15 s slow pushes it past a 60 s server window. Pass
-  /// `reuseCached: false` to always sign a new event.
+  /// Signing and cache reuse share a 45 s budget within the 60 s max age.
+  /// Before learning server time, slow clocks can expire tokens and fast
+  /// clocks can exceed the server's future-skew allowance. The HTTP transport
+  /// corrects either rejection and passes `reuseCached: false` on its retry.
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,
     String? payload,
     bool reuseCached = true,
   }) async {
-    if (!_authService.isAuthenticated) {
+    if (_disposed || !_authService.isAuthenticated) {
       Log.error(
         'Cannot create NIP-98 token - user not authenticated',
         name: 'Nip98AuthService',
@@ -99,6 +123,13 @@ class Nip98AuthService {
     }
 
     try {
+      final owner = _authService.currentPublicKeyHex;
+      if (_cacheOwner != owner) {
+        clearTokenCache();
+        _cacheOwner = owner;
+      }
+      final signingStarted = clock.now();
+      final clockOffset = _serverOffsets[Uri.parse(url).origin];
       // Create cache key for this request
       final cacheKey = _createCacheKey(url, method, payload);
 
@@ -140,12 +171,19 @@ class Nip98AuthService {
       final eventJson = jsonEncode(authEvent.toJson());
       final token = base64Encode(utf8.encode(eventJson));
 
-      final now = clock.now();
+      final expiresAt = signingStarted.add(_tokenValidityDuration);
+      if (_disposed ||
+          clockOffset != _serverOffsets[Uri.parse(url).origin] ||
+          !_authService.isAuthenticated ||
+          owner != _authService.currentPublicKeyHex ||
+          !clock.now().isBefore(expiresAt)) {
+        return null;
+      }
       final nip98Token = Nip98Token(
         token: token,
         signedEvent: authEvent,
-        createdAt: now,
-        expiresAt: now.add(_tokenValidityDuration),
+        createdAt: signingStarted,
+        expiresAt: expiresAt,
       );
 
       // Cache the token
@@ -180,8 +218,7 @@ class Nip98AuthService {
     String? payload,
   }) async {
     try {
-      final now = clock.now();
-      final timestamp = (now.millisecondsSinceEpoch / 1000).round();
+      final timestamp = _timestamp(url);
 
       // Create tags according to NIP-98
       final tags = <List<String>>[
@@ -205,6 +242,7 @@ class Nip98AuthService {
         kind: 27235, // NIP-98 HTTP Auth event kind
         content: '', // Content is empty for auth events
         tags: tags,
+        createdAt: timestamp,
       );
 
       if (authEvent == null) {
@@ -303,7 +341,7 @@ class Nip98AuthService {
         return false;
       }
 
-      final now = (clock.now().millisecondsSinceEpoch / 1000).round();
+      final now = _timestamp(url);
       final timeDiff = (now - tagTimestamp).abs();
       if (timeDiff > 60) {
         // 60 seconds
@@ -386,6 +424,12 @@ class Nip98AuthService {
     };
   }
 
+  /// Whether a retry still belongs to the active authenticated account.
+  bool isCurrentOwner(String pubkey) =>
+      !_disposed &&
+      _authService.isAuthenticated &&
+      _authService.currentPublicKeyHex == pubkey;
+
   /// Check if we can create auth tokens (user is authenticated)
   bool get canCreateTokens => _authService.isAuthenticated;
 
@@ -399,7 +443,9 @@ class Nip98AuthService {
       category: LogCategory.system,
     );
 
+    _disposed = true;
     _cleanupTimer?.cancel();
     _tokenCache.clear();
+    _serverOffsets.clear();
   }
 }

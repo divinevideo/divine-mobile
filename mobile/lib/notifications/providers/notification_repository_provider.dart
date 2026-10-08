@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:http/http.dart' as http;
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -10,6 +11,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/nip98_http_client.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 
 /// Riverpod provider that creates and exposes a [NotificationRepository].
@@ -26,8 +28,16 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     configuredRelays: nostrService.configuredRelays,
     fallbackBaseUrl: relayWsToHttpBase(environmentConfig.relayUrl),
   );
+  final nip98AuthService = ref.watch(nip98AuthServiceProvider);
+  final httpClient = Nip98HttpClient(
+    inner: http.Client(),
+    authService: nip98AuthService,
+    trustedOrigin: Uri.parse(notificationsBaseUrl),
+  );
+  ref.onDispose(httpClient.close);
   final funnelcakeApiClient = FunnelcakeApiClient(
     baseUrl: notificationsBaseUrl,
+    httpClient: httpClient,
     appVersion: ref.watch(appVersionProvider),
   );
   final profileRepository = ref.watch(profileRepositoryProvider);
@@ -38,7 +48,6 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
 
   final db = ref.watch(databaseProvider);
   final authService = ref.watch(authServiceProvider);
-  final nip98AuthService = ref.watch(nip98AuthServiceProvider);
   final userPubkey = authService.currentPublicKeyHex ?? '';
 
   final repository = NotificationRepository(

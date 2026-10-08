@@ -10,6 +10,7 @@ import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/nip98_http_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// How this build can drive the crossposting connect flow.
@@ -112,7 +113,12 @@ final crosspostingApiClientFactoryProvider =
           CrosspostingApiClient(
             nip98AuthService: nip98AuthService,
             ownerPubkey: ownerPubkey,
-            httpClient: newHttpClient(),
+            httpClient: Nip98HttpClient(
+              inner: newHttpClient(),
+              authService: nip98AuthService,
+              trustedOrigin: Uri.parse(CrosspostingApiClient.defaultBaseUrl),
+              retryBudget: CrosspostingApiClient.requestTimeout,
+            ),
           );
     });
 

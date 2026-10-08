@@ -270,7 +270,7 @@ class CrosspostingApiClient {
   /// the app.
   static const String defaultBaseUrl = AppConfig.crossposterBaseUrl;
 
-  static const Duration _timeout = Duration(seconds: 20);
+  static const Duration requestTimeout = Duration(seconds: 20);
   static const _allowedReturnUrlHosts = {
     'divine.video',
     'www.divine.video',
@@ -293,8 +293,8 @@ class CrosspostingApiClient {
 
   /// Signs [method] [uri] with [body] as the exact bytes that will be sent.
   ///
-  /// A fresh event is signed per request: the server allows 60 s of clock
-  /// skew, and a cached token can already be 45 s old. The signed event must
+  /// A fresh event is signed per request to retain the short server freshness
+  /// window even when signing takes time. The signed event must
   /// belong to [_ownerPubkey], so a client bound to one account never sends a
   /// request signed by another after a mid-flight account switch.
   Future<Map<String, String>> _authHeaders(
@@ -557,7 +557,7 @@ class CrosspostingApiClient {
     Future<http.Response> Function() request,
   ) async {
     try {
-      return await request().timeout(_timeout);
+      return await request().timeout(requestTimeout);
     } on TimeoutException catch (error) {
       throw CrosspostingApiException(
         'Crossposter request timed out',
