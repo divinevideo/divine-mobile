@@ -158,8 +158,9 @@ Version 21 adds the `removed_message_ids` table (#8179): the rumor id of every
 message and reaction deleted when its conversation was removed, owner-scoped,
 with `(owner_pubkey, rumor_id)` as the primary key. Removing a conversation
 deletes the rows a later NIP-09 kind 5 would apply to, so without the ids the
-wrap carrying that kind 5 was deferred forever and decrypted again on every
-launch. The same ids stop a replayed message from being stored again, which
+wrap carrying that kind 5 stayed deferred and was decrypted again on relay
+redelivery until it aged out of the subscription window. The same ids stop a
+replayed message from being stored again, which
 the removal timestamp alone could not do: a sender chooses a rumor's
 `created_at`, so a future-dated message could clear the removal instant on a
 later replay. The table is new, so nothing migrates into it and conversations
