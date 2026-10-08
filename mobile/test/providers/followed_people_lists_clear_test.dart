@@ -71,6 +71,7 @@ void main() {
             openBox: () => Hive.openBox<dynamic>(HiveBoxNames.peopleLists),
           );
           final client = _Client();
+          when(() => client.isDisposed).thenReturn(false);
           final viewer = 'a' * 64;
           final owner = 'b' * 64;
           final member = 'c' * 64;
