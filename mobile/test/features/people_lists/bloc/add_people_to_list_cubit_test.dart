@@ -49,7 +49,7 @@ UserProfile _profile({
   );
 }
 
-Future<void> _flush() => Future<void>.delayed(Duration.zero);
+Future<void> _flush() => pumpEventQueue();
 
 void main() {
   setUpAll(() {
