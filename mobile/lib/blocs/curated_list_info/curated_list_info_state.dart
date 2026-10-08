@@ -63,7 +63,7 @@ class CuratedListInfoState extends Equatable {
   /// Full hex pubkeys of the people allowed to add to the list.
   final List<String> collaboratorPubkeys;
 
-  /// Visibility of the list as it was opened, or null when creating one.
+  /// Latest saved visibility of the list, or null when creating one.
   final bool? wasPublic;
 
   /// The existing Sync now action has publication or deletion work to deliver.
