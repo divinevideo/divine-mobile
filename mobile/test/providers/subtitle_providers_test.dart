@@ -2,6 +2,7 @@
 // ABOUTME: Verifies parsing embedded content (REST API), Blossom VTT fetch,
 // ABOUTME: and relay query fallback.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -12,11 +13,29 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _TrackingSubtitlePreferences extends SubtitleLanguagePreferenceService {
+  int registrations = 0;
+  int removals = 0;
+
+  @override
+  void addListener(VoidCallback listener) {
+    registrations++;
+    super.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    removals++;
+    super.removeListener(listener);
+  }
+}
 
 void main() {
   const testPubkey =
@@ -40,9 +59,13 @@ void main() {
     registerFallbackValue(Uri.parse('https://media.divine.video/fallback/vtt'));
   });
 
-  ProviderContainer createContainer() {
+  ProviderContainer createContainer({
+    SubtitleLanguagePreferenceService? service,
+  }) {
     return ProviderContainer(
       overrides: [
+        if (service != null)
+          subtitleLanguagePreferenceServiceProvider.overrideWithValue(service),
         nostrServiceProvider.overrideWith(
           () => _FakeNostrService(mockNostrClient),
         ),
@@ -101,8 +124,12 @@ void main() {
     test(
       'refreshes an active track when target and keep-original change',
       () async {
-        final container = createContainer();
-        addTearDown(container.dispose);
+        final service = _TrackingSubtitlePreferences();
+        final container = createContainer(service: service);
+        addTearDown(() {
+          container.dispose();
+          expect(service.removals, 1);
+        });
         when(() => mockHttpClient.get(any())).thenAnswer((invocation) async {
           final url = invocation.positionalArguments.first as Uri;
           final lang = url.queryParameters['lang']!;
@@ -125,13 +152,12 @@ void main() {
         final subscription = container.listen(provider, (_, _) {});
         addTearDown(subscription.close);
         expect((await container.read(provider.future)).single.text, 'en');
-        final service = container.read(
-          subtitleLanguagePreferenceServiceProvider,
-        );
         await service.setTargetLanguage('es');
         expect((await container.read(provider.future)).single.text, 'es');
         await service.setKeepOriginalLanguages({'ja'});
         expect((await container.read(provider.future)).single.text, 'Original');
+        expect(service.registrations, 1);
+        expect(service.removals, 0);
       },
     );
 

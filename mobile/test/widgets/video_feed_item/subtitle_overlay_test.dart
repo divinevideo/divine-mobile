@@ -138,7 +138,10 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
-            provider.overrideWith((ref) async => track),
+            provider.overrideWith((ref) async {
+              ref.watch(subtitleLanguagePreferenceVersionProvider);
+              return track;
+            }),
           ],
         );
         addTearDown(container.dispose);
@@ -170,7 +173,9 @@ void main() {
           SubtitleFetchStatus.available,
           cues: SubtitleService.parseVtt(video.textTrackContent!),
         );
-        container.invalidate(provider);
+        await container
+            .read(subtitleLanguagePreferenceServiceProvider)
+            .setTargetLanguage('es');
         await tester.pump();
         await tester.pump();
         expect(find.text('Second line'), findsOneWidget);

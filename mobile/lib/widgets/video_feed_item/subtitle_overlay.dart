@@ -59,6 +59,7 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
     );
 
     return cuesAsync.when(
+      skipLoadingOnReload: true,
       data: (track) {
         final cues = track.cues;
         final initialPositionMs =

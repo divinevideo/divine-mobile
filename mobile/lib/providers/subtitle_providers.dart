@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/l10n/current_app_l10n.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -32,6 +33,23 @@ final subtitleLanguagePreferenceServiceProvider =
       (_) => SubtitleLanguagePreferenceService(),
     );
 
+/// Publishes preference changes without recreating the service listener.
+final subtitleLanguagePreferenceVersionProvider =
+    NotifierProvider<SubtitleLanguagePreferenceVersion, int>(
+      SubtitleLanguagePreferenceVersion.new,
+    );
+
+class SubtitleLanguagePreferenceVersion extends Notifier<int> {
+  @override
+  int build() {
+    final service = ref.watch(subtitleLanguagePreferenceServiceProvider);
+    listenForProviderLifetime(ref, service, increment);
+    return 0;
+  }
+
+  void increment() => state++;
+}
+
 /// Fetches the track and its verified machine-translation attribution.
 @riverpod
 Future<SubtitleFetchResult> subtitleTrack(
@@ -44,9 +62,8 @@ Future<SubtitleFetchResult> subtitleTrack(
   String? sourceLang,
   String? appLocaleCode,
 }) async {
+  ref.watch(subtitleLanguagePreferenceVersionProvider);
   final service = ref.watch(subtitleLanguagePreferenceServiceProvider);
-  service.addListener(ref.invalidateSelf);
-  ref.onDispose(() => service.removeListener(ref.invalidateSelf));
   final prefs = ref.watch(sharedPreferencesProvider);
   await service.initialize();
   if (!ref.mounted) {
