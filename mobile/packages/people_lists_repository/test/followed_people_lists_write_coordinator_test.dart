@@ -124,5 +124,63 @@ void main() {
         expect(refreshed, isTrue);
       },
     );
+    test(
+      'a live joiner retries when the operation client retires later',
+      () async {
+        final coordinator = FollowedPeopleListsWriteCoordinator();
+        const viewer =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        final oldRelease = Completer<void>();
+        var retired = false;
+        var oldApplied = false;
+        var liveQueries = 0;
+        final old = coordinator.refresh(
+          viewerPubkey: viewer,
+          isOperationUnavailable: () => retired,
+          operation: (isCancelled) async {
+            await oldRelease.future;
+            oldApplied = !isCancelled();
+          },
+        );
+        final joined = coordinator.refresh(
+          viewerPubkey: viewer,
+          operation: (_) async => liveQueries++,
+        );
+        final alsoJoined = coordinator.refresh(
+          viewerPubkey: viewer,
+          operation: (_) async => liveQueries++,
+        );
+        retired = true;
+        oldRelease.complete();
+        await Future.wait([old, joined, alsoJoined]);
+        expect(oldApplied, isFalse);
+        expect(liveQueries, 1);
+      },
+    );
+
+    test('a canceled joiner does not retry a retired operation', () async {
+      final coordinator = FollowedPeopleListsWriteCoordinator();
+      const viewer =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final release = Completer<void>();
+      var retired = false;
+      var canceled = false;
+      var newQueries = 0;
+      final old = coordinator.refresh(
+        viewerPubkey: viewer,
+        isOperationUnavailable: () => retired,
+        operation: (_) => release.future,
+      );
+      final joined = coordinator.refresh(
+        viewerPubkey: viewer,
+        isCancelled: () => canceled,
+        operation: (_) async => newQueries++,
+      );
+      retired = true;
+      canceled = true;
+      release.complete();
+      await Future.wait([old, joined]);
+      expect(newQueries, 0);
+    });
   });
 }
