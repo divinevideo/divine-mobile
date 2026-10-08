@@ -60,39 +60,43 @@ class UserListPeopleScreen extends StatefulWidget {
 }
 
 class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
-  /// The delete this screen is waiting on, with the owner it was issued for.
+  /// Deletes the list and reports only what its own operation settled to.
   ///
-  /// The owner is part of the record because the bloc clears its pending
-  /// mutations wholesale whenever it tears its state down. On the mutation map
-  /// alone, an account switch or a `FeatureFlag.curatedLists` flag-off is
-  /// indistinguishable from the delete settling (#6504).
-  ///
-  /// Only [_pendingDeleteResolved] and the listener read this — [build] does
-  /// not — so it is assigned without `setState`.
-  ({String listId, String? ownerPubkey})? _pendingDelete;
-
-  void _deleteList(String listId) {
-    final bloc = context.read<PeopleListsBloc>();
-    _pendingDelete = (listId: listId, ownerPubkey: bloc.state.ownerPubkey);
-    bloc.add(PeopleListsDeleteRequested(listId: listId));
-  }
-
-  bool _pendingDeleteResolved(
-    PeopleListsState previous,
-    PeopleListsState current,
-  ) {
-    final pending = _pendingDelete;
-    if (pending == null) return false;
-    return _hasPendingDelete(previous, pending.listId) &&
-        !_hasPendingDelete(current, pending.listId);
-  }
-
-  static bool _hasPendingDelete(PeopleListsState state, String listId) {
-    return state.pendingMutations.values.any(
-      (mutation) =>
-          mutation.kind == PeopleListsMutationKind.deleteList &&
-          mutation.listId == listId,
+  /// The bloc resolves the operation as `cancelled` when it tears the request
+  /// down — an account switch, a `FeatureFlag.curatedLists` flag-off or a
+  /// repository swap — so nothing is announced and the route stays put. A
+  /// teardown also clears the pending mutations, which is indistinguishable
+  /// from the delete settling if read from state alone (#6504).
+  Future<void> _deleteList(String listId) async {
+    final result = await context.read<PeopleListsBloc>().submit(
+      PeopleListsDeleteRequested(listId: listId),
     );
+    if (!mounted) return;
+    switch (result) {
+      case PeopleListsOperationResult.cancelled:
+        return;
+      case PeopleListsOperationResult.failed:
+        final message = context.l10n.peopleListsDeleteFailed;
+        announceDetached(
+          context,
+          message,
+          description: 'announce people list deletion failure',
+          logName: 'UserListPeopleScreen',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+        );
+      case PeopleListsOperationResult.succeeded:
+        announceDetached(
+          context,
+          context.l10n.curatedListDeletedSnack,
+          description: 'announce people list deletion',
+          logName: 'UserListPeopleScreen',
+        );
+        if (context.canPop()) {
+          context.pop();
+        }
+    }
   }
 
   @override
@@ -107,78 +111,39 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
       );
     }
 
-    return BlocListener<PeopleListsBloc, PeopleListsState>(
-      listenWhen: _pendingDeleteResolved,
-      listener: (context, state) {
-        final pending = _pendingDelete;
-        final failed = state.status == PeopleListsStatus.failure;
-        _pendingDelete = null;
-        // The bloc dropped the mutation rather than resolving it: the feature
-        // was turned off, or another account took over. Nothing settled, so
-        // announce nothing and stay on the route.
-        if (pending == null ||
-            !state.enabled ||
-            state.ownerPubkey != pending.ownerPubkey) {
-          return;
-        }
-        if (failed) {
-          final message = context.l10n.peopleListsDeleteFailed;
-          announceDetached(
-            context,
-            message,
-            description: 'announce people list deletion failure',
-            logName: 'UserListPeopleScreen',
+    return BlocSelector<
+      PeopleListsBloc,
+      PeopleListsState,
+      ({bool listsKnown, bool readFailed, UserList? list})
+    >(
+      selector: (state) => (
+        listsKnown: state.listsKnown,
+        readFailed:
+            state.activeOwnerPubkey != null &&
+            state.ownerReadStatus == PeopleListsOwnerReadStatus.failed,
+        list: _ownListById(state, widget.listId),
+      ),
+      builder: (context, selected) {
+        final userList = selected.list;
+        if (userList != null) {
+          return _UserListPeopleView(
+            userList: userList,
+            onDeleteConfirmed: _deleteList,
           );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message), backgroundColor: VineTheme.error),
-          );
-          return;
         }
-        announceDetached(
-          context,
-          context.l10n.curatedListDeletedSnack,
-          description: 'announce people list deletion',
-          logName: 'UserListPeopleScreen',
-        );
-        if (context.canPop()) {
-          context.pop();
-        }
-      },
-      child:
-          BlocSelector<
-            PeopleListsBloc,
-            PeopleListsState,
-            ({bool listsKnown, bool readFailed, UserList? list})
-          >(
-            selector: (state) => (
-              listsKnown: state.listsKnown,
-              readFailed:
-                  state.activeOwnerPubkey != null &&
-                  state.ownerReadStatus == PeopleListsOwnerReadStatus.failed,
-              list: _ownListById(state, widget.listId),
+        // Absence is known only after both the cached snapshot and the owner
+        // relay read settle. Existing cached lists render above while the read
+        // is pending or failed.
+        if (selected.readFailed) {
+          return _ListLoadFailedView(
+            onRetry: () => context.read<PeopleListsBloc>().add(
+              const PeopleListsOwnerSyncRequested(),
             ),
-            builder: (context, selected) {
-              final userList = selected.list;
-              if (userList != null) {
-                return _UserListPeopleView(
-                  userList: userList,
-                  onDeleteConfirmed: _deleteList,
-                );
-              }
-              // Absence is known only after both the cached snapshot and the
-              // owner relay read settle. Existing cached lists render above
-              // while the read is pending or failed.
-              if (selected.readFailed) {
-                return _ListLoadFailedView(
-                  onRetry: () => context.read<PeopleListsBloc>().add(
-                    const PeopleListsOwnerSyncRequested(),
-                  ),
-                );
-              }
-              if (!selected.listsKnown) return const _ListLoadingView();
-              return const _ListNotFoundView();
-            },
-          ),
+          );
+        }
+        if (!selected.listsKnown) return const _ListLoadingView();
+        return const _ListNotFoundView();
+      },
     );
   }
 }
