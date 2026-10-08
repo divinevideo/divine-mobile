@@ -464,7 +464,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('keeps the video count and date visible for a long name', (
+    testWidgets('keeps the video count and date visible in the compact line', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(393, 852);
@@ -495,6 +495,17 @@ void main() {
       final content = _metaLine(tester);
       expect(content, contains(loopLine(tester, 3)));
       expect(content, contains('Sep 30'));
+      final line = find.byKey(const Key('video_meta_line'));
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: line, matching: find.byType(RichText)),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(
+        tester.getRect(line).right,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(VideoOverlayActionColumn)).left,
+        ),
+      );
       expect(tester.takeException(), isNull);
     });
 
