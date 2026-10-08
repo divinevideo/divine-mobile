@@ -1537,10 +1537,12 @@ void main() {
 
       for (final hasFirstMatch in [false, true]) {
         testWidgets(
-          'offers the next page with a short first page ($hasFirstMatch)',
+          'offers the next page when the first page has '
+          '${hasFirstMatch ? 'one match' : 'no matches'}',
           (
             tester,
           ) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
             final profile = UserProfile(
               pubkey: 'a' * 64,
               displayName: 'Sam Match',
@@ -1620,8 +1622,8 @@ void main() {
               );
               expect(list.position.maxScrollExtent, 0);
             }
-            expect(find.text('Show more'), findsOneWidget);
-            await tester.tap(find.text('Show more'));
+            expect(find.text(l10n.profileShowMore), findsOneWidget);
+            await tester.tap(find.text(l10n.profileShowMore));
             await tester.pumpAndSettle();
 
             verify(
@@ -1633,7 +1635,7 @@ void main() {
               ),
             ).called(1);
             expect(find.text('Sam Match'), findsOneWidget);
-            expect(find.text('Show more'), findsNothing);
+            expect(find.text(l10n.profileShowMore), findsNothing);
           },
         );
       }
