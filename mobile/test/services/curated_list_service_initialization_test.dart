@@ -1,10 +1,10 @@
-// ABOUTME: Unit tests for CuratedListService initialization performance
-// ABOUTME: Verifies that initialization completes quickly without blocking
-// on relay sync
+// ABOUTME: Unit tests for CuratedListService local initialization readiness.
+// ABOUTME: Verifies initialization completes independently of relay sync.
 
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -23,7 +23,7 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
-  group('CuratedListService - Initialization Performance', () {
+  group('CuratedListService - Initialization Readiness', () {
     late _MockNostrClient mockNostr;
     late _MockAuthService mockAuth;
     late SharedPreferences prefs;
@@ -138,24 +138,8 @@ void main() {
     });
 
     test(
-      'initialize() completes quickly without waiting for relay sync',
+      'initialize() completes at zero virtual time while relay is blocked',
       () async {
-        // Set up a SLOW relay response (simulates 7+ second timeout)
-        final slowRelayCompleter = Completer<void>();
-        when(
-          () => mockNostr.subscribe(
-            any(),
-            closeOnEose: true,
-            onEose: any(named: 'onEose'),
-          ),
-        ).thenAnswer((_) {
-          // This stream never completes quickly - simulates slow relay
-          return Stream.fromFuture(
-            slowRelayCompleter.future.then((_) => null),
-          ).where((_) => false).cast<Event>();
-        });
-
-        // Pre-populate with cached lists so we have data
         final cachedList = CuratedList(
           id: 'cached_list_id',
           name: 'Cached List',
@@ -167,45 +151,75 @@ void main() {
           CuratedListService.listsStorageKey,
           jsonEncode([cachedList.toJson()]),
         );
-
-        // Also pre-populate subscribed list IDs
         await prefs.setString(
           CuratedListService.subscribedListsStorageKey,
           '["cached_list_id"]',
         );
-
-        final service = CuratedListService(
-          nostrService: mockNostr,
-          authService: mockAuth,
-          prefs: prefs,
-        );
-
-        // Verify local cache was loaded in constructor
-        expect(service.lists.length, greaterThan(0));
-        expect(service.lists.any((l) => l.name == 'Cached List'), isTrue);
-
-        // Call initialize() and measure time
-        final stopwatch = Stopwatch()..start();
-        await service.initialize();
-        stopwatch.stop();
-
-        // CRITICAL: initialize() should complete in < 100ms, not 7+
-        // seconds. The relay sync should happen in background, not
-        // block initialization
-        expect(
-          stopwatch.elapsedMilliseconds,
-          lessThan(100),
-          reason:
-              'initialize() should complete quickly without '
-              'waiting for relay sync',
-        );
-
-        // isInitialized should be true IMMEDIATELY after initialize()
-        // returns
-        expect(service.isInitialized, isTrue);
-
-        // Clean up - complete the slow relay so test can finish
-        slowRelayCompleter.complete();
+        fakeAsync((async) {
+          final slowRelayCompleter = Completer<void>();
+          var relaySubscribed = false;
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) {
+            relaySubscribed = true;
+            return Stream.fromFuture(
+              slowRelayCompleter.future.then((_) => null),
+            ).where((_) => false).cast<Event>();
+          });
+          final service = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          var completed = false;
+          Object? initializationError;
+          try {
+            expect(service.lists.any((l) => l.name == 'Cached List'), isTrue);
+            unawaited(
+              service.initialize().then(
+                (_) => completed = true,
+                onError: (Object error) => initializationError = error,
+              ),
+            );
+            // Drain local work without advancing virtual time. An awaited
+            // relay or timer cannot complete while its response stays held.
+            async.flushMicrotasks();
+            expect(initializationError, isNull);
+            expect(
+              completed,
+              isTrue,
+              reason:
+                  'initialize() must complete after local microtasks without '
+                  'awaiting a relay or timer',
+            );
+            expect(async.elapsed, Duration.zero);
+            expect(relaySubscribed, isTrue);
+            expect(slowRelayCompleter.isCompleted, isFalse);
+            expect(service.isInitialized, isTrue);
+            expect(service.isReadyForMutations, isTrue);
+            expect(service.getListById('cached_list_id')?.videoEventIds, [
+              'video1',
+              'video2',
+            ]);
+            expect(service.isSubscribedToList('cached_list_id'), isTrue);
+            expect(service.hasLoadedSubscriptionIds, isTrue);
+            verify(
+              () => mockNostr.subscribe(
+                any(),
+                closeOnEose: true,
+                onEose: any(named: 'onEose'),
+              ),
+            ).called(1);
+          } finally {
+            service.dispose();
+            if (!slowRelayCompleter.isCompleted) slowRelayCompleter.complete();
+            async.flushMicrotasks();
+          }
+        });
       },
     );
 
