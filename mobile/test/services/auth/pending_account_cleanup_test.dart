@@ -175,7 +175,7 @@ void main() {
     );
   });
 
-  group('clearUserSpecificData', () {
+  group('sign-out cleanup intent', () {
     test(
       'lying sign-out intent write stops before any cache or database deletion',
       () async {

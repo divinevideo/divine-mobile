@@ -63,7 +63,7 @@ fixture(CuratedList source) async {
 }
 
 void main() {
-  group('updateListWithResult', () {
+  group('updateList into a full private list', () {
     for (final pending in [false, true]) {
       for (final mode in ['bool', 'typed']) {
         test(
