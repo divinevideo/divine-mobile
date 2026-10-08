@@ -112,7 +112,7 @@ void main() {
             CuratedListService.defaultListDeletedStorageKey,
       )..listsLoaded(service.lists);
 
-  group('raw owner evidence', () {
+  group('raw secondary owner labels', () {
     for (final label in ['ownerPubkey', 'authorPubkey']) {
       for (final role in ['authenticated', 'remembered', 'guest']) {
         test('$role cannot mutate a null-primary $label record', () async {
@@ -338,7 +338,7 @@ void main() {
     }
   });
 
-  group('genuine draft compatibility', () {
+  group('compatible edits', () {
     for (final role in ['authenticated', 'remembered', 'guest']) {
       test('$role keeps genuine unlabelled draft compatibility', () async {
         await load([rawRow(row())], role: role);
@@ -348,9 +348,7 @@ void main() {
         if (role != 'authenticated') noSigning();
       });
     }
-  });
 
-  group('authored mutation commit', () {
     test(
       'consistent full primary identity preserves secondary label on edit',
       () async {
@@ -367,6 +365,8 @@ void main() {
         ]);
       },
     );
+  });
+  group('queued owned mutations', () {
     for (final corruptedField in ['pubkey', 'id']) {
       test(
         'queued owned mutation retains late invalid $corruptedField evidence',

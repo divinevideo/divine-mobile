@@ -217,137 +217,132 @@ void main() {
     }
   });
 
-  group('legacy ownership', () {
-    group('fetchUserListsFromRelays', () {
-      for (final follows in [
-        jsonEncode([id]),
-        jsonEncode([':$id']),
-        'unreadable',
-      ]) {
-        test(
-          'ownerless row with follow metadata $follows is never claimed',
-          () async {
-            final local = row();
-            await load([local], follows: follows);
-            final disk = prefs.getString(CuratedListService.listsStorageKey);
-            expect(await service.addVideoToList(id, added), isFalse);
-            expect(
-              await service.updateList(listId: id, name: 'Changed'),
-              isFalse,
-            );
-            expect(service.getListById(id), local);
-            expect(prefs.getString(CuratedListService.listsStorageKey), disk);
-            expect(
-              prefs.getString(CuratedListService.subscribedListsStorageKey),
-              follows,
-            );
-            expectNoPublication();
-          },
-        );
-      }
+  group('ownerless rows', () {
+    for (final follows in [
+      jsonEncode([id]),
+      jsonEncode([':$id']),
+      'unreadable',
+    ]) {
+      test(
+        'ownerless row with follow metadata $follows is never claimed',
+        () async {
+          final local = row();
+          await load([local], follows: follows);
+          final disk = prefs.getString(CuratedListService.listsStorageKey);
+          expect(await service.addVideoToList(id, added), isFalse);
+          expect(
+            await service.updateList(listId: id, name: 'Changed'),
+            isFalse,
+          );
+          expect(service.getListById(id), local);
+          expect(prefs.getString(CuratedListService.listsStorageKey), disk);
+          expect(
+            prefs.getString(CuratedListService.subscribedListsStorageKey),
+            follows,
+          );
+          expectNoPublication();
+        },
+      );
+    }
 
-      test('published ownerless row cannot be adopted', () async {
-        final local = row(eventId: first);
-        await load([local]);
+    test('published ownerless row cannot be adopted', () async {
+      final local = row(eventId: first);
+      await load([local]);
+      final disk = prefs.getString(CuratedListService.listsStorageKey);
+      expect(await service.addVideoToList(id, added), isFalse);
+      expect(await service.updateList(listId: id, name: 'Changed'), isFalse);
+      expect(service.getListById(id), local);
+      expect(prefs.getString(CuratedListService.listsStorageKey), disk);
+      expectNoPublication();
+    });
+  });
+
+  group('legacy local drafts', () {
+    test(
+      'guest unpublished edits persist through restart without signing',
+      () async {
+        await load([row()], signedIn: false);
+        when(() => auth.currentPublicKeyHex).thenReturn(null);
+        expect(await service.addVideoToList(id, added), isTrue);
+        expect(
+          await service.updateList(listId: id, name: 'Guest edited'),
+          isTrue,
+        );
+        final restored = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(restored.dispose);
+        expect(restored.getListById(id)?.name, 'Guest edited');
+        expect(restored.getListById(id)?.videoEventIds, [first, second, added]);
+        expect(restored.getListById(id)?.pubkey, isNull);
+        expectNoPublication();
+      },
+    );
+
+    test(
+      'signed-out remembered owner can edit only its stamped cached row',
+      () async {
+        final foreign = row(pubkey: stranger);
+        await load([foreign, row(pubkey: owner)], signedIn: false);
+        expect(await service.addVideoToList('$owner:$id', added), isTrue);
+        expect(
+          await service.updateList(listId: '$owner:$id', name: 'Offline edit'),
+          isTrue,
+        );
+        expect(
+          await service.addVideoToList(foreign.authorScopedId, added),
+          isFalse,
+        );
+        expect(service.getListById(foreign.authorScopedId), foreign);
+        expectNoPublication();
+      },
+    );
+
+    test(
+      'authenticated legacy local edit stamps owner before publication',
+      () async {
+        await load([row()]);
+        expect(await service.addVideoToList(id, added), isTrue);
+        expect(service.getListById('$owner:$id')?.videoEventIds, [
+          first,
+          second,
+          added,
+        ]);
+        expect(service.getListById('$owner:$id')?.pubkey, owner);
+        expect(service.getListById('$owner:$id')?.nostrEventId, isNotNull);
+        final stored = CuratedList.fromJson(
+          (jsonDecode(
+                prefs.getString(CuratedListService.listsStorageKey)!,
+              ) as List).single
+              as Map<String, dynamic>,
+        );
+        expect(stored.pubkey, owner);
+        verify(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).called(1);
+      },
+    );
+    test(
+      'refused legacy owner stamp never signs and restores pending local work',
+      () async {
+        final local = row().copyWith(pendingRepublish: true);
+        await load([local], rejectWrites: true);
         final disk = prefs.getString(CuratedListService.listsStorageKey);
         expect(await service.addVideoToList(id, added), isFalse);
-        expect(await service.updateList(listId: id, name: 'Changed'), isFalse);
         expect(service.getListById(id), local);
         expect(prefs.getString(CuratedListService.listsStorageKey), disk);
         expectNoPublication();
-      });
+      },
+    );
+  });
 
-      test(
-        'guest unpublished edits persist through restart without signing',
-        () async {
-          await load([row()], signedIn: false);
-          when(() => auth.currentPublicKeyHex).thenReturn(null);
-          expect(await service.addVideoToList(id, added), isTrue);
-          expect(
-            await service.updateList(listId: id, name: 'Guest edited'),
-            isTrue,
-          );
-          final restored = CuratedListService(
-            nostrService: client,
-            authService: auth,
-            prefs: prefs,
-          );
-          addTearDown(restored.dispose);
-          expect(restored.getListById(id)?.name, 'Guest edited');
-          expect(restored.getListById(id)?.videoEventIds, [
-            first,
-            second,
-            added,
-          ]);
-          expect(restored.getListById(id)?.pubkey, isNull);
-          expectNoPublication();
-        },
-      );
-
-      test(
-        'signed-out remembered owner can edit only its stamped cached row',
-        () async {
-          final foreign = row(pubkey: stranger);
-          await load([foreign, row(pubkey: owner)], signedIn: false);
-          expect(await service.addVideoToList('$owner:$id', added), isTrue);
-          expect(
-            await service.updateList(
-              listId: '$owner:$id',
-              name: 'Offline edit',
-            ),
-            isTrue,
-          );
-          expect(
-            await service.addVideoToList(foreign.authorScopedId, added),
-            isFalse,
-          );
-          expect(service.getListById(foreign.authorScopedId), foreign);
-          expectNoPublication();
-        },
-      );
-
-      test(
-        'authenticated legacy local edit stamps owner before publication',
-        () async {
-          await load([row()]);
-          expect(await service.addVideoToList(id, added), isTrue);
-          expect(service.getListById('$owner:$id')?.videoEventIds, [
-            first,
-            second,
-            added,
-          ]);
-          expect(service.getListById('$owner:$id')?.pubkey, owner);
-          expect(service.getListById('$owner:$id')?.nostrEventId, isNotNull);
-          final stored = CuratedList.fromJson(
-            (jsonDecode(
-                  prefs.getString(CuratedListService.listsStorageKey)!,
-                ) as List).single
-                as Map<String, dynamic>,
-          );
-          expect(stored.pubkey, owner);
-          verify(
-            () => auth.createAndSignEvent(
-              kind: any(named: 'kind'),
-              content: any(named: 'content'),
-              tags: any(named: 'tags'),
-            ),
-          ).called(1);
-        },
-      );
-      test(
-        'refused legacy owner stamp never signs and restores pending local work',
-        () async {
-          final local = row().copyWith(pendingRepublish: true);
-          await load([local], rejectWrites: true);
-          final disk = prefs.getString(CuratedListService.listsStorageKey);
-          expect(await service.addVideoToList(id, added), isFalse);
-          expect(service.getListById(id), local);
-          expect(prefs.getString(CuratedListService.listsStorageKey), disk);
-          expectNoPublication();
-        },
-      );
-    });
-
+  group('relay backfill and owned coordinates', () {
     for (final follows in [
       jsonEncode([id]),
       jsonEncode([':$id']),
@@ -386,9 +381,6 @@ void main() {
         expectNoPublication();
       },
     );
-  });
-
-  group('colliding coordinates', () {
     for (final legacyFirst in [false, true]) {
       test(
         'owner-stamp mutation rejects an existing owned coordinate (${legacyFirst ? 'legacy' : 'owned'} first)',
@@ -421,9 +413,9 @@ void main() {
           ).thenAnswer((_) => const Stream<Event>.empty());
           final rows = service.lists;
           final disk = prefs.getString(CuratedListService.listsStorageKey);
-          final expectedRows = legacyFirst ? [legacy, owned] : [owned, legacy];
           expect(rows, hasLength(2));
           expect(disk, isNotNull);
+          final expectedRows = legacyFirst ? [legacy, owned] : [owned, legacy];
           expect(rows, expectedRows);
           expect(
             disk,
@@ -455,7 +447,9 @@ void main() {
         },
       );
     }
+  });
 
+  group('null drafts beside authored rows', () {
     test('duplicate unknown local coordinates cannot be adopted', () async {
       final firstLegacy = row();
       final secondLegacy = row().copyWith(name: 'Other local draft');
@@ -527,7 +521,6 @@ void main() {
       );
     }
   });
-
   PrefsCuratedListStore anotherStore(
     CuratedListCacheWriteCoordinator coordinator,
   ) {
@@ -541,7 +534,7 @@ void main() {
     )..listsLoaded(service.lists);
   }
 
-  group('ownership claim preflight', () {
+  group('queued ownership claims', () {
     for (final newer in [false, true]) {
       final ownedDate = newer ? DateTime.utc(2040) : DateTime.utc(2000);
       for (final method in ['add', 'update', 'backfill']) {
