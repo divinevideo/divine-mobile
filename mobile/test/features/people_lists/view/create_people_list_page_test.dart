@@ -162,6 +162,29 @@ void main() {
       },
     );
 
+    testWidgets('fits a short viewport with the keyboard open and large text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(320, 480)
+        ..devicePixelRatio = 1
+        ..viewInsets = const FakeViewPadding(bottom: 220);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view
+          ..resetPhysicalSize()
+          ..resetDevicePixelRatio()
+          ..resetViewInsets();
+        tester.platformDispatcher.clearAllTestValues();
+      });
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(DivineButton, 'Create'), findsOneWidget);
+    });
+
     group('after a confirmed save', () {
       Future<void> save(WidgetTester tester) async {
         await tester.pumpWidget(buildSubject());

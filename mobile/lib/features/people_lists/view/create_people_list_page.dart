@@ -152,18 +152,29 @@ class _CreatePeopleListPageState extends ConsumerState<CreatePeopleListPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _NameField(controller: _nameController, enabled: !_submitting),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                enabled: !_submitting,
-                decoration: InputDecoration(
-                  labelText: context.l10n.listDescriptionLabel,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _NameField(
+                        controller: _nameController,
+                        enabled: !_submitting,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        enabled: !_submitting,
+                        decoration: InputDecoration(
+                          labelText: context.l10n.listDescriptionLabel,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(context.l10n.peopleListsPublicNotice),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(context.l10n.peopleListsPublicNotice),
-              const Spacer(),
               if (_result == PeopleListsOperationResult.failed)
                 Text(
                   widget.editingList == null
