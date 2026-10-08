@@ -32,8 +32,8 @@ class PostPublishConfirmationSheet extends StatelessWidget {
   final VoidCallback onView;
   final VoidCallback onShare;
 
-  /// Optional crossposting prompt rendered below View and Share, so it never
-  /// displaces or restyles the buttons the post-publish experiment measures.
+  /// Optional crossposting prompt rendered below View and Share.
+  /// The section owns its spacing so hidden prompts leave no empty gap.
   final Widget? crosspostSection;
 
   /// Shows the confirmation over [context]'s navigator.
@@ -89,9 +89,9 @@ class PostPublishConfirmationSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        spacing: 24,
         children: [
           _Preview(thumbnailBytes: thumbnailBytes),
+          const SizedBox(height: 24),
           Text(
             l10n.postPublishConfirmationTitle,
             textAlign: TextAlign.center,
@@ -99,6 +99,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
+          const SizedBox(height: 24),
           Row(
             spacing: 12,
             children: [

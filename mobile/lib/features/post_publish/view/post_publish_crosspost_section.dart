@@ -89,20 +89,23 @@ class _PromptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final action = this.action;
-    return DivineInfoCard(
-      icon: DivineIconName.arrowsClockwise,
-      tone: DivineInfoCardTone.neutral,
-      compact: true,
-      message: message,
-      footer: action == null
-          ? null
-          : DivineButton(
-              label: action.label,
-              type: DivineButtonType.secondary,
-              size: DivineButtonSize.small,
-              expanded: true,
-              onPressed: action.onPressed,
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: DivineInfoCard(
+        icon: DivineIconName.arrowsClockwise,
+        tone: DivineInfoCardTone.neutral,
+        compact: true,
+        message: message,
+        footer: action == null
+            ? null
+            : DivineButton(
+                label: action.label,
+                type: DivineButtonType.secondary,
+                size: DivineButtonSize.small,
+                expanded: true,
+                onPressed: action.onPressed,
+              ),
+      ),
     );
   }
 }

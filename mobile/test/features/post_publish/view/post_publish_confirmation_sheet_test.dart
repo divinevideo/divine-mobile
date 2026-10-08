@@ -91,6 +91,26 @@ void main() {
       expect(shared, equals(1));
     });
 
+    testWidgets('a hidden crosspost section leaves no gap below the actions', (
+      tester,
+    ) async {
+      await _pumpSheetHost(tester, onView: () {}, onShare: () {});
+      final share = find.text(_l10n.postPublishConfirmationShare);
+      final withoutSection = tester.getCenter(share);
+      await tester.tap(share);
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      await _pumpSheetHost(
+        tester,
+        onView: () {},
+        onShare: () {},
+        crosspostSection: const SizedBox.shrink(),
+      );
+
+      expect(tester.getCenter(share), withoutSection);
+    });
+
     testWidgets('reads its copy from l10n rather than hardcoded English', (
       tester,
     ) async {
