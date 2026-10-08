@@ -98,8 +98,7 @@ void main() {
               CuratedListConverter.privateItemPayloadFits(source),
               isFalse,
             );
-            // This early slice retains later recovery evidence as opaque bytes;
-            // it must not import or assume the later journal's read contract.
+            // A rejected save must leave existing recovery journal bytes untouched.
             const journalKey = 'curated_list_recovery_v1:$_owner';
             SharedPreferences.setMockInitialValues({
               'current_user_pubkey_hex': _owner,
