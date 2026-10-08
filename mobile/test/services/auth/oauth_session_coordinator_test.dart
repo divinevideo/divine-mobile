@@ -411,20 +411,111 @@ void main() {
               oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
         ).thenAnswer((_) async => _session(accessToken: 'fresh-token'));
 
-        final token = await build().refreshAccessToken();
+        var rejections = 0;
+        final token = await build().refreshAccessToken(
+          onRejected: () => rejections++,
+        );
 
         expect(token, equals('fresh-token'));
+        expect(rejections, isZero);
       });
 
-      test('returns null when the refresh fails', () async {
+      test('reports a rejection when Keycast refuses the refresh', () async {
+        // KeycastOAuth.refreshSession returns null without throwing only when
+        // there is no refresh token left or Keycast refused it (and deleted
+        // it). Nothing can recover the session after that (#9943).
         when(
           () =>
               oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
         ).thenAnswer((_) async => null);
 
-        final token = await build().refreshAccessToken();
+        var rejections = 0;
+        final token = await build().refreshAccessToken(
+          onRejected: () => rejections++,
+        );
 
         expect(token, isNull);
+        expect(rejections, equals(1));
+      });
+
+      test('reports a rejection when the refreshed session has no RPC '
+          'access', () async {
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenAnswer(
+          (_) async => const KeycastSession(bunkerUrl: 'bunker://x'),
+        );
+
+        var rejections = 0;
+        final token = await build().refreshAccessToken(
+          onRejected: () => rejections++,
+        );
+
+        expect(token, isNull);
+        expect(rejections, equals(1));
+      });
+
+      test('does not report a rejection when Keycast is unreachable', () async {
+        // Network errors, timeouts and 5xx keep the refresh token for a later
+        // retry. Treating them as a rejection would prompt every user to sign
+        // in again during a Keycast outage.
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenThrow(OAuthNetworkException('offline'));
+
+        var rejections = 0;
+        final token = await build().refreshAccessToken(
+          onRejected: () => rejections++,
+        );
+
+        expect(token, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('does not report a rejection when the refresh fails '
+          'unexpectedly', () async {
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenThrow(Exception('unexpected'));
+
+        var rejections = 0;
+        final token = await build().refreshAccessToken(
+          onRejected: () => rejections++,
+        );
+
+        expect(token, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('reports a rejection to a caller that joined the in-flight '
+          'refresh', () async {
+        final gate = Completer<KeycastSession?>();
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenAnswer((_) => gate.future);
+
+        final coordinator = build();
+        var firstRejections = 0;
+        var joinedRejections = 0;
+        final first = coordinator.refreshAccessToken(
+          onRejected: () => firstRejections++,
+        );
+        final joined = coordinator.refreshAccessToken(
+          onRejected: () => joinedRejections++,
+        );
+        gate.complete(null);
+        await Future.wait([first, joined]);
+
+        verify(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).called(1);
+        expect(firstRejections, equals(1));
+        expect(joinedRejections, equals(1));
       });
     });
 

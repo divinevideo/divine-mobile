@@ -8,6 +8,14 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Outcome of one shared refresh attempt.
+///
+/// [rejected] is true only when Keycast refused the refresh token, or none was
+/// left to use, so nothing short of a fresh sign-in can recover the session.
+/// Unreachable-server failures throw [OAuthNetworkException] instead, and
+/// unexpected errors leave it false.
+typedef _RefreshOutcome = ({KeycastSession? session, bool rejected});
+
 /// Coordinates OAuth session refresh so concurrent callers never race on a
 /// one-time-use refresh token.
 ///
@@ -38,7 +46,7 @@ class OAuthSessionCoordinator {
   final bool Function() _hasExpiredSession;
 
   Future<bool>? _pendingRefresh;
-  Future<KeycastSession?>? _pendingOAuthRefresh;
+  Future<_RefreshOutcome>? _pendingOAuthRefresh;
 
   /// Runs [attempt] under an outer single-flight, bounded by
   /// [expiredSessionRefreshTimeout], to silently refresh an expired OAuth
@@ -118,7 +126,7 @@ class OAuthSessionCoordinator {
     final pending = _pendingOAuthRefresh;
     if (pending != null) {
       return _guardRefreshForCaller(
-        pending,
+        pending.then((outcome) => outcome.session),
         expectedOwnerPubkey: expectedOwnerPubkey,
         timeout: timeout,
         storedSessionReader: storedSessionReader,
@@ -126,7 +134,20 @@ class OAuthSessionCoordinator {
       );
     }
 
-    late final Future<KeycastSession?> refresh;
+    return _startRefresh(
+      expectedOwnerPubkey: expectedOwnerPubkey,
+      storedSessionReader: storedSessionReader,
+      caller: caller,
+    ).then((outcome) => outcome.session);
+  }
+
+  /// Starts a new shared refresh attempt and claims the single-flight slot.
+  Future<_RefreshOutcome> _startRefresh({
+    String? expectedOwnerPubkey,
+    Future<KeycastSession?> Function()? storedSessionReader,
+    String? caller,
+  }) {
+    late final Future<_RefreshOutcome> refresh;
     refresh =
         _doRefreshSession(
               expectedOwnerPubkey: expectedOwnerPubkey,
@@ -157,13 +178,14 @@ class OAuthSessionCoordinator {
     return _pendingOAuthRefresh = refresh;
   }
 
-  Future<KeycastSession?> _doRefreshSession({
+  Future<_RefreshOutcome> _doRefreshSession({
     String? expectedOwnerPubkey,
     Future<KeycastSession?> Function()? storedSessionReader,
     String? caller,
   }) async {
+    const notRefreshed = (session: null, rejected: false);
     final oauthClient = _oauthClient;
-    if (oauthClient == null) return null;
+    if (oauthClient == null) return notRefreshed;
     try {
       if (expectedOwnerPubkey != null &&
           storedSessionReader != null &&
@@ -172,12 +194,21 @@ class OAuthSessionCoordinator {
             storedSessionReader,
             caller,
           )) {
-        return null;
+        return notRefreshed;
       }
 
       final pubkey = expectedOwnerPubkey ?? _currentPubkeyFallback();
       final refreshed = await oauthClient.refreshSession(userPubkey: pubkey);
-      if (refreshed == null || !refreshed.hasRpcAccess) return null;
+      // A null result without an exception means there was no refresh token
+      // to use or Keycast refused it (KeycastOAuth deletes a refused token).
+      if (refreshed == null || !refreshed.hasRpcAccess) {
+        Log.warning(
+          '_refreshOAuthSession: Keycast rejected the refresh',
+          name: 'OAuthSessionCoordinator',
+          category: LogCategory.auth,
+        );
+        return (session: null, rejected: true);
+      }
 
       Log.info(
         '_refreshOAuthSession: succeeded '
@@ -185,7 +216,7 @@ class OAuthSessionCoordinator {
         name: 'OAuthSessionCoordinator',
         category: LogCategory.auth,
       );
-      return refreshed;
+      return (session: refreshed, rejected: false);
     } on OAuthNetworkException {
       rethrow;
     } catch (e) {
@@ -194,7 +225,7 @@ class OAuthSessionCoordinator {
         name: 'OAuthSessionCoordinator',
         category: LogCategory.auth,
       );
-      return null;
+      return notRefreshed;
     }
   }
 
@@ -291,17 +322,22 @@ class OAuthSessionCoordinator {
   /// [TokenRefreshCallback] passed to [KeycastRpc] so it can recover from
   /// mid-session 401s without caller involvement.
   ///
-  /// Delegates to [refreshSession] which deduplicates concurrent callers —
-  /// multiple in-flight RPC 401s and app-resume refresh all share a single
-  /// refresh token exchange.
-  Future<String?> refreshAccessToken() async {
-    final KeycastSession? refreshed;
+  /// Shares the single-flight refresh with [refreshSession], so multiple
+  /// in-flight RPC 401s and app-resume refresh all share a single refresh
+  /// token exchange.
+  ///
+  /// [onRejected] runs when Keycast refused the refresh, so the caller can
+  /// ask the user to sign in again (#9943). It does not run when Keycast was
+  /// unreachable: the refresh token survives that for a later retry.
+  Future<String?> refreshAccessToken({void Function()? onRejected}) async {
+    final _RefreshOutcome outcome;
     try {
-      refreshed = await refreshSession();
+      outcome = await (_pendingOAuthRefresh ?? _startRefresh());
     } on OAuthNetworkException {
       return null;
     }
-    return refreshed?.accessToken;
+    if (outcome.rejected) onRejected?.call();
+    return outcome.session?.accessToken;
   }
 
   /// Returns an access token only when the stored OAuth session belongs to

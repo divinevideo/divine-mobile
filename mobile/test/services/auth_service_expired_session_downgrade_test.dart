@@ -1673,5 +1673,111 @@ void main() {
         );
       },
     );
+
+    group('mid-session 401 with a failed refresh (#9943)', () {
+      KeycastSession liveSession() => KeycastSession(
+        bunkerUrl: 'https://login.divine.video/api/nostr',
+        accessToken: 'live_token',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+        refreshToken: 'refresh_token',
+      );
+
+      // The signer production builds, but with Keycast answering every call
+      // the way it does once it no longer recognises the access token.
+      KeycastRpc rejectingSigner(AuthService authService) => KeycastRpc(
+        nostrApi: 'https://login.divine.video/api/nostr',
+        accessToken: 'revoked_token',
+        httpClient: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'error': 'Invalid or expired token. Please log in again.',
+            }),
+            401,
+          ),
+        ),
+        onTokenRefresh: authService.debugKeycastTokenRefresh,
+      );
+
+      test('a rejected refresh flags the session expired and notifies '
+          'listeners so the sign-in prompt can show', () async {
+        final authService = await arrangeInitializedDivineOAuthService(
+          liveSession(),
+        );
+        expect(authService.authState, equals(AuthState.authenticated));
+        expect(authService.hasExpiredOAuthSession, isFalse);
+
+        final emitted = <AuthState>[];
+        final subscription = authService.authStateStream.listen(emitted.add);
+        addTearDown(subscription.cancel);
+
+        // arrangeInitializedDivineOAuthService stubs refreshSession to return
+        // null: Keycast refused the refresh token.
+        await expectLater(
+          rejectingSigner(authService).getPublicKey(),
+          throwsA(isA<RpcException>()),
+        );
+        await pumpEventQueue();
+
+        expect(authService.hasExpiredOAuthSession, isTrue);
+        expect(
+          authService.authState,
+          equals(AuthState.authenticated),
+          reason: 'The user stays in the app; the prompt asks them to sign in',
+        );
+        expect(emitted, contains(AuthState.authenticated));
+      });
+
+      test('an unreachable Keycast leaves the session alone', () async {
+        final authService = await arrangeInitializedDivineOAuthService(
+          liveSession(),
+        );
+        when(
+          () => mockOAuthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenThrow(OAuthNetworkException('Refresh request failed: HTTP 503'));
+
+        await expectLater(
+          rejectingSigner(authService).getPublicKey(),
+          throwsA(isA<RpcException>()),
+        );
+        await pumpEventQueue();
+
+        expect(
+          authService.hasExpiredOAuthSession,
+          isFalse,
+          reason: 'An outage must not ask every user to sign in again',
+        );
+      });
+
+      test('a rejection that lands after sign-out does not mark the signed-out '
+          'session expired', () async {
+        final authService = await arrangeInitializedDivineOAuthService(
+          liveSession(),
+        );
+        final refreshGate = Completer<KeycastSession?>();
+        when(
+          () => mockOAuthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => refreshGate.future);
+        when(() => mockOAuthClient.logout()).thenAnswer((_) async {});
+
+        await runIgnoringMockedHttpErrors(() async {
+          final call = expectLater(
+            rejectingSigner(authService).getPublicKey(),
+            throwsA(isA<RpcException>()),
+          );
+          await pumpEventQueue();
+          await authService.signOut();
+          refreshGate.complete(null);
+          await call;
+          await pumpEventQueue();
+        });
+
+        expect(authService.authState, equals(AuthState.unauthenticated));
+        expect(authService.hasExpiredOAuthSession, isFalse);
+      });
+    });
   });
 }
