@@ -308,7 +308,7 @@ class AppLocalizationsId extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'putaran',
+      other: 'loop',
     );
     return '$compactCount $_temp0 sepanjang waktu';
   }

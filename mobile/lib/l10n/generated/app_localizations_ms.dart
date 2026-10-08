@@ -337,7 +337,7 @@ class AppLocalizationsMs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'ulangan',
+      other: 'loop',
     );
     return '$compactCount $_temp0 sepanjang masa';
   }

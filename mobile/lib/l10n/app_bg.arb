@@ -3216,7 +3216,7 @@
     "appearanceSettingsSystem": "Системна настройка",
     "appearanceSettingsLight": "Светла",
     "appearanceSettingsDark": "Тъмна",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} за всички времена",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{луп} other{лупа}} за всички времена",
     "videoOverlayTotalLoopsScope": "{compactCount} за всички времена",
     "generalSettingsClosedCaptions": "Субтитри",
     "generalSettingsClosedCaptionsSubtitle": "Показвай субтитри, когато видеата ги имат",

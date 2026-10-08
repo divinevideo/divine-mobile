@@ -296,9 +296,9 @@ class AppLocalizationsKo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '회 반복',
+      other: '루프',
     );
-    return '전체 $compactCount$_temp0';
+    return '전체 $compactCount $_temp0';
   }
 
   @override

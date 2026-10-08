@@ -373,8 +373,8 @@ class AppLocalizationsBg extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'повторения',
-      one: 'повторение',
+      other: 'лупа',
+      one: 'луп',
     );
     return '$compactCount $_temp0 за всички времена';
   }

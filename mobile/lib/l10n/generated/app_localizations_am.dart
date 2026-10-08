@@ -367,8 +367,8 @@ class AppLocalizationsAm extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'ዙሮች',
-      one: 'ዙር',
+      other: 'ሉፖች',
+      one: 'ሉፕ',
     );
     return '$compactCount ጠቅላላ $_temp0';
   }

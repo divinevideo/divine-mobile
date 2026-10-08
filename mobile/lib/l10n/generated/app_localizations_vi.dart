@@ -338,7 +338,7 @@ class AppLocalizationsVi extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'lượt',
+      other: 'loop',
     );
     return '$compactCount $_temp0 tổng cộng';
   }
