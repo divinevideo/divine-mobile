@@ -739,6 +739,30 @@ abstract class AppLocalizations {
   /// **'Use device language (default)'**
   String get contentPreferencesUseDeviceLanguage;
 
+  /// No description provided for @contentPreferencesSubtitleLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitle language'**
+  String get contentPreferencesSubtitleLanguage;
+
+  /// No description provided for @contentPreferencesSubtitleLanguageFollowApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as app language'**
+  String get contentPreferencesSubtitleLanguageFollowApp;
+
+  /// No description provided for @contentPreferencesSubtitleKeepOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep these in the original'**
+  String get contentPreferencesSubtitleKeepOriginal;
+
+  /// No description provided for @contentPreferencesSubtitleKeepOriginalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get contentPreferencesSubtitleKeepOriginalNone;
+
   /// No description provided for @contentPreferencesAudioSharing.
   ///
   /// In en, this message translates to:

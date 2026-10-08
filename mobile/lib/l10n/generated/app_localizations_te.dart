@@ -434,6 +434,20 @@ class AppLocalizationsTe extends AppLocalizations {
       'పరికర భాషను ఉపయోగించండి (డిఫాల్ట్)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'పునర్వినియోగం కోసం నా ఆడియోను అందుబాటులో ఉంచు';
 

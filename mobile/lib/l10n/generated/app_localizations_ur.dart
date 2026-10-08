@@ -428,6 +428,20 @@ class AppLocalizationsUr extends AppLocalizations {
       'ڈیوائس کی زبان استعمال کریں (ڈیفالٹ)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'میری آڈیو دوبارہ استعمال کے لیے دستیاب کریں';
 

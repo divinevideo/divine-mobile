@@ -1,6 +1,8 @@
 // ABOUTME: Content preferences screen for language, audio sharing, and content filters
 // ABOUTME: Composes three small Cubits (one per independent sub-setting).
 
+import 'dart:async';
+
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -14,6 +16,7 @@ import 'package:openvine/blocs/language_setting/language_setting_cubit.dart';
 import 'package:openvine/blocs/music_mode/music_mode_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/screens/settings/account_content_labels_tile.dart';
@@ -43,6 +46,7 @@ class ContentPreferencesScreen extends ConsumerWidget {
           child: ListView(
             children: [
               const ContentLanguageSetting(),
+              const SubtitleTranslationSetting(),
               const _ContentFiltersTile(),
               const AccountContentLabelsTile(),
               const _AudioSharingToggle(),
@@ -465,4 +469,248 @@ class _AudioDevicePickerContent extends StatelessWidget {
 String _formatAudioDeviceName(BuildContext context, String name) {
   if (name.isEmpty) return context.l10n.contentPreferencesUnknownMicrophone;
   return name;
+}
+
+/// Viewer preference for translating incoming subtitles into their language.
+///
+/// Two rows: the target language subtitles are translated into (default: the
+/// app language), and the set of source languages to leave untouched.
+class SubtitleTranslationSetting extends ConsumerStatefulWidget {
+  const SubtitleTranslationSetting({super.key});
+
+  @override
+  ConsumerState<SubtitleTranslationSetting> createState() =>
+      _SubtitleTranslationSettingState();
+}
+
+class _SubtitleTranslationSettingState
+    extends ConsumerState<SubtitleTranslationSetting> {
+  String? _targetLanguage;
+  Set<String> _keepOriginal = <String>{};
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final service = ref.read(subtitleLanguagePreferenceServiceProvider);
+    await service.initialize();
+    if (!mounted) return;
+    setState(() {
+      _targetLanguage = service.targetLanguage;
+      _keepOriginal = service.keepOriginalLanguages;
+      _loaded = true;
+    });
+  }
+
+  Future<void> _setTarget(String? code) async {
+    final service = ref.read(subtitleLanguagePreferenceServiceProvider);
+    await service.setTargetLanguage(code);
+    if (!mounted) return;
+    setState(() => _targetLanguage = service.targetLanguage);
+  }
+
+  Future<void> _setKeepOriginal(Set<String> languages) async {
+    final service = ref.read(subtitleLanguagePreferenceServiceProvider);
+    await service.setKeepOriginalLanguages(languages);
+    if (!mounted) return;
+    setState(() => _keepOriginal = service.keepOriginalLanguages);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final target = _targetLanguage;
+    final targetSubtitle = target == null
+        ? context.l10n.contentPreferencesSubtitleLanguageFollowApp
+        : LanguagePreferenceService.displayNameFor(target);
+
+    final keepSubtitle = _keepOriginal.isEmpty
+        ? context.l10n.contentPreferencesSubtitleKeepOriginalNone
+        : (_keepOriginal.toList()..sort())
+              .map(LanguagePreferenceService.displayNameFor)
+              .join(', ');
+
+    return Column(
+      children: [
+        ListTile(
+          leading: DivineIcon(
+            icon: DivineIconName.closedCaptioning,
+            color: context.vineColors.accentPositive,
+          ),
+          title: Text(
+            context.l10n.contentPreferencesSubtitleLanguage,
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.primaryText,
+            ),
+          ),
+          subtitle: Text(
+            targetSubtitle,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+          trailing: DivineIcon(
+            icon: DivineIconName.caretRight,
+            color: context.vineColors.mutedText,
+          ),
+          enabled: _loaded,
+          onTap: _loaded ? () => _showTargetPicker(context) : null,
+        ),
+        ListTile(
+          leading: DivineIcon(
+            icon: DivineIconName.globe,
+            color: context.vineColors.accentPositive,
+          ),
+          title: Text(
+            context.l10n.contentPreferencesSubtitleKeepOriginal,
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.primaryText,
+            ),
+          ),
+          subtitle: Text(
+            keepSubtitle,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+          trailing: DivineIcon(
+            icon: DivineIconName.caretRight,
+            color: context.vineColors.mutedText,
+          ),
+          enabled: _loaded,
+          onTap: _loaded ? () => _showKeepOriginalPicker(context) : null,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showTargetPicker(BuildContext context) async {
+    await VineBottomSheet.show<void>(
+      context: context,
+      contentTitle: context.l10n.contentPreferencesSubtitleLanguage,
+      buildScrollBody: (scrollController) => _SubtitleTargetPickerContent(
+        scrollController: scrollController,
+        currentTarget: _targetLanguage,
+        onUseAppLanguage: () async {
+          await _setTarget(null);
+          if (context.mounted) Navigator.pop(context);
+        },
+        onSelect: (code) async {
+          await _setTarget(code);
+          if (context.mounted) Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  Future<void> _showKeepOriginalPicker(BuildContext context) async {
+    await VineBottomSheet.show<void>(
+      context: context,
+      contentTitle: context.l10n.contentPreferencesSubtitleKeepOriginal,
+      buildScrollBody: (scrollController) => _SubtitleKeepOriginalPickerContent(
+        scrollController: scrollController,
+        keptLanguages: _keepOriginal,
+        onChanged: _setKeepOriginal,
+      ),
+    );
+  }
+}
+
+class _SubtitleTargetPickerContent extends StatelessWidget {
+  const _SubtitleTargetPickerContent({
+    required this.scrollController,
+    required this.currentTarget,
+    required this.onUseAppLanguage,
+    required this.onSelect,
+  });
+
+  final ScrollController scrollController;
+  final String? currentTarget;
+  final Future<void> Function() onUseAppLanguage;
+  final Future<void> Function(String code) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final languages = LanguagePreferenceService.supportedLanguages.entries
+        .toList(growable: false);
+    return ListView.builder(
+      controller: scrollController,
+      padding: EdgeInsets.zero,
+      itemCount: languages.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return DivineSelectableRow(
+            title: context.l10n.contentPreferencesSubtitleLanguageFollowApp,
+            subtitle: LanguagePreferenceService.displayNameFor(
+              PlatformDispatcher.instance.locale.languageCode,
+            ),
+            isSelected: currentTarget == null,
+            onTap: onUseAppLanguage,
+          );
+        }
+        final entry = languages[index - 1];
+        return DivineSelectableRow(
+          title: entry.value,
+          subtitle: entry.key.toUpperCase(),
+          isSelected: currentTarget == entry.key,
+          onTap: () => onSelect(entry.key),
+        );
+      },
+    );
+  }
+}
+
+/// Multi-select list of source languages the viewer reads as-is.
+///
+/// Keeps its own working set so a toggle repaints immediately while the
+/// preference write happens in the background.
+class _SubtitleKeepOriginalPickerContent extends StatefulWidget {
+  const _SubtitleKeepOriginalPickerContent({
+    required this.scrollController,
+    required this.keptLanguages,
+    required this.onChanged,
+  });
+
+  final ScrollController scrollController;
+  final Set<String> keptLanguages;
+  final Future<void> Function(Set<String>) onChanged;
+
+  @override
+  State<_SubtitleKeepOriginalPickerContent> createState() =>
+      _SubtitleKeepOriginalPickerContentState();
+}
+
+class _SubtitleKeepOriginalPickerContentState
+    extends State<_SubtitleKeepOriginalPickerContent> {
+  late final Set<String> _kept = Set<String>.from(widget.keptLanguages);
+
+  void _toggle(String code) {
+    setState(() {
+      if (!_kept.add(code)) _kept.remove(code);
+    });
+    unawaited(widget.onChanged(Set<String>.from(_kept)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final languages = LanguagePreferenceService.supportedLanguages.entries
+        .toList(growable: false);
+    return ListView.builder(
+      controller: widget.scrollController,
+      padding: EdgeInsets.zero,
+      itemCount: languages.length,
+      itemBuilder: (context, index) {
+        final entry = languages[index];
+        return DivineSelectableRow(
+          title: entry.value,
+          subtitle: entry.key.toUpperCase(),
+          isSelected: _kept.contains(entry.key),
+          onTap: () => _toggle(entry.key),
+        );
+      },
+    );
+  }
 }
