@@ -2579,14 +2579,12 @@ void main() {
         ],
       );
 
+      late Completer<HomeFeedResult> paginationResponse;
+
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'drops concurrent requests via droppable transformer',
         setUp: () {
-          final moreVideos = createTestVideos(
-            pageSize,
-            startTimestamp: 1000,
-            idPrefix: 'more',
-          );
+          paginationResponse = Completer<HomeFeedResult>();
 
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
           when(
@@ -2597,11 +2595,7 @@ void main() {
               limit: any(named: 'limit'),
               until: any(named: 'until'),
             ),
-          ).thenAnswer((_) async {
-            // Simulate network delay
-            await Future<void>.delayed(const Duration(milliseconds: 50));
-            return HomeFeedResult(videos: moreVideos);
-          });
+          ).thenAnswer((_) => paginationResponse.future);
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -2609,15 +2603,44 @@ void main() {
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
         ),
-        act: (bloc) {
+        act: (bloc) async {
           // Fire multiple events simultaneously — droppable should
           // process only the first and drop the rest while it's running.
           bloc
             ..add(const VideoFeedLoadMoreRequested())
             ..add(const VideoFeedLoadMoreRequested())
             ..add(const VideoFeedLoadMoreRequested());
+          try {
+            // Process all three requests while the first response stays pending.
+            await pumpEventQueue();
+            expect(bloc.state.isLoadingMore, isTrue);
+          } finally {
+            paginationResponse.complete(
+              HomeFeedResult(
+                videos: createTestVideos(
+                  pageSize,
+                  startTimestamp: 1000,
+                  idPrefix: 'more',
+                ),
+              ),
+            );
+          }
+          await bloc.stream.firstWhere((state) => !state.isLoadingMore);
         },
-        wait: const Duration(milliseconds: 200),
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.isLoadingMore,
+            'isLoadingMore',
+            isTrue,
+          ),
+          isA<VideoFeedBlocState>()
+              .having((state) => state.isLoadingMore, 'isLoadingMore', isFalse)
+              .having(
+                (state) => state.videos.length,
+                'video count',
+                pageSize * 2,
+              ),
+        ],
         verify: (_) {
           verify(
             () => mockVideosRepository.getHomeFeedVideos(
@@ -2968,8 +2991,11 @@ void main() {
         ),
         act: (bloc) async {
           // First, trigger a load so _lastRefreshedAt gets set
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
           bloc.add(const VideoFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await loaded;
 
           // Now the auto-refresh should be skipped (data is fresh)
           bloc.add(const VideoFeedAutoRefreshRequested());
@@ -3009,8 +3035,11 @@ void main() {
         ),
         act: (bloc) async {
           // First, trigger a load so _lastRefreshedAt gets set
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(Duration.zero);
+          await loaded;
 
           // Now the auto-refresh should be skipped (data is fresh)
           bloc.add(const VideoFeedAutoRefreshRequested());
@@ -3047,8 +3076,11 @@ void main() {
         ),
         act: (bloc) async {
           // First load sets _lastRefreshedAt
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(Duration.zero);
+          await loaded;
 
           // With Duration.zero interval, this should refresh
           bloc.add(const VideoFeedAutoRefreshRequested());
@@ -4147,8 +4179,11 @@ void main() {
         setUp: () => stubFollowingFetch(createTestVideos(5, idPrefix: 'fresh')),
         build: createBlocWithCache,
         act: (bloc) async {
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(Duration.zero);
+          await loaded;
           bloc.add(const VideoFeedActiveIndexChanged(2));
         },
         // The swipe persist is trailing-debounced, so wait past the debounce
@@ -4186,8 +4221,11 @@ void main() {
         setUp: () => stubFollowingFetch(createTestVideos(3, idPrefix: 'fresh')),
         build: createBlocWithCache,
         act: (bloc) async {
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(Duration.zero);
+          await loaded;
           // Index 2 + offset 1 = 3 == length → nothing left to resume to.
           bloc.add(const VideoFeedActiveIndexChanged(2));
         },
@@ -4354,8 +4392,11 @@ void main() {
           profileRepository: mockProfileRepository,
         ),
         act: (bloc) async {
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.creatorProfiles.containsKey(pubkeyA),
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await loaded;
           bloc.add(const VideoFeedLoadMoreRequested());
         },
         verify: (_) {
@@ -4437,8 +4478,11 @@ void main() {
           profileRepository: mockProfileRepository,
         ),
         act: (bloc) async {
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.creatorProfiles.containsKey(pubkeyA),
+          );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await loaded;
           bloc.add(const VideoFeedLoadMoreRequested());
         },
         verify: (_) {
