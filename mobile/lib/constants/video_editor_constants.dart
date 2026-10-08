@@ -653,6 +653,12 @@ class VideoEditorConstants {
   /// [drawMinStrokeWidth].
   static const double drawMaxStrokeWidth = 40.0;
 
+  /// How long the brush preview takes to fade out after the brush size
+  /// slider is released.
+  static const Duration drawBrushPreviewFadeDuration = Duration(
+    milliseconds: 250,
+  );
+
   /// Standard deviation of the blur that hides an area, in logical pixels of
   /// the editor canvas. The preview blurs with it, and the export scales it
   /// to the video's pixels like the area itself.
