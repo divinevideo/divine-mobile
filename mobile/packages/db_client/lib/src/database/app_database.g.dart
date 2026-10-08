@@ -17421,6 +17421,285 @@ class RemovedConversationsCompanion
   }
 }
 
+class $RemovedMessageIdsTable extends RemovedMessageIds
+    with TableInfo<$RemovedMessageIdsTable, RemovedMessageId> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RemovedMessageIdsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rumorIdMeta = const VerificationMeta(
+    'rumorId',
+  );
+  @override
+  late final GeneratedColumn<String> rumorId = GeneratedColumn<String>(
+    'rumor_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _removedAtMeta = const VerificationMeta(
+    'removedAt',
+  );
+  @override
+  late final GeneratedColumn<int> removedAt = GeneratedColumn<int>(
+    'removed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ownerPubkey, rumorId, removedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'removed_message_ids';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RemovedMessageId> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('rumor_id')) {
+      context.handle(
+        _rumorIdMeta,
+        rumorId.isAcceptableOrUnknown(data['rumor_id']!, _rumorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rumorIdMeta);
+    }
+    if (data.containsKey('removed_at')) {
+      context.handle(
+        _removedAtMeta,
+        removedAt.isAcceptableOrUnknown(data['removed_at']!, _removedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_removedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, rumorId};
+  @override
+  RemovedMessageId map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RemovedMessageId(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      rumorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rumor_id'],
+      )!,
+      removedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}removed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RemovedMessageIdsTable createAlias(String alias) {
+    return $RemovedMessageIdsTable(attachedDatabase, alias);
+  }
+}
+
+class RemovedMessageId extends DataClass
+    implements Insertable<RemovedMessageId> {
+  final String ownerPubkey;
+
+  /// Rumor id of a kind 14/15 message or a kind 7 reaction.
+  final String rumorId;
+
+  /// Unix timestamp when the owning conversation was removed.
+  final int removedAt;
+  const RemovedMessageId({
+    required this.ownerPubkey,
+    required this.rumorId,
+    required this.removedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['rumor_id'] = Variable<String>(rumorId);
+    map['removed_at'] = Variable<int>(removedAt);
+    return map;
+  }
+
+  RemovedMessageIdsCompanion toCompanion(bool nullToAbsent) {
+    return RemovedMessageIdsCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      rumorId: Value(rumorId),
+      removedAt: Value(removedAt),
+    );
+  }
+
+  factory RemovedMessageId.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RemovedMessageId(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      rumorId: serializer.fromJson<String>(json['rumorId']),
+      removedAt: serializer.fromJson<int>(json['removedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'rumorId': serializer.toJson<String>(rumorId),
+      'removedAt': serializer.toJson<int>(removedAt),
+    };
+  }
+
+  RemovedMessageId copyWith({
+    String? ownerPubkey,
+    String? rumorId,
+    int? removedAt,
+  }) => RemovedMessageId(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    rumorId: rumorId ?? this.rumorId,
+    removedAt: removedAt ?? this.removedAt,
+  );
+  RemovedMessageId copyWithCompanion(RemovedMessageIdsCompanion data) {
+    return RemovedMessageId(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      rumorId: data.rumorId.present ? data.rumorId.value : this.rumorId,
+      removedAt: data.removedAt.present ? data.removedAt.value : this.removedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemovedMessageId(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('rumorId: $rumorId, ')
+          ..write('removedAt: $removedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ownerPubkey, rumorId, removedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RemovedMessageId &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.rumorId == this.rumorId &&
+          other.removedAt == this.removedAt);
+}
+
+class RemovedMessageIdsCompanion extends UpdateCompanion<RemovedMessageId> {
+  final Value<String> ownerPubkey;
+  final Value<String> rumorId;
+  final Value<int> removedAt;
+  final Value<int> rowid;
+  const RemovedMessageIdsCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.rumorId = const Value.absent(),
+    this.removedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RemovedMessageIdsCompanion.insert({
+    required String ownerPubkey,
+    required String rumorId,
+    required int removedAt,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       rumorId = Value(rumorId),
+       removedAt = Value(removedAt);
+  static Insertable<RemovedMessageId> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? rumorId,
+    Expression<int>? removedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (rumorId != null) 'rumor_id': rumorId,
+      if (removedAt != null) 'removed_at': removedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RemovedMessageIdsCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? rumorId,
+    Value<int>? removedAt,
+    Value<int>? rowid,
+  }) {
+    return RemovedMessageIdsCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      rumorId: rumorId ?? this.rumorId,
+      removedAt: removedAt ?? this.removedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (rumorId.present) {
+      map['rumor_id'] = Variable<String>(rumorId.value);
+    }
+    if (removedAt.present) {
+      map['removed_at'] = Variable<int>(removedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemovedMessageIdsCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('rumorId: $rumorId, ')
+          ..write('removedAt: $removedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PendingProfileSavesTable extends PendingProfileSaves
     with TableInfo<$PendingProfileSavesTable, PendingProfileSaveRow> {
   @override
@@ -20948,6 +21227,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ProcessedGiftWrapsTable(this);
   late final $RemovedConversationsTable removedConversations =
       $RemovedConversationsTable(this);
+  late final $RemovedMessageIdsTable removedMessageIds =
+      $RemovedMessageIdsTable(this);
   late final $PendingProfileSavesTable pendingProfileSaves =
       $PendingProfileSavesTable(this);
   late final $IdentityEventsTable identityEvents = $IdentityEventsTable(this);
@@ -21103,6 +21384,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ProcessedGiftWrapsDao(this as AppDatabase);
   late final RemovedConversationsDao removedConversationsDao =
       RemovedConversationsDao(this as AppDatabase);
+  late final RemovedMessageIdsDao removedMessageIdsDao = RemovedMessageIdsDao(
+    this as AppDatabase,
+  );
   late final PendingProfileSavesDao pendingProfileSavesDao =
       PendingProfileSavesDao(this as AppDatabase);
   late final IdentityEventsDao identityEventsDao = IdentityEventsDao(
@@ -21151,6 +21435,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pendingGiftWraps,
     processedGiftWraps,
     removedConversations,
+    removedMessageIds,
     pendingProfileSaves,
     identityEvents,
     identityVerifications,
@@ -29242,6 +29527,183 @@ typedef $$RemovedConversationsTableProcessedTableManager =
       RemovedConversation,
       PrefetchHooks Function()
     >;
+typedef $$RemovedMessageIdsTableCreateCompanionBuilder =
+    RemovedMessageIdsCompanion Function({
+      required String ownerPubkey,
+      required String rumorId,
+      required int removedAt,
+      Value<int> rowid,
+    });
+typedef $$RemovedMessageIdsTableUpdateCompanionBuilder =
+    RemovedMessageIdsCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> rumorId,
+      Value<int> removedAt,
+      Value<int> rowid,
+    });
+
+class $$RemovedMessageIdsTableFilterComposer
+    extends Composer<_$AppDatabase, $RemovedMessageIdsTable> {
+  $$RemovedMessageIdsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rumorId => $composableBuilder(
+    column: $table.rumorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get removedAt => $composableBuilder(
+    column: $table.removedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RemovedMessageIdsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RemovedMessageIdsTable> {
+  $$RemovedMessageIdsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rumorId => $composableBuilder(
+    column: $table.rumorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get removedAt => $composableBuilder(
+    column: $table.removedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RemovedMessageIdsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RemovedMessageIdsTable> {
+  $$RemovedMessageIdsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rumorId =>
+      $composableBuilder(column: $table.rumorId, builder: (column) => column);
+
+  GeneratedColumn<int> get removedAt =>
+      $composableBuilder(column: $table.removedAt, builder: (column) => column);
+}
+
+class $$RemovedMessageIdsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RemovedMessageIdsTable,
+          RemovedMessageId,
+          $$RemovedMessageIdsTableFilterComposer,
+          $$RemovedMessageIdsTableOrderingComposer,
+          $$RemovedMessageIdsTableAnnotationComposer,
+          $$RemovedMessageIdsTableCreateCompanionBuilder,
+          $$RemovedMessageIdsTableUpdateCompanionBuilder,
+          (
+            RemovedMessageId,
+            BaseReferences<
+              _$AppDatabase,
+              $RemovedMessageIdsTable,
+              RemovedMessageId
+            >,
+          ),
+          RemovedMessageId,
+          PrefetchHooks Function()
+        > {
+  $$RemovedMessageIdsTableTableManager(
+    _$AppDatabase db,
+    $RemovedMessageIdsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RemovedMessageIdsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RemovedMessageIdsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RemovedMessageIdsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> rumorId = const Value.absent(),
+                Value<int> removedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RemovedMessageIdsCompanion(
+                ownerPubkey: ownerPubkey,
+                rumorId: rumorId,
+                removedAt: removedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String rumorId,
+                required int removedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RemovedMessageIdsCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                rumorId: rumorId,
+                removedAt: removedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RemovedMessageIdsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RemovedMessageIdsTable,
+      RemovedMessageId,
+      $$RemovedMessageIdsTableFilterComposer,
+      $$RemovedMessageIdsTableOrderingComposer,
+      $$RemovedMessageIdsTableAnnotationComposer,
+      $$RemovedMessageIdsTableCreateCompanionBuilder,
+      $$RemovedMessageIdsTableUpdateCompanionBuilder,
+      (
+        RemovedMessageId,
+        BaseReferences<
+          _$AppDatabase,
+          $RemovedMessageIdsTable,
+          RemovedMessageId
+        >,
+      ),
+      RemovedMessageId,
+      PrefetchHooks Function()
+    >;
 typedef $$PendingProfileSavesTableCreateCompanionBuilder =
     PendingProfileSavesCompanion Function({
       required String userPubkey,
@@ -31153,6 +31615,8 @@ class $AppDatabaseManager {
       $$ProcessedGiftWrapsTableTableManager(_db, _db.processedGiftWraps);
   $$RemovedConversationsTableTableManager get removedConversations =>
       $$RemovedConversationsTableTableManager(_db, _db.removedConversations);
+  $$RemovedMessageIdsTableTableManager get removedMessageIds =>
+      $$RemovedMessageIdsTableTableManager(_db, _db.removedMessageIds);
   $$PendingProfileSavesTableTableManager get pendingProfileSaves =>
       $$PendingProfileSavesTableTableManager(_db, _db.pendingProfileSaves);
   $$IdentityEventsTableTableManager get identityEvents =>

@@ -23,6 +23,7 @@ export 'personal_reposts_dao.dart';
 export 'processed_gift_wraps_dao.dart';
 export 'profile_stats_dao.dart';
 export 'removed_conversations_dao.dart';
+export 'removed_message_ids_dao.dart';
 export 'saved_caption_styles_dao.dart';
 export 'saved_title_styles_dao.dart';
 export 'scheduled_posts_dao.dart';

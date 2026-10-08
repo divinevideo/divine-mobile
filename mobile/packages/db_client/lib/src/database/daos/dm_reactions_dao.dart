@@ -637,6 +637,36 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
+  /// The rows of [ownerPubkey] in [conversationIds]: what conversation removal
+  /// deletes, and what [reactionIdsForConversations] reads first.
+  Expression<bool> _inConversationsOf(
+    $DmMessageReactionsTable row,
+    List<String> conversationIds,
+    String ownerPubkey,
+  ) =>
+      row.conversationId.isIn(conversationIds) &
+      row.ownerPubkey.equals(ownerPubkey);
+
+  /// Ids of every reaction row, deleted ones included, that
+  /// [deleteForConversations] would remove from [conversationIds] for
+  /// [ownerPubkey].
+  ///
+  /// Both filter through the same [_inConversationsOf], so an id read here is
+  /// exactly an id that removal then deletes. Returns an empty list when
+  /// [conversationIds] is empty.
+  Future<List<String>> reactionIdsForConversations({
+    required Iterable<String> conversationIds,
+    required String ownerPubkey,
+  }) async {
+    final ids = conversationIds.toList(growable: false);
+    if (ids.isEmpty) return const [];
+    final query = selectOnly(dmMessageReactions)
+      ..addColumns([dmMessageReactions.id])
+      ..where(_inConversationsOf(dmMessageReactions, ids, ownerPubkey));
+    final rows = await query.get();
+    return [for (final row in rows) row.read(dmMessageReactions.id)!];
+  }
+
   /// Delete every reaction row in [conversationIds] for [ownerPubkey].
   ///
   /// Conversation removal calls this inside the same transaction as the
@@ -651,10 +681,9 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   }) {
     final ids = conversationIds.toList(growable: false);
     if (ids.isEmpty) return Future.value(0);
-    return (delete(dmMessageReactions)..where(
-          (t) => t.conversationId.isIn(ids) & t.ownerPubkey.equals(ownerPubkey),
-        ))
-        .go();
+    return (delete(
+      dmMessageReactions,
+    )..where((t) => _inConversationsOf(t, ids, ownerPubkey))).go();
   }
 
   /// Re-point reactions whose target message moved to another conversation.
