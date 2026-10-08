@@ -30,6 +30,23 @@ export 'package:openvine/models/curated_list_callbacks.dart';
 
 part 'curated_lists/curated_list_playlist.dart';
 
+/// A metadata update's bounded rejection reason.
+enum CuratedListUpdateRejection { failed, privateListFull }
+
+/// Outcome without changing the legacy boolean update contract.
+class CuratedListUpdateResult {
+  const CuratedListUpdateResult.saved() : succeeded = true, rejection = null;
+  const CuratedListUpdateResult.failed()
+    : succeeded = false,
+      rejection = CuratedListUpdateRejection.failed;
+  const CuratedListUpdateResult.privateListFull()
+    : succeeded = false,
+      rejection = CuratedListUpdateRejection.privateListFull;
+
+  final bool succeeded;
+  final CuratedListUpdateRejection? rejection;
+}
+
 /// Service for managing NIP-51 curated lists.
 ///
 /// Sanctioned ChangeNotifier per the "Sanctioned Riverpod (STAYS)" list in
@@ -709,7 +726,50 @@ class CuratedListService extends ChangeNotifier {
     List<String>? allowedCollaborators,
     String? thumbnailEventId,
     PlayOrder? playOrder,
+  }) => updateListWithResult(
+    listId: listId,
+    name: name,
+    description: description,
+    imageUrl: imageUrl,
+    isPublic: isPublic,
+    tags: tags,
+    isCollaborative: isCollaborative,
+    allowedCollaborators: allowedCollaborators,
+    thumbnailEventId: thumbnailEventId,
+    playOrder: playOrder,
+  ).then((result) => result.succeeded);
+
+  /// Updates metadata while identifying an impossible new private target.
+  /// Other updates preserve the existing local-save and relay-ACK milestones.
+  Future<CuratedListUpdateResult> updateListWithResult({
+    required String listId,
+    String? name,
+    String? description,
+    String? imageUrl,
+    bool? isPublic,
+    List<String>? tags,
+    bool? isCollaborative,
+    List<String>? allowedCollaborators,
+    String? thumbnailEventId,
+    PlayOrder? playOrder,
   }) {
+    if (isReadyForMutations) {
+      final cached = getListById(listId);
+      // Reject a known impossible privacy flip before queueing or changing any
+      // metadata. The queued turn checks its current row again before storage.
+      if (cached != null &&
+          cached.isPublic &&
+          isPublic == false &&
+          _authService.isAuthenticated &&
+          _canMutateCachedList(cached) &&
+          hasValidCuratedListVisibility(
+            false,
+            isCollaborative ?? cached.isCollaborative,
+          ) &&
+          !_relayGateway.privateItemPayloadFits(cached)) {
+        return Future.value(const CuratedListUpdateResult.privateListFull());
+      }
+    }
     return _serializeListOperation(
       listId,
       () => _updateList(
@@ -724,11 +784,11 @@ class CuratedListService extends ChangeNotifier {
         thumbnailEventId: thumbnailEventId,
         playOrder: playOrder,
       ),
-      cancelled: false,
+      cancelled: const CuratedListUpdateResult.failed(),
     );
   }
 
-  Future<bool> _updateList({
+  Future<CuratedListUpdateResult> _updateList({
     required String listId,
     String? name,
     String? description,
@@ -743,11 +803,13 @@ class CuratedListService extends ChangeNotifier {
     try {
       final listIndex = _listIndex(listId);
       if (listIndex == -1) {
-        return false;
+        return const CuratedListUpdateResult.failed();
       }
 
       final list = _lists[listIndex];
-      if (!_canMutateCachedList(list)) return false;
+      if (!_canMutateCachedList(list)) {
+        return const CuratedListUpdateResult.failed();
+      }
       final visibilityChanged = isPublic != null && isPublic != list.isPublic;
       if (visibilityChanged && !_authService.isAuthenticated) {
         Log.warning(
@@ -755,7 +817,7 @@ class CuratedListService extends ChangeNotifier {
           name: 'CuratedListService',
           category: LogCategory.system,
         );
-        return false;
+        return const CuratedListUpdateResult.failed();
       }
 
       final updatedList = list.copyWith(
@@ -782,7 +844,13 @@ class CuratedListService extends ChangeNotifier {
           name: 'CuratedListService',
           category: LogCategory.system,
         );
-        return false;
+        return const CuratedListUpdateResult.failed();
+      }
+
+      if (visibilityChanged &&
+          !updatedList.isPublic &&
+          !_relayGateway.privateItemPayloadFits(updatedList)) {
+        return const CuratedListUpdateResult.privateListFull();
       }
 
       // Name, description and the rest of the edit are local-first: they are
@@ -823,7 +891,7 @@ class CuratedListService extends ChangeNotifier {
             await _saveLists();
           }
         }
-        return false;
+        return const CuratedListUpdateResult.failed();
       }
 
       if (plaintextEventId != null) {
@@ -838,7 +906,7 @@ class CuratedListService extends ChangeNotifier {
       if (!isCurrentSession || !_authService.isAuthenticated) {
         final currentIndex = _listIndex(listId);
         if (currentIndex == -1) {
-          return false;
+          return const CuratedListUpdateResult.failed();
         }
         _lists[currentIndex] = updatedList;
         await _saveLists();
@@ -850,14 +918,14 @@ class CuratedListService extends ChangeNotifier {
         category: LogCategory.system,
       );
 
-      return true;
+      return const CuratedListUpdateResult.saved();
     } catch (e) {
       Log.error(
         'Failed to update list: $e',
         name: 'CuratedListService',
         category: LogCategory.system,
       );
-      return false;
+      return const CuratedListUpdateResult.failed();
     }
   }
 
