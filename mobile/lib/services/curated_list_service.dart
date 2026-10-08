@@ -393,8 +393,9 @@ class CuratedListService extends ChangeNotifier {
   /// Unreadable accepted evidence must be repaired before changing lists.
   bool get recoveryNeedsRepair {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    return _recovery.legacyNeedsRepair ||
-        (owner != null && _recovery.needsRepair(owner));
+    return owner == null
+        ? _recovery.legacyNeedsRepair
+        : _recovery.needsRepair(owner);
   }
 
   void _notifyRecoveryChanged(String owner) {

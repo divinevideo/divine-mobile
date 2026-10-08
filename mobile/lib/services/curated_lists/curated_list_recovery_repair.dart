@@ -69,11 +69,12 @@ extension CuratedListRecoveryRepair on CuratedListRecoveryJournal {
       final recovered = <String, Map<String, CuratedListRecoveryRecord>>{};
       try {
         for (final entry in reconstructedJournals.entries) {
-          if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(entry.key)) return false;
-          recovered[entry.key] =
-              CuratedListRecoveryStorage.validateRepairRecords(
-                entry.value,
-              );
+          if (!NostrHexUtils.isValidPubkey(entry.key)) return false;
+          final owner = entry.key.toLowerCase();
+          if (recovered.containsKey(owner)) return false;
+          recovered[owner] = CuratedListRecoveryStorage.validateRepairRecords(
+            entry.value,
+          );
         }
       } on Object {
         return false;

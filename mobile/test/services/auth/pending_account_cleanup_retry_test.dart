@@ -174,6 +174,10 @@ void main() {
     test(
       'retry preserves failed deletion scope before the next owner',
       () async {
+        // This case isolates the database retry obligation. Opaque recovery
+        // bytes intentionally prevent destructive deletion completion and are
+        // covered by the recovery owner-scope tests.
+        await preferences.setString('curated_lists', '[]');
         final attempts = <(String?, bool)>[];
         cleanup.onDatabaseCleanup =
             ({
