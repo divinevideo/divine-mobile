@@ -76,10 +76,30 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   ) => _serializeOwner(ownerPubkey, () async {
     try {
       return await operation();
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      Log.error(
+        'People-list change for ${pubkeyForLogs(ownerPubkey)} threw',
+        name: _logName,
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
       return PeopleListPublishResult.failed(error: error);
     }
   });
+
+  /// Reports a refusal to publish as a failed result, with the reason logged.
+  ///
+  /// Every refusal here is a path where the caller sees only a generic
+  /// failure, so the reason has nowhere else to surface.
+  PeopleListPublishResult _refuse(String listId, String reason) {
+    Log.warning(
+      'Not publishing a change to people list $listId: $reason',
+      name: _logName,
+      category: LogCategory.relay,
+    );
+    return const PeopleListPublishResult.failed();
+  }
 
   /// Avoid walking an imported future timestamp arbitrarily far forward.
   /// This application bound is not a claim about any relay's clock tolerance;
@@ -221,12 +241,18 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) => _serializeMutation(ownerPubkey, () async {
     final title = name.trim();
     final summary = description.trim();
-    if (title.isEmpty || !await _reconcileOwner(ownerPubkey)) {
-      return const PeopleListPublishResult.failed();
+    if (title.isEmpty) return _refuse(listId, 'the title is empty');
+    if (!await _reconcileOwner(ownerPubkey)) {
+      return _refuse(listId, 'the owner read was inconclusive');
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    if (record == null || !record.hasPublishSource) {
-      return const PeopleListPublishResult.failed();
+    if (record == null) return _refuse(listId, 'the list is not cached');
+    if (!record.hasPublishSource) {
+      return _refuse(
+        listId,
+        'the cached row predates source preservation, so no complete '
+        'replacement can be built from it',
+      );
     }
     final existing = record.list;
     if (existing.name == title && (existing.description ?? '') == summary) {
@@ -268,12 +294,10 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
-      return const PeopleListPublishResult.failed();
+      return _refuse(listId, 'the owner read was inconclusive');
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    if (record == null) {
-      return const PeopleListPublishResult.failed();
-    }
+    if (record == null) return _refuse(listId, 'the list is not cached');
     final existing = record.list;
     if (existing.pubkeys.contains(pubkey)) {
       return const PeopleListPublishResult.noop();
@@ -319,12 +343,10 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
-      return const PeopleListPublishResult.failed();
+      return _refuse(listId, 'the owner read was inconclusive');
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    if (record == null) {
-      return const PeopleListPublishResult.failed();
-    }
+    if (record == null) return _refuse(listId, 'the list is not cached');
     final existing = record.list;
     if (!existing.pubkeys.contains(pubkey)) {
       return const PeopleListPublishResult.noop();
@@ -366,7 +388,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String listId,
   }) async {
     if (!await _reconcileOwner(ownerPubkey)) {
-      return const PeopleListPublishResult.failed();
+      return _refuse(listId, 'the owner read was inconclusive');
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
     final createdAt = _revisionTimestamp(record?.list);
