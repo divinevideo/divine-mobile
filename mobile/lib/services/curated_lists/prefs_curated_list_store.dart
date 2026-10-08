@@ -68,6 +68,15 @@ class PrefsCuratedListStore {
     _savedLists = List.unmodifiable(lists);
   }
 
+  /// The row this adapter acknowledged in its own baseline, if present.
+  /// A later refusal restores that row rather than undoing its owner claim.
+  CuratedList? acknowledgedList(String authorScopedId) {
+    for (final row in _savedLists) {
+      if (row.authorScopedId == authorScopedId) return row;
+    }
+    return null;
+  }
+
   /// Sets [ids], as just loaded from storage, as the baseline the next
   /// [saveSubscriptions] diffs against.
   void subscriptionsLoaded(Set<String> ids) {
