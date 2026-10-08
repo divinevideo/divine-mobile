@@ -3,6 +3,5 @@
 # scripts/check_future_delayed_ceiling.sh. Each ceiling may only SHRINK (growth
 # fails CI vs origin/main). Migrate to fakeAsync / pumpEventQueue. Epic: #8290;
 # issue: #4837 (originally WS-2 of #4337).
-test/blocs/camera_permission/camera_permission_bloc_test.dart	3
 test/blocs/video_feed/video_feed_bloc_test.dart	21
 test/providers/list_providers_test.dart	17
