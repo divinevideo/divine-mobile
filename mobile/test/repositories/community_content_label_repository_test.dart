@@ -242,9 +242,8 @@ void main() {
             ).thenAnswer((_) => Completer<List<Event>>().future);
 
             Object? caught;
-            // Keep this request running while fake time advances to exercise
-            // the repository's timeout; the handler records its expected
-            // degraded result below.
+            // Hold the request open so fake time trips the repository timeout;
+            // onError captures the degraded result asserted below.
             unawaited(
               repository
                   .communityLabelsForVideo(video)
