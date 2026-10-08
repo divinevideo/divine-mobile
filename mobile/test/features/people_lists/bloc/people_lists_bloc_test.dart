@@ -1396,6 +1396,109 @@ void main() {
     // only gates construction. A bloc built while FeatureFlag.curatedLists was
     // on used to keep its cache subscription and keep calling syncOwner for
     // kind 30000 for the rest of the session after the flag went off.
+    group('update', () {
+      Future<PeopleListsBloc> startedForOwnerA() async {
+        final bloc = buildBloc(initialOwnerPubkey: _ownerA);
+        addTearDown(bloc.close);
+        bloc.add(
+          PeopleListsRepositoryListsChanged(
+            ownerPubkey: _ownerA,
+            lists: [_buildList(id: 'crew', name: 'Crew', pubkeys: [])],
+          ),
+        );
+        await _flush();
+        return bloc;
+      }
+
+      const request = PeopleListsUpdateRequested(
+        expectedOwnerPubkey: _ownerA,
+        listId: 'crew',
+        name: 'Crew 2',
+        description: 'Who we ride with',
+      );
+
+      void stubUpdate(Future<PeopleListPublishResult> Function() answer) {
+        when(
+          () => repository.updateList(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+            name: 'Crew 2',
+            description: 'Who we ride with',
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      test('succeeds once the repository confirms the edit', () async {
+        stubUpdate(
+          () async =>
+              const PeopleListPublishResult.submitted(eventId: 'event-1'),
+        );
+        final bloc = await startedForOwnerA();
+
+        final result = await bloc.submit(request);
+
+        expect(result, PeopleListsOperationResult.succeeded);
+        expect(bloc.state.pendingMutations, isEmpty);
+        expect(bloc.state.status, PeopleListsStatus.ready);
+        expect(bloc.state.lastSubmittedEventId, 'event-1');
+      });
+
+      test('treats an unchanged edit as settled rather than failed', () async {
+        stubUpdate(() async => const PeopleListPublishResult.noop());
+        final bloc = await startedForOwnerA();
+
+        final result = await bloc.submit(request);
+
+        expect(result, PeopleListsOperationResult.succeeded);
+        expect(bloc.state.status, PeopleListsStatus.ready);
+      });
+
+      test('fails when the repository refuses the edit', () async {
+        stubUpdate(() async => const PeopleListPublishResult.failed());
+        final bloc = await startedForOwnerA();
+
+        final result = await bloc.submit(request);
+
+        expect(result, PeopleListsOperationResult.failed);
+        expect(bloc.state.pendingMutations, isEmpty);
+        expect(bloc.state.status, PeopleListsStatus.failure);
+      });
+
+      test('fails when the repository throws', () async {
+        stubUpdate(() async => throw StateError('relay exploded'));
+        final bloc = await startedForOwnerA();
+
+        final result = await bloc.submit(request);
+
+        expect(result, PeopleListsOperationResult.failed);
+        expect(bloc.state.status, PeopleListsStatus.failure);
+        expect(bloc.state.pendingMutations, isEmpty);
+      });
+
+      test('cancels an edit made for another account', () async {
+        final bloc = await startedForOwnerA();
+
+        final result = await bloc.submit(
+          const PeopleListsUpdateRequested(
+            expectedOwnerPubkey: _ownerB,
+            listId: 'crew',
+            name: 'Crew 2',
+            description: 'Who we ride with',
+          ),
+        );
+
+        expect(result, PeopleListsOperationResult.cancelled);
+        verifyNever(
+          () => repository.updateList(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+          ),
+        );
+      });
+    });
+
     group('curated-lists flag lifecycle', () {
       Future<PeopleListsBloc> startedWithOwnerA() async {
         final bloc = buildBloc()..add(const PeopleListsStarted());
