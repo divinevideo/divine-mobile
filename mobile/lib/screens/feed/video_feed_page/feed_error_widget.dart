@@ -10,6 +10,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/outage_notice/outage_notice_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/outage_diagnosis_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Error state for the home video feed.
 ///
@@ -29,8 +31,16 @@ class FeedErrorWidget extends ConsumerWidget {
 
     return BlocProvider(
       key: ValueKey(diagnosisService),
-      create: (_) =>
-          OutageNoticeCubit(diagnosisService: diagnosisService)..diagnose(),
+      create: (_) {
+        final cubit = OutageNoticeCubit(diagnosisService: diagnosisService);
+        runDetached(
+          cubit.diagnose(),
+          'diagnose feed outage',
+          logName: 'FeedErrorWidget',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: FeedErrorView(onRetry: onRetry),
     );
   }
