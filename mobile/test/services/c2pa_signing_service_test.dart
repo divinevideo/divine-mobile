@@ -803,6 +803,45 @@ void main() {
           contains('video.divine.nostr.creator_binding'),
         );
       });
+
+      test('declares a library sound by the name in its URL', () async {
+        final output = writeFile('scored.mp4', const [1]);
+        final video = writeFile('take.mp4', const [2]);
+        stubSourcesAttested();
+        stubBuilder(signedBytes: const [8]);
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [
+            C2paEditSource(path: video.path),
+            const C2paEditSource(
+              path: 'https://media.example/sounds/song.m4a?v=2',
+              kind: C2paSourceKind.audio,
+            ),
+          ],
+        );
+
+        expect(result.success, isTrue);
+        // Only a local file can carry a manifest; a URL is never read.
+        verifyNever(
+          () => mockC2pa.readManifestFromFile(
+            'https://media.example/sounds/song.m4a?v=2',
+          ),
+        );
+        final manifest = jsonDecode(
+          verify(
+                () => mockC2pa.createBuilder(captureAny()),
+              ).captured.single
+              as String,
+        ) as Map<String, dynamic>;
+        expect(
+          (manifest['ingredients'] as List<dynamic>).single,
+          allOf(
+            containsPair('title', 'song.m4a'),
+            containsPair('format', 'audio/mp4'),
+          ),
+        );
+      });
     });
   });
 }

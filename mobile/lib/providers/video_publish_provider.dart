@@ -913,6 +913,11 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         creatorBindingAssertion: creatorBindingAssertion,
         cawgIdentityAssertion: verifierBundle?.identityAssertionPayload,
         verifiedIdentityBundle: verifierBundle?.toJson(),
+        // A rendered video is an edit. The render signed it against its
+        // clips; when that did not happen, signing it here as a fresh capture
+        // would vouch for footage nobody recorded (#9893), so it stays
+        // unsigned and only gains the identity metadata.
+        derivedFrom: const [],
       );
 
       final proofManifestJson = proofData != null

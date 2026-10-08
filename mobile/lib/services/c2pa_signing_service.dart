@@ -449,7 +449,10 @@ class C2paSigningService {
       final attested = <C2paEditSource>[];
       final declared = <Ingredient>[];
       for (final source in sources) {
+        // A sound streamed from the library is declared by its URL; only a
+        // local file can carry a manifest.
         final hasManifest =
+            File(source.path).existsSync() &&
             (await readManifest(source.path))?.activeManifest != null;
         if (source.kind == C2paSourceKind.video) {
           if (!hasManifest) {
@@ -472,7 +475,7 @@ class C2paSigningService {
         } else {
           declared.add(
             Ingredient(
-              title: source.path.split('/').last,
+              title: _titleOf(source.path),
               format: _mimeTypeFor(source),
               relationship: Relationship.componentOf,
             ),
@@ -613,6 +616,15 @@ class C2paSigningService {
         failureReason: failureReason,
       );
     }
+  }
+
+  /// The file name of [path], or of the URL path when [path] is a URL.
+  static String _titleOf(String path) {
+    final uri = Uri.tryParse(path);
+    if (uri != null && uri.hasScheme && uri.pathSegments.isNotEmpty) {
+      return uri.pathSegments.last;
+    }
+    return path.split('/').last;
   }
 
   static String _mimeTypeFor(C2paEditSource source) {

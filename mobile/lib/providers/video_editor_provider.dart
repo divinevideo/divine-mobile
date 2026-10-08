@@ -1574,7 +1574,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// [signingConfigured] is [C2paSigningService.isSigningConfigured]; passed in
   /// so the decision is pure and testable. Returns false whenever signing isn't
-  /// configured (CI / unconfigured builds), so those never prompt.
+  /// configured (CI / unconfigured builds), so those never prompt, and for a
+  /// video left unsigned on purpose because its footage has no camera proof.
   @visibleForTesting
   static bool c2paSigningFailedFor({
     required bool signingConfigured,
@@ -1585,7 +1586,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     try {
       final decoded = jsonDecode(proofManifestJson);
       if (decoded is! Map<String, dynamic>) return true;
-      final manifestId = NativeProofData.fromJson(decoded).c2paManifestId;
+      final proof = NativeProofData.fromJson(decoded);
+      // Footage without a camera proof is never signed; retrying cannot
+      // change that, so there is nothing to prompt about.
+      if (proof.unattestedSources) return false;
+      final manifestId = proof.c2paManifestId;
       return manifestId == null || manifestId.isEmpty;
     } catch (_) {
       return true;
@@ -1627,6 +1632,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         clip: clip,
         clips: _clips,
         editorStateHistory: state.editorStateHistory,
+        parameters: _buildRenderParameters(),
       );
 
       // A newer render/re-sign superseded this one — discard.

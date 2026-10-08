@@ -3,7 +3,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -28,6 +31,50 @@ void main() {
   group(VideoEditorMergeService, () {
     tearDown(() {
       VideoEditorRenderService.renderVideoOverride = null;
+    });
+
+    test('signs the merged clip as a composite of its clips', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
+      List<C2paEditSource>? signedFrom;
+      NativeProofModeService.proofFileOverride =
+          (
+            videoFile, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async {
+            signedFrom = derivedFrom;
+            return const NativeProofData(
+              videoHash: 'merged',
+              c2paManifestId: 'urn:c2pa:merged',
+            );
+          };
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result = await VideoEditorMergeService.mergeClips(
+        clips: [
+          _createClip(id: 'a'),
+          _createClip(id: 'b'),
+        ],
+        renderId: 'merge-1',
+      );
+
+      expect(signedFrom, const [
+        C2paEditSource(path: '/path/a.mp4'),
+        C2paEditSource(path: '/path/b.mp4'),
+      ]);
+      expect(result?.proofManifestJson, contains('urn:c2pa:merged'));
     });
 
     test('returns null when fewer than two clips are supplied', () async {
