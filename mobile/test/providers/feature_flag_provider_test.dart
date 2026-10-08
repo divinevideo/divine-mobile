@@ -229,6 +229,7 @@ void main() {
 
       setUp(() {
         originalReporter = detachedFailureReporter;
+        addTearDown(() => detachedFailureReporter = originalReporter);
         reporter = _RecordingCrashReporter();
         detachedFailureReporter = reporter;
 
@@ -240,11 +241,7 @@ void main() {
         container = ProviderContainer(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
         );
-      });
-
-      tearDown(() {
-        container.dispose();
-        detachedFailureReporter = originalReporter;
+        addTearDown(container.dispose);
       });
 
       test('reports the failure at creation instead of leaking it', () async {
