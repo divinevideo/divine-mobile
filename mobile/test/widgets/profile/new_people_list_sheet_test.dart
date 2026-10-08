@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -187,6 +188,25 @@ void main() {
       },
     );
 
+    testWidgets('Done stays disabled until a name is entered', (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      final done = find.widgetWithText(DivineButton, l10n.listDone);
+
+      expect(tester.widget<DivineButton>(done).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).first, '   ');
+      await tester.pump();
+      expect(tester.widget<DivineButton>(done).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).first, 'Film Club');
+      await tester.pump();
+      expect(tester.widget<DivineButton>(done).onPressed, isNotNull);
+    });
+
     testWidgets('keeps entered name open until confirmed and after failure', (
       tester,
     ) async {
@@ -198,6 +218,7 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'My people');
+      await tester.pump();
       await tester.tap(find.bySemanticsLabel(l10n.listDone));
       await tester.pump();
       expect(find.text('My people'), findsOneWidget);

@@ -330,6 +330,7 @@ void main() {
             find.byType(TextField).first,
             'Seeded without metadata',
           );
+          await tester.pump();
           await tester.tap(find.bySemanticsLabel(l10n.listDone));
           await tester.pumpAndSettle();
           final request =

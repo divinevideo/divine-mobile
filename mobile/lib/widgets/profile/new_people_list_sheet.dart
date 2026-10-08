@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for creating a new people list from a profile
-// ABOUTME: Shows list name and description inputs with close and done buttons
+// ABOUTME: Shows list name and description inputs with a Done button
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,7 +18,7 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 /// Shows the "New people list" bottom sheet.
 ///
 /// Creates the list via [PeopleListsBloc] dispatching
-/// [PeopleListsCreateRequested] when the check button is tapped.
+/// [PeopleListsCreateRequested] when Done is tapped.
 ///
 /// [initialCollaborator] is pre-added as the first member — useful when
 /// opening the sheet directly from a profile.
@@ -47,8 +47,6 @@ Future<void> showNewPeopleListSheet(
     context: context,
     scrollable: false,
     title: Text(l10n.listNewPeopleList),
-    closeSemanticLabel: l10n.commonClose,
-    completeSemanticLabel: l10n.listDone,
     body: _NewPeopleListSheetBody(
       ownerPubkey: openingOwner!,
       isSessionCurrent: isSessionCurrent,
@@ -91,14 +89,22 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
     _collaborators = [
       if (widget.initialCollaborator != null) widget.initialCollaborator!,
     ];
+    _nameController.addListener(_onNameChanged);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nameController
+      ..removeListener(_onNameChanged)
+      ..dispose();
     _descriptionController.dispose();
     super.dispose();
   }
+
+  // Rebuilds the Done button so it tracks whether a name has been entered.
+  void _onNameChanged() => setState(() {});
+
+  bool get _canSubmit => !_submitting && _nameController.text.trim().isNotEmpty;
 
   /// Creates the list via [PeopleListsBloc] dispatching
   /// [PeopleListsCreateRequested].
@@ -214,7 +220,7 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
           DivineButton(
             label: l10n.listDone,
             expanded: true,
-            onPressed: _submitting ? null : _createList,
+            onPressed: _canSubmit ? _createList : null,
           ),
         ],
       ),
