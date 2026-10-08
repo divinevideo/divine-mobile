@@ -911,26 +911,32 @@ class _NoResults extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (onShowMore == null)
-              Text(
+        child: onShowMore == null
+            ? Text(
                 context.l10n.userSearchNoResults,
                 style: VineTheme.bodyMediumFont(
                   color: context.vineColors.onSurfaceMuted,
                 ),
-              ),
-            if (onShowMore != null)
-              DivineButton(
-                label: context.l10n.profileShowMore,
-                type: DivineButtonType.secondary,
-                onPressed: isLoadingMore ? null : onShowMore,
-                isLoading: isLoadingMore,
-              ),
-          ],
-        ),
+              )
+            : _ShowMoreButton(onPressed: onShowMore, isLoading: isLoadingMore),
       ),
+    );
+  }
+}
+
+class _ShowMoreButton extends StatelessWidget {
+  const _ShowMoreButton({required this.onPressed, required this.isLoading});
+
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DivineButton(
+      label: context.l10n.profileShowMore,
+      type: DivineButtonType.secondary,
+      onPressed: isLoading ? null : onPressed,
+      isLoading: isLoading,
     );
   }
 }
@@ -958,6 +964,9 @@ class _ResultsList extends StatelessWidget {
   final Set<String> selectedPubkeys;
   final Set<String> hidePubkeys;
 
+  /// Remaining scroll extent below which a settled scroll asks for more.
+  static const _loadMoreExtent = 400.0;
+
   @override
   Widget build(BuildContext context) {
     final visible = hidePubkeys.isEmpty
@@ -967,7 +976,7 @@ class _ResultsList extends StatelessWidget {
       onNotification: (notification) {
         if (notification.depth == 0 &&
             notification.metrics.axis == Axis.vertical &&
-            notification.metrics.extentAfter < 400) {
+            notification.metrics.extentAfter < _loadMoreExtent) {
           onNearEnd?.call();
         }
         return false;
@@ -990,10 +999,8 @@ class _ResultsList extends StatelessWidget {
           if (index == visible.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: DivineButton(
-                label: context.l10n.profileShowMore,
-                type: DivineButtonType.secondary,
-                onPressed: isLoadingMore ? null : onShowMore,
+              child: _ShowMoreButton(
+                onPressed: onShowMore,
                 isLoading: isLoadingMore,
               ),
             );
@@ -1032,6 +1039,8 @@ class _NetworkResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void loadMore() => searchBloc.add(const UserSearchLoadMore());
+
     return BlocBuilder<UserSearchBloc, UserSearchState>(
       bloc: searchBloc,
       builder: (context, state) {
@@ -1054,21 +1063,15 @@ class _NetworkResults extends StatelessWidget {
           ),
           UserSearchStatus.failure => const _ErrorState(),
           UserSearchStatus.success when state.results.isEmpty => _NoResults(
-            onShowMore: state.hasMore
-                ? () => searchBloc.add(const UserSearchLoadMore())
-                : null,
+            onShowMore: state.hasMore ? loadMore : null,
             isLoadingMore: state.isLoadingMore,
           ),
           UserSearchStatus.success => _ResultsList(
             scrollController: scrollController,
             results: state.results,
             onUserSelected: onUserSelected,
-            onNearEnd: state.hasMore && !state.isLoadingMore
-                ? () => searchBloc.add(const UserSearchLoadMore())
-                : null,
-            onShowMore: state.hasMore
-                ? () => searchBloc.add(const UserSearchLoadMore())
-                : null,
+            onNearEnd: state.hasMore && !state.isLoadingMore ? loadMore : null,
+            onShowMore: state.hasMore ? loadMore : null,
             isLoadingMore: state.isLoadingMore,
             excludePubkeys: excludePubkeys,
             selectedPubkeys: selectedPubkeys,
