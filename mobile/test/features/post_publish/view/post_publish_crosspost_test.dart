@@ -213,7 +213,7 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('crosspost opens the flow with the manual connections', (
+      testWidgets('crosspost logs the tap and passes the manual connections', (
         tester,
       ) async {
         await pump(
@@ -245,7 +245,7 @@ void main() {
         );
       });
 
-      testWidgets('connect opens crossposting setup', (tester) async {
+      testWidgets('connect calls onSetUp', (tester) async {
         await pump(tester, settings: [_instagram()]);
 
         await tester.tap(
@@ -257,7 +257,7 @@ void main() {
         expect(reconnects, equals(0));
       });
 
-      testWidgets('reconnect opens the reconnect route', (tester) async {
+      testWidgets('reconnect calls onReconnect', (tester) async {
         await pump(
           tester,
           settings: [
