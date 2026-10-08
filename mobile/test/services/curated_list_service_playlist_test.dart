@@ -1,6 +1,8 @@
 // ABOUTME: Unit tests for CuratedListService playlist features
 // ABOUTME: Tests video ordering, reordering, and play order modes
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -189,12 +191,26 @@ void main() {
       });
 
       test('updates updatedAt timestamp', () async {
-        final list = await service.createList(name: 'Test List');
-        await service.addVideoToList(list!.id, 'video_1');
+        final list = (await service.createList(name: 'Test List'))!;
+        await service.addVideoToList(list.id, 'video_1');
         await service.addVideoToList(list.id, 'video_2');
-        final originalUpdatedAt = service.getListById(list.id)!.updatedAt;
-
-        await Future.delayed(const Duration(milliseconds: 10));
+        final originalUpdatedAt = DateTime.utc(2000);
+        final historicalList = service
+            .getListById(list.id)!
+            .copyWith(
+              createdAt: originalUpdatedAt,
+              updatedAt: originalUpdatedAt,
+            );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([historicalList.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(service.getListById(list.id)!.updatedAt, originalUpdatedAt);
         await service.reorderVideos(list.id, ['video_2', 'video_1']);
 
         final updatedList = service.getListById(list.id);

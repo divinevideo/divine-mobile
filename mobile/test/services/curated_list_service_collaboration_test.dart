@@ -1,6 +1,8 @@
 // ABOUTME: Unit tests for CuratedListService collaboration features
 // ABOUTME: Tests adding/removing collaborators and permission checks
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -200,9 +202,23 @@ void main() {
           name: 'Test List',
           isCollaborative: true,
         );
-        final originalUpdatedAt = service.getListById(list!.id)!.updatedAt;
-
-        await Future.delayed(const Duration(milliseconds: 10));
+        final originalUpdatedAt = DateTime.utc(2000);
+        final historicalList = service
+            .getListById(list!.id)!
+            .copyWith(
+              createdAt: originalUpdatedAt,
+              updatedAt: originalUpdatedAt,
+            );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([historicalList.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(service.getListById(list.id)!.updatedAt, originalUpdatedAt);
         await service.addCollaborator(list.id, 'collaborator_1');
 
         final updatedList = service.getListById(list.id);
@@ -378,7 +394,7 @@ void main() {
         },
       );
 
-      test('adding collaborator with empty pubkey', () async {
+      test('stores an empty collaborator pubkey', () async {
         final list = await service.createList(
           name: 'Test List',
           isCollaborative: true,
@@ -386,8 +402,8 @@ void main() {
 
         final result = await service.addCollaborator(list!.id, '');
 
-        // Service should handle gracefully (either accept or reject)
-        expect(result, isA<bool>());
+        expect(result, isTrue);
+        expect(service.getListById(list.id)!.allowedCollaborators, ['']);
       });
 
       test('collaborator list persists across service recreations', () async {
