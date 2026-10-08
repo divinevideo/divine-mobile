@@ -1,6 +1,7 @@
 // ABOUTME: Pure resolvers from universal-link and divine:// URIs to GoRouter paths
 // ABOUTME: Shared source of truth used by the router redirect and tests
 
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 /// Converts a Divine web URL into an internal drill-down route path.
 ///
@@ -21,7 +23,8 @@ String? divineUrlToPushRoute(Uri uri) {
   if (host != 'divine.video' && host != 'www.divine.video') return null;
 
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
-  return _pushRouteForDeepLink(deepLink);
+  return _pushRouteForDeepLink(deepLink) ??
+      _invalidPeopleListRoute(uri, deepLink);
 }
 
 String? _pushRouteForDeepLink(DeepLink deepLink) {
@@ -62,6 +65,8 @@ String? _pushRouteForDeepLink(DeepLink deepLink) {
         pubkey: listPubkey,
         listId: listId,
       );
+    case DeepLinkType.peopleList:
+      return peopleListDeepLinkToRouterPath(deepLink);
     // savedVideos is unreachable here — it only arrives over divine://, which
     // both callers reject before this point. customSchemeToRouterPath owns it.
     case DeepLinkType.savedVideos:
@@ -167,11 +172,56 @@ String? universalLinkToRouterPath(Uri uri) {
     case DeepLinkType.savedVideos:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
-      return null;
+      return _invalidPeopleListRoute(uri, deepLink);
     case DeepLinkType.profile:
     case DeepLinkType.hashtag:
     case DeepLinkType.search:
     case DeepLinkType.list:
+    case DeepLinkType.peopleList:
       return route;
   }
+}
+
+/// Shared by cold router resolution and the running app's link listener so a
+/// query-qualified roster or picker never silently becomes a detail view.
+String? peopleListDeepLinkToRouterPath(DeepLink deepLink) {
+  final owner = deepLink.listPubkey;
+  final id = deepLink.listId;
+  if (deepLink.type != DeepLinkType.peopleList ||
+      id == null ||
+      id.isEmpty ||
+      owner == null ||
+      !NostrKeyUtils.isValidKey(owner)) {
+    return null;
+  }
+  final canonicalOwner = owner.toLowerCase();
+  return switch (deepLink.peopleListView) {
+    PeopleListLinkView.detail => RoutePaths.peopleListForId(
+      id,
+      ownerPubkey: canonicalOwner,
+    ),
+    PeopleListLinkView.members => RoutePaths.peopleListMembersForId(
+      id,
+      ownerPubkey: canonicalOwner,
+    ),
+    PeopleListLinkView.addPeople =>
+      '${RoutePaths.peopleListAddPeopleForId(id)}'
+          '?owner=${Uri.encodeComponent(canonicalOwner)}',
+  };
+}
+
+/// A malformed public coordinate must not reach the legacy own-list matcher
+/// merely because its d-tag coincides with a roster/picker suffix. An explicit
+/// empty owner uses the same localized route error as other invalid authors.
+/// Bare IDs and path-only in-app routes remain the legacy navigation contract.
+String? _invalidPeopleListRoute(Uri uri, DeepLink deepLink) {
+  if (deepLink.type != DeepLinkType.unknown) return null;
+  final segments = uri.pathSegments;
+  if (segments.isEmpty || segments.first != 'people-lists') return null;
+  final hasOwner = uri.queryParametersAll.containsKey('owner');
+  if (segments.length == 3 || (segments.length == 2 && hasOwner)) {
+    final id = hasOwner ? segments[1] : segments.last;
+    return RoutePaths.peopleListForId(id, ownerPubkey: '');
+  }
+  return null;
 }

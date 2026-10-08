@@ -21,8 +21,7 @@ import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/public_identifier_normalizer.dart';
+import 'package:openvine/utils/people_list_owner.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 List<RouteBase> listsRoutes(Ref ref) {
@@ -51,6 +50,7 @@ List<RouteBase> listsRoutes(Ref ref) {
           listName: extra?.listName ?? ctx.l10n.routeDefaultListName,
           videoIds: extra?.videoIds,
           authorPubkey: extra?.authorPubkey,
+          discoveredList: extra?.list,
         );
       },
     ),
@@ -222,26 +222,11 @@ String? _peopleListsRedirectIfDisabled(Ref ref, GoRouterState state) {
   final owners = uri.queryParametersAll['owner'];
   if (owners == null) return (pubkey: null, invalid: false);
   if (owners.length != 1) return (pubkey: null, invalid: true);
-  final identifier = owners.single;
-  final lowercase = identifier.toLowerCase();
-  // Bech32 accepts uniform uppercase as well as lowercase. Keep mixed-case
-  // input unchanged so its invalid checksum/casing is still rejected.
-  final publicIdentifier =
-      (lowercase.startsWith('npub1') || lowercase.startsWith('nprofile1')) &&
-          identifier == identifier.toUpperCase()
-      ? lowercase
-      : identifier;
-  final String? normalized;
-  try {
-    normalized = normalizePublicIdentifier(publicIdentifier)?.hexPubkey;
-  } on FormatException {
-    // An nprofile relay hint that is not UTF-8 throws from the decoder.
+  final normalized = normalizePeopleListOwner(owners.single);
+  if (normalized == null) {
     return (pubkey: null, invalid: true);
   }
-  if (normalized == null || !NostrKeyUtils.isValidKey(normalized)) {
-    return (pubkey: null, invalid: true);
-  }
-  return (pubkey: normalized.toLowerCase(), invalid: false);
+  return (pubkey: normalized, invalid: false);
 }
 
 Widget _buildPeopleList(

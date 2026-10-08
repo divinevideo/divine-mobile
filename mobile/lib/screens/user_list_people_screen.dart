@@ -21,11 +21,13 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
@@ -511,6 +513,22 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
               ownerPubkey: owner,
               listId: userList.id,
               userList: userList,
+            ),
+          if (widget.ownerPubkey case final owner? when !userList.isEditable)
+            ShareListButton(
+              onPressed: () => runDetached(
+                shareListLink(
+                  context,
+                  name: userList.name,
+                  path: RoutePaths.peopleListByAuthorFor(
+                    pubkey: owner,
+                    listId: userList.id,
+                  ),
+                ),
+                'share people list',
+                logName: 'UserListPeopleScreen',
+                category: LogCategory.ui,
+              ),
             ),
         ],
       );

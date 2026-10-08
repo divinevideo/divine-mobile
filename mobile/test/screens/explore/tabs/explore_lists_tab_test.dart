@@ -959,6 +959,8 @@ void main() {
               as CuratedListRouteExtra;
       expect(extra.listName, equals('Video skate'));
       expect(extra.authorPubkey, equals(_videoList('skate').pubkey));
+      expect(extra.list?.id, equals('skate'));
+      expect(extra.authorPubkey, equals(extra.list?.pubkey));
     });
 
     testWidgets('people card navigates with the owner query param', (
