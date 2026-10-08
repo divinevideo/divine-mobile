@@ -12339,4 +12339,15 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '在跨平台发布设置中重新连接这些账号，才能继续发布：$platforms。',
+      one: '在跨平台发布设置中重新连接 $platforms，才能继续发布。',
+    );
+    return '$_temp0';
+  }
 }

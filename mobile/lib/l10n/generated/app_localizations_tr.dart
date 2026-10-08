@@ -13060,4 +13060,17 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: $platforms.',
+      one:
+          'Paylaşmaya devam etmek için çapraz paylaşım ayarlarından $platforms hesabını yeniden bağla.',
+    );
+    return '$_temp0';
+  }
 }

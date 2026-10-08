@@ -13135,4 +13135,17 @@ class AppLocalizationsMs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: $platforms.',
+      one:
+          'Sambung semula $platforms dalam tetapan siaran silang untuk terus menyiarkan.',
+    );
+    return '$_temp0';
+  }
 }

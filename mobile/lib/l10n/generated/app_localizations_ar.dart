@@ -13090,4 +13090,24 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      many:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      few:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      two:
+          'إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      zero:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      one: 'إعادة ربط $platforms في إعدادات النشر المتقاطع لمواصلة النشر.',
+    );
+    return '$_temp0';
+  }
 }

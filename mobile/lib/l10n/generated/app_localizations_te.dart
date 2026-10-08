@@ -13477,4 +13477,17 @@ class AppLocalizationsTe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: $platforms.',
+      one:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో $platformsను మళ్లీ కనెక్ట్ చేయండి.',
+    );
+    return '$_temp0';
+  }
 }

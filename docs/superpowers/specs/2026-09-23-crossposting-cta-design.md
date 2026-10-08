@@ -280,7 +280,7 @@ sheet this keeps the two buttons stationary when the card loads:
 - No current or previous connection: a setup call to action, routed through
   `openCrosspostingSetup` (native settings or the web fallback).
 - A lapsed connection still switched on: a reconnect prompt, through the same
-  routing, naming each affected platform separately.
+  routing, with a count-aware message naming the affected platforms.
 - Automatic mode: a one-line note, no call to action.
 - A deliberately disconnected or switched-off platform does not trigger a setup
   pitch. This differs intentionally from the user-opened Settings screen.

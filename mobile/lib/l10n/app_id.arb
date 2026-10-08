@@ -4965,5 +4965,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Hubungkan ulang {platforms} di pengaturan crossposting untuk tetap bisa memposting.} other{Hubungkan ulang akun-akun ini di pengaturan crossposting untuk tetap bisa memposting: {platforms}.}}"
 }

@@ -12489,4 +12489,15 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：$platforms。',
+      one: '投稿を続けるには、クロス投稿設定で $platforms を再接続してください。',
+    );
+    return '$_temp0';
+  }
 }

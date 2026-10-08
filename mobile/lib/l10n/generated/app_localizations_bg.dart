@@ -13261,4 +13261,17 @@ class AppLocalizationsBg extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Свържи отново тези акаунти в настройките за кръстосано публикуване, за да продължиш да публикуваш: $platforms.',
+      one:
+          'Свържи отново $platforms в настройките за кръстосано публикуване, за да продължиш да публикуваш.',
+    );
+    return '$_temp0';
+  }
 }

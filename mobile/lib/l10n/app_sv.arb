@@ -4965,5 +4965,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Återanslut {platforms} i korspostningsinställningarna för att fortsätta publicera.} other{Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: {platforms}.}}"
 }

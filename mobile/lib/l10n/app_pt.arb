@@ -4965,5 +4965,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconecte o {platforms} nas configurações de crosspost para continuar publicando.} many{Reconecte estas contas nas configurações de crosspost para continuar publicando: {platforms}.} other{Reconecte estas contas nas configurações de crosspost para continuar publicando: {platforms}.}}"
 }

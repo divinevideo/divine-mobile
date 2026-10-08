@@ -13080,4 +13080,16 @@ class AppLocalizationsVi extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: $platforms.',
+      one: 'Kết nối lại $platforms trong cài đặt đăng chéo để tiếp tục đăng.',
+    );
+    return '$_temp0';
+  }
 }

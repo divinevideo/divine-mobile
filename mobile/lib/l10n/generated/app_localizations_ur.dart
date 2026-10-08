@@ -13127,4 +13127,17 @@ class AppLocalizationsUr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: $platforms۔',
+      one:
+          'پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں $platforms دوبارہ منسلک کریں۔',
+    );
+    return '$_temp0';
+  }
 }

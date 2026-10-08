@@ -3957,5 +3957,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{I-reconnect ang {platforms} sa crossposting settings para makapag-post pa rin.} other{I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: {platforms}.}}"
 }

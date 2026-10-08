@@ -211,45 +211,46 @@ void main() {
         );
 
         expect(
-          find.text(_l10n.crosspostReconnectPrompt('Instagram')),
+          find.text(_l10n.postPublishCrosspostReconnect(1, 'Instagram')),
           findsOneWidget,
         );
         expect(find.text(_l10n.crosspostReconnect), findsOneWidget);
       });
 
-      testWidgets('names each lapsed platform in its own reconnect message', (
-        tester,
-      ) async {
-        await pump(
+      testWidgets(
+        'combines lapsed accounts in a plural-aware reconnect message',
+        (
           tester,
-          settings: [
-            _instagram(
-              connection: _instagramNeedsReauth,
-              mode: CrosspostingMode.manual,
-            ),
-            const CrosspostingPlatformSettings(
-              platform: CrosspostingPlatform.tiktok,
-              supportsAutomatic: true,
-              mode: CrosspostingMode.manual,
-              connection: CrosspostingConnection(
-                id: 'lapsed-tiktok',
-                platform: CrosspostingPlatform.tiktok,
-                status: CrosspostingConnectionStatus.needsReauth,
+        ) async {
+          await pump(
+            tester,
+            settings: [
+              _instagram(
+                connection: _instagramNeedsReauth,
+                mode: CrosspostingMode.manual,
               ),
-            ),
-          ],
-        );
+              const CrosspostingPlatformSettings(
+                platform: CrosspostingPlatform.tiktok,
+                supportsAutomatic: true,
+                mode: CrosspostingMode.manual,
+                connection: CrosspostingConnection(
+                  id: 'lapsed-tiktok',
+                  platform: CrosspostingPlatform.tiktok,
+                  status: CrosspostingConnectionStatus.needsReauth,
+                ),
+              ),
+            ],
+          );
 
-        expect(
-          find.textContaining(_l10n.crosspostReconnectPrompt('Instagram')),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining(_l10n.crosspostReconnectPrompt('TikTok')),
-          findsOneWidget,
-        );
-        expect(find.text(_l10n.crosspostReconnect), findsOneWidget);
-      });
+          expect(
+            find.text(
+              _l10n.postPublishCrosspostReconnect(2, 'Instagram, TikTok'),
+            ),
+            findsOneWidget,
+          );
+          expect(find.text(_l10n.crosspostReconnect), findsOneWidget);
+        },
+      );
 
       testWidgets('nothing when no platform is available', (tester) async {
         await pump(tester, settings: []);

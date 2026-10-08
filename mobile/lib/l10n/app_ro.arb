@@ -4965,5 +4965,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconectează {platforms} în setările de crosspost ca să continui să postezi.} few{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.} other{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.}}"
 }

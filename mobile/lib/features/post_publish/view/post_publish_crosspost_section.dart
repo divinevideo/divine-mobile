@@ -66,11 +66,10 @@ class PostPublishCrosspostSection extends StatelessWidget {
         ),
       ),
       PostPublishCrosspostPrompt.reconnect => _PromptCard(
-        message: state.platforms
-            .map(
-              (platform) => l10n.crosspostReconnectPrompt(platform.displayName),
-            )
-            .join('\n'),
+        message: l10n.postPublishCrosspostReconnect(
+          state.platforms.length,
+          names,
+        ),
         action: (
           label: l10n.crosspostReconnect,
           onPressed: () => tapped(onReconnect),

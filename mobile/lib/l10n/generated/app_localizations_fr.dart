@@ -13336,4 +13336,19 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      many:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      one:
+          'Reconnecte $platforms dans les réglages de crosspost pour continuer à publier.',
+    );
+    return '$_temp0';
+  }
 }

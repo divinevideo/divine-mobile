@@ -12801,4 +12801,15 @@ class AppLocalizationsAm extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ $platforms።',
+      one: 'መለጠፍን ለመቀጠል $platformsን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።',
+    );
+    return '$_temp0';
+  }
 }

@@ -12502,4 +12502,15 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: $platforms.',
+      one: '계속 게시하려면 크로스 포스팅 설정에서 $platforms 계정을 다시 연결해주세요.',
+    );
+    return '$_temp0';
+  }
 }

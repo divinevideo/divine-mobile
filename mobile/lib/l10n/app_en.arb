@@ -9386,5 +9386,17 @@
       }
     }
   },
-  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}"
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}",
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconnect {platforms} in crossposting settings to keep posting.} other{Reconnect these accounts in crossposting settings to keep posting: {platforms}.}}",
+  "@postPublishCrosspostReconnect": {
+    "description": "Post-publish reconnect prompt. Count is the number of lapsed accounts; platforms is their comma-separated display-name list. Use singular grammar only for one account.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "platforms": {
+        "type": "String"
+      }
+    }
+  }
 }
