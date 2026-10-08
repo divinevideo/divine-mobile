@@ -892,7 +892,7 @@ class _VideoMetaLineContent extends ConsumerWidget {
                 Text.rich(fieldSpans[index], style: fieldStyle)
               else
                 Flexible(
-                  flex: index == 0 && fieldSpans.length > 1 ? 1 : 2,
+                  flex: showVideoCount && index == 0 ? 2 : 1,
                   child: Text.rich(
                     fieldSpans[index],
                     style: fieldStyle,

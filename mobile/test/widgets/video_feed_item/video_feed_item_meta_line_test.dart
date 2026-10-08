@@ -464,40 +464,44 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('keeps the video count and date visible in the compact line', (
+    testWidgets('keeps the video count visible in the constrained row', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(393, 852);
+      tester.view.physicalSize = const Size(320, 852);
       tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
       });
       SharedPreferences.setMockInitialValues({
         StatsVisibilityPreferences.showTotalLoopsKey: true,
         StatsVisibilityPreferences.showVideoLoopsKey: true,
-        StatsVisibilityPreferences.showPublishedDateKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
       });
       final prefs = await SharedPreferences.getInstance();
       await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
         await pump(
           tester,
           video: _video(
-            authorName: 'AnExtraordinarilyLongCreatorName',
             rawTags: {'views': '3'},
             createdAt: 1790726400,
           ),
-          authorTotalLoops: 78600,
+          authorTotalLoops: 23200000,
           prefs: prefs,
         );
       });
 
-      final content = _metaLine(tester);
-      expect(content, contains(loopLine(tester, 3)));
-      expect(content, contains('Sep 30'));
       final line = find.byKey(const Key('video_meta_line'));
+      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
+      final videoCount = find.descendant(
+        of: line,
+        matching: find.text(loopLine(tester, 3)),
+      );
+      expect(videoCount, findsOneWidget);
       final paragraph = tester.renderObject<RenderParagraph>(
-        find.descendant(of: line, matching: find.byType(RichText)),
+        find.descendant(of: videoCount, matching: find.byType(RichText)),
       );
       expect(paragraph.didExceedMaxLines, isFalse);
       expect(
