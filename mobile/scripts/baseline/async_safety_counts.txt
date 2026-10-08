@@ -64,4 +64,3 @@ unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
 unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
-unawaited_futures|test/features/feature_flags/screens/feature_flag_screen_route_test.dart	1
