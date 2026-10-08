@@ -18,6 +18,7 @@ import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,6 +167,8 @@ class CuratedListService extends ChangeNotifier {
   Object? _initializationError;
   StackTrace? _initializationStackTrace;
   bool _isDisposed = false;
+  final _pendingOwnershipClaims = <String, CuratedList>{};
+  int _pendingListSaves = 0;
 
   @override
   void dispose() {
@@ -1439,10 +1442,19 @@ class CuratedListService extends ChangeNotifier {
     if (!isCurrentSession || recoveryNeedsRepair) return false;
     final owner = _relayGateway.currentAuthenticatedPubkey();
     if (!_isCurrent(owner)) return false;
+    // Recovery capture can await before the cache adapter starts. A derived
+    // edit must retain the original claim throughout that earlier interval.
+    _pendingOwnershipClaims.addAll(ownershipClaims);
+    final claims = Map<String, CuratedList>.unmodifiable(
+      _pendingOwnershipClaims,
+    );
+    final requested = List<CuratedList>.unmodifiable(_lists);
+    _pendingListSaves++;
+    var enteredCacheWrite = false;
     notifyListeners();
     try {
       if (owner != null &&
-          (!await _recovery.captureRows(List.unmodifiable(_lists), owner) ||
+          (!await _recovery.captureRows(requested, owner) ||
               !_isCurrent(owner))) {
         Log.warning(
           'Curated list recovery storage ${_isCurrent(owner) ? CuratedCacheWriteStatus.storageRejected.name : CuratedCacheWriteStatus.superseded.name}',
@@ -1451,10 +1463,11 @@ class CuratedListService extends ChangeNotifier {
         );
         return false;
       }
+      enteredCacheWrite = true;
       await _cacheStore.saveListsOrThrow(
         _lists,
         isCurrent: () => _isCurrent(owner),
-        ownershipClaims: ownershipClaims,
+        ownershipClaims: claims,
       );
       return true;
     } on Exception catch (error, stackTrace) {
@@ -1471,6 +1484,33 @@ class CuratedListService extends ChangeNotifier {
       }
       return false;
     } finally {
+      // The adapter reconciles its own attempted writes. An earlier refusal
+      // restores this candidate's source, or the already acknowledged owner.
+      if (!enteredCacheWrite && _isCurrent(owner)) {
+        for (final claim in claims.entries) {
+          final attempted = requested.indexWhere(
+            (row) => row.authorScopedId == claim.key,
+          );
+          if (attempted == -1) continue;
+          final current = _lists.indexWhere(
+            (row) =>
+                row.authorScopedId == claim.key && row == requested[attempted],
+          );
+          if (current == -1) continue;
+          final acknowledged = _cacheStore.acknowledgedList(claim.key);
+          if (acknowledged != null) {
+            _lists[current] = acknowledged;
+          } else if (_lists.any(
+            (row) => row.authorScopedId == claim.value.authorScopedId,
+          )) {
+            _lists.removeAt(current);
+          } else {
+            _lists[current] = claim.value;
+          }
+        }
+      }
+      _pendingListSaves--;
+      if (_pendingListSaves == 0) _pendingOwnershipClaims.clear();
       if (_isCurrent(owner)) notifyListeners();
     }
   }
@@ -1730,8 +1770,9 @@ class CuratedListService extends ChangeNotifier {
           if (!await _saveLists(
                 ownershipClaims: {current.authorScopedId: source},
               ) ||
-              !_isCurrent(owner))
+              !_isCurrent(owner)) {
             return false;
+          }
         }
         if (current.pubkey != currentOwner) return false;
         await _publishListToNostr(current, confirmed: true);
