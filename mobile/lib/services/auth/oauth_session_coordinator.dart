@@ -23,7 +23,9 @@ typedef _RefreshOutcome = ({KeycastSession? session, bool rejected});
 /// collaborators this one is STATEFUL: it owns the two single-flight futures
 /// ([_pendingOAuthRefresh]/[_pendingRefresh]) — process-lifetime concurrency
 /// state, not per-call snapshots. The facade retains ownership of the
-/// `_hasExpiredOAuthSession` flag (written by restore orchestration) and all
+/// `_hasExpiredOAuthSession` flag (written by restore orchestration, and by a
+/// rejected mid-session refresh through [refreshAccessToken]'s `onRejected`)
+/// and all
 /// result application (rebuilding the signer, `signInWithDivineOAuth`), reached
 /// here through the injected ports so behavior is preserved exactly.
 class OAuthSessionCoordinator {
