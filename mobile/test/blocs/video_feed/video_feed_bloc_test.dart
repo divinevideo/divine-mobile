@@ -85,22 +85,15 @@ class _RefusingPreferencesStore extends InMemorySharedPreferencesStore {
   @override
   Future<bool> setValue(String valueType, String key, Object value) async =>
       false;
+
+  @override
+  Future<bool> remove(String key) async => false;
 }
 
 /// Stands in for the `Error` an unopenable Hive box throws.
 class _UnopenableBoxError extends Error {}
 
 /// Preferences whose platform refuses every write, as a full disk does.
-class _RefusingWrites extends InMemorySharedPreferencesStore {
-  _RefusingWrites() : super.empty();
-
-  @override
-  Future<bool> setValue(String valueType, String key, Object value) async =>
-      false;
-
-  @override
-  Future<bool> remove(String key) async => false;
-}
 
 /// Preferences that can hold back their next write until released.
 class _GatedWrites extends InMemorySharedPreferencesStore {
@@ -4802,7 +4795,8 @@ void main() {
             // Resets the cached SharedPreferences instance, which a store
             // assigned alone would not reach.
             SharedPreferences.setMockInitialValues({});
-            SharedPreferencesStorePlatform.instance = _RefusingWrites();
+            SharedPreferencesStorePlatform.instance =
+                _RefusingPreferencesStore();
             stubRecommended(createTestVideos(2));
             savedModeBloc = createPeopleBloc(
               sharedPreferences: await SharedPreferences.getInstance(),
