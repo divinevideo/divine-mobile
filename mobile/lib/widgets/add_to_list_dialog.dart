@@ -321,30 +321,33 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
       );
     }
 
+    final dialogContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        fields,
+        if (_saveError case final message?) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              message,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
     return AlertDialog(
       backgroundColor: context.vineColors.card,
       title: Text(
         title,
         style: TextStyle(color: context.vineColors.primaryText),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          fields,
-          if (_saveError case final message?) ...[
-            const SizedBox(height: 8),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                message,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.onErrorContainer,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+      content: _isEditing
+          ? SingleChildScrollView(child: dialogContent)
+          : dialogContent,
       actions: actions,
     );
   }
