@@ -10033,6 +10033,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'المستوى';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'حجم الفرشاة';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'إغلاق تفاصيل المنشور';
 

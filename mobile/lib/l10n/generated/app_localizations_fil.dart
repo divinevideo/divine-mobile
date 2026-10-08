@@ -10156,6 +10156,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Antas';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Laki ng brush';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Isara ang mga detalye ng post';
 

@@ -2869,6 +2869,7 @@
     "videoEditorAddElementSemanticLabel": "Ajouter un élément",
     "videoEditorDoneSemanticLabel": "Terminé",
     "videoEditorLevelSemanticLabel": "Niveau",
+    "videoEditorBrushSizeSemanticLabel": "Taille du pinceau",
     "videoMetadataClosePostDetailsSemanticLabel": "Fermer les détails de la publication",
     "videoMetadataDismissHelpDialogSemanticLabel": "Fermer la fenêtre d'aide",
     "videoMetadataGotItButton": "Compris !",

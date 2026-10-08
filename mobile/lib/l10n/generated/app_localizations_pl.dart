@@ -10273,6 +10273,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Poziom';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Rozmiar pędzla';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Zamknij szczegóły posta';
 

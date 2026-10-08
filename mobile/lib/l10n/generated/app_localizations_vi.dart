@@ -10033,6 +10033,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Mức';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Kích thước cọ';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Đóng chi tiết bài đăng';
 

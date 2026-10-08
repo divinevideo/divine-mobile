@@ -2506,6 +2506,7 @@
     "videoEditorHueSemanticLabel": "色相",
     "videoEditorKeepEditingButton": "編集を続ける",
     "videoEditorLevelSemanticLabel": "レベル",
+    "videoEditorBrushSizeSemanticLabel": "ブラシのサイズ",
     "videoEditorNoStickersAvailable": "ステッカーがありません",
     "videoEditorNoStickersFound": "ステッカーが見つかりません",
     "videoEditorOpenAudioSemanticLabel": "オーディオエディタを開く",

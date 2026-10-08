@@ -3122,6 +3122,7 @@
     "videoEditorAddElementSemanticLabel": "Добави елемент",
     "videoEditorDoneSemanticLabel": "Готово",
     "videoEditorLevelSemanticLabel": "Ниво",
+    "videoEditorBrushSizeSemanticLabel": "Размер на четката",
     "videoMetadataClosePostDetailsSemanticLabel": "Затваряне на подробностите за публикацията",
     "videoMetadataDismissHelpDialogSemanticLabel": "Отхвърляне на диалоговия прозорец за помощ",
     "videoMetadataGotItButton": "Разбрах!",

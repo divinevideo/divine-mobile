@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_arrow.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_eraser.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_marker.dart';
@@ -59,7 +60,11 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
       paintEditor
         ..setMode(config.mode)
         ..setOpacity(config.opacity)
-        ..setStrokeWidth(config.strokeWidth / scope.fittedBoxScale);
+        ..setToolStrokeWidth(
+          tool,
+          bloc.state.strokeWidthOf(tool),
+          fittedBoxScale: scope.fittedBoxScale,
+        );
       if (tool.isCensor) {
         paintEditor.setCensorStrength(
           censorStrengthOf(config.mode, bloc.state.censorIntensityOf(tool)),

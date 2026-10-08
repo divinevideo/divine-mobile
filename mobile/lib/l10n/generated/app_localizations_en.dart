@@ -10173,6 +10173,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Level';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Brush size';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel => 'Close post details';
 
   @override

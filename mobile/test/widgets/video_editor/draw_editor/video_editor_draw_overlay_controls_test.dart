@@ -1,5 +1,5 @@
 // ABOUTME: Tests for VideoEditorDrawOverlayControls widget.
-// ABOUTME: Validates top bar buttons (Close, Undo, Redo, Done) and their state.
+// ABOUTME: Validates top bar buttons (Close, Undo, Redo, Done) and the sliders.
 
 import 'dart:async';
 
@@ -231,13 +231,40 @@ void main() {
       });
     });
 
-    group('Strength slider', () {
-      testWidgets('is hidden while drawing', (tester) async {
+    group('Brush size slider', () {
+      testWidgets('shows the brush size of the selected drawing tool', (
+        tester,
+      ) async {
+        const state = VideoEditorDrawState(
+          selectedTool: DrawToolType.marker,
+          strokeWidths: {DrawToolType.marker: 20.0},
+        );
+        when(() => mockBloc.state).thenReturn(state);
         await tester.pumpWidget(buildWidget());
 
-        expect(find.byType(VideoEditorVerticalSlider), findsNothing);
+        final slider = tester.widget<VideoEditorVerticalSlider>(
+          find.byType(VideoEditorVerticalSlider),
+        );
+        expect(slider.value, state.brushSize);
+        expect(slider.semanticLabel, l10n.videoEditorBrushSizeSemanticLabel);
       });
 
+      testWidgets('reports a new brush size', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        tester
+            .widget<VideoEditorVerticalSlider>(
+              find.byType(VideoEditorVerticalSlider),
+            )
+            .onChanged(0.3);
+
+        verify(
+          () => mockBloc.add(const VideoEditorDrawBrushSizeChanged(0.3)),
+        ).called(1);
+      });
+    });
+
+    group('Strength slider', () {
       testWidgets('shows the intensity of the selected censor tool', (
         tester,
       ) async {
@@ -253,6 +280,7 @@ void main() {
           find.byType(VideoEditorVerticalSlider),
         );
         expect(slider.value, 0.8);
+        expect(slider.semanticLabel, isNull);
       });
 
       testWidgets('reports a new intensity', (tester) async {

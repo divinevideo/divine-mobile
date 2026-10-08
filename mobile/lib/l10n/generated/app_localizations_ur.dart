@@ -10076,6 +10076,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'سطح';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'برش کا سائز';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'پوسٹ کی تفصیلات بند کریں';
 

@@ -48,6 +48,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
@@ -3181,11 +3182,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 final drawState = context.read<VideoEditorDrawBloc>().state;
                 final toolConfig = drawState.selectedTool.config;
                 // Sync editor with current BLoC state - use tool config for
-                // strokeWidth/opacity/mode to ensure consistency with tool switch
+                // opacity/mode to ensure consistency with tool switch
                 paintEditor
                   ?..setColor(drawState.selectedColor)
-                  ..setStrokeWidth(
-                    toolConfig.strokeWidth / scope.fittedBoxScale,
+                  ..setToolStrokeWidth(
+                    drawState.selectedTool,
+                    drawState.strokeWidth,
+                    fittedBoxScale: scope.fittedBoxScale,
                   )
                   ..setOpacity(toolConfig.opacity)
                   ..setMode(toolConfig.mode);

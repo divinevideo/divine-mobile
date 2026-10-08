@@ -17125,6 +17125,12 @@ abstract class AppLocalizations {
   /// **'Level'**
   String get videoEditorLevelSemanticLabel;
 
+  /// Screen reader label for the vertical slider that sets how thick the draw editor's pencil, marker, arrow or eraser draws.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush size'**
+  String get videoEditorBrushSizeSemanticLabel;
+
   /// No description provided for @videoMetadataClosePostDetailsSemanticLabel.
   ///
   /// In en, this message translates to:

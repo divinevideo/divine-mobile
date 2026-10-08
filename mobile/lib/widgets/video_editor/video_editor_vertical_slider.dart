@@ -18,6 +18,7 @@ class VideoEditorVerticalSlider extends StatefulWidget {
     super.key,
     this.onChangeEnd,
     this.height = 300,
+    this.semanticLabel,
   });
 
   /// Current value (0.0 - 1.0).
@@ -31,6 +32,9 @@ class VideoEditorVerticalSlider extends StatefulWidget {
 
   /// Total height of the slider.
   final double height;
+
+  /// What the slider sets, for screen readers. Defaults to a generic level.
+  final String? semanticLabel;
 
   @override
   State<VideoEditorVerticalSlider> createState() =>
@@ -81,7 +85,9 @@ class _VideoEditorVerticalSliderState extends State<VideoEditorVerticalSlider> {
 
           return Semantics(
             slider: true,
-            label: context.l10n.videoEditorLevelSemanticLabel,
+            label:
+                widget.semanticLabel ??
+                context.l10n.videoEditorLevelSemanticLabel,
             value: '${(_currentValue * 100).round()}%',
             increasedValue:
                 '${((_currentValue + 0.1).clamp(0.0, 1.0) * 100).round()}%',

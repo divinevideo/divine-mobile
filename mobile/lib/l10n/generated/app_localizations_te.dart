@@ -10360,6 +10360,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'స్థాయి';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'బ్రష్ పరిమాణం';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'పోస్ట్ వివరాలను మూసివేయండి';
 
