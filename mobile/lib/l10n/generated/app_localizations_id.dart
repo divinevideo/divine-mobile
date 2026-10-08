@@ -13588,10 +13588,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Cari pengikut dan yang diikuti';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

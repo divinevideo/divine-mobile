@@ -13902,10 +13902,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton compte ou ton accès à la liste a changé. Rouvre cette page pour continuer.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Rechercher parmi les abonnés et les abonnements';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

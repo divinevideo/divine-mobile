@@ -13014,9 +13014,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。';
 
   @override
-  String get peopleListsSearchConnectionsHint => 'フォロワーとフォロー中のユーザーを検索';
-
-  @override
   String get listMemberNamesSeparator => '、';
 
   @override

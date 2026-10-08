@@ -13856,10 +13856,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Konto oder dein Zugriff auf die Liste hat sich geändert. Öffne diese Seite erneut, um fortzufahren.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Follower und gefolgte Personen durchsuchen';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
