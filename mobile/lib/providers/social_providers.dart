@@ -30,6 +30,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
+import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/analytics_ingest_client.dart';
@@ -117,7 +118,8 @@ final seenVideosClearProvider = Provider<Future<void> Function()>((ref) {
 ///
 /// Account and moderation labels are rebuilt at every account boundary
 /// anyway because they watch the Nostr client, and only widgets watch audio
-/// sharing, so those are still invalidated.
+/// sharing and the subtitle language preferences, so those are still
+/// invalidated.
 final accountScopedPreferenceServicesResetProvider =
     Provider<Future<void> Function()>((ref) {
       return () async {
@@ -142,7 +144,8 @@ final accountScopedPreferenceServicesResetProvider =
         ref
           ..invalidate(accountLabelServiceProvider)
           ..invalidate(moderationLabelServiceProvider)
-          ..invalidate(audioSharingPreferenceServiceProvider);
+          ..invalidate(audioSharingPreferenceServiceProvider)
+          ..invalidate(subtitleLanguagePreferenceServiceProvider);
       };
     });
 

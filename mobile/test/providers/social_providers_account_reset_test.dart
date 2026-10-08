@@ -1,5 +1,6 @@
-// ABOUTME: Regression tests for #8121: the account-boundary preference reset
-// ABOUTME: must not leave a watched service for a widget build to rebuild
+// ABOUTME: Tests for the account-boundary preference reset: it must drop the
+// ABOUTME: departing account's cached preferences, and must not leave a watched
+// ABOUTME: service for a widget build to rebuild (#8121).
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
+import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -141,6 +144,44 @@ void main() {
         warmUp: (container) =>
             container.read(soundLibraryServiceProvider.future),
       ),
+    );
+
+    test(
+      "drops the departing account's subtitle language preferences",
+      () async {
+        SharedPreferences.setMockInitialValues({
+          SubtitleLanguagePreferenceService.targetLanguageStorageKey: 'pt',
+          SubtitleLanguagePreferenceService.keepOriginalLanguagesStorageKey: [
+            'ja',
+          ],
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final departing = container.read(
+          subtitleLanguagePreferenceServiceProvider,
+        );
+        await departing.initialize();
+        expect(departing.targetLanguage, equals('pt'));
+        expect(departing.keepOriginalLanguages, equals({'ja'}));
+
+        // The sweep removes the stored keys before it runs the reset.
+        await prefs.remove(
+          SubtitleLanguagePreferenceService.targetLanguageStorageKey,
+        );
+        await prefs.remove(
+          SubtitleLanguagePreferenceService.keepOriginalLanguagesStorageKey,
+        );
+        await container.read(accountScopedPreferenceServicesResetProvider)();
+
+        final incoming = container.read(
+          subtitleLanguagePreferenceServiceProvider,
+        );
+        await incoming.initialize();
+        expect(incoming.targetLanguage, isNull);
+        expect(incoming.keepOriginalLanguages, isEmpty);
+      },
     );
   });
 }
