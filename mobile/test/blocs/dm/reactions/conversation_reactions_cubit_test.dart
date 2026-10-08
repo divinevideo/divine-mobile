@@ -570,6 +570,51 @@ void main() {
         },
       );
 
+      blocTest<ConversationReactionsCubit, ConversationReactionsState>(
+        'toggle-off puts the own chip back when the removal fails',
+        build: () {
+          when(
+            () => repo.removeOwn(
+              rumorId: any(named: 'rumorId'),
+              targetMessageAuthor: any(named: 'targetMessageAuthor'),
+            ),
+          ).thenAnswer((_) async => throw Exception('disk I/O error'));
+          return ConversationReactionsCubit(
+            reactionsRepository: repo,
+            ownerPubkey: _owner,
+          );
+        },
+        act: (cubit) async {
+          cubit.add(const ConversationReactionsStarted(conversationId: _convo));
+          await watching.future;
+          streamController.add([ownReaction('❤️')]);
+          await pumpEventQueue();
+          cubit.add(
+            const ConversationReactionToggled(
+              conversationId: _convo,
+              messageId: _msgId,
+              messageAuthorPubkey: _peer,
+              emoji: '❤️',
+            ),
+          );
+          await pumpEventQueue();
+        },
+        errors: () => [isA<Exception>()],
+        verify: (cubit) {
+          expect(cubit.state.optimistic, isEmpty);
+          expect(
+            cubit.state.reactionsFor(_msgId).where((r) => r.isOwn),
+            hasLength(1),
+          );
+          verify(
+            () => repo.removeOwn(
+              rumorId: 'own-❤️',
+              targetMessageAuthor: _peer,
+            ),
+          ).called(1);
+        },
+      );
+
       for (final status in [
         DmReactionPublishStatus.failed,
         DmReactionPublishStatus.pending,
