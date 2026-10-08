@@ -10,6 +10,8 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
+import 'helpers/in_memory_followed_people_lists_store.dart';
+
 class _Client extends Mock implements NostrClient {}
 
 class _Cache extends Mock implements LocalPeopleListsCache {}
@@ -89,6 +91,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final results = await Future.wait([
         repository.addPubkey(
@@ -116,6 +119,7 @@ void main() {
       final cold = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       await cold.syncOwner(ownerPubkey: _owner);
       expect(
@@ -145,6 +149,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       expect(
         (await repository.createList(ownerPubkey: _owner, name: 'Crew')).status,
@@ -185,6 +190,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await repository
             .searchPublicLists('Matching', limit: 2)
@@ -235,6 +241,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
 
         final results = await repository
@@ -273,6 +280,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final results = await repository.searchPublicLists('Matching').toList();
       expect(results.single.map((result) => result.list.id), ['crew']);
@@ -317,6 +325,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         expect(
           (await repository.updateList(
@@ -383,6 +392,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await Future.wait([
           repository.updateList(
@@ -470,6 +480,7 @@ void main() {
           final repository = PeopleListsRepositoryImpl(
             nostrClient: client,
             cache: await cache(),
+            followedListsStore: InMemoryFollowedPeopleListsStore(),
           );
           final result = await switch (action) {
             'add' => repository.addPubkey(
@@ -535,6 +546,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         expect(
           (await repository.addPubkey(
@@ -588,6 +600,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await Future.wait([
           repository.addPubkey(
@@ -681,6 +694,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: cache,
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final sync = repository.syncOwner(ownerPubkey: _owner);
       await syncRead.future;
