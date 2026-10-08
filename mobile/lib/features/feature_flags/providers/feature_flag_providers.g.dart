@@ -112,7 +112,7 @@ final class FeatureFlagServiceProvider
 }
 
 String _$featureFlagServiceHash() =>
-    r'1b0c90cbcbb5bed6e9757284a916317ebcc3a0b0';
+    r'0680df0640bcc94bd1620df79786fca62327dafd';
 
 /// Feature flag state provider that publishes service changes to its state.
 ///

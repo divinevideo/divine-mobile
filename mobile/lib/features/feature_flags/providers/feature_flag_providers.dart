@@ -31,8 +31,9 @@ FeatureFlagService featureFlagService(Ref ref) {
     buildConfig,
     canOverrideInternalFlags: () => environmentService.isDeveloperModeEnabled,
   );
-  // Load persisted overrides from SharedPreferences without blocking this
-  // synchronous provider build, while still observing initialization errors.
+  // initialize() has no await today, so it applies persisted overrides before
+  // this build returns; keep it that way, since the first read relies on it.
+  // runProviderDetached only owns the error path.
   void initializeService() => runProviderDetached(
     service.initialize(),
     'initialize feature flag service',
@@ -45,8 +46,7 @@ FeatureFlagService featureFlagService(Ref ref) {
   // and rebuilding: this provider's instance is captured by ref.read in
   // SettingsScreen.initState, and a new identity here would strand that
   // capture on an orphaned service.
-  void onEnvironmentChanged() => initializeService();
-  listenForProviderLifetime(ref, environmentService, onEnvironmentChanged);
+  listenForProviderLifetime(ref, environmentService, initializeService);
 
   return service;
 }
