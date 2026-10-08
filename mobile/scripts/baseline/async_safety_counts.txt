@@ -32,7 +32,7 @@ discarded_futures|lib/widgets/delete_account_dialog.dart	2
 discarded_futures|lib/widgets/developer_options/shorebird_patch_section.dart	2
 discarded_futures|lib/widgets/feature_request_dialog.dart	1
 discarded_futures|lib/widgets/feed_tuning/feed_tuning_swipe_overlay.dart	1
-discarded_futures|lib/widgets/for_you_tab.dart	2
+discarded_futures|lib/widgets/for_you_tab.dart	1
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
