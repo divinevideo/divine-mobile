@@ -10,13 +10,12 @@ import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
-import 'package:openvine/features/people_lists/bloc/people_list_picks_outcome.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/widgets/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_picker_create_button.dart';
@@ -85,10 +84,31 @@ class AddToPeopleListsSheet extends StatefulWidget {
   }) async {
     if (!curatedListsEnabled(context)) return;
 
-    final session = _PickerSession(
-      context.read<PeopleListsBloc>(),
-      ProviderScope.containerOf(context, listen: false),
-    );
+    final account = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(curatedListEditorSessionProvider);
+    final openingOwner = account.currentOwnerPubkey;
+    if (openingOwner == null || openingOwner.isEmpty) return;
+    final bloc = context.read<PeopleListsBloc>();
+    if (!bloc.state.enabled || bloc.isClosed) return;
+    if (bloc.state.status == PeopleListsStatus.initial) {
+      // Lazy startup establishes the first mutation epoch. Wait for that
+      // explicit transition before capturing this visit's epoch.
+      await bloc.stream.firstWhere(
+        (state) =>
+            state.status != PeopleListsStatus.initial ||
+            !state.enabled ||
+            state.activeOwnerPubkey != openingOwner,
+        orElse: () => const PeopleListsState(),
+      );
+    }
+    if (!context.mounted ||
+        account.currentOwnerPubkey != openingOwner ||
+        bloc.isClosed) {
+      return;
+    }
+    final session = _PickerSession(bloc, account);
     if (!session.isAuthCurrent || !session.isCurrent(context)) return;
     final l10n = context.l10n;
     // Resolved before the sheet opens: the screen that opened it may be
@@ -139,8 +159,8 @@ class AddToPeopleListsSheet extends StatefulWidget {
       // The sheet closed as soon as the picks were sent; the bloc rolls a
       // refused one back on its own, and this is what says so.
       runDetached(
-        _reportRefusedPicks(
-          refusedPicks: outcome,
+        _reportPicksResult(
+          completion: outcome,
           messenger: messenger,
           failedMessage: l10n.peopleListsMembershipUpdateFailed,
           cancelledMessage: l10n.peopleListsSessionChanged,
@@ -153,14 +173,14 @@ class AddToPeopleListsSheet extends StatefulWidget {
     }
   }
 
-  static Future<void> _reportRefusedPicks({
-    required Future<PeopleListsOperationResult> refusedPicks,
+  static Future<void> _reportPicksResult({
+    required Future<PeopleListsOperationResult> completion,
     required ScaffoldMessengerState? messenger,
     required String failedMessage,
     required String cancelledMessage,
     required bool Function() isSessionCurrent,
   }) async {
-    final result = await refusedPicks;
+    final result = await completion;
     if (result == PeopleListsOperationResult.succeeded ||
         !isSessionCurrent() ||
         !(messenger?.mounted ?? false)) {
@@ -287,8 +307,8 @@ class _PeopleListRows extends StatelessWidget {
 ///
 /// The picks go to [PeopleListsBloc] as one [PeopleListsPicksApplied]; the
 /// bloc applies each optimistically, rolls back any a relay refuses, and
-/// records the outcome, which the sheet's opener reports on the screen
-/// underneath, since the sheet is gone by then.
+/// returns that request's aggregate result, which the opener reports on the
+/// screen underneath after the sheet closes.
 class _ApplyButton extends StatelessWidget {
   const _ApplyButton({
     required this.pubkey,
@@ -325,28 +345,11 @@ class _ApplyButton extends StatelessWidget {
         addListIds: addListIds,
         removeListIds: removeListIds,
       );
-      final before = bloc.state.lastPicksOutcome;
-      final refusedPicks = awaitRefusedPicks(
-        states: bloc.stream,
-        requestId: request.requestId,
-        ownerPubkey: ownerPubkey,
-        before: before,
-        pubkey: pubkey,
-      );
-      onApplied(_awaitResult(bloc.submit(request), refusedPicks));
+      // The shared queue aggregates every item and owns cancellation.
+      // Its completion needs no extra stream listener after the sheet closes.
+      onApplied(bloc.submit(request));
     }
     context.popModalIfMounted();
-  }
-
-  Future<PeopleListsOperationResult> _awaitResult(
-    Future<PeopleListsOperationResult> completion,
-    Future<int> refusedPicks,
-  ) async {
-    final result = await completion;
-    if (result != PeopleListsOperationResult.succeeded) return result;
-    return await refusedPicks == 0
-        ? PeopleListsOperationResult.succeeded
-        : PeopleListsOperationResult.failed;
   }
 
   @override
@@ -441,21 +444,25 @@ class _EmptyListRows extends StatelessWidget {
 
 /// The opening account and mutation epoch belong to one picker visit.
 class _PickerSession {
-  _PickerSession(this.bloc, this.container)
+  _PickerSession(this.bloc, this.account)
     : ownerPubkey = bloc.state.activeOwnerPubkey,
       epoch = bloc.mutationSessionEpoch;
 
   final PeopleListsBloc bloc;
-  final ProviderContainer container;
+  final CuratedListEditorSession account;
   final String? ownerPubkey;
   final int epoch;
 
   bool get isAuthCurrent =>
       ownerPubkey != null &&
       ownerPubkey!.isNotEmpty &&
-      container.read(authServiceProvider).currentPublicKeyHex == ownerPubkey;
+      account.currentOwnerPubkey == ownerPubkey;
 
   bool isCurrent(BuildContext context) =>
+      isAuthCurrent &&
+      context.mounted &&
+      !bloc.isClosed &&
+      bloc.state.enabled &&
       curatedListsEnabled(context) &&
       identical(context.read<PeopleListsBloc>(), bloc) &&
       bloc.mutationSessionEpoch == epoch &&
