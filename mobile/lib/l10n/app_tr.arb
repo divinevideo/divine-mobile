@@ -1661,7 +1661,6 @@
   "reportReceivedReviewNotice": "İnternete bağlandığında otomatik olarak göndereceğiz. Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Kapat",
-  "listAddToList": "Listeye Ekle",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -1670,25 +1669,8 @@
       }
     }
   },
-  "listNewList": "Yeni Liste",
   "listDone": "Bitti",
   "listErrorLoading": "Listeler yüklenirken hata",
-  "listRemovedFrom": "{name} listesinden kaldırıldı",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} listesine eklendi",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Yeni Liste Oluştur",
   "listNewPeopleList": "Yeni kişi listesi",
   "listNameLabel": "Liste Adı",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Yeni bir güncellemen var",
   "peopleListsAddToList": "Listeye ekle",
-  "peopleListsSheetTitle": "Listeye ekle",
   "peopleListsEmptyTitle": "Henüz liste yok",
   "peopleListsEmptySubtitle": "Kişileri gruplamaya başlamak için bir liste oluştur.",
-  "peopleListsCreateList": "Liste oluştur",
   "peopleListsNewListTitle": "Yeni liste",
   "peopleListsRouteTitle": "Kişi listesi",
   "peopleListsListNameLabel": "Liste adı",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
   "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
   "listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
-  "listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi."
+  "listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.",
+  "listAddToLists": "Listelere ekle"
 }

@@ -1664,7 +1664,6 @@
   "reportReceivedReviewNotice": "La invieremo automaticamente quando avrai una connessione. Il nostro team esaminerà la tua segnalazione e prenderà i provvedimenti del caso. Potresti ricevere aggiornamenti tramite messaggio diretto.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Chiudi",
-  "listAddToList": "Aggiungi a lista",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -1673,25 +1672,8 @@
       }
     }
   },
-  "listNewList": "Nuova lista",
   "listDone": "Fatto",
   "listErrorLoading": "Errore nel caricamento delle liste",
-  "listRemovedFrom": "Rimosso da {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Aggiunto a {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Crea nuova lista",
   "listNewPeopleList": "Nuova lista persone",
   "listNameLabel": "Nome lista",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Hai un nuovo aggiornamento",
   "peopleListsAddToList": "Aggiungi alla lista",
-  "peopleListsSheetTitle": "Aggiungi alla lista",
   "peopleListsEmptyTitle": "Ancora nessuna lista",
   "peopleListsEmptySubtitle": "Crea una lista per iniziare a raggruppare le persone.",
-  "peopleListsCreateList": "Crea lista",
   "peopleListsNewListTitle": "Nuova lista",
   "peopleListsRouteTitle": "Lista persone",
   "peopleListsListNameLabel": "Nome lista",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Questa lista ha modifiche in attesa di sincronizzazione.",
   "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.",
   "listRecoveryReadOnly": "Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.",
-  "listPrivateConversionTooLarge": "Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate."
+  "listPrivateConversionTooLarge": "Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate.",
+  "listAddToLists": "Aggiungi alle liste"
 }

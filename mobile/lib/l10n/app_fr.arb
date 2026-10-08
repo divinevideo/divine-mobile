@@ -1664,7 +1664,6 @@
   "reportReceivedReviewNotice": "Nous l’enverrons automatiquement quand tu seras connecté. Notre équipe va examiner ton signalement et prendre les mesures appropriées. Tu pourras recevoir des mises à jour par message direct.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Fermer",
-  "listAddToList": "Ajouter à une liste",
   "listVideoCount": "{count} vidéos",
   "@listVideoCount": {
     "placeholders": {
@@ -1673,25 +1672,8 @@
       }
     }
   },
-  "listNewList": "Nouvelle liste",
   "listDone": "Terminé",
   "listErrorLoading": "Erreur de chargement des listes",
-  "listRemovedFrom": "Retiré de {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Ajouté à {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Créer une nouvelle liste",
   "listNewPeopleList": "Nouvelle liste de personnes",
   "listNameLabel": "Nom de la liste",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Tu as une nouvelle mise à jour",
   "peopleListsAddToList": "Ajouter à la liste",
-  "peopleListsSheetTitle": "Ajouter à la liste",
   "peopleListsEmptyTitle": "Aucune liste pour l'instant",
   "peopleListsEmptySubtitle": "Crée une liste pour commencer à regrouper des personnes.",
-  "peopleListsCreateList": "Créer une liste",
   "peopleListsNewListTitle": "Nouvelle liste",
   "peopleListsRouteTitle": "Liste de personnes",
   "peopleListsListNameLabel": "Nom de la liste",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Cette liste a des modifications en attente de synchronisation.",
   "listPermissionsRecoveryPending": "Votre modification a été acceptée. Appuyez sur Synchroniser maintenant pour terminer son enregistrement. Les modifications sont suspendues jusque-là.",
   "listRecoveryReadOnly": "Certaines modifications enregistrées dans les listes de vidéos doivent être récupérées. Tu peux consulter les listes de vidéos, mais les modifications sont en pause.",
-  "listPrivateConversionTooLarge": "Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées."
+  "listPrivateConversionTooLarge": "Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées.",
+  "listAddToLists": "Ajouter aux listes"
 }

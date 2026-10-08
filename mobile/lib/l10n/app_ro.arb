@@ -1664,7 +1664,6 @@
   "reportReceivedReviewNotice": "Îl vom trimite automat când te conectezi la internet. Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Închide",
-  "listAddToList": "Adaugă la listă",
   "listVideoCount": "{count, plural, one{1 videoclip} few{{count} videoclipuri} other{{count} de videoclipuri}}",
   "@listVideoCount": {
     "placeholders": {
@@ -1673,25 +1672,8 @@
       }
     }
   },
-  "listNewList": "Listă nouă",
   "listDone": "Gata",
   "listErrorLoading": "Eroare la încărcarea listelor",
-  "listRemovedFrom": "Eliminat din {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Adăugat la {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Creează o listă nouă",
   "listNewPeopleList": "Listă nouă de persoane",
   "listNameLabel": "Numele listei",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Ai o actualizare nouă",
   "peopleListsAddToList": "Adaugă la listă",
-  "peopleListsSheetTitle": "Adaugă la listă",
   "peopleListsEmptyTitle": "Nicio listă încă",
   "peopleListsEmptySubtitle": "Creează o listă pentru a începe să grupezi persoane.",
-  "peopleListsCreateList": "Creează listă",
   "peopleListsNewListTitle": "Listă nouă",
   "peopleListsRouteTitle": "Listă de persoane",
   "peopleListsListNameLabel": "Numele listei",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
   "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
   "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
-  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate."
+  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
+  "listAddToLists": "Adaugă la liste"
 }

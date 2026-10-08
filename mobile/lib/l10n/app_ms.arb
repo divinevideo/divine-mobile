@@ -1935,10 +1935,8 @@
     }
   },
   "peopleListsAddToList": "Tambah ke senarai",
-  "peopleListsSheetTitle": "Tambah ke senarai",
   "peopleListsEmptyTitle": "Belum ada senarai",
   "peopleListsEmptySubtitle": "Cipta senarai untuk mula mengumpulkan orang.",
-  "peopleListsCreateList": "Cipta senarai",
   "peopleListsNewListTitle": "Senarai baharu",
   "peopleListsRouteTitle": "Senarai orang",
   "@peopleListsRouteTitle": {
@@ -2398,7 +2396,6 @@
   "reportLearnMoreAt": "Ketahui lebih lanjut di",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Tutup",
-  "listAddToList": "Tambah ke Senarai",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2408,25 +2405,8 @@
     }
   },
   "listByAuthorPrefix": "Oleh ",
-  "listNewList": "Senarai Baharu",
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
-  "listRemovedFrom": "Dialih keluar daripada {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Ditambah ke {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Cipta Senarai Baharu",
   "listNewPeopleList": "Senarai orang baharu",
   "listNameLabel": "Nama Senarai",
@@ -6803,5 +6783,6 @@
   "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
   "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
   "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
-  "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan."
+  "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.",
+  "listAddToLists": "Tambah ke senarai"
 }

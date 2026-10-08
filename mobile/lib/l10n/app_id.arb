@@ -1661,7 +1661,6 @@
   "reportReceivedReviewNotice": "Kami akan mengirimkannya otomatis saat kamu terhubung ke internet. Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Tutup",
-  "listAddToList": "Tambah ke Daftar",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -1670,25 +1669,8 @@
       }
     }
   },
-  "listNewList": "Daftar Baru",
   "listDone": "Selesai",
   "listErrorLoading": "Kesalahan memuat daftar",
-  "listRemovedFrom": "Dihapus dari {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Ditambahkan ke {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Buat Daftar Baru",
   "listNewPeopleList": "Daftar orang baru",
   "listNameLabel": "Nama Daftar",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Kamu punya pembaruan baru",
   "peopleListsAddToList": "Tambahkan ke daftar",
-  "peopleListsSheetTitle": "Tambahkan ke daftar",
   "peopleListsEmptyTitle": "Belum ada daftar",
   "peopleListsEmptySubtitle": "Buat daftar untuk mulai mengelompokkan orang.",
-  "peopleListsCreateList": "Buat daftar",
   "peopleListsNewListTitle": "Daftar baru",
   "peopleListsRouteTitle": "Daftar orang",
   "peopleListsListNameLabel": "Nama daftar",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
   "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
   "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
-  "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan."
+  "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
+  "listAddToLists": "Tambahkan ke daftar"
 }

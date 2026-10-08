@@ -3893,16 +3893,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddToList => 'أضف إلى القائمة';
 
   @override
-  String get peopleListsSheetTitle => 'أضف إلى القائمة';
-
-  @override
   String get peopleListsEmptyTitle => 'لا توجد قوائم بعد';
 
   @override
   String get peopleListsEmptySubtitle => 'أنشئ قائمة لبدء تجميع الأشخاص.';
-
-  @override
-  String get peopleListsCreateList => 'إنشاء قائمة';
 
   @override
   String get peopleListsNewListTitle => 'قائمة جديدة';
@@ -4894,9 +4888,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportClose => 'إغلاق';
 
   @override
-  String get listAddToList => 'إضافة إلى قائمة';
-
-  @override
   String listVideoCount(int count) {
     return '$count مقاطع فيديو';
   }
@@ -4905,23 +4896,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listByAuthorPrefix => 'بقلم ';
 
   @override
-  String get listNewList => 'قائمة جديدة';
-
-  @override
   String get listDone => 'تم';
 
   @override
   String get listErrorLoading => 'تعذر تحميل القوائم';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'تمت الإزالة من $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'تمت الإضافة إلى $name';
-  }
 
   @override
   String get listCreateNewList => 'إنشاء قائمة جديدة';
@@ -13073,4 +13051,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
+
+  @override
+  String get listAddToLists => 'إضافة إلى القوائم';
 }

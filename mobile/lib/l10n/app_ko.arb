@@ -1200,7 +1200,6 @@
   "reportReceivedReviewNotice": "인터넷에 연결되면 자동으로 보낼게요. 저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "닫기",
-  "listAddToList": "목록에 추가",
   "listVideoCount": "영상 {count}개",
   "@listVideoCount": {
     "placeholders": {
@@ -1209,25 +1208,8 @@
       }
     }
   },
-  "listNewList": "새 목록",
   "listDone": "완료",
   "listErrorLoading": "목록을 불러오는 중 오류 발생",
-  "listRemovedFrom": "{name}에서 삭제했어요",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name}에 추가했어요",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "새 목록 만들기",
   "listNewPeopleList": "새 사람 목록",
   "listNameLabel": "목록 이름",
@@ -2575,10 +2557,8 @@
   },
   "notificationSystemUpdate": "새로운 업데이트가 있어요",
   "peopleListsAddToList": "목록에 추가",
-  "peopleListsSheetTitle": "목록에 추가",
   "peopleListsEmptyTitle": "목록이 없습니다",
   "peopleListsEmptySubtitle": "목록을 만들어 사람들을 그룹화하세요.",
-  "peopleListsCreateList": "목록 만들기",
   "peopleListsNewListTitle": "새 목록",
   "peopleListsRouteTitle": "사람 목록",
   "peopleListsListNameLabel": "목록 이름",
@@ -5052,5 +5032,6 @@
   "listRecoveryPending": "이 목록에 동기화를 기다리는 변경 사항이 있어요.",
   "listPermissionsRecoveryPending": "변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.",
   "listRecoveryReadOnly": "동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.",
-  "listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요."
+  "listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.",
+  "listAddToLists": "목록에 추가"
 }

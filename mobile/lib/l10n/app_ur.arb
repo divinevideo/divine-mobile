@@ -1935,10 +1935,8 @@
     }
   },
   "peopleListsAddToList": "فہرست میں شامل کریں",
-  "peopleListsSheetTitle": "فہرست میں شامل کریں",
   "peopleListsEmptyTitle": "ابھی کوئی فہرست نہیں",
   "peopleListsEmptySubtitle": "لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔",
-  "peopleListsCreateList": "فہرست بنائیں",
   "peopleListsNewListTitle": "نئی فہرست",
   "peopleListsRouteTitle": "لوگوں کی فہرست",
   "@peopleListsRouteTitle": {
@@ -2398,7 +2396,6 @@
   "reportLearnMoreAt": "مزید جانیں",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "بند کریں",
-  "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
     "placeholders": {
@@ -2408,25 +2405,8 @@
     }
   },
   "listByAuthorPrefix": "از ",
-  "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
-  "listRemovedFrom": "{name} سے ہٹا دی گئی",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} میں شامل کر دی گئی",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listNameLabel": "فہرست کا نام",
@@ -6803,5 +6783,6 @@
   "listRecoveryReadOnly": "ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔",
   "listRecoveryPending": "اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔",
   "listPermissionsRecoveryPending": "آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔",
-  "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔"
+  "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔",
+  "listAddToLists": "فہرستوں میں شامل کریں"
 }

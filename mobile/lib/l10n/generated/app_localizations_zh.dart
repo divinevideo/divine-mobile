@@ -3648,16 +3648,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddToList => '加入列表';
 
   @override
-  String get peopleListsSheetTitle => '加入列表';
-
-  @override
   String get peopleListsEmptyTitle => '还没有列表';
 
   @override
   String get peopleListsEmptySubtitle => '创建一个列表，开始给人们分组。';
-
-  @override
-  String get peopleListsCreateList => '创建列表';
 
   @override
   String get peopleListsNewListTitle => '新列表';
@@ -4595,9 +4589,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportClose => '关闭';
 
   @override
-  String get listAddToList => '加入列表';
-
-  @override
   String listVideoCount(int count) {
     return '$count 个视频';
   }
@@ -4606,23 +4597,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listByAuthorPrefix => '来自 ';
 
   @override
-  String get listNewList => '新列表';
-
-  @override
   String get listDone => '完成';
 
   @override
   String get listErrorLoading => '加载列表出错';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '已从 $name 移除';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '已加入 $name';
-  }
 
   @override
   String get listCreateNewList => '创建新列表';
@@ -12322,4 +12300,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
+
+  @override
+  String get listAddToLists => '加入列表';
 }

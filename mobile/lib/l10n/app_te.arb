@@ -2283,10 +2283,8 @@
     }
   },
   "peopleListsAddToList": "జాబితాకు జోడించండి",
-  "peopleListsSheetTitle": "జాబితాకు జోడించండి",
   "peopleListsEmptyTitle": "ఇంకా జాబితాలు లేవు",
   "peopleListsEmptySubtitle": "వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.",
-  "peopleListsCreateList": "జాబితాను సృష్టించండి",
   "peopleListsNewListTitle": "కొత్త జాబితా",
   "peopleListsRouteTitle": "వ్యక్తుల జాబితా",
   "@peopleListsRouteTitle": {
@@ -2853,7 +2851,6 @@
   "reportLearnMoreAt": "ఇక్కడ మరింత తెలుసుకోండి",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "మూసివేయండి",
-  "listAddToList": "జాబితాకు జోడించండి",
   "listVideoCount": "{count, plural, =1{{count}వీడియో} other{{count}వీడియోలు}}",
   "@listVideoCount": {
     "placeholders": {
@@ -2863,25 +2860,8 @@
     }
   },
   "listByAuthorPrefix": "ద్వారా ",
-  "listNewList": "కొత్త జాబితా",
   "listDone": "పూర్తయింది",
   "listErrorLoading": "జాబితాలను లోడ్ చేయడంలో లోపం",
-  "listRemovedFrom": "నుండి తీసివేయబడింది {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "దీనికి జోడించబడింది {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
   "listNameLabel": "జాబితా పేరు",
@@ -8472,5 +8452,6 @@
   "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
   "listRecoveryPending": "ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.",
   "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
-  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు."
+  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
+  "listAddToLists": "జాబితాలకు జోడించండి"
 }

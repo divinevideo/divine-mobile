@@ -1664,7 +1664,6 @@
   "reportReceivedReviewNotice": "We versturen die automatisch zodra je verbinding hebt. Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Sluiten",
-  "listAddToList": "Toevoegen aan lijst",
   "listVideoCount": "{count} video's",
   "@listVideoCount": {
     "placeholders": {
@@ -1673,25 +1672,8 @@
       }
     }
   },
-  "listNewList": "Nieuwe lijst",
   "listDone": "Klaar",
   "listErrorLoading": "Fout bij laden van lijsten",
-  "listRemovedFrom": "Verwijderd uit {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Toegevoegd aan {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Nieuwe lijst maken",
   "listNewPeopleList": "Nieuwe personenlijst",
   "listNameLabel": "Lijstnaam",
@@ -3036,10 +3018,8 @@
   },
   "notificationSystemUpdate": "Je hebt een nieuwe update",
   "peopleListsAddToList": "Toevoegen aan lijst",
-  "peopleListsSheetTitle": "Toevoegen aan lijst",
   "peopleListsEmptyTitle": "Nog geen lijsten",
   "peopleListsEmptySubtitle": "Maak een lijst om mensen te groeperen.",
-  "peopleListsCreateList": "Lijst aanmaken",
   "peopleListsNewListTitle": "Nieuwe lijst",
   "peopleListsRouteTitle": "Personenlijst",
   "peopleListsListNameLabel": "Lijstnaam",
@@ -5506,5 +5486,6 @@
   "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
   "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
   "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
-  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen."
+  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
+  "listAddToLists": "Toevoegen aan lijsten"
 }

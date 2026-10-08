@@ -1935,10 +1935,8 @@
     }
   },
   "peopleListsAddToList": "Thêm vào danh sách",
-  "peopleListsSheetTitle": "Thêm vào danh sách",
   "peopleListsEmptyTitle": "Chưa có danh sách nào",
   "peopleListsEmptySubtitle": "Tạo một danh sách để bắt đầu nhóm mọi người.",
-  "peopleListsCreateList": "Tạo danh sách",
   "peopleListsNewListTitle": "Danh sách mới",
   "peopleListsRouteTitle": "Danh sách người",
   "@peopleListsRouteTitle": {
@@ -2398,7 +2396,6 @@
   "reportLearnMoreAt": "Tìm hiểu thêm tại",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Đóng",
-  "listAddToList": "Thêm vào danh sách",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2408,25 +2405,8 @@
     }
   },
   "listByAuthorPrefix": "Bởi ",
-  "listNewList": "Danh sách mới",
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
-  "listRemovedFrom": "Đã xóa khỏi {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Đã thêm vào {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Tạo danh sách mới",
   "listNewPeopleList": "Danh sách người mới",
   "listNameLabel": "Tên danh sách",
@@ -6803,5 +6783,6 @@
   "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
   "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
   "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
-  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu."
+  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
+  "listAddToLists": "Thêm vào danh sách"
 }

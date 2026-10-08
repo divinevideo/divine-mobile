@@ -1757,10 +1757,8 @@
     }
   },
   "peopleListsAddToList": "ወደ ዝርዝር ያክሉ",
-  "peopleListsSheetTitle": "ወደ ዝርዝር ያክሉ",
   "peopleListsEmptyTitle": "እስካሁን ምንም ዝርዝሮች የሉም",
   "peopleListsEmptySubtitle": "ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።",
-  "peopleListsCreateList": "ዝርዝር ይፍጠሩ",
   "peopleListsNewListTitle": "አዲስ ዝርዝር",
   "peopleListsRouteTitle": "የሰዎች ዝርዝር",
   "@peopleListsRouteTitle": {
@@ -2100,7 +2098,6 @@
   "reportReceivedReviewNotice": "ከበይነመረብ ጋር ስትገናኝ በራስ-ሰር እንልከዋለን። ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "ገጠመ",
-  "listAddToList": "ወደ ዝርዝር ያክሉ",
   "listVideoCount": "{count} ቪዲዮዎች",
   "@listVideoCount": {
     "placeholders": {
@@ -2110,25 +2107,8 @@
     }
   },
   "listByAuthorPrefix": "በ",
-  "listNewList": "አዲስ ዝርዝር",
   "listDone": "ተከናውኗል",
   "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
-  "listRemovedFrom": "ከ{name} ተወግዷል",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "ወደ {name} ታክሏል።",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
   "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
   "listNameLabel": "የዝርዝር ስም",
@@ -5583,5 +5563,6 @@
   "listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
   "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
   "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
-  "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።"
+  "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።",
+  "listAddToLists": "ወደ ዝርዝሮች ያክሉ"
 }

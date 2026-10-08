@@ -2512,10 +2512,8 @@
     }
   },
   "peopleListsAddToList": "Add to list",
-  "peopleListsSheetTitle": "Add to list",
   "peopleListsEmptyTitle": "No lists yet",
   "peopleListsEmptySubtitle": "Create a list to start grouping people.",
-  "peopleListsCreateList": "Create list",
   "peopleListsNewListTitle": "New list",
   "peopleListsRouteTitle": "People list",
   "@peopleListsRouteTitle": {
@@ -3141,7 +3139,6 @@
   "reportLearnMoreAt": "Learn more at",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Close",
-  "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
     "placeholders": {
@@ -3151,25 +3148,8 @@
     }
   },
   "listByAuthorPrefix": "By ",
-  "listNewList": "New List",
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
-  "listRemovedFrom": "Removed from {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Added to {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
   "listNameLabel": "List Name",
@@ -9585,5 +9565,9 @@
     "description": "A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission."
   },
   "listPermissionsRecoveryPending": "Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.",
-  "listRecoveryReadOnly": "Some saved changes to video lists need recovery. You can view video lists, but editing is paused."
+  "listRecoveryReadOnly": "Some saved changes to video lists need recovery. You can view video lists, but editing is paused.",
+  "@listAddToLists": {
+    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
+  },
+  "listAddToLists": "Add to lists"
 }
