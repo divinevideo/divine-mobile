@@ -117,6 +117,23 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     emitIfOpen(state.copyWith(selectedPubkeys: next));
   }
 
+  /// Clear only members confirmed by the repository; failed choices stay selected.
+  void additionsConfirmed(Set<String> pubkeys) {
+    _existingMembers.addAll(pubkeys);
+    for (final pubkey in pubkeys) {
+      final candidate = _candidatesByPubkey[pubkey];
+      if (candidate != null) {
+        _candidatesByPubkey[pubkey] = candidate.copyWith(isAlreadyInList: true);
+      }
+    }
+    emitIfOpen(
+      state.copyWith(
+        selectedPubkeys: state.selectedPubkeys.difference(pubkeys),
+        candidates: _sortedCandidates(),
+      ),
+    );
+  }
+
   /// Re-run the loader after a prior failure.
   void retryRequested() {
     unawaited(started());

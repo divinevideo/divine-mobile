@@ -3963,9 +3963,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Kon mensen niet laden. Probeer het opnieuw.';
 
@@ -4947,15 +4944,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Nieuwe personenlijst';
-
-  @override
-  String get listCollaboratorsNone => 'Geen';
-
-  @override
-  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
-
-  @override
-  String get listCollaboratorSearchHint => 'Zoek in Divine...';
 
   @override
   String get listNameLabel => 'Lijstnaam';
@@ -13095,4 +13083,25 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Nieuwe videolijst';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Deze lijst is openbaar. Iedereen kan de naam, beschrijving en personen in de lijst zien.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personen';
+
+  @override
+  String get peopleListsPeopleNone => 'Geen personen toegevoegd';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Zoek in volgers en mensen die je volgt';
 }

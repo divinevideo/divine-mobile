@@ -3698,9 +3698,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
-
-  @override
   String get peopleListsAddPeopleError => 'ユーザーを読み込めませんでした。もう一度お試しください。';
 
   @override
@@ -4633,15 +4630,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '新しい人リスト';
-
-  @override
-  String get listCollaboratorsNone => 'なし';
-
-  @override
-  String get listAddCollaboratorTitle => 'コラボレーターを追加';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divineを検索...';
 
   @override
   String get listNameLabel => 'リスト名';
@@ -12384,4 +12372,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '新しい動画リスト';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'このリストは公開されます。名前、説明、リスト内のユーザーは誰でも見ることができます。';
+
+  @override
+  String get peopleListsPeopleLabel => 'ユーザー';
+
+  @override
+  String get peopleListsPeopleNone => 'ユーザーはまだ追加されていません';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。';
+
+  @override
+  String get peopleListsSearchConnectionsHint => 'フォロワーとフォロー中のユーザーを検索';
 }

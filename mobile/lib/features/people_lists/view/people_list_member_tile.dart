@@ -39,6 +39,7 @@ class PeopleListMemberTile extends ConsumerWidget {
     final l10n = context.l10n;
     final bloc = context.read<PeopleListsBloc>();
     final messenger = ScaffoldMessenger.of(context);
+    final owner = bloc.state.activeOwnerPubkey;
     final shouldRemove = await context.showVideoPausingVineBottomSheet<bool>(
       scrollable: false,
       showHeaderDivider: false,
@@ -59,19 +60,56 @@ class PeopleListMemberTile extends ConsumerWidget {
     // the owner's confirmation still stands.
     if (shouldRemove != true) return;
 
-    bloc.add(PeopleListsPubkeyRemoveRequested(listId: listId, pubkey: pubkey));
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(l10n.peopleListsRemovedFromList(displayName)),
-        action: SnackBarAction(
-          label: l10n.peopleListsUndo,
-          onPressed: () => bloc.add(
-            PeopleListsPubkeyAddRequested(listId: listId, pubkey: pubkey),
+    Future<void> publish({required bool remove}) async {
+      if (!messenger.mounted) return;
+      if (owner == null || owner != bloc.state.activeOwnerPubkey) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.peopleListsSessionChanged)),
+        );
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.profileSetupSavingButton)),
+      );
+      final result = await bloc.submit(
+        remove
+            ? PeopleListsPubkeyRemoveRequested(listId: listId, pubkey: pubkey)
+            : PeopleListsPubkeyAddRequested(listId: listId, pubkey: pubkey),
+      );
+      if (!messenger.mounted) return;
+      // A retry action may still be dismissing its old snackbar while the
+      // next result arrives. Remove queued progress before showing the result.
+      messenger
+        ..clearSnackBars()
+        ..removeCurrentSnackBar();
+      if (result == PeopleListsOperationResult.cancelled) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.peopleListsSessionChanged)),
+        );
+      } else if (result == PeopleListsOperationResult.failed) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.listUpdateFailed),
+            action: SnackBarAction(
+              label: l10n.peopleListsAddPeopleRetry,
+              onPressed: () => publish(remove: remove),
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      } else if (remove) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.peopleListsRemovedFromList(displayName)),
+            action: SnackBarAction(
+              label: l10n.peopleListsUndo,
+              onPressed: () => publish(remove: false),
+            ),
+          ),
+        );
+      }
+    }
+
+    await publish(remove: true);
   }
 
   @override

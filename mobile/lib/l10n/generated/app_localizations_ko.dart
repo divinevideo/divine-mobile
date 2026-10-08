@@ -3714,9 +3714,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => '사람 검색';
-
-  @override
   String get peopleListsAddPeopleError => '사람을 불러올 수 없습니다. 다시 시도해 주세요.';
 
   @override
@@ -4652,15 +4649,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '새 사람 목록';
-
-  @override
-  String get listCollaboratorsNone => '없음';
-
-  @override
-  String get listAddCollaboratorTitle => '협업자 추가';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine 검색...';
 
   @override
   String get listNameLabel => '목록 이름';
@@ -12398,4 +12386,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '새 동영상 목록';
+
+  @override
+  String get peopleListsPublicNotice =>
+      '이 목록은 공개됩니다. 누구나 이름, 설명, 목록에 있는 사람을 볼 수 있어요.';
+
+  @override
+  String get peopleListsPeopleLabel => '사람';
+
+  @override
+  String get peopleListsPeopleNone => '추가된 사람이 없어요';
+
+  @override
+  String get peopleListsSessionChanged =>
+      '계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.';
+
+  @override
+  String get peopleListsSearchConnectionsHint => '팔로워 및 팔로우 중인 사람 검색';
 }

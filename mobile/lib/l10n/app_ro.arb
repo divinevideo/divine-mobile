@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Creează o listă nouă",
     "listNewPeopleList": "Listă nouă de persoane",
-    "listCollaboratorsNone": "Niciunul",
-    "listAddCollaboratorTitle": "Adaugă un colaborator",
-    "listCollaboratorSearchHint": "Caută în Divine...",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
     "listPublicList": "Listă publică",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
-    "peopleListsAddPeopleSearchHint": "Caută persoane",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
     "peopleListsAddButton": "Adaugă",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Listă nouă de videoclipuri",
+  "peopleListsPublicNotice": "Această listă este publică. Oricine poate vedea numele, descrierea și persoanele din ea.",
+  "peopleListsPeopleLabel": "Persoane",
+  "peopleListsPeopleNone": "Nicio persoană adăugată",
+  "peopleListsSessionChanged": "Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.",
+  "peopleListsSearchConnectionsHint": "Caută printre urmăritori și persoanele urmărite"
 }

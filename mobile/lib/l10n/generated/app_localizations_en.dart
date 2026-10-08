@@ -4021,9 +4021,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Search people';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Couldn\'t load people. Please try again.';
 
@@ -5012,15 +5009,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'New people list';
-
-  @override
-  String get listCollaboratorsNone => 'None';
-
-  @override
-  String get listAddCollaboratorTitle => 'Add a collaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Search Divine...';
 
   @override
   String get listNameLabel => 'List Name';
@@ -13116,4 +13104,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'New video list';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'This list is public. Anyone can see its name, description, and people.';
+
+  @override
+  String get peopleListsPeopleLabel => 'People';
+
+  @override
+  String get peopleListsPeopleNone => 'No people added';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Your account or list access changed. Reopen this page to continue.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Search followers and following';
 }

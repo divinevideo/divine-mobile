@@ -3955,9 +3955,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
-
-  @override
   String get peopleListsAddPeopleError =>
       'لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔';
 
@@ -4936,15 +4933,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'لوگوں کی نئی فہرست';
-
-  @override
-  String get listCollaboratorsNone => 'کوئی نہیں';
-
-  @override
-  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
 
   @override
   String get listNameLabel => 'فہرست کا نام';
@@ -13017,4 +13005,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'نئی ویڈیو فہرست';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'یہ فہرست عوامی ہے۔ کوئی بھی اس کا نام، تفصیل اور اس میں شامل لوگوں کو دیکھ سکتا ہے۔';
+
+  @override
+  String get peopleListsPeopleLabel => 'لوگ';
+
+  @override
+  String get peopleListsPeopleNone => 'ابھی کوئی شخص شامل نہیں کیا گیا';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں';
 }

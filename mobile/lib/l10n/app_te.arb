@@ -2313,7 +2313,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
   "peopleListsAddButton": "జోడించండి",
@@ -2898,9 +2897,6 @@
   },
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
-  "listCollaboratorsNone": "ఏదీ లేదు",
-  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
-  "listCollaboratorSearchHint": "శోధన Divine...",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
   "listPublicList": "పబ్లిక్ జాబితా",
@@ -8441,5 +8437,11 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "అన్నీ చూడండి"
+  "peopleListsViewAllMembers": "అన్నీ చూడండి",
+  "listNewVideoList": "కొత్త వీడియో జాబితా",
+  "peopleListsPublicNotice": "ఈ జాబితా పబ్లిక్. దీని పేరు, వివరణ మరియు ఇందులోని వ్యక్తులను ఎవరైనా చూడవచ్చు.",
+  "peopleListsPeopleLabel": "వ్యక్తులు",
+  "peopleListsPeopleNone": "ఇంకా ఎవరినీ జోడించలేదు",
+  "peopleListsSessionChanged": "మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.",
+  "peopleListsSearchConnectionsHint": "అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి"
 }

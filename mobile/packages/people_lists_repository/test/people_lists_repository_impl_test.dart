@@ -1,5 +1,5 @@
 // ABOUTME: Tests for PeopleListsRepositoryImpl relay publish and sync flow.
-// ABOUTME: Covers submitted-only semantics, NIP-09 delete, and echo ordering.
+// ABOUTME: Covers acknowledged writes, NIP-09 delete, and echo ordering.
 
 import 'dart:async';
 import 'dart:io';
@@ -67,6 +67,13 @@ const _blockedOwnerPubkey =
 const int _peopleListKind = 30000;
 const int _deletionKind = 5;
 
+PublishOutcome _accepted({required Event event}) => PublishOutcome(
+  eventId: event.id,
+  acceptedBy: const ['wss://relay.example'],
+  rejectedBy: const {},
+  noResponseFrom: const [],
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
@@ -123,13 +130,15 @@ void main() {
     }
 
     group('createList', () {
-      test('returns submitted result when publishEvent returns a non-null '
+      test('returns submitted result when a relay acknowledges the '
           'event', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,
@@ -159,13 +168,20 @@ void main() {
       });
 
       test(
-        'does not write to cache when publishEvent returns PublishFailed',
+        'does not write to cache when no relay acknowledges acceptance',
         () async {
           final client = _MockNostrClient();
           when(() => client.publicKey).thenReturn(_ownerPubkey);
           when(
-            () => client.publishEvent(any()),
-          ).thenAnswer((_) async => const PublishFailed());
+            () => client.publishEventAwaitOk(any()),
+          ).thenAnswer(
+            (_) async => const PublishOutcome(
+              eventId: _ownerPubkey,
+              acceptedBy: [],
+              rejectedBy: {},
+              noResponseFrom: [],
+            ),
+          );
           final repository = buildRepository(nostrClient: client);
 
           final result = await repository.createList(
@@ -181,11 +197,11 @@ void main() {
         },
       );
 
-      test('returns failed when publishEvent throws', () async {
+      test('returns failed when acknowledged publication throws', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
         when(
-          () => client.publishEvent(any()),
+          () => client.publishEventAwaitOk(any()),
         ).thenThrow(StateError('network down'));
         final repository = buildRepository(nostrClient: client);
 
@@ -198,41 +214,46 @@ void main() {
         expect(result.error, isA<StateError>());
       });
 
-      test('never reports confirmed status', () async {
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
-          final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
-            event: signedEvent(
-              kind: event.kind,
-              tags: event.tags,
-              content: event.content,
-              createdAt: event.createdAt,
-            ),
+      test(
+        'retains submitted status without claiming durable storage',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            final event = invocation.positionalArguments.first as Event;
+            return _accepted(
+              event: signedEvent(
+                kind: event.kind,
+                tags: event.tags,
+                content: event.content,
+                createdAt: event.createdAt,
+              ),
+            );
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          final result = await repository.createList(
+            ownerPubkey: _ownerPubkey,
+            name: 'Besties',
           );
-        });
-        final repository = buildRepository(nostrClient: client);
 
-        final result = await repository.createList(
-          ownerPubkey: _ownerPubkey,
-          name: 'Besties',
-        );
-
-        expect(
-          PeopleListPublishStatus.values,
-          isNot(
-            contains(
-              isA<PeopleListPublishStatus>().having(
-                (s) => s.name,
-                'name',
-                'confirmed',
+          expect(
+            PeopleListPublishStatus.values,
+            isNot(
+              contains(
+                isA<PeopleListPublishStatus>().having(
+                  (s) => s.name,
+                  'name',
+                  'confirmed',
+                ),
               ),
             ),
-          ),
-        );
-        expect(result.status.name, equals('submitted'));
-      });
+          );
+          expect(result.status.name, equals('submitted'));
+        },
+      );
     });
 
     group('addPubkey', () {
@@ -259,9 +280,11 @@ void main() {
         ).thenAnswer(
           (_) async => (events: [remote], timedOut: false, noRelays: false),
         );
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(event: event);
+          return _accepted(event: event);
         });
         final repository = buildRepository(nostrClient: client);
 
@@ -273,7 +296,9 @@ void main() {
 
         expect(result.status, PeopleListPublishStatus.submitted);
         final published =
-            verify(() => client.publishEvent(captureAny())).captured.single
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
                 as Event;
         expect(published.tags, const [
           ['d', 'shared-list'],
@@ -310,8 +335,10 @@ void main() {
             (_) async =>
                 (events: [staleRemote], timedOut: false, noRelays: false),
           );
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
-            return PublishSuccess(
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            return _accepted(
               event: invocation.positionalArguments.first as Event,
             );
           });
@@ -335,7 +362,7 @@ void main() {
           );
 
           final published = verify(
-            () => client.publishEvent(captureAny()),
+            () => client.publishEventAwaitOk(captureAny()),
           ).captured.cast<Event>();
           expect(published.last.tags, const [
             ['d', 'shared-list'],
@@ -375,19 +402,24 @@ void main() {
           // NostrClient appends the NIP-89 client tag during publish and
           // rebinds event.tags to a new list, so the caller's pre-publish
           // payload never observes it. Model that here.
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
             final outgoing = invocation.positionalArguments.first as Event;
-            return PublishSuccess(
-              event: signedEvent(
-                kind: outgoing.kind,
-                tags: [
-                  ...outgoing.tags,
-                  const ['client', 'Divine'],
-                ],
-                content: outgoing.content,
-                createdAt: outgoing.createdAt,
-              ),
+            final signed = signedEvent(
+              kind: outgoing.kind,
+              tags: [
+                ...outgoing.tags,
+                const ['client', 'Divine'],
+              ],
+              content: outgoing.content,
+              createdAt: outgoing.createdAt,
             );
+            outgoing
+              ..tags = signed.tags
+              ..id = signed.id
+              ..sig = signed.sig;
+            return _accepted(event: outgoing);
           });
           final repository = buildRepository(nostrClient: client);
 
@@ -409,7 +441,7 @@ void main() {
           );
 
           final published = verify(
-            () => client.publishEvent(captureAny()),
+            () => client.publishEventAwaitOk(captureAny()),
           ).captured.cast<Event>();
           // The second edit is built from the source cached by the first. If
           // that source were the pre-publish payload, the tag the relay holds
@@ -427,9 +459,11 @@ void main() {
         () async {
           final client = _MockNostrClient();
           when(() => client.publicKey).thenReturn(_ownerPubkey);
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
             final event = invocation.positionalArguments.first as Event;
-            return PublishSuccess(
+            return _accepted(
               event: signedEvent(
                 kind: event.kind,
                 tags: event.tags,
@@ -456,7 +490,7 @@ void main() {
 
           expect(result.status, equals(PeopleListPublishStatus.submitted));
           final captured = verify(
-            () => client.publishEvent(captureAny()),
+            () => client.publishEventAwaitOk(captureAny()),
           ).captured.cast<Event>();
 
           // First publish was createList, second was addPubkey.
@@ -483,9 +517,11 @@ void main() {
       test('returns noop when pubkey is already in list', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,
@@ -514,7 +550,7 @@ void main() {
         );
 
         expect(result.status, equals(PeopleListPublishStatus.noop));
-        verifyNever(() => client.publishEvent(any()));
+        verifyNever(() => client.publishEventAwaitOk(any()));
       });
     });
 
@@ -524,9 +560,11 @@ void main() {
         () async {
           final client = _MockNostrClient();
           when(() => client.publicKey).thenReturn(_ownerPubkey);
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
             final event = invocation.positionalArguments.first as Event;
-            return PublishSuccess(
+            return _accepted(
               event: signedEvent(
                 kind: event.kind,
                 tags: event.tags,
@@ -555,16 +593,18 @@ void main() {
           );
 
           expect(result.status, equals(PeopleListPublishStatus.noop));
-          verifyNever(() => client.publishEvent(any()));
+          verifyNever(() => client.publishEventAwaitOk(any()));
         },
       );
 
       test('publishes replacement event without the removed pubkey', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,
@@ -594,7 +634,7 @@ void main() {
 
         expect(result.status, equals(PeopleListPublishStatus.submitted));
         final captured = verify(
-          () => client.publishEvent(captureAny()),
+          () => client.publishEventAwaitOk(captureAny()),
         ).captured.cast<Event>();
         expect(captured, hasLength(1));
         final published = captured.single;
@@ -635,9 +675,11 @@ void main() {
           ).thenAnswer(
             (_) async => (events: [remote], timedOut: false, noRelays: false),
           );
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
             final event = invocation.positionalArguments.first as Event;
-            return PublishSuccess(event: event);
+            return _accepted(event: event);
           });
           final repository = buildRepository(nostrClient: client);
 
@@ -649,7 +691,9 @@ void main() {
 
           expect(result.status, PeopleListPublishStatus.submitted);
           final published =
-              verify(() => client.publishEvent(captureAny())).captured.single
+              verify(
+                    () => client.publishEventAwaitOk(captureAny()),
+                  ).captured.single
                   as Event;
           // The removed member loses every matching tag; the foreign tags and
           // the surviving member's relay hint and petname survive verbatim.
@@ -668,9 +712,11 @@ void main() {
       _MockNostrClient publishingClient() {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,
@@ -727,7 +773,7 @@ void main() {
         );
 
         expect(result.status, equals(PeopleListPublishStatus.failed));
-        verifyNever(() => client.publishEvent(any()));
+        verifyNever(() => client.publishEventAwaitOk(any()));
       });
 
       test('addPubkey does not publish when no relay took the query', () async {
@@ -744,7 +790,7 @@ void main() {
         );
 
         expect(result.status, equals(PeopleListPublishStatus.failed));
-        verifyNever(() => client.publishEvent(any()));
+        verifyNever(() => client.publishEventAwaitOk(any()));
       });
 
       test(
@@ -763,7 +809,7 @@ void main() {
           );
 
           expect(result.status, equals(PeopleListPublishStatus.failed));
-          verifyNever(() => client.publishEvent(any()));
+          verifyNever(() => client.publishEventAwaitOk(any()));
         },
       );
 
@@ -781,7 +827,7 @@ void main() {
         );
 
         expect(result.status, equals(PeopleListPublishStatus.submitted));
-        verify(() => client.publishEvent(any())).called(1);
+        verify(() => client.publishEventAwaitOk(any())).called(1);
         verify(
           () => client.queryEventsDetailed(
             any(),
@@ -812,7 +858,7 @@ void main() {
                   ['p', memberAddedElsewhere],
                 ],
                 createdAt:
-                    DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000 + 60,
+                    DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000 + 1,
               ),
             ],
           );
@@ -825,7 +871,9 @@ void main() {
 
           expect(result.status, equals(PeopleListPublishStatus.submitted));
           final published =
-              verify(() => client.publishEvent(captureAny())).captured.last
+              verify(
+                    () => client.publishEventAwaitOk(captureAny()),
+                  ).captured.last
                   as Event;
           final members = published.tags
               .where((tag) => tag.isNotEmpty && tag.first == 'p')
@@ -880,7 +928,7 @@ void main() {
           );
 
           expect(result.status, PeopleListPublishStatus.failed);
-          verifyNever(() => client.publishEvent(any()));
+          verifyNever(() => client.publishEventAwaitOk(any()));
         },
       );
 
@@ -925,7 +973,9 @@ void main() {
 
           expect(result.status, PeopleListPublishStatus.submitted);
           final published =
-              verify(() => client.publishEvent(captureAny())).captured.single
+              verify(
+                    () => client.publishEventAwaitOk(captureAny()),
+                  ).captured.single
                   as Event;
           expect(published.tags, const [
             ['d', 'legacy-list'],
@@ -944,9 +994,11 @@ void main() {
           'locally', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,
@@ -975,7 +1027,7 @@ void main() {
 
         expect(result.status, equals(PeopleListPublishStatus.submitted));
         final captured = verify(
-          () => client.publishEvent(captureAny()),
+          () => client.publishEventAwaitOk(captureAny()),
         ).captured.cast<Event>();
         expect(captured, hasLength(1));
         final deletion = captured.single;
@@ -996,48 +1048,57 @@ void main() {
         expect(stored, isEmpty);
       });
 
-      test('does not tombstone locally when publish does not return '
-          'PublishSuccess', () async {
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
+      test(
+        'does not tombstone locally when no relay accepts the publish',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
 
-        // First call for createList succeeds, second (deleteList) fails.
-        var publishCalls = 0;
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
-          publishCalls++;
-          if (publishCalls == 1) {
-            final event = invocation.positionalArguments.first as Event;
-            return PublishSuccess(
-              event: signedEvent(
-                kind: event.kind,
-                tags: event.tags,
-                content: event.content,
-                createdAt: event.createdAt,
-              ),
+          // First call for createList succeeds, second (deleteList) fails.
+          var publishCalls = 0;
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            publishCalls++;
+            if (publishCalls == 1) {
+              final event = invocation.positionalArguments.first as Event;
+              return _accepted(
+                event: signedEvent(
+                  kind: event.kind,
+                  tags: event.tags,
+                  content: event.content,
+                  createdAt: event.createdAt,
+                ),
+              );
+            }
+            return const PublishOutcome(
+              eventId: _ownerPubkey,
+              acceptedBy: [],
+              rejectedBy: {},
+              noResponseFrom: [],
             );
-          }
-          return const PublishFailed();
-        });
-        final repository = buildRepository(nostrClient: client);
+          });
+          final repository = buildRepository(nostrClient: client);
 
-        await repository.createList(
-          ownerPubkey: _ownerPubkey,
-          name: 'Besties',
-          initialPubkeys: const [_memberA],
-        );
-        final listId = (await repository.readLists(
-          ownerPubkey: _ownerPubkey,
-        )).single.id;
+          await repository.createList(
+            ownerPubkey: _ownerPubkey,
+            name: 'Besties',
+            initialPubkeys: const [_memberA],
+          );
+          final listId = (await repository.readLists(
+            ownerPubkey: _ownerPubkey,
+          )).single.id;
 
-        final result = await repository.deleteList(
-          ownerPubkey: _ownerPubkey,
-          listId: listId,
-        );
+          final result = await repository.deleteList(
+            ownerPubkey: _ownerPubkey,
+            listId: listId,
+          );
 
-        expect(result.status, equals(PeopleListPublishStatus.failed));
-        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
-        expect(stored, hasLength(1));
-      });
+          expect(result.status, equals(PeopleListPublishStatus.failed));
+          final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+          expect(stored, hasLength(1));
+        },
+      );
     });
 
     group('syncOwner', () {
@@ -1251,9 +1312,11 @@ void main() {
           when(() => client.publicKey).thenReturn(_ownerPubkey);
 
           // Local optimistic write will be far in the future.
-          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
             final event = invocation.positionalArguments.first as Event;
-            return PublishSuccess(
+            return _accepted(
               event: signedEvent(
                 kind: event.kind,
                 tags: event.tags,
@@ -1577,28 +1640,31 @@ void main() {
         );
       }
 
-      test('issues a kind 30000 relay query with the given limit', () async {
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
-        ).thenAnswer((_) async => const []);
+      test(
+        'queries 500 candidates independently of the result limit',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          when(
+            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          ).thenAnswer((_) async => const []);
 
-        final repository = buildRepository(nostrClient: client);
+          final repository = buildRepository(nostrClient: client);
 
-        await repository.searchPublicLists('anything', limit: 25).toList();
+          await repository.searchPublicLists('anything', limit: 25).toList();
 
-        final capturedFilters = verify(
-          () => client.queryEvents(
-            captureAny(),
-            useCache: any(named: 'useCache'),
-          ),
-        ).captured.cast<List<Filter>>();
-        expect(capturedFilters, hasLength(1));
-        final filter = capturedFilters.single.single;
-        expect(filter.kinds, equals(const [_peopleListKind]));
-        expect(filter.limit, equals(25));
-      });
+          final capturedFilters = verify(
+            () => client.queryEvents(
+              captureAny(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).captured.cast<List<Filter>>();
+          expect(capturedFilters, hasLength(1));
+          final filter = capturedFilters.single.single;
+          expect(filter.kinds, equals(const [_peopleListKind]));
+          expect(filter.limit, equals(500));
+        },
+      );
 
       test('emits empty stream for a blank query', () async {
         final client = _MockNostrClient();
@@ -1920,9 +1986,11 @@ void main() {
       test('emits cached lists on subscribe and after createList', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
-        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
           final event = invocation.positionalArguments.first as Event;
-          return PublishSuccess(
+          return _accepted(
             event: signedEvent(
               kind: event.kind,
               tags: event.tags,

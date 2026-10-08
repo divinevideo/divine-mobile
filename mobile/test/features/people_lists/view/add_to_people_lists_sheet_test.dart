@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for AddToPeopleListsSheet.
 // ABOUTME: Covers list filtering, empty state, and toggle dispatching.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -79,6 +81,8 @@ void main() {
 
     setUp(() {
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
     });
 
     tearDown(() async {
@@ -103,6 +107,65 @@ void main() {
         ),
       );
     }
+
+    testWidgetsWithSurfaceSize(
+      'pending and failed toggle stay with the same list when rows reorder',
+      (tester) async {
+        final first = _buildList(id: 'first', name: 'First');
+        final second = _buildList(id: 'second', name: 'Second');
+        final snapshots = StreamController<PeopleListsState>();
+        addTearDown(snapshots.close);
+        whenListen(
+          bloc,
+          snapshots.stream,
+          initialState: _stateWith(lists: [first, second]),
+        );
+        final pending = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+        await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
+        await tester.tap(find.text('First'));
+        await tester.pump();
+        snapshots.add(_stateWith(lists: [second, first]));
+        await tester.pump();
+        await tester.pump();
+        final firstRow = find.byWidgetPredicate(
+          (widget) => widget is PeopleListRow && widget.listId == 'first',
+        );
+        final secondRow = find.byWidgetPredicate(
+          (widget) => widget is PeopleListRow && widget.listId == 'second',
+        );
+        expect(
+          find.descendant(
+            of: firstRow,
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: secondRow,
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsNothing,
+        );
+        pending.complete(PeopleListsOperationResult.failed);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: firstRow,
+            matching: find.text(l10n.listUpdateFailed),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: secondRow,
+            matching: find.text(l10n.listUpdateFailed),
+          ),
+          findsNothing,
+        );
+      },
+    );
 
     group('renders', () {
       testWidgetsWithSurfaceSize(
@@ -169,7 +232,7 @@ void main() {
           await tester.pump();
 
           verify(
-            () => bloc.add(
+            () => bloc.submit(
               const PeopleListsPubkeyToggleRequested(
                 listId: 'list-42',
                 pubkey: _targetPubkey,
@@ -263,6 +326,17 @@ void main() {
 
           // The new list sheet is shown — identified by its title key.
           expect(find.text(l10n.listNewPeopleList), findsOneWidget);
+          await tester.enterText(
+            find.byType(TextField).first,
+            'Seeded without metadata',
+          );
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+          final request =
+              verify(() => bloc.submit(captureAny())).captured.single
+                  as PeopleListsCreateRequested;
+          expect(request.initialPubkeys, [_targetPubkey]);
         },
       );
     });

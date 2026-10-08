@@ -9,7 +9,6 @@
 # Comments and string literals are not counted. Regenerate after migrating:
 #   UPDATE_BASELINE=1 bash scripts/check_unsafe_back_pop_ceiling.sh
 lib/features/people_lists/view/add_people_to_list_screen.dart	2
-lib/features/people_lists/view/create_people_list_page.dart	1
 lib/screens/apps/app_detail_screen.dart	1
 lib/screens/apps/apps_directory_screen.dart	1
 lib/screens/apps/apps_permissions_screen.dart	1

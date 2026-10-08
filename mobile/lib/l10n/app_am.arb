@@ -1695,7 +1695,6 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
     "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
     "peopleListsAddButton": "አክል",
@@ -2053,9 +2052,6 @@
     },
     "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
     "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
-    "listCollaboratorsNone": "ምንም",
-    "listAddCollaboratorTitle": "ተባባሪ ጨምር",
-    "listCollaboratorSearchHint": "Divine ፈልግ...",
     "listNameLabel": "የዝርዝር ስም",
     "listDescriptionLabel": "መግለጫ (አማራጭ)",
     "listPublicList": "የህዝብ ዝርዝር",
@@ -5036,5 +5032,11 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ"
+  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ",
+  "listNewVideoList": "አዲስ የቪዲዮ ዝርዝር",
+  "peopleListsPublicNotice": "ይህ ዝርዝር ይፋዊ ነው። ማንም ሰው ስሙን፣ መግለጫውን እና በውስጡ ያሉትን ሰዎች ማየት ይችላል።",
+  "peopleListsPeopleLabel": "ሰዎች",
+  "peopleListsPeopleNone": "ምንም ሰዎች አልተጨመሩም",
+  "peopleListsSessionChanged": "መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።",
+  "peopleListsSearchConnectionsHint": "ተከታዮችን እና የምትከተላቸውን ፈልግ"
 }

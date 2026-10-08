@@ -102,8 +102,26 @@ class PeopleListsRepositoryListsChanged extends PeopleListsEvent {
   List<Object?> get props => [ownerPubkey, lists];
 }
 
+/// Base for writes serialized together across all mutation types.
+sealed class PeopleListsMutationRequested extends PeopleListsEvent {
+  const PeopleListsMutationRequested();
+}
+
+/// Outcome belonging to one request, independently of global refresh state.
+enum PeopleListsOperationResult { succeeded, failed, cancelled }
+
+class _QueuedPeopleListsMutation extends PeopleListsEvent {
+  _QueuedPeopleListsMutation(this.request, this.session, this.owner);
+  final PeopleListsMutationRequested request;
+  final int session;
+  final String? owner;
+  final completion = Completer<PeopleListsOperationResult>();
+  @override
+  List<Object?> get props => [completion];
+}
+
 /// Requests creation of a new people list.
-class PeopleListsCreateRequested extends PeopleListsEvent {
+class PeopleListsCreateRequested extends PeopleListsMutationRequested {
   /// Creates a create-list request.
   const PeopleListsCreateRequested({
     required this.expectedOwnerPubkey,
@@ -138,8 +156,24 @@ class PeopleListsCreateRequested extends PeopleListsEvent {
   ];
 }
 
+/// Changes the public name and description of an owned list.
+class PeopleListsUpdateRequested extends PeopleListsMutationRequested {
+  const PeopleListsUpdateRequested({
+    required this.expectedOwnerPubkey,
+    required this.listId,
+    required this.name,
+    required this.description,
+  });
+  final String expectedOwnerPubkey;
+  final String listId;
+  final String name;
+  final String description;
+  @override
+  List<Object?> get props => [expectedOwnerPubkey, listId, name, description];
+}
+
 /// Requests deletion of a people list.
-class PeopleListsDeleteRequested extends PeopleListsEvent {
+class PeopleListsDeleteRequested extends PeopleListsMutationRequested {
   /// Creates a delete-list request.
   const PeopleListsDeleteRequested({required this.listId});
 
@@ -151,7 +185,7 @@ class PeopleListsDeleteRequested extends PeopleListsEvent {
 }
 
 /// Requests adding a pubkey to an existing list.
-class PeopleListsPubkeyAddRequested extends PeopleListsEvent {
+class PeopleListsPubkeyAddRequested extends PeopleListsMutationRequested {
   /// Creates an add-pubkey request.
   const PeopleListsPubkeyAddRequested({
     required this.listId,
@@ -169,7 +203,7 @@ class PeopleListsPubkeyAddRequested extends PeopleListsEvent {
 }
 
 /// Requests removal of a pubkey from an existing list.
-class PeopleListsPubkeyRemoveRequested extends PeopleListsEvent {
+class PeopleListsPubkeyRemoveRequested extends PeopleListsMutationRequested {
   /// Creates a remove-pubkey request.
   const PeopleListsPubkeyRemoveRequested({
     required this.listId,
@@ -188,7 +222,7 @@ class PeopleListsPubkeyRemoveRequested extends PeopleListsEvent {
 
 /// Toggles a pubkey's membership in a list (add if absent, remove if
 /// present).
-class PeopleListsPubkeyToggleRequested extends PeopleListsEvent {
+class PeopleListsPubkeyToggleRequested extends PeopleListsMutationRequested {
   /// Creates a toggle-pubkey request.
   const PeopleListsPubkeyToggleRequested({
     required this.listId,

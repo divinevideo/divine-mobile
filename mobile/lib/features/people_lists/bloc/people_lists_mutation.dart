@@ -14,6 +14,9 @@ enum PeopleListsMutationKind {
   /// A list creation mutation.
   createList,
 
+  /// A public name or description update.
+  updateList,
+
   /// A list deletion mutation.
   deleteList,
 }

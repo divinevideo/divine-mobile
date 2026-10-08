@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Crea nuova lista",
     "listNewPeopleList": "Nuova lista persone",
-    "listCollaboratorsNone": "Nessuno",
-    "listAddCollaboratorTitle": "Aggiungi un collaboratore",
-    "listCollaboratorSearchHint": "Cerca su Divine...",
     "listNameLabel": "Nome lista",
     "listDescriptionLabel": "Descrizione (opzionale)",
     "listPublicList": "Lista pubblica",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
-    "peopleListsAddPeopleSearchHint": "Cerca persone",
     "peopleListsAddPeopleError": "Impossibile caricare le persone. Riprova.",
     "peopleListsAddPeopleRetry": "Riprova",
     "peopleListsAddButton": "Aggiungi",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nuova lista di video",
+  "peopleListsPublicNotice": "Questa lista è pubblica. Chiunque può vederne il nome, la descrizione e le persone incluse.",
+  "peopleListsPeopleLabel": "Persone",
+  "peopleListsPeopleNone": "Nessuna persona aggiunta",
+  "peopleListsSessionChanged": "Il tuo account o l’accesso alla lista è cambiato. Riapri questa pagina per continuare.",
+  "peopleListsSearchConnectionsHint": "Cerca tra follower e persone che segui"
 }

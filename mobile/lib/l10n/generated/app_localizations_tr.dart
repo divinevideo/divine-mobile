@@ -3889,9 +3889,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Kişiler yüklenemedi. Lütfen tekrar dene.';
 
@@ -4870,15 +4867,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Yeni kişi listesi';
-
-  @override
-  String get listCollaboratorsNone => 'Yok';
-
-  @override
-  String get listAddCollaboratorTitle => 'Ortak ekle';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine\'da ara...';
 
   @override
   String get listNameLabel => 'Liste Adı';
@@ -12949,4 +12937,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Yeni video listesi';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Bu liste herkese açık. Adını, açıklamasını ve içindeki kişileri herkes görebilir.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Kişiler';
+
+  @override
+  String get peopleListsPeopleNone => 'Henüz kimse eklenmedi';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Takipçilerin ve takip ettiklerin arasında ara';
 }

@@ -1511,7 +1511,6 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "Търси хора",
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
     "peopleListsAddButton": "Добави",
@@ -1860,9 +1859,6 @@
     },
     "listCreateNewList": "Създаване на нов списък",
     "listNewPeopleList": "Нов списък с хора",
-    "listCollaboratorsNone": "Няма",
-    "listAddCollaboratorTitle": "Добави сътрудник",
-    "listCollaboratorSearchHint": "Търсене Divine...",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
     "listPublicList": "Публичен списък",
@@ -5054,5 +5050,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Нов списък с видеа",
+  "peopleListsPublicNotice": "Този списък е публичен. Всеки може да види името, описанието и хората в него.",
+  "peopleListsPeopleLabel": "Хора",
+  "peopleListsPeopleNone": "Няма добавени хора",
+  "peopleListsSessionChanged": "Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.",
+  "peopleListsSearchConnectionsHint": "Търси сред последователи и следвани"
 }

@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for CreatePeopleListPage full-screen form.
 // ABOUTME: Covers name-entry, disabled-create guard, and create dispatching.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,10 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -35,9 +40,14 @@ void main() {
 
   group(CreatePeopleListPage, () {
     late _MockPeopleListsBloc bloc;
+    late MockGoRouter router;
 
     setUp(() {
+      router = MockGoRouter();
+      when(() => router.canPop()).thenReturn(true);
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
       when(() => bloc.state).thenReturn(
         const PeopleListsState(
           status: PeopleListsStatus.ready,
@@ -50,20 +60,168 @@ void main() {
       await bloc.close();
     });
 
-    Widget buildSubject({String? initialPubkey, MockAuthService? auth}) {
+    Widget buildSubject({
+      String? initialPubkey,
+      MockAuthService? auth,
+      UserList? editingList,
+    }) {
       return testProviderScope(
         mockAuthService:
             auth ?? createMockAuthService(currentPublicKeyHex: _ownerPubkey),
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: CreatePeopleListPage(initialPubkey: initialPubkey),
+          home: MockGoRouterProvider(
+            goRouter: router,
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: CreatePeopleListPage(
+                initialPubkey: initialPubkey,
+                editingList: editingList,
+              ),
+            ),
           ),
         ),
       );
     }
+
+    testWidgets(
+      'creation waits for confirmation, preserves failed fields, and retries',
+      (tester) async {
+        final pending = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+        await tester.pumpWidget(buildSubject(initialPubkey: targetPubkey));
+        await tester.enterText(find.byType(TextFormField).first, 'My people');
+        await tester.enterText(
+          find.byType(TextFormField).last,
+          'Our description',
+        );
+        await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          tester
+              .widget<DivineButton>(find.widgetWithText(DivineButton, 'Create'))
+              .onPressed,
+          isNull,
+        );
+        pending.complete(PeopleListsOperationResult.failed);
+        await tester.pumpAndSettle();
+        expect(find.text('My people'), findsOneWidget);
+        expect(find.text('Our description'), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).listCreateFailed,
+          ),
+          findsOneWidget,
+        );
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+        await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+        await tester.pumpAndSettle();
+        final requests = verify(() => bloc.submit(captureAny())).captured
+            .cast<PeopleListsCreateRequested>();
+        expect(requests, hasLength(2));
+        expect(requests.last.initialPubkeys, [targetPubkey]);
+        expect(requests.last.description, 'Our description');
+      },
+    );
+
+    testWidgets(
+      'edits public metadata without creating a second list and retains rejected edits',
+      (tester) async {
+        final list = UserList(
+          id: 'crew',
+          name: 'Original',
+          description: 'Original description',
+          pubkeys: const [targetPubkey],
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.failed);
+        await tester.pumpWidget(buildSubject(editingList: list));
+        expect(find.text('Original description'), findsOneWidget);
+        await tester.enterText(find.byType(TextFormField).first, 'Renamed');
+        await tester.enterText(find.byType(TextFormField).last, '');
+        await tester.tap(find.widgetWithText(DivineButton, 'Save'));
+        await tester.pumpAndSettle();
+        expect(find.text('Renamed'), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).listUpdateFailed,
+          ),
+          findsOneWidget,
+        );
+        final request =
+            verify(() => bloc.submit(captureAny())).captured.single
+                as PeopleListsUpdateRequested;
+        expect(request.listId, 'crew');
+        expect(request.name, 'Renamed');
+        expect(request.description, isEmpty);
+      },
+    );
+
+    testWidgets('fits a short viewport with the keyboard open and large text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(320, 480)
+        ..devicePixelRatio = 1
+        ..viewInsets = const FakeViewPadding(bottom: 220);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view
+          ..resetPhysicalSize()
+          ..resetDevicePixelRatio()
+          ..resetViewInsets();
+        tester.platformDispatcher.clearAllTestValues();
+      });
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(DivineButton, 'Create'), findsOneWidget);
+    });
+
+    group('after a confirmed save', () {
+      Future<void> save(WidgetTester tester) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.enterText(find.byType(TextFormField).first, 'Film Club');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('returns to the previous route', (tester) async {
+        await save(tester);
+
+        verify(() => router.pop()).called(1);
+        verifyNever(() => router.go(any()));
+      });
+
+      testWidgets('leaves for the fallback when nothing is below', (
+        tester,
+      ) async {
+        when(() => router.canPop()).thenReturn(false);
+
+        await save(tester);
+
+        verify(() => router.go(defaultSafePopFallback)).called(1);
+        verifyNever(() => router.pop());
+      });
+
+      testWidgets('stays put after a failed save', (tester) async {
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.failed);
+
+        await save(tester);
+
+        verifyNever(() => router.pop());
+        verifyNever(() => router.go(any()));
+      });
+    });
 
     test('exposes route name and path constants', () {
       expect(
@@ -76,8 +234,23 @@ void main() {
     testWidgets('renders name field and create button', (tester) async {
       await tester.pumpWidget(buildSubject());
 
-      expect(find.byType(TextFormField), findsOneWidget);
+      expect(find.byType(TextFormField), findsNWidgets(2));
       expect(find.widgetWithText(DivineButton, 'Create'), findsOneWidget);
+    });
+
+    testWidgets('chains the name field into the description field', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+
+      final fields = tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .toList();
+
+      expect(fields.map((field) => field.textInputAction), [
+        TextInputAction.next,
+        TextInputAction.done,
+      ]);
     });
 
     testWidgets(
@@ -97,7 +270,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(buildSubject());
 
-        await tester.enterText(find.byType(TextFormField), '    ');
+        await tester.enterText(find.byType(TextFormField).first, '    ');
         await tester.pump();
 
         final button = tester.widget<DivineButton>(
@@ -112,7 +285,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(buildSubject());
 
-        await tester.enterText(find.byType(TextFormField), 'Film Club');
+        await tester.enterText(find.byType(TextFormField).first, 'Film Club');
         await tester.pump();
 
         final button = tester.widget<DivineButton>(
@@ -129,7 +302,7 @@ void main() {
         await tester.pumpWidget(buildSubject());
 
         await tester.enterText(
-          find.byType(TextFormField),
+          find.byType(TextFormField).first,
           '  Close Friends  ',
         );
         await tester.pump();
@@ -138,7 +311,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsCreateRequested(
               expectedOwnerPubkey: _ownerPubkey,
               name: 'Close Friends',
@@ -156,7 +329,7 @@ void main() {
         await tester.pumpWidget(buildSubject(initialPubkey: targetPubkey));
 
         await tester.enterText(
-          find.byType(TextFormField),
+          find.byType(TextFormField).first,
           'Close Friends',
         );
         await tester.pump();
@@ -165,7 +338,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsCreateRequested(
               expectedOwnerPubkey: _ownerPubkey,
               name: 'Close Friends',
@@ -183,7 +356,7 @@ void main() {
         await tester.pumpWidget(buildSubject());
 
         await tester.enterText(
-          find.byType(TextFormField),
+          find.byType(TextFormField).first,
           'Solo',
         );
         await tester.pump();
@@ -192,7 +365,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsCreateRequested(
               expectedOwnerPubkey: _ownerPubkey,
               name: 'Solo',
@@ -213,7 +386,7 @@ void main() {
         await tester.pumpWidget(buildSubject(initialPubkey: ''));
 
         await tester.enterText(
-          find.byType(TextFormField),
+          find.byType(TextFormField).first,
           'Solo',
         );
         await tester.pump();
@@ -222,7 +395,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsCreateRequested(
               expectedOwnerPubkey: _ownerPubkey,
               name: 'Solo',
@@ -242,13 +415,16 @@ void main() {
       final auth = createMockAuthService(currentPublicKeyHex: owner);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
       await tester.pumpWidget(buildSubject(auth: auth));
-      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Account A fields',
+      );
       await tester.pump();
       owner = targetPubkey;
       await tester.tap(find.widgetWithText(DivineButton, 'Create'));
       await tester.pump();
       expect(bloc.state.activeOwnerPubkey, _ownerPubkey);
-      verifyNever(() => bloc.add(any()));
+      verifyNever(() => bloc.submit(any()));
     });
 
     testWidgets('opening auth different from bloc owner does not submit', (
@@ -259,18 +435,24 @@ void main() {
           auth: createMockAuthService(currentPublicKeyHex: targetPubkey),
         ),
       );
-      await tester.enterText(find.byType(TextFormField), 'Account B fields');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Account B fields',
+      );
       await tester.pump();
       await tester.tap(find.widgetWithText(DivineButton, 'Create'));
       await tester.pump();
-      verifyNever(() => bloc.add(any()));
+      verifyNever(() => bloc.submit(any()));
     });
 
     testWidgets('does not submit after the opening account changes', (
       tester,
     ) async {
       await tester.pumpWidget(buildSubject());
-      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Account A fields',
+      );
       await tester.pump();
       when(() => bloc.state).thenReturn(
         const PeopleListsState(
@@ -280,21 +462,24 @@ void main() {
       );
       await tester.tap(find.widgetWithText(DivineButton, 'Create'));
       await tester.pump();
-      verifyNever(() => bloc.add(any()));
+      verifyNever(() => bloc.submit(any()));
     });
 
     testWidgets('does not submit after the feature is disabled', (
       tester,
     ) async {
       await tester.pumpWidget(buildSubject());
-      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Account A fields',
+      );
       await tester.pump();
       when(() => bloc.state).thenReturn(
         const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
       );
       await tester.tap(find.widgetWithText(DivineButton, 'Create'));
       await tester.pump();
-      verifyNever(() => bloc.add(any()));
+      verifyNever(() => bloc.submit(any()));
     });
 
     test(
@@ -317,6 +502,8 @@ void main() {
       'route opens the create page using handwritten $GoRoute',
       (tester) async {
         final bloc = _MockPeopleListsBloc();
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
         addTearDown(() async => bloc.close());
         when(() => bloc.state).thenReturn(
           const PeopleListsState(

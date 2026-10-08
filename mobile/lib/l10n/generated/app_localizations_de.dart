@@ -4002,9 +4002,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Personen suchen';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Personen konnten nicht geladen werden. Bitte versuche es erneut.';
 
@@ -4993,15 +4990,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Neue Personenliste';
-
-  @override
-  String get listCollaboratorsNone => 'Keine';
-
-  @override
-  String get listAddCollaboratorTitle => 'Mitarbeiter hinzufügen';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine durchsuchen...';
 
   @override
   String get listNameLabel => 'Listenname';
@@ -13186,4 +13174,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Neue Videoliste';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Diese Liste ist öffentlich. Alle können ihren Namen, ihre Beschreibung und die Personen darin sehen.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personen';
+
+  @override
+  String get peopleListsPeopleNone => 'Keine Personen hinzugefügt';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Dein Konto oder dein Zugriff auf die Liste hat sich geändert. Öffne diese Seite erneut, um fortzufahren.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Follower und gefolgte Personen durchsuchen';
 }

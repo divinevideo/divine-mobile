@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Nieuwe lijst maken",
     "listNewPeopleList": "Nieuwe personenlijst",
-    "listCollaboratorsNone": "Geen",
-    "listAddCollaboratorTitle": "Medewerker toevoegen",
-    "listCollaboratorSearchHint": "Zoek in Divine...",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
     "listPublicList": "Openbare lijst",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",
-    "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
     "peopleListsAddButton": "Toevoegen",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nieuwe videolijst",
+  "peopleListsPublicNotice": "Deze lijst is openbaar. Iedereen kan de naam, beschrijving en personen in de lijst zien.",
+  "peopleListsPeopleLabel": "Personen",
+  "peopleListsPeopleNone": "Geen personen toegevoegd",
+  "peopleListsSessionChanged": "Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.",
+  "peopleListsSearchConnectionsHint": "Zoek in volgers en mensen die je volgt"
 }

@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Skapa ny lista",
     "listNewPeopleList": "Ny personlista",
-    "listCollaboratorsNone": "Inga",
-    "listAddCollaboratorTitle": "Lägg till medarbetare",
-    "listCollaboratorSearchHint": "Sök i Divine...",
     "listNameLabel": "Listnamn",
     "listDescriptionLabel": "Beskrivning (valfritt)",
     "listPublicList": "Publik lista",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
-    "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
     "peopleListsAddButton": "Lägg till",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Ny videolista",
+  "peopleListsPublicNotice": "Den här listan är offentlig. Alla kan se dess namn, beskrivning och personerna i den.",
+  "peopleListsPeopleLabel": "Personer",
+  "peopleListsPeopleNone": "Inga personer tillagda",
+  "peopleListsSessionChanged": "Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.",
+  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer"
 }

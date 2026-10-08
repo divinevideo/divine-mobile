@@ -5,13 +5,13 @@ import 'package:equatable/equatable.dart';
 
 /// Outcome of a repository publish or delete operation.
 ///
-/// The repository treats a non-null return from
-/// `NostrClient.publishEvent` as relay submission. It does **not** wait for a
-/// relay `OK` acknowledgement, so a status of
-/// [PeopleListPublishStatus.submitted] does not imply the relay has persisted
-/// the event.
+/// `submitted` retains the public API name, but the people-list repository
+/// now waits for at least one relay's `OK true`. Acceptance is not a guarantee
+/// of durable storage: a relay may acknowledge before committing its queue.
 enum PeopleListPublishStatus {
-  /// The event was signed and submitted to at least one relay socket.
+  /// The event was submitted according to the owning repository's contract.
+  /// People-list edits require relay acceptance; notify subscriptions retain
+  /// socket-submission semantics.
   submitted,
 
   /// The publish failed or the relay layer returned no event.
@@ -61,7 +61,7 @@ class PeopleListPublishResult extends Equatable {
   /// [PeopleListPublishStatus.failed].
   final Object? error;
 
-  /// Whether the publish reached at least one relay socket.
+  /// Whether submission succeeded according to the repository contract.
   bool get submitted => status == PeopleListPublishStatus.submitted;
 
   @override

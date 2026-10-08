@@ -900,23 +900,23 @@ void main() {
       await tester.tap(find.text(l10n.commonCancel));
       await tester.pumpAndSettle();
 
-      verifyNever(() => bloc.add(any()));
+      verifyNever(() => bloc.submit(any()));
       expect(find.text('Cancel Delete List'), findsOneWidget);
     });
 
     testWidgets(
-      'delete confirmation confirm dispatches delete request and pops after success',
+      'delete confirmation confirm submits the delete and pops after success',
       (tester) async {
         final bloc = _MockPeopleListsBloc();
         final list = _buildList(
           id: 'confirm-delete-list',
           name: 'Confirm Delete List',
         );
-        final controller = StreamController<PeopleListsState>.broadcast();
-        addTearDown(controller.close);
+        final result = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => result.future);
         whenListen(
           bloc,
-          controller.stream,
+          const Stream<PeopleListsState>.empty(),
           initialState: PeopleListsState(
             status: PeopleListsStatus.ready,
             ownerPubkey: _ownerPubkey,
@@ -928,32 +928,13 @@ void main() {
         await _confirmDelete(tester, l10n);
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsDeleteRequested(listId: 'confirm-delete-list'),
           ),
         ).called(1);
         expect(find.text('Confirm Delete List'), findsOneWidget);
 
-        controller
-          ..add(
-            const PeopleListsState(
-              status: PeopleListsStatus.submitting,
-              ownerPubkey: _ownerPubkey,
-              pendingMutations: {
-                'delete-1': PeopleListsMutation(
-                  id: 'delete-1',
-                  kind: PeopleListsMutationKind.deleteList,
-                  listId: 'confirm-delete-list',
-                ),
-              },
-            ),
-          )
-          ..add(
-            const PeopleListsState(
-              status: PeopleListsStatus.ready,
-              ownerPubkey: _ownerPubkey,
-            ),
-          );
+        result.complete(PeopleListsOperationResult.succeeded);
         await tester.pumpAndSettle();
 
         expect(find.text('Confirm Delete List'), findsNothing);
@@ -961,14 +942,63 @@ void main() {
       },
     );
 
+    testWidgets('pending deletion does not report the list as missing', (
+      tester,
+    ) async {
+      final bloc = _MockPeopleListsBloc();
+      final list = _buildList();
+      final states = StreamController<PeopleListsState>();
+      addTearDown(states.close);
+      final result = Completer<PeopleListsOperationResult>();
+      when(() => bloc.submit(any())).thenAnswer((_) => result.future);
+      whenListen(
+        bloc,
+        states.stream,
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
+      await _confirmDelete(tester, l10n);
+      states.add(
+        const PeopleListsState(
+          status: PeopleListsStatus.submitting,
+          ownerPubkey: _ownerPubkey,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+
+      states.add(
+        PeopleListsState(
+          status: PeopleListsStatus.failure,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      result.complete(PeopleListsOperationResult.failed);
+      await tester.pumpAndSettle();
+      expect(find.text(list.name), findsOneWidget);
+      expect(find.text(l10n.peopleListsDeleteFailed), findsOneWidget);
+      expect(find.text('Open list'), findsNothing);
+    });
+
     // #6504: a teardown clears `pendingMutations` wholesale, which reads
     // exactly like the delete settling. The relay still has the list, so
-    // announcing a delete and popping the route would be a lie.
+    // announcing a delete and popping the route would be a lie. The bloc
+    // reports the dropped request as `cancelled`.
     testWidgets('a delete dropped by a flag-off neither announces nor pops', (
       tester,
     ) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(id: 'flag-off-list', name: 'Flag Off List');
+      final result = Completer<PeopleListsOperationResult>();
+      when(() => bloc.submit(any())).thenAnswer((_) => result.future);
       final controller = StreamController<PeopleListsState>.broadcast();
       addTearDown(controller.close);
       whenListen(
@@ -985,24 +1015,11 @@ void main() {
       await _confirmDelete(tester, l10n);
       final announcements = _captureAnnouncements(tester);
 
-      controller
-        ..add(
-          const PeopleListsState(
-            status: PeopleListsStatus.submitting,
-            ownerPubkey: _ownerPubkey,
-            pendingMutations: {
-              'delete-1': PeopleListsMutation(
-                id: 'delete-1',
-                kind: PeopleListsMutationKind.deleteList,
-                listId: 'flag-off-list',
-              ),
-            },
-          ),
-        )
-        // What `_onEnabledChanged` emits when the curated-lists flag goes off.
-        ..add(
-          const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
-        );
+      // What `_onEnabledChanged` emits when the curated-lists flag goes off.
+      controller.add(
+        const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
+      );
+      result.complete(PeopleListsOperationResult.cancelled);
       await tester.pumpAndSettle();
 
       expect(announcements, isEmpty);
@@ -1016,6 +1033,8 @@ void main() {
       (tester) async {
         final bloc = _MockPeopleListsBloc();
         final list = _buildList(id: 'switch-list', name: 'Switch List');
+        final result = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => result.future);
         final controller = StreamController<PeopleListsState>.broadcast();
         addTearDown(controller.close);
         whenListen(
@@ -1032,27 +1051,14 @@ void main() {
         await _confirmDelete(tester, l10n);
         final announcements = _captureAnnouncements(tester);
 
-        controller
-          ..add(
-            const PeopleListsState(
-              status: PeopleListsStatus.submitting,
-              ownerPubkey: _ownerPubkey,
-              pendingMutations: {
-                'delete-1': PeopleListsMutation(
-                  id: 'delete-1',
-                  kind: PeopleListsMutationKind.deleteList,
-                  listId: 'switch-list',
-                ),
-              },
-            ),
-          )
-          // What `_onOwnerChanged` emits when another account signs in.
-          ..add(
-            const PeopleListsState(
-              status: PeopleListsStatus.loading,
-              ownerPubkey: _otherOwnerPubkey,
-            ),
-          );
+        // What `_onOwnerChanged` emits when another account signs in.
+        controller.add(
+          const PeopleListsState(
+            status: PeopleListsStatus.loading,
+            ownerPubkey: _otherOwnerPubkey,
+          ),
+        );
+        result.complete(PeopleListsOperationResult.cancelled);
         // Two frames: one for the states to land, one for the confirmation
         // sheet to be gone. The spinner never settles, so no pumpAndSettle.
         await tester.pump();
@@ -1078,6 +1084,50 @@ void main() {
       },
     );
 
+    // A repository swap for the same owner keeps the owner and the lists, so
+    // nothing in state tells the screen the delete was abandoned: only the
+    // operation result does.
+    testWidgets(
+      'a delete dropped by a repository swap neither announces nor pops',
+      (tester) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList(id: 'swap-list', name: 'Swap List');
+        final result = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => result.future);
+        final controller = StreamController<PeopleListsState>.broadcast();
+        addTearDown(controller.close);
+        whenListen(
+          bloc,
+          controller.stream,
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+
+        await _pumpPushedListRoute(tester, bloc: bloc, list: list);
+        await _confirmDelete(tester, l10n);
+        final announcements = _captureAnnouncements(tester);
+
+        // What `_onOwnerChanged` emits for `PeopleListsOwnerChanged.rewire()`.
+        controller.add(
+          PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+        result.complete(PeopleListsOperationResult.cancelled);
+        await tester.pumpAndSettle();
+
+        expect(announcements, isEmpty);
+        expect(find.text(l10n.peopleListsDeleteFailed), findsNothing);
+        expect(find.text('Open list'), findsNothing);
+        expect(find.text('Swap List'), findsOneWidget);
+      },
+    );
+
     testWidgets('delete failure keeps route open and shows failure feedback', (
       tester,
     ) async {
@@ -1086,11 +1136,12 @@ void main() {
         id: 'failed-delete-list',
         name: 'Failed Delete List',
       );
-      final controller = StreamController<PeopleListsState>.broadcast();
-      addTearDown(controller.close);
+      when(
+        () => bloc.submit(any()),
+      ).thenAnswer((_) async => PeopleListsOperationResult.failed);
       whenListen(
         bloc,
-        controller.stream,
+        const Stream<PeopleListsState>.empty(),
         initialState: PeopleListsState(
           status: PeopleListsStatus.ready,
           ownerPubkey: _ownerPubkey,
@@ -1108,34 +1159,10 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => bloc.add(
+        () => bloc.submit(
           const PeopleListsDeleteRequested(listId: 'failed-delete-list'),
         ),
       ).called(1);
-
-      controller
-        ..add(
-          const PeopleListsState(
-            status: PeopleListsStatus.submitting,
-            ownerPubkey: _ownerPubkey,
-            pendingMutations: {
-              'delete-1': PeopleListsMutation(
-                id: 'delete-1',
-                kind: PeopleListsMutationKind.deleteList,
-                listId: 'failed-delete-list',
-              ),
-            },
-          ),
-        )
-        ..add(
-          PeopleListsState(
-            status: PeopleListsStatus.failure,
-            ownerPubkey: _ownerPubkey,
-            lists: [list],
-          ),
-        );
-      await tester.pumpAndSettle();
-
       expect(find.text('Failed Delete List'), findsOneWidget);
       expect(find.text(l10n.peopleListsDeleteFailed), findsOneWidget);
     });
@@ -1186,10 +1213,29 @@ void main() {
         final bloc = _MockPeopleListsBloc();
         const memberPubkey =
             '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+        when(
+          () => bloc.submit(
+            const PeopleListsPubkeyRemoveRequested(
+              listId: 'list-1',
+              pubkey: memberPubkey,
+            ),
+          ),
+        ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+        when(
+          () => bloc.submit(
+            const PeopleListsPubkeyAddRequested(
+              listId: 'list-1',
+              pubkey: memberPubkey,
+            ),
+          ),
+        ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
         whenListen(
           bloc,
           const Stream<PeopleListsState>.empty(),
-          initialState: const PeopleListsState(status: PeopleListsStatus.ready),
+          initialState: const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+          ),
         );
 
         await tester.pumpWidget(
@@ -1218,7 +1264,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyRemoveRequested(
               listId: 'list-1',
               pubkey: memberPubkey,
@@ -1234,10 +1280,29 @@ void main() {
       final bloc = _MockPeopleListsBloc();
       const memberPubkey =
           '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+      when(
+        () => bloc.submit(
+          const PeopleListsPubkeyRemoveRequested(
+            listId: 'list-1',
+            pubkey: memberPubkey,
+          ),
+        ),
+      ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+      when(
+        () => bloc.submit(
+          const PeopleListsPubkeyAddRequested(
+            listId: 'list-1',
+            pubkey: memberPubkey,
+          ),
+        ),
+      ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
       whenListen(
         bloc,
         const Stream<PeopleListsState>.empty(),
-        initialState: const PeopleListsState(status: PeopleListsStatus.ready),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+        ),
       );
 
       await tester.pumpWidget(
@@ -1269,7 +1334,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => bloc.add(
+        () => bloc.submit(
           const PeopleListsPubkeyAddRequested(
             listId: 'list-1',
             pubkey: memberPubkey,
@@ -1468,5 +1533,6 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(const PeopleListsStarted());
+    registerFallbackValue(const PeopleListsDeleteRequested(listId: 'fallback'));
   });
 }

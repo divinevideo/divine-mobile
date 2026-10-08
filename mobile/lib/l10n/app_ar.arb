@@ -1645,9 +1645,6 @@
     },
     "listCreateNewList": "إنشاء قائمة جديدة",
     "listNewPeopleList": "قائمة أشخاص جديدة",
-    "listCollaboratorsNone": "لا أحد",
-    "listAddCollaboratorTitle": "إضافة متعاون",
-    "listCollaboratorSearchHint": "ابحث في Divine...",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
     "listPublicList": "قائمة عامة",
@@ -3020,7 +3017,6 @@
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
-    "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
     "peopleListsAddButton": "إضافة",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "قائمة فيديوهات جديدة",
+  "peopleListsPublicNotice": "هذه القائمة عامة. يمكن لأي شخص رؤية اسمها ووصفها والأشخاص فيها.",
+  "peopleListsPeopleLabel": "الأشخاص",
+  "peopleListsPeopleNone": "لم تتم إضافة أي أشخاص",
+  "peopleListsSessionChanged": "تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.",
+  "peopleListsSearchConnectionsHint": "ابحث في المتابعين ومن تتابعهم"
 }

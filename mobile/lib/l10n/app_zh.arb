@@ -1959,7 +1959,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "搜索用户",
   "peopleListsAddPeopleError": "加载用户失败，请重试。",
   "peopleListsAddPeopleRetry": "再试一次",
   "peopleListsAddButton": "添加",
@@ -2437,9 +2436,6 @@
   },
   "listCreateNewList": "创建新列表",
   "listNewPeopleList": "新人物列表",
-  "listCollaboratorsNone": "无",
-  "listAddCollaboratorTitle": "添加协作者",
-  "listCollaboratorSearchHint": "搜索 Divine...",
   "listNameLabel": "列表名称",
   "listDescriptionLabel": "描述（可选）",
   "listPublicList": "公开列表",
@@ -6697,5 +6693,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "新建视频列表",
+  "peopleListsPublicNotice": "此列表是公开的。任何人都可以看到它的名称、描述和其中的用户。",
+  "peopleListsPeopleLabel": "用户",
+  "peopleListsPeopleNone": "尚未添加用户",
+  "peopleListsSessionChanged": "你的账号或列表访问权限已更改。请重新打开此页面以继续。",
+  "peopleListsSearchConnectionsHint": "搜索关注者和已关注的用户"
 }

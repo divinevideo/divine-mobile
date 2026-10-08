@@ -3692,9 +3692,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => '搜索用户';
-
-  @override
   String get peopleListsAddPeopleError => '加载用户失败，请重试。';
 
   @override
@@ -4614,15 +4611,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '新人物列表';
-
-  @override
-  String get listCollaboratorsNone => '无';
-
-  @override
-  String get listAddCollaboratorTitle => '添加协作者';
-
-  @override
-  String get listCollaboratorSearchHint => '搜索 Divine...';
 
   @override
   String get listNameLabel => '列表名称';
@@ -12239,4 +12227,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '新建视频列表';
+
+  @override
+  String get peopleListsPublicNotice => '此列表是公开的。任何人都可以看到它的名称、描述和其中的用户。';
+
+  @override
+  String get peopleListsPeopleLabel => '用户';
+
+  @override
+  String get peopleListsPeopleNone => '尚未添加用户';
+
+  @override
+  String get peopleListsSessionChanged => '你的账号或列表访问权限已更改。请重新打开此页面以继续。';
+
+  @override
+  String get peopleListsSearchConnectionsHint => '搜索关注者和已关注的用户';
 }

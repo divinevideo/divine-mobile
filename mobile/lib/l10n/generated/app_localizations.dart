@@ -6763,12 +6763,6 @@ abstract class AppLocalizations {
   /// **'Add to {name}'**
   String peopleListsAddToListName(String name);
 
-  /// No description provided for @peopleListsAddPeopleSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search people'**
-  String get peopleListsAddPeopleSearchHint;
-
   /// No description provided for @peopleListsAddPeopleError.
   ///
   /// In en, this message translates to:
@@ -8400,24 +8394,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New people list'**
   String get listNewPeopleList;
-
-  /// No description provided for @listCollaboratorsNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get listCollaboratorsNone;
-
-  /// No description provided for @listAddCollaboratorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a collaborator'**
-  String get listAddCollaboratorTitle;
-
-  /// No description provided for @listCollaboratorSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Divine...'**
-  String get listCollaboratorSearchHint;
 
   /// No description provided for @listNameLabel.
   ///
@@ -21854,6 +21830,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' ∙ '**
   String get listStatsSeparator;
+
+  /// No description provided for @listNewVideoList.
+  ///
+  /// In en, this message translates to:
+  /// **'New video list'**
+  String get listNewVideoList;
+
+  /// No description provided for @peopleListsPublicNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is public. Anyone can see its name, description, and people.'**
+  String get peopleListsPublicNotice;
+
+  /// No description provided for @peopleListsPeopleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get peopleListsPeopleLabel;
+
+  /// No description provided for @peopleListsPeopleNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No people added'**
+  String get peopleListsPeopleNone;
+
+  /// No description provided for @peopleListsSessionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account or list access changed. Reopen this page to continue.'**
+  String get peopleListsSessionChanged;
+
+  /// No description provided for @peopleListsSearchConnectionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search followers and following'**
+  String get peopleListsSearchConnectionsHint;
 }
 
 class _AppLocalizationsDelegate

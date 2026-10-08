@@ -4096,9 +4096,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
-
-  @override
   String get peopleListsAddPeopleError =>
       'వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
@@ -5101,15 +5098,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'కొత్త వ్యక్తుల జాబితా';
-
-  @override
-  String get listCollaboratorsNone => 'ఏదీ లేదు';
-
-  @override
-  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
-
-  @override
-  String get listCollaboratorSearchHint => 'శోధన Divine...';
 
   @override
   String get listNameLabel => 'జాబితా పేరు';
@@ -13366,4 +13354,25 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'కొత్త వీడియో జాబితా';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'ఈ జాబితా పబ్లిక్. దీని పేరు, వివరణ మరియు ఇందులోని వ్యక్తులను ఎవరైనా చూడవచ్చు.';
+
+  @override
+  String get peopleListsPeopleLabel => 'వ్యక్తులు';
+
+  @override
+  String get peopleListsPeopleNone => 'ఇంకా ఎవరినీ జోడించలేదు';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి';
 }

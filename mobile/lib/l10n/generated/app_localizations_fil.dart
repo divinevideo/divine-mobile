@@ -3975,9 +3975,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Hindi na-load ang mga tao. Subukan ulit.';
 
@@ -4961,15 +4958,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Bagong people list';
-
-  @override
-  String get listCollaboratorsNone => 'Wala';
-
-  @override
-  String get listAddCollaboratorTitle => 'Magdagdag ng collaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Maghanap sa Divine...';
 
   @override
   String get listNameLabel => 'Pangalan ng Listahan';
@@ -13138,4 +13126,25 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Bagong listahan ng video';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Pampubliko ang listahang ito. Makikita ng kahit sino ang pangalan, paglalarawan, at mga tao rito.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Mga tao';
+
+  @override
+  String get peopleListsPeopleNone => 'Wala pang idinagdag na tao';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Nagbago ang account mo o ang access sa listahan. Buksan ulit ang pahinang ito para magpatuloy.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Maghanap sa mga tagasubaybay at sinusubaybayan';
 }

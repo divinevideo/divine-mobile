@@ -102,26 +102,101 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     on<PeopleListsOwnerSyncRequested>(_onOwnerSyncRequested);
     on<PeopleListsOwnerSyncCompleted>(_onOwnerSyncCompleted);
     on<PeopleListsRepositoryListsChanged>(_onRepositoryListsChanged);
-    on<PeopleListsCreateRequested>(
-      _onCreateRequested,
-      transformer: droppable(),
-    );
-    on<PeopleListsDeleteRequested>(
-      _onDeleteRequested,
+    on<_QueuedPeopleListsMutation>(
+      _onQueuedMutation,
       transformer: sequential(),
     );
-    on<PeopleListsPubkeyAddRequested>(
-      _onPubkeyAddRequested,
-      transformer: sequential(),
+  }
+
+  // Queue bookkeeping is independent of UI state. The epoch invalidates even
+  // queued writes on A -> B -> A, feature disable, or repository replacement.
+  int _mutationSession = 0;
+  bool _closing = false;
+  final _operations = <_QueuedPeopleListsMutation>{};
+  _QueuedPeopleListsMutation? _activeOperation;
+
+  /// Publishes one operation and resolves only its own confirmed outcome.
+  Future<PeopleListsOperationResult> submit(
+    PeopleListsMutationRequested event,
+  ) {
+    if (_closing || isClosed) {
+      return Future.value(PeopleListsOperationResult.cancelled);
+    }
+    final operation = _QueuedPeopleListsMutation(
+      event,
+      _mutationSession,
+      state.activeOwnerPubkey,
     );
-    on<PeopleListsPubkeyRemoveRequested>(
-      _onPubkeyRemoveRequested,
-      transformer: sequential(),
-    );
-    on<PeopleListsPubkeyToggleRequested>(
-      _onPubkeyToggleRequested,
-      transformer: sequential(),
-    );
+    _operations.add(operation);
+    super.add(operation);
+    return operation.completion.future;
+  }
+
+  @override
+  void add(PeopleListsEvent event) {
+    if (event is PeopleListsMutationRequested) {
+      unawaited(submit(event));
+    } else {
+      super.add(event);
+    }
+  }
+
+  void _cancelOperations() {
+    _mutationSession++;
+    for (final operation in _operations) {
+      if (!operation.completion.isCompleted) {
+        operation.completion.complete(PeopleListsOperationResult.cancelled);
+      }
+    }
+    _operations.clear();
+  }
+
+  Future<void> _onQueuedMutation(
+    _QueuedPeopleListsMutation operation,
+    Emitter<PeopleListsState> emit,
+  ) async {
+    if (operation.session != _mutationSession ||
+        operation.owner == null ||
+        operation.owner != state.activeOwnerPubkey) {
+      if (!operation.completion.isCompleted) {
+        operation.completion.complete(PeopleListsOperationResult.cancelled);
+      }
+      _operations.remove(operation);
+      return;
+    }
+    _activeOperation = operation;
+    try {
+      switch (operation.request) {
+        case final PeopleListsCreateRequested request:
+          if (request.expectedOwnerPubkey != operation.owner) {
+            operation.completion.complete(PeopleListsOperationResult.cancelled);
+            return;
+          }
+          await _onCreateRequested(request, emit);
+        case final PeopleListsUpdateRequested request:
+          if (request.expectedOwnerPubkey != operation.owner) {
+            operation.completion.complete(PeopleListsOperationResult.cancelled);
+            return;
+          }
+          await _onUpdateRequested(request, emit);
+        case final PeopleListsDeleteRequested request:
+          await _onDeleteRequested(request, emit);
+        case final PeopleListsPubkeyAddRequested request:
+          await _onPubkeyAddRequested(request, emit);
+        case final PeopleListsPubkeyRemoveRequested request:
+          await _onPubkeyRemoveRequested(request, emit);
+        case final PeopleListsPubkeyToggleRequested request:
+          await _onPubkeyToggleRequested(request, emit);
+      }
+      if (!operation.completion.isCompleted) {
+        operation.completion.complete(
+          PeopleListsOperationResult.succeeded,
+        );
+      }
+    } finally {
+      _operations.remove(operation);
+      _activeOperation = null;
+    }
   }
 
   static DateTime _defaultClock() => DateTime.now().toUtc();
@@ -153,6 +228,8 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
 
   @override
   Future<void> close() async {
+    _closing = true;
+    _cancelOperations();
     await _ownerSubscription?.cancel();
     await _listsSubscription?.cancel();
     await _repositorySubscription?.cancel();
@@ -215,6 +292,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     if (event.enabled == state.enabled) return;
 
     if (!event.enabled) {
+      _cancelOperations();
       _stopWatchingLists();
       // Drops the snapshot and any pending mutations, but keeps the owner: the
       // owner stream is not seeded, so state is the only place a later flag-on
@@ -256,6 +334,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     Emitter<PeopleListsState> emit,
   ) {
     if (identical(_repository, event.repository)) return;
+    _cancelOperations();
     _repository = event.repository;
     addIfOpen(const PeopleListsOwnerChanged.rewire());
   }
@@ -313,6 +392,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       return;
     }
 
+    _cancelOperations();
     _stopWatchingLists();
 
     if (newOwner == null || newOwner.isEmpty) {
@@ -331,6 +411,14 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       return;
     }
 
+    if (event.isRewire) {
+      emit(
+        state.copyWith(
+          pendingMutations: const {},
+          status: PeopleListsStatus.ready,
+        ),
+      );
+    }
     if (!event.isRewire) {
       emit(
         PeopleListsState(
@@ -447,6 +535,40 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       emit(_withoutMutation(state, mutation.id, resultEventId: result.eventId));
     } catch (e, stackTrace) {
       addError(e, stackTrace);
+      if (!_resultStillApplies(mutation, owner)) return;
+      emit(_withoutMutation(state, mutation.id, failed: true));
+    }
+  }
+
+  Future<void> _onUpdateRequested(
+    PeopleListsUpdateRequested event,
+    Emitter<PeopleListsState> emit,
+  ) async {
+    final owner = state.activeOwnerPubkey;
+    if (owner == null || owner != event.expectedOwnerPubkey) return;
+    final mutation = _buildMutation(
+      PeopleListsMutationKind.updateList,
+      listId: event.listId,
+    );
+    emit(_withMutation(state, mutation, status: PeopleListsStatus.submitting));
+    try {
+      final result = await _repository.updateList(
+        ownerPubkey: owner,
+        listId: event.listId,
+        name: event.name,
+        description: event.description,
+      );
+      if (!_resultStillApplies(mutation, owner)) return;
+      emit(
+        _withoutMutation(
+          state,
+          mutation.id,
+          failed: result.status == PeopleListPublishStatus.failed,
+          resultEventId: result.eventId,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
       if (!_resultStillApplies(mutation, owner)) return;
       emit(_withoutMutation(state, mutation.id, failed: true));
     }
@@ -703,7 +825,8 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   /// The mutation lookup is what actually detects a teardown; the owner check
   /// keeps the guard honest if a future teardown ever preserves the map.
   bool _resultStillApplies(PeopleListsMutation mutation, String owner) {
-    return state.activeOwnerPubkey == owner &&
+    return _activeOperation?.session == _mutationSession &&
+        state.activeOwnerPubkey == owner &&
         state.pendingMutations.containsKey(mutation.id);
   }
 
@@ -773,6 +896,10 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     String? resultEventId,
     bool failed = false,
   }) {
+    final operation = _activeOperation;
+    if (failed && operation != null && !operation.completion.isCompleted) {
+      operation.completion.complete(PeopleListsOperationResult.failed);
+    }
     final next = Map<String, PeopleListsMutation>.from(current.pendingMutations)
       ..remove(mutationId);
     // Recovery contract: a fresh failure pins `failure`; otherwise, once

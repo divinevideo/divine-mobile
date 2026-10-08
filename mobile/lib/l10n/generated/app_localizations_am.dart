@@ -3861,9 +3861,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
-
-  @override
   String get peopleListsAddPeopleError => 'ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
 
   @override
@@ -4810,15 +4807,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'አዲስ ሰዎች ዝርዝር';
-
-  @override
-  String get listCollaboratorsNone => 'ምንም';
-
-  @override
-  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
 
   @override
   String get listNameLabel => 'የዝርዝር ስም';
@@ -12692,4 +12680,24 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'አዲስ የቪዲዮ ዝርዝር';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'ይህ ዝርዝር ይፋዊ ነው። ማንም ሰው ስሙን፣ መግለጫውን እና በውስጡ ያሉትን ሰዎች ማየት ይችላል።';
+
+  @override
+  String get peopleListsPeopleLabel => 'ሰዎች';
+
+  @override
+  String get peopleListsPeopleNone => 'ምንም ሰዎች አልተጨመሩም';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።';
+
+  @override
+  String get peopleListsSearchConnectionsHint => 'ተከታዮችን እና የምትከተላቸውን ፈልግ';
 }
