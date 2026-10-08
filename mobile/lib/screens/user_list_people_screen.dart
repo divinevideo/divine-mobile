@@ -400,17 +400,17 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: context.vineColors.surfaceContainer,
+        backgroundColor: dialogContext.vineColors.surfaceContainer,
         title: Text(
           l10n.peopleListsDeleteConfirmTitle,
           style: VineTheme.titleMediumFont(
-            color: context.vineColors.primaryText,
+            color: dialogContext.vineColors.primaryText,
           ),
         ),
         content: Text(
           l10n.peopleListsDeleteConfirmBody,
           style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
+            color: dialogContext.vineColors.secondaryText,
           ),
         ),
         actions: [
@@ -419,7 +419,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
             child: Text(
               l10n.commonCancel,
               style: VineTheme.labelMediumFont(
-                color: context.vineColors.secondaryText,
+                color: dialogContext.vineColors.secondaryText,
               ),
             ),
           ),
