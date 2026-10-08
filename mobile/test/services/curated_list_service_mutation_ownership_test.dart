@@ -422,6 +422,8 @@ void main() {
           final rows = service.lists;
           final disk = prefs.getString(CuratedListService.listsStorageKey);
           final expectedRows = legacyFirst ? [legacy, owned] : [owned, legacy];
+          expect(rows, hasLength(2));
+          expect(disk, isNotNull);
           expect(rows, expectedRows);
           expect(
             disk,
