@@ -1,6 +1,8 @@
 // ABOUTME: Dialogs for adding videos to curated lists
 // ABOUTME: Selects an existing list and opens the list info sheet to create one
 
+import 'dart:math' as math;
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,79 @@ import 'package:openvine/widgets/curated_list_initialization_failure.dart';
 import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+// Match the existing tile/link geometry, reserving a readable short word
+// instead of allowing a scaled action to squeeze the title into one column.
+({bool belowLabel, int maxLines, EdgeInsets padding}) _syncControlLayout(
+  BuildContext context, {
+  required double width,
+  required String title,
+  required String label,
+}) {
+  final theme = Theme.of(context);
+  final tileTheme = ListTileTheme.of(context);
+  final direction = Directionality.of(context);
+  final scaler = MediaQuery.textScalerOf(context);
+  final padding =
+      (tileTheme.contentPadding ??
+              (theme.useMaterial3
+                  ? const EdgeInsetsDirectional.only(start: 16, end: 24)
+                  : const EdgeInsets.symmetric(horizontal: 16)))
+          .resolve(direction);
+  final titleStyle =
+      tileTheme.titleTextStyle ??
+      (theme.useMaterial3
+          ? theme.textTheme.bodyLarge
+          : theme.textTheme.titleMedium) ??
+      DefaultTextStyle.of(context).style;
+  final titlePainter = TextPainter(
+    text: TextSpan(text: title, style: titleStyle),
+    textDirection: direction,
+    textScaler: scaler,
+  );
+  final actionPainter = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
+    ),
+    textDirection: direction,
+    textScaler: scaler,
+  );
+  try {
+    titlePainter.layout();
+    final wordWidth = titlePainter.minIntrinsicWidth;
+    titlePainter.text = TextSpan(text: 'MMMM', style: titleStyle);
+    titlePainter.layout();
+    final readableWidth = math.min(wordWidth, titlePainter.width);
+    actionPainter.layout();
+    final leadingWidth = math.max(
+      DivineIcon.scaleSize(context, 24),
+      tileTheme.minLeadingWidth ?? (theme.useMaterial3 ? 24 : 40),
+    );
+    final density =
+        tileTheme.visualDensity ??
+        (theme.useMaterial3 ? VisualDensity.standard : theme.visualDensity);
+    final gap = (tileTheme.horizontalTitleGap ?? 16) + density.horizontal * 2;
+    // The base link uses 24px horizontal padding on each side. When expanded
+    // below the title, its documented symmetric inset is 12px on each side.
+    final inlineWidth =
+        padding.horizontal + leadingWidth + gap * 2 + actionPainter.width + 48;
+    if (inlineWidth + readableWidth <= width) {
+      return (belowLabel: false, maxLines: 1, padding: padding);
+    }
+    actionPainter.layout(
+      maxWidth: math.max(1, width - padding.horizontal - 24),
+    );
+    return (
+      belowLabel: true,
+      maxLines: math.max(1, actionPainter.computeLineMetrics().length),
+      padding: padding,
+    );
+  } finally {
+    titlePainter.dispose();
+    actionPainter.dispose();
+  }
+}
 
 class _LoadingIndicator extends StatelessWidget {
   const _LoadingIndicator();
@@ -140,92 +215,143 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
           content: SizedBox(
             width: double.maxFinite,
             height: 300,
-            child: Column(
-              children: [
-                if (recoveryReadOnly) const CuratedListRecoveryReadOnlyNotice(),
-                if (_creationOutcome ==
-                    ListInfoSheetOutcome.createdWithoutVideo)
-                  ListInfoFailureMessage(l10n.listVideoNotAdded),
-                if (!recoveryReadOnly &&
-                    availableLists.any(
-                      (list) =>
-                          list.hasPendingPermissionRecovery ||
-                          list.pendingPlaintextEventIds.isNotEmpty,
-                    ))
-                  ListInfoRecoveryPendingMessage(
-                    permissionRecoveryPending: availableLists.any(
-                      (list) => list.hasPendingPermissionRecovery,
-                    ),
-                  )
-                else if (!recoveryReadOnly && pendingLists.isNotEmpty)
-                  const ListInfoPendingSyncMessage(),
-                if (!recoveryReadOnly && syncFailed)
-                  ListInfoFailureMessage(l10n.listUpdateFailed),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: availableLists.length,
-                    itemBuilder: (context, index) {
-                      final list = availableLists[index];
-                      final isInList = list.videoEventIds.contains(
-                        widget.video.id,
-                      );
+            child: CustomScrollView(
+              semanticChildCount: availableLists.length,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (recoveryReadOnly)
+                        const CuratedListRecoveryReadOnlyNotice(),
+                      if (_creationOutcome ==
+                          ListInfoSheetOutcome.createdWithoutVideo)
+                        ListInfoFailureMessage(l10n.listVideoNotAdded),
+                      if (!recoveryReadOnly &&
+                          availableLists.any(
+                            (list) =>
+                                list.hasPendingPermissionRecovery ||
+                                list.pendingPlaintextEventIds.isNotEmpty,
+                          ))
+                        ListInfoRecoveryPendingMessage(
+                          permissionRecoveryPending: availableLists.any(
+                            (list) => list.hasPendingPermissionRecovery,
+                          ),
+                        )
+                      else if (!recoveryReadOnly && pendingLists.isNotEmpty)
+                        const ListInfoPendingSyncMessage(),
+                      if (!recoveryReadOnly && syncFailed)
+                        ListInfoFailureMessage(l10n.listUpdateFailed),
+                    ],
+                  ),
+                ),
+                SliverPadding(
+                  padding: MediaQuery.paddingOf(context).copyWith(
+                    left: 0,
+                    right: 0,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final list = availableLists[index];
+                        final isInList = list.videoEventIds.contains(
+                          widget.video.id,
+                        );
 
-                      return ListTile(
-                        leading: DivineIcon(
-                          icon: isInList
-                              ? DivineIconName.checkCircle
-                              : DivineIconName.playlist,
-                          color: isInList
-                              ? context.vineColors.accentPositive
-                              : context.vineColors.primaryText,
-                        ),
-                        title: Text(
-                          list.name,
-                          style: TextStyle(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${l10n.listVideoCount(list.videoEventIds.length)} • '
-                          '${list.publicationTarget.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
-                          style: TextStyle(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                        trailing: pendingLists.contains(list.id)
-                            ? _syncingListIds.contains(list.id)
-                                  ? const SizedBox(
-                                      width: 40,
-                                      child: _LoadingIndicator(),
-                                    )
-                                  : DivineButton(
-                                      label: l10n.listRetrySync,
-                                      type: DivineButtonType.link,
-                                      onPressed: recoveryReadOnly
-                                          ? null
-                                          : () => runDetached(
-                                              _retrySync(list),
-                                              'retry list sync',
-                                              logName: 'SelectListDialog',
-                                              category: LogCategory.ui,
-                                            ),
-                                    )
-                            : null,
-                        onTap:
-                            recoveryReadOnly ||
-                                _syncingListIds.contains(list.id) ||
-                                list.hasPendingPermissionRecovery
-                            ? null
-                            : () => _toggleVideoInList(
-                                context,
-                                ref
-                                    .read(curatedListsStateProvider.notifier)
-                                    .service!,
-                                list,
-                                isInList,
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final pending = pendingLists.contains(list.id);
+                            final syncLayout = pending
+                                ? _syncControlLayout(
+                                    context,
+                                    width: constraints.maxWidth,
+                                    title: list.name,
+                                    label: l10n.listRetrySync,
+                                  )
+                                : (
+                                    belowLabel: false,
+                                    maxLines: 1,
+                                    padding: EdgeInsets.zero,
+                                  );
+                            final syncControl = !pending
+                                ? null
+                                : _syncingListIds.contains(list.id)
+                                ? const SizedBox(
+                                    width: 40,
+                                    child: _LoadingIndicator(),
+                                  )
+                                : DivineButton(
+                                    label: l10n.listRetrySync,
+                                    type: DivineButtonType.link,
+                                    expanded: syncLayout.belowLabel,
+                                    maxLines: syncLayout.maxLines,
+                                    onPressed: recoveryReadOnly
+                                        ? null
+                                        : () => runDetached(
+                                            _retrySync(list),
+                                            'retry list sync',
+                                            logName: 'SelectListDialog',
+                                            category: LogCategory.ui,
+                                          ),
+                                  );
+                            final tile = ListTile(
+                              leading: DivineIcon(
+                                icon: isInList
+                                    ? DivineIconName.checkCircle
+                                    : DivineIconName.playlist,
+                                color: isInList
+                                    ? context.vineColors.accentPositive
+                                    : context.vineColors.primaryText,
                               ),
-                      );
-                    },
+                              title: Text(
+                                list.name,
+                                style: TextStyle(
+                                  color: context.vineColors.primaryText,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${l10n.listVideoCount(list.videoEventIds.length)} • '
+                                '${list.publicationTarget.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
+                                style: TextStyle(
+                                  color: context.vineColors.secondaryText,
+                                ),
+                              ),
+                              trailing: syncLayout.belowLabel
+                                  ? null
+                                  : syncControl,
+                              onTap:
+                                  recoveryReadOnly ||
+                                      _syncingListIds.contains(list.id) ||
+                                      list.hasPendingPermissionRecovery
+                                  ? null
+                                  : () => _toggleVideoInList(
+                                      context,
+                                      ref
+                                          .read(
+                                            curatedListsStateProvider.notifier,
+                                          )
+                                          .service!,
+                                      list,
+                                      isInList,
+                                    ),
+                            );
+                            if (!syncLayout.belowLabel) return tile;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                tile,
+                                Padding(
+                                  padding: syncLayout.padding,
+                                  child: syncControl,
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      childCount: availableLists.length,
+                    ),
                   ),
                 ),
               ],
