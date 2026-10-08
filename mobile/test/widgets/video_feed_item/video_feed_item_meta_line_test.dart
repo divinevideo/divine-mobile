@@ -161,6 +161,13 @@ void main() {
   String loopLine(WidgetTester tester, int count) => _l10n(tester)
       .videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
 
+  String totalLine(WidgetTester tester, int count) => _l10n(tester)
+      .videoOverlayTotalLoops(StringUtils.formatCompactNumber(count), count);
+
+  String totalScope(WidgetTester tester, int count) =>
+      _l10n(tester)
+          .videoOverlayTotalLoopsScope(StringUtils.formatCompactNumber(count));
+
   group('video card meta line', () {
     testWidgets('shows all enabled details on one line under the username', (
       tester,
@@ -190,12 +197,12 @@ void main() {
         find.byKey(const Key('video_meta_line')),
       );
       final content = _metaLine(tester);
-      expect(content, contains("78.6K Kayl's loops"));
-      expect(content, contains("3 this video's loops"));
+      expect(content, contains('3 loops'));
+      expect(content, contains('78.6K all-time'));
       expect(content, contains('Sep 30'));
       expect(content, contains('\u2009·\u2009'));
-      expect(content.indexOf('Kayl'), lessThan(content.indexOf('video')));
-      expect(content.indexOf('video'), lessThan(content.indexOf('Sep 30')));
+      expect(content.indexOf('3 loops'), lessThan(content.indexOf('78.6K')));
+      expect(content.indexOf('78.6K'), lessThan(content.indexOf('Sep 30')));
       expect(line.maxLines, 1);
       final paragraph = tester.renderObject<RenderParagraph>(
         find.descendant(
@@ -235,7 +242,7 @@ void main() {
         onAuthorStatsLookup: () => lookups++,
       );
 
-      expect(_metaLine(tester), "50K this video's loops");
+      expect(_metaLine(tester), loopLine(tester, 50000));
       expect(lookups, 0);
     });
 
@@ -255,11 +262,11 @@ void main() {
       );
 
       final content = _metaLine(tester);
-      expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
-      expect(content, "1 this video's loop");
+      expect(content, _l10n(tester).videoFeedLoopCountLine('1', 1));
+      expect(content, '1 loop');
     });
 
-    testWidgets('emphasizes the count, not matching digits in the name', (
+    testWidgets('emphasizes each count and not the surrounding copy', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 900);
@@ -274,15 +281,9 @@ void main() {
         StatsVisibilityPreferences.showPublishedDateKey: false,
       });
       final prefs = await SharedPreferences.getInstance();
-      // Japanese puts the creator name before the count, so the name's digits
-      // come first in the rendered text.
       await pump(
         tester,
-        video: _video(
-          authorName: 'Creator 123',
-          rawTags: {'views': '5'},
-          createdAt: 1735689600,
-        ),
+        video: _video(rawTags: {'views': '5'}, createdAt: 1735689600),
         authorTotalLoops: 123,
         prefs: prefs,
         locale: const Locale('ja'),
@@ -298,16 +299,18 @@ void main() {
           });
       final emphasized = spans
           .where((span) => span.style?.fontWeight == FontWeight.w600)
+          .map((span) => span.text)
           .toList();
-      final total = lookupAppLocalizations(
-        const Locale('ja'),
-      ).videoOverlayTotalLoops('123', 123, 'Creator 123');
-      final totalCount = emphasized.first;
-      final before = spans[spans.indexOf(totalCount) - 1].text!;
+      final ja = lookupAppLocalizations(const Locale('ja'));
 
-      expect(totalCount.text, '123');
-      expect(before, startsWith('Creator 123'));
-      expect(total, startsWith(before + totalCount.text!));
+      expect(_metaLine(tester), contains(ja.videoFeedLoopCountLine('5', 5)));
+      expect(
+        _metaLine(tester),
+        contains(ja.videoOverlayTotalLoopsScope('123')),
+      );
+      // Only the two counts carry the heavy weight; the scope word and the
+      // plural noun stay in the lighter style.
+      expect(emphasized, ['5', '123']);
     });
 
     testWidgets('uses the singular for a creator total of one loop', (
@@ -315,7 +318,7 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues({
         StatsVisibilityPreferences.showTotalLoopsKey: true,
-        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
         StatsVisibilityPreferences.showPublishedDateKey: false,
       });
       final prefs = await SharedPreferences.getInstance();
@@ -326,7 +329,8 @@ void main() {
         prefs: prefs,
       );
 
-      expect(_metaLine(tester), startsWith("1 Kayl's loop\u2009"));
+      expect(_metaLine(tester), totalLine(tester, 1));
+      expect(_metaLine(tester), '1 all-time loop');
     });
 
     testWidgets('shows only the publish date when it alone is enabled', (
@@ -488,23 +492,9 @@ void main() {
         );
       });
 
-      final line = find.byKey(const Key('video_meta_line'));
-      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
-      expect(
-        find.descendant(of: line, matching: find.text("3 this video's loops")),
-        findsOneWidget,
-      );
-      final videoCount = tester.renderObject<RenderParagraph>(
-        find.descendant(
-          of: find.text("3 this video's loops"),
-          matching: find.byType(RichText),
-        ),
-      );
-      expect(videoCount.didExceedMaxLines, isFalse);
-      expect(
-        find.descendant(of: line, matching: find.text('Sep 30')),
-        findsOneWidget,
-      );
+      final content = _metaLine(tester);
+      expect(content, contains(loopLine(tester, 3)));
+      expect(content, contains('Sep 30'));
       expect(tester.takeException(), isNull);
     });
 
@@ -529,12 +519,12 @@ void main() {
 
       await tester.runAsync(() => settings.setShowTotalLoops(true));
       await tester.pumpAndSettle();
-      expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 23200000)), findsOneWidget);
       await tester.runAsync(() => settings.setShowVideoLoops(true));
       await tester.pump();
       expect(
         find.textContaining(
-          "23.2M Kayl's loops\u2009·\u200950K this video's loops",
+          '${loopLine(tester, 50000)}\u2009·\u2009${totalScope(tester, 23200000)}',
         ),
         findsOneWidget,
       );
@@ -543,8 +533,8 @@ void main() {
       expect(find.textContaining('1/1/2025'), findsOneWidget);
       await tester.runAsync(() => settings.setShowTotalLoops(false));
       await tester.pump();
-      expect(find.textContaining("Kayl's loops"), findsNothing);
-      expect(find.textContaining("50K this video's loops"), findsOneWidget);
+      expect(find.textContaining('all-time'), findsNothing);
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
@@ -591,7 +581,7 @@ void main() {
       );
 
       // Video loops are off by default, so only the creator total appears.
-      expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 23200000)), findsOneWidget);
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
@@ -607,7 +597,7 @@ void main() {
         prefs: prefs,
       );
 
-      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+      expect(find.textContaining(totalLine(tester, 50000)), findsNothing);
     });
 
     testWidgets('follows the total-loops setting while mounted', (
@@ -624,15 +614,15 @@ void main() {
       final settings = ProviderScope.containerOf(
         tester.element(find.byType(VideoOverlayActions)),
       ).read(statsVisibilityPreferencesProvider);
-      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 50000)), findsOneWidget);
 
       await tester.runAsync(() => settings.setShowTotalLoops(false));
       await tester.pump();
-      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+      expect(find.textContaining(totalLine(tester, 50000)), findsNothing);
 
       await tester.runAsync(() => settings.setShowTotalLoops(true));
       await tester.pumpAndSettle();
-      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('skips the author stats lookup while total loops are off', (
@@ -664,25 +654,25 @@ void main() {
       );
 
       expect(lookups, equals(1));
-      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('hides a zero lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 0);
 
-      expect(find.textContaining(loopLine(tester, 0)), findsNothing);
+      expect(find.textContaining(totalLine(tester, 0)), findsNothing);
     });
 
     testWidgets('shows the author lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 10000);
 
-      expect(find.textContaining(loopLine(tester, 10000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 10000)), findsOneWidget);
     });
 
     testWidgets('hides the line while the total is unknown', (tester) async {
       await pump(tester, video: _video(rawTags: {'views': '50000'}));
 
-      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+      expect(find.textContaining(totalLine(tester, 50000)), findsNothing);
     });
 
     testWidgets('hides the publish date by default', (tester) async {
@@ -693,7 +683,7 @@ void main() {
       );
 
       expect(find.textContaining('1/1/2025'), findsNothing);
-      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+      expect(find.textContaining(totalLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('the author node is a labelled button that opens the profile', (

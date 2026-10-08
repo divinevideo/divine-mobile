@@ -303,29 +303,19 @@ class AppLocalizationsTr extends AppLocalizations {
       'Akışları klasik kare formatta tut';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$authorName: $compactCount döngü',
-      one: '$authorName: $compactCount döngü',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'döngü',
       one: 'döngü',
     );
-    return 'bu videoda $compactCount $_temp0';
+    return 'toplam $compactCount $_temp0';
+  }
+
+  @override
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return 'toplam $compactCount';
   }
 
   @override
