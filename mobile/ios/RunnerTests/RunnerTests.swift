@@ -963,6 +963,189 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(state["positionMs"] as? Int, 0, "a paused seek must not start playback")
   }
 
+  func testPauseDuringSeekFromTheEndPreventsResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip plays to its end") { $0["status"] as? String == "completed" }
+
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let sought = expectation(description: "seek answered")
+    var seekAnswered = false
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in
+      seekAnswered = true
+      sought.fulfill()
+    }
+    XCTAssertFalse(seekAnswered, "pause must precede seek completion")
+    // Deliver pause before allowing the asynchronous seek completion to run.
+    _ = try invoke("pause")
+    wait(for: [sought], timeout: 10)
+
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "paused")
+    XCTAssertEqual(state["positionMs"] as? Int, 0, "a late seek must not override pause")
+  }
+
+  func testConsecutiveSeeksFromTheEndPreservePlaybackIntent() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let first = expectation(description: "first seek answered")
+    let second = expectation(description: "second seek answered")
+    var firstAnswered = false
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in firstAnswered = true; first.fulfill() }
+    XCTAssertFalse(firstAnswered, "the seeks must overlap")
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 400]
+    ))) { _ in second.fulfill() }
+    wait(for: [first, second], timeout: 10)
+    try waitForState("the latest seek resumes playback") {
+      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 450
+    }
+  }
+
+  func testStopDuringSeekFromTheEndKeepsMediaStopped() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let sought = expectation(description: "cancelled seek answered")
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in sought.fulfill() }
+    _ = try invoke("stop")
+    wait(for: [sought], timeout: 10)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "idle")
+    XCTAssertEqual(state["clipCount"] as? Int, 0)
+    // A stopped player reports nothing more, so a resume the cancelled seek
+    // left behind only shows once media is loaded again: it plays at once.
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
+  }
+
+  func testReplacementDuringSeekFromTheEndStaysPaused() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let sought = expectation(description: "superseded seek answered")
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in sought.fulfill() }
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    wait(for: [sought], timeout: 10)
+    try waitForState("replacement loads paused") { $0["status"] as? String == "paused" }
+    let loadedPosition = try XCTUnwrap(latestState()?["positionMs"] as? Int)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "paused")
+    XCTAssertEqual(state["positionMs"] as? Int, loadedPosition)
+  }
+
+  func testSeekCompletingWhileInactiveDefersPlaybackUntilForeground() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let sought = expectation(description: "background seek answered")
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in sought.fulfill() }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    wait(for: [sought], timeout: 10)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["positionMs"] as? Int, 0, "the seek must not play while inactive")
+    try waitForState("the deferred seek resumes in foreground") {
+      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 100
+    }
+  }
+
+  func testPauseWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("pause")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "paused")
+    XCTAssertEqual(state["positionMs"] as? Int, 0)
+  }
+
+  func testStopWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("stop")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "idle", "a stopped player must stay stopped")
+    // A resume that outlived stop only shows once media is loaded again: it plays at once.
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
+  }
+
+  func testReplacementWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(
+      state["status"] as? String, "paused", "the replacement must not inherit the deferred resume"
+    )
+  }
+
+  func testOrdinaryBackgroundPausePreservesExistingForegroundResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip is playing") { $0["status"] as? String == "playing" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    // Dart's lifecycle pause must not cancel the existing native resume policy.
+    _ = try invoke("pause")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    try waitForState("ordinary playback resumes in foreground") {
+      $0["status"] as? String == "playing"
+    }
+  }
+
+  func testSeekBeforeAnyMediaIsLoadedIsAnswered() throws {
+    let bareId = Self.playerId - 1
+    plugin.handle(
+      FlutterMethodCall(methodName: "create", arguments: ["id": bareId, "useTexture": true])
+    ) { _ in }
+    addTeardownBlock { [plugin] in
+      plugin?.handle(FlutterMethodCall(methodName: "dispose", arguments: ["id": bareId])) { _ in }
+    }
+
+    // Nothing is loaded, so there is no queue to seek; the call must still answer.
+    _ = try invoke("seekTo", ["positionMs": 0], on: "divine_video_player/player_\(bareId)")
+  }
+
   /// Calls [method] the way the Dart controller does and waits for its answer.
   @discardableResult
   private func invoke(
