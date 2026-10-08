@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -414,7 +415,7 @@ class _AddButtonBarState extends State<_AddButtonBar> {
       _result = result;
     });
     if (result == PeopleListsOperationResult.succeeded) {
-      Navigator.of(context).maybePop();
+      context.safePop();
     }
   }
 }

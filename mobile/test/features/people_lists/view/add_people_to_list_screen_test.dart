@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/features/people_lists/view/add_people_to_list_screen.da
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -106,8 +108,11 @@ void main() {
   group(AddPeopleToListScreen, () {
     late _MockPeopleListsBloc bloc;
     late _MockAddPeopleToListCubit cubit;
+    late MockGoRouter router;
 
     setUp(() {
+      router = MockGoRouter();
+      when(() => router.canPop()).thenReturn(true);
       bloc = _MockPeopleListsBloc();
       when(() => bloc.submit(any()))
           .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
@@ -127,12 +132,15 @@ void main() {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<PeopleListsBloc>.value(value: bloc),
-            BlocProvider<AddPeopleToListCubit>.value(value: cubit),
-          ],
-          child: AddPeopleToListView(userList: userList),
+        home: MockGoRouterProvider(
+          goRouter: router,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PeopleListsBloc>.value(value: bloc),
+              BlocProvider<AddPeopleToListCubit>.value(value: cubit),
+            ],
+            child: AddPeopleToListView(userList: userList),
+          ),
         ),
       );
     }
@@ -170,12 +178,15 @@ void main() {
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider<PeopleListsBloc>.value(value: bloc),
-                BlocProvider<AddPeopleToListCubit>.value(value: picker),
-              ],
-              child: AddPeopleToListView(userList: list),
+            home: MockGoRouterProvider(
+              goRouter: router,
+              child: MultiBlocProvider(
+                providers: [
+                  BlocProvider<PeopleListsBloc>.value(value: bloc),
+                  BlocProvider<AddPeopleToListCubit>.value(value: picker),
+                ],
+                child: AddPeopleToListView(userList: list),
+              ),
             ),
           ),
         );
@@ -226,6 +237,53 @@ void main() {
         ).called(2);
       },
     );
+
+    group('after a confirmed add', () {
+      Future<void> addSelected(WidgetTester tester) async {
+        final list = _buildList(id: 'list-42', name: 'Close Friends');
+        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+        await tester.pumpWidget(
+          buildViewSubject(
+            userList: list,
+            cubitState: AddPeopleToListState(
+              status: AddPeopleToListStatus.ready,
+              candidates: [_candidate(_candidateA, displayName: 'Alice')],
+              selectedPubkeys: const {_candidateA},
+            ),
+          ),
+        );
+        await tester.tap(find.widgetWithText(DivineButton, 'Add 1'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('returns to the previous route', (tester) async {
+        await addSelected(tester);
+
+        verify(() => router.pop()).called(1);
+        verifyNever(() => router.go(any()));
+      });
+
+      testWidgets('leaves for the fallback when nothing is below', (
+        tester,
+      ) async {
+        when(() => router.canPop()).thenReturn(false);
+
+        await addSelected(tester);
+
+        verify(() => router.go(defaultSafePopFallback)).called(1);
+        verifyNever(() => router.pop());
+      });
+
+      testWidgets('stays put when a person could not be added', (tester) async {
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.failed);
+
+        await addSelected(tester);
+
+        verifyNever(() => router.pop());
+        verifyNever(() => router.go(any()));
+      });
+    });
 
     test('exposes route name and path constants', () {
       expect(AddPeopleToListScreen.routeName, equals('people-list-add-people'));

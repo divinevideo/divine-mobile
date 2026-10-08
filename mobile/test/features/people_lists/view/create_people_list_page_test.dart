@@ -11,10 +11,12 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -38,8 +40,11 @@ void main() {
 
   group(CreatePeopleListPage, () {
     late _MockPeopleListsBloc bloc;
+    late MockGoRouter router;
 
     setUp(() {
+      router = MockGoRouter();
+      when(() => router.canPop()).thenReturn(true);
       bloc = _MockPeopleListsBloc();
       when(() => bloc.submit(any()))
           .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
@@ -66,11 +71,14 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: CreatePeopleListPage(
-              initialPubkey: initialPubkey,
-              editingList: editingList,
+          home: MockGoRouterProvider(
+            goRouter: router,
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: CreatePeopleListPage(
+                initialPubkey: initialPubkey,
+                editingList: editingList,
+              ),
             ),
           ),
         ),
@@ -153,6 +161,44 @@ void main() {
         expect(request.description, isEmpty);
       },
     );
+
+    group('after a confirmed save', () {
+      Future<void> save(WidgetTester tester) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.enterText(find.byType(TextFormField).first, 'Film Club');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('returns to the previous route', (tester) async {
+        await save(tester);
+
+        verify(() => router.pop()).called(1);
+        verifyNever(() => router.go(any()));
+      });
+
+      testWidgets('leaves for the fallback when nothing is below', (
+        tester,
+      ) async {
+        when(() => router.canPop()).thenReturn(false);
+
+        await save(tester);
+
+        verify(() => router.go(defaultSafePopFallback)).called(1);
+        verifyNever(() => router.pop());
+      });
+
+      testWidgets('stays put after a failed save', (tester) async {
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.failed);
+
+        await save(tester);
+
+        verifyNever(() => router.pop());
+        verifyNever(() => router.go(any()));
+      });
+    });
 
     test('exposes route name and path constants', () {
       expect(

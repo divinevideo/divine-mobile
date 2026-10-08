@@ -131,7 +131,7 @@ class _CreatePeopleListPageState extends ConsumerState<CreatePeopleListPage> {
       _result = result;
     });
     if (result == PeopleListsOperationResult.succeeded) {
-      Navigator.of(context).maybePop();
+      context.safePop();
     }
   }
 
