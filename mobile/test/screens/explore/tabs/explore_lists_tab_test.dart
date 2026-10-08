@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,7 +211,7 @@ void main() {
         },
       );
       testWidgets(
-        'video creation keeps its dialog during initialization failure=$failure',
+        'video creation opens a shared sheet during initialization failure=$failure',
         (tester) async {
           if (failure) {
             _initializationError = StateError('initialization failed');
@@ -222,6 +223,11 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
           expect(find.byType(CreateListDialog), findsOneWidget);
+          expect(find.byType(VineBottomSheet), findsOneWidget);
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(find.text('List Name'), findsOneWidget);
+          expect(find.text('Description (optional)'), findsOneWidget);
+          expect(find.text('Public List'), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );

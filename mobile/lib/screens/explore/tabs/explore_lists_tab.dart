@@ -496,11 +496,15 @@ class _ExploreCreationHeader extends ConsumerWidget {
           leadingIcon: .plus,
           label: context.l10n.listNewVideoList,
           onPressed: () => runDetached(
-            showDialog<void>(
+            VineBottomSheet.show<void>(
               context: context,
-              builder: (_) => const CreateListDialog(),
+              useRootNavigator: true,
+              scrollable: false,
+              showHeader: false,
+              showHeaderDivider: false,
+              body: const CreateListDialog.sheet(),
             ),
-            'open list creation dialog',
+            'open list creation sheet',
             logName: 'ExploreListsTab',
             category: LogCategory.ui,
           ),

@@ -199,14 +199,21 @@ class SelectListDialog extends StatelessWidget {
 
 /// Dialog for creating a new curated list, optionally adding [video] to it.
 ///
-/// Like [SelectListDialog] this is always presented with `showDialog` and is
-/// never registered as a `go_router` route, so every dismissal here goes
-/// through [Navigator] — the navigator that owns the dialog route — rather
-/// than `context.pop`.
+/// Existing callers retain the dialog presentation; [CreateListDialog.sheet]
+/// supplies the same form and save contract inside a [VineBottomSheet]. Both
+/// are modal routes, so dismissal uses the owning [Navigator].
 class CreateListDialog extends ConsumerStatefulWidget {
-  const CreateListDialog({this.video, this.existingList, super.key});
+  const CreateListDialog({this.video, this.existingList, super.key})
+    : _isSheet = false;
+
+  /// Creation form for a sanctioned [VineBottomSheet] presentation.
+  const CreateListDialog.sheet({this.video, super.key})
+    : existingList = null,
+      _isSheet = true;
+
   final VideoEvent? video;
   final CuratedList? existingList;
+  final bool _isSheet;
 
   @override
   ConsumerState<CreateListDialog> createState() => _CreateListDialogState();
@@ -216,6 +223,7 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   bool _isPublic = true;
+  String? _sheetSaveError;
 
   bool get _isEditing => widget.existingList != null;
 
@@ -232,68 +240,104 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final title = _isEditing ? l10n.listEditTitle : l10n.listCreateNewList;
+    final fields = _CreateListFields(
+      nameController: _nameController,
+      descriptionController: _descriptionController,
+      isPublic: _isPublic,
+      onVisibilityChanged: (value) => setState(() => _isPublic = value),
+    );
+    final actions = [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(l10n.listCancel),
+      ),
+      TextButton(
+        onPressed: _saveList,
+        child: Text(_isEditing ? l10n.listSave : l10n.listCreate),
+      ),
+    ];
+
+    if (widget._isSheet) {
+      return Material(
+        color: context.vineColors.surface,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: VineTheme.titleMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      fields,
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_sheetSaveError case final message?) ...[
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          message,
+                          style: VineTheme.bodyMediumFont(
+                            color: context.vineColors.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    OverflowBar(
+                      alignment: MainAxisAlignment.end,
+                      overflowAlignment: OverflowBarAlignment.end,
+                      spacing: 8,
+                      overflowSpacing: 8,
+                      children: actions,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return AlertDialog(
       backgroundColor: context.vineColors.card,
       title: Text(
-        _isEditing ? l10n.listEditTitle : l10n.listCreateNewList,
+        title,
         style: TextStyle(color: context.vineColors.primaryText),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            enableInteractiveSelection: true,
-            style: TextStyle(color: context.vineColors.primaryText),
-            decoration: InputDecoration(
-              labelText: l10n.listNameLabel,
-              labelStyle: TextStyle(color: context.vineColors.secondaryText),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _descriptionController,
-            enableInteractiveSelection: true,
-            style: TextStyle(color: context.vineColors.primaryText),
-            decoration: InputDecoration(
-              labelText: l10n.listDescriptionLabel,
-              labelStyle: TextStyle(color: context.vineColors.secondaryText),
-            ),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: Text(
-              l10n.listPublicList,
-              style: TextStyle(color: context.vineColors.primaryText),
-            ),
-            subtitle: Text(
-              _isPublic
-                  ? l10n.listPublicListSubtitle
-                  : l10n.listPrivateListSubtitle,
-              style: TextStyle(color: context.vineColors.secondaryText),
-            ),
-            value: _isPublic,
-            onChanged: (value) => setState(() => _isPublic = value),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.listCancel),
-        ),
-        TextButton(
-          onPressed: _saveList,
-          child: Text(_isEditing ? l10n.listSave : l10n.listCreate),
-        ),
-      ],
+      content: fields,
+      actions: actions,
     );
   }
 
   Future<void> _saveList() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
+    if (widget._isSheet && _sheetSaveError != null) {
+      setState(() => _sheetSaveError = null);
+    }
 
     try {
       final listService = ref.read(curatedListsStateProvider.notifier).service;
@@ -424,11 +468,18 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
     return confirmed ?? false;
   }
 
-  /// Reports a failure while this dialog is still on screen.
-  void _showSaveFailed() => _showSaveFailedDetached(
-    ScaffoldMessenger.of(context),
-    _isEditing ? context.l10n.listUpdateFailed : context.l10n.listCreateFailed,
-  );
+  /// Keeps sheet errors above its controls; an underlying snackbar would be
+  /// obscured by the modal. Existing dialog callers retain their snackbar.
+  void _showSaveFailed() {
+    final message = _isEditing
+        ? context.l10n.listUpdateFailed
+        : context.l10n.listCreateFailed;
+    if (widget._isSheet) {
+      setState(() => _sheetSaveError = message);
+      return;
+    }
+    _showSaveFailedDetached(ScaffoldMessenger.of(context), message);
+  }
 
   /// Reports a failure once the dialog may already be gone.
   ///
@@ -449,5 +500,65 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+}
+
+/// Shared fields keep the creation dialog and sheet on one edit contract.
+class _CreateListFields extends StatelessWidget {
+  const _CreateListFields({
+    required this.nameController,
+    required this.descriptionController,
+    required this.isPublic,
+    required this.onVisibilityChanged,
+  });
+
+  final TextEditingController nameController;
+  final TextEditingController descriptionController;
+  final bool isPublic;
+  final ValueChanged<bool> onVisibilityChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: nameController,
+          enableInteractiveSelection: true,
+          style: TextStyle(color: context.vineColors.primaryText),
+          decoration: InputDecoration(
+            labelText: l10n.listNameLabel,
+            labelStyle: TextStyle(color: context.vineColors.secondaryText),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: descriptionController,
+          enableInteractiveSelection: true,
+          style: TextStyle(color: context.vineColors.primaryText),
+          decoration: InputDecoration(
+            labelText: l10n.listDescriptionLabel,
+            labelStyle: TextStyle(color: context.vineColors.secondaryText),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: Text(
+            l10n.listPublicList,
+            style: TextStyle(color: context.vineColors.primaryText),
+          ),
+          subtitle: Text(
+            isPublic
+                ? l10n.listPublicListSubtitle
+                : l10n.listPrivateListSubtitle,
+            style: TextStyle(color: context.vineColors.secondaryText),
+          ),
+          value: isPublic,
+          onChanged: onVisibilityChanged,
+        ),
+      ],
+    );
   }
 }
