@@ -441,9 +441,10 @@ class _ProfileAvatarWithColor extends StatelessWidget {
     required this.imageUrl,
     required this.userIdHex,
     required this.showSkeleton,
+    required this.showSupporterTreatment,
     this.profileColor,
     this.pendingActions = const [],
-    this.showSupporterTreatment = false,
+    this.opensSupporterLightbox = false,
     this.onActionTap,
   });
 
@@ -468,6 +469,10 @@ class _ProfileAvatarWithColor extends StatelessWidget {
 
   /// Whether to surround the avatar with the supporter halo and wings.
   final bool showSupporterTreatment;
+
+  /// Whether a tap opens the supporter lightbox, where the halo and wings fly
+  /// along with the avatar, instead of the plain photo lightbox.
+  final bool opensSupporterLightbox;
 
   @override
   Widget build(BuildContext context) {
@@ -504,7 +509,14 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         );
       }
 
-      avatar = showSupporterTreatment
+      avatar = showSupporterTreatment && opensSupporterLightbox
+          ? _SupporterAvatarHero(
+              imageUrl: imageUrl,
+              userIdHex: userIdHex,
+              avatarSize: avatarSize,
+              avatar: avatarWidget,
+            )
+          : showSupporterTreatment
           ? SupporterHaloWings(
               avatarSize: avatarSize,
               builder: (context, trackCover) =>

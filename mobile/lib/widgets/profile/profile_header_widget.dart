@@ -14,7 +14,10 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
+import 'package:openvine/blocs/supporter/supporter_cubit.dart';
+import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/monetization/monetization_analytics.dart';
@@ -28,6 +31,7 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/widgets/followers_screen_router.dart';
@@ -36,6 +40,7 @@ import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -68,6 +73,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 part 'profile_header_identity.dart';
 part 'profile_header_media.dart';
+part 'profile_header_supporter_lightbox.dart';
 
 void _runProfileDetached(Future<void> operation, String description) {
   runDetached(
@@ -416,8 +422,8 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                     showSkeleton: showIdentitySkeleton,
                     profileColor: profileColor,
                     pendingActions: pendingActions,
-                    showSupporterTreatment:
-                        supporterHaloPreview && widget.isOwnProfile,
+                    showSupporterTreatment: supporterHaloPreview,
+                    opensSupporterLightbox: !widget.isOwnProfile,
                     onActionTap: pendingActions.isEmpty
                         ? null
                         : pendingActions.first ==

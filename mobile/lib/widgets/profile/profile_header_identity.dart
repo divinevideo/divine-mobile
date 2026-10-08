@@ -64,10 +64,10 @@ class _ProfileNameAndBio extends StatelessWidget {
             ],
           ),
         ),
-        // The halo and wings replace the heart chip while previewing them.
+        // The halo and wings replace the heart chips while previewing them.
         if (!isVanished && isOwnProfile && !supporterHaloPreview)
           const SupporterMembership(compact: true)
-        else if (!isVanished)
+        else if (!isVanished && !supporterHaloPreview)
           PublicSupporterBadge(pubkey: userIdHex),
         Skeleton.keep(child: _ProfileBadgesBlock(userIdHex: userIdHex)),
         Padding(

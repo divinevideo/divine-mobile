@@ -28,10 +28,15 @@ class SupporterHaloWings extends StatefulWidget {
   const SupporterHaloWings({
     required this.avatarSize,
     required this.builder,
+    this.sparkles,
     super.key,
   });
 
   final double avatarSize;
+
+  /// When set, twinkling sparkles surround the group, faded in by this value.
+  /// Used where the supporter status is the subject, such as its lightbox.
+  final Animation<double>? sparkles;
 
   /// Builds the avatar. Call the given callback with the route animation when
   /// the avatar opens something that flies it away.
@@ -77,7 +82,24 @@ abstract class _Motion {
 
   /// The right wing trails the left by this share of a cycle.
   static const double wingPhaseLag = 0.08;
+
+  /// Sparkles pulse between this scale and full size, each on its own beat.
+  static const double sparkleMinScale = 0.55;
+  static const double sparkleTiltRadians = 12 * math.pi / 180;
 }
+
+/// Accents around the avatar: offset from its top-left corner and size, as
+/// fractions of the avatar size, a phase so they do not pulse together, and
+/// the image. Hearts sit in opposite corners, sparkles in the other two.
+const _sparkleAsset = 'assets/supporter/sparkle.png';
+const _heartAsset = 'assets/supporter/heart.png';
+const List<({double dx, double dy, double size, double phase, String asset})>
+_sparkles = [
+  (dx: -0.12, dy: -0.04, size: 0.16, phase: 0, asset: _heartAsset),
+  (dx: -0.36, dy: 0.62, size: 20 / 192, phase: 0.35, asset: _sparkleAsset),
+  (dx: 0.98, dy: 0.12, size: 0.16, phase: 0.55, asset: _sparkleAsset),
+  (dx: 1.02, dy: 0.88, size: 20 / 192, phase: 0.8, asset: _heartAsset),
+];
 
 class _SupporterHaloWingsState extends State<SupporterHaloWings>
     with SingleTickerProviderStateMixin {
@@ -126,7 +148,15 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
       if (_controller.isAnimating) _controller.stop();
       _controller.value = 0;
     } else if (_visible && appVisible) {
-      if (!_controller.isAnimating) _controller.repeat();
+      if (!_controller.isAnimating) {
+        // Every instance starts from the wall clock, so the header and the
+        // lightbox copy stay in step while the avatar flies between them.
+        final periodMs = _Motion.period.inMilliseconds;
+        _controller
+          ..value =
+              (DateTime.now().millisecondsSinceEpoch % periodMs) / periodMs
+          ..repeat();
+      }
     } else if (_controller.isAnimating) {
       _controller.stop();
     }
@@ -173,6 +203,23 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
+                // Accents sit behind the wings, avatar and halo.
+                if (widget.sparkles case final visibility?)
+                  for (final sparkle in _sparkles)
+                    Positioned(
+                      left: outset + (sparkle.dx - sparkle.size / 2) * size,
+                      top: (sparkle.dy - sparkle.size / 2) * size,
+                      width: sparkle.size * size,
+                      height: sparkle.size * size,
+                      child: FadeTransition(
+                        opacity: visibility,
+                        child: _AnimatedPart(
+                          animation: _controller,
+                          builder: (t) => _Sparkle(t: t, phase: sparkle.phase),
+                          child: _PartImage(sparkle.asset),
+                        ),
+                      ),
+                    ),
                 Positioned(
                   left: 0,
                   top: wingTop,
@@ -283,6 +330,25 @@ class _Halo implements _PartTransform {
     final bob = -math.sin(angle) * avatarSize * _Motion.haloBobFraction;
     final tilt = math.sin(angle + math.pi / 2) * _Motion.haloTiltRadians;
     return Matrix4.translationValues(0, bob, 0)..rotateZ(tilt);
+  }
+
+  @override
+  Alignment get origin => Alignment.center;
+}
+
+class _Sparkle implements _PartTransform {
+  _Sparkle({required this.t, required this.phase});
+
+  final double t;
+  final double phase;
+
+  @override
+  Matrix4 get matrix {
+    final wave = (math.sin((t + phase) * 2 * math.pi) + 1) / 2;
+    final scale =
+        _Motion.sparkleMinScale + (1 - _Motion.sparkleMinScale) * wave;
+    return Matrix4.diagonal3Values(scale, scale, 1)
+      ..rotateZ((wave - 0.5) * _Motion.sparkleTiltRadians);
   }
 
   @override
