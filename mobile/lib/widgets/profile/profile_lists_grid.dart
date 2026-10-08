@@ -39,18 +39,49 @@ class ProfileListsGrid extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 16,
-            children: [
-              const Expanded(child: _VideoListsSection()),
-              if (peopleEnabled) const Expanded(child: _PeopleListsSection()),
-            ],
-          ),
+          child: peopleEnabled
+              ? BlocSelector<PeopleListsBloc, PeopleListsState, bool>(
+                  selector: (state) =>
+                      state.enabled && state.activeOwnerPubkey != null,
+                  builder: (_, showPeople) =>
+                      _ListSections(showPeople: showPeople),
+                )
+              : const _ListSections(showPeople: false),
         ),
       ],
     );
   }
+}
+
+/// Keep creation controls full width on compact screens. Wider surfaces can
+/// present the independent sections side by side without clipping their labels.
+class _ListSections extends StatelessWidget {
+  const _ListSections({required this.showPeople});
+
+  final bool showPeople;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (!showPeople) return const _VideoListsSection();
+      if (constraints.maxWidth < 600 ||
+          MediaQuery.textScalerOf(context).scale(16) > 16) {
+        return const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [_VideoListsSection(), _PeopleListsSection()],
+        );
+      }
+      return const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 16,
+        children: [
+          Expanded(child: _VideoListsSection()),
+          Expanded(child: _PeopleListsSection()),
+        ],
+      );
+    },
+  );
 }
 
 class _PeopleListsSection extends StatelessWidget {
@@ -67,14 +98,11 @@ class _PeopleListsSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SectionHeading(title: context.l10n.explorePeopleLists),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DivineButton(
-                label: context.l10n.listNewPeopleList,
-                leadingIcon: DivineIconName.plus,
-                expanded: true,
-                onPressed: () => context.push(CreatePeopleListPage.path),
-              ),
+            DivineButton(
+              label: context.l10n.listNewPeopleList,
+              leadingIcon: DivineIconName.plus,
+              expanded: true,
+              onPressed: () => context.push(CreatePeopleListPage.path),
             ),
             for (final list in state.lists)
               Padding(
@@ -224,7 +252,7 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+    padding: const EdgeInsets.only(top: 8, bottom: 12),
     child: Text(
       title,
       style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),

@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -166,6 +167,37 @@ void main() {
       await tester.tap(find.text('New people list'));
       await tester.pumpAndSettle();
       expect(pushedRoute, CreatePeopleListPage.path);
+    });
+
+    for (final width in [360.0, 393.0, 430.0]) {
+      testWidgets('creation labels remain readable at $width phone width', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(Size(width, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        for (final label in ['New people list', 'New video list']) {
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: find.text(label),
+              matching: find.byType(RichText),
+            ),
+          );
+          expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+        }
+      });
+    }
+
+    testWidgets('owner-less people section does not reserve an empty column', (
+      tester,
+    ) async {
+      when(() => peopleBloc.state).thenReturn(const PeopleListsState());
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final button = find.widgetWithText(DivineButton, 'New video list');
+      expect(tester.getSize(button).width, 768);
+      expect(find.text('New people list'), findsNothing);
     });
 
     testWidgets('people read failure keeps cached lists and offers retry', (
