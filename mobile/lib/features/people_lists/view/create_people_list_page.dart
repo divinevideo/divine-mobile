@@ -165,6 +165,9 @@ class _CreatePeopleListPageState extends ConsumerState<CreatePeopleListPage> {
                       TextFormField(
                         controller: _descriptionController,
                         enabled: !_submitting,
+                        keyboardType: TextInputType.text,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           labelText: context.l10n.listDescriptionLabel,
                         ),
@@ -210,8 +213,9 @@ class _NameField extends StatelessWidget {
       controller: controller,
       enabled: enabled,
       autofocus: true,
+      keyboardType: TextInputType.text,
       textCapitalization: TextCapitalization.sentences,
-      textInputAction: TextInputAction.done,
+      textInputAction: TextInputAction.next,
       style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
       decoration: InputDecoration(
         labelText: context.l10n.peopleListsListNameLabel,

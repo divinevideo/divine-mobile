@@ -238,6 +238,21 @@ void main() {
       expect(find.widgetWithText(DivineButton, 'Create'), findsOneWidget);
     });
 
+    testWidgets('chains the name field into the description field', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+
+      final fields = tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .toList();
+
+      expect(fields.map((field) => field.textInputAction), [
+        TextInputAction.next,
+        TextInputAction.done,
+      ]);
+    });
+
     testWidgets(
       'Create button is disabled while the name field is empty',
       (tester) async {
