@@ -44,6 +44,10 @@ class _Preferences extends Fake implements SharedPreferences {
   bool rejectRecoveryRemoval = false;
 
   @override
+  Future<void> reload() => backing.reload();
+  @override
+  Object? get(String key) => backing.get(key);
+  @override
   Set<String> getKeys() => backing.getKeys();
   @override
   bool containsKey(String key) => backing.containsKey(key);
