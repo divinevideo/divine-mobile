@@ -60,6 +60,8 @@ class UserListPeopleScreen extends StatefulWidget {
 }
 
 class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
+  bool _deleting = false;
+
   /// Deletes the list and reports only what its own operation settled to.
   ///
   /// The bloc resolves the operation as `cancelled` when it tears the request
@@ -68,10 +70,13 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
   /// teardown also clears the pending mutations, which is indistinguishable
   /// from the delete settling if read from state alone (#6504).
   Future<void> _deleteList(String listId) async {
+    if (_deleting) return;
+    setState(() => _deleting = true);
     final result = await context.read<PeopleListsBloc>().submit(
       PeopleListsDeleteRequested(listId: listId),
     );
     if (!mounted) return;
+    setState(() => _deleting = false);
     switch (result) {
       case PeopleListsOperationResult.cancelled:
         return;
@@ -131,6 +136,9 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
             onDeleteConfirmed: _deleteList,
           );
         }
+        // The bloc removes optimistically before the relay acknowledges.
+        // Until this operation settles, absence is not a missing-list result.
+        if (_deleting) return const _ListLoadingView();
         // Absence is known only after both the cached snapshot and the owner
         // relay read settle. Existing cached lists render above while the read
         // is pending or failed.

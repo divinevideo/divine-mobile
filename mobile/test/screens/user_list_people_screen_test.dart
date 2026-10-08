@@ -863,6 +863,52 @@ void main() {
       },
     );
 
+    testWidgets('pending deletion does not report the list as missing', (
+      tester,
+    ) async {
+      final bloc = _MockPeopleListsBloc();
+      final list = _buildList();
+      final states = StreamController<PeopleListsState>();
+      addTearDown(states.close);
+      final result = Completer<PeopleListsOperationResult>();
+      when(() => bloc.submit(any())).thenAnswer((_) => result.future);
+      whenListen(
+        bloc,
+        states.stream,
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
+      await _confirmDelete(tester, l10n);
+      states.add(
+        const PeopleListsState(
+          status: PeopleListsStatus.submitting,
+          ownerPubkey: _ownerPubkey,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+
+      states.add(
+        PeopleListsState(
+          status: PeopleListsStatus.failure,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      result.complete(PeopleListsOperationResult.failed);
+      await tester.pumpAndSettle();
+      expect(find.text(list.name), findsOneWidget);
+      expect(find.text(l10n.peopleListsDeleteFailed), findsOneWidget);
+      expect(find.text('Open list'), findsNothing);
+    });
+
     // #6504: a teardown clears `pendingMutations` wholesale, which reads
     // exactly like the delete settling. The relay still has the list, so
     // announcing a delete and popping the route would be a lie. The bloc
