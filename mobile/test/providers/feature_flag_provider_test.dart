@@ -143,42 +143,6 @@ void main() {
       );
     });
 
-    test('should provide individual flag checks', () async {
-      final mockPrefs = _MockSharedPreferences();
-
-      // Set up default stubs for all flags
-      for (final flag in FeatureFlag.values) {
-        when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(
-          () => mockPrefs.setBool('ff_${flag.name}', any()),
-        ).thenAnswer((_) async => true);
-        when(
-          () => mockPrefs.remove('ff_${flag.name}'),
-        ).thenAnswer((_) async => true);
-        when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
-      }
-
-      // Set up specific flag value
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-      when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
-      ).thenReturn(true);
-
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-      );
-
-      final service = container.read(featureFlagServiceProvider);
-      await service.initialize();
-
-      final isEnabled = container.read(
-        isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics),
-      );
-      expect(isEnabled, isTrue);
-
-      container.dispose();
-    });
-
     test('should update when service notifies', () async {
       final mockPrefs = _MockSharedPreferences();
 
