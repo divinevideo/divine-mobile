@@ -112,6 +112,90 @@ void main() {
       expect(find.text('Hello there'), findsOneWidget);
     });
 
+    testWidgets(
+      'replaces the visible cue immediately when its track refreshes',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final video = _makeVideo();
+        final hostKey = GlobalKey<_RebuildingSubtitleHostState>();
+        final positions = StreamController<Duration>.broadcast();
+        addTearDown(positions.close);
+        final provider = subtitleTrackProvider(
+          videoId: video.id,
+          textTrackContent: video.textTrackContent,
+          appLocaleCode: 'en',
+        );
+        var track = SubtitleFetchResult(
+          SubtitleFetchStatus.available,
+          cues: SubtitleService.parseVtt(
+            video.textTrackContent!
+                .replaceAll('Hello there', 'Translated')
+                .replaceAll('Second line', 'Translated second'),
+          ),
+          isMachineTranslated: true,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            provider.overrideWith((ref) async => track),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: _RebuildingSubtitleHost(
+                  key: hostKey,
+                  video: video,
+                  positions: positions.stream,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Translated'), findsOneWidget);
+        expect(find.text('Machine-translated'), findsOneWidget);
+        positions.add(const Duration(milliseconds: 1200));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Translated second'), findsOneWidget);
+
+        track = SubtitleFetchResult(
+          SubtitleFetchStatus.available,
+          cues: SubtitleService.parseVtt(video.textTrackContent!),
+        );
+        container.invalidate(provider);
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Second line'), findsOneWidget);
+        expect(find.text('Translated second'), findsNothing);
+        expect(find.text('Machine-translated'), findsNothing);
+        positions.add(const Duration(milliseconds: 500));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Hello there'), findsOneWidget);
+
+        await container
+            .read(subtitleVisibilityProvider.notifier)
+            .setEnabled(false);
+        await tester.pump();
+        hostKey.currentState!.rebuildAt(const Duration(milliseconds: 1200));
+        await tester.pump();
+        await container
+            .read(subtitleVisibilityProvider.notifier)
+            .setEnabled(true);
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Second line'), findsOneWidget);
+      },
+    );
+
     testWidgets('does not rebuild the caption pill for ticks within one cue', (
       tester,
     ) async {

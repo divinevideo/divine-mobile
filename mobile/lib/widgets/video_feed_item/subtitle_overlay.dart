@@ -32,6 +32,7 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
   List<SubtitleCue>? _displayStreamCues;
   Stream<Duration>? _displayStreamSource;
   String? _displayStreamVideoId;
+  int? _latestPositionMs;
 
   @override
   void didUpdateWidget(covariant SubtitleCueStreamPill oldWidget) {
@@ -60,12 +61,14 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
     return cuesAsync.when(
       data: (track) {
         final cues = track.cues;
-        final initialPositionMs = widget.initialPosition.inMilliseconds;
+        final initialPositionMs =
+            _latestPositionMs ?? widget.initialPosition.inMilliseconds;
         final initialDisplay = _SubtitleCueDisplayTracker(
           cues,
         ).displayFor(initialPositionMs);
 
         return StreamBuilder<_SubtitleCueDisplay>(
+          key: ObjectKey(cues),
           stream: _displayStreamFor(cues, initialPositionMs),
           initialData: initialDisplay,
           builder: (context, snapshot) {
@@ -122,7 +125,9 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
     var previousDisplay = tracker.displayFor(initialPositionMs);
 
     await for (final position in positionStream) {
-      final display = tracker.displayFor(position.inMilliseconds);
+      final positionMs = position.inMilliseconds;
+      _latestPositionMs = positionMs;
+      final display = tracker.displayFor(positionMs);
       if (display == previousDisplay) continue;
 
       previousDisplay = display;
@@ -131,6 +136,7 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
   }
 
   void _clearDisplayStream() {
+    _latestPositionMs = null;
     _displayStream = null;
     _displayStreamCues = null;
     _displayStreamSource = null;
