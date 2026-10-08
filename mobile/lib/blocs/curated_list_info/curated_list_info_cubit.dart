@@ -38,9 +38,6 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
        _listId = existingList?.id,
        _listLookupId = existingList?.authorScopedId,
        _storedCollaborators = existingList?.allowedCollaborators ?? const [],
-       _storedPublicTarget = existingList?.publicationTarget.isPublic ?? true,
-       _storedCollaboratorTarget =
-           existingList?.publicationTarget.allowedCollaborators ?? const [],
        _videoEventId = videoEventId,
        super(
          CuratedListInfoState(
@@ -71,8 +68,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// The latest confirmed collaborators, used to detect an intentional edit.
   List<String> _storedCollaborators;
-  bool _storedPublicTarget;
-  List<String> _storedCollaboratorTarget;
+  // An explicit choice remains a draft even if a background save temporarily
+  // matches it. Only a successful Save consumes that intent; Sync does not.
+  bool _visibilityEdited = false;
+  bool _collaboratorsEdited = false;
   final String? _videoEventId;
   bool _lastAttemptWasSync = false;
 
@@ -125,15 +124,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         recoveryReadOnly: recoveryReadOnly,
       );
     }
-    final visibilityEdited = state.isPublic != _storedPublicTarget;
-    final collaboratorsEdited = !const SetEquality<String>().equals(
-      state.collaboratorPubkeys.toSet(),
-      _storedCollaboratorTarget.toSet(),
-    );
     final target = list.publicationTarget;
     _storedCollaborators = list.allowedCollaborators;
-    _storedPublicTarget = target.isPublic;
-    _storedCollaboratorTarget = target.allowedCollaborators;
     return state.copyWith(
       // Later background delivery settles a failed retry, but cannot settle an
       // unrelated failed Save or claim that its unsaved values were stored.
@@ -144,8 +136,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
                   !list.needsSync
               ? CuratedListInfoStatus.editing
               : null),
-      isPublic: visibilityEdited ? state.isPublic : target.isPublic,
-      collaboratorPubkeys: collaboratorsEdited
+      isPublic: _visibilityEdited ? state.isPublic : target.isPublic,
+      collaboratorPubkeys: _collaboratorsEdited
           ? state.collaboratorPubkeys
           : target.allowedCollaborators,
       wasPublic: list.isPublic,
@@ -180,6 +172,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   void visibilityChanged({required bool isPublic}) {
     _refreshRecoveryHold();
     if (!state.canEdit) return;
+    _visibilityEdited = true;
     emitIfOpen(
       state.copyWith(
         isPublic: isPublic,
@@ -212,6 +205,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
               viewerPubkey == null || !pubkeysEqual(pubkey, viewerPubkey),
         )
         .toList();
+    _collaboratorsEdited = true;
     emitIfOpen(
       state.copyWith(
         collaboratorPubkeys: next,
@@ -342,6 +336,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
                     ?.videoEventIds
                     .contains(videoEventId) ==
                 true;
+        _consumePermissionDrafts();
         emitIfOpen(
           state.copyWith(
             status: videoAdded
@@ -379,6 +374,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             ? null
             : () {
                 if (isSessionCurrent) {
+                  _consumePermissionDrafts();
                   emitIfOpen(
                     state.copyWith(
                       status: CuratedListInfoStatus.savedAwaitingRelay,
@@ -398,6 +394,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           return;
         }
         final pending = service.getListById(listId);
+        if (updated) _consumePermissionDrafts();
         emitIfOpen(
           state.copyWith(
             needsSync: pending?.needsSync ?? false,
@@ -445,6 +442,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
       return;
     }
+    if (published) _consumePermissionDrafts();
     emitIfOpen(
       state.copyWith(
         status: published
@@ -454,5 +452,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             : CuratedListInfoStatus.failure,
       ),
     );
+  }
+
+  void _consumePermissionDrafts() {
+    _visibilityEdited = false;
+    _collaboratorsEdited = false;
   }
 }
