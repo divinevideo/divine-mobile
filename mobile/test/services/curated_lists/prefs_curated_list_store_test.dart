@@ -315,56 +315,68 @@ void main() {
           logs = await _freshLogs();
         });
 
-        test('replaces stored lists that are not valid JSON', () async {
-          await prefs.setString(_listsKey, 'invalid json {{{');
+        test('preserves stored lists that are not valid JSON', () async {
+          const raw = 'invalid json {{{';
+          await prefs.setString(_listsKey, raw);
           final crew = _list('crew');
 
           final saved = await _store(prefs).saveLists([crew]);
 
-          expect(saved, isTrue);
-          expect(_storedLists(prefs), [crew]);
+          expect(saved, isFalse);
+          expect(prefs.getString(_listsKey), raw);
         });
 
-        test('replaces stored lists of the wrong shape', () async {
-          await prefs.setString(_listsKey, jsonEncode({'crew': 1}));
+        test('preserves stored lists of the wrong shape', () async {
+          final raw = jsonEncode({'crew': 1});
+          await prefs.setString(_listsKey, raw);
           final crew = _list('crew');
 
           final saved = await _store(prefs).saveLists([crew]);
 
-          expect(saved, isTrue);
-          expect(_storedLists(prefs), [crew]);
+          expect(saved, isFalse);
+          expect(prefs.getString(_listsKey), raw);
         });
 
         test(
-          'rewrites the lists it loaded before a row it cannot decode',
+          'preserves unreadable rows and retries only after verified repair',
           () async {
             final kept = _list('kept');
             final removed = _list('removed');
             final added = _list('added');
-            await prefs.setString(
-              _listsKey,
-              jsonEncode([
-                kept.toJson(),
-                removed.toJson(),
-                'not a row',
-              ]),
-            );
+            final raw = jsonEncode([
+              kept.toJson(),
+              removed.toJson(),
+              'not a row',
+            ]);
+            await prefs.setString(_listsKey, raw);
             final store = _store(prefs)..listsLoaded([kept, removed]);
 
             final saved = await store.saveLists([kept, added]);
 
-            expect(saved, isTrue);
+            expect(saved, isFalse);
+            expect(prefs.getString(_listsKey), raw);
+
+            // A verified repair restores the acknowledged rows. The refused
+            // save must not advance its baseline or drop the intended removal.
+            await prefs.setString(
+              _listsKey,
+              jsonEncode([kept.toJson(), removed.toJson()]),
+            );
+            expect(await store.saveLists([kept, added]), isTrue);
             expect(_storedLists(prefs), unorderedEquals([kept, added]));
           },
         );
 
-        test('logs what it replaced without quoting the stored data', () async {
-          await prefs.setString(_listsKey, '$_storedText {{{');
+        test(
+          'logs unreadable storage without quoting the stored data',
+          () async {
+            await prefs.setString(_listsKey, '$_storedText {{{');
 
-          await _store(prefs).saveLists([_list('crew')]);
+            await _store(prefs).saveLists([_list('crew')]);
 
-          _expectUnreadableLog(logs, what: 'lists');
-        });
+            _expectUnreadableLog(logs, what: 'lists');
+          },
+        );
       });
     });
 

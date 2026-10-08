@@ -346,4 +346,49 @@ void main() {
       ]);
     },
   );
+  for (final corruptedField in ['pubkey', 'id']) {
+    test(
+      'queued owned mutation retains late invalid $corruptedField evidence',
+      () async {
+        final coordinator = CuratedListCacheWriteCoordinator();
+        final source = row(pubkey: _alice).copyWith(
+          isPublic: true,
+          isCollaborative: false,
+          allowedCollaborators: const [],
+        );
+        await load([rawRow(source)], coordinator: coordinator);
+        final damaged = rawRow(source)
+          ..['ownerPubkey'] = _bob
+          ..[corruptedField] = 42;
+        final laterRaw = jsonEncode([damaged]);
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final writer = coordinator.runExclusive(() async {
+          entered.complete();
+          await release.future;
+          await prefs.setString(CuratedListService.listsStorageKey, laterRaw);
+        });
+        await entered.future;
+        final reachedSave = Completer<void>();
+        service.addListener(() {
+          if (service.lists.any((r) => r.videoEventIds.contains(_added)) &&
+              !reachedSave.isCompleted) {
+            reachedSave.complete();
+          }
+        });
+        final mutation = service.addVideoToList('$_alice:$_id', _added);
+        await reachedSave.future;
+        release.complete();
+        await writer;
+        final accepted = await mutation;
+        expect(
+          accepted,
+          isFalse,
+          reason: 'An unclassifiable latest owner identity cannot authorize rewriting raw evidence',
+        );
+        expect(prefs.getString(CuratedListService.listsStorageKey), laterRaw);
+        noSigning();
+      },
+    );
+  }
 }
