@@ -78,7 +78,8 @@ class PrefsCuratedListStore {
   /// keeping lists another writer stored in the meantime. Returns whether
   /// every change was stored.
   ///
-  /// Unreadable lists fall back to [lists]; raw ownership evidence is retained.
+  /// Undecodable rows may fall back to the baseline, but a save refuses
+  /// unreadable ownership evidence so it cannot replace pending privacy work.
   Future<bool> saveLists(List<CuratedList> lists) async =>
       (await saveListsWithResult(lists)).succeeded;
 
@@ -129,6 +130,9 @@ class PrefsCuratedListStore {
           // This runs inside the shared barrier after earlier writers finish.
           ownerEvidence = _rawOwnerEvidence();
           return {
+            if (!ownerEvidence.readable) ...{
+              for (final row in [...baseline, ...requested]) row.authorScopedId,
+            },
             ...ownerEvidence.mutationConflicts(baseline, requested),
             if (activeClaims.isNotEmpty)
               ...(storedListsReadable && ownerEvidence.readable
@@ -136,10 +140,9 @@ class PrefsCuratedListStore {
                   : activeClaims.keys.toSet()),
           };
         },
-        write: (merged) => _writeString(
-          _listsKey,
-          jsonEncode(ownerEvidence.encode(merged)),
-        ),
+        write: (merged) => ownerEvidence.readable
+            ? _writeString(_listsKey, jsonEncode(ownerEvidence.encode(merged)))
+            : Future<bool>.value(false),
       );
       _savedLists = result.nextBaseline;
       return result;
