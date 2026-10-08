@@ -2,6 +2,7 @@
 // ABOUTME: Covers typed failures, manifest gates, and parent ingredients
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:c2pa_flutter/c2pa.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
+import 'package:openvine/services/nostr_creator_binding_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -65,6 +67,39 @@ void main() {
         .map((file) => file.uri.pathSegments.last)
         .where((name) => name.startsWith('c2pa_signed_'))
         .toList();
+
+    void stubSourcesAttested({Set<String> unattested = const {}}) {
+      when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
+        (invocation) async =>
+            unattested.contains(invocation.positionalArguments.single)
+            ? const ManifestStoreInfo()
+            : const ManifestStoreInfo(activeManifest: 'urn:c2pa:x'),
+      );
+    }
+
+    _MockManifestBuilder stubBuilder({required List<int> signedBytes}) {
+      final builder = _MockManifestBuilder();
+      when(() => mockC2pa.createBuilder(any()))
+          .thenAnswer((_) async => builder);
+      when(
+        () => builder.addIngredientFromFile(
+          path: any(named: 'path'),
+          config: any(named: 'config'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => builder.signFile(
+          sourcePath: any(named: 'sourcePath'),
+          destPath: any(named: 'destPath'),
+          signer: any(named: 'signer'),
+        ),
+      ).thenAnswer((invocation) async {
+        File(
+          invocation.namedArguments[#destPath] as String,
+        ).writeAsBytesSync(signedBytes);
+      });
+      return builder;
+    }
 
     group('failure classification', () {
       test('classifies iOS secure connection failures as TLS errors', () {
@@ -577,35 +612,11 @@ void main() {
         expect(output.readAsBytesSync(), equals([1, 2, 3]));
       });
 
-      test('carries the source manifest forward: parentOf ingredient, edit '
-          'action, and writes the signed bytes back in place', () async {
-        when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
-          (_) async => const ManifestStoreInfo(activeManifest: 'urn:c2pa:x'),
-        );
-
-        final builder = _MockManifestBuilder();
-        when(
-          () => mockC2pa.createBuilder(any()),
-        ).thenAnswer((_) async => builder);
-        when(
-          () => builder.addIngredient(
-            data: any(named: 'data'),
-            mimeType: any(named: 'mimeType'),
-            config: any(named: 'config'),
-          ),
-        ).thenAnswer((_) async {});
-        final signedBytes = Uint8List.fromList(const [9, 9, 9, 9, 9]);
-        when(
-          () => builder.sign(
-            sourceData: any(named: 'sourceData'),
-            mimeType: any(named: 'mimeType'),
-            signer: any(named: 'signer'),
-          ),
-        ).thenAnswer(
-          (_) async =>
-              BuilderSignResult(signedData: signedBytes, manifestSize: 5),
-        );
-
+      test('carries the source manifest forward: the source file as a '
+          'parentOf ingredient, an edit action, and the signed copy in '
+          'place of the output', () async {
+        stubSourcesAttested();
+        final builder = stubBuilder(signedBytes: const [9, 9, 9, 9, 9]);
         final output = writeFile('out.mp4', const [1, 2, 3]);
         final source = writeFile('src.mp4', const [4, 5, 6]);
 
@@ -616,58 +627,38 @@ void main() {
         );
 
         expect(result.success, isTrue);
-
-        final ingredientConfig =
+        final ingredient =
             verify(
-                  () => builder.addIngredient(
-                    data: any(named: 'data'),
-                    mimeType: any(named: 'mimeType'),
+                  () => builder.addIngredientFromFile(
+                    path: source.path,
                     config: captureAny(named: 'config'),
                   ),
                 ).captured.single
                 as IngredientConfig;
-        expect(ingredientConfig.relationship, Relationship.parentOf);
-
+        expect(ingredient.relationship, Relationship.parentOf);
         final recordedAction =
             verify(() => builder.addAction(captureAny())).captured.single
                 as ActionConfig;
         // Literal token: pins the protocol surface, not just the constant.
         expect(recordedAction.action, 'c2pa.edited');
-
         verify(() => builder.setIntent(ManifestIntent.edit)).called(1);
+        verifyNever(
+          () => builder.addIngredient(
+            data: any(named: 'data'),
+            mimeType: any(named: 'mimeType'),
+            config: any(named: 'config'),
+          ),
+        );
         verify(builder.dispose).called(1);
-        expect(output.readAsBytesSync(), equals(signedBytes));
+        expect(output.readAsBytesSync(), equals([9, 9, 9, 9, 9]));
+        expect(signedLeftovers(), isEmpty);
       });
 
       test(
-        'leaves the derived file untouched when signing returns empty bytes',
+        'leaves the derived file untouched when signing writes nothing',
         () async {
-          when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
-            (_) async => const ManifestStoreInfo(activeManifest: 'urn:c2pa:x'),
-          );
-
-          final builder = _MockManifestBuilder();
-          when(
-            () => mockC2pa.createBuilder(any()),
-          ).thenAnswer((_) async => builder);
-          when(
-            () => builder.addIngredient(
-              data: any(named: 'data'),
-              mimeType: any(named: 'mimeType'),
-              config: any(named: 'config'),
-            ),
-          ).thenAnswer((_) async {});
-          when(
-            () => builder.sign(
-              sourceData: any(named: 'sourceData'),
-              mimeType: any(named: 'mimeType'),
-              signer: any(named: 'signer'),
-            ),
-          ).thenAnswer(
-            (_) async =>
-                BuilderSignResult(signedData: Uint8List(0), manifestSize: 0),
-          );
-
+          stubSourcesAttested();
+          final builder = stubBuilder(signedBytes: const []);
           final output = writeFile('out.mp4', const [1, 2, 3]);
           final source = writeFile('src.mp4', const [4, 5, 6]);
 
@@ -680,6 +671,7 @@ void main() {
           expect(result.success, isFalse);
           expect(result.failureReason, C2paSigningFailureReason.outputMissing);
           expect(output.readAsBytesSync(), equals([1, 2, 3]));
+          expect(signedLeftovers(), isEmpty);
           verify(builder.dispose).called(1);
         },
       );
@@ -698,6 +690,119 @@ void main() {
           verifyNever(() => mockC2pa.createBuilder(any()));
         },
       );
+    });
+
+    group('signEditInPlace', () {
+      test('signs several videos as a composite of their captures', () async {
+        stubSourcesAttested();
+        final builder = stubBuilder(signedBytes: const [7, 7, 7]);
+        final output = writeFile('merged.mp4', const [1]);
+        final first = writeFile('a.mp4', const [2]);
+        final second = writeFile('b.mp4', const [3]);
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [
+            C2paEditSource(path: first.path),
+            C2paEditSource(path: second.path),
+          ],
+        );
+
+        expect(result.success, isTrue);
+        verify(
+          () => builder.setIntent(
+            ManifestIntent.create,
+            DigitalSourceType.compositeCapture,
+          ),
+        ).called(1);
+        final configs = verify(
+          () => builder.addIngredientFromFile(
+            path: any(named: 'path'),
+            config: captureAny(named: 'config'),
+          ),
+        ).captured.cast<IngredientConfig>();
+        expect(
+          configs.map((config) => config.relationship),
+          everyElement(Relationship.componentOf),
+        );
+        expect(configs, hasLength(2));
+      });
+
+      test('signs nothing when a source video carries no manifest', () async {
+        final output = writeFile('edited.mp4', const [1, 2]);
+        final source = writeFile('unsigned.mp4', const [3]);
+        stubSourcesAttested(unattested: {source.path});
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [C2paEditSource(path: source.path)],
+        );
+
+        expect(result.success, isFalse);
+        expect(
+          result.failureReason,
+          C2paSigningFailureReason.sourceUnattested,
+        );
+        verifyNever(() => mockC2pa.createBuilder(any()));
+        expect(output.readAsBytesSync(), equals([1, 2]));
+      });
+
+      test('declares an image without a manifest instead of embedding it, and '
+          'records who made the edit', () async {
+        final output = writeFile('keyed.mp4', const [1]);
+        final video = writeFile('take.mp4', const [2]);
+        final backdrop = writeFile('backdrop.png', const [3]);
+        stubSourcesAttested(unattested: {backdrop.path});
+        final builder = stubBuilder(signedBytes: const [8]);
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [
+            C2paEditSource(path: video.path),
+            C2paEditSource(path: backdrop.path, kind: C2paSourceKind.image),
+          ],
+          creatorBindingAssertion: const NostrCreatorBindingAssertion(
+            assertionLabel: 'video.divine.nostr.creator_binding',
+            payloadJson: '{"pubkey":"abc","signature":"sig"}',
+            signature: 'sig',
+            pubkey: 'abc',
+          ),
+        );
+
+        expect(result.success, isTrue);
+        verify(
+          () => builder.addIngredientFromFile(
+            path: video.path,
+            config: any(named: 'config'),
+          ),
+        ).called(1);
+        verifyNever(
+          () => builder.addIngredientFromFile(
+            path: backdrop.path,
+            config: any(named: 'config'),
+          ),
+        );
+        final manifest = jsonDecode(
+          verify(
+                () => mockC2pa.createBuilder(captureAny()),
+              ).captured.single
+              as String,
+        ) as Map<String, dynamic>;
+        final ingredients = manifest['ingredients'] as List<dynamic>;
+        expect(
+          ingredients.single,
+          allOf(
+            containsPair('title', 'backdrop.png'),
+            containsPair('relationship', 'componentOf'),
+          ),
+        );
+        expect(
+          (manifest['assertions'] as List<dynamic>).map(
+            (assertion) => (assertion as Map<String, dynamic>)['label'],
+          ),
+          contains('video.divine.nostr.creator_binding'),
+        );
+      });
     });
   });
 }
