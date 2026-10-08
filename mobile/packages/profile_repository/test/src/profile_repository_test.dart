@@ -4650,6 +4650,49 @@ void main() {
       }
 
       test(
+        'progressive search keeps server follower and video counts on a newer '
+        'cached revision',
+        () async {
+          final cached = UserProfile(
+            pubkey: pkCachedVine,
+            displayName: 'Sam From Contacts',
+            createdAt: DateTime(2026),
+            eventId: 'a' * 64,
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached]);
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pk1Video,
+              displayName: 'Sam Newcomer',
+              createdAt: DateTime(2026),
+              followerCount: 10,
+              videoCount: 1,
+            ),
+            ProfileSearchResult(
+              pubkey: pkCachedVine,
+              displayName: 'Sam Old Name',
+              createdAt: DateTime(2025),
+              followerCount: 500,
+              videoCount: 40,
+            ),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+              .last;
+
+          final kept = result.profiles.first;
+          expect(kept.pubkey, pkCachedVine);
+          expect(kept.displayName, 'Sam From Contacts');
+          expect(kept.restFollowerCount, 500);
+          expect(kept.restVideoCount, 40);
+        },
+      );
+
+      test(
         'progressive search preserves cleared server media fields',
         () async {
           final cached = UserProfile(

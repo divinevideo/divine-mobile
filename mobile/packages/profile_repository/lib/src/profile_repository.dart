@@ -2422,6 +2422,16 @@ class ProfileRepository implements ProfileReader {
               NostrHexUtils.isValidEventId(cached.eventId) &&
               serverRevision != null &&
               cached.createdAt.isAfter(serverRevision)) {
+            // Counts are not part of the profile event, so the newer revision
+            // still ranks and renders with the server's numbers.
+            resultMap[result.pubkey] = cached.copyWith(
+              rawData: {
+                ...cached.rawData,
+                if (result.followerCount != null)
+                  'follower_count': result.followerCount,
+                if (result.videoCount != null) 'video_count': result.videoCount,
+              },
+            );
             continue;
           }
           resultMap[result.pubkey] = result.toUserProfile();

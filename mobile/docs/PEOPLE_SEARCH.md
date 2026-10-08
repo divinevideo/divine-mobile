@@ -53,11 +53,12 @@ retain their configured filter, or the display-name fallback when none is set.
 
 Reconcile each REST profile before matching. A cached profile wins only with a
 canonical event ID and an event timestamp strictly newer than the server's
-known timestamp. Equal or missing server timestamps select the server copy;
-synthetic REST and bundled seed IDs cannot establish an event revision.
-Preserve the selected server fields through enrichment, including cleared
-names and media, then apply identity matching again. A renamed account can
-therefore disappear from a query for its old name.
+known timestamp, and keeps the server's follower and video counts, which are
+not part of the profile event. Equal or missing server timestamps select the
+server copy; synthetic REST and bundled seed IDs cannot establish an event
+revision. Preserve the selected server fields through enrichment, including
+cleared names and media, then apply identity matching again. A renamed account
+can therefore disappear from a query for its old name.
 
 Pagination uses the raw REST response size, not the number of matching profiles.
 An empty or short matching page may still have later results. The user picker
