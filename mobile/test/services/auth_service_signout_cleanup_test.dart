@@ -580,9 +580,9 @@ void main() {
             async.elapse(const Duration(seconds: 5));
             async.flushMicrotasks();
 
+            expect(signOutError, isNull);
             expect(events, ['slow started', 'second started']);
             expect(completed, isTrue);
-            expect(signOutError, isNull);
             expect(authService.authState, AuthState.unauthenticated);
             slow.complete();
             async.flushMicrotasks();
