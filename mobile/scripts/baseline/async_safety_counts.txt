@@ -42,7 +42,6 @@ discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/new_videos_tab.dart	1
-discarded_futures|lib/widgets/popular_videos_tab.dart	1
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
 discarded_futures|lib/widgets/report_content_confirmation.dart	1
 discarded_futures|lib/widgets/report_content_dialog.dart	2
