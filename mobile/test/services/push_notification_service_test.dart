@@ -28,6 +28,32 @@ class _MockNotificationService extends Mock implements NotificationService {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
 
+class _MockLocalIdentity extends Mock implements LocalNostrIdentity {}
+
+enum _SignerFailure {
+  encryptionReturnsNull('NIP-44 encryption returns null'),
+  encryptionThrows('NIP-44 encryption throws'),
+  signatureReturnsNull('event signing returns null');
+
+  const _SignerFailure(this.label);
+
+  final String label;
+}
+
+enum _SignerKind {
+  keycast('a Keycast identity', retries: true),
+  offlineRestore('an offline-restored identity', retries: true),
+  localKey('a local-key identity', retries: true),
+  bunker('a Bunker identity', retries: false);
+
+  const _SignerKind(this.label, {required this.retries});
+
+  final String label;
+
+  /// Whether the signer can recover silently, so registration is retried.
+  final bool retries;
+}
+
 class _FakeEvent extends Fake implements Event {
   @override
   String get id => 'push-control-event-id';
@@ -80,6 +106,9 @@ void main() {
     mockNostrSigner = _MockNostrSigner();
 
     when(() => mockNostrClient.signer).thenReturn(mockNostrSigner);
+    when(() => mockAuthService.currentIdentity).thenReturn(
+      BunkerNostrIdentity(pubkey: testPubkey, remoteSigner: mockNostrSigner),
+    );
     when(() => mockNostrSigner.nip44Encrypt(any(), any()))
         .thenAnswer((_) async => encryptedPayload);
 
@@ -249,11 +278,11 @@ void main() {
         service.dispose();
       });
 
-      test('does nothing when FCM token is null', () async {
+      test('returns retryable failure when FCM token is not ready', () async {
         final service = buildService(token: null);
         expect(
           await service.register(testPubkey),
-          PushRegistrationResult.terminalFailure,
+          PushRegistrationResult.retryableFailure,
         );
 
         verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
@@ -266,18 +295,37 @@ void main() {
         service.dispose();
       });
 
-      test('returns terminal failure when FCM token lookup throws', () async {
-        final service = buildService(
-          getToken: () => throw StateError('apns-token-not-set'),
-        );
+      test(
+        'returns terminal failure when FCM token lookup throws an Error',
+        () async {
+          final service = buildService(
+            getToken: () => throw StateError('apns-token-not-set'),
+          );
 
-        expect(
-          await service.register(testPubkey),
-          PushRegistrationResult.terminalFailure,
-        );
-        verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
-        service.dispose();
-      });
+          expect(
+            await service.register(testPubkey),
+            PushRegistrationResult.terminalFailure,
+          );
+          verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+          service.dispose();
+        },
+      );
+
+      test(
+        'returns retryable failure when FCM token lookup throws an Exception',
+        () async {
+          final service = buildService(
+            getToken: () => throw Exception('apns-token-not-set'),
+          );
+
+          expect(
+            await service.register(testPubkey),
+            PushRegistrationResult.retryableFailure,
+          );
+          verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+          service.dispose();
+        },
+      );
 
       test(
         'skips registration when push service pubkey is still placeholder',
@@ -352,6 +400,106 @@ void main() {
           ),
         );
         service.dispose();
+      });
+
+      group('when the signer is not ready', () {
+        NostrIdentity identityFor(_SignerKind kind) {
+          final remoteSigner = mockNostrSigner;
+          final local = _MockLocalIdentity();
+          when(() => local.pubkey).thenReturn(testPubkey);
+          when(() => local.signsWithLocalKey).thenReturn(true);
+          when(() => local.nip44Encrypt(any(), any())).thenAnswer(
+            (call) => mockNostrSigner.nip44Encrypt(
+              call.positionalArguments[0] as String,
+              call.positionalArguments[1] as String,
+            ),
+          );
+          return switch (kind) {
+            _SignerKind.keycast => KeycastNostrIdentity(
+              pubkey: testPubkey,
+              rpcSigner: remoteSigner,
+            ),
+            _SignerKind.offlineRestore => PubkeyOnlyNostrIdentity(
+              pubkey: testPubkey,
+            ),
+            _SignerKind.localKey => local,
+            _SignerKind.bunker => BunkerNostrIdentity(
+              pubkey: testPubkey,
+              remoteSigner: remoteSigner,
+            ),
+          };
+        }
+
+        for (final kind in _SignerKind.values) {
+          for (final failure in _SignerFailure.values) {
+            // A pubkey-only identity cannot reach event signing or RPC errors.
+            if (kind == _SignerKind.offlineRestore &&
+                failure != _SignerFailure.encryptionReturnsNull) {
+              continue;
+            }
+            final expected = kind.retries
+                ? PushRegistrationResult.retryableFailure
+                : PushRegistrationResult.terminalFailure;
+
+            test(
+              'returns $expected when ${failure.label} for ${kind.label}',
+              () async {
+                final identity = identityFor(kind);
+                when(
+                  () => mockAuthService.currentIdentity,
+                ).thenReturn(identity);
+                switch (failure) {
+                  case _SignerFailure.encryptionReturnsNull:
+                    when(
+                      () => mockNostrSigner.nip44Encrypt(any(), any()),
+                    ).thenAnswer((_) async => null);
+                  case _SignerFailure.encryptionThrows:
+                    when(
+                      () => mockNostrSigner.nip44Encrypt(any(), any()),
+                    ).thenAnswer(
+                      (_) async => throw TimeoutException('signer unavailable'),
+                    );
+                  case _SignerFailure.signatureReturnsNull:
+                    when(
+                      () => mockAuthService.createAndSignEvent(
+                        kind: any(named: 'kind'),
+                        content: any(named: 'content'),
+                        tags: any(named: 'tags'),
+                      ),
+                    ).thenAnswer((_) async => null);
+                }
+
+                final service = buildService();
+                expect(await service.register(testPubkey), expected);
+
+                if (kind == _SignerKind.offlineRestore) {
+                  verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+                } else {
+                  verify(() => mockNostrSigner.nip44Encrypt(any(), any()))
+                      .called(1);
+                }
+                if (failure == _SignerFailure.signatureReturnsNull) {
+                  verify(
+                    () => mockAuthService.createAndSignEvent(
+                      kind: any(named: 'kind'),
+                      content: any(named: 'content'),
+                      tags: any(named: 'tags'),
+                    ),
+                  ).called(1);
+                } else {
+                  verifyNever(
+                    () => mockAuthService.createAndSignEvent(
+                      kind: any(named: 'kind'),
+                      content: any(named: 'content'),
+                      tags: any(named: 'tags'),
+                    ),
+                  );
+                }
+                service.dispose();
+              },
+            );
+          }
+        }
       });
 
       test('returns uncertain failure when registration publish receives no OK response', () async {

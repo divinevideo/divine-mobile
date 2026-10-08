@@ -2,6 +2,7 @@
 // ABOUTME: Covers loading, empty, error-with-retry, and ranked sound rows.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
     CreatorSound sound(String id, String title, int videoCount) => CreatorSound(
       id: id,
       title: title,
-      createdAt: DateTime.now().toUtc().subtract(const Duration(days: 3)),
+      createdAt: clock.now().toUtc().subtract(const Duration(days: 3)),
       videoCount: videoCount,
     );
 
