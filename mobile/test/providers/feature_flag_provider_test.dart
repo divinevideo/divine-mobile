@@ -1,6 +1,8 @@
 // ABOUTME: Tests for Riverpod providers managing feature flag service and state
 // ABOUTME: Validates provider setup, dependency injection, and state management
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,8 +10,11 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'listener_call_recorder.dart';
@@ -19,6 +24,37 @@ class _MockSharedPreferences extends Mock implements SharedPreferences {}
 class _RecordingFeatureFlagService extends FeatureFlagService
     with ListenerCallRecorder {
   _RecordingFeatureFlagService(super._prefs, super._buildConfig);
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
+
+/// Runs [body] in a guarded zone and returns every error that escaped it.
+Future<List<Object>> _unhandledErrorsWhile(
+  Future<void> Function() body,
+) async {
+  final errors = <Object>[];
+  await runZonedGuarded(() async {
+    await body();
+    await pumpEventQueue();
+  }, (error, _) => errors.add(error));
+  return errors;
 }
 
 void main() {
@@ -219,6 +255,72 @@ void main() {
 
       expect(service.isEnabled(FeatureFlag.communityContentWarnings), isFalse);
       expect(prefs.getBool('ff_communityContentWarnings'), isTrue);
+    });
+
+    group('when a persisted flag cannot be read', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+      late _MockSharedPreferences mockPrefs;
+      late ProviderContainer container;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+
+        mockPrefs = _MockSharedPreferences();
+        // What SharedPreferences.getBool throws for a non-bool stored value.
+        when(
+          () => mockPrefs.getBool(any(that: startsWith('ff_'))),
+        ).thenThrow(TypeError());
+        container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+        );
+      });
+
+      tearDown(() {
+        container.dispose();
+        detachedFailureReporter = originalReporter;
+      });
+
+      test('reports the failure at creation instead of leaking it', () async {
+        final unhandledErrors = await _unhandledErrorsWhile(() async {
+          container.read(featureFlagServiceProvider);
+        });
+
+        expect(unhandledErrors, isEmpty);
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<TypeError>(),
+          ),
+        );
+      });
+
+      test(
+        'reports the failure on a developer-mode change instead of leaking it',
+        () async {
+          when(
+            () => mockPrefs.setBool(any(), any()),
+          ).thenAnswer((_) async => true);
+          final environment = container.read(environmentServiceProvider);
+          await environment.initialize(sharedPreferences: mockPrefs);
+          container.read(featureFlagServiceProvider);
+
+          final unhandledErrors = await _unhandledErrorsWhile(
+            environment.enableDeveloperMode,
+          );
+
+          expect(unhandledErrors, isEmpty);
+          expect(
+            reporter.recordedErrors,
+            hasLength(2),
+            reason: 'creation and the developer-mode re-read both failed',
+          );
+        },
+      );
     });
   });
 
