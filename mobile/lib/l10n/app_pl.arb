@@ -4948,7 +4948,6 @@
     "peopleListsPeopleLabel": "Osoby",
     "peopleListsPeopleNone": "Nie dodano żadnych osób",
     "peopleListsSessionChanged": "Twoje konto lub dostęp do listy uległy zmianie. Otwórz tę stronę ponownie, aby kontynuować.",
-    "peopleListsSearchConnectionsHint": "Szukaj wśród obserwujących i obserwowanych",
     "listCardSemanticLabel": "{visibility, select, private{{name}, Prywatna, {count}} other{{name}, {count}}}",
     "listMemberNamesSeparator": ", ",
     "@listCardSemanticLabel": {

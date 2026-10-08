@@ -12330,9 +12330,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsSessionChanged => '你的账号或列表访问权限已更改。请重新打开此页面以继续。';
 
   @override
-  String get peopleListsSearchConnectionsHint => '搜索关注者和已关注的用户';
-
-  @override
   String get listMemberNamesSeparator => '、';
 
   @override

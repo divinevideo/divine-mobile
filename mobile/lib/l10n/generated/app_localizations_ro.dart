@@ -13390,10 +13390,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Caută printre urmăritori și persoanele urmărite';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

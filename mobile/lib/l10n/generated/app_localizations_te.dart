@@ -13464,10 +13464,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

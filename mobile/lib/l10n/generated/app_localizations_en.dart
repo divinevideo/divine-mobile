@@ -13214,10 +13214,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account or list access changed. Reopen this page to continue.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Search followers and following';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

@@ -13383,10 +13383,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twoje konto lub dostęp do listy uległy zmianie. Otwórz tę stronę ponownie, aby kontynuować.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Szukaj wśród obserwujących i obserwowanych';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

@@ -6708,7 +6708,6 @@
   "peopleListsPeopleLabel": "Orang",
   "peopleListsPeopleNone": "Belum ada orang ditambah",
   "peopleListsSessionChanged": "Akaun atau akses anda kepada senarai telah berubah. Buka semula halaman ini untuk meneruskan.",
-  "peopleListsSearchConnectionsHint": "Cari pengikut dan orang yang diikuti",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Peribadi, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {

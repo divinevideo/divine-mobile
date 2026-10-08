@@ -13264,10 +13264,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu cuenta o el acceso a la lista cambió. Volvé a abrir esta página para continuar.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Buscá entre tus seguidores y las personas que seguís';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

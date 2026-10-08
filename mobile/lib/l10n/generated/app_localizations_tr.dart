@@ -13047,10 +13047,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Takipçilerin ve takip ettiklerin arasında ara';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

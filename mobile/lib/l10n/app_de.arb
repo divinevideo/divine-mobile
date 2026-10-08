@@ -4948,7 +4948,6 @@
     "peopleListsPeopleLabel": "Personen",
     "peopleListsPeopleNone": "Keine Personen hinzugefügt",
     "peopleListsSessionChanged": "Dein Konto oder dein Zugriff auf die Liste hat sich geändert. Öffne diese Seite erneut, um fortzufahren.",
-    "peopleListsSearchConnectionsHint": "Follower und gefolgte Personen durchsuchen",
     "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
     "listMemberNamesSeparator": ", ",
     "@listCardSemanticLabel": {

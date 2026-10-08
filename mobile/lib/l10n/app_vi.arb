@@ -6708,7 +6708,6 @@
   "peopleListsPeopleLabel": "Mọi người",
   "peopleListsPeopleNone": "Chưa thêm ai",
   "peopleListsSessionChanged": "Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.",
-  "peopleListsSearchConnectionsHint": "Tìm người theo dõi và người bạn đang theo dõi",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Riêng tư, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {

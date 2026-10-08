@@ -5041,7 +5041,6 @@
     "peopleListsPeopleLabel": "ሰዎች",
     "peopleListsPeopleNone": "ምንም ሰዎች አልተጨመሩም",
     "peopleListsSessionChanged": "መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።",
-    "peopleListsSearchConnectionsHint": "ተከታዮችን እና የምትከተላቸውን ፈልግ",
     "listMemberNamesSeparator": "፣ ",
     "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
     "@listCardSemanticLabel": {

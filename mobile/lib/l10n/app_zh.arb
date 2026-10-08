@@ -6708,7 +6708,6 @@
   "peopleListsPeopleLabel": "用户",
   "peopleListsPeopleNone": "尚未添加用户",
   "peopleListsSessionChanged": "你的账号或列表访问权限已更改。请重新打开此页面以继续。",
-  "peopleListsSearchConnectionsHint": "搜索关注者和已关注的用户",
   "listCardSemanticLabel": "{visibility, select, private{{name}，私密，{count}} other{{name}，{count}}}",
   "listMemberNamesSeparator": "、",
   "@listCardSemanticLabel": {

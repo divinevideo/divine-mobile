@@ -13237,10 +13237,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nagbago ang account mo o ang access sa listahan. Buksan ulit ang pahinang ito para magpatuloy.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Maghanap sa mga tagasubaybay at sinusubaybayan';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

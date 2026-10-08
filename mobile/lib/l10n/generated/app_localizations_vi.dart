@@ -13066,10 +13066,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Tìm người theo dõi và người bạn đang theo dõi';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

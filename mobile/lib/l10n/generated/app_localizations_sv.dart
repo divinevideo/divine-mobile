@@ -13127,10 +13127,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Sök bland följare och personer du följer';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

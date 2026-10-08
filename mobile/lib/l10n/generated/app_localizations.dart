@@ -21969,12 +21969,6 @@ abstract class AppLocalizations {
   /// **'Your account or list access changed. Reopen this page to continue.'**
   String get peopleListsSessionChanged;
 
-  /// No description provided for @peopleListsSearchConnectionsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search followers and following'**
-  String get peopleListsSearchConnectionsHint;
-
   /// Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ').
   ///
   /// In en, this message translates to:

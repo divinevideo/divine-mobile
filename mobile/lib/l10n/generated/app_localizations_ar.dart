@@ -13073,10 +13073,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'ابحث في المتابعين ومن تتابعهم';
-
-  @override
   String get listMemberNamesSeparator => '، ';
 
   @override

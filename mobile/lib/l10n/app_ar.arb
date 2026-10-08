@@ -4948,7 +4948,6 @@
     "peopleListsPeopleLabel": "الأشخاص",
     "peopleListsPeopleNone": "لم تتم إضافة أي أشخاص",
     "peopleListsSessionChanged": "تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.",
-    "peopleListsSearchConnectionsHint": "ابحث في المتابعين ومن تتابعهم",
     "listCardSemanticLabel": "{visibility, select, private{{name}، خاصة، {count}} other{{name}، {count}}}",
     "listMemberNamesSeparator": "، ",
     "@listCardSemanticLabel": {

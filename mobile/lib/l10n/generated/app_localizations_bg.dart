@@ -13250,10 +13250,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Търси сред последователи и следвани';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

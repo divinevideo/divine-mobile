@@ -12791,9 +12791,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።';
 
   @override
-  String get peopleListsSearchConnectionsHint => 'ተከታዮችን እና የምትከተላቸውን ፈልግ';
-
-  @override
   String get listMemberNamesSeparator => '፣ ';
 
   @override

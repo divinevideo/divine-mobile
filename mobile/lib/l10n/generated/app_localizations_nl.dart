@@ -13192,10 +13192,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Zoek in volgers en mensen die je volgt';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override

@@ -13116,10 +13116,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں';
-
-  @override
   String get listMemberNamesSeparator => '، ';
 
   @override

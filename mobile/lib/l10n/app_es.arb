@@ -4948,7 +4948,6 @@
     "peopleListsPeopleLabel": "Personas",
     "peopleListsPeopleNone": "No agregaste personas",
     "peopleListsSessionChanged": "Tu cuenta o el acceso a la lista cambió. Volvé a abrir esta página para continuar.",
-    "peopleListsSearchConnectionsHint": "Buscá entre tus seguidores y las personas que seguís",
     "listCardSemanticLabel": "{visibility, select, private{{name}, Privada, {count}} other{{name}, {count}}}",
     "listMemberNamesSeparator": ", ",
     "@listCardSemanticLabel": {

@@ -12491,9 +12491,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.';
 
   @override
-  String get peopleListsSearchConnectionsHint => '팔로워 및 팔로우 중인 사람 검색';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
