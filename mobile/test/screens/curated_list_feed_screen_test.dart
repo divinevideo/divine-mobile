@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -299,13 +300,41 @@ void main() {
         nostrEventId: listEventId,
       );
 
-      testWidgets("reports someone else's list from its menu", (
+      testWidgets('offers no report on your own uncached discovered list', (
         tester,
       ) async {
+        // A deep link can resolve before the background owner-list sync.
+        // The local store is ready but does not contain this list yet.
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: listAuthor,
+        );
         await tester.pumpWidget(
           buildSubject(
             authorPubkey: listAuthor,
             discoveredList: reportableList(),
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets("reports someone else's list from its menu", (
+        tester,
+      ) async {
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: 'a' * 64,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
           ),
         );
         await tester.pump();

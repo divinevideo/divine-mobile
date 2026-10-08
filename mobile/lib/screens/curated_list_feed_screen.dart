@@ -460,6 +460,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   }) {
     final author = list?.pubkey ?? widget.authorPubkey;
     if (!isOwnedKnown || author == null) return null;
+    // Deep links can resolve an owned list before background sync adds it
+    // to the local store; an absent entry does not mean someone else owns it.
+    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
+    if (viewer != null && viewer.toLowerCase() == author.toLowerCase()) {
+      return null;
+    }
     final eventId =
         list?.nostrEventId ??
         ref
