@@ -4184,11 +4184,22 @@ void main() {
           );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
           await loaded;
+          expect(bloc.state.videos, hasLength(5));
+          expect(bloc.state.currentIndex, 0);
+
+          final persisted = Completer<void>();
+          when(
+            () => mockCache.writeVideos(
+              pubkey: any(named: 'pubkey'),
+              mode: 'following',
+              videos: any(named: 'videos', that: hasLength(2)),
+            ),
+          ).thenAnswer((_) async {
+            if (!persisted.isCompleted) persisted.complete();
+          });
           bloc.add(const VideoFeedActiveIndexChanged(2));
+          await persisted.future;
         },
-        // The swipe persist is trailing-debounced, so wait past the debounce
-        // window for the disk write to fire.
-        wait: const Duration(milliseconds: 700),
         expect: () => [
           const VideoFeedBlocState(mode: FeedMode.following),
           isA<VideoFeedBlocState>()
@@ -4226,10 +4237,22 @@ void main() {
           );
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
           await loaded;
+          expect(bloc.state.videos, hasLength(3));
+          expect(bloc.state.currentIndex, 0);
+
+          final cleared = Completer<void>();
+          when(
+            () => mockCache.clearVideos(
+              pubkey: any(named: 'pubkey'),
+              mode: 'following',
+            ),
+          ).thenAnswer((_) async {
+            if (!cleared.isCompleted) cleared.complete();
+          });
           // Index 2 + offset 1 = 3 == length → nothing left to resume to.
           bloc.add(const VideoFeedActiveIndexChanged(2));
+          await cleared.future;
         },
-        wait: const Duration(milliseconds: 700),
         verify: (_) {
           // An empty forward window must invalidate the key, not no-op — else
           // the next cold start re-serves already-seen videos.
