@@ -13,6 +13,7 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
@@ -79,9 +80,7 @@ class _PeopleListsSection extends StatelessWidget {
             for (final list in state.lists)
               UserListCard(
                 userList: list,
-                onTap: () => context.push(
-                  '/people-lists/${Uri.encodeComponent(list.id)}',
-                ),
+                onTap: () => context.push(RoutePaths.peopleListForId(list.id)),
               ),
             if (state.ownerReadStatus == PeopleListsOwnerReadStatus.failed)
               _ListReadFailure(
