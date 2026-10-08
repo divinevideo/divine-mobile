@@ -38,6 +38,15 @@ class NativeProofModeService {
   @visibleForTesting
   static C2paSigningService Function()? c2paSigningServiceFactoryOverride;
 
+  /// Builds the signed-in account's creator binding for a file about to be
+  /// signed, so every recording, edit and post names who made it (#9893).
+  ///
+  /// A static utility has no constructor to inject through, so startup
+  /// assigns this once a provider container exists. Unset, files are signed
+  /// without a binding.
+  static Future<NostrCreatorBindingAssertion?> Function(String filePath)?
+  creatorBindingFactory;
+
   /// Generate native ProofMode proof for a video file.
   ///
   /// Returns [NativeProofData] if proof generation succeeds, null otherwise.
@@ -168,11 +177,19 @@ class NativeProofModeService {
         name: 'VideoRecorderProofService',
         category: LogCategory.video,
       );
+      // An explicit binding is the publish flow's, which also records it in
+      // the proof metadata below. Otherwise the signed-in account's binding is
+      // embedded in the manifest only, so a recording or edit names its maker
+      // without changing what that metadata reports.
+      final embeddedBinding =
+          creatorBindingAssertion ??
+          await creatorBindingFactory?.call(videoFile.path);
+
       // Replaces videoFile's bytes in place — deliberately, so the ProofMode
       // hash below covers the credentialed media.
       final c2paResult = await c2paSigningService.signVideoInPlace(
         videoPath: videoFile.path,
-        creatorBindingAssertion: creatorBindingAssertion,
+        creatorBindingAssertion: embeddedBinding,
         cawgIdentityAssertion: cawgIdentityAssertion,
         enableAdvancedCawgEmbedding: enableAdvancedCawgEmbedding,
       );

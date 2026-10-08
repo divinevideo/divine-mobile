@@ -28,6 +28,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/c2pa_creator_binding_factory.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
@@ -334,6 +335,17 @@ final nostrCreatorBindingServiceProvider = Provider<NostrCreatorBindingService>(
     final authService = ref.watch(authServiceProvider);
     return NostrCreatorBindingService(identity: authService.currentIdentity);
   },
+);
+
+/// Builds the creator binding embedded in every C2PA manifest this app signs.
+///
+/// The account is read when a file is signed rather than when this provider
+/// is built, so it is not watched here.
+final c2paCreatorBindingFactoryProvider = Provider<C2paCreatorBindingFactory>(
+  (ref) => C2paCreatorBindingFactory(
+    bindingService: () => ref.read(nostrCreatorBindingServiceProvider),
+    nip05: () => ref.read(authServiceProvider).currentProfile?.nip05,
+  ),
 );
 
 /// Provider for the CAWG verifier base URI.

@@ -289,6 +289,93 @@ void main() {
     });
   });
 
+  group('proofFile creator binding', () {
+    const accountBinding = NostrCreatorBindingAssertion(
+      assertionLabel: NostrCreatorBindingService.assertionLabel,
+      payloadJson: '{"pubkey":"account"}',
+      signature: 'account-signature',
+      pubkey: 'account',
+    );
+    const publishBinding = NostrCreatorBindingAssertion(
+      assertionLabel: NostrCreatorBindingService.assertionLabel,
+      payloadJson: '{"pubkey":"publish"}',
+      signature: 'publish-signature',
+      pubkey: 'publish',
+    );
+    const generatedProofHash =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+    late File video;
+    late _SuccessfulC2paSigningService c2paService;
+    late List<String> boundPaths;
+
+    setUp(() async {
+      final directory = await Directory.systemTemp.createTemp(
+        'native-proofmode-binding-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      video = File('${directory.path}/video.mp4');
+      await video.writeAsBytes(const [1, 2, 3, 4]);
+      final proofDir = Directory('${directory.path}/$generatedProofHash');
+      await proofDir.create();
+      await File(
+        '${proofDir.path}/$generatedProofHash.asc',
+      ).writeAsString('signature');
+
+      c2paService = _SuccessfulC2paSigningService(video.path);
+      NativeProofModeService.c2paSigningServiceFactoryOverride = () =>
+          c2paService;
+      boundPaths = [];
+      NativeProofModeService.creatorBindingFactory = (path) async {
+        boundPaths.add(path);
+        return accountBinding;
+      };
+      addTearDown(() => NativeProofModeService.creatorBindingFactory = null);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(proofModeChannel, (call) async {
+            switch (call.method) {
+              case 'isAvailable':
+                return true;
+              case 'getProofDir':
+                final args = call.arguments as Map<Object?, Object?>;
+                return args['proofHash'] == generatedProofHash
+                    ? proofDir.path
+                    : null;
+              case 'generateProof':
+                return generatedProofHash;
+              default:
+                fail('Unexpected proof mode method call: ${call.method}');
+            }
+          });
+    });
+
+    test('embeds the signed-in account in the manifest it signs', () async {
+      final proofData = await NativeProofModeService.proofFile(video);
+
+      expect(boundPaths, equals([video.path]));
+      expect(c2paService.signedCreatorBinding, same(accountBinding));
+      // Only the publish flow reports a binding in the proof metadata, so a
+      // recording's proof reads exactly as it did before bindings existed.
+      expect(proofData, isNotNull);
+      expect(proofData!.hasCreatorIdentityMetadata, isFalse);
+    });
+
+    test('signs with the binding the caller passes instead', () async {
+      final proofData = await NativeProofModeService.proofFile(
+        video,
+        creatorBindingAssertion: publishBinding,
+      );
+
+      expect(boundPaths, isEmpty);
+      expect(c2paService.signedCreatorBinding, same(publishBinding));
+      expect(
+        proofData?.creatorBindingPayloadJson,
+        equals(publishBinding.payloadJson),
+      );
+    });
+  });
+
   group('proofFile iOS device attestation', () {
     // Pins the split introduced with per-account App Attest keys: generation
     // runs before the publishing account is fixed, so it cannot mint a payload
@@ -434,6 +521,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
   final String videoPath;
   int readManifestCallCount = 0;
   int signVideoInPlaceCallCount = 0;
+  NostrCreatorBindingAssertion? signedCreatorBinding;
 
   @override
   Future<C2paSigningResult> signVideoInPlace({
@@ -443,6 +531,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
     bool enableAdvancedCawgEmbedding = false,
   }) async {
     signVideoInPlaceCallCount += 1;
+    signedCreatorBinding = creatorBindingAssertion;
     return C2paSigningResult(
       signedFilePath: this.videoPath,
       success: true,
