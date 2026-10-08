@@ -1324,15 +1324,26 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
+          final followingSubscribed = Completer<void>();
+          followingController.onListen = () {
+            if (!followingSubscribed.isCompleted) {
+              followingSubscribed.complete();
+            }
+          };
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          // Wait for the initial load to complete.
-          await Future<void>.delayed(Duration.zero);
+          await followingSubscribed.future;
+          expect(bloc.state.status, VideoFeedStatus.success);
+          expect(bloc.state.videos.first.id, startsWith('popular'));
+          final refreshed = bloc.stream.firstWhere(
+            (state) =>
+                state.videos.isNotEmpty &&
+                state.videos.first.id.startsWith('following'),
+          );
           // Simulate FollowRepository.initialize() completing and emitting
           // the real follow list. Because this first replay differs from the
           // list used for the initial fetch, it is NOT ignored.
           followingController.add(['author1', 'author2']);
-          // Wait for _onFollowingListChanged to finish the corrective refresh.
-          await Future<void>.delayed(Duration.zero);
+          await refreshed;
         },
         expect: () => [
           // 1. Loading state
@@ -1371,13 +1382,20 @@ void main() {
         },
       );
 
+      late Completer<void> cachedFollowingSubscribed;
+
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'does not refresh twice when cached follows replay before initialize finishes',
         setUp: () {
-          final replayingFollowing = BehaviorSubject<List<String>>.seeded([
-            'author1',
-            'author2',
-          ]);
+          cachedFollowingSubscribed = Completer<void>();
+          final replayingFollowing = BehaviorSubject<List<String>>.seeded(
+            ['author1', 'author2'],
+            onListen: () {
+              if (!cachedFollowingSubscribed.isCompleted) {
+                cachedFollowingSubscribed.complete();
+              }
+            },
+          );
           addTearDown(replayingFollowing.close);
 
           final followingVideos = createTestVideos(5, idPrefix: 'following');
@@ -1402,7 +1420,8 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await Future<void>.delayed(Duration.zero);
+          await cachedFollowingSubscribed.future;
+          await pumpEventQueue();
         },
         expect: () => [
           const VideoFeedBlocState(mode: FeedMode.following),
@@ -3291,14 +3310,28 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
+          final followingSubscribed = Completer<void>();
+          followingController.onListen = () {
+            if (!followingSubscribed.isCompleted) {
+              followingSubscribed.complete();
+            }
+          };
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          // Wait for initial load to complete (Funnelcake returned empty)
-          await Future<void>.delayed(Duration.zero);
+          await followingSubscribed.future;
+          expect(bloc.state.status, VideoFeedStatus.success);
+          expect(bloc.state.videos, isEmpty);
           // First emission is skipped (BehaviorSubject replay)
           followingController.add(['author']);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
+          expect(bloc.state.videos, isEmpty);
+          final recovered = bloc.stream.firstWhere(
+            (state) =>
+                state.status == VideoFeedStatus.success &&
+                state.videos.length == pageSize,
+          );
           // Second emission triggers recovery
           followingController.add(['author', 'new-follow']);
+          await recovered;
         },
         skip: 2, // Skip loading + success(empty) from VideoFeedStarted
         expect: () => [
@@ -3674,10 +3707,27 @@ void main() {
           ),
         ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
+        final followingSubscribed = Completer<void>();
+        final curatedListsSubscribed = Completer<void>();
+        followingController.onListen = () {
+          if (!followingSubscribed.isCompleted) {
+            followingSubscribed.complete();
+          }
+        };
+        curatedListsController.onListen = () {
+          if (!curatedListsSubscribed.isCompleted) {
+            curatedListsSubscribed.complete();
+          }
+        };
         final bloc = createBloc();
+        addTearDown(bloc.close);
         bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await Future.wait([
+          followingSubscribed.future,
+          curatedListsSubscribed.future,
+        ]);
+        expect(bloc.state.status, VideoFeedStatus.success);
+        expect(bloc.state.videos, videos);
 
         expect(followingController.hasListener, isTrue);
         expect(curatedListsController.hasListener, isTrue);
@@ -3692,7 +3742,7 @@ void main() {
           () => curatedListsController.add([createTestList()]),
           returnsNormally,
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       });
     });
 
