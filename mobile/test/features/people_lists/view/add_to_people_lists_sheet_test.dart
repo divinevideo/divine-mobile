@@ -22,11 +22,46 @@ import 'package:openvine/features/people_lists/view/widgets/people_list_row.dart
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockPeopleListsRepository extends Mock
+    implements PeopleListsRepository {}
+
+/// Counts actual UI listeners while keeping the real mutation actor.
+class _TrackedPeopleListsBloc extends PeopleListsBloc {
+  _TrackedPeopleListsBloc({
+    required super.repository,
+    required super.repositoryStream,
+  }) : super(
+         ownerPubkeyStream: const Stream.empty(),
+         enabledStream: const Stream.empty(),
+         initialOwnerPubkey: _ownerPubkey,
+       );
+
+  int activeStateListeners = 0;
+  late final Stream<PeopleListsState> _trackedStream =
+      Stream<PeopleListsState>.multi((controller) {
+        activeStateListeners++;
+        final subscription = super.stream.listen(
+          controller.addSync,
+          onError: controller.addErrorSync,
+          onDone: controller.closeSync,
+        );
+        controller.onCancel = () {
+          activeStateListeners--;
+          unawaited(subscription.cancel());
+        };
+      }, isBroadcast: true);
+
+  @override
+  Stream<PeopleListsState> get stream => _trackedStream;
+}
 
 // Full-length Nostr pubkeys — never truncate.
 const String _ownerPubkey =
@@ -99,6 +134,7 @@ void main() {
       auth = createMockAuthService(currentPublicKeyHex: _ownerPubkey);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.isClosed).thenReturn(false);
       picks = PeopleListPicksCubit(memberListIds: const {});
       when(() => bloc.mutationSessionEpoch).thenReturn(0);
       when(() => bloc.submit(any())).thenAnswer(
@@ -899,6 +935,321 @@ void main() {
               matching: checks,
             ),
             findsNothing,
+          );
+        },
+      );
+    });
+
+    group('real actor lifetime', () {
+      _MockPeopleListsRepository repositoryWith(UserList list) {
+        final repository = _MockPeopleListsRepository();
+        when(() => repository.watchLists(ownerPubkey: _ownerPubkey))
+            .thenAnswer((_) => Stream.value([list]));
+        when(() => repository.syncOwner(ownerPubkey: _ownerPubkey))
+            .thenAnswer((_) async {});
+        when(
+          () => repository.syncFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            isCancelled: any(named: 'isCancelled'),
+          ),
+        ).thenAnswer((_) async {});
+        return repository;
+      }
+
+      Widget realSubject(
+        PeopleListsBloc realBloc, {
+        bool startActor = true,
+        ValueChanged<Future<void>>? onOpened,
+      }) => _withCuratedListsFlag(
+        enabled: true,
+        auth: auth,
+        child: BlocProvider<PeopleListsBloc>(
+          create: (_) {
+            if (startActor) realBloc.add(const PeopleListsStarted());
+            return realBloc;
+          },
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    final opened = AddToPeopleListsSheet.show(
+                      context,
+                      pubkey: _targetPubkey,
+                      entryPoint: PeopleListEntryPoint.shareMenu,
+                    );
+                    onOpened?.call(opened);
+                  },
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      testWidgetsWithSurfaceSize(
+        'initialization opens the loading picker before its relay read finishes',
+        (tester) async {
+          final list = _buildList(id: 'crew', name: 'Crew');
+          final repository = repositoryWith(list);
+          final sync = Completer<void>();
+          when(() => repository.watchLists(ownerPubkey: _ownerPubkey))
+              .thenAnswer((_) => const Stream.empty());
+          when(() => repository.syncOwner(ownerPubkey: _ownerPubkey))
+              .thenAnswer((_) => sync.future);
+          final realBloc = _TrackedPeopleListsBloc(
+            repository: repository,
+            repositoryStream: const Stream.empty(),
+          );
+          await tester.pumpWidget(realSubject(realBloc));
+          await tester.tap(find.text('open'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(sync.isCompleted, isFalse);
+          expect(
+            realBloc.state.ownerReadStatus,
+            PeopleListsOwnerReadStatus.pending,
+          );
+          expect(find.byType(AddToPeopleListsSheet), findsOneWidget);
+          expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+          expect(find.text(l10n.peopleListsEmptyTitle), findsNothing);
+          sync.complete();
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+          expect(realBloc.activeStateListeners, 0);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'a closed actor settles initial coordination without opening or hanging',
+        (tester) async {
+          final list = _buildList(id: 'crew', name: 'Crew');
+          final realBloc = PeopleListsBloc(
+            repository: repositoryWith(list),
+            ownerPubkeyStream: const Stream.empty(),
+            repositoryStream: const Stream.empty(),
+            enabledStream: const Stream.empty(),
+            initialOwnerPubkey: _ownerPubkey,
+          );
+          var openingCompleted = false;
+          await tester.pumpWidget(
+            realSubject(
+              realBloc,
+              startActor: false,
+              onOpened: (opened) => unawaited(
+                opened.then((_) {
+                  openingCompleted = true;
+                }),
+              ),
+            ),
+          );
+          await tester.tap(find.text('open'));
+          await tester.pump();
+          expect(openingCompleted, isFalse);
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+          var closingCompleted = false;
+          unawaited(
+            realBloc.close().then((_) {
+              closingCompleted = true;
+            }),
+          );
+          // Some cancellation futures belong to the real zone, so service
+          // that event-loop turn before draining the widget-clock callbacks.
+          await tester.pump(Duration.zero);
+          await tester.runAsync(() async {});
+          await tester.pump(Duration.zero);
+          expect(closingCompleted, isTrue);
+          expect(openingCompleted, isTrue);
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+          expect(realBloc.isClosed, isTrue);
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'a first lazy startup establishes the epoch before accepting picks',
+        (tester) async {
+          final list = _buildList(id: 'crew', name: 'Crew');
+          final repository = repositoryWith(list);
+          when(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _targetPubkey,
+            ),
+          ).thenAnswer(
+            (_) async => const PeopleListPublishResult(
+              status: PeopleListPublishStatus.submitted,
+            ),
+          );
+          final realBloc = _TrackedPeopleListsBloc(
+            repository: repository,
+            repositoryStream: const Stream.empty(),
+          );
+          await tester.pumpWidget(realSubject(realBloc));
+          expect(realBloc.state.status, PeopleListsStatus.initial);
+          expect(realBloc.mutationSessionEpoch, 0);
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          expect(realBloc.mutationSessionEpoch, greaterThan(0));
+          await tester.tap(find.text('Crew'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+          verify(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _targetPubkey,
+            ),
+          ).called(1);
+          expect(find.text(l10n.peopleListsSessionChanged), findsNothing);
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+          expect(realBloc.activeStateListeners, 0);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'same-owner repository replacement cancels saved picks without an orphan listener',
+        (tester) async {
+          final list = _buildList(id: 'crew', name: 'Crew');
+          final repository = repositoryWith(list);
+          final next = repositoryWith(list);
+          final write = Completer<PeopleListPublishResult>();
+          when(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _targetPubkey,
+            ),
+          ).thenAnswer((_) => write.future);
+          final replacements =
+              StreamController<PeopleListsRepository>.broadcast();
+          addTearDown(replacements.close);
+          final realBloc = _TrackedPeopleListsBloc(
+            repository: repository,
+            repositoryStream: replacements.stream,
+          );
+          // Establish the actor before opening this already-live visit.
+          realBloc.add(const PeopleListsStarted());
+          await tester.pump();
+          await tester.pump();
+          await tester.pumpWidget(realSubject(realBloc));
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          // The still-live BlocProvider owns its normal inherited listener.
+          final liveProviderListeners = realBloc.activeStateListeners;
+          expect(liveProviderListeners, greaterThan(0));
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Crew'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+          verify(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _targetPubkey,
+            ),
+          ).called(1);
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+          replacements.add(next);
+          await tester.pumpAndSettle();
+          expect(realBloc.state.activeOwnerPubkey, _ownerPubkey);
+          expect(find.text(l10n.peopleListsSessionChanged), findsOneWidget);
+          expect(realBloc.activeStateListeners, liveProviderListeners);
+          write.complete(
+            const PeopleListPublishResult(
+              status: PeopleListPublishStatus.submitted,
+            ),
+          );
+          await tester.pumpAndSettle();
+          verifyNever(
+            () => next.addPubkey(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+              pubkey: any(named: 'pubkey'),
+            ),
+          );
+          expect(realBloc.activeStateListeners, liveProviderListeners);
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+          expect(realBloc.activeStateListeners, 0);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'finishing after the account container is disposed reads no dead providers',
+        (tester) async {
+          final list = _buildList(id: 'crew', name: 'Crew');
+          final completion = Completer<PeopleListsOperationResult>();
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+          when(() => bloc.submit(any())).thenAnswer((_) => completion.future);
+          final container = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              authServiceProvider.overrideWithValue(auth),
+              isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                  .overrideWithValue(true),
+            ],
+          );
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: Builder(
+                      builder: (context) => ElevatedButton(
+                        onPressed: () => AddToPeopleListsSheet.show(
+                          context,
+                          pubkey: _targetPubkey,
+                          entryPoint: PeopleListEntryPoint.shareMenu,
+                        ),
+                        child: const Text('open'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Crew'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+          final before = LogCaptureService().getRecentLogs().length;
+          container.dispose();
+          completion.complete(PeopleListsOperationResult.failed);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(
+            find.text(l10n.peopleListsMembershipUpdateFailed),
+            findsNothing,
+          );
+          expect(
+            LogCaptureService()
+                .getRecentLogs()
+                .skip(before)
+                .where(
+                  (entry) =>
+                      entry.name == 'AddToPeopleListsSheet' &&
+                      entry.error != null,
+                ),
+            isEmpty,
           );
         },
       );

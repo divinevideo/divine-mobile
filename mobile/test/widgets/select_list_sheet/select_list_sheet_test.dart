@@ -1489,8 +1489,12 @@ void main() {
             await tester.pump();
             await tester.tap(find.bySemanticsLabel(l10n.listCreate));
             await tester.pump();
-            verify(() => service.addVideoToList('list_fresh', _videoEventId))
-                .called(1);
+            verify(
+              () => service.addVideoToList(
+                list('Fresh').authorScopedId,
+                _videoEventId,
+              ),
+            ).called(1);
 
             await tester.tap(find.bySemanticsLabel(l10n.commonClose).last);
             await tester.pumpAndSettle();
@@ -1542,14 +1546,18 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
             ),
           ).thenAnswer((_) async => fresh);
-          when(() => service.getListById(fresh.id)).thenReturn(pending);
-          when(() => service.addVideoToList(fresh.id, _videoEventId))
-              .thenAnswer((_) async {
-                when(() => service.myLists).thenReturn([empty, pending]);
-                listener();
-                return false;
-              });
-          when(() => service.retryListSync(fresh.id)).thenAnswer((_) async {
+          when(() => service.getListById(fresh.authorScopedId))
+              .thenReturn(pending);
+          when(
+            () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+          ).thenAnswer((_) async {
+            when(() => service.myLists).thenReturn([empty, pending]);
+            listener();
+            return false;
+          });
+          when(() => service.retryListSync(fresh.id)).thenAnswer((
+            _,
+          ) async {
             when(() => service.myLists)
                 .thenReturn([empty, pending.copyWith(pendingRepublish: false)]);
             listener();
@@ -1575,8 +1583,9 @@ void main() {
           expect(find.text(l10n.listRetrySync), findsNothing);
           expect(find.text(l10n.listVideoPendingSync), findsNothing);
           verify(() => service.retryListSync(fresh.id)).called(1);
-          verify(() => service.addVideoToList(fresh.id, _videoEventId))
-              .called(1);
+          verify(
+            () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+          ).called(1);
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
       );
@@ -1607,7 +1616,9 @@ void main() {
         await tester.tap(find.bySemanticsLabel(l10n.listCreate));
         await tester.pumpAndSettle();
         expect(find.byType(ListInfoForm), findsNothing);
-        verify(() => service.addVideoToList(fresh.id, _videoEventId)).called(1);
+        verify(
+          () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+        ).called(1);
 
         // The real service tells its listeners once the list exists.
         final listener =
