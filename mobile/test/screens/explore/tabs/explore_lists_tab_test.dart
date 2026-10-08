@@ -21,6 +21,7 @@ import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.da
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -219,6 +220,10 @@ void main() {
           await tester.pumpWidget(buildPage());
           await tester.pump();
           await tester.pump();
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(ExploreListsTab)),
+          );
+          expect(container.read(overlayVisibilityProvider).isPageOpen, isFalse);
           await tester.tap(find.text('New video list'));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
@@ -228,10 +233,72 @@ void main() {
           expect(find.text('List Name'), findsOneWidget);
           expect(find.text('Description (optional)'), findsOneWidget);
           expect(find.text('Public List'), findsOneWidget);
+          expect(container.read(overlayVisibilityProvider).isPageOpen, isFalse);
+          expect(
+            container.read(overlayVisibilityProvider).isBottomSheetOpen,
+            isTrue,
+          );
+          expect(
+            container.read(overlayVisibilityProvider).hasVisibleOverlay,
+            isTrue,
+          );
+          expect(
+            container.read(overlayVisibilityProvider).shouldRetainPlayer,
+            isTrue,
+          );
+          Navigator.of(tester.element(find.byType(CreateListDialog))).pop();
+          // The gallery keeps shimmering while its service is unavailable.
+          // Finish only the sheet transition instead of settling that loop.
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+          expect(find.byType(CreateListDialog), findsNothing);
+          expect(
+            container.read(overlayVisibilityProvider).isBottomSheetOpen,
+            isFalse,
+          );
+          expect(
+            container.read(overlayVisibilityProvider).hasVisibleOverlay,
+            isFalse,
+          );
           expect(tester.takeException(), isNull);
         },
       );
     }
+
+    testWidgets('closing video creation preserves another page pause owner', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildPage());
+      await tester.pump();
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ExploreListsTab)),
+      );
+      final notifier = container.read(overlayVisibilityProvider.notifier);
+      final otherPageOwner = Object();
+      notifier.setPageOpenForOwner(otherPageOwner, isOpen: true);
+      await tester.tap(find.text('New video list'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final whileOpen = container.read(overlayVisibilityProvider);
+      expect(whileOpen.isPageOpen, isTrue);
+      expect(whileOpen.isBottomSheetOpen, isTrue);
+      expect(whileOpen.hasVisibleOverlay, isTrue);
+      expect(whileOpen.shouldRetainPlayer, isFalse);
+      Navigator.of(tester.element(find.byType(CreateListDialog))).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final afterClose = container.read(overlayVisibilityProvider);
+      expect(afterClose.isBottomSheetOpen, isFalse);
+      expect(afterClose.isPageOpen, isTrue);
+      expect(afterClose.hasVisibleOverlay, isTrue);
+      notifier.setPageOpenForOwner(otherPageOwner, isOpen: false);
+      expect(
+        container.read(overlayVisibilityProvider).hasVisibleOverlay,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('drops the status-bar inset above the first creation control', (
       tester,

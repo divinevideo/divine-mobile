@@ -21,6 +21,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart'
@@ -496,8 +497,7 @@ class _ExploreCreationHeader extends ConsumerWidget {
           leadingIcon: .plus,
           label: context.l10n.listNewVideoList,
           onPressed: () => runDetached(
-            VineBottomSheet.show<void>(
-              context: context,
+            context.showVideoPausingVineBottomSheet<void>(
               useRootNavigator: true,
               scrollable: false,
               showHeader: false,
