@@ -20,6 +20,7 @@ final String _viewer = 'f' * 64;
 final String _alice = 'a' * 64;
 final String _bob = 'b' * 64;
 final String _carol = 'c' * 64;
+final String _listIdentity = '$_viewer:list-1';
 
 const String _videoEventId =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -185,14 +186,15 @@ void main() {
         expect(cubit.state.name, pending.name);
         expect(cubit.state.description, pending.description);
         verifyNever(() => service.updateList(listId: any(named: 'listId')));
-        when(() => service.retryListSync(pending.id)).thenAnswer((_) async {
-          current = pending.copyWith(
-            isPublic: true,
-            pendingRepublish: false,
-            clearPendingVisibility: true,
-          );
-          return true;
-        });
+        when(() => service.retryListSync(pending.authorScopedId))
+            .thenAnswer((_) async {
+              current = pending.copyWith(
+                isPublic: true,
+                pendingRepublish: false,
+                clearPendingVisibility: true,
+              );
+              return true;
+            });
         await cubit.retrySync();
         expect(cubit.state.canEdit, isTrue);
         expect(cubit.state.wasPublic, isTrue);
@@ -215,7 +217,7 @@ void main() {
         );
         when(() => service.getListById(any())).thenReturn(pending);
         when(
-          () => service.retryListSync(pending.id),
+          () => service.retryListSync(pending.authorScopedId),
         ).thenAnswer((_) async => false);
         final cubit = buildCubit(existingList: pending);
         addTearDown(cubit.close);
@@ -333,7 +335,8 @@ void main() {
             : 'missing relay confirmation keeps a collaborator edit open',
         () async {
           final existing = _list();
-          when(() => service.getListById(existing.id)).thenReturn(existing);
+          when(() => service.getListById(existing.authorScopedId))
+              .thenReturn(existing);
           when(
             () => service.updateList(
               listId: any(named: 'listId'),
@@ -661,7 +664,7 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
           verify(
-            () => service.addVideoToList('list-1', _videoEventId),
+            () => service.addVideoToList(_listIdentity, _videoEventId),
           ).called(1);
         },
       );
@@ -753,7 +756,7 @@ void main() {
         ],
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
@@ -775,7 +778,7 @@ void main() {
         // Leaving isPublic out of the matcher pins it to null.
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
@@ -794,7 +797,7 @@ void main() {
         },
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
@@ -821,7 +824,7 @@ void main() {
         },
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
@@ -843,7 +846,7 @@ void main() {
         },
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',
             isCollaborative: true,
@@ -867,7 +870,7 @@ void main() {
         },
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',
             isCollaborative: false,
@@ -888,7 +891,7 @@ void main() {
         },
         verify: (_) => verify(
           () => service.updateList(
-            listId: 'list-1',
+            listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',
             isPublic: false,

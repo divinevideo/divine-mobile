@@ -52,10 +52,11 @@ void main() {
       var current = saved;
       when(() => service.getListById(saved.authorScopedId))
           .thenAnswer((_) => current);
-      when(() => service.retryListSync(saved.id)).thenAnswer((_) async {
-        current = saved.copyWith(pendingRepublish: false);
-        return true;
-      });
+      when(() => service.retryListSync(saved.authorScopedId))
+          .thenAnswer((_) async {
+            current = saved.copyWith(pendingRepublish: false);
+            return true;
+          });
       final cubit = editor(service, saved);
       addTearDown(cubit.close);
       cubit
@@ -74,7 +75,7 @@ void main() {
       expect(cubit.state.wasPublic, isTrue);
       expect(cubit.state.needsSync, isFalse);
       expect(cubit.state.status, CuratedListInfoStatus.editing);
-      verify(() => service.retryListSync(saved.id)).called(1);
+      verify(() => service.retryListSync(saved.authorScopedId)).called(1);
       verifyNever(() => service.createList(name: any(named: 'name')));
       verifyNever(() => service.updateList(listId: any(named: 'listId')));
     },
@@ -86,12 +87,11 @@ void main() {
       final service = _Service();
       final saved = list(collaborators: [bob]);
       when(() => service.getListById(saved.authorScopedId)).thenReturn(saved);
-      when(() => service.getListById(saved.id)).thenReturn(saved);
-      when(() => service.retryListSync(saved.id))
+      when(() => service.retryListSync(saved.authorScopedId))
           .thenAnswer((_) async => false);
       when(
         () => service.updateList(
-          listId: saved.id,
+          listId: saved.authorScopedId,
           name: any(named: 'name'),
           description: any(named: 'description'),
           isPublic: any(named: 'isPublic'),
@@ -114,7 +114,7 @@ void main() {
       await cubit.submitted();
       verify(
         () => service.updateList(
-          listId: saved.id,
+          listId: saved.authorScopedId,
           name: saved.name,
           description: saved.description,
           isCollaborative: true,
@@ -187,7 +187,7 @@ void main() {
       await cubit.submitted();
       verify(
         () => service.updateList(
-          listId: saved.id,
+          listId: saved.authorScopedId,
           name: 'Draft name',
           description: saved.description,
           onLocalSaved: any(named: 'onLocalSaved'),
@@ -256,7 +256,7 @@ void main() {
     when(() => original.getListById(saved.authorScopedId)).thenReturn(saved);
     when(() => replacement.getListById(saved.authorScopedId))
         .thenReturn(list(isPublic: false));
-    when(() => original.retryListSync(saved.id))
+    when(() => original.retryListSync(saved.authorScopedId))
         .thenAnswer((_) => answer.future);
     final cubit = CuratedListInfoCubit(
       resolveService: () => active,
@@ -284,7 +284,7 @@ void main() {
     var activeOwner = owner;
     final answer = Completer<bool>();
     when(() => service.getListById(saved.authorScopedId)).thenReturn(saved);
-    when(() => service.retryListSync(saved.id))
+    when(() => service.retryListSync(saved.authorScopedId))
         .thenAnswer((_) => answer.future);
     final cubit = CuratedListInfoCubit(
       resolveService: () => service,
@@ -317,7 +317,7 @@ void main() {
       );
       when(() => service.getListById(pending.authorScopedId))
           .thenReturn(pending);
-      when(() => service.retryListSync(pending.id))
+      when(() => service.retryListSync(pending.authorScopedId))
           .thenThrow(StateError('Stored retry refused'));
       final cubit = editor(service, pending);
       addTearDown(cubit.close);
@@ -340,10 +340,11 @@ void main() {
       final service = _Service();
       final saved = list(collaborators: [bob]);
       when(() => service.getListById(saved.authorScopedId)).thenReturn(saved);
-      when(() => service.retryListSync(saved.id)).thenAnswer((_) async {
-        service.recoveryNeedsRepair = true;
-        return false;
-      });
+      when(() => service.retryListSync(saved.authorScopedId))
+          .thenAnswer((_) async {
+            service.recoveryNeedsRepair = true;
+            return false;
+          });
       final cubit = editor(service, saved);
       addTearDown(cubit.close);
       cubit
@@ -369,7 +370,7 @@ void main() {
       final saved = list();
       final answer = Completer<bool>();
       when(() => service.getListById(saved.authorScopedId)).thenReturn(saved);
-      when(() => service.retryListSync(saved.id))
+      when(() => service.retryListSync(saved.authorScopedId))
           .thenAnswer((_) => answer.future);
       final cubit = editor(service, saved);
       final retry = cubit.retrySync();
@@ -390,7 +391,8 @@ void main() {
     var current = saved;
     when(() => service.getListById(saved.authorScopedId))
         .thenAnswer((_) => current);
-    when(() => service.retryListSync(saved.id)).thenAnswer((_) async => false);
+    when(() => service.retryListSync(saved.authorScopedId))
+        .thenAnswer((_) async => false);
     final cubit = editor(service, saved);
     addTearDown(cubit.close);
     cubit.nameChanged('Unsaved name');

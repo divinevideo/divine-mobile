@@ -64,6 +64,7 @@ const String _authorPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 const String _listId =
     'list_created_456789abcdef0123456789abcdef0123456789abcdef012345';
+const String _listIdentity = '$_authorPubkey:$_listId';
 final String _collaborator = 'c' * 64;
 final String _otherCollaborator = 'd' * 64;
 
@@ -283,7 +284,7 @@ void main() {
         );
         var current = pending;
         when(() => service.getListById(any())).thenAnswer((_) => current);
-        when(() => service.retryListSync(_listId)).thenAnswer((_) async {
+        when(() => service.retryListSync(_listIdentity)).thenAnswer((_) async {
           current = pending.copyWith(
             isPublic: true,
             clearPendingVisibility: true,
@@ -323,7 +324,7 @@ void main() {
         );
         when(() => service.getListById(any())).thenReturn(pending);
         when(
-          () => service.retryListSync(_listId),
+          () => service.retryListSync(_listIdentity),
         ).thenAnswer((_) async => false);
         await openSheet(tester, existingList: pending);
         await tester.tap(find.text(l10n.listRetrySync));
@@ -333,7 +334,7 @@ void main() {
         expect(find.byType(ListInfoFailureMessage), findsOneWidget);
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);
         expect(visibilityTile(tester).onChanged, isNull);
-        verify(() => service.retryListSync(_listId)).called(1);
+        verify(() => service.retryListSync(_listIdentity)).called(1);
         verifyNever(() => service.updateList(listId: any(named: 'listId')));
       },
     );
@@ -362,7 +363,7 @@ void main() {
         final saved = list().copyWith(pendingRepublish: true);
         var current = saved;
         when(() => service.getListById(any())).thenAnswer((_) => current);
-        when(() => service.retryListSync(_listId)).thenAnswer((_) async {
+        when(() => service.retryListSync(_listIdentity)).thenAnswer((_) async {
           current = saved.copyWith(pendingRepublish: false);
           return true;
         });
@@ -383,7 +384,7 @@ void main() {
         expect(find.text('Draft description'), findsOneWidget);
         expect(visibilityTile(tester).value, isFalse);
         expect(find.text(l10n.listRetrySync), findsNothing);
-        verify(() => service.retryListSync(_listId)).called(1);
+        verify(() => service.retryListSync(_listIdentity)).called(1);
         verifyNever(() => service.updateList(listId: any(named: 'listId')));
         await tester.tap(saveButton(editing: true));
         await tester.pumpAndSettle();
@@ -667,7 +668,8 @@ void main() {
         await tester.tap(saveButton(editing: false));
         await tester.pumpAndSettle();
 
-        verify(() => service.addVideoToList(_listId, _videoEventId)).called(1);
+        verify(() => service.addVideoToList(_listIdentity, _videoEventId))
+            .called(1);
         expect(find.text(l10n.listCreateNewList), findsNothing);
       });
 
@@ -718,7 +720,8 @@ void main() {
         created.complete(list(name: 'Video List'));
         await tester.pumpAndSettle();
 
-        verify(() => service.addVideoToList(_listId, _videoEventId)).called(1);
+        verify(() => service.addVideoToList(_listIdentity, _videoEventId))
+            .called(1);
         expect(outcomes, [ListInfoSheetOutcome.createdWithoutVideo]);
         expect(tester.takeException(), isNull);
       });
@@ -1027,7 +1030,7 @@ void main() {
 
         verify(
           () => service.updateList(
-            listId: _listId,
+            listId: _listIdentity,
             name: 'Puppets',
             description: '',
             isPublic: true,
@@ -1080,7 +1083,7 @@ void main() {
 
         verify(
           () => service.updateList(
-            listId: _listId,
+            listId: _listIdentity,
             name: 'Marionettes',
             description: '',
             onLocalSaved: any(named: 'onLocalSaved'),
@@ -1133,7 +1136,7 @@ void main() {
 
         verify(
           () => service.updateList(
-            listId: _listId,
+            listId: _listIdentity,
             name: 'Puppets',
             description: '',
             isPublic: true,
@@ -1334,7 +1337,7 @@ void main() {
           await tester.pumpAndSettle();
           verify(
             () => service.updateList(
-              listId: _listId,
+              listId: _listIdentity,
               name: 'Puppets',
               description: '',
               isCollaborative: false,
@@ -1510,7 +1513,7 @@ void main() {
 
         verify(
           () => service.updateList(
-            listId: _listId,
+            listId: _listIdentity,
             name: 'Puppets',
             description: '',
             isPublic: false,
