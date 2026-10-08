@@ -4651,7 +4651,8 @@ void main() {
 
       for (final clearedName in <String?>[null, '']) {
         test(
-          'progressive search does not restore cleared server names ($clearedName) from cache',
+          'progressive search does not restore cleared server names '
+          '($clearedName) from cache',
           () async {
             final cached = UserProfile(
               pubkey: pkCachedVine,
