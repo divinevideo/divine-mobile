@@ -1,5 +1,5 @@
-// ABOUTME: Pins crosspost API providers to the account-bound Divine token
-// ABOUTME: Guards provider wiring against raw, unbound Keycast session reads
+// ABOUTME: Pins crossposter auth to NIP-98 and Keycast auth to the bound token
+// ABOUTME: Guards provider wiring against leaking the Keycast token off-host
 
 import 'dart:convert';
 
@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -23,10 +25,13 @@ void main() {
     registerFallbackValue(Uri());
   });
 
-  group('crossposterApiClientProvider', () {
+  group('crosspostingApiClientProvider', () {
     late _MockAuthService auth;
     late _MockHttpClient httpClient;
+    late bool signerAvailable;
 
+    const ownerPubkey =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
     const eventId =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         'aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -34,6 +39,27 @@ void main() {
     setUp(() {
       auth = _MockAuthService();
       httpClient = _MockHttpClient();
+      signerAvailable = true;
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(() => auth.currentPublicKeyHex).thenReturn(ownerPubkey);
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((invocation) async {
+        if (!signerAvailable) return null;
+        return Event.fromJson({
+          'id': 'ab' * 32,
+          'kind': 27235,
+          'pubkey': ownerPubkey,
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'content': '',
+          'tags': invocation.namedArguments[#tags] as List<List<String>>,
+          'sig': 'cd' * 64,
+        });
+      });
       when(
         () => httpClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer((_) async => http.Response(jsonEncode({'jobs': []}), 200));
@@ -43,6 +69,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWithValue(auth),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           instrumentedHttpClientFactoryProvider.overrideWithValue(
             () => httpClient,
           ),
@@ -52,53 +79,50 @@ void main() {
       return container;
     }
 
-    // The publishing path must not read the Keycast session directly.
-    // getBoundDivineAccessToken re-checks the owner pubkey across its await
-    // and refreshes through the process-wide single-flight coordinator, so a
-    // raw session read can hand this client another account's token or race
-    // Keycast's rotating refresh (#7802).
-    test('authenticates with the account-bound Divine token', () async {
-      when(
-        auth.getBoundDivineAccessToken,
-      ).thenAnswer((_) async => 'owner-bound-token');
-
-      final client = buildContainer().read(crossposterApiClientProvider);
-      await client.getCrossposts(eventId: eventId);
-
-      verify(auth.getBoundDivineAccessToken).called(1);
-      final headers =
-          verify(
-                () => httpClient.get(
-                  any(),
-                  headers: captureAny(named: 'headers'),
-                ),
-              ).captured.single
-              as Map<String, String>;
-      expect(headers['Authorization'], equals('Bearer owner-bound-token'));
-    });
-
+    // The crossposter only needs identity. A Keycast access token can sign
+    // arbitrary events, so it must never leave the device for this service.
     test(
-      'refuses to publish when no account-bound token is available',
+      'authenticates with a NIP-98 event and never the Keycast token',
       () async {
-        when(
-          () => auth.getBoundDivineAccessToken(),
-        ).thenAnswer((_) async => null);
+        final client = buildContainer().read(crosspostingApiClientProvider);
+        await client.getCrossposts(eventId: eventId);
 
-        final client = buildContainer().read(crossposterApiClientProvider);
-
-        await expectLater(
-          client.getCrossposts(eventId: eventId),
-          throwsA(
-            isA<CrosspostingApiException>()
-                .having((e) => e.statusCode, 'statusCode', 401)
-                .having((e) => e.code, 'code', 'unauthorized'),
+        verifyNever(auth.getBoundDivineAccessToken);
+        final headers =
+            verify(
+                  () => httpClient.get(
+                    any(),
+                    headers: captureAny(named: 'headers'),
+                  ),
+                ).captured.single
+                as Map<String, String>;
+        final authorization = headers['Authorization']!;
+        expect(authorization, startsWith('Nostr '));
+        final event = jsonDecode(
+          utf8.decode(
+            base64.decode(authorization.substring('Nostr '.length)),
           ),
-        );
-        verifyNever(
-          () => httpClient.get(any(), headers: any(named: 'headers')),
-        );
+        ) as Map<String, dynamic>;
+        expect(event['kind'], equals(27235));
+        expect(event['pubkey'], equals(ownerPubkey));
       },
     );
+
+    test('refuses to send when the signer cannot sign', () async {
+      signerAvailable = false;
+
+      final client = buildContainer().read(crosspostingApiClientProvider);
+
+      await expectLater(
+        client.getCrossposts(eventId: eventId),
+        throwsA(
+          isA<CrosspostingApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.code, 'code', 'unauthorized'),
+        ),
+      );
+      verifyNever(() => httpClient.get(any(), headers: any(named: 'headers')));
+    });
   });
 
   group('crosspostApiClientProvider', () {

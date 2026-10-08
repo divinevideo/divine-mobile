@@ -15,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
@@ -71,10 +72,14 @@ void main() {
       repository = _MockCrosspostingRepository();
       l10n = lookupAppLocalizations(const Locale('en'));
       when(() => authService.currentPublicKeyHex).thenReturn('pubkeyhex');
-      when(() => authService.isRegistered).thenReturn(true);
-      when(
-        () => authService.authenticationSource,
-      ).thenReturn(AuthenticationSource.automatic);
+      when(() => authService.isRegistered).thenReturn(false);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      when(() => authService.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => authService.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+      when(() => authService.authenticationSource)
+          .thenReturn(AuthenticationSource.automatic);
       when(repository.loadSettings).thenAnswer((_) async => _defaultEntries);
     });
 
@@ -128,8 +133,8 @@ void main() {
       verifyNever(repository.loadSettings);
     });
 
-    testWidgets('requires a Divine OAuth account', (tester) async {
-      when(() => authService.isRegistered).thenReturn(false);
+    testWidgets('waits for a signer that can sign', (tester) async {
+      when(() => authService.canPublishNostrWritesNow).thenReturn(false);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -138,13 +143,21 @@ void main() {
       verifyNever(repository.loadSettings);
     });
 
+    testWidgets('loads for an account that is not a Divine OAuth '
+        'registration', (tester) async {
+      // setUp models a local-key account: isRegistered is false.
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingSignInRequired), findsNothing);
+      verify(repository.loadSettings).called(1);
+    });
+
     testWidgets('reacts to mounted sign-out and sign-in transitions', (
       tester,
     ) async {
       String? publicKey = 'first-pubkey';
-      when(
-        () => authService.currentPublicKeyHex,
-      ).thenAnswer((_) => publicKey);
+      when(() => authService.currentPublicKeyHex).thenAnswer((_) => publicKey);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -257,9 +270,8 @@ void main() {
     testWidgets('shows all modes and only the selected Manual copy', (
       tester,
     ) async {
-      when(repository.loadSettings).thenAnswer(
-        (_) async => [_connected(mode: CrosspostingMode.manual)],
-      );
+      when(repository.loadSettings)
+          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -267,14 +279,8 @@ void main() {
       expect(find.text(l10n.crosspostingModeOff), findsOneWidget);
       expect(find.text(l10n.crosspostingModeManual), findsOneWidget);
       expect(find.text(l10n.crosspostingModeAutomatic), findsOneWidget);
-      expect(
-        find.text(l10n.crosspostingModeManualSubtitle),
-        findsOneWidget,
-      );
-      expect(
-        find.text(l10n.crosspostingModeAutomaticSubtitle),
-        findsNothing,
-      );
+      expect(find.text(l10n.crosspostingModeManualSubtitle), findsOneWidget);
+      expect(find.text(l10n.crosspostingModeAutomaticSubtitle), findsNothing);
     });
 
     testWidgets('omits Automatic when the platform does not support it', (
@@ -322,30 +328,22 @@ void main() {
         expect(manualButton.type, DivineButtonType.primary);
         expect(find.text(l10n.crosspostingModeManual), findsOneWidget);
         expect(find.text(l10n.crosspostingModeAutomatic), findsNothing);
-        expect(
-          find.text(l10n.crosspostingModeAutomaticSubtitle),
-          findsNothing,
-        );
+        expect(find.text(l10n.crosspostingModeAutomaticSubtitle), findsNothing);
       },
     );
 
     testWidgets('changes selected copy for Automatic and hides it for Off', (
       tester,
     ) async {
-      when(repository.loadSettings).thenAnswer(
-        (_) async => [_connected(mode: CrosspostingMode.manual)],
-      );
-      when(
-        () => repository.setMode(any(), any()),
-      ).thenAnswer((_) async {});
+      when(repository.loadSettings)
+          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
+      when(() => repository.setMode(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
       await tester.tap(
-        find.byKey(
-          const ValueKey('crossposting-mode-instagram-automatic'),
-        ),
+        find.byKey(const ValueKey('crossposting-mode-instagram-automatic')),
       );
       await tester.pumpAndSettle();
 
@@ -355,10 +353,7 @@ void main() {
           CrosspostingMode.automatic,
         ),
       ).called(1);
-      expect(
-        find.text(l10n.crosspostingModeAutomaticSubtitle),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.crosspostingModeAutomaticSubtitle), findsOneWidget);
       expect(find.text(l10n.crosspostingModeManualSubtitle), findsNothing);
 
       await tester.tap(
@@ -366,10 +361,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(l10n.crosspostingModeAutomaticSubtitle),
-        findsNothing,
-      );
+      expect(find.text(l10n.crosspostingModeAutomaticSubtitle), findsNothing);
       expect(find.text(l10n.crosspostingModeManualSubtitle), findsNothing);
     });
 
@@ -462,9 +454,7 @@ void main() {
         loadCount++;
         return loadCount == 1 ? [_connected()] : [_disconnected()];
       });
-      when(
-        () => repository.disconnect(any(), any()),
-      ).thenAnswer((_) async {});
+      when(() => repository.disconnect(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -541,9 +531,8 @@ void main() {
       testWidgets('shows and acknowledges ${scenario.name} OAuth outcome', (
         tester,
       ) async {
-        when(repository.loadSettings).thenAnswer(
-          (_) async => [_disconnected()],
-        );
+        when(repository.loadSettings)
+            .thenAnswer((_) async => [_disconnected()]);
         when(
           () => repository.startConnection(
             any(),
@@ -583,9 +572,7 @@ void main() {
           any(),
           returnUrl: any(named: 'returnUrl'),
         ),
-      ).thenThrow(
-        const CrosspostingApiException('down', statusCode: 500),
-      );
+      ).thenThrow(const CrosspostingApiException('down', statusCode: 500));
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -597,9 +584,7 @@ void main() {
       expect(find.text(l10n.crosspostingGenericError), findsOneWidget);
     });
 
-    testWidgets('a new snackbar replaces the current snackbar', (
-      tester,
-    ) async {
+    testWidgets('a new snackbar replaces the current snackbar', (tester) async {
       var startCount = 0;
       when(repository.loadSettings).thenAnswer((_) async => [_disconnected()]);
       when(
@@ -656,9 +641,8 @@ void main() {
           _disconnected(platform: CrosspostingPlatform.x),
         ],
       );
-      when(
-        () => repository.disconnect(any(), any()),
-      ).thenAnswer((_) => disconnect.future);
+      when(() => repository.disconnect(any(), any()))
+          .thenAnswer((_) => disconnect.future);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -679,9 +663,7 @@ void main() {
       expect(xButton.isLoading, isFalse);
       for (final mode in CrosspostingMode.values) {
         final modeButton = tester.widget<DivineButton>(
-          find.byKey(
-            ValueKey('crossposting-mode-instagram-${mode.wireName}'),
-          ),
+          find.byKey(ValueKey('crossposting-mode-instagram-${mode.wireName}')),
         );
         expect(modeButton.onPressed, isNull);
       }
@@ -725,9 +707,7 @@ void main() {
         find.byKey(const ValueKey('crossposting-action-instagram')),
       );
       final mode = tester.widget<DivineButton>(
-        find.byKey(
-          const ValueKey('crossposting-mode-instagram-manual'),
-        ),
+        find.byKey(const ValueKey('crossposting-mode-instagram-manual')),
       );
       expect(action.onPressed, isNull);
       expect(mode.onPressed, isNull);
@@ -738,9 +718,7 @@ void main() {
       expect(
         tester
             .widget<DivineButton>(
-              find.byKey(
-                const ValueKey('crossposting-action-instagram'),
-              ),
+              find.byKey(const ValueKey('crossposting-action-instagram')),
             )
             .onPressed,
         isNotNull,
@@ -751,28 +729,22 @@ void main() {
       tester,
     ) async {
       final saved = Completer<void>();
-      when(repository.loadSettings).thenAnswer(
-        (_) async => [_connected(mode: CrosspostingMode.manual)],
-      );
-      when(
-        () => repository.setMode(any(), any()),
-      ).thenAnswer((_) => saved.future);
+      when(repository.loadSettings)
+          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
+      when(() => repository.setMode(any(), any()))
+          .thenAnswer((_) => saved.future);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(
-          const ValueKey('crossposting-mode-instagram-automatic'),
-        ),
+        find.byKey(const ValueKey('crossposting-mode-instagram-automatic')),
       );
       await tester.pump();
 
       expect(
         tester
             .widget<DivineButton>(
-              find.byKey(
-                const ValueKey('crossposting-action-instagram'),
-              ),
+              find.byKey(const ValueKey('crossposting-action-instagram')),
             )
             .isLoading,
         isFalse,
@@ -781,9 +753,7 @@ void main() {
         tester
             .widget<DivineButton>(
               find.byKey(
-                const ValueKey(
-                  'crossposting-mode-instagram-automatic',
-                ),
+                const ValueKey('crossposting-mode-instagram-automatic'),
               ),
             )
             .isLoading,
@@ -791,15 +761,10 @@ void main() {
       );
       final savingSemantics = tester.getSemantics(
         find.byKey(
-          const ValueKey(
-            'crossposting-mode-semantics-instagram-automatic',
-          ),
+          const ValueKey('crossposting-mode-semantics-instagram-automatic'),
         ),
       );
-      expect(
-        savingSemantics.flagsCollection.isEnabled,
-        Tristate.isFalse,
-      );
+      expect(savingSemantics.flagsCollection.isEnabled, Tristate.isFalse);
       expect(
         savingSemantics.getSemanticsData().hasAction(SemanticsAction.tap),
         isFalse,
@@ -836,9 +801,7 @@ void main() {
 
       final semantics = tester.getSemantics(
         find.byKey(
-          const ValueKey(
-            'crossposting-mode-semantics-instagram-manual',
-          ),
+          const ValueKey('crossposting-mode-semantics-instagram-manual'),
         ),
       );
       expect(semantics.label, contains(l10n.crosspostingModeManual));
@@ -857,9 +820,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        buildApp(textScaler: const TextScaler.linear(2)),
-      );
+      await tester.pumpWidget(buildApp(textScaler: const TextScaler.linear(2)));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -956,9 +917,8 @@ void main() {
     testWidgets(
       'routes the benefit card connect through the awaited resolver',
       (tester) async {
-        when(repository.loadSettings).thenAnswer(
-          (_) async => [_disconnected()],
-        );
+        when(repository.loadSettings)
+            .thenAnswer((_) async => [_disconnected()]);
         when(
           () => repository.startConnection(
             any(),
@@ -1007,48 +967,44 @@ void main() {
       },
     );
 
-    testWidgets(
-      'sends a platform row connect to the web when in-app OAuth is '
-      'unsupported',
-      (tester) async {
-        when(repository.loadSettings).thenAnswer(
-          (_) async => [_disconnected()],
-        );
-        var webOpened = false;
-        var oauthLaunched = false;
+    testWidgets('sends a platform row connect to the web when in-app OAuth is '
+        'unsupported', (tester) async {
+      when(() => authService.isRegistered).thenReturn(true);
+      when(repository.loadSettings).thenAnswer((_) async => [_disconnected()]);
+      var webOpened = false;
+      var oauthLaunched = false;
 
-        await tester.pumpWidget(
-          buildApp(
-            launchOAuth: (_) async {
-              oauthLaunched = true;
-              return null;
-            },
-            additionalOverrides: [
-              appOAuthSupportProvider.overrideWith((ref) async => false),
-              crosspostingWebOpenerProvider.overrideWithValue((_) async {
-                webOpened = true;
-                return true;
-              }),
-            ],
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        buildApp(
+          launchOAuth: (_) async {
+            oauthLaunched = true;
+            return null;
+          },
+          additionalOverrides: [
+            appOAuthSupportProvider.overrideWith((ref) async => false),
+            crosspostingWebOpenerProvider.overrideWithValue((_) async {
+              webOpened = true;
+              return true;
+            }),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.byKey(const ValueKey('crossposting-action-instagram')),
-        );
-        await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('crossposting-action-instagram')),
+      );
+      await tester.pumpAndSettle();
 
-        expect(webOpened, isTrue);
-        expect(oauthLaunched, isFalse);
-        verifyNever(
-          () => repository.startConnection(
-            any(),
-            returnUrl: any(named: 'returnUrl'),
-          ),
-        );
-      },
-    );
+      expect(webOpened, isTrue);
+      expect(oauthLaunched, isFalse);
+      verifyNever(
+        () => repository.startConnection(
+          any(),
+          returnUrl: any(named: 'returnUrl'),
+        ),
+      );
+    });
 
     testWidgets('encourages automatic mode for a connected manual platform', (
       tester,
@@ -1084,9 +1040,7 @@ void main() {
 
     testWidgets('logs which settings CTA was tapped', (tester) async {
       final sink = _RecordingAnalyticsSink();
-      when(repository.loadSettings).thenAnswer(
-        (_) async => [_disconnected()],
-      );
+      when(repository.loadSettings).thenAnswer((_) async => [_disconnected()]);
 
       await tester.pumpWidget(
         buildApp(
@@ -1105,9 +1059,7 @@ void main() {
         equals({'surface': 'settings', 'cta': 'connect'}),
       );
 
-      await tester.tap(
-        find.text(l10n.crosspostingBenefitConnect('Instagram')),
-      );
+      await tester.tap(find.text(l10n.crosspostingBenefitConnect('Instagram')));
       await tester.pumpAndSettle();
 
       final tapEvents = sink.events
@@ -1169,9 +1121,9 @@ void main() {
     testWidgets('hides the auto card when the platform is already automatic', (
       tester,
     ) async {
-      when(repository.loadSettings).thenAnswer(
-        (_) async => [_connected(mode: CrosspostingMode.automatic)],
-      );
+      when(
+        repository.loadSettings,
+      ).thenAnswer((_) async => [_connected(mode: CrosspostingMode.automatic)]);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -1206,13 +1158,15 @@ void main() {
       tester,
     ) async {
       final authService = _MockAuthService();
-      when(() => authService.isRegistered).thenReturn(true);
-      when(
-        () => authService.authenticationSource,
-      ).thenReturn(AuthenticationSource.automatic);
-      when(
-        () => authService.currentPublicKeyHex,
-      ).thenReturn('pubkeyhex');
+      when(() => authService.isRegistered).thenReturn(false);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      when(() => authService.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => authService.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+      when(() => authService.authenticationSource)
+          .thenReturn(AuthenticationSource.automatic);
+      when(() => authService.currentPublicKeyHex).thenReturn('pubkeyhex');
       SharedPreferences.setMockInitialValues({});
       final sharedPreferences = await SharedPreferences.getInstance();
       await tester.binding.setSurfaceSize(const Size(400, 260));
@@ -1238,9 +1192,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWithValue(
-              AuthState.authenticated,
-            ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           ],
           child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,

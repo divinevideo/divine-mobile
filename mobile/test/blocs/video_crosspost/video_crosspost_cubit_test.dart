@@ -178,6 +178,35 @@ void main() {
         verifyNever(() => client.getCrossposts(eventId: eventId));
       });
 
+      test('waits for a slow signer before starting another poll', () {
+        when(
+          () => client.createCrossposts(
+            eventId: any(named: 'eventId'),
+            platforms: any(named: 'platforms'),
+          ),
+        ).thenAnswer((_) async => [queuedJob]);
+        fakeAsync((fake) {
+          final pending = Completer<List<CrosspostJob>>();
+          var requests = 0;
+          when(() => client.getCrossposts(eventId: eventId)).thenAnswer((_) {
+            requests++;
+            return requests == 1 ? pending.future : Future.value([postedJob]);
+          });
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 40));
+          expect(requests, 1);
+          pending.complete([queuedJob]);
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 10));
+          expect(requests, 2);
+          expect(cubit.state.status, VideoCrosspostStatus.finished);
+          unawaited(cubit.close());
+          fake.flushMicrotasks();
+        });
+      });
+
       test('polls until jobs reach a terminal state', () {
         when(
           () => client.createCrossposts(

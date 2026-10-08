@@ -21,6 +21,7 @@ void main() {
     }) {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.canPublishNostrWritesNow).thenReturn(true);
       when(() => auth.isRegistered).thenReturn(true);
       return ProviderContainer(
         overrides: [
