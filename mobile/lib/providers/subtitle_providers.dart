@@ -32,18 +32,57 @@ final subtitleLanguagePreferenceServiceProvider =
       (_) => SubtitleLanguagePreferenceService(),
     );
 
-/// Fetches subtitle cues for a video, using ordered fallback.
-///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
-///    viewer does not want a translation, parse it directly — zero network.
-/// 2. When the viewer wants a translation ([sourceLang] differs from their
-///    target and is not kept original), skip the embedded source track so the
-///    language-specific Blossom track is fetched instead.
-/// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
-///    try HTTP fetch or relay query in order.
-/// 4. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
-/// 5. Otherwise returns an empty list (no subtitles available).
+/// Fetches the track and its verified machine-translation attribution.
+@riverpod
+Future<SubtitleFetchResult> subtitleTrack(
+  Ref ref, {
+  required String videoId,
+  String? textTrackRef,
+  List<String> textTrackRefs = const [],
+  String? textTrackContent,
+  String? sha256,
+  String? sourceLang,
+  String? appLocaleCode,
+}) async {
+  final service = ref.watch(subtitleLanguagePreferenceServiceProvider);
+  service.addListener(ref.invalidateSelf);
+  ref.onDispose(() => service.removeListener(ref.invalidateSelf));
+  final prefs = ref.watch(sharedPreferencesProvider);
+  await service.initialize();
+  if (!ref.mounted) {
+    return const SubtitleFetchResult(SubtitleFetchStatus.unavailable);
+  }
+  final effectiveAppLocale =
+      appLocaleCode ?? currentAppUiLocale(prefs).languageCode;
+  final wantsTranslation = service.shouldTranslate(
+    sourceLanguage: sourceLang,
+    appLocaleCode: effectiveAppLocale,
+  );
+  final lang = wantsTranslation
+      ? service.effectiveTargetLanguage(effectiveAppLocale)
+      : null;
+
+  if (!wantsTranslation &&
+      textTrackContent != null &&
+      textTrackContent.isNotEmpty) {
+    final embedded = SubtitleFetchResult.fromBody(textTrackContent);
+    if (embedded?.status == SubtitleFetchStatus.available) return embedded!;
+  }
+  final refs = textTrackRefs.isNotEmpty
+      ? textTrackRefs
+      : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef];
+  return fetchSubtitleCues(
+    httpClient: ref.read(subtitleHttpClientProvider),
+    nostrClient: ref.read(nostrServiceProvider),
+    delay: ref.read(subtitlePollDelayProvider),
+    textTrackContent: textTrackContent,
+    textTrackRefs: refs,
+    sha256: sha256,
+    lang: lang,
+  );
+}
+
+/// Cue-only view for callers that do not render track attribution.
 @riverpod
 Future<List<SubtitleCue>> subtitleCues(
   Ref ref, {
@@ -54,36 +93,15 @@ Future<List<SubtitleCue>> subtitleCues(
   String? sha256,
   String? sourceLang,
 }) async {
-  final service = ref.read(subtitleLanguagePreferenceServiceProvider);
-  await service.initialize();
-  final appLocaleCode = currentAppUiLocale(
-    ref.read(sharedPreferencesProvider),
-  ).languageCode;
-  final wantsTranslation = service.shouldTranslate(
-    sourceLanguage: sourceLang,
-    appLocaleCode: appLocaleCode,
-  );
-  final lang = wantsTranslation
-      ? service.effectiveTargetLanguage(appLocaleCode)
-      : null;
-
-  if (!wantsTranslation &&
-      textTrackContent != null &&
-      textTrackContent.isNotEmpty) {
-    return SubtitleService.parseVtt(textTrackContent);
-  }
-
-  final refs = textTrackRefs.isNotEmpty
-      ? textTrackRefs
-      : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef];
-  final result = await fetchSubtitleCues(
-    httpClient: ref.read(subtitleHttpClientProvider),
-    nostrClient: ref.read(nostrServiceProvider),
-    delay: ref.read(subtitlePollDelayProvider),
-    textTrackContent: wantsTranslation ? null : textTrackContent,
-    textTrackRefs: refs,
-    sha256: sha256,
-    lang: lang,
+  final result = await ref.watch(
+    subtitleTrackProvider(
+      videoId: videoId,
+      textTrackRef: textTrackRef,
+      textTrackRefs: textTrackRefs,
+      textTrackContent: textTrackContent,
+      sha256: sha256,
+      sourceLang: sourceLang,
+    ).future,
   );
   return result.cues;
 }

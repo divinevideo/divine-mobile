@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/subtitle_language_setting/subtitle_language_setting_cubit.dart';
 import 'package:openvine/blocs/subtitle_language_setting/subtitle_language_setting_state.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockSubtitleLanguagePreferenceService extends Mock
     implements SubtitleLanguagePreferenceService {}
@@ -34,6 +35,26 @@ void main() {
 
     SubtitleLanguageSettingCubit buildCubit() =>
         SubtitleLanguageSettingCubit(service: service);
+
+    test(
+      'refreshes an open setting after account preferences are cleared',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          SubtitleLanguagePreferenceService.targetLanguageStorageKey: 'es',
+        });
+        final realService = SubtitleLanguagePreferenceService();
+        final cubit = SubtitleLanguageSettingCubit(service: realService);
+        addTearDown(cubit.close);
+        await cubit.load();
+        expect(cubit.state.targetLanguage, 'es');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(
+          SubtitleLanguagePreferenceService.targetLanguageStorageKey,
+        );
+        await realService.reloadFromStorage();
+        expect(cubit.state.targetLanguage, isNull);
+      },
+    );
 
     group('load', () {
       blocTest<SubtitleLanguageSettingCubit, SubtitleLanguageSettingState>(

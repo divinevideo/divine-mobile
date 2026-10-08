@@ -1,6 +1,7 @@
 // ABOUTME: Stores the viewer's subtitle translation preferences: the target
 // ABOUTME: language to translate into, and which source languages stay original.
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -14,7 +15,31 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// All values are normalized to the bare BCP-47 primary subtag (`de-CH` ->
 /// `de`), matching the language the publish path writes onto `text-track` tags.
-class SubtitleLanguagePreferenceService {
+class SubtitleLanguagePreferenceService implements Listenable {
+  final Set<VoidCallback> _listeners = {};
+
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
+
+  void _notifyListeners() {
+    for (final listener in List<VoidCallback>.of(_listeners)) {
+      listener();
+    }
+  }
+
+  /// Reloads this account-scoped instance and refreshes active subtitle tracks.
+  Future<void> reloadFromStorage() async {
+    await initialize();
+    _targetLanguage = null;
+    _keepOriginalLanguages = {};
+    _initializeFuture = _load();
+    await _initializeFuture;
+    _notifyListeners();
+  }
+
   /// SharedPreferences key for the target language.
   static const String targetLanguageStorageKey = 'subtitle_target_language';
 
@@ -63,6 +88,7 @@ class SubtitleLanguagePreferenceService {
     await initialize();
     final normalized = _normalize(languageCode);
     _targetLanguage = normalized;
+    _notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -84,6 +110,7 @@ class SubtitleLanguagePreferenceService {
   Future<void> setKeepOriginalLanguages(Set<String> languages) async {
     await initialize();
     _keepOriginalLanguages = _normalizeAll(languages);
+    _notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();

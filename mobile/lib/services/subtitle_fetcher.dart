@@ -50,7 +50,11 @@ enum SubtitleFetchStatus {
 /// Outcome of a subtitle fetch: the cues plus why they are what they are.
 class SubtitleFetchResult {
   /// Creates a result with an explicit [status].
-  const SubtitleFetchResult(this.status, {this.cues = const []});
+  const SubtitleFetchResult(
+    this.status, {
+    this.cues = const [],
+    this.isMachineTranslated = false,
+  });
 
   /// Classifies a [body] a source served as a subtitle track:
   /// [SubtitleFetchStatus.available] when it holds cues, or
@@ -60,12 +64,19 @@ class SubtitleFetchResult {
   /// JSON envelope served with HTTP 200 parses to zero cues just like a
   /// silent video's track does, and calling that `empty` would tell the
   /// creator no speech was detected when the fetch actually failed.
-  static SubtitleFetchResult? fromBody(String body) {
+  static SubtitleFetchResult? fromBody(
+    String body, {
+    bool isMachineTranslated = false,
+  }) {
     if (!SubtitleService.isWebVtt(body)) return null;
     final cues = SubtitleService.parseVtt(body);
     return cues.isEmpty
         ? const SubtitleFetchResult(SubtitleFetchStatus.empty)
-        : SubtitleFetchResult(SubtitleFetchStatus.available, cues: cues);
+        : SubtitleFetchResult(
+            SubtitleFetchStatus.available,
+            cues: cues,
+            isMachineTranslated: isMachineTranslated,
+          );
   }
 
   /// Why the fetch ended the way it did.
@@ -74,6 +85,9 @@ class SubtitleFetchResult {
   /// The resolved cues. Empty unless [status] is
   /// [SubtitleFetchStatus.available].
   final List<SubtitleCue> cues;
+
+  /// True only for a response verified against the translation contract.
+  final bool isMachineTranslated;
 }
 
 Duration _parseRetryAfter(Map<String, String> headers) {
@@ -181,18 +195,45 @@ Future<SubtitleFetchResult?> _fetchBlossom({
   return null;
 }
 
+Future<SubtitleFetchResult?> _fetchTranslation({
+  required http.Client client,
+  required String sha256,
+  required String lang,
+}) async {
+  final url = Uri.parse('https://media.divine.video/$sha256/vtt')
+      .replace(queryParameters: {'lang': lang});
+  try {
+    final response = await client.get(url).timeout(const Duration(seconds: 5));
+    if (response.statusCode != 200 ||
+        response.headers['x-divine-machine-translated'] != 'true' ||
+        response.headers['content-language']?.toLowerCase() !=
+            lang.toLowerCase()) {
+      return null;
+    }
+    return SubtitleFetchResult.fromBody(
+      _decodeVtt(response),
+      isMachineTranslated: true,
+    );
+  } on Object catch (error) {
+    Log.warning(
+      'Translated VTT fetch failed for $sha256: $error',
+      name: 'fetchSubtitleCues',
+      category: LogCategory.video,
+    );
+    return null;
+  }
+}
+
 /// Resolves subtitle cues with ordered fallback.
 ///
-/// Strategy (first source with cues wins):
-/// 1. If [textTrackContent] is non-empty, parse it directly (zero network).
-/// 2. For each ref in [textTrackRefs], try HTTP fetch (http/https) or relay
-///    query (Nostr NIP coords). [nostrClient] may be null; relay refs are
-///    skipped when it is.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`, polling on 202. When [lang]
-///    is set, request the translated track via `?lang=<lang>`; a server that
-///    does not know the parameter serves the original, so callers keep the
-///    original track as the fallback.
+/// When [lang] and [sha256] are supplied, try a verified translation first.
+/// A pending, failed, or unmarked response immediately falls back to the
+/// original chain; translation requests never poll or replace creator captions
+/// with an unmarked server transcript.
+///
+/// Original strategy (first source with cues wins): embedded content, then
+/// HTTP/relay refs, then the plain Blossom URL with bounded transcription polling.
+/// [sourcePreference] can place refs before embedded content for the editor.
 ///
 /// A source that resolves to zero cues does not end the chain — the next
 /// source still gets a turn. When no source yields cues, the returned status
@@ -213,6 +254,15 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   SubtitleSourcePreference sourcePreference =
       SubtitleSourcePreference.embeddedFirst,
 }) async {
+  if (lang != null && lang.isNotEmpty && sha256 != null && sha256.isNotEmpty) {
+    final translated = await _fetchTranslation(
+      client: httpClient,
+      sha256: sha256,
+      lang: lang,
+    );
+    if (translated?.status == SubtitleFetchStatus.available) return translated!;
+  }
+
   var sawProcessing = false;
   var sawEmpty = false;
 
@@ -271,11 +321,7 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   }
 
   if (sha256 != null && sha256.isNotEmpty) {
-    final vttUrl = (lang != null && lang.isNotEmpty)
-        ? Uri.parse(
-            'https://media.divine.video/$sha256/vtt',
-          ).replace(queryParameters: {'lang': lang})
-        : Uri.parse('https://media.divine.video/$sha256/vtt');
+    final vttUrl = Uri.parse('https://media.divine.video/$sha256/vtt');
     try {
       final cues = accept(
         await _fetchBlossom(client: httpClient, delay: delay, vttUrl: vttUrl),

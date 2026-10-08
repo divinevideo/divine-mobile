@@ -1,9 +1,10 @@
 // ABOUTME: Overlay widget displaying subtitle text on video playback.
-// ABOUTME: Uses subtitleCuesProvider for dual-fetch (REST embedded or relay).
+// ABOUTME: Shows verified translation attribution alongside timed caption cues.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/widgets/caption_pill.dart';
@@ -49,10 +50,16 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
       return const SizedBox.shrink();
     }
 
-    final cuesAsync = ref.watch(_subtitleCuesProvider(widget.video));
+    final cuesAsync = ref.watch(
+      _subtitleTrackProvider(
+        widget.video,
+        Localizations.localeOf(context).languageCode,
+      ),
+    );
 
     return cuesAsync.when(
-      data: (cues) {
+      data: (track) {
+        final cues = track.cues;
         final initialPositionMs = widget.initialPosition.inMilliseconds;
         final initialDisplay = _SubtitleCueDisplayTracker(
           cues,
@@ -64,7 +71,12 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
           builder: (context, snapshot) {
             final display = snapshot.data ?? const _SubtitleCueDisplay.hidden();
             if (display.text == null) return const SizedBox.shrink();
-            return CaptionPill(text: display.text!);
+            return CaptionPill(
+              text: display.text!,
+              label: track.isMachineTranslated
+                  ? context.l10n.subtitleMachineTranslated
+                  : null,
+            );
           },
         );
       },
@@ -126,14 +138,18 @@ class _SubtitleCueStreamPillState extends ConsumerState<SubtitleCueStreamPill> {
   }
 }
 
-SubtitleCuesProvider _subtitleCuesProvider(VideoEvent video) {
-  return subtitleCuesProvider(
+SubtitleTrackProvider _subtitleTrackProvider(
+  VideoEvent video,
+  String appLocaleCode,
+) {
+  return subtitleTrackProvider(
     videoId: video.id,
     textTrackRef: video.textTrackRef,
     textTrackRefs: video.textTrackRefs,
     textTrackContent: video.textTrackContent,
     sha256: video.sha256,
     sourceLang: video.textTrackLang,
+    appLocaleCode: appLocaleCode,
   );
 }
 

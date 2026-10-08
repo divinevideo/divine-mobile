@@ -118,8 +118,7 @@ final seenVideosClearProvider = Provider<Future<void> Function()>((ref) {
 ///
 /// Account and moderation labels are rebuilt at every account boundary
 /// anyway because they watch the Nostr client, and only widgets watch audio
-/// sharing and the subtitle language preferences, so those are still
-/// invalidated.
+/// sharing, so it is still invalidated.
 final accountScopedPreferenceServicesResetProvider =
     Provider<Future<void> Function()>((ref) {
       return () async {
@@ -135,6 +134,11 @@ final accountScopedPreferenceServicesResetProvider =
         if (ref.exists(languagePreferenceServiceProvider)) {
           await ref.read(languagePreferenceServiceProvider).reloadFromStorage();
         }
+        if (ref.exists(subtitleLanguagePreferenceServiceProvider)) {
+          await ref
+              .read(subtitleLanguagePreferenceServiceProvider)
+              .reloadFromStorage();
+        }
         if (ref.exists(soundLibraryServiceProvider)) {
           final soundLibrary = await ref.read(
             soundLibraryServiceProvider.future,
@@ -144,8 +148,7 @@ final accountScopedPreferenceServicesResetProvider =
         ref
           ..invalidate(accountLabelServiceProvider)
           ..invalidate(moderationLabelServiceProvider)
-          ..invalidate(audioSharingPreferenceServiceProvider)
-          ..invalidate(subtitleLanguagePreferenceServiceProvider);
+          ..invalidate(audioSharingPreferenceServiceProvider);
       };
     });
 

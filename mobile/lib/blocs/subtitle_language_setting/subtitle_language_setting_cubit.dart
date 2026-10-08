@@ -9,16 +9,23 @@ import 'package:openvine/services/subtitle_language_preference_service.dart';
 
 /// Cubit backing the subtitle-translation tiles in `ContentPreferencesScreen`.
 ///
-/// `SubtitleLanguagePreferenceService` is prefs-backed with no stream, so the
-/// cubit re-reads it after each mutation and emits the post-write snapshot.
+/// Listens for account-boundary reloads as well as setting changes.
 class SubtitleLanguageSettingCubit extends Cubit<SubtitleLanguageSettingState>
     with CloseGuardedEmit<SubtitleLanguageSettingState> {
   SubtitleLanguageSettingCubit({
     required SubtitleLanguagePreferenceService service,
   }) : _service = service,
-       super(const SubtitleLanguageSettingState());
+       super(const SubtitleLanguageSettingState()) {
+    _service.addListener(_emitSnapshot);
+  }
 
   final SubtitleLanguagePreferenceService _service;
+
+  @override
+  Future<void> close() {
+    _service.removeListener(_emitSnapshot);
+    return super.close();
+  }
 
   Future<void> load() async {
     await _service.initialize();

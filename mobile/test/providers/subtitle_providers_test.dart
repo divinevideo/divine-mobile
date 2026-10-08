@@ -77,6 +77,10 @@ void main() {
         return http.Response(
           'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nTranslated\n',
           200,
+          headers: {
+            'content-language': 'en',
+            'x-divine-machine-translated': 'true',
+          },
         );
       });
 
@@ -85,6 +89,7 @@ void main() {
           videoId: 'test-id',
           sha256: 'a' * 64,
           sourceLang: 'ja',
+          textTrackRefs: ['https://media.divine.video/${'a' * 64}/vtt'],
         ).future,
       );
 
@@ -92,6 +97,43 @@ void main() {
       expect(requested, isNotNull);
       expect(requested!.queryParameters['lang'], equals('en'));
     });
+
+    test(
+      'refreshes an active track when target and keep-original change',
+      () async {
+        final container = createContainer();
+        addTearDown(container.dispose);
+        when(() => mockHttpClient.get(any())).thenAnswer((invocation) async {
+          final url = invocation.positionalArguments.first as Uri;
+          final lang = url.queryParameters['lang']!;
+          return http.Response(
+            'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n$lang\n',
+            200,
+            headers: {
+              'content-language': lang,
+              'x-divine-machine-translated': 'true',
+            },
+          );
+        });
+        final provider = subtitleCuesProvider(
+          videoId: 'test-id',
+          sha256: 'a' * 64,
+          sourceLang: 'ja',
+          textTrackContent:
+              'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nOriginal\n',
+        );
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+        expect((await container.read(provider.future)).single.text, 'en');
+        final service = container.read(
+          subtitleLanguagePreferenceServiceProvider,
+        );
+        await service.setTargetLanguage('es');
+        expect((await container.read(provider.future)).single.text, 'es');
+        await service.setKeepOriginalLanguages({'ja'});
+        expect((await container.read(provider.future)).single.text, 'Original');
+      },
+    );
 
     test('does not translate when the source matches the app locale', () async {
       final container = createContainer();

@@ -21992,6 +21992,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Reconnect {platforms} in crossposting settings to keep posting.} other{Reconnect these accounts in crossposting settings to keep posting: {platforms}.}}'**
   String postPublishCrosspostReconnect(int count, String platforms);
+
+  /// Short attribution above captions verified as a machine translation; not creator-written words.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine-translated'**
+  String get subtitleMachineTranslated;
 }
 
 class _AppLocalizationsDelegate

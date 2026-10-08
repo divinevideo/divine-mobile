@@ -13485,4 +13485,7 @@ class AppLocalizationsTe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'యంత్ర అనువాదం';
 }

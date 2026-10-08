@@ -6724,5 +6724,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Sambung semula {platforms} dalam tetapan siaran silang untuk terus menyiarkan.} other{Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Sambung semula {platforms} dalam tetapan siaran silang untuk terus menyiarkan.} other{Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: {platforms}.}}",
+  "subtitleMachineTranslated": "Terjemahan mesin"
 }

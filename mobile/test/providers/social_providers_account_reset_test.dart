@@ -179,6 +179,7 @@ void main() {
           subtitleLanguagePreferenceServiceProvider,
         );
         await incoming.initialize();
+        expect(identical(incoming, departing), isTrue);
         expect(incoming.targetLanguage, isNull);
         expect(incoming.keepOriginalLanguages, isEmpty);
       },

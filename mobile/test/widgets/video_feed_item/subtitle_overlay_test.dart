@@ -6,6 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:openvine/services/subtitle_fetcher.dart';
+import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/widgets/video_feed_item/subtitle_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -68,6 +71,47 @@ class _RebuildingSubtitleHostState extends State<_RebuildingSubtitleHost> {
 
 void main() {
   group('renders', () {
+    testWidgets('shows attribution only for a verified machine translation', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final video = _makeVideo();
+      final provider = subtitleTrackProvider(
+        videoId: video.id,
+        textTrackContent: video.textTrackContent,
+        appLocaleCode: 'en',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            provider.overrideWith(
+              (ref) async => SubtitleFetchResult(
+                SubtitleFetchStatus.available,
+                cues: SubtitleService.parseVtt(video.textTrackContent!),
+                isMachineTranslated: true,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SubtitleCueStreamPill(
+                video: video,
+                positionStream: const Stream<Duration>.empty(),
+                initialPosition: const Duration(milliseconds: 300),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Machine-translated'), findsOneWidget);
+      expect(find.text('Hello there'), findsOneWidget);
+    });
+
     testWidgets('does not rebuild the caption pill for ticks within one cue', (
       tester,
     ) async {
@@ -98,6 +142,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Hello there'), findsOneWidget);
+      expect(find.text('Machine-translated'), findsNothing);
       final initialTextWidget = tester.widget<Text>(find.text('Hello there'));
 
       positions.add(const Duration(milliseconds: 500));

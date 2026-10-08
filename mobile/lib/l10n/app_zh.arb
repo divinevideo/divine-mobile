@@ -6724,5 +6724,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{在跨平台发布设置中重新连接 {platforms}，才能继续发布。} other{在跨平台发布设置中重新连接这些账号，才能继续发布：{platforms}。}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{在跨平台发布设置中重新连接 {platforms}，才能继续发布。} other{在跨平台发布设置中重新连接这些账号，才能继续发布：{platforms}。}}",
+  "subtitleMachineTranslated": "机器翻译"
 }

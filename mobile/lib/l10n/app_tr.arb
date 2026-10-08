@@ -4957,5 +4957,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından {platforms} hesabını yeniden bağla.} other{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından {platforms} hesabını yeniden bağla.} other{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: {platforms}.}}",
+  "subtitleMachineTranslated": "Makine çevirisi"
 }

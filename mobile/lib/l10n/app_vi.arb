@@ -6724,5 +6724,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Kết nối lại {platforms} trong cài đặt đăng chéo để tiếp tục đăng.} other{Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Kết nối lại {platforms} trong cài đặt đăng chéo để tiếp tục đăng.} other{Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: {platforms}.}}",
+  "subtitleMachineTranslated": "Bản dịch máy"
 }

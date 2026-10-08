@@ -9397,5 +9397,9 @@
         "type": "String"
       }
     }
+  },
+  "subtitleMachineTranslated": "Machine-translated",
+  "@subtitleMachineTranslated": {
+    "description": "Short attribution above captions verified as a machine translation; not creator-written words."
   }
 }

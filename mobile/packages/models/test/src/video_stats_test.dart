@@ -1255,7 +1255,13 @@ void main() {
               ['title', 'Test'],
               ['url', 'https://example.com/video.mp4'],
               ['thumb', 'https://example.com/thumb.jpg'],
-              ['text-track', '39307:abc123:subtitles:video-1'],
+              [
+                'text-track',
+                '39307:abc123:subtitles:video-1',
+                '',
+                'captions',
+                'ja-JP',
+              ],
             ],
           },
           'stats': {
@@ -1269,6 +1275,8 @@ void main() {
         final stats = VideoStats.fromJson(json);
 
         expect(stats.textTrackRef, equals('39307:abc123:subtitles:video-1'));
+        expect(stats.textTrackLang, 'ja');
+        expect(stats.toVideoEvent().textTrackLang, 'ja');
       });
 
       test('normalizes empty text-track fields to null', () {
