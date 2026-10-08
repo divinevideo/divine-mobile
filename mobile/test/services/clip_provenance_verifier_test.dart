@@ -3,6 +3,8 @@
 
 import 'dart:convert';
 
+import 'package:bip340/bip340.dart' as schnorr;
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,7 +19,99 @@ const _digitalCapture =
     'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture';
 const _trainedAlgorithmicMedia =
     'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia';
+const _compositeCapture =
+    'http://cv.iptc.org/newscodes/digitalsourcetype/compositeCapture';
 const _cachedPem = 'cached-pem';
+
+/// BIP-340 test-vector key, so bindings in these reports carry a real
+/// signature.
+const _bindingKey =
+    'b7e151628aed2a6abf7158809cf4f3c762e7160f38b4da56a784d9045190cfef';
+
+Map<String, dynamic> _capture({Map<String, dynamic>? binding}) => {
+  'assertions': [
+    _actions([
+      {'action': 'c2pa.created', 'digitalSourceType': _digitalCapture},
+    ]),
+    ?binding,
+  ],
+};
+
+Map<String, dynamic> _ingredient(
+  String? activeManifest, {
+  String relationship = 'parentOf',
+  String format = 'video/mp4',
+}) => {
+  'format': format,
+  'relationship': relationship,
+  'active_manifest': ?activeManifest,
+};
+
+Map<String, dynamic> _edit(
+  List<Map<String, dynamic>> ingredients, {
+  Map<String, dynamic>? binding,
+}) => {
+  'ingredients': ingredients,
+  'assertions': [
+    _actions([
+      {'action': 'c2pa.opened'},
+      {'action': 'c2pa.edited'},
+    ]),
+    ?binding,
+  ],
+};
+
+Map<String, dynamic> _composite(List<Map<String, dynamic>> ingredients) => {
+  'ingredients': ingredients,
+  'assertions': [
+    _actions([
+      {'action': 'c2pa.created', 'digitalSourceType': _compositeCapture},
+    ]),
+  ],
+};
+
+Map<String, dynamic> _chain(Map<String, Map<String, dynamic>> manifests) => {
+  'active_manifest': manifests.keys.first,
+  'manifests': manifests,
+  'validation_state': 'Trusted',
+  'validation_results': {
+    'activeManifest': {
+      'success': [
+        {'code': 'claimSignature.validated'},
+      ],
+      'failure': <Map<String, dynamic>>[],
+    },
+  },
+};
+
+/// A creator binding signed with [_bindingKey], as the reader returns it:
+/// keys sorted, which is not the order they were signed in.
+Map<String, dynamic> _binding({bool tampered = false}) {
+  final pubkey = schnorr.getPublicKey(_bindingKey);
+  final unsigned = <String, dynamic>{
+    'version': 1,
+    'pubkey': pubkey,
+    'sig_alg': 'nostr.secp256k1',
+    'created_at': '2026-10-08T09:00:00.000Z',
+    'claims': <String, dynamic>{},
+    'referenced_assertions': ['c2pa.actions.v2'],
+    'hard_binding': {'alg': 'sha256', 'value': 'ab' * 32},
+  };
+  final digest = sha256.convert(utf8.encode(jsonEncode(unsigned))).toString();
+  final signature = schnorr.sign(_bindingKey, digest, 'cd' * 32);
+  final data = {
+    ...unsigned,
+    if (tampered) 'created_at': '2026-10-09T09:00:00.000Z',
+    'signature': signature,
+  };
+  return {
+    'label': 'video.divine.nostr.creator_binding',
+    'data': Map.fromEntries(
+      data.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+    ),
+  };
+}
+
 const _freshPem = 'fresh-pem';
 
 Map<String, dynamic> _actions(List<Map<String, dynamic>> actions) => {
@@ -182,6 +276,128 @@ void main() {
         );
 
         expect(result.status, equals(ClipProvenanceStatus.verified));
+      });
+
+      group('edit chains', () {
+        test('verifies an edit of a capture', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([_ingredient('rec')]),
+              'rec': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+        });
+
+        test('verifies an edit passed on and edited again', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'second': _edit([_ingredient('first')]),
+              'first': _edit([_ingredient('rec')]),
+              'rec': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+        });
+
+        test('verifies a composite of captures with a declared image', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'merged': _composite([
+                _ingredient('a', relationship: 'componentOf'),
+                _ingredient('b', relationship: 'componentOf'),
+                _ingredient(
+                  null,
+                  relationship: 'componentOf',
+                  format: 'image/png',
+                ),
+              ]),
+              'a': _capture(),
+              'b': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+        });
+
+        test('rejects an edit of a video with no manifest', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([_ingredient(null)]),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
+        });
+
+        test('rejects a composite that mixes in an unsigned video', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'merged': _composite([
+                _ingredient('a', relationship: 'componentOf'),
+                _ingredient(null, relationship: 'componentOf'),
+              ]),
+              'a': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
+        });
+
+        test('rejects an ingredient the reader does not validate', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([
+                _ingredient('rec'),
+                _ingredient('other', relationship: 'inputTo'),
+              ]),
+              'rec': _capture(),
+              'other': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
+        });
+
+        test('rejects a history that refers back to itself', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([_ingredient('edit')]),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
+        });
+
+        test('rejects an edit chain deeper than the limit', () {
+          final depth = ClipProvenanceVerifier.maxChainDepth + 2;
+          final manifests = <String, Map<String, dynamic>>{
+            for (var i = 0; i < depth; i++)
+              'm$i': _edit([_ingredient('m${i + 1}')]),
+            'm$depth': _capture(),
+          };
+
+          final result = ClipProvenanceVerifier.evaluate(_chain(manifests));
+
+          expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
+        });
+
+        test('collects everyone whose binding verifies along the chain', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([_ingredient('rec')], binding: _binding()),
+              'rec': _capture(binding: _binding(tampered: true)),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+          expect(
+            result.contributors,
+            equals([schnorr.getPublicKey(_bindingKey)]),
+          );
+        });
       });
 
       test('reports no credentials when there is no active manifest', () {

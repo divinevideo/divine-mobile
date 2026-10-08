@@ -8,12 +8,15 @@ import 'package:c2pa_flutter/c2pa_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:openvine/services/c2pa_trust_anchor_service.dart';
+import 'package:openvine/services/nostr_creator_binding_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Outcome of checking a clip's C2PA credential.
 enum ClipProvenanceStatus {
-  /// Signed by a trusted ProofSign signer, unmodified since, and recorded as
-  /// a camera capture with no generative source anywhere in its history.
+  /// Signed by a trusted ProofSign signer, unmodified since, and either a
+  /// camera capture or made from camera captures through edits and merges
+  /// whose every step is signed, with no generative source anywhere in its
+  /// history.
   verified,
 
   /// The file carries no C2PA manifest.
@@ -26,8 +29,8 @@ enum ClipProvenanceStatus {
   /// it was signed over.
   invalid,
 
-  /// The manifest does not describe a camera capture, or names a generative
-  /// or synthetic source somewhere in its history.
+  /// The history does not lead back to camera captures, or names a
+  /// generative or synthetic source somewhere.
   notCameraCapture,
 
   /// The check could not run: no trust anchors, or no C2PA support on this
@@ -39,13 +42,22 @@ enum ClipProvenanceStatus {
 @immutable
 class ClipProvenanceResult {
   /// Creates a [ClipProvenanceResult].
-  const ClipProvenanceResult(this.status, {this.activeManifestId});
+  const ClipProvenanceResult(
+    this.status, {
+    this.activeManifestId,
+    this.contributors = const [],
+  });
 
   /// What the check concluded.
   final ClipProvenanceStatus status;
 
   /// Label of the manifest that was checked, when the file had one.
   final String? activeManifestId;
+
+  /// Hex pubkeys of everyone whose signed creator binding is in the verified
+  /// history, from the latest edit back to the recordings. Empty unless
+  /// [isVerified], and for history signed before bindings were added.
+  final List<String> contributors;
 
   /// Whether the clip passed.
   bool get isVerified => status == ClipProvenanceStatus.verified;
@@ -59,10 +71,12 @@ class ClipProvenanceResult {
   bool operator ==(Object other) =>
       other is ClipProvenanceResult &&
       other.status == status &&
-      other.activeManifestId == activeManifestId;
+      other.activeManifestId == activeManifestId &&
+      listEquals(other.contributors, contributors);
 
   @override
-  int get hashCode => Object.hash(status, activeManifestId);
+  int get hashCode =>
+      Object.hash(status, activeManifestId, Object.hashAll(contributors));
 
   @override
   String toString() => 'ClipProvenanceResult($status, $activeManifestId)';
@@ -101,9 +115,16 @@ class ClipProvenanceVerifier {
   static const String _logName = 'ClipProvenanceVerifier';
 
   static const String _createdAction = 'c2pa.created';
+  static const String _openedAction = 'c2pa.opened';
   static const String _untrustedCode = 'signingCredential.untrusted';
   static const String _digitalCaptureSuffix =
       'newscodes/digitalsourcetype/digitalCapture';
+  static const String _compositeCaptureSuffix =
+      'newscodes/digitalsourcetype/compositeCapture';
+
+  /// How many edits deep a history is followed. Every hop of passing a clip
+  /// on adds one; a longer chain is rejected rather than walked.
+  static const int maxChainDepth = 16;
 
   final C2paTrustAnchorService _trustAnchors;
   final C2paManifestStoreReader _readManifestStore;
@@ -242,19 +263,22 @@ class ClipProvenanceVerifier {
       );
     }
 
-    final createdAsCapture = _actionsOf(active).any(
-      (action) =>
-          action['action'] == _createdAction &&
-          _isCameraCapture(action['digitalSourceType']),
-    );
     final everySourceIsCapture = manifests.values.every(
       (manifest) => _actionsOf(manifest).every(
         (action) =>
             action['digitalSourceType'] == null ||
-            _isCameraCapture(action['digitalSourceType']),
+            _isCaptureSource(action['digitalSourceType']),
       ),
     );
-    if (!createdAsCapture || !everySourceIsCapture) {
+    final contributors = <String>[];
+    final leadsToCaptures = _leadsToCaptures(
+      manifests,
+      activeId,
+      depth: 0,
+      visiting: <String>{},
+      contributors: contributors,
+    );
+    if (!everySourceIsCapture || !leadsToCaptures) {
       return ClipProvenanceResult(
         ClipProvenanceStatus.notCameraCapture,
         activeManifestId: activeId,
@@ -264,8 +288,116 @@ class ClipProvenanceVerifier {
     return ClipProvenanceResult(
       ClipProvenanceStatus.verified,
       activeManifestId: activeId,
+      contributors: List.unmodifiable(contributors),
     );
   }
+
+  /// Whether the manifest [label] is a camera capture, or an edit or a
+  /// composite whose video sources all are, recursively.
+  ///
+  /// A capture is `c2pa.created` with the `digitalCapture` source type; its
+  /// ingredients are not followed. An edit starts with `c2pa.opened` and has
+  /// exactly one `parentOf` video. A composite is `c2pa.created` with the
+  /// `compositeCapture` source type and at least one video component. Any
+  /// other video ingredient must lead back to captures too; an image or a
+  /// sound without a manifest is a declared component and is accepted, while
+  /// one with a manifest is covered by the source-type check over every
+  /// manifest in the store. Creator bindings of every manifest on the way are
+  /// collected into [contributors].
+  static bool _leadsToCaptures(
+    Map<dynamic, dynamic> manifests,
+    String label, {
+    required int depth,
+    required Set<String> visiting,
+    required List<String> contributors,
+  }) {
+    if (depth > maxChainDepth || !visiting.add(label)) return false;
+    final manifest = manifests[label];
+    if (manifest is! Map) return false;
+    _collectContributors(manifest, contributors);
+
+    final actions = _actionsOf(manifest).toList();
+    if (actions.isEmpty) return false;
+    final first = actions.first;
+    final sourceType = first['digitalSourceType'];
+    final ingredients = switch (manifest['ingredients']) {
+      final List<dynamic> list =>
+        list.whereType<Map<dynamic, dynamic>>().toList(),
+      _ => const <Map<dynamic, dynamic>>[],
+    };
+
+    bool ingredientLeadsToCaptures(Map<dynamic, dynamic> ingredient) {
+      if (ingredient['relationship'] == 'inputTo') return false;
+      final format = ingredient['format'];
+      final ingredientLabel = ingredient['active_manifest'];
+      final isVideo = format is String && format.startsWith('video/');
+      if (!isVideo) return true;
+      return ingredientLabel is String &&
+          _leadsToCaptures(
+            manifests,
+            ingredientLabel,
+            depth: depth + 1,
+            visiting: visiting,
+            contributors: contributors,
+          );
+    }
+
+    bool isVideo(Map<dynamic, dynamic> ingredient) {
+      final format = ingredient['format'];
+      return format is String && format.startsWith('video/');
+    }
+
+    switch (first['action']) {
+      case _createdAction when _isCameraCapture(sourceType):
+        return true;
+      case _createdAction when _isCompositeCapture(sourceType):
+        return ingredients.any(isVideo) &&
+            ingredients.every(
+              (ingredient) =>
+                  ingredient['relationship'] != 'parentOf' &&
+                  ingredientLeadsToCaptures(ingredient),
+            );
+      case _openedAction:
+        final parents = ingredients
+            .where((ingredient) => ingredient['relationship'] == 'parentOf')
+            .toList();
+        return parents.length == 1 &&
+            isVideo(parents.single) &&
+            ingredients.every(ingredientLeadsToCaptures);
+      default:
+        return false;
+    }
+  }
+
+  /// Adds the verified signer of every creator binding in [manifest].
+  static void _collectContributors(
+    Map<dynamic, dynamic> manifest,
+    List<String> contributors,
+  ) {
+    final assertions = manifest['assertions'];
+    if (assertions is! List) return;
+    for (final assertion in assertions.whereType<Map<dynamic, dynamic>>()) {
+      final label = assertion['label'];
+      final data = assertion['data'];
+      if (label is! String ||
+          !label.startsWith(NostrCreatorBindingService.assertionLabel) ||
+          data is! Map) {
+        continue;
+      }
+      final signer = NostrCreatorBindingService.verifiedSigner(
+        Map<String, dynamic>.from(data),
+      );
+      if (signer != null && !contributors.contains(signer)) {
+        contributors.add(signer);
+      }
+    }
+  }
+
+  static bool _isCaptureSource(Object? sourceType) =>
+      _isCameraCapture(sourceType) || _isCompositeCapture(sourceType);
+
+  static bool _isCompositeCapture(Object? sourceType) =>
+      sourceType is String && sourceType.endsWith(_compositeCaptureSuffix);
 
   static bool _isCameraCapture(Object? sourceType) =>
       sourceType is String && sourceType.endsWith(_digitalCaptureSuffix);
