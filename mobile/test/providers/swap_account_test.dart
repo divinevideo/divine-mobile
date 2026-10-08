@@ -1190,6 +1190,8 @@ class _RefusingCleanupPreferences extends Fake implements SharedPreferences {
   Future<bool> setString(String key, String value) =>
       backing.setString(key, value);
   @override
+  Future<void> reload() => backing.reload();
+  @override
   Future<bool> remove(String key) async {
     refusedKeys.add(key);
     return false;
