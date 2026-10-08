@@ -197,6 +197,44 @@ void main() {
       });
     });
 
+    group('Label Width', () {
+      testWidgets('extends a long label up to 16pt before the settings menu', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(402, 874);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        const longName =
+            'A subscribed list with a name far too long to fit on one row';
+        when(() => mockBloc.state).thenReturn(
+          VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: const VideoFeedSource.subscribedList(
+              listId: 'long',
+              listName: longName,
+            ),
+            subscribedLists: [curatedList(id: 'long', name: longName)],
+          ),
+        );
+        await tester.pumpWidget(createTestWidget());
+
+        final caret = find.descendant(
+          of: find
+              .ancestor(
+                of: find.text(longName),
+                matching: find.byType(GestureDetector),
+              )
+              .first,
+          matching: find.byType(ShadowedDivineIcon),
+        );
+        final menuLeft = tester.getRect(find.byType(FeedSettingsMenu)).left;
+
+        expect(tester.getRect(caret).right, equals(menuLeft - 16));
+      });
+    });
+
     group('Feed Settings', () {
       testWidgets('does not show owner actions in the feed settings popover', (
         tester,
