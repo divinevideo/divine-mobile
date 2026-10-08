@@ -14,7 +14,9 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart';
+import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -188,7 +190,7 @@ void main() {
         ).thenAnswer(
           (_) async => (events: [remote], timedOut: false, noRelays: false),
         );
-        when(() => client.publishEvent(any())).thenAnswer((i) async {
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
           final event = i.positionalArguments.first as Event;
           sent.add(event);
           if (event.kind == 30000 &&
@@ -197,7 +199,12 @@ void main() {
                       event.id.compareTo(remote.id) < 0))) {
             remote = event;
           }
-          return PublishSuccess(event: event);
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const ['wss://relay.example'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
         });
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
@@ -229,11 +236,25 @@ void main() {
             .single;
         expect(initial.pubkeys, [_ownerB]);
         await collect(container, initial.pubkeys);
-        final cubit = PeopleListInfoCubit(
+        final mutations = PeopleListsBloc(
           repository: repository,
+          ownerPubkeyStream: const Stream.empty(),
+          repositoryStream: const Stream.empty(),
+          enabledStream: const Stream.empty(),
+          initialOwnerPubkey: _ownerA,
+          clock: () => DateTime.utc(2026, 10, 4),
+        );
+        addTearDown(mutations.close);
+        final openingEpoch = mutations.mutationSessionEpoch;
+        final cubit = PeopleListInfoCubit(
+          submitMutation: mutations.submit,
           ownerPubkey: _ownerA,
           list: initial,
-          currentOwnerPubkey: () => _ownerA,
+          currentOwnerPubkey: () =>
+              !mutations.isClosed &&
+                  mutations.mutationSessionEpoch == openingEpoch
+              ? mutations.state.activeOwnerPubkey
+              : null,
         );
         addTearDown(cubit.close);
         cubit.nameChanged('New name');
