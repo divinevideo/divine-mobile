@@ -15,7 +15,9 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The creator's most used sounds, as a Creator Analytics card.
 ///
@@ -86,9 +88,7 @@ class CreatorSoundsCard extends StatelessWidget {
         ),
         CreatorSoundsStatus.success when state.sounds.isEmpty =>
           const _CreatorSoundsEmpty(),
-        CreatorSoundsStatus.success => _CreatorSoundsList(
-          sounds: state.sounds,
-        ),
+        CreatorSoundsStatus.success => _CreatorSoundsList(sounds: state.sounds),
       },
     );
   }
@@ -192,8 +192,12 @@ class _CreatorSoundRow extends StatelessWidget {
       sound.createdAt.millisecondsSinceEpoch ~/ 1000,
     );
 
-    Future<void> openSound() =>
-        context.push(SoundDetailScreen.pathForId(sound.id));
+    void openSound() => runDetached(
+      context.push<void>(SoundDetailScreen.pathForId(sound.id)),
+      'open sound',
+      logName: 'CreatorSoundsCard',
+      category: LogCategory.ui,
+    );
 
     return Semantics(
       button: true,

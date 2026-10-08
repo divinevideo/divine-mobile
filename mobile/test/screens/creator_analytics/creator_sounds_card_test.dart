@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/accessibility_guidelines.dart';
 import '../../helpers/go_router.dart';
@@ -156,7 +157,7 @@ void main() {
       });
 
       testWidgets('tapping a sound opens its detail page', (tester) async {
-        when(() => goRouter.push<Object?>(any())).thenAnswer((_) async => null);
+        when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
         await pumpCard(
           tester,
           CreatorSoundsState(
@@ -168,8 +169,39 @@ void main() {
         await tester.tap(find.text('Test sound'));
 
         verify(
-          () => goRouter.push<Object?>(SoundDetailScreen.pathForId('sound-a')),
+          () => goRouter.push<void>(SoundDetailScreen.pathForId('sound-a')),
         ).called(1);
+      });
+
+      testWidgets('logs a failed sound route push instead of leaking it', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        when(() => goRouter.push<void>(any()))
+            .thenAnswer((_) => Future<void>.error(Exception('route failed')));
+        await pumpCard(
+          tester,
+          CreatorSoundsState(
+            status: CreatorSoundsStatus.success,
+            sounds: [sound('sound-a', 'Test sound', 42)],
+          ),
+        );
+
+        await tester.tap(find.text('Test sound'));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final logs = logCapture.getRecentLogs();
+        expect(logs, hasLength(1));
+        expect(logs.single.level, LogLevel.error);
+        expect(logs.single.name, 'CreatorSoundsCard');
+        expect(logs.single.category, LogCategory.ui);
+        expect(
+          logs.single.message,
+          'Failed to open sound: Exception: route failed',
+        );
       });
     });
   });
