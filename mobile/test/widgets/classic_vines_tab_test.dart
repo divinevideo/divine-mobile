@@ -24,14 +24,18 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/classic_vines_tab.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
@@ -61,6 +65,25 @@ class _EmptyClassicVinesFeed extends ClassicVinesFeed {
 }
 
 class _MockFeedRepository extends Mock implements FeedRepository {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 const _classicPubkey =
     '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
@@ -148,15 +171,27 @@ void main() {
     group('navigation', () {
       late _MockFeedRepository feedRepository;
       late MockGoRouter router;
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+      late LogCaptureService logCapture;
 
       // Thumbnails resolve through the process-global image cache; stub it so
       // no real cache-manager work or cleanup timer runs (#5158 seam).
-      setUp(() {
+      setUp(() async {
         debugImageCacheOverride = createMockMediaCacheManager();
         feedRepository = _MockFeedRepository();
         router = MockGoRouter();
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
       });
-      tearDown(() => debugImageCacheOverride = null);
+      tearDown(() async {
+        debugImageCacheOverride = null;
+        detachedFailureReporter = originalReporter;
+        await logCapture.clearAllLogs();
+      });
 
       Future<void> pumpLoadedTab(WidgetTester tester) async {
         await tester.pumpWidget(
@@ -227,6 +262,25 @@ void main() {
           ),
         ).called(1);
         expect(tester.takeException(), isNull);
+
+        final logs = logCapture
+            .getRecentLogs()
+            .where((entry) => entry.name == 'ClassicVinesTab')
+            .where((entry) => entry.level == LogLevel.error);
+        expect(logs, hasLength(1));
+        expect(logs.single.category, LogCategory.video);
+        expect(
+          logs.single.message,
+          'Failed to open classic video: Bad state: route failed',
+        );
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
       });
     });
   });
