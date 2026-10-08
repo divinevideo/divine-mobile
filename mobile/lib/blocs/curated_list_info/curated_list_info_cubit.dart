@@ -359,7 +359,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       // sheet opened, and resending the opening value would undo that.
       final permissionsWillChange = visibilityWillChange || writesCollaborators;
       var publicationUnconfirmed = false;
-      final update = service.updateList(
+      final update = service.updateListWithResult(
         listId: listId,
         name: name,
         description: description,
@@ -393,14 +393,17 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           return;
         }
         final pending = service.getListById(listId);
-        if (updated) _consumePermissionDrafts();
+        if (updated.succeeded) _consumePermissionDrafts();
         emitIfOpen(
           state.copyWith(
             needsSync: pending?.needsSync ?? false,
             permissionRecoveryPending:
                 pending?.hasPendingPermissionRecovery ?? false,
-            status: updated
+            status: updated.succeeded
                 ? CuratedListInfoStatus.saved
+                : updated.rejection ==
+                      CuratedListUpdateRejection.privateListFull
+                ? CuratedListInfoStatus.privateListFull
                 : publicationUnconfirmed
                 ? CuratedListInfoStatus.permissionsUnconfirmed
                 : CuratedListInfoStatus.failure,
@@ -435,17 +438,21 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   ///
   /// The service emits the local milestone only after this edit reaches
   /// storage, including when it was queued behind another publication.
-  Future<void> _closeThenAwait(Future<bool> update) async {
+  Future<void> _closeThenAwait(
+    Future<CuratedListUpdateResult> update,
+  ) async {
     final published = await update;
     if (!isSessionCurrent) {
       emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
       return;
     }
-    if (published) _consumePermissionDrafts();
+    if (published.succeeded) _consumePermissionDrafts();
     emitIfOpen(
       state.copyWith(
-        status: published
+        status: published.succeeded
             ? CuratedListInfoStatus.saved
+            : published.rejection == CuratedListUpdateRejection.privateListFull
+            ? CuratedListInfoStatus.privateListFull
             : state.status == CuratedListInfoStatus.savedAwaitingRelay
             ? CuratedListInfoStatus.publishFailed
             : CuratedListInfoStatus.failure,
