@@ -75,6 +75,44 @@ void main() {
         C2paEditSource(path: '/path/b.mp4'),
       ]);
       expect(result?.proofManifestJson, contains('urn:c2pa:merged'));
+      // Signed, the merged file vouches for itself.
+      expect(result?.derivedFrom, isNull);
+    });
+
+    test('keeps the merged sources when it could not be signed', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => null;
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result = await VideoEditorMergeService.mergeClips(
+        clips: [
+          _createClip(id: 'a'),
+          _createClip(id: 'b'),
+        ],
+        renderId: 'merge-1',
+      );
+
+      // Merged offline, a later edit is still signed against the originals.
+      expect(result?.derivedFrom, const [
+        C2paEditSource(path: '/path/a.mp4'),
+        C2paEditSource(path: '/path/b.mp4'),
+      ]);
     });
 
     test('returns null when fewer than two clips are supplied', () async {

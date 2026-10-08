@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:models/models.dart' as model show ClipSourceCredit;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -50,6 +51,11 @@ class VideoEditorMergeService {
       File(outputPath),
       clips: clips,
     );
+    // Left unsigned, for example offline, it stays an editor intermediate:
+    // an edit of it is signed against the media it was merged from.
+    final mergedFrom = proof?.c2paManifestId == null
+        ? _signingSourcesOf(clips)
+        : null;
 
     final mergedDuration = clips.fold(
       Duration.zero,
@@ -69,7 +75,19 @@ class VideoEditorMergeService {
       lensMetadata: first.lensMetadata,
       sourceCredits: sourceCredits,
       proofManifestJson: proof == null ? null : jsonEncode(proof),
+      derivedFrom: mergedFrom,
     );
+  }
+
+  /// Every source of [clips], or `null` when one of them names none.
+  static List<C2paEditSource>? _signingSourcesOf(List<DivineVideoClip> clips) {
+    final sources = <C2paEditSource>{};
+    for (final clip in clips) {
+      final clipSources = clip.signingSources;
+      if (clipSources == null) return null;
+      sources.addAll(clipSources);
+    }
+    return sources.toList();
   }
 
   static List<model.ClipSourceCredit> _sourceCreditsFromClips(
