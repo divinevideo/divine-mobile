@@ -18,6 +18,7 @@ import 'helpers/in_memory_followed_people_lists_store.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {
   _MockNostrClient() {
+    when(() => isDisposed).thenReturn(false);
     // Self-registered so the stub below works without each file needing its
     // own `setUpAll`. Idempotent.
     registerFallbackValue(Duration.zero);

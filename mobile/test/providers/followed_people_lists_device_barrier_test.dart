@@ -150,6 +150,7 @@ void main() {
       addTearDown(containerA.dispose);
       addTearDown(containerB.dispose);
       client = _Client();
+      when(() => client.isDisposed).thenReturn(false);
       when(() => client.queryEvents(any(), timeout: any(named: 'timeout')))
           .thenAnswer((_) async => [_newRevision()]);
       box = await Hive.openBox<dynamic>(HiveBoxNames.peopleLists);
@@ -202,6 +203,89 @@ void main() {
         hasLength(1),
       );
     }
+
+    test('a live client does not join a retired client refresh', () async {
+      await repositoryA.followList(
+        viewerPubkey: _viewerA,
+        ownerPubkey: _owner,
+        list: _list(),
+      );
+      var retired = false;
+      when(() => client.isDisposed).thenAnswer((_) => retired);
+      final queried = Completer<void>();
+      final oldReply = Completer<List<Event>>();
+      when(() => client.queryEvents(any(), timeout: any(named: 'timeout')))
+          .thenAnswer((_) {
+            queried.complete();
+            return oldReply.future;
+          });
+      final liveClient = _Client();
+      when(() => liveClient.isDisposed).thenReturn(false);
+      final liveReply = Completer<List<Event>>();
+      when(() => liveClient.queryEvents(any(), timeout: any(named: 'timeout')))
+          .thenAnswer((_) => liveReply.future);
+      final liveRepository = PeopleListsRepositoryImpl(
+        nostrClient: liveClient,
+        cache: LocalPeopleListsCache(openBox: () async => box),
+        followedListsStore: containerB.read(followedPeopleListsStoreProvider),
+        followedListsWriteCoordinator: containerB.read(
+          followedPeopleListsWriteCoordinatorProvider,
+        ),
+      );
+      final old = repositoryA.syncFollowedLists(viewerPubkey: _viewerA);
+      await queried.future;
+      retired = true;
+      final active = liveRepository.syncFollowedLists(viewerPubkey: _viewerA);
+      await pumpEventQueue();
+      expect(
+        (await cache.readFollowedCopies(viewerPubkey: _viewerA))
+            .single
+            .list
+            .name,
+        'Crew',
+      );
+      oldReply.complete([
+        Event(
+          _owner,
+          30000,
+          const [
+            ['d', 'crew'],
+            ['title', 'Retired reply'],
+            ['p', _member],
+          ],
+          '',
+          createdAt: 1800000200,
+        ),
+      ]);
+      await old;
+      expect(
+        (await cache.readFollowedCopies(viewerPubkey: _viewerA))
+            .single
+            .list
+            .name,
+        'Crew',
+      );
+      liveReply.complete([_newRevision()]);
+      await active;
+      verify(
+        () => liveClient.queryEvents(any(), timeout: any(named: 'timeout')),
+      ).called(1);
+      final copies = await cache.readFollowedCopies(viewerPubkey: _viewerA);
+      expect(copies.single.list.name, 'Crew refreshed');
+      await prefs.reload();
+      expect(
+        await repositoryB.isFollowingList(
+          viewerPubkey: _viewerA,
+          ownerPubkey: _owner,
+          listId: 'crew',
+        ),
+        isTrue,
+      );
+      expect(
+        await cache.readFollowedCopies(viewerPubkey: _viewerB),
+        hasLength(1),
+      );
+    });
 
     test('one device shares its queue; another device keeps its own', () {
       expect(

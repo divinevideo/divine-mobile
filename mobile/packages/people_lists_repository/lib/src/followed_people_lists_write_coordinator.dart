@@ -12,17 +12,29 @@ class FollowedPeopleListsWriteCoordinator {
 
   /// Shares a relay refresh while at least one caller remains active.
   /// A fully canceled refresh retires permanently; a new caller starts fresh.
+  /// An unavailable operation client also retires its query. Live joiners
+  /// retry using their own operation instead of accepting that no-op result.
   Future<void> refresh({
     required String viewerPubkey,
     required Future<void> Function(bool Function() isCancelled) operation,
     bool Function()? isCancelled,
+    bool Function()? isOperationUnavailable,
   }) {
     final active = _refreshes[viewerPubkey];
     if (active != null && !active.isCancelled) {
       active.callers.add(isCancelled ?? _neverCancelled);
-      return active.future;
+      return _joinRefresh(
+        active,
+        viewerPubkey: viewerPubkey,
+        operation: operation,
+        isCancelled: isCancelled,
+        isOperationUnavailable: isOperationUnavailable,
+      );
     }
-    final pending = _FollowedListsRefresh(isCancelled ?? _neverCancelled);
+    final pending = _FollowedListsRefresh(
+      isCancelled ?? _neverCancelled,
+      isOperationUnavailable ?? _neverCancelled,
+    );
     _refreshes[viewerPubkey] = pending;
     return pending.future =
         Future<void>.sync(
@@ -32,6 +44,29 @@ class FollowedPeopleListsWriteCoordinator {
             final _ = _refreshes.remove(viewerPubkey);
           }
         });
+  }
+
+  // A joining repository may have a live client even if the client which
+  // started the shared query retires while that query is in flight.
+  Future<void> _joinRefresh(
+    _FollowedListsRefresh active, {
+    required String viewerPubkey,
+    required Future<void> Function(bool Function() isCancelled) operation,
+    bool Function()? isCancelled,
+    bool Function()? isOperationUnavailable,
+  }) async {
+    await active.future;
+    if (!active.isOperationUnavailable ||
+        (isCancelled?.call() ?? false) ||
+        (isOperationUnavailable?.call() ?? false)) {
+      return;
+    }
+    await refresh(
+      viewerPubkey: viewerPubkey,
+      operation: operation,
+      isCancelled: isCancelled,
+      isOperationUnavailable: isOperationUnavailable,
+    );
   }
 
   static bool _neverCancelled() => false;
@@ -60,7 +95,11 @@ class FollowedPeopleListsWriteCoordinator {
 }
 
 class _FollowedListsRefresh {
-  _FollowedListsRefresh(bool Function() caller) : callers = [caller];
+  _FollowedListsRefresh(bool Function() caller, this._isOperationUnavailable)
+    : callers = [caller];
+
+  final bool Function() _isOperationUnavailable;
+  bool get isOperationUnavailable => _isOperationUnavailable();
 
   final List<bool Function()> callers;
   late final Future<void> future;
@@ -68,6 +107,7 @@ class _FollowedListsRefresh {
 
   bool get isCancelled {
     if (_retired) return true;
-    return _retired = callers.every((caller) => caller());
+    return _retired =
+        isOperationUnavailable || callers.every((caller) => caller());
   }
 }
