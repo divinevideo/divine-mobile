@@ -200,6 +200,34 @@ void main() {
       expect(find.text('New people list'), findsNothing);
     });
 
+    testWidgets('wide surface stacks sections with enlarged text', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.text('People Lists')).dy,
+        greaterThan(tester.getTopLeft(find.text('Video Lists')).dy),
+      );
+      for (final label in ['New people list', 'New video list']) {
+        expect(
+          tester.getSize(find.widgetWithText(DivineButton, label)).width,
+          768,
+        );
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.text(label),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      }
+    });
+
     testWidgets('people read failure keeps cached lists and offers retry', (
       tester,
     ) async {
