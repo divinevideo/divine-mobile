@@ -42,6 +42,12 @@ final class CuratedListRelaySnapshotReader {
     required Duration timeout,
     Future<void>? cancelled,
   }) async {
+    Log.info(
+      "📋 Fetching user's curated lists from relays for pubkey: ${pubkeyForLogs(ownerPubkey)}",
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
+
     StreamSubscription<Event>? relaySubscription;
     Timer? timeoutTimer;
     try {
