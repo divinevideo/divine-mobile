@@ -30,7 +30,6 @@ discarded_futures|lib/screens/web_auth_screen.dart	1
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/auth/forgot_password_dialog.dart	1
 discarded_futures|lib/widgets/bug_report_dialog.dart	1
-discarded_futures|lib/widgets/categories_tab.dart	1
 discarded_futures|lib/widgets/classic_vines_tab.dart	1
 discarded_futures|lib/widgets/composable_video_grid.dart	1
 discarded_futures|lib/widgets/delete_account_dialog.dart	2

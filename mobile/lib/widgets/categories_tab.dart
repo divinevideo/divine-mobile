@@ -14,8 +14,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class CategoriesTab extends ConsumerWidget {
   const CategoriesTab({super.key});
@@ -38,9 +40,14 @@ class CategoriesTab extends ConsumerWidget {
               );
             },
             onCategoryTap: (category) {
-              context.push(
-                CategoryGalleryScreen.locationFor(category.name),
-                extra: category,
+              runDetached(
+                context.push<void>(
+                  CategoryGalleryScreen.locationFor(category.name),
+                  extra: category,
+                ),
+                'open category gallery',
+                logName: 'CategoriesTab',
+                category: LogCategory.ui,
               );
             },
           );
