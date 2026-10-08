@@ -256,11 +256,14 @@ void main() {
                   ),
             );
 
+            async.elapse(
+              CommunityContentWarningConstants.queryTimeout -
+                  const Duration(milliseconds: 1),
+            );
+            expect(caught, isNull);
+
             async
-              ..elapse(
-                CommunityContentWarningConstants.queryTimeout +
-                    const Duration(seconds: 1),
-              )
+              ..elapse(const Duration(seconds: 1))
               ..flushMicrotasks();
 
             expect(caught, isA<CommunityLabelUnavailableException>());
