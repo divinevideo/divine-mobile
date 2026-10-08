@@ -565,8 +565,8 @@ void main() {
               events.add('second started');
             });
 
-            // The timeout should let signOut finish while this cleanup hook
-            // is still pending; fakeAsync drives that future below.
+            // Not awaited: signOut only completes once fakeAsync elapses the
+            // teardown timeout below.
             unawaited(
               authService.signOut().then<void>(
                 (_) => completed = true,
