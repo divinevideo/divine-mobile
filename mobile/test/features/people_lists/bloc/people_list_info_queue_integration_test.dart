@@ -197,7 +197,7 @@ void main() {
       await started;
       final info = createInfo(bloc)..nameChanged('Crew renamed');
       final save = info.submitted();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       verifyNever(
         () => repository.updateListInfo(
           ownerPubkey: any(named: 'ownerPubkey'),
@@ -242,7 +242,7 @@ void main() {
       expect(info.state.canClose, isFalse);
       expect(info.state.name, 'My draft');
       answer.complete(PeopleListPublishResult.submitted(eventId: _eventId));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(info.state.status, PeopleListInfoStatus.failure);
       expect(bloc.state.activeOwnerPubkey, _ownerB);
       expect(bloc.state.lastSubmittedEventId, isNull);
@@ -337,7 +337,7 @@ void main() {
       expect(info.state.name, 'Queued draft');
       expect(info.state.canClose, isFalse);
       memberAck.complete(PeopleListPublishResult.submitted(eventId: _eventId));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       verifyNever(
         () => repository.updateListInfo(
           ownerPubkey: any(named: 'ownerPubkey'),
@@ -411,7 +411,7 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           bloc.add(PeopleListsRepositoryChanged(repository: replacement));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           verifyNever(
             () => replacement.updateListInfo(
               ownerPubkey: any(named: 'ownerPubkey'),
