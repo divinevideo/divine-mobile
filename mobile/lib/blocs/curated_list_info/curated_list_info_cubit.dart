@@ -36,7 +36,11 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
        _openingOwnerPubkey = currentOwnerPubkey(),
        _listOwnerPubkey = existingList?.pubkey,
        _listId = existingList?.id,
+       _listLookupId = existingList?.authorScopedId,
        _storedCollaborators = existingList?.allowedCollaborators ?? const [],
+       _storedPublicTarget = existingList?.publicationTarget.isPublic ?? true,
+       _storedCollaboratorTarget =
+           existingList?.publicationTarget.allowedCollaborators ?? const [],
        _videoEventId = videoEventId,
        super(
          CuratedListInfoState(
@@ -58,18 +62,40 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   final String? _openingOwnerPubkey;
   final String? _listOwnerPubkey;
   final String? _listId;
+  final String? _listLookupId;
 
   bool get isSessionCurrent =>
       _openingOwnerPubkey != null &&
       _openingOwnerPubkey.isNotEmpty &&
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
-  /// The collaborators the list was opened with.
+  /// The latest confirmed collaborators, used to detect an intentional edit.
   List<String> _storedCollaborators;
+  bool _storedPublicTarget;
+  List<String> _storedCollaboratorTarget;
   final String? _videoEventId;
+  bool _lastAttemptWasSync = false;
 
-  /// Refreshes an open form when its current service enters or leaves recovery.
-  void refreshRecoveryReadOnly() {
+  /// Refreshes saved delivery and permissions without replacing unsaved edits.
+  ///
+  /// Untouched permission fields follow the latest saved target. A draft stays
+  /// visible and still needs Save and any required privacy confirmation.
+  void refreshRecoveryReadOnly({bool refreshSavedList = true}) {
+    if (isClosed || !isSessionCurrent) return;
+    final service = _resolveService();
+    if (service == null) return;
+    final recoveryReadOnly = service.recoveryNeedsRepair;
+    final list = !recoveryReadOnly && refreshSavedList
+        ? _currentList(service)
+        : null;
+    final refreshed = _withSavedState(
+      list,
+      recoveryReadOnly: recoveryReadOnly,
+    );
+    if (refreshed != state) emitIfOpen(refreshed);
+  }
+
+  void _refreshRecoveryHold() {
     if (isClosed || !isSessionCurrent) return;
     final service = _resolveService();
     if (service == null) return;
@@ -79,9 +105,59 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     }
   }
 
+  CuratedList? _currentList(CuratedListService service) {
+    final lookupId = _listLookupId;
+    if (lookupId == null || _listOwnerPubkey != _openingOwnerPubkey) {
+      return null;
+    }
+    final list = service.getListById(lookupId);
+    return list?.pubkey == _listOwnerPubkey ? list : null;
+  }
+
+  CuratedListInfoState _withSavedState(
+    CuratedList? list, {
+    required bool recoveryReadOnly,
+    CuratedListInfoStatus? status,
+  }) {
+    if (list == null) {
+      return state.copyWith(
+        status: status,
+        recoveryReadOnly: recoveryReadOnly,
+      );
+    }
+    final visibilityEdited = state.isPublic != _storedPublicTarget;
+    final collaboratorsEdited = !const SetEquality<String>().equals(
+      state.collaboratorPubkeys.toSet(),
+      _storedCollaboratorTarget.toSet(),
+    );
+    final target = list.publicationTarget;
+    _storedCollaborators = list.allowedCollaborators;
+    _storedPublicTarget = target.isPublic;
+    _storedCollaboratorTarget = target.allowedCollaborators;
+    return state.copyWith(
+      // Later background delivery settles a failed retry, but cannot settle an
+      // unrelated failed Save or claim that its unsaved values were stored.
+      status:
+          status ??
+          (_lastAttemptWasSync &&
+                  state.status == CuratedListInfoStatus.failure &&
+                  !list.needsSync
+              ? CuratedListInfoStatus.editing
+              : null),
+      isPublic: visibilityEdited ? state.isPublic : target.isPublic,
+      collaboratorPubkeys: collaboratorsEdited
+          ? state.collaboratorPubkeys
+          : target.allowedCollaborators,
+      wasPublic: list.isPublic,
+      needsSync: list.needsSync,
+      permissionRecoveryPending: list.hasPendingPermissionRecovery,
+      recoveryReadOnly: recoveryReadOnly,
+    );
+  }
+
   /// Records the list name as typed.
   void nameChanged(String name) {
-    refreshRecoveryReadOnly();
+    _refreshRecoveryHold();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(name: name, status: CuratedListInfoStatus.editing),
@@ -90,7 +166,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records the description as typed.
   void descriptionChanged(String description) {
-    refreshRecoveryReadOnly();
+    _refreshRecoveryHold();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
@@ -102,7 +178,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records whether the list should be public.
   void visibilityChanged({required bool isPublic}) {
-    refreshRecoveryReadOnly();
+    _refreshRecoveryHold();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
@@ -125,7 +201,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     required Set<String> picked,
     String? viewerPubkey,
   }) {
-    refreshRecoveryReadOnly();
+    _refreshRecoveryHold();
     if (!state.canEdit || isClosed || !isSessionCurrent) return;
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
@@ -156,6 +232,11 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         !isSessionCurrent) {
       return;
     }
+    if (_currentList(service) == null) {
+      emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+      return;
+    }
+    _lastAttemptWasSync = true;
     emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saving));
     var recovered = false;
     try {
@@ -164,22 +245,20 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       addError(error, stackTrace);
     }
     if (!isSessionCurrent || isClosed) return;
-    final list = service.getListById(listId);
-    if (list == null || list.pubkey != _openingOwnerPubkey) {
+    if (!identical(service, _resolveService())) {
+      refreshRecoveryReadOnly();
       emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
       return;
     }
-    _storedCollaborators = list.allowedCollaborators;
+    final recoveryReadOnly = service.recoveryNeedsRepair;
+    final list = recoveryReadOnly ? null : _currentList(service);
     emitIfOpen(
-      state.copyWith(
-        status: recovered
+      _withSavedState(
+        list,
+        status: recovered && list != null
             ? CuratedListInfoStatus.editing
             : CuratedListInfoStatus.failure,
-        isPublic: list.publicationTarget.isPublic,
-        collaboratorPubkeys: list.publicationTarget.allowedCollaborators,
-        wasPublic: list.isPublic,
-        needsSync: list.needsSync,
-        permissionRecoveryPending: list.hasPendingPermissionRecovery,
+        recoveryReadOnly: recoveryReadOnly,
       ),
     );
   }
@@ -197,12 +276,14 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// passes through [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
   /// [CuratedListInfoStatus.publishFailed] instead.
   Future<void> submitted() async {
-    refreshRecoveryReadOnly();
+    _refreshRecoveryHold();
     if (!state.canSubmit) return;
     if (!isSessionCurrent) {
       emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
       return;
     }
+
+    _lastAttemptWasSync = false;
 
     final name = state.name.trim();
     final description = state.description.trim();

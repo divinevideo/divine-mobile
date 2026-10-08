@@ -111,14 +111,14 @@ class _SaveFailedMessage extends StatelessWidget {
     final isEditing = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.isEditing,
     );
-    final permissionRecoveryPending = context.select(
-      (CuratedListInfoCubit cubit) => cubit.state.permissionRecoveryPending,
+    final recoveryPending = context.select(
+      (CuratedListInfoCubit cubit) =>
+          cubit.state.permissionRecoveryPending || cubit.state.recoveryReadOnly,
     );
-    final recoveryReadOnly = context.select(
-      (CuratedListInfoCubit cubit) => cubit.state.recoveryReadOnly,
-    );
-    // An accepted change needs recovery, not a second permissions submission.
-    if (permissionRecoveryPending || recoveryReadOnly) {
+    // An already accepted change needs recovery, not an unconfirmed-change
+    // warning. A failed retry still shows its error alongside that recovery.
+    if (status == CuratedListInfoStatus.permissionsUnconfirmed &&
+        recoveryPending) {
       return const SizedBox.shrink();
     }
     if (status != CuratedListInfoStatus.failure &&
