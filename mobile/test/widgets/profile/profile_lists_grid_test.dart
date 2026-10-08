@@ -475,6 +475,52 @@ void main() {
         );
       });
 
+      testWidgets(
+        'wide profile keeps creation labels readable and actions accessible with large text',
+        (tester) async {
+          const surfaceWidth = 650.0;
+          await tester.binding.setSurfaceSize(const Size(surfaceWidth, 1800));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.platformDispatcher.textScaleFactorTestValue = 3;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+
+          final videoButton = find.widgetWithText(
+            DivineButton,
+            'New video list',
+          );
+          final peopleButton = find.widgetWithText(
+            DivineButton,
+            'New people list',
+          );
+          final videoBounds = tester.getRect(videoButton);
+          final peopleBounds = tester.getRect(peopleButton);
+          for (final label in ['New video list', 'New people list']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(label),
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+          }
+          expect(videoBounds.width, surfaceWidth - 32);
+          expect(peopleBounds.width, videoBounds.width);
+          expect(peopleBounds.left, videoBounds.left);
+          expect(videoBounds.bottom, lessThan(peopleBounds.top));
+          expect(videoButton.hitTestable(), findsOneWidget);
+          expect(peopleButton.hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          await tester.tap(peopleButton);
+          await tester.pumpAndSettle();
+          expect(pushedRoute, CreatePeopleListPage.path);
+          expect(find.text('create people'), findsOneWidget);
+        },
+      );
+
       testWidgets('keeps an owned list visible before it has any videos', (
         tester,
       ) async {
