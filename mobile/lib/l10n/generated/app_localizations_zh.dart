@@ -4744,6 +4744,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listContinue => '继续';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

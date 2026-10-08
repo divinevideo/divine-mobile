@@ -5072,6 +5072,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listContinue => 'جاری رکھیں';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

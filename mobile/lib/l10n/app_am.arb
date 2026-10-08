@@ -5101,5 +5101,6 @@
     "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
     "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
     "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
-    "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።"
+    "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።",
+    "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።"
 }

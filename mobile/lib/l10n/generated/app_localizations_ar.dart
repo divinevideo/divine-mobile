@@ -5041,6 +5041,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listContinue => 'متابعة';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

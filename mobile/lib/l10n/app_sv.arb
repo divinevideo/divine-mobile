@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "Läser in listor",
     "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
     "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
-    "authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen."
+    "authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
+    "listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än."
 }

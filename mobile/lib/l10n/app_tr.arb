@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
     "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
     "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor.",
-    "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene."
+    "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene.",
+    "listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi."
 }

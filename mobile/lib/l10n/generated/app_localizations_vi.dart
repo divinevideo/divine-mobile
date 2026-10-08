@@ -5032,6 +5032,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listContinue => 'Tiếp tục';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

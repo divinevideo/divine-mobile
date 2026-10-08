@@ -5084,6 +5084,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listContinue => 'Doorgaan';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

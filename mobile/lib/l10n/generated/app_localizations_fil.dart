@@ -5098,6 +5098,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listContinue => 'Magpatuloy';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

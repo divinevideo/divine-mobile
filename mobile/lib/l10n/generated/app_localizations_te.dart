@@ -5239,6 +5239,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listContinue => 'కొనసాగించండి';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

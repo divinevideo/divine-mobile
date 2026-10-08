@@ -506,13 +506,13 @@ void main() {
     testWidgets('confirms before publishing a private list', (tester) async {
       final list = createdList('Puppets').copyWith(isPublic: false);
       when(
-        () => mockListService.updateList(
+        () => mockListService.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
           isPublic: any(named: 'isPublic'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
 
       await tester.pumpWidget(buildDialogLauncher(existingList: list));
       await tester.tap(find.text('Open list editor'));
@@ -523,7 +523,7 @@ void main() {
 
       expect(find.text('Make this list public?'), findsOneWidget);
       verifyNever(
-        () => mockListService.updateList(
+        () => mockListService.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -535,7 +535,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockListService.updateList(
+        () => mockListService.updateListWithResult(
           listId: list.id,
           name: 'Puppets',
           description: '',
@@ -548,12 +548,14 @@ void main() {
       tester,
     ) async {
       final list = createdList('Puppets');
-      final updateCompleter = Completer<bool>();
+      final updateCompleter = Completer<CuratedListUpdateResult>();
       addTearDown(() {
-        if (!updateCompleter.isCompleted) updateCompleter.complete(true);
+        if (!updateCompleter.isCompleted) {
+          updateCompleter.complete(const CuratedListUpdateResult.saved());
+        }
       });
       when(
-        () => mockListService.updateList(
+        () => mockListService.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -569,7 +571,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockListService.updateList(
+        () => mockListService.updateListWithResult(
           listId: list.id,
           name: 'Marionettes',
           description: '',
@@ -578,7 +580,7 @@ void main() {
       ).called(1);
       expect(find.text(l10n.listEditTitle), findsNothing);
 
-      updateCompleter.complete(false);
+      updateCompleter.complete(const CuratedListUpdateResult.failed());
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.listUpdateFailed), findsOneWidget);
@@ -590,12 +592,14 @@ void main() {
         tester,
       ) async {
         final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<bool>();
+        final updateCompleter = Completer<CuratedListUpdateResult>();
         addTearDown(() {
-          if (!updateCompleter.isCompleted) updateCompleter.complete(true);
+          if (!updateCompleter.isCompleted) {
+            updateCompleter.complete(const CuratedListUpdateResult.saved());
+          }
         });
         when(
-          () => mockListService.updateList(
+          () => mockListService.updateListWithResult(
             listId: any(named: 'listId'),
             name: any(named: 'name'),
             description: any(named: 'description'),
@@ -613,7 +617,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockListService.updateList(
+          () => mockListService.updateListWithResult(
             listId: list.id,
             name: 'Puppets',
             description: '',
@@ -622,7 +626,7 @@ void main() {
         ).called(1);
         expect(find.text(l10n.listEditTitle), findsOneWidget);
 
-        updateCompleter.complete(true);
+        updateCompleter.complete(const CuratedListUpdateResult.saved());
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.listEditTitle), findsNothing);
@@ -633,12 +637,14 @@ void main() {
       'keeps a rejected visibility change on screen for a retry',
       (tester) async {
         final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<bool>();
+        final updateCompleter = Completer<CuratedListUpdateResult>();
         addTearDown(() {
-          if (!updateCompleter.isCompleted) updateCompleter.complete(true);
+          if (!updateCompleter.isCompleted) {
+            updateCompleter.complete(const CuratedListUpdateResult.saved());
+          }
         });
         when(
-          () => mockListService.updateList(
+          () => mockListService.updateListWithResult(
             listId: any(named: 'listId'),
             name: any(named: 'name'),
             description: any(named: 'description'),
@@ -656,7 +662,7 @@ void main() {
         await tester.tap(find.text(l10n.listContinue));
         await tester.pumpAndSettle();
 
-        updateCompleter.complete(false);
+        updateCompleter.complete(const CuratedListUpdateResult.failed());
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);

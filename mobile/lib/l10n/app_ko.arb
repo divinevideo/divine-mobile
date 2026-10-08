@@ -4547,5 +4547,6 @@
     "listsDiscoveryLoadingLabel": "목록 불러오는 중",
     "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
     "listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요.",
-    "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요."
+    "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.",
+    "listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요."
 }

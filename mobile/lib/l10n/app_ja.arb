@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "リストを読み込み中",
     "listSearchPeopleUnavailable": "現在、ユーザーリストを利用できません。",
     "listSearchVideosUnavailable": "現在、動画リストを利用できません。",
-    "authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。"
+    "authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。",
+    "listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。"
 }

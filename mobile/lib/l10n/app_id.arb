@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "Memuat daftar",
     "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
     "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
-    "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi."
+    "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
+    "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan."
 }

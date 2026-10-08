@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "Listen werden geladen",
     "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
     "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar.",
-    "authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut."
+    "authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut.",
+    "listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert."
 }

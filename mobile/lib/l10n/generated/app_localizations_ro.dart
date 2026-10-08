@@ -5212,6 +5212,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listContinue => 'Continuă';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

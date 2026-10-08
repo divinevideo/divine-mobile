@@ -4007,5 +4007,6 @@
     "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
     "listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
     "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon.",
-    "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit."
+    "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit.",
+    "listPrivateConversionTooLarge": "Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save."
 }

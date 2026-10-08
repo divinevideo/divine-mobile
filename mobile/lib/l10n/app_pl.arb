@@ -5001,5 +5001,6 @@
     "listsDiscoveryLoadingLabel": "Wczytywanie list",
     "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
     "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
-    "authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie."
+    "authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
+    "listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane."
 }

@@ -6768,5 +6768,6 @@
   "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
   "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
   "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
+  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
   "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại."
 }
