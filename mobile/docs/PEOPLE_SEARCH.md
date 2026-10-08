@@ -61,8 +61,10 @@ cleared names and media, then apply identity matching again. A renamed account
 can therefore disappear from a query for its old name.
 
 Pagination uses the raw REST response size, not the number of matching profiles.
-An empty or short matching page may still have later results. The user picker
-retains scroll pagination and offers Show more whenever another page exists.
+An empty or short matching page may still have later results. Appended pages
+skip accounts already shown, because the first page also merges cache and
+NIP-50 hits. The user picker loads the next page near the end of its list and
+offers Show more whenever another page exists.
 
 ## Source consultation order
 

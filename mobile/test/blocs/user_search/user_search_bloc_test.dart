@@ -75,12 +75,12 @@ void main() {
       );
     }
 
-    List<UserProfile> createTestProfiles(int count) {
+    List<UserProfile> createTestProfiles(int count, {int start = 0}) {
       return List.generate(
         count,
         (i) => createTestProfile(
-          '${i.toString().padLeft(2, '0')}${'a' * 62}',
-          'User $i',
+          '${(start + i).toString().padLeft(2, '0')}${'a' * 62}',
+          'User ${start + i}',
         ),
       );
     }
@@ -720,7 +720,9 @@ void main() {
               offset: 50,
               sortBy: 'followers',
             ),
-          ).thenAnswer((_) => progressive(createTestProfiles(10)));
+          ).thenAnswer(
+            (_) => progressive(createTestProfiles(10, start: 50)),
+          );
         },
         build: createBloc,
         seed: () => UserSearchState(
@@ -746,8 +748,8 @@ void main() {
       blocTest<UserSearchBloc, UserSearchState>(
         'uses last emission when stream yields multiple times',
         setUp: () {
-          final partial = createTestProfiles(5);
-          final full = createTestProfiles(10);
+          final partial = createTestProfiles(5, start: 50);
+          final full = createTestProfiles(10, start: 50);
           when(
             () => mockProfileRepository.searchUsersProgressive(
               query: 'alice',
@@ -804,7 +806,10 @@ void main() {
               sortBy: 'followers',
             ),
           ).thenAnswer(
-            (_) => progressive(createTestProfiles(50), restHasMore: true),
+            (_) => progressive(
+              createTestProfiles(50, start: 50),
+              restHasMore: true,
+            ),
           );
         },
         build: createBloc,
@@ -870,6 +875,40 @@ void main() {
               .having((state) => state.offset, 'offset', 100)
               .having((state) => state.hasMore, 'hasMore', true),
         ],
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'skips profiles that are already shown when appending a page',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: 'alice',
+              limit: 50,
+              offset: 50,
+              sortBy: 'followers',
+            ),
+          ).thenAnswer(
+            (_) => progressive([
+              createTestProfile('a' * 64, 'Alice Cached'),
+              createTestProfile('b' * 64, 'Alice Later'),
+            ]),
+          );
+        },
+        build: createBloc,
+        seed: () => UserSearchState(
+          status: UserSearchStatus.success,
+          query: 'alice',
+          results: [createTestProfile('a' * 64, 'Alice Cached')],
+          offset: 50,
+          hasMore: true,
+        ),
+        act: (bloc) => bloc.add(const UserSearchLoadMore()),
+        verify: (bloc) {
+          expect(bloc.state.results.map((profile) => profile.pubkey), [
+            'a' * 64,
+            'b' * 64,
+          ]);
+        },
       );
 
       blocTest<UserSearchBloc, UserSearchState>(
