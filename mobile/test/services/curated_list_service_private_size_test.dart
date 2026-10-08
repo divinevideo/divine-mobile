@@ -252,7 +252,7 @@ void main() {
           rejected = result;
           return result;
         });
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue();
     expect(rejected?.rejection, CuratedListUpdateRejection.privateListFull);
     expect({
       for (final key in f.prefs.getKeys()) key: f.prefs.get(key),
