@@ -282,6 +282,16 @@ void main() {
           expect(unhandledErrors, isEmpty);
           expect(
             reporter.recordedErrors,
+            everyElement(
+              isA<Reportable<Object>>().having(
+                (error) => error.unwrap(),
+                'unwrap',
+                isA<TypeError>(),
+              ),
+            ),
+          );
+          expect(
+            reporter.recordedErrors,
             hasLength(2),
             reason: 'creation and the developer-mode re-read both failed',
           );
