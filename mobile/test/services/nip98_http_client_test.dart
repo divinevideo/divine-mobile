@@ -581,44 +581,47 @@ void main() {
       });
     });
 
-    test('crossposting production wiring recovers without changing its owner', () async {
-      await withClock(
-        Clock.fixed(serverTime.add(const Duration(seconds: 30))),
-        () async {
-          var attempts = 0;
-          final transport = MockClient((request) async {
-            attempts++;
-            final event = _authEvent(request);
-            expect(event['pubkey'], _owner);
-            final accepted =
-                (event['created_at'] as int) <=
-                serverTime.millisecondsSinceEpoch ~/ 1000 + 10;
-            return http.Response(
-              accepted
-                  ? '{"platforms":[]}'
-                  : '{"error":"Auth failed: event timestamp is in the future"}',
-              accepted ? 200 : 401,
-              headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+    test(
+      'crossposting production wiring recovers without changing its owner',
+      () async {
+        await withClock(
+          Clock.fixed(serverTime.add(const Duration(seconds: 90))),
+          () async {
+            var attempts = 0;
+            final transport = MockClient((request) async {
+              attempts++;
+              final event = _authEvent(request);
+              expect(event['pubkey'], _owner);
+              final accepted =
+                  ((event['created_at'] as int) -
+                          serverTime.millisecondsSinceEpoch ~/ 1000)
+                      .abs() <=
+                  60;
+              return http.Response(
+                accepted ? '{"platforms":[]}' : '{"error":{"code":"unauthorized","message":"nostr auth event is expired or from the future"}}',
+                accepted ? 200 : 401,
+                headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+              );
+            });
+            final container = ProviderContainer(
+              overrides: [
+                instrumentedHttpClientFactoryProvider.overrideWithValue(
+                  () => transport,
+                ),
+              ],
             );
-          });
-          final container = ProviderContainer(
-            overrides: [
-              instrumentedHttpClientFactoryProvider.overrideWithValue(
-                () => transport,
-              ),
-            ],
-          );
-          addTearDown(container.dispose);
-          final api = container.read(crosspostingApiClientFactoryProvider)(
-            nip98AuthService: service,
-            ownerPubkey: _owner,
-          );
-          addTearDown(api.close);
-          expect(await api.getPlatforms(), isEmpty);
-          expect(attempts, 2);
-        },
-      );
-    });
+            addTearDown(container.dispose);
+            final api = container.read(crosspostingApiClientFactoryProvider)(
+              nip98AuthService: service,
+              ownerPubkey: _owner,
+            );
+            addTearDown(api.close);
+            expect(await api.getPlatforms(), isEmpty);
+            expect(attempts, 2);
+          },
+        );
+      },
+    );
 
     test('unsigned responses do not influence subsequent signing', () async {
       await withClock(

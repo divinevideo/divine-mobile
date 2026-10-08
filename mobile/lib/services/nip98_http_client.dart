@@ -129,7 +129,13 @@ class Nip98HttpClient extends http.BaseClient {
     try {
       final decoded = jsonDecode(body);
       if (decoded is! Map<String, dynamic>) return false;
-      final message = decoded['error'] ?? decoded['message'];
+      final error = decoded['error'];
+      if (error is Map<String, dynamic>) {
+        return error['code'] == 'unauthorized' &&
+            error['message'] ==
+                'nostr auth event is expired or from the future';
+      }
+      final message = error ?? decoded['message'];
       if (message is! String) return false;
       return message == 'Auth failed: event timestamp is in the future' ||
           RegExp(r'^Auth failed: event expired \(older than \d+s\)$')
