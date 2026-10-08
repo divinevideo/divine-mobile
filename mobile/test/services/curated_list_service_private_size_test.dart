@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,7 +42,14 @@ CuratedList _row({int count = 1000, bool isPublic = true}) => CuratedList(
   nostrEventId: _priorEvent,
 );
 
-Future<({CuratedListService service, SharedPreferences prefs, _Client client})>
+Future<
+  ({
+    CuratedListService service,
+    SharedPreferences prefs,
+    _Client client,
+    _Auth auth,
+  })
+>
 fixture(CuratedList source) async {
   SharedPreferences.setMockInitialValues({
     'current_user_pubkey_hex': _owner,
@@ -59,7 +67,7 @@ fixture(CuratedList source) async {
     prefs: prefs,
   );
   addTearDown(service.dispose);
-  return (service: service, prefs: prefs, client: client);
+  return (service: service, prefs: prefs, client: client, auth: auth);
 }
 
 void main() {
@@ -69,19 +77,22 @@ void main() {
         'oversized private Save through $mode preserves the complete source and '
         '${pending ? 'existing deletion work' : 'stored metadata'}',
         () async {
-          final source = CuratedList(
-            id: 'large-public-list',
-            pubkey: _owner,
-            name: 'Published name',
-            description: 'Published description',
-            videoEventIds: List.generate(
-              1000,
-              (i) => (i + 1).toRadixString(16).padLeft(64, '0'),
-            ),
-            createdAt: DateTime.utc(2026),
-            updatedAt: DateTime.utc(2026),
-            nostrEventId: _priorEvent,
-          );
+          final source = CuratedList.fromJson({
+            ...CuratedList(
+              id: 'large-public-list',
+              pubkey: _owner,
+              name: 'Published name',
+              description: 'Published description',
+              videoEventIds: List.generate(
+                1000,
+                (i) => (i + 1).toRadixString(16).padLeft(64, '0'),
+              ),
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+              nostrEventId: _priorEvent,
+            ).toJson(),
+            if (pending) 'pendingPlaintextEventIds': [_pendingDeletion],
+          });
           expect(CuratedListConverter.privateItemPayloadFits(source), isFalse);
           // This early slice retains later recovery evidence as opaque bytes;
           // it must not import or assume the later journal's read contract.
@@ -118,12 +129,16 @@ void main() {
           );
           addTearDown(service.dispose);
           expect(service.isReadyForMutations, isTrue);
+          var localSavedCalls = 0;
+          var unconfirmedCalls = 0;
           if (mode == 'typed') {
             final result = await service.updateListWithResult(
               listId: source.authorScopedId,
               name: 'Unsaved replacement name',
               description: 'Unsaved replacement description',
               isPublic: false,
+              onLocalSaved: () => localSavedCalls++,
+              onPublicationUnconfirmed: () => unconfirmedCalls++,
             );
             expect(result.succeeded, isFalse);
             expect(
@@ -137,11 +152,23 @@ void main() {
                 name: 'Unsaved replacement name',
                 description: 'Unsaved replacement description',
                 isPublic: false,
+                onLocalSaved: () => localSavedCalls++,
+                onPublicationUnconfirmed: () => unconfirmedCalls++,
               ),
               isFalse,
             );
           }
+          expect(localSavedCalls, 0);
+          expect(unconfirmedCalls, 0);
           expect(service.getListById(source.authorScopedId), source);
+          if (pending) {
+            expect(
+              service
+                  .getListById(source.authorScopedId)!
+                  .pendingPlaintextEventIds,
+              contains(_pendingDeletion),
+            );
+          }
           expect({
             for (final key in prefs.getKeys()) key: prefs.get(key),
           }, before);
@@ -292,6 +319,139 @@ void main() {
           f.prefs.getString(CuratedListService.listsStorageKey)!,
         ) as List).single['name'],
         'Offline private rename',
+      );
+    },
+  );
+
+  for (final mode in ['public rename', 'new private', 'existing private']) {
+    test(
+      'typed $mode forwards durable local-save and acceptance callbacks',
+      () async {
+        final source = _row(count: 2, isPublic: mode != 'existing private');
+        final f = await fixture(source);
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        addTearDown(() {
+          if (!release.isCompleted) release.complete();
+        });
+        when(() => f.client.publishEventAwaitOk(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.single as Event;
+          if (event.kind == 30005 && !entered.isCompleted) {
+            entered.complete();
+            await release.future;
+          }
+          return acceptedOutcome(event);
+        });
+        var localSavedCalls = 0;
+        var unconfirmedCalls = 0;
+        final update = f.service.updateListWithResult(
+          listId: source.authorScopedId,
+          name: 'Typed accepted rename',
+          isPublic: mode == 'new private' ? false : null,
+          onLocalSaved: () => localSavedCalls++,
+          onPublicationUnconfirmed: () => unconfirmedCalls++,
+        );
+        await entered.future;
+        expect(localSavedCalls, 1);
+        expect(unconfirmedCalls, 0);
+        expect(
+          f.service.getListById(source.authorScopedId)!.isPublic,
+          source.isPublic,
+        );
+        expect(
+          (jsonDecode(
+            f.prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List).single['name'],
+          'Typed accepted rename',
+        );
+        release.complete();
+        final result = await update;
+        expect(result.succeeded, isTrue);
+        expect(result.rejection, isNull);
+        expect(localSavedCalls, 1);
+        expect(unconfirmedCalls, 0);
+        expect(
+          f.service.getListById(source.authorScopedId)!.isPublic,
+          mode == 'public rename',
+        );
+      },
+    );
+  }
+
+  test('typed uncertain publication reports its existing callback after local save', () async {
+    final source = _row(count: 2);
+    final f = await fixture(source);
+    when(() => f.client.publishEventAwaitOk(any())).thenAnswer((i) async {
+      final event = i.positionalArguments.single as Event;
+      return PublishOutcome(
+        eventId: event.id,
+        acceptedBy: const [],
+        rejectedBy: const {},
+        noResponseFrom: const ['wss://relay.test'],
+      );
+    });
+    var localSavedCalls = 0;
+    var unconfirmedCalls = 0;
+    final result = await f.service.updateListWithResult(
+      listId: source.authorScopedId,
+      name: 'Typed uncertain rename',
+      onLocalSaved: () => localSavedCalls++,
+      onPublicationUnconfirmed: () => unconfirmedCalls++,
+    );
+    expect(result.succeeded, isFalse);
+    expect(result.rejection, CuratedListUpdateRejection.failed);
+    expect(localSavedCalls, 1);
+    expect(unconfirmedCalls, 1);
+    expect(
+      f.service.getListById(source.authorScopedId)!.name,
+      'Typed uncertain rename',
+    );
+    expect(
+      f.service.getListById(source.authorScopedId)!.pendingRepublish,
+      isTrue,
+    );
+  });
+
+  test(
+    'typed late ACK cannot commit permissions after an owner boundary',
+    () async {
+      final source = _row(count: 2);
+      final f = await fixture(source);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      when(() => f.client.publishEventAwaitOk(any())).thenAnswer((i) async {
+        final event = i.positionalArguments.single as Event;
+        entered.complete();
+        await release.future;
+        return acceptedOutcome(event);
+      });
+      var localSavedCalls = 0;
+      var unconfirmedCalls = 0;
+      final update = f.service.updateListWithResult(
+        listId: source.authorScopedId,
+        name: 'Opening account metadata',
+        isPublic: false,
+        onLocalSaved: () => localSavedCalls++,
+        onPublicationUnconfirmed: () => unconfirmedCalls++,
+      );
+      await entered.future;
+      final cacheBeforeAck = f.prefs.getString(
+        CuratedListService.listsStorageKey,
+      );
+      when(() => f.auth.currentPublicKeyHex).thenReturn(_priorEvent);
+      release.complete();
+      final result = await update;
+      expect(result.succeeded, isFalse);
+      expect(result.rejection, CuratedListUpdateRejection.failed);
+      expect(localSavedCalls, 1);
+      expect(unconfirmedCalls, 0);
+      expect(f.service.getListById(source.authorScopedId)!.isPublic, isTrue);
+      expect(
+        f.prefs.getString(CuratedListService.listsStorageKey),
+        cacheBeforeAck,
       );
     },
   );
