@@ -14,10 +14,12 @@ enum PostPublishCrosspostPrompt {
   /// Nothing is connected yet: offer to set crossposting up.
   setUp,
 
-  /// Every connected platform posts automatically: say so, offer nothing.
+  /// A connected platform posts automatically and none is manual or lapsed:
+  /// say so, offer nothing.
   automatic,
 
-  /// A platform's authorization lapsed: offer to reconnect it.
+  /// A platform still switched on lapsed its authorization: offer to
+  /// reconnect it.
   reconnect,
 }
 

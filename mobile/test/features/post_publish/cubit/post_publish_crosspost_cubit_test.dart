@@ -182,6 +182,21 @@ void main() {
       );
 
       blocTest<PostPublishCrosspostCubit, PostPublishCrosspostState>(
+        'stays quiet when a platform the creator switched off has lapsed',
+        setUp: () => when(() => repository.loadSettings()).thenAnswer(
+          (_) async => [_settings(connection: _instagramNeedsReauth)],
+        ),
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const PostPublishCrosspostState(
+            prompt: PostPublishCrosspostPrompt.none,
+          ),
+        ],
+        verify: (_) => expect(analytics.events, isEmpty),
+      );
+
+      blocTest<PostPublishCrosspostCubit, PostPublishCrosspostState>(
         'prefers suggesting a crosspost over a reconnect elsewhere',
         setUp: () => when(() => repository.loadSettings()).thenAnswer(
           (_) async => [

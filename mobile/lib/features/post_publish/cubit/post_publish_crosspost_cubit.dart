@@ -78,9 +78,11 @@ class PostPublishCrosspostCubit extends Cubit<PostPublishCrosspostState>
       );
     }
 
+    // Only a platform still switched on needs its lapsed account back.
     final needsReauth = [
       for (final platform in settings)
-        if (platform.needsReauth) platform.platform,
+        if (platform.needsReauth && platform.mode != CrosspostingMode.disabled)
+          platform.platform,
     ];
     if (needsReauth.isNotEmpty) {
       return PostPublishCrosspostState(
@@ -101,9 +103,12 @@ class PostPublishCrosspostCubit extends Cubit<PostPublishCrosspostState>
       );
     }
 
-    // A connected platform switched off is a choice, not a gap to fill.
-    final anyConnected = settings.any((platform) => platform.isConnected);
-    if (settings.isEmpty || anyConnected) {
+    // A platform switched off is a choice, not a gap to fill, whether its
+    // account is still connected or has lapsed.
+    final anyAccount = settings.any(
+      (platform) => platform.isConnected || platform.needsReauth,
+    );
+    if (settings.isEmpty || anyAccount) {
       return const PostPublishCrosspostState(
         prompt: PostPublishCrosspostPrompt.none,
       );
