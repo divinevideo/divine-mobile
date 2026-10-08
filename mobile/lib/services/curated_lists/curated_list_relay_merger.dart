@@ -6,7 +6,6 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
-import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Applies relay revisions synchronously after the caller checks its session.
@@ -18,6 +17,8 @@ class CuratedListRelayMerger {
     required this.subscribedListIds,
     required this.isSubscribedToList,
     required this.defaultListId,
+    this.onParsedList,
+    this.now = DateTime.now,
   });
 
   final List<CuratedList> lists;
@@ -25,6 +26,8 @@ class CuratedListRelayMerger {
   final Set<String> subscribedListIds;
   final bool Function(String) isSubscribedToList;
   final String defaultListId;
+  final void Function(CuratedList)? onParsedList;
+  final DateTime Function() now;
 
   /// A failed unseal never replaces a cached list with an empty public copy.
   void merge(
@@ -55,6 +58,7 @@ class CuratedListRelayMerger {
       );
       return;
     }
+    onParsedList?.call(curatedList);
     final dTag = curatedList.id;
     if (dTag == defaultListId && store.wasDefaultListDeleted()) {
       Log.debug(
@@ -86,55 +90,20 @@ class CuratedListRelayMerger {
       if (existingList.nostrEventId == null &&
           !existingList.pendingRepublish &&
           isSameOwner) {
-        // A null event id may be a legacy device-only private list or a
-        // local edit that could not reach a relay. Another device can have
-        // independently published the same stable d-tag. Preserve both
-        // item sets and backfill their union after the full sync instead of
-        // letting whichever device wrote last silently erase the other.
-        final relayIsNewer =
-            event.createdAt >
-            existingList.updatedAt.millisecondsSinceEpoch ~/ 1000;
-        final preferred = relayIsNewer ? curatedList : existingList;
-        final other = relayIsNewer ? existingList : curatedList;
-        final mergedVideoIds = <String>[];
-        final seenVideoIds = <String>{};
-        for (final id in [
-          ...preferred.videoEventIds,
-          ...other.videoEventIds,
-        ]) {
-          if (seenVideoIds.add(id)) mergedVideoIds.add(id);
-        }
-        final isCollaborative =
-            existingList.isCollaborative || curatedList.isCollaborative;
-        final collaborators = <String>{
-          ...existingList.allowedCollaborators,
-          ...curatedList.allowedCollaborators,
-        }.toList(growable: false);
-        final isPublic = existingList.isPublic && curatedList.isPublic;
-        final hasPrivacyConflict = !hasValidCuratedListVisibility(
-          isPublic,
-          isCollaborative,
+        final merged = CuratedListConverter.mergeUnpublished(
+          existingList,
+          curatedList,
+          mergedAt: now(),
         );
-        if (hasPrivacyConflict) {
+        if ((existingList.isCollaborative || curatedList.isCollaborative) &&
+            !merged.isCollaborative) {
           Log.warning(
-            'Keeping list $dTag private and dropping collaboration during '
-            'relay merge',
+            'Keeping list $dTag private and dropping collaboration during relay merge',
             name: 'CuratedListService',
             category: LogCategory.system,
           );
         }
-
-        lists[existingListIndex] = preferred.copyWith(
-          pubkey: event.pubkey,
-          videoEventIds: mergedVideoIds,
-          createdAt: existingList.createdAt,
-          updatedAt: DateTime.now(),
-          isCollaborative: isCollaborative && !hasPrivacyConflict,
-          allowedCollaborators: hasPrivacyConflict ? const [] : collaborators,
-          isPublic: isPublic,
-          clearNostrEventId: true,
-          pendingRepublish: false,
-        );
+        lists[existingListIndex] = merged;
         Log.info(
           'Merged unpublished local and relay copies of list $dTag',
           name: 'CuratedListService',
@@ -151,8 +120,16 @@ class CuratedListRelayMerger {
           category: LogCategory.system,
         );
 
+        final plaintextIds = <String>{
+          ...existingList.pendingPlaintextEventIds,
+          if (existingList.isPublic &&
+              !curatedList.isPublic &&
+              existingList.nostrEventId != null)
+            existingList.nostrEventId!,
+        };
         lists[existingListIndex] = curatedList.copyWith(
           createdAt: existingList.createdAt,
+          pendingPlaintextEventIds: plaintextIds.toList(growable: false),
         );
       } else {
         Log.debug(

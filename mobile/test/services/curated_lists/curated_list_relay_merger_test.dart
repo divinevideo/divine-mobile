@@ -107,5 +107,149 @@ void main() {
       );
       expect(lists, isEmpty);
     });
+
+    group('revision and privacy preservation', () {
+      test(
+        'observes a decoded revision before a default tombstone skips it',
+        () {
+          when(() => store.wasDefaultListDeleted()).thenReturn(true);
+          final observed = <CuratedList>[];
+          final original = lists.single;
+          expect(original.videoEventIds, [localVideo]);
+          CuratedListRelayMerger(
+            lists: lists,
+            store: store,
+            subscribedListIds: {},
+            isSubscribedToList: (_) => false,
+            defaultListId: 'collection',
+            onParsedList: observed.add,
+          ).merge(
+            relayEvent(),
+            const UnsealedItemTags.notSealed(),
+            ownerPubkey: owner,
+          );
+          expect(observed.single.nostrEventId, 'd' * 64);
+          expect(lists.single, same(original));
+        },
+      );
+
+      test('failed unseal never advances the observed revision', () {
+        final observed = <CuratedList>[];
+        CuratedListRelayMerger(
+          lists: lists,
+          store: store,
+          subscribedListIds: {},
+          isSubscribedToList: (_) => false,
+          defaultListId: 'default',
+          onParsedList: observed.add,
+        ).merge(
+          relayEvent(),
+          const UnsealedItemTags.failed(),
+          ownerPubkey: owner,
+        );
+        expect(observed, isEmpty);
+        expect(lists.single.videoEventIds, [localVideo]);
+      });
+
+      test(
+        'unpublished merge uses the injected clock and keeps privacy work',
+        () {
+          final instant = DateTime.utc(2026, 10, 8);
+          final pending = 'f' * 64;
+          lists[0] = lists.single.copyWith(pendingPlaintextEventIds: [pending]);
+          CuratedListRelayMerger(
+            lists: lists,
+            store: store,
+            subscribedListIds: {},
+            isSubscribedToList: (_) => false,
+            defaultListId: 'default',
+            now: () => instant,
+          ).merge(
+            relayEvent(),
+            const UnsealedItemTags.notSealed(),
+            ownerPubkey: owner,
+          );
+          expect(lists.single.updatedAt, instant);
+          expect(lists.single.videoEventIds, [relayVideo, localVideo]);
+          expect(lists.single.pendingPlaintextEventIds, [pending]);
+        },
+      );
+
+      test(
+        'private relay replacement retains every prior plaintext target',
+        () {
+          final oldPublicEvent = 'f' * 64;
+          final priorPending = '9' * 64;
+          lists[0] = lists.single.copyWith(
+            nostrEventId: oldPublicEvent,
+            pendingPlaintextEventIds: [priorPending, oldPublicEvent],
+          );
+          final privateEvent = Event.fromJson({
+            ...relayEvent().toJson(),
+            'tags': [
+              ['d', 'collection'],
+              ['title', 'Relay title'],
+            ],
+          });
+          merger.merge(
+            privateEvent,
+            UnsealedItemTags.unsealed([
+              ['e', relayVideo],
+            ]),
+            ownerPubkey: owner,
+          );
+          expect(lists.single.isPublic, isFalse);
+          expect(lists.single.nostrEventId, 'd' * 64);
+          expect(lists.single.videoEventIds, [relayVideo]);
+          expect(lists.single.pendingPlaintextEventIds, [
+            priorPending,
+            oldPublicEvent,
+          ]);
+        },
+      );
+
+      test('public replacement retains existing pending privacy work', () {
+        final oldPublicEvent = 'f' * 64;
+        final priorPending = '9' * 64;
+        lists[0] = lists.single.copyWith(
+          nostrEventId: oldPublicEvent,
+          pendingPlaintextEventIds: [priorPending],
+        );
+        merger.merge(
+          relayEvent(),
+          const UnsealedItemTags.notSealed(),
+          ownerPubkey: owner,
+        );
+        expect(lists.single.isPublic, isTrue);
+        expect(lists.single.pendingPlaintextEventIds, [priorPending]);
+      });
+
+      test(
+        'observes an older decoded revision without replacing the winner',
+        () {
+          final observed = <CuratedList>[];
+          lists[0] = lists.single.copyWith(
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(300000),
+            nostrEventId: 'f' * 64,
+          );
+          final winner = lists.single;
+          expect(winner.nostrEventId, 'f' * 64);
+          CuratedListRelayMerger(
+            lists: lists,
+            store: store,
+            subscribedListIds: {},
+            isSubscribedToList: (_) => false,
+            defaultListId: 'default',
+            onParsedList: observed.add,
+          ).merge(
+            relayEvent(),
+            const UnsealedItemTags.notSealed(),
+            ownerPubkey: owner,
+          );
+          expect(observed.single.nostrEventId, 'd' * 64);
+          expect(lists.single, same(winner));
+        },
+      );
+    });
   });
 }
