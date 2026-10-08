@@ -48,56 +48,61 @@ class PostPublishCrosspostSection extends StatelessWidget {
     return switch (state.prompt) {
       PostPublishCrosspostPrompt.loading ||
       PostPublishCrosspostPrompt.none => const SizedBox.shrink(),
-      PostPublishCrosspostPrompt.automatic => DivineInfoCard(
-        icon: DivineIconName.arrowsClockwise,
-        tone: DivineInfoCardTone.neutral,
-        compact: true,
+      PostPublishCrosspostPrompt.automatic => _PromptCard(
         message: l10n.postPublishCrosspostAutomatic(names),
       ),
       PostPublishCrosspostPrompt.crosspost => _PromptCard(
         message: l10n.postPublishCrosspostSuggest(names),
-        actionLabel: l10n.crosspostSubmit,
-        onAction: () => tapped(() => onCrosspost(state.connections)),
+        action: (
+          label: l10n.crosspostSubmit,
+          onPressed: () => tapped(() => onCrosspost(state.connections)),
+        ),
       ),
       PostPublishCrosspostPrompt.setUp => _PromptCard(
         message: l10n.postPublishCrosspostSetUp(names),
-        actionLabel: l10n.crosspostingBenefitConnect(names),
-        onAction: () => tapped(onSetUp),
+        action: (
+          label: l10n.crosspostingBenefitConnect(names),
+          onPressed: () => tapped(onSetUp),
+        ),
       ),
       PostPublishCrosspostPrompt.reconnect => _PromptCard(
         message: l10n.crosspostReconnectPrompt(names),
-        actionLabel: l10n.crosspostReconnect,
-        onAction: () => tapped(onReconnect),
+        action: (
+          label: l10n.crosspostReconnect,
+          onPressed: () => tapped(onReconnect),
+        ),
       ),
     };
   }
 }
 
+/// The card every prompt renders, so the automatic note and the calls to
+/// action keep one look.
 class _PromptCard extends StatelessWidget {
-  const _PromptCard({
-    required this.message,
-    required this.actionLabel,
-    required this.onAction,
-  });
+  const _PromptCard({required this.message, this.action});
 
   final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+
+  /// The call to action; null for the automatic note, which asks nothing.
+  final ({String label, VoidCallback onPressed})? action;
 
   @override
   Widget build(BuildContext context) {
+    final action = this.action;
     return DivineInfoCard(
       icon: DivineIconName.arrowsClockwise,
       tone: DivineInfoCardTone.neutral,
       compact: true,
       message: message,
-      footer: DivineButton(
-        label: actionLabel,
-        type: DivineButtonType.secondary,
-        size: DivineButtonSize.small,
-        expanded: true,
-        onPressed: onAction,
-      ),
+      footer: action == null
+          ? null
+          : DivineButton(
+              label: action.label,
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
+              expanded: true,
+              onPressed: action.onPressed,
+            ),
     );
   }
 }
