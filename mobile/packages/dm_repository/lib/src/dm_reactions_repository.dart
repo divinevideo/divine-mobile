@@ -760,6 +760,13 @@ class DmReactionsRepository {
   /// sweep.
   ///
   /// Does nothing when this account holds no row for [rumorId].
+  ///
+  /// Throws:
+  ///
+  /// * the database error when the reaction row cannot be read, or the
+  ///   error when the removal cannot be built or recorded. Nothing is sent
+  ///   and the reaction stays live, so a caller that already hid it must
+  ///   show it again.
   Future<void> removeOwn({
     required String rumorId,
     required String targetMessageAuthor,
@@ -805,8 +812,11 @@ class DmReactionsRepository {
   /// removal; the wire publish itself is `unawaited` and re-driven by the sweep
   /// via [retryDeletion] on any failed/offline attempt. The first attempt and
   /// every retry are coalesced by rumor id, so only one fan-out can drive the
-  /// stored kind-5 at a time. On a DAO write failure the deletion is reported
-  /// to [reportSite] and skipped (no wire attempt).
+  /// stored kind-5 at a time.
+  ///
+  /// When the kind-5 cannot be built or recorded, the failure is reported to
+  /// [reportSite] and rethrown, with no wire attempt: no kind-5 is queued for
+  /// the sweep to deliver.
   ///
   /// An empty [recipients] means they could not be established. The removal
   /// is recorded all the same, tagged with [targetMessageAuthor] like the
@@ -821,17 +831,17 @@ class DmReactionsRepository {
     required String reportSite,
     Future<Map<String, DmInboxLookup>>? inboxes,
   }) async {
-    final deletion = messageService.buildRumor(
-      recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', EventKind.reaction.toString()],
-      ],
-    );
-
+    final Event deletion;
     try {
+      deletion = messageService.buildRumor(
+        recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
+        content: '',
+        eventKind: EventKind.eventDeletion,
+        additionalTags: [
+          ['e', rumorId],
+          ['k', EventKind.reaction.toString()],
+        ],
+      );
       await _reactionsDao.markOwnDeletionPending(
         id: rumorId,
         ownerPubkey: ownerPubkey,
@@ -839,7 +849,7 @@ class DmReactionsRepository {
       );
     } on Object catch (e, st) {
       _errorReporter?.call(e, st, site: reportSite);
-      return;
+      rethrow;
     }
     if (recipients.isEmpty) return;
 
@@ -1564,16 +1574,22 @@ class DmReactionsRepository {
   }) async {
     for (final MapEntry(key: priorId, value: priorRecipients)
         in priors.entries) {
-      await _durablyDeleteReaction(
-        rumorId: priorId,
-        recipients: priorRecipients,
-        targetMessageAuthor: targetMessageAuthor,
-        ownerPubkey: ownerPubkey,
-        messageService: messageService,
-        reportSite:
-            DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
-        inboxes: inboxes,
-      );
+      try {
+        await _durablyDeleteReaction(
+          rumorId: priorId,
+          recipients: priorRecipients,
+          targetMessageAuthor: targetMessageAuthor,
+          ownerPubkey: ownerPubkey,
+          messageService: messageService,
+          reportSite:
+              DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
+          inboxes: inboxes,
+        );
+      } on Object {
+        // Already reported by _durablyDeleteReaction. The new reaction is
+        // persisted by now, so it is still sent; this prior's kind-5 is lost
+        // (#9915).
+      }
     }
   }
 

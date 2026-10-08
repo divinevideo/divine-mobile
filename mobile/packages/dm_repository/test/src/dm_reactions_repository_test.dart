@@ -549,7 +549,8 @@ void main() {
       },
     );
 
-    group('publish superseding a prior reaction it cannot fully read', () {
+    group('publish superseding a prior reaction it cannot fully read or '
+        'record', () {
       const priorReactionId =
           '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
       late Event rumor;
@@ -900,6 +901,56 @@ void main() {
           expect(
             jsonDecode(recorded.single as String) as List<dynamic>,
             unorderedEquals([_otherPubkey, thirdPubkey]),
+          );
+        },
+      );
+
+      test(
+        'still sends the new reaction, and reports once, when recording its '
+        'removal fails',
+        () async {
+          stubSwap();
+          when(
+            () =>
+                mockDao.getById(id: priorReactionId, ownerPubkey: _ownerPubkey),
+          ).thenAnswer(
+            (_) async => makeRow(
+              id: priorReactionId,
+              publishStatus: 'sent',
+              recipientPubkeys: jsonEncode([_otherPubkey]),
+            ),
+          );
+          when(
+            () => mockDao.markOwnDeletionPending(
+              id: priorReactionId,
+              ownerPubkey: _ownerPubkey,
+              deletionRumorJson: any(named: 'deletionRumorJson'),
+            ),
+          ).thenThrow(Exception('disk I/O error'));
+
+          final result = await swap(createRepository());
+          await pumpEventQueue();
+
+          expect(result.success, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
+            ]),
+          );
+          verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: rumor,
+              recipientPubkey: _otherPubkey,
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => mockMessageService.sendRumor(
+              rumorEvent: deletionRumor,
+              recipientPubkey: any(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
           );
         },
       );
@@ -2129,6 +2180,60 @@ void main() {
           () => mockDao.markDeletionSent(
             id: any(named: 'id'),
             ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'removeOwn throws, reports, and sends nothing when the deletion '
+      'cannot be recorded',
+      () async {
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        final failure = Exception('disk I/O error');
+        stubQueuedRow(publishStatus: 'sent');
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '',
+            eventKind: EventKind.eventDeletion,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(deletionRumor);
+        when(
+          () => mockDao.markOwnDeletionPending(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).thenThrow(failure);
+
+        await expectLater(
+          createRepository().removeOwn(
+            rumorId: _reactionRumorId,
+            targetMessageAuthor: _otherPubkey,
+          ),
+          throwsA(same(failure)),
+        );
+        await pumpEventQueue();
+
+        expect(
+          reporterSites,
+          equals([DmReactionsRepositoryReportableSites.removeOwnSoftDelete]),
+        );
+        verifyNever(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: any(named: 'recipientPubkey'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
           ),
         );
       },
