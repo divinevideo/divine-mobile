@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -85,7 +86,7 @@ extension LayerExportKeyframes on Layer {
     if (keyframes.isEmpty) return const [];
     final mirrored = flipX != flipY;
     return [
-      for (final keyframe in _linearExportKeyframes(timelineMap))
+      for (final keyframe in _exportKeyframes(timelineMap))
         pve.TimelineKeyframe(
           time: _outputTime(timelineMap, keyframeOrigin + keyframe.time),
           offset: exportedLayerTopLeft(
@@ -104,49 +105,107 @@ extension LayerExportKeyframes on Layer {
     ];
   }
 
-  /// Split linear spans where the timeline clock changes speed. Merely
-  /// retiming endpoints changes even placement outside the blend. Each added
-  /// point lies on the original motion, making the mapped pieces identical.
-  /// Eased spans cannot be split this way: a cropped enum curve is not the
-  /// original curve, so they keep their existing representation.
-  Iterable<LayerKeyframe> _linearExportKeyframes(
+  /// The keyframes the export moves the layer through: its own, and where a
+  /// motion crosses a change in the export's pace, more on that motion.
+  ///
+  /// On each piece of the timeline the export's clock runs at one pace
+  /// against the editor's: as fast outside a clip transition, half as fast
+  /// through one, where it plays both clips at once. A linear motion stays
+  /// linear on each piece, so a keyframe where it crosses into the next one,
+  /// on the motion itself, keeps it exact. An eased motion cut there is none
+  /// of the 13 curves any more, so the export follows it through linear
+  /// keyframes [VideoEditorConstants.exportedMotionSamplesPerSecond] times a
+  /// second instead.
+  Iterable<LayerKeyframe> _exportKeyframes(
     TransitionTimelineMap timelineMap,
   ) sync* {
-    final boundaries = timelineMap.clockBoundaries;
     for (var i = 0; i < keyframes.length; i++) {
       final from = keyframes[i];
-      yield from;
-      if (from.curve != AnimationCurve.linear || i + 1 == keyframes.length) {
-        continue;
+      if (i + 1 == keyframes.length) {
+        yield from;
+        break;
       }
       final start = keyframeOrigin + from.time;
       final end = keyframeOrigin + keyframes[i + 1].time;
-      for (final boundary in boundaries) {
-        if (boundary <= start || boundary >= end) continue;
-        final placement = keyframePlacementAt(boundary)!;
-        yield LayerKeyframe(
-          time: boundary - keyframeOrigin,
-          offset: placement.offset,
-          scale: placement.scale,
-          rotation: placement.rotation,
-          opacity: placement.opacity,
-        );
+      final crossings = _paceChangesWithin(timelineMap, start, end);
+      if (crossings.isEmpty) {
+        yield from;
+      } else if (from.curve == AnimationCurve.linear) {
+        yield from;
+        for (final crossing in crossings) {
+          yield _keyframeAt(crossing);
+        }
+      } else {
+        yield from.copyWith(curve: AnimationCurve.linear);
+        yield* _sampledMotion(timelineMap, start, end);
       }
     }
   }
 
+  /// Linear keyframes on the motion from [start] to [end] (video time), on a
+  /// fixed grid of the output's time between the two.
+  Iterable<LayerKeyframe> _sampledMotion(
+    TransitionTimelineMap timelineMap,
+    Duration start,
+    Duration end,
+  ) sync* {
+    const rate = VideoEditorConstants.exportedMotionSamplesPerSecond;
+    const usPerSecond = Duration.microsecondsPerSecond;
+    final outputStartUs = _outputTime(timelineMap, start).inMicroseconds;
+    final outputEndUs = _outputTime(timelineMap, end).inMicroseconds;
+    for (
+      var sample = (outputStartUs * rate / usPerSecond).floor() + 1;
+      ;
+      sample++
+    ) {
+      final outputUs = (sample * usPerSecond / rate).round();
+      if (outputUs >= outputEndUs) break;
+      if (outputUs <= outputStartUs) continue;
+      yield _keyframeAt(
+        _editorTime(timelineMap, Duration(microseconds: outputUs)),
+      );
+    }
+  }
+
+  /// A linear keyframe holding the placement the keyframes give the layer at
+  /// [time] (video time).
+  LayerKeyframe _keyframeAt(Duration time) => LayerKeyframe.fromPlacement(
+    keyframePlacementAt(time)!,
+    time: time - keyframeOrigin,
+  );
+
   /// The [Layer.keyframeEffects] as pro_video_editor loops that repeat only
   /// over their stretch of the output timeline. Empty when there are none.
   ///
-  /// A stretch keeps its number of cycles: where [timelineMap] shortens it at
-  /// a clip transition, every cycle shortens with it, so the layer still
-  /// comes to rest on both keyframes as it does in the editor.
+  /// The export runs at its own pace on each piece of the timeline (see
+  /// [_exportKeyframes]), so an effect that crosses into another piece is
+  /// split there. Each part repeats at the pace of its piece and starts at the
+  /// phase the editor shows there, so the effect runs on in step and the layer
+  /// rests on both keyframes, as in the editor. A part before the video's
+  /// start is left out; the first part on the output starts at the phase the
+  /// editor shows at 0.
   List<pve.LayerAnimation> divineKeyframeEffectsForExport({
     required TransitionTimelineMap timelineMap,
   }) => [
-    for (final effect in keyframeEffects) ?_exportedEffect(effect, timelineMap),
+    for (final effect in keyframeEffects)
+      ..._exportedEffect(effect, timelineMap),
   ];
 }
+
+/// The editor times strictly between [start] and [end] where the export's
+/// pace against the editor changes: the edges of each clip transition.
+List<Duration> _paceChangesWithin(
+  TransitionTimelineMap timelineMap,
+  Duration start,
+  Duration end,
+) => [
+  for (final boundary in timelineMap.clockBoundaries)
+    if (boundary > start && boundary < end) boundary,
+];
+
+/// [time] on the output timeline as video time, the inverse of [_outputTime].
+Duration _editorTime(TransitionTimelineMap timelineMap, Duration time) =>
+    time.isNegative ? time : timelineMap.outputToEditor(time);
 
 /// [time] (video time) on the output timeline.
 ///
@@ -157,32 +216,44 @@ extension LayerExportKeyframes on Layer {
 Duration _outputTime(TransitionTimelineMap timelineMap, Duration time) =>
     time.isNegative ? time : timelineMap.editorToOutput(time);
 
-/// [effect] as a pro_video_editor loop over its stretch on the output
-/// timeline, or `null` when the stretch does not reach into the output.
-pve.LayerAnimation? _exportedEffect(
+/// [effect] as pro_video_editor loops, one for each piece of its stretch on
+/// the output timeline that runs at one pace; see
+/// [LayerExportKeyframes.divineKeyframeEffectsForExport].
+Iterable<pve.LayerAnimation> _exportedEffect(
   LayerKeyframeEffect effect,
   TransitionTimelineMap timelineMap,
-) {
-  final start = _outputTime(timelineMap, effect.start);
-  final end = _outputTime(timelineMap, effect.end);
-  final cycleUs = (end - start).inMicroseconds ~/ effect.cycles;
-  if (cycleUs <= 0) return null;
-  // The renderers take a loop start before 0 for none and count the cycles
-  // from the layer's start instead, out of step with the keyframes. Starting
-  // at the first whole cycle on the output keeps them in step, so the layer
-  // still rests on the next keyframe; only the part cycle before it is still.
-  var loopStartUs = start.inMicroseconds;
-  if (loopStartUs < 0) {
-    loopStartUs += (cycleUs - 1 - loopStartUs) ~/ cycleUs * cycleUs;
+) sync* {
+  final cycleUs = effect.animation.duration.inMicroseconds;
+  if (cycleUs <= 0) return;
+  final edges = [
+    effect.start,
+    // The output starts at 0, where the editor does too.
+    if (effect.start.isNegative && effect.end > Duration.zero) Duration.zero,
+    ..._paceChangesWithin(timelineMap, effect.start, effect.end),
+    effect.end,
+  ];
+  for (var i = 0; i + 1 < edges.length; i++) {
+    final from = edges[i];
+    final to = edges[i + 1];
+    if (to <= Duration.zero) continue;
+    final outputFrom = _outputTime(timelineMap, from);
+    final outputTo = _outputTime(timelineMap, to);
+    // How much output time an editor microsecond takes on this piece.
+    final pace =
+        (outputTo - outputFrom).inMicroseconds / (to - from).inMicroseconds;
+    final partCycleUs = (cycleUs * pace).round();
+    if (partCycleUs <= 0) continue;
+    final phaseUs = ((from - effect.start).inMicroseconds % cycleUs * pace)
+        .round();
+    // The two packages share the animation map; only the timing differs.
+    final map = effect.animation.toMap()
+      ..remove('slideFrom')
+      ..['durationUs'] = partCycleUs
+      ..['loopStartUs'] = outputFrom.inMicroseconds
+      ..['loopEndUs'] = outputTo.inMicroseconds
+      ..['loopPhaseUs'] = phaseUs;
+    yield pve.LayerAnimation.fromMap(map);
   }
-  if (loopStartUs >= end.inMicroseconds) return null;
-  // The two packages share the animation map; only the timing differs.
-  final map = effect.animation.toMap()
-    ..remove('slideFrom')
-    ..['durationUs'] = cycleUs
-    ..['loopStartUs'] = loopStartUs
-    ..['loopEndUs'] = end.inMicroseconds;
-  return pve.LayerAnimation.fromMap(map);
 }
 
 /// The pro_video_editor curve named like [curve]. The packages share the

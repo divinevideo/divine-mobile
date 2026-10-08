@@ -255,11 +255,12 @@ void main() {
           .divineKeyframeEffectsForExport(timelineMap: timelineMap)
           .single;
 
-      // Five 640 ms hops fill the 3.2 s stretch. The renderers count a loop
-      // from its start, which must not be before 0, so it starts at the
-      // first whole hop on the video and still ends at rest on the keyframe.
+      // Five 640 ms hops fill the 3.2 s stretch. The video starts 1.2 s into
+      // it, 560 ms into the second hop, so the loop starts there, as the
+      // editor shows it, and still ends at rest on the keyframe.
       expect(loop.duration, ms * 640);
-      expect(loop.loopStart, ms * 80);
+      expect(loop.loopStart, Duration.zero);
+      expect(loop.loopPhase, ms * 560);
       expect(loop.loopEnd, ms * 2000);
     });
   });
