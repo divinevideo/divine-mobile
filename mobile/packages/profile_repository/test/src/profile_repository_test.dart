@@ -4610,32 +4610,79 @@ void main() {
         },
       );
 
-      test('progressive search retains a matching cached identity when REST '
-          'has an unrelated name for the same pubkey', () async {
-        final cached = UserProfile(
-          pubkey: pkCachedVine,
-          displayName: 'Sam From Contacts',
-          createdAt: DateTime(2026),
-          eventId: 'cached',
-          rawData: const {},
+      for (final serverRevision in [
+        DateTime(2025),
+        DateTime(2026),
+        DateTime(2027),
+        null,
+      ]) {
+        test(
+          'progressive search uses actual profile revision $serverRevision',
+          () async {
+            final cached = UserProfile(
+              pubkey: pkCachedVine,
+              displayName: 'Sam From Contacts',
+              createdAt: DateTime(2026),
+              eventId: 'a' * 64,
+              rawData: const {},
+            );
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => [cached]);
+            stubRestResults([
+              ProfileSearchResult(
+                pubkey: pkCachedVine,
+                displayName: 'Renamed Account',
+                createdAt: serverRevision,
+              ),
+            ]);
+            final result = await repoWithFunnelcake
+                .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+                .last;
+            if (serverRevision != null &&
+                serverRevision.isBefore(cached.createdAt)) {
+              expect(result.profiles.single.displayName, 'Sam From Contacts');
+            } else {
+              expect(result.profiles, isEmpty);
+            }
+          },
         );
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => [cached]);
-        stubRestResults([
-          ProfileSearchResult(
-            pubkey: pkCachedVine,
-            displayName: 'Unrelated Account',
-            createdAt: DateTime(2026),
-          ),
-        ]);
+      }
 
-        final result = await repoWithFunnelcake
-            .searchUsersProgressive(query: 'sam', sortBy: 'followers')
-            .last;
-
-        expect(result.profiles.single.displayName, 'Sam From Contacts');
-      });
+      for (final clearedName in <String?>[null, '']) {
+        test(
+          'progressive search does not restore cleared server names ($clearedName) from cache',
+          () async {
+            final cached = UserProfile(
+              pubkey: pkCachedVine,
+              name: 'sam',
+              displayName: 'Sam From Contacts',
+              createdAt: DateTime(2025),
+              eventId: 'a' * 64,
+              rawData: const {},
+            );
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => [cached]);
+            when(
+              () => mockUserProfilesDao.getProfile(pkCachedVine),
+            ).thenAnswer((_) async => cached);
+            stubRestResults([
+              ProfileSearchResult(
+                pubkey: pkCachedVine,
+                name: clearedName,
+                displayName: clearedName,
+                nip05: clearedName,
+                createdAt: DateTime(2026),
+              ),
+            ]);
+            final result = await repoWithFunnelcake
+                .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+                .last;
+            expect(result.profiles, isEmpty);
+          },
+        );
+      }
 
       test('progressive search keeps a cached name match and drops unrelated '
           'server hits', () async {

@@ -2329,6 +2329,7 @@ class ProfileRepository implements ProfileReader {
     if (_isSearchCancelled(cancellationToken)) return;
 
     final resultMap = <String, UserProfile>{};
+    final serverSelectedPubkeys = <String>{};
     final sources = <SearchSource, SearchSourceStatus>{
       for (final source in SearchSource.values)
         source: const SearchSourcePending(),
@@ -2411,19 +2412,19 @@ class ProfileRepository implements ProfileReader {
         if (_isSearchCancelled(cancellationToken)) return;
         nextRestOffset = offset + restResults.length;
         restHasMore = restResults.length == limit;
-        final normalizedQuery = trimmed.toLowerCase();
-        final queryHex = _npubQueryToHex(normalizedQuery);
         for (final result in restResults) {
-          final candidate = result.toUserProfile();
           final cached = resultMap[result.pubkey];
-          // Keep a local identity match if the REST representation of the
-          // same account would make it disappear from this search.
+          final serverRevision = result.createdAt;
+          // Compare event revisions before conversion: an older API can omit
+          // created_at, and toUserProfile's fallback is not an event timestamp.
           if (cached != null &&
-              _searchRelevance(cached, normalizedQuery, queryHex) > 0 &&
-              _searchRelevance(candidate, normalizedQuery, queryHex) == 0) {
+              cached.eventId.isNotEmpty &&
+              serverRevision != null &&
+              cached.createdAt.isAfter(serverRevision)) {
             continue;
           }
-          resultMap[result.pubkey] = candidate;
+          resultMap[result.pubkey] = result.toUserProfile();
+          serverSelectedPubkeys.add(result.pubkey);
         }
         sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
           resultCount: resultMap.length - preRestCount,
@@ -2497,6 +2498,7 @@ class ProfileRepository implements ProfileReader {
         final enriched = await _enrichFromCache(
           resultMap.values.toList(),
           cancellationToken: cancellationToken,
+          preserveRevisions: serverSelectedPubkeys,
         );
         if (_isSearchCancelled(cancellationToken)) return;
         final result = snapshot(
@@ -2523,6 +2525,7 @@ class ProfileRepository implements ProfileReader {
     final enriched = await _enrichFromCache(
       resultMap.values.toList(),
       cancellationToken: cancellationToken,
+      preserveRevisions: serverSelectedPubkeys,
     );
     if (_isSearchCancelled(cancellationToken)) return;
     final result = snapshot(
@@ -3025,12 +3028,19 @@ class ProfileRepository implements ProfileReader {
   Future<List<UserProfile>> _enrichFromCache(
     List<UserProfile> profiles, {
     SearchCancellationToken? cancellationToken,
+    Set<String> preserveRevisions = const {},
   }) async {
     final enriched = <UserProfile>[];
     var cacheHits = 0;
     var pictureEnriched = 0;
     for (final profile in profiles) {
       if (_isSearchCancelled(cancellationToken)) break;
+      // A selected server revision includes intentional omissions. Mixing in
+      // older cached fields would restore removed names and other metadata.
+      if (preserveRevisions.contains(profile.pubkey)) {
+        enriched.add(profile);
+        continue;
+      }
       final cached = await _userProfilesDao.getProfile(profile.pubkey);
       if (_isSearchCancelled(cancellationToken)) break;
       if (cached == null) {
