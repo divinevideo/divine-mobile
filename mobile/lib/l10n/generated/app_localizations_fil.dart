@@ -3728,6 +3728,46 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip mula sa library mo';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video mula sa gallery mo';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Tinitingnan kung kinunan sa Divine ang clip na ito…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Hindi namin makumpirma na kinunan ito gamit ang Divine camera, kaya hindi ito naidagdag sa clips mo.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Puwede nilang idagdag sa clips nila ang ipinadala mo at i-post ito, at mababanggit ka.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Naipadala ang $sent sa $total na clip. Hindi naipadala ang iba.',
+      one: 'Naipadala ang $sent sa $total clip. Hindi naipadala ang iba.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'I-save ang Video';
 
   @override

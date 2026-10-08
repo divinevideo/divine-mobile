@@ -14533,6 +14533,134 @@ void main() {
           },
         );
       });
+
+      test('appends extraTags to the rumor and persists them', () async {
+        when(
+          () => mockMessageService.sendPrivateMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            eventKind: any(named: 'eventKind'),
+            additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: _rumorEventId,
+            messageEventId: _giftWrapEventId,
+            recipientPubkey: _validPubkeyB,
+          ),
+        );
+        when(
+          () => mockDirectMessagesDao.insertMessage(
+            id: any(named: 'id'),
+            conversationId: any(named: 'conversationId'),
+            senderPubkey: any(named: 'senderPubkey'),
+            content: any(named: 'content'),
+            createdAt: any(named: 'createdAt'),
+            giftWrapId: any(named: 'giftWrapId'),
+            messageKind: any(named: 'messageKind'),
+            replyToId: any(named: 'replyToId'),
+            subject: any(named: 'subject'),
+            fileType: any(named: 'fileType'),
+            encryptionAlgorithm: any(named: 'encryptionAlgorithm'),
+            decryptionKey: any(named: 'decryptionKey'),
+            decryptionNonce: any(named: 'decryptionNonce'),
+            fileHash: any(named: 'fileHash'),
+            originalFileHash: any(named: 'originalFileHash'),
+            fileSize: any(named: 'fileSize'),
+            dimensions: any(named: 'dimensions'),
+            blurhash: any(named: 'blurhash'),
+            thumbnailUrl: any(named: 'thumbnailUrl'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            tagsJson: any(named: 'tagsJson'),
+            sendBatchId: any(named: 'sendBatchId'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockConversationsDao.upsertConversation(
+            id: any(named: 'id'),
+            participantPubkeys: any(named: 'participantPubkeys'),
+            isGroup: any(named: 'isGroup'),
+            createdAt: any(named: 'createdAt'),
+            lastMessageContent: any(named: 'lastMessageContent'),
+            lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
+            lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
+            subject: any(named: 'subject'),
+            isRead: any(named: 'isRead'),
+            currentUserHasSent: any(named: 'currentUserHasSent'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            dmProtocol: any(named: 'dmProtocol'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockConversationsDao.getConversation(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final repository = createRepository();
+
+        final result = await repository.sendFileMessage(
+          recipientPubkey: _validPubkeyB,
+          fileUrl: 'https://blossom.example.com/file.enc',
+          fileMetadata: testFileMetadata,
+          extraTags: const [
+            ['divine-clip', 'square'],
+          ],
+        );
+
+        expect(result.success, isTrue);
+        final sentTags =
+            verify(
+                  () => mockMessageService.sendPrivateMessage(
+                    recipientPubkey: _validPubkeyB,
+                    content: any(named: 'content'),
+                    eventKind: EventKind.fileMessage,
+                    additionalTags: captureAny(named: 'additionalTags'),
+                    targetRelays: any(named: 'targetRelays'),
+                    selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+                    awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                    selfWrapOnSoftUnconfirmed: any(
+                      named: 'selfWrapOnSoftUnconfirmed',
+                    ),
+                  ),
+                ).captured.single
+                as List<List<String>>;
+        expect(sentTags.last, equals(['divine-clip', 'square']));
+        expect(sentTags.first, equals(['file-type', 'image/jpeg']));
+
+        final persistedTagsJson =
+            verify(
+                  () => mockDirectMessagesDao.insertMessage(
+                    id: _rumorEventId,
+                    conversationId: any(named: 'conversationId'),
+                    senderPubkey: any(named: 'senderPubkey'),
+                    content: any(named: 'content'),
+                    createdAt: any(named: 'createdAt'),
+                    giftWrapId: any(named: 'giftWrapId'),
+                    messageKind: any(named: 'messageKind'),
+                    subject: any(named: 'subject'),
+                    fileType: any(named: 'fileType'),
+                    encryptionAlgorithm: any(named: 'encryptionAlgorithm'),
+                    decryptionKey: any(named: 'decryptionKey'),
+                    decryptionNonce: any(named: 'decryptionNonce'),
+                    fileHash: any(named: 'fileHash'),
+                    fileSize: any(named: 'fileSize'),
+                    ownerPubkey: any(named: 'ownerPubkey'),
+                    tagsJson: captureAny(named: 'tagsJson'),
+                    sendBatchId: any(named: 'sendBatchId'),
+                  ),
+                ).captured.single
+                as String;
+        expect(
+          jsonDecode(persistedTagsJson),
+          contains(equals(['divine-clip', 'square'])),
+        );
+      });
     });
 
     // -----------------------------------------------------------------

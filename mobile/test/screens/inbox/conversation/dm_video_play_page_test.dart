@@ -20,6 +20,7 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../mocks/mock_path_provider_platform.dart';
@@ -58,6 +59,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue('');
     registerFallbackValue(_videoMessage());
+    registerFallbackValue(EditorVideo.file(''));
   });
 
   setUp(() {
@@ -105,7 +107,7 @@ void main() {
     });
   }
 
-  Widget host() => ProviderScope(
+  Widget host({bool canAddToClips = false}) => ProviderScope(
     overrides: [
       dmVideoDecryptorProvider.overrideWithValue(decryptor),
       gallerySaveServiceProvider.overrideWithValue(gallerySaveService),
@@ -113,7 +115,10 @@ void main() {
     child: MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: DmVideoPlayPage(message: _videoMessage()),
+      home: DmVideoPlayPage(
+        message: _videoMessage(),
+        canAddToClips: canAddToClips,
+      ),
     ),
   );
 
@@ -179,6 +184,58 @@ void main() {
         find.text(AppLocalizationsEn().dmVideoUnavailable),
         findsOneWidget,
       );
+    });
+
+    group('save', () {
+      final l10n = AppLocalizationsEn();
+
+      Future<void> pumpReady(
+        WidgetTester tester, {
+        required bool canAddToClips,
+      }) async {
+        stubDelete();
+        stubDecrypt(() async {
+          File(expectedClipPath())
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(const [1, 2, 3]);
+          return expectedClipPath();
+        });
+        when(
+          () => gallerySaveService.saveVideoToGallery(any()),
+        ).thenAnswer((_) async => const GallerySaveSuccess());
+        installMockDivineVideoPlayer();
+
+        await tester.pumpWidget(host(canAddToClips: canAddToClips));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      testWidgets('asks between clips and gallery for a received video', (
+        tester,
+      ) async {
+        await pumpReady(tester, canAddToClips: true);
+
+        await tester.tap(find.bySemanticsLabel(l10n.shareSheetSaveVideo));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        await tester.tap(find.text(l10n.shareSheetSaveToGallery));
+        await tester.pumpAndSettle();
+
+        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+      });
+
+      testWidgets('saves straight to the gallery when clips are not offered', (
+        tester,
+      ) async {
+        await pumpReady(tester, canAddToClips: false);
+
+        await tester.tap(find.bySemanticsLabel(l10n.shareSheetSaveVideo));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+      });
     });
   });
 }

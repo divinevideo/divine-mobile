@@ -1,5 +1,6 @@
 export 'collaborator_invite_card.dart';
 export 'conversation_app_bar.dart';
+export 'dm_clip_save_scope.dart';
 export 'empty_conversation.dart';
 export 'encrypted_video_card.dart';
 export 'full_reaction_emoji_picker_sheet.dart';

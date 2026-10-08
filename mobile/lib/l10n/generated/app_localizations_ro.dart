@@ -3822,6 +3822,47 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip din biblioteca ta';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Videoclip din galeria ta';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Verificăm dacă acest clip a fost filmat cu Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Nu am putut confirma că a fost filmat cu camera Divine, așa că nu a fost adăugat la clipurile tale.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Persoana poate adăuga ce trimiți la clipurile sale și le poate publica, menționându-te.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Trimise $sent din $total de clipuri. Restul nu a plecat.',
+      few: 'Trimise $sent din $total clipuri. Restul nu a plecat.',
+      one: 'Trimis $sent din $total clip. Restul nu a plecat.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Salvează videoclipul';
 
   @override

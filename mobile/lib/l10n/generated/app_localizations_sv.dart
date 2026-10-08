@@ -3702,6 +3702,45 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Klipp från ditt bibliotek';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video från ditt galleri';
+
+  @override
+  String get dmClipBadge => 'Klipp';
+
+  @override
+  String get dmClipChecking => 'Kollar att klippet är filmat med Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Vi kunde inte bekräfta att det är filmat med Divine-kameran, så det lades inte till i dina klipp.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Det går inte att kolla klippet just nu. Försök igen om en stund.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Vi kunde inte bekräfta att klippet är filmat med Divine-kameran, så det kan inte skickas som klipp.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Det du skickar kan mottagaren lägga till i sina klipp och publicera, och du krediteras.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent av $total klipp skickade. Resten gick inte iväg.',
+      one: '$sent av $total klipp skickat. Resten gick inte iväg.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Spara video';
 
   @override

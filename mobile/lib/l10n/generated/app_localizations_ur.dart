@@ -3712,6 +3712,45 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'آپ کی لائبریری سے کلپ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'آپ کی گیلری سے ویڈیو';
+
+  @override
+  String get dmClipBadge => 'کلپ';
+
+  @override
+  String get dmClipChecking => 'تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'وہ آپ کی بھیجی ہوئی چیز اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total کلپس میں سے $sent بھیج دیے گئے۔ باقی نہیں جا سکے۔',
+      one: '$total کلپ میں سے $sent بھیجا گیا۔ باقی نہیں جا سکے۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'ویڈیو محفوظ کریں';
 
   @override

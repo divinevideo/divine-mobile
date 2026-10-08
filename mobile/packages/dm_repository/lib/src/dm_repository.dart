@@ -7967,6 +7967,10 @@ class DmRepository {
   /// Blossom server. This method wraps the file URL and metadata in a
   /// Kind 15 event, then encrypts with NIP-59 gift wrapping.
   ///
+  /// [extraTags] are appended to the rumor after the NIP-17 file tags, for
+  /// app-level markers the recipient's client reads back from
+  /// [DmMessage.tags]. They must not repeat a file tag this method writes.
+  ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
   /// metadata is missing.
@@ -7976,6 +7980,7 @@ class DmRepository {
     required String fileUrl,
     required DmFileMetadata fileMetadata,
     String? replyToId,
+    List<List<String>> extraTags = const [],
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -8013,6 +8018,7 @@ class DmRepository {
       if (fileMetadata.thumbnailUrl != null)
         ['thumb', fileMetadata.thumbnailUrl!],
       if (replyToId != null) ['e', replyToId],
+      ...extraTags,
     ];
 
     // Routed like a text message: to the recipient's kind-10050 inbox, the

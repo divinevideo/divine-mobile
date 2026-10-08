@@ -3483,6 +3483,42 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => '보관함의 클립';
+
+  @override
+  String get dmAttachVideoFromGallery => '갤러리의 동영상';
+
+  @override
+  String get dmClipBadge => '클립';
+
+  @override
+  String get dmClipChecking => '이 클립이 Divine으로 촬영됐는지 확인하고 있어요…';
+
+  @override
+  String get dmClipNotVerified => 'Divine 카메라로 촬영된 것을 확인할 수 없어서 클립에 추가하지 않았어요.';
+
+  @override
+  String get dmClipCheckUnavailable => '지금은 이 클립을 확인할 수 없어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      '이 클립이 Divine 카메라로 촬영된 것을 확인할 수 없어서 클립으로 보낼 수 없어요.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      '보낸 영상은 상대방이 자기 클립에 추가해서 게시할 수 있어요. 이때 회원님이 출처로 표시돼요.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '클립 $total개 중 $sent개를 보냈어요. 나머지는 보내지 못했어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '영상 저장';
 
   @override

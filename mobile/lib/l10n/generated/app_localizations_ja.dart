@@ -3467,6 +3467,43 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'ライブラリのクリップ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'ギャラリーの動画';
+
+  @override
+  String get dmClipBadge => 'クリップ';
+
+  @override
+  String get dmClipChecking => 'このクリップがDivineで撮影されたか確認しています…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Divineのカメラで撮影されたことを確認できなかったため、クリップに追加しませんでした';
+
+  @override
+  String get dmClipCheckUnavailable => '今はこのクリップを確認できません。少し経ってからもう一度お試しください';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません';
+
+  @override
+  String get dmAttachReuseNotice =>
+      '送ったものは相手が自分のクリップに追加して投稿できます。その際、あなたがクレジットされます。';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件のクリップのうち$sent件を送信しました。残りは送信できませんでした。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '動画を保存';
 
   @override

@@ -3814,6 +3814,47 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Klip z twojej biblioteki';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Film z twojej galerii';
+
+  @override
+  String get dmClipBadge => 'Klip';
+
+  @override
+  String get dmClipChecking => 'Sprawdzamy, czy ten klip nagrano w Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Nie udało się potwierdzić, że nagrano to kamerą Divine, więc nie trafiło do twoich klipów.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Nie można teraz sprawdzić tego klipu. Spróbuj ponownie za chwilę.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Nie udało się potwierdzić, że ten klip nagrano kamerą Divine, więc nie można go wysłać jako klipu.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Druga osoba może dodać to, co wysyłasz, do swoich klipów i to opublikować. Pojawisz się jako źródło.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Wysłano $sent z $total klipu. Reszta nie dotarła.',
+      many: 'Wysłano $sent z $total klipów. Reszta nie dotarła.',
+      few: 'Wysłano $sent z $total klipów. Reszta nie dotarła.',
+      one: 'Wysłano $sent z $total klipu. Reszta nie dotarła.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Zapisz film';
 
   @override

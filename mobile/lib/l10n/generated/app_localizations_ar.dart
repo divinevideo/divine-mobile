@@ -3693,6 +3693,49 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'مقطع من مكتبتك';
+
+  @override
+  String get dmAttachVideoFromGallery => 'فيديو من معرض الصور';
+
+  @override
+  String get dmClipBadge => 'مقطع';
+
+  @override
+  String get dmClipChecking => 'جارٍ التحقق من أن هذا المقطع صُوّر على Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لم تتم إضافته إلى مقاطعك.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'تعذّر التحقق من هذا المقطع الآن. يُرجى المحاولة بعد قليل.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لا يمكن إرساله كمقطع.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'يمكنهم إضافة ما ترسله إلى مقاطعهم ونشره، مع الإشارة إليك.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'تم إرسال $sent من $total مقطع. لم يُرسل الباقي.',
+      many: 'تم إرسال $sent من $total مقطعًا. لم يُرسل الباقي.',
+      few: 'تم إرسال $sent من $total مقاطع. لم يُرسل الباقي.',
+      two: 'تم إرسال $sent من $total مقطعين. لم يُرسل الباقي.',
+      one: 'تم إرسال $sent من $total مقطع. لم يُرسل الباقي.',
+      zero: 'تم إرسال $sent من $total مقطع. لم يُرسل الباقي.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'حفظ الفيديو';
 
   @override

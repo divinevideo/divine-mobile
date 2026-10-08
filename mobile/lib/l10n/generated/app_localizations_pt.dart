@@ -3737,6 +3737,47 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clipe da sua biblioteca';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Vídeo da sua galeria';
+
+  @override
+  String get dmClipBadge => 'Clipe';
+
+  @override
+  String get dmClipChecking =>
+      'Conferindo se este clipe foi gravado com o Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Não conseguimos confirmar que isso foi gravado com a câmera do Divine, então não foi adicionado aos seus clipes.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Não dá para verificar este clipe agora. Tente de novo daqui a pouco.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Não conseguimos confirmar que este clipe foi gravado com a câmera do Divine, então ele não pode ser enviado como clipe.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'A pessoa pode adicionar o que você envia aos clipes dela e publicar, com crédito para você.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent de $total clipes enviados. O resto não foi enviado.',
+      many: '$sent de $total de clipes enviados. O resto não foi enviado.',
+      one: '$sent de $total clipe enviado. O resto não foi enviado.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Salvar vídeo';
 
   @override

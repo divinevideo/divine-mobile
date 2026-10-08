@@ -15,6 +15,10 @@ enum MessageAction {
   /// Play a received encrypted video DM.
   playVideo,
 
+  /// Add a received clip to the viewer's clip library, once its C2PA
+  /// credential proves it is a Divine camera capture.
+  addToClips,
+
   /// Delete the message for everyone (NIP-09 kind 5).
   delete,
 

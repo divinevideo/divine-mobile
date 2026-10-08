@@ -3758,6 +3758,45 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Клип от библиотеката ти';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Видео от галерията ти';
+
+  @override
+  String get dmClipBadge => 'Клип';
+
+  @override
+  String get dmClipChecking => 'Проверяваме дали клипът е заснет с Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Не успяхме да потвърдим, че е заснет с камерата на Divine, затова не е добавен към клиповете ти.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Не можем да проверим клипа в момента. Опитай пак след малко.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Не успяхме да потвърдим, че клипът е заснет с камерата на Divine, затова не може да се изпрати като клип.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Могат да добавят това, което изпращаш, към клиповете си и да го публикуват, като те посочат.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Изпратени $sent от $total клипа. Останалите не минаха.',
+      one: 'Изпратен $sent от $total клип. Останалите не минаха.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Запази видео';
 
   @override

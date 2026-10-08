@@ -154,6 +154,59 @@ void main() {
       },
     );
 
+    test('forwards extraTags to sendFileMessage', () async {
+      final videoFile = File('${tempDir.path}/clip.mp4')
+        ..writeAsBytesSync(const [9, 9, 9]);
+      final ciphertext = ciphertextFile();
+      when(
+        () => encryption.encryptFile(videoFile),
+      ).thenAnswer((_) async => encryptedVideo(ciphertext));
+      when(
+        () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
+      ).thenAnswer(
+        (_) async => const BlossomUploadResult(
+          success: true,
+          videoId: _ciphertextHash,
+          url: _fileUrl,
+        ),
+      );
+      when(
+        () => dmRepository.sendFileMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          fileUrl: any(named: 'fileUrl'),
+          fileMetadata: any(named: 'fileMetadata'),
+          extraTags: any(named: 'extraTags'),
+        ),
+      ).thenAnswer(
+        (_) async => NIP17SendResult.success(
+          rumorEventId: 'rumor-1',
+          messageEventId: 'wrap-1',
+          recipientPubkey: _recipientPubkey,
+        ),
+      );
+
+      final result = await createService().sendVideo(
+        recipientPubkey: _recipientPubkey,
+        videoFile: videoFile,
+        mimeType: 'video/mp4',
+        extraTags: const [
+          ['divine-clip', 'vertical'],
+        ],
+      );
+
+      expect(result.success, isTrue);
+      verify(
+        () => dmRepository.sendFileMessage(
+          recipientPubkey: _recipientPubkey,
+          fileUrl: _fileUrl,
+          fileMetadata: any(named: 'fileMetadata'),
+          extraTags: const [
+            ['divine-clip', 'vertical'],
+          ],
+        ),
+      ).called(1);
+    });
+
     test('upload failure skips sendFileMessage and still cleans up', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')
         ..writeAsBytesSync(const [9, 9, 9]);

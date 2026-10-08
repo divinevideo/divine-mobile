@@ -13,6 +13,7 @@ import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/dm_clip_save_scope.dart';
 
 /// Plays a received encrypted video DM.
 ///
@@ -21,16 +22,29 @@ import 'package:openvine/providers/video_providers.dart';
 /// the message metadata.
 class DmVideoPlayPage extends ConsumerWidget {
   /// Creates a play page for [message], a kind 15 video DM.
-  const DmVideoPlayPage({required this.message, super.key});
+  const DmVideoPlayPage({
+    required this.message,
+    this.canAddToClips = false,
+    super.key,
+  });
 
   /// The received kind 15 message whose [DmMessage.fileMetadata] is a video.
   final DmMessage message;
 
+  /// Whether the save action also offers adding the video to the viewer's
+  /// clips, behind the C2PA check. Only for a video someone else sent.
+  final bool canAddToClips;
+
   /// Opens the page for [message] on the enclosing navigator.
-  static Future<void> open(BuildContext context, DmMessage message) {
+  static Future<void> open(
+    BuildContext context,
+    DmMessage message, {
+    bool canAddToClips = false,
+  }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => DmVideoPlayPage(message: message),
+        builder: (_) =>
+            DmVideoPlayPage(message: message, canAddToClips: canAddToClips),
       ),
     );
   }
@@ -40,18 +54,23 @@ class DmVideoPlayPage extends ConsumerWidget {
     // Both services are stateless and account-independent.
     final decryptor = ref.watch(dmVideoDecryptorProvider);
     final gallerySaveService = ref.watch(gallerySaveServiceProvider);
-    return BlocProvider(
-      key: ValueKey((decryptor, gallerySaveService)),
-      create: (_) {
-        final cubit = DmVideoPlaybackCubit(
-          message: message,
-          decryptor: decryptor,
-          gallerySaveService: gallerySaveService,
-        );
-        unawaited(cubit.load());
-        return cubit;
-      },
-      child: const DmVideoPlayView(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          key: ValueKey((decryptor, gallerySaveService)),
+          create: (_) {
+            final cubit = DmVideoPlaybackCubit(
+              message: message,
+              decryptor: decryptor,
+              gallerySaveService: gallerySaveService,
+            );
+            unawaited(cubit.load());
+            return cubit;
+          },
+        ),
+        const DmClipSaveProvider(),
+      ],
+      child: DmVideoPlayView(canAddToClips: canAddToClips),
     );
   }
 }
@@ -60,7 +79,10 @@ class DmVideoPlayPage extends ConsumerWidget {
 class DmVideoPlayView extends StatelessWidget {
   /// Creates a [DmVideoPlayView].
   @visibleForTesting
-  const DmVideoPlayView({super.key});
+  const DmVideoPlayView({this.canAddToClips = false, super.key});
+
+  /// See [DmVideoPlayPage.canAddToClips].
+  final bool canAddToClips;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +99,8 @@ class DmVideoPlayView extends StatelessWidget {
           backgroundColor: VineTheme.transparent,
           foregroundColor: VineTheme.whiteText,
           actions: [
-            if (status == DmVideoPlaybackStatus.ready) const _SaveButton(),
+            if (status == DmVideoPlaybackStatus.ready)
+              _SaveButton(canAddToClips: canAddToClips),
           ],
         ),
         body: Center(
@@ -115,8 +138,13 @@ class DmVideoPlayView extends StatelessWidget {
   }
 }
 
+/// Where the save action puts the video.
+enum _SaveDestination { clips, gallery }
+
 class _SaveButton extends StatelessWidget {
-  const _SaveButton();
+  const _SaveButton({required this.canAddToClips});
+
+  final bool canAddToClips;
 
   @override
   Widget build(BuildContext context) {
@@ -130,14 +158,48 @@ class _SaveButton extends StatelessWidget {
         icon: DivineIconName.downloadSimple,
         type: DivineIconButtonType.ghostOverMedia,
         size: DivineIconButtonSize.small,
-        onPressed: saving
-            ? null
-            : () => unawaited(
-                context.read<DmVideoPlaybackCubit>().saveToGallery(),
-              ),
+        onPressed: saving ? null : () => unawaited(_onPressed(context)),
         semanticLabel: context.l10n.shareSheetSaveVideo,
       ),
     );
+  }
+
+  /// Saves to the gallery, or first asks whether the video goes to the
+  /// gallery or into the viewer's clips.
+  Future<void> _onPressed(BuildContext context) async {
+    final playback = context.read<DmVideoPlaybackCubit>();
+    if (!canAddToClips) {
+      await playback.saveToGallery();
+      return;
+    }
+
+    final l10n = context.l10n;
+    _SaveDestination? destination;
+    await VineBottomSheetActionMenu.show(
+      context: context,
+      options: [
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.filmSlate.assetPath,
+          label: l10n.shareSheetAddToClips,
+          onTap: () => destination = _SaveDestination.clips,
+        ),
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.downloadSimple.assetPath,
+          label: l10n.shareSheetSaveToGallery,
+          onTap: () => destination = _SaveDestination.gallery,
+        ),
+      ],
+    );
+    if (!context.mounted) return;
+
+    switch (destination) {
+      case _SaveDestination.clips:
+        await addReceivedClipToLibrary(context, playback.message);
+      case _SaveDestination.gallery:
+        await playback.saveToGallery();
+      case null:
+        return;
+    }
   }
 }
 

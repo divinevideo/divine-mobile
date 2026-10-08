@@ -3677,6 +3677,45 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip từ thư viện của bạn';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video từ thư viện ảnh của bạn';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Đang kiểm tra clip này có được quay bằng Divine không…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Người nhận có thể thêm nội dung bạn gửi vào clip của họ và đăng lên, kèm ghi công cho bạn.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đã gửi $sent/$total clip. Phần còn lại chưa gửi được.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override
