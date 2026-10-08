@@ -30,97 +30,107 @@ void main() {
     ],
   );
 
-  testWidgets('tapping the reply parent opens its video route', (tester) async {
-    final router = GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => Scaffold(
-            body: VideoReplyParentLink(
-              video: reply,
-              variant: VideoReplyParentLinkVariant.metadata,
+  group(VideoReplyParentLink, () {
+    group('navigation', () {
+      testWidgets('tapping the reply parent opens its video route', (
+        tester,
+      ) async {
+        final router = GoRouter(
+          initialLocation: '/',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => Scaffold(
+                body: VideoReplyParentLink(
+                  video: reply,
+                  variant: VideoReplyParentLinkVariant.metadata,
+                ),
+              ),
+            ),
+            GoRoute(
+              path: VideoDetailScreen.path,
+              builder: (_, state) =>
+                  Scaffold(body: Text('Opened ${state.pathParameters['id']}')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              videoReplyParentProvider.overrideWith(
+                (ref, routeId) async => null,
+              ),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
             ),
           ),
-        ),
-        GoRoute(
-          path: VideoDetailScreen.path,
-          builder: (_, state) =>
-              Scaffold(body: Text('Opened ${state.pathParameters['id']}')),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
+        );
+        await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          videoReplyParentProvider.overrideWith((ref, routeId) async => null),
-        ],
-        child: MaterialApp.router(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: router,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+        await tester.tap(find.text(fallbackLabel));
+        await tester.pumpAndSettle();
 
-    await tester.tap(find.text(fallbackLabel));
-    await tester.pumpAndSettle();
+        expect(find.text('Opened $parentId'), findsOneWidget);
+      });
 
-    expect(find.text('Opened $parentId'), findsOneWidget);
-  });
+      testWidgets('logs a rejected parent route push instead of leaking it', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
 
-  testWidgets('logs a rejected parent route push instead of leaking it', (
-    tester,
-  ) async {
-    final logCapture = LogCaptureService();
-    await logCapture.clearAllLogs();
-    addTearDown(logCapture.clearAllLogs);
-    final router = MockGoRouter();
-    when(
-      () => router.push<void>(any()),
-    ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
-
-    await tester.pumpWidget(
-      MockGoRouterProvider(
-        goRouter: router,
-        child: ProviderScope(
-          overrides: [
-            videoReplyParentProvider.overrideWith((ref, routeId) async => null),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: VideoReplyParentLink(
-                video: reply,
-                variant: VideoReplyParentLinkVariant.metadata,
+        await tester.pumpWidget(
+          MockGoRouterProvider(
+            goRouter: router,
+            child: ProviderScope(
+              overrides: [
+                videoReplyParentProvider.overrideWith(
+                  (ref, routeId) async => null,
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: VideoReplyParentLink(
+                    video: reply,
+                    variant: VideoReplyParentLinkVariant.metadata,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-    await tester.tap(find.text(fallbackLabel));
-    await tester.pump();
+        await tester.tap(find.text(fallbackLabel));
+        await tester.pump();
 
-    verify(() => router.push<void>(VideoDetailScreen.pathForId(parentId)))
-        .called(1);
-    expect(tester.takeException(), isNull);
-    final failures = logCapture
-        .getRecentLogs()
-        .where((entry) => entry.name == 'VideoReplyParentLink')
-        .toList();
-    expect(failures, hasLength(1));
-    expect(failures.single.level, LogLevel.error);
-    expect(failures.single.category, LogCategory.video);
-    expect(
-      failures.single.message,
-      'Failed to open reply parent video: Exception: route failed',
-    );
+        verify(() => router.push<void>(VideoDetailScreen.pathForId(parentId)))
+            .called(1);
+        expect(tester.takeException(), isNull);
+        final failures = logCapture
+            .getRecentLogs()
+            .where((entry) => entry.name == 'VideoReplyParentLink')
+            .toList();
+        expect(failures, hasLength(1));
+        expect(failures.single.level, LogLevel.error);
+        expect(failures.single.category, LogCategory.video);
+        expect(
+          failures.single.message,
+          'Failed to open reply parent video: Exception: route failed',
+        );
+      });
+    });
   });
 }
