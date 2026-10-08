@@ -748,6 +748,118 @@ void main() {
     });
   });
 
+  group('list report (showForList path)', () {
+    late MockNostrClient mockNostrClient;
+    // Full-length hex, never truncated.
+    final listEventId = 'e' * 64;
+    final listAuthor = 'b' * 64;
+    final coordinate = '30005:$listAuthor:faves';
+
+    setUp(() {
+      mockNostrClient = createMockNostrService();
+      when(() => mockNostrClient.publicKey).thenReturn('test_pubkey_hex');
+    });
+
+    Future<void> openListReport(WidgetTester tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => ReportContentDialog.showForList(
+                    context,
+                    kind: ReportedListKind.videos,
+                    eventId: listEventId,
+                    authorPubkey: listAuthor,
+                    dTag: 'faves',
+                    title: 'Best skate clips',
+                  ),
+                  child: const Text('Open List Report'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        testProviderScope(
+          mockNostrService: mockNostrClient,
+          additionalOverrides: [
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistRepositoryProvider.overrideWith(
+              (ref) => mockBlocklistRepository,
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open List Report'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('offers only the reasons that fit a list', (tester) async {
+      await setLargeSurface(tester);
+      await openListReport(tester);
+
+      for (final offered in [
+        l10n.reportReasonSpam,
+        l10n.reportReasonHarassment,
+        l10n.reportReasonViolence,
+        l10n.reportReasonSexualContent,
+        l10n.reportReasonFalseInfo,
+        l10n.reportReasonChildSafety,
+        l10n.reportReasonCsam,
+        l10n.reportReasonOther,
+      ]) {
+        expect(find.text(offered), findsOneWidget, reason: offered);
+      }
+      for (final withheld in [
+        l10n.reportReasonCopyright,
+        l10n.reportReasonAiGenerated,
+        l10n.reportReasonUnderageUser,
+      ]) {
+        expect(find.text(withheld), findsNothing, reason: withheld);
+      }
+    });
+
+    testWidgets(
+      "files the report against the list's event, author and coordinate",
+      (tester) async {
+        await setLargeSurface(tester);
+        await openListReport(tester);
+
+        await tester.tap(find.text(l10n.reportReasonHarassment));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+
+        final context = verify(
+          () => mockReportingService.reportContent(
+            eventId: listEventId,
+            authorPubkey: listAuthor,
+            reason: ContentFilterReason.harassment,
+            details: any(named: 'details'),
+            sourceRelay: any(named: 'sourceRelay'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+            additionalContext: captureAny(named: 'additionalContext'),
+            addressableCoordinate: coordinate,
+          ),
+        ).captured.single;
+        expect(context, contains('Best skate clips'));
+      },
+    );
+  });
+
   group('moderation DM integration', () {
     late MockNostrClient mockNostrClient;
     late _MockDmRepository mockDmRepository;

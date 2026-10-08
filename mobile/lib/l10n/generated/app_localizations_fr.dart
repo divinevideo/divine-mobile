@@ -6321,6 +6321,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listDeleteAction => 'Supprimer la liste';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Supprimer la liste ?';
 
   @override

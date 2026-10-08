@@ -23,6 +23,8 @@ class ReportTarget extends Equatable {
     this.sourceRelay,
     this.sha256,
     this.videoUrl,
+    this.additionalContext,
+    this.addressableCoordinate,
   });
 
   /// Id of the reported event. Synthetic (`user_<pubkey>`) for a user
@@ -43,6 +45,14 @@ class ReportTarget extends Equatable {
   /// Canonical fallback for [sha256] — Blossom URLs carry the
   /// content-addressed hash in their path.
   final String? videoUrl;
+
+  /// Extra text for the report, such as the title of a reported list, so a
+  /// moderator can tell what was reported without opening it.
+  final String? additionalContext;
+
+  /// The `<kind>:<pubkey>:<d>` coordinate of a reported addressable event,
+  /// such as a list. Published as an `a` tag beside the NIP-56 targets.
+  final String? addressableCoordinate;
 
   /// Header used in the moderation DM (e.g. "Content Report"). Internal-only.
   final String moderationKindLabel;
@@ -73,6 +83,8 @@ class ReportTarget extends Equatable {
     sourceRelay,
     sha256,
     videoUrl,
+    additionalContext,
+    addressableCoordinate,
     moderationKindLabel,
     moderationEventLabel,
   ];
@@ -147,6 +159,8 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
               sourceRelay: _target.sourceRelay,
               moderationContent: content.toString().trimRight(),
               moderationTags: tags,
+              additionalContext: _target.additionalContext,
+              addressableCoordinate: _target.addressableCoordinate,
             );
       if (isClosed) return;
       emit(

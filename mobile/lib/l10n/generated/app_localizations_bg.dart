@@ -6292,6 +6292,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listDeleteAction => 'Изтрий списъка';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Да изтрием списъка?';
 
   @override

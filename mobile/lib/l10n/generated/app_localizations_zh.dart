@@ -5868,6 +5868,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDeleteAction => '删除列表';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => '删除列表？';
 
   @override

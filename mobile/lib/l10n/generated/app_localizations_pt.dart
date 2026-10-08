@@ -6282,6 +6282,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get listDeleteAction => 'Excluir lista';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Excluir lista?';
 
   @override

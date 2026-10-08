@@ -6228,6 +6228,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listDeleteAction => 'Ta bort lista';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Ta bort lista?';
 
   @override

@@ -26,12 +26,13 @@ import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _CuratedListAction { editInfo, managePosts, share, delete }
+enum _CuratedListAction { editInfo, managePosts, share, delete, report }
 
 class CuratedListFeedScreen extends ConsumerStatefulWidget {
   /// Route name for this screen.
@@ -138,6 +139,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         false;
     final list = localList ?? widget.discoveredList;
     final isShareable = (list?.isPublic ?? false) && list?.pubkey != null;
+    final reportTarget = _reportTarget(
+      list: list,
+      // Until the store loads, a list cannot be known not to be your own.
+      isOwnedKnown: serviceAsync.hasValue && !isOwned,
+    );
 
     final PreferredSizeWidget? appBar;
     if (_activeVideoIndex != null) {
@@ -167,6 +173,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
               onPressed: () =>
                   _showOwnerActions(canManagePosts: canManagePosts),
+              tooltip: context.l10n.curatedListActionsTooltip,
+            )
+          else if (reportTarget != null)
+            DiVineAppBarAction(
+              icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
+              onPressed: () => _showViewerActions(
+                target: reportTarget,
+                title: list?.name ?? widget.listName,
+              ),
               tooltip: context.l10n.curatedListActionsTooltip,
             ),
         ],
@@ -433,6 +448,66 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     _exitManageMode();
   }
 
+  /// What a report on someone else's list names, or null when it cannot be
+  /// reported yet: the viewer's own list (reporting it stays disabled, as it
+  /// is for videos), or a list with no known author.
+  ///
+  /// A list opened from search carries no record, so its current event is
+  /// looked up by author and d tag, the same lookup a shared link uses.
+  ({String eventId, String author})? _reportTarget({
+    required CuratedList? list,
+    required bool isOwnedKnown,
+  }) {
+    final author = list?.pubkey ?? widget.authorPubkey;
+    if (!isOwnedKnown || author == null) return null;
+    // Deep links can resolve an owned list before background sync adds it
+    // to the local store; an absent entry does not mean someone else owns it.
+    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
+    if (viewer != null && viewer.toLowerCase() == author.toLowerCase()) {
+      return null;
+    }
+    final eventId =
+        list?.nostrEventId ??
+        ref
+            .watch(
+              publicCuratedListProvider(
+                authorPubkey: author,
+                listId: widget.listId,
+              ),
+            )
+            .value
+            ?.nostrEventId;
+    return eventId == null ? null : (eventId: eventId, author: author);
+  }
+
+  Future<void> _showViewerActions({
+    required ({String eventId, String author}) target,
+    required String title,
+  }) async {
+    final action = await VineBottomSheet.show<_CuratedListAction>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      children: [
+        _OwnerActionTile(
+          identifier: 'list_report_option',
+          label: context.l10n.listReportAction,
+          icon: DivineIconName.flag,
+          action: _CuratedListAction.report,
+        ),
+      ],
+    );
+    if (!mounted || action != _CuratedListAction.report) return;
+    await ReportContentDialog.showForList(
+      context,
+      kind: ReportedListKind.videos,
+      eventId: target.eventId,
+      authorPubkey: target.author,
+      dTag: widget.listId,
+      title: title,
+    );
+  }
+
   CuratedList? _localList() => ref
       .read(curatedListsStateProvider.notifier)
       .service
@@ -491,6 +566,9 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         await _shareList();
       case _CuratedListAction.delete:
         await _confirmDeleteList();
+      case _CuratedListAction.report:
+        // Not offered on the owner's sheet: you cannot report your own list.
+        break;
     }
   }
 

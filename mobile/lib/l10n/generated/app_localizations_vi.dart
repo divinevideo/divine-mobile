@@ -6202,6 +6202,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listDeleteAction => 'Xóa danh sách';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Xóa danh sách?';
 
   @override

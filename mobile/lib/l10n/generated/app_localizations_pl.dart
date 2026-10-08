@@ -6393,6 +6393,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listDeleteAction => 'Usuń listę';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Usunąć listę?';
 
   @override

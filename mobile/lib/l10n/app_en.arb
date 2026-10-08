@@ -4114,6 +4114,10 @@
   "curatedListDeleteFailed": "Couldn't delete list",
   "peopleListsActionsTooltip": "List actions",
   "listDeleteAction": "Delete list",
+  "listReportAction": "Report list",
+  "@listReportAction": {
+    "description": "Menu action on someone else's video or people list that opens the report sheet for that list."
+  },
   "peopleListsDeleteConfirmTitle": "Delete list?",
   "peopleListsDeleteConfirmBody": "This removes the list for everyone. The people in it will not be unfollowed.",
   "peopleListsDeleteFailed": "Couldn't delete list",

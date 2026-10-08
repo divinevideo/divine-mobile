@@ -6242,6 +6242,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDeleteAction => 'فہرست حذف کریں';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'فہرست حذف کریں؟';
 
   @override

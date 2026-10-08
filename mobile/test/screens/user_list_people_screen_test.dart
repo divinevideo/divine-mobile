@@ -52,6 +52,7 @@ UserList _buildList({
   String name = 'Close Friends',
   List<String> pubkeys = const [],
   bool isEditable = true,
+  String? nostrEventId,
 }) {
   final now = DateTime.utc(2025);
   return UserList(
@@ -61,6 +62,7 @@ UserList _buildList({
     createdAt: now,
     updatedAt: now,
     isEditable: isEditable,
+    nostrEventId: nostrEventId,
   );
 }
 
@@ -710,6 +712,84 @@ void main() {
 
         expect(find.byType(PeopleListMembersPreview), findsNothing);
         expect(find.text(l10n.peopleListsViewAllMembers), findsNothing);
+      });
+    });
+
+    group('report list', () {
+      Future<void> pumpList(
+        WidgetTester tester, {
+        required UserList list,
+        String? ownerPubkey,
+      }) async {
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [if (list.isEditable) list],
+          ),
+        );
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              if (ownerPubkey != null)
+                publicPeopleListProvider(
+                  ownerPubkey: ownerPubkey,
+                  listId: list.id,
+                ).overrideWith((ref) async => list),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: UserListPeopleScreen(
+                  listId: list.id,
+                  ownerPubkey: ownerPubkey,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets("opens the report sheet from someone else's list", (
+        tester,
+      ) async {
+        await pumpList(
+          tester,
+          list: _buildList(
+            id: 'crew',
+            isEditable: false,
+            nostrEventId: 'e' * 64,
+          ),
+          ownerPubkey: _otherOwnerPubkey,
+        );
+
+        await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listReportAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      });
+
+      testWidgets('offers no report on your own list', (tester) async {
+        await pumpList(
+          tester,
+          list: _buildList(id: 'crew', nostrEventId: 'e' * 64),
+        );
+
+        await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+        await tester.pumpAndSettle();
+
+        // The owner's own actions are there; reporting is not.
+        expect(find.text(l10n.listDeleteAction), findsOneWidget);
+        expect(find.text(l10n.listReportAction), findsNothing);
       });
     });
 
