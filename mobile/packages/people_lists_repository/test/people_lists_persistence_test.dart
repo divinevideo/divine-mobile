@@ -167,10 +167,20 @@ void main() {
             ['p', _alice],
           ], ''),
         );
-        when(() => client.queryEvents(any())).thenAnswer((call) async {
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((call) async {
           final filter =
               (call.positionalArguments.single as List<Filter>).single;
-          return events.take(filter.limit!).toList();
+          return (
+            events: events.take(filter.limit!).toList(),
+            timedOut: false,
+            noRelays: false,
+          );
         });
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
@@ -181,7 +191,13 @@ void main() {
             .toList();
         expect(results.single, hasLength(2));
         final filter =
-            (verify(() => client.queryEvents(captureAny())).captured.single
+            (verify(
+                      () => client.queryEventsDetailed(
+                        captureAny(),
+                        timeout: kPublicPeopleListsRelayReadTimeout,
+                        requireAllRelaysSettled: true,
+                      ),
+                    ).captured.single
                     as List<Filter>)
                 .single;
         expect(filter.limit, greaterThanOrEqualTo(500));
@@ -207,7 +223,15 @@ void main() {
               createdAt: 1700000000 + i,
             ),
         ];
-        when(() => client.queryEvents(any())).thenAnswer((_) async => events);
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: false, noRelays: false),
+        );
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
@@ -226,15 +250,25 @@ void main() {
 
     test('public search excludes block and notify machinery sets', () async {
       final client = _Client();
-      when(() => client.queryEvents(any())).thenAnswer(
-        (_) async => [
-          for (final id in ['block', 'notify', 'crew'])
-            Event(_owner, 30000, [
-              ['d', id],
-              ['title', 'Matching'],
-              ['p', _alice],
-            ], ''),
-        ],
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          timeout: kPublicPeopleListsRelayReadTimeout,
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: [
+            for (final id in ['block', 'notify', 'crew'])
+              Event(_owner, 30000, [
+                ['d', id],
+                ['title', 'Matching'],
+                ['p', _alice],
+              ], ''),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ),
       );
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
