@@ -1258,8 +1258,15 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                       expanded: true,
                       onPressed: performance.video.id.isEmpty
                           ? null
-                          : () => context.push(
-                              VideoDetailScreen.pathForId(performance.video.id),
+                          : () => runDetached(
+                              context.push<void>(
+                                VideoDetailScreen.pathForId(
+                                  performance.video.id,
+                                ),
+                              ),
+                              'open post video',
+                              logName: 'CreatorAnalyticsScreen',
+                              category: LogCategory.ui,
                             ),
                     ),
                   ],
