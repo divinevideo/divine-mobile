@@ -53,6 +53,8 @@ class _FakeCuratedListsState extends CuratedListsState {
   Future<List<CuratedList>> build() async => const [];
 
   void notifyRecoveryChanged() => state = AsyncData(List<CuratedList>.empty());
+
+  void notifyListsChanged(List<CuratedList> lists) => state = AsyncData(lists);
 }
 
 // Full-length 64-char identifiers — never truncate.
@@ -309,7 +311,7 @@ void main() {
     );
 
     testWidgets(
-      'failed recovery keeps accepted feedback and does not invite resubmission',
+      'failed recovery shows its failure alongside accepted feedback without resubmission',
       (tester) async {
         final pending = list(isPublic: false).copyWith(
           pendingVisibility: const CuratedListVisibility(
@@ -328,7 +330,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(l10n.listPermissionsRecoveryPending), findsOneWidget);
         expect(find.text(l10n.listRetrySync), findsOneWidget);
-        expect(find.byType(ListInfoFailureMessage), findsNothing);
+        expect(find.byType(ListInfoFailureMessage), findsOneWidget);
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
         expect(visibilityTile(tester).onChanged, isNull);
         verify(() => service.retryListSync(_listId)).called(1);
         verifyNever(() => service.updateList(listId: any(named: 'listId')));
@@ -348,6 +351,82 @@ void main() {
         expect(find.text(l10n.listRetrySync), findsOneWidget);
         expect(find.byType(ListInfoFailureMessage), findsNothing);
         expect(visibilityTile(tester).onChanged, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'Sync preserves typed edits and still requires privacy confirmation',
+      (
+        tester,
+      ) async {
+        final saved = list().copyWith(pendingRepublish: true);
+        var current = saved;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(() => service.retryListSync(_listId)).thenAnswer((_) async {
+          current = saved.copyWith(pendingRepublish: false);
+          return true;
+        });
+        await openSheet(tester, existingList: saved);
+        await tester.enterText(find.byType(TextField).first, 'Draft name');
+        await tester.enterText(
+          find.byType(TextField).last,
+          'Draft description',
+        );
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        expect(visibilityTile(tester).value, isFalse);
+
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Draft name'), findsOneWidget);
+        expect(find.text('Draft description'), findsOneWidget);
+        expect(visibilityTile(tester).value, isFalse);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        verify(() => service.retryListSync(_listId)).called(1);
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listMakePrivateTitle), findsOneWidget);
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        expect(find.text('Draft name'), findsOneWidget);
+        expect(visibilityTile(tester).value, isFalse);
+      },
+    );
+
+    testWidgets(
+      'background delivery updates Sync without replacing visible drafts',
+      (
+        tester,
+      ) async {
+        final saved = list().copyWith(pendingRepublish: true);
+        var current = saved;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        await openSheet(tester, existingList: saved);
+        await tester.enterText(find.byType(TextField).first, 'Draft name');
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ListInfoForm)),
+        );
+        final notifier = container.read(
+          curatedListsStateProvider.notifier,
+        ) as _FakeCuratedListsState;
+        current = saved.copyWith(pendingRepublish: false);
+
+        notifier.notifyListsChanged([current]);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        expect(find.text(l10n.listRecoveryPending), findsNothing);
+        expect(find.text('Draft name'), findsOneWidget);
+        expect(visibilityTile(tester).value, isFalse);
+        expect(visibilityTile(tester).onChanged, isNotNull);
+        verifyNever(() => service.retryListSync(any()));
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
       },
     );
 
