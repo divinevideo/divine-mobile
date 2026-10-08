@@ -35,8 +35,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
        _currentOwnerPubkey = currentOwnerPubkey,
        _openingOwnerPubkey = currentOwnerPubkey(),
        _listOwnerPubkey = existingList?.pubkey,
-       _listId = existingList?.id,
-       _listLookupId = existingList?.authorScopedId,
+       _listId = existingList?.authorScopedId,
        _storedCollaborators = existingList?.allowedCollaborators ?? const [],
        _videoEventId = videoEventId,
        super(
@@ -58,8 +57,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   final String? Function() _currentOwnerPubkey;
   final String? _openingOwnerPubkey;
   final String? _listOwnerPubkey;
+  // The local coordinate is author-qualified; the model retains its raw d-tag.
   final String? _listId;
-  final String? _listLookupId;
 
   bool get isSessionCurrent =>
       _openingOwnerPubkey != null &&
@@ -105,7 +104,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   }
 
   CuratedList? _currentList(CuratedListService service) {
-    final lookupId = _listLookupId;
+    final lookupId = _listId;
     if (lookupId == null || _listOwnerPubkey != _openingOwnerPubkey) {
       return null;
     }
@@ -324,7 +323,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         // closes and the opener hands the outcome to its caller.
         final videoAdded =
             videoEventId == null ||
-            await service.addVideoToList(created.id, videoEventId);
+            await service.addVideoToList(created.authorScopedId, videoEventId);
         if (!isSessionCurrent) {
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
           return;
@@ -332,7 +331,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         final pendingVideo =
             !videoAdded &&
             service
-                    .getListById(created.id)
+                    .getListById(created.authorScopedId)
                     ?.videoEventIds
                     .contains(videoEventId) ==
                 true;
