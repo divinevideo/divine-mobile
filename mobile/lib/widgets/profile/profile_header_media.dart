@@ -482,27 +482,35 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         size: avatarSize,
       );
       final hasAvatar = imageUrl != null && imageUrl!.isNotEmpty;
-      final tappableAvatar = hasAvatar
-          ? GestureDetector(
-              onTap: () => _showAvatarLightbox(
-                context,
-                imageUrl: imageUrl,
-                userIdHex: userIdHex,
-              ),
-              child: Hero(
-                tag: _avatarHeroTag(userIdHex),
-                flightShuttleBuilder: (_, _, _, _, _) =>
-                    _AvatarHeroFlightShuttle(
-                      imageUrl: imageUrl,
-                      userIdHex: userIdHex,
-                    ),
-                child: avatarWidget,
-              ),
-            )
-          : avatarWidget;
+      Widget tappableAvatar({void Function(Animation<double>)? onOpened}) {
+        if (!hasAvatar) return avatarWidget;
+        return GestureDetector(
+          onTap: () {
+            final transition = _showAvatarLightbox(
+              context,
+              imageUrl: imageUrl,
+              userIdHex: userIdHex,
+            );
+            onOpened?.call(transition);
+          },
+          child: Hero(
+            tag: _avatarHeroTag(userIdHex),
+            flightShuttleBuilder: (_, _, _, _, _) => _AvatarHeroFlightShuttle(
+              imageUrl: imageUrl,
+              userIdHex: userIdHex,
+            ),
+            child: avatarWidget,
+          ),
+        );
+      }
+
       avatar = showSupporterTreatment
-          ? SupporterHaloWings(avatarSize: avatarSize, child: tappableAvatar)
-          : tappableAvatar;
+          ? SupporterHaloWings(
+              avatarSize: avatarSize,
+              builder: (context, trackCover) =>
+                  tappableAvatar(onOpened: trackCover),
+            )
+          : tappableAvatar();
     }
 
     if (pendingActions.isEmpty) return avatar;
@@ -703,7 +711,9 @@ class _AvatarHeroFlightShuttle extends StatelessWidget {
   }
 }
 
-void _showAvatarLightbox(
+/// Opens the lightbox and returns its route animation, so decorations around
+/// the header avatar can follow the transition both ways.
+Animation<double> _showAvatarLightbox(
   BuildContext context, {
   required String userIdHex,
   String? imageUrl,
@@ -716,18 +726,23 @@ void _showAvatarLightbox(
   // from the current PageRoute of nested navigators, so the header avatar
   // (branch) and the lightbox (root) are matched. A PageRoute — not a
   // PopupRoute like showGeneralDialog — is required for the HeroController.
-  Navigator.of(context, rootNavigator: true).push<void>(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierColor: VineTheme.transparent,
-      barrierDismissible: true,
-      barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-      pageBuilder: (context, _, _) =>
-          _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
-      transitionsBuilder: (context, animation, _, child) =>
-          FadeTransition(opacity: animation, child: child),
-    ),
+  final route = PageRouteBuilder<void>(
+    opaque: false,
+    barrierColor: VineTheme.transparent,
+    barrierDismissible: true,
+    barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
+    pageBuilder: (context, _, _) =>
+        _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+    transitionsBuilder: (context, animation, _, child) =>
+        FadeTransition(opacity: animation, child: child),
   );
+  _runProfileDetached(
+    _awaitProfileResult(
+      Navigator.of(context, rootNavigator: true).push<void>(route),
+    ),
+    'open avatar lightbox',
+  );
+  return route.animation!;
 }
 
 class _AvatarLightbox extends StatelessWidget {
