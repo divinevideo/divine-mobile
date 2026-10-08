@@ -255,7 +255,14 @@ class UserDataCleanupService {
           isIdentityChange: false,
           deleteUserData: true,
         );
-    await requiredCleanup.record(_prefs);
+    try {
+      await requiredCleanup.record(_prefs);
+    } on Object {
+      if (PendingAccountCleanup.readbackUnknown(_prefs)) {
+        _listSessions.markRecoveryReadbackUnknown();
+      }
+      rethrow;
+    }
     if (!await CuratedListRecoveryStorage.verifyValue(
       _prefs,
       PendingAccountCleanup.storageKey,
@@ -321,7 +328,14 @@ class UserDataCleanupService {
       deleteUserData: true,
       preserveActiveSession: preserveActiveSession,
     );
-    await requiredCleanup.complete(_prefs);
+    try {
+      await requiredCleanup.complete(_prefs);
+    } on Object {
+      if (PendingAccountCleanup.readbackUnknown(_prefs)) {
+        _listSessions.markRecoveryReadbackUnknown();
+      }
+      rethrow;
+    }
     if (!await CuratedListRecoveryStorage.verifyValue(
       _prefs,
       PendingAccountCleanup.storageKey,

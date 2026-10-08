@@ -93,7 +93,8 @@ abstract final class CuratedListRecoveryStorage {
           final fields = row as Map<String, dynamic>;
           final list = CuratedList.fromJson(fields);
           final owner = _provenRecoveryOwner(list.pubkey);
-          if (owner != null && _provenRowOwner(fields) == null) {
+          if (owner != null && _provenRowOwner(fields) == null ||
+              list.pubkey == null && _hasExplicitRecoveryOwnerLabels(fields)) {
             corrupt = true;
             continue;
           }

@@ -482,7 +482,7 @@ void main() {
     store.failReadback = true;
     await expectLater(
       deleteAlice(),
-      throwsA(isA<CuratedListRecoveryException>()),
+      throwsStateError,
     );
     expect(journal.needsRepair(_bob), isTrue);
     store.failReadback = false;
@@ -633,7 +633,9 @@ void main() {
       store.lyingKey = guardedKey;
       await expectLater(
         deleteAlice(),
-        throwsA(isA<CuratedListRecoveryException>()),
+        guardedKey == PendingAccountCleanup.storageKey
+            ? throwsStateError
+            : throwsA(isA<CuratedListRecoveryException>()),
       );
       await restart();
       expect(prefs.getString(archiveKey), original);

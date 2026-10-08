@@ -21,6 +21,9 @@ String? _provenRecoveryOwner(Object? value) =>
     ? value.toLowerCase()
     : null;
 
+bool _hasExplicitRecoveryOwnerLabels(Map<dynamic, dynamic> row) =>
+    row.containsKey('ownerPubkey') || row.containsKey('authorPubkey');
+
 String? _provenRowOwner(Map<dynamic, dynamic> row) {
   final owner = _provenRecoveryOwner(row['pubkey']);
   if (owner == null) return null;
@@ -44,6 +47,14 @@ class _SharedRecoveryVerdict {
   final Object? marker;
   final Object? archive;
   final _SharedRecoveryScope scope;
+}
+
+bool _hasSharedRecoveryProvenance(Map<String, dynamic> archive) {
+  final rawBuckets = archive['rawBuckets'];
+  final recordBackups = archive['recordBackups'];
+  return rawBuckets is List && rawBuckets.isNotEmpty ||
+      recordBackups is List && recordBackups.isNotEmpty ||
+      archive['originalLiveValue'] != null;
 }
 
 const _archiveFields = {
@@ -83,10 +94,13 @@ _SharedRecoveryScope _sharedRecoveryScope(
       var damaged = false;
       var unknownPending = false;
       try {
-        final row = CuratedList.fromJson(value as Map<String, dynamic>);
+        final fields = value as Map<String, dynamic>;
+        final row = CuratedList.fromJson(fields);
         unknownPending =
             owner == null &&
-            (row.pubkey != null || legacyOwner == null) &&
+            (row.pubkey != null ||
+                legacyOwner == null ||
+                _hasExplicitRecoveryOwnerLabels(fields)) &&
             (row.pendingPlaintextEventIds.isNotEmpty ||
                 row.hasPendingPermissionRecovery);
       } on Object {
@@ -128,11 +142,7 @@ _SharedRecoveryScope _sharedRecoveryScope(
     if (unresolved != null && (unresolved is! List || unresolved.isNotEmpty)) {
       scope.unknown = true;
     }
-    final rawBuckets = decoded['rawBuckets'];
-    final recordBackups = decoded['recordBackups'];
-    if ((rawBuckets is! List || rawBuckets.isEmpty) &&
-        (recordBackups is! List || recordBackups.isEmpty) &&
-        decoded['originalLiveValue'] == null) {
+    if (!_hasSharedRecoveryProvenance(decoded)) {
       scope.unknown = true;
     }
     return scope;
@@ -191,6 +201,9 @@ _SharedRecoveryRedaction _redactSharedRecovery(
   } else if (decoded is Map<String, dynamic> && decoded['version'] == 2) {
     final archive = Map<String, dynamic>.of(decoded);
     unknown |= decoded.keys.any((key) => !_archiveFields.contains(key));
+    unknown |=
+        decoded['needsRepair'] != false &&
+        !_hasSharedRecoveryProvenance(decoded);
     for (final field in ['rawBuckets', 'recordBackups']) {
       final buckets = decoded[field];
       if (buckets == null) continue;
