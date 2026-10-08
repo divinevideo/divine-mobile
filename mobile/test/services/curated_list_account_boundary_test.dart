@@ -51,8 +51,6 @@ class _Preferences extends Fake implements SharedPreferences {
   Set<String> getKeys() => backing.getKeys();
   @override
   bool containsKey(String key) => backing.containsKey(key);
-  @override
-  Object? get(String key) => backing.get(key);
 
   @override
   String? getString(String key) => backing.getString(key);
@@ -64,8 +62,6 @@ class _Preferences extends Fake implements SharedPreferences {
   int? getInt(String key) => backing.getInt(key);
   @override
   Future<bool> setInt(String key, int value) => backing.setInt(key, value);
-  @override
-  Future<void> reload() => backing.reload();
   @override
   Future<bool> remove(String key) =>
       rejectRemoval ||
