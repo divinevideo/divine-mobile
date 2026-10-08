@@ -3052,6 +3052,8 @@
     "appearanceSettingsSystem": "Sistem varsayılanı",
     "appearanceSettingsLight": "Açık",
     "appearanceSettingsDark": "Koyu",
+    "videoOverlayTotalLoops": "{count, plural, one{{authorName}: {compactCount} döngü} other{{authorName}: {compactCount} döngü}}",
+    "videoOverlayVideoLoops": "bu videoda {compactCount} {count, plural, one{döngü} other{döngü}}",
     "generalSettingsClosedCaptions": "Altyazılar",
     "generalSettingsClosedCaptionsSubtitle": "Videolarda altyazı varsa göster",
     "generalSettingsVideoShapeSquareOnly": "Sadece kare videolar",

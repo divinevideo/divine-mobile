@@ -350,6 +350,40 @@ class AppLocalizationsAr extends AppLocalizations {
       'أبقِ التغذيات بالشكل المربّع الكلاسيكي';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تكرار',
+      many: 'تكرارًا',
+      few: 'تكرارات',
+      two: 'تكرار',
+      one: 'تكرار',
+      zero: 'تكرار',
+    );
+    return '$compactCount $_temp0 لـ$authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'دورة',
+      many: 'دورةً',
+      few: 'دورات',
+      two: 'دورة',
+      one: 'دورة',
+      zero: 'دورة',
+    );
+    return '$compactCount $_temp0 لهذا الفيديو';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'إظهار إجمالي التكرارات';
 
   @override

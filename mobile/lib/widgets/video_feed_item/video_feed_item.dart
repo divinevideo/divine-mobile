@@ -3,9 +3,11 @@
 // ABOUTME: SCOPE: Non-feed detail use cases only (e.g. debug screens).
 // ABOUTME: Feed surfaces must use PooledFullscreenVideoFeedScreen / FeedVideos instead.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -290,7 +292,7 @@ class VideoOverlayActions extends ConsumerWidget {
         Positioned(
           bottom: bottomOffset,
           left: 16,
-          right: 80, // Leave space for action buttons
+          right: 68, // Leave space for action buttons
           child: AnimatedOpacity(
             opacity: isActive ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -487,6 +489,8 @@ class VideoOverlayActions extends ConsumerWidget {
                                             ),
                                             _VideoCardMetaLine(
                                               authorPubkey: authorPubkey,
+                                              authorName: displayName,
+                                              video: video,
                                             ),
                                           ],
                                         ),
@@ -689,22 +693,50 @@ class VideoOverlayActions extends ConsumerWidget {
   }
 }
 
-/// The line under a video card's author name: the author's lifetime loop
-/// total across every video they have published.
-///
-/// The figure describes the creator, not the clip, so it never changes between
-/// their videos and never reads as a verdict on one. The post date is
-/// deliberately omitted, so an old timestamp cannot make the feed read as
-/// inactive; the metadata sheet carries it.
-///
-/// Rendered only when the viewer has total loops on
-/// ([StatsVisibilityPreferences.showTotalLoops], on by default), and only
-/// while the total is known (`null`), rather than an empty row or a
-/// placeholder zero. The stats lookup starts only once the total is shown.
+/// One field of the video meta line, split around its emphasized count.
+class _MetaLineField {
+  const _MetaLineField.plain(this.before) : count = null, after = '';
+
+  /// Locates [count] by rendering [format] with a marker in its place, so the
+  /// emphasis cannot land on the same digits elsewhere, e.g. in a name.
+  factory _MetaLineField.counted(
+    String count,
+    String Function(String count) format,
+  ) {
+    final marked = format(_countMarker);
+    final offset = marked.indexOf(_countMarker);
+    if (offset < 0) return _MetaLineField.plain(format(count));
+    return _MetaLineField._(
+      before: marked.substring(0, offset),
+      count: count,
+      after: marked.substring(offset + _countMarker.length),
+    );
+  }
+
+  const _MetaLineField._({
+    required this.before,
+    required this.count,
+    required this.after,
+  });
+
+  static const _countMarker = '\uE000';
+
+  final String before;
+  final String? count;
+  final String after;
+}
+
+/// Viewer-selected creator total, video loops, and publish date under the name.
 class _VideoCardMetaLine extends ConsumerWidget {
-  const _VideoCardMetaLine({required this.authorPubkey});
+  const _VideoCardMetaLine({
+    required this.authorPubkey,
+    required this.authorName,
+    required this.video,
+  });
 
   final String authorPubkey;
+  final String authorName;
+  final VideoEvent? video;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -713,36 +745,174 @@ class _VideoCardMetaLine extends ConsumerWidget {
     return ListenableBuilder(
       listenable: statsVisibility,
       builder: (context, _) {
-        if (!statsVisibility.showTotalLoops) return const SizedBox.shrink();
-
-        return _AuthorTotalLoops(authorPubkey: authorPubkey);
+        if (!statsVisibility.showTotalLoops &&
+            !statsVisibility.showVideoLoops &&
+            !statsVisibility.showPublishedDate) {
+          return const SizedBox.shrink();
+        }
+        return _VideoMetaLineContent(
+          authorPubkey: authorPubkey,
+          authorName: authorName,
+          video: video,
+          showTotalLoops: statsVisibility.showTotalLoops,
+          showVideoLoops: statsVisibility.showVideoLoops,
+          showPublishedDate: statsVisibility.showPublishedDate,
+        );
       },
     );
   }
 }
 
-class _AuthorTotalLoops extends ConsumerWidget {
-  const _AuthorTotalLoops({required this.authorPubkey});
+class _VideoMetaLineContent extends ConsumerWidget {
+  const _VideoMetaLineContent({
+    required this.authorPubkey,
+    required this.authorName,
+    required this.video,
+    required this.showTotalLoops,
+    required this.showVideoLoops,
+    required this.showPublishedDate,
+  });
 
   final String authorPubkey;
+  final String authorName;
+  final VideoEvent? video;
+  final bool showTotalLoops;
+  final bool showVideoLoops;
+  final bool showPublishedDate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authorStats = ref
-        .watch(videoCardAuthorStatsProvider(authorPubkey))
-        .value;
+    final authorStats = showTotalLoops
+        ? ref.watch(videoCardAuthorStatsProvider(authorPubkey)).value
+        : null;
     final totalLoops = authorStats?.hasKnownTotalViews == true
         ? authorStats!.totalViews
         : null;
-    if (totalLoops == null || totalLoops <= 0) return const SizedBox.shrink();
+    final video = this.video;
+    final showVideoCount =
+        showVideoLoops && video != null && video.hasLoopMetadata;
+    final publishedAtSeconds = video == null
+        ? null
+        : int.tryParse(video.publishedAt ?? '') ?? video.createdAt;
+    final publishedAt =
+        !showPublishedDate ||
+            video == null ||
+            video.hasUnknownOriginalDate ||
+            publishedAtSeconds == null ||
+            publishedAtSeconds <= 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            publishedAtSeconds * 1000,
+            isUtc: true,
+          );
+    final compactTotal = totalLoops == null
+        ? null
+        : StringUtils.formatCompactNumber(totalLoops);
+    final compactVideo = showVideoCount
+        ? StringUtils.formatCompactNumber(video.totalLoops)
+        : null;
+    final l10n = context.l10n;
+    final parts = <_MetaLineField>[
+      if (totalLoops != null && totalLoops > 0 && showVideoCount)
+        _MetaLineField.counted(
+          compactTotal!,
+          (count) => l10n.videoOverlayTotalLoops(count, totalLoops, authorName),
+        ),
+      if (totalLoops != null && totalLoops > 0 && !showVideoCount)
+        _MetaLineField.counted(
+          compactTotal!,
+          (count) => l10n.videoFeedLoopCountLine(count, totalLoops),
+        ),
+      if (showVideoCount)
+        _MetaLineField.counted(
+          compactVideo!,
+          (count) => l10n.videoOverlayVideoLoops(count, video.totalLoops),
+        ),
+      if (publishedAt != null)
+        _MetaLineField.plain(
+          (publishedAt.year == clock.now().toUtc().year
+                  ? DateFormat.MMMd(Localizations.localeOf(context).toString())
+                  : DateFormat.yMd(Localizations.localeOf(context).toString()))
+              .format(publishedAt),
+        ),
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
 
-    return Text(
-      context.l10n.videoFeedLoopCountLine(
-        StringUtils.formatCompactNumber(totalLoops),
-        totalLoops,
+    final fieldStyle = VineTheme.labelSmallFont(
+      color: VineTheme.whiteText.withValues(alpha: 0.82),
+    ).copyWith(fontWeight: FontWeight.w400, letterSpacing: -0.1);
+    final countStyle = fieldStyle.copyWith(
+      color: VineTheme.whiteText,
+      fontWeight: FontWeight.w600,
+    );
+    final separator = TextSpan(
+      text: '\u2009·\u2009',
+      style: fieldStyle.copyWith(
+        color: VineTheme.whiteText.withValues(alpha: 0.5),
       ),
-      // Sits on the video next to the white author name.
-      style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
+    );
+    TextSpan fieldSpan(_MetaLineField part) {
+      final count = part.count;
+      if (count == null) return TextSpan(text: part.before);
+      return TextSpan(
+        children: [
+          TextSpan(text: part.before),
+          TextSpan(text: count, style: countStyle),
+          TextSpan(text: part.after),
+        ],
+      );
+    }
+
+    final fieldSpans = parts.map(fieldSpan).toList();
+    final spans = <InlineSpan>[
+      for (var index = 0; index < fieldSpans.length; index++) ...[
+        if (index > 0) separator,
+        fieldSpans[index],
+      ],
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final text = TextSpan(style: fieldStyle, children: spans);
+        final painter = TextPainter(
+          text: text,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        final fitsOnOneLine = painter.width <= constraints.maxWidth;
+        painter.dispose();
+        if (fitsOnOneLine) {
+          return Text.rich(
+            text,
+            key: const Key('video_meta_line'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+        }
+
+        return Row(
+          key: const Key('video_meta_line'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < fieldSpans.length; index++) ...[
+              if (index > 0) Text.rich(separator, style: fieldStyle),
+              if (parts[index].count == null)
+                Text.rich(fieldSpans[index], style: fieldStyle)
+              else
+                Flexible(
+                  flex: index == 0 && fieldSpans.length > 1 ? 1 : 2,
+                  child: Text.rich(
+                    fieldSpans[index],
+                    style: fieldStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

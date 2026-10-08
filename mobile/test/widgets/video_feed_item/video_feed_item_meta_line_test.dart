@@ -1,9 +1,10 @@
-// ABOUTME: Widget tests for the video card's author lifetime-loops meta line.
-// ABOUTME: Pins the author total (not the video's), the chits, the author node.
+// ABOUTME: Widget tests for the viewer-selected video metadata line.
+// ABOUTME: Pins independent creator/video/date settings and the author node.
 
 import 'dart:async';
 
-import 'package:flutter/semantics.dart';
+import 'package:clock/clock.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
@@ -41,11 +43,19 @@ class _MockAuthService extends Mock implements AuthService {}
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 
+String _metaLine(WidgetTester tester) => tester
+    .widget<Text>(find.byKey(const Key('video_meta_line')))
+    .textSpan!
+    .toPlainText();
+
 VideoEvent _video({
   String pubkey = _authorPubkey,
+  String authorName = 'Kayl',
   Map<String, String> rawTags = const {},
+  int? createdAt,
+  String? publishedAt,
 }) {
-  final at = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  final at = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
   return VideoEvent(
     id: 'video-card-meta-line-test-0123456789abcdef0123456789abcdef0123',
     pubkey: pubkey,
@@ -53,6 +63,8 @@ VideoEvent _video({
     content: 'caption',
     timestamp: DateTime.fromMillisecondsSinceEpoch(at * 1000, isUtc: true),
     rawTags: rawTags,
+    publishedAt: publishedAt,
+    authorName: authorName,
   );
 }
 
@@ -68,12 +80,10 @@ void main() {
     mockRepostsRepository = _MockRepostsRepository();
     mockAuthService = _MockAuthService();
 
-    when(
-      () => mockInteractionsBloc.stream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockInteractionsBloc.state,
-    ).thenReturn(const VideoInteractionsState());
+    when(() => mockInteractionsBloc.stream)
+        .thenAnswer((_) => const Stream.empty());
+    when(() => mockInteractionsBloc.state)
+        .thenReturn(const VideoInteractionsState());
     when(
       () => mockRepostsRepository.fetchEventReposters(
         eventId: any(named: 'eventId'),
@@ -82,9 +92,8 @@ void main() {
     ).thenAnswer((_) async => const <String>[]);
     when(() => mockAuthService.currentPublicKeyHex).thenReturn(_strangerPubkey);
     when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-    when(
-      () => mockAuthService.authStateStream,
-    ).thenAnswer((_) => authStateController.stream);
+    when(() => mockAuthService.authStateStream)
+        .thenAnswer((_) => authStateController.stream);
   });
 
   tearDown(() => authStateController.close());
@@ -99,6 +108,7 @@ void main() {
     bool eligibilityIsLoading = false,
     SharedPreferences? prefs,
     void Function()? onAuthorStatsLookup,
+    Locale? locale,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -124,6 +134,7 @@ void main() {
           }),
         ],
         child: MaterialApp(
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -147,11 +158,395 @@ void main() {
     }
   }
 
-  String loopLine(WidgetTester tester, int count) => _l10n(
-    tester,
-  ).videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
+  String loopLine(WidgetTester tester, int count) => _l10n(tester)
+      .videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
 
   group('video card meta line', () {
+    testWidgets('shows all enabled details on one line under the username', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(rawTags: {'views': '3'}, createdAt: 1790726400),
+          authorTotalLoops: 78600,
+          prefs: prefs,
+        );
+      });
+
+      final line = tester.widget<Text>(
+        find.byKey(const Key('video_meta_line')),
+      );
+      final content = _metaLine(tester);
+      expect(content, contains("78.6K Kayl's loops"));
+      expect(content, contains("3 this video's loops"));
+      expect(content, contains('Sep 30'));
+      expect(content, contains('\u2009·\u2009'));
+      expect(content.indexOf('Kayl'), lessThan(content.indexOf('video')));
+      expect(content.indexOf('video'), lessThan(content.indexOf('Sep 30')));
+      expect(line.maxLines, 1);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byKey(const Key('video_meta_line')),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(
+        paragraph.didExceedMaxLines,
+        isFalse,
+        reason:
+            'available=${paragraph.constraints.maxWidth}, content=${paragraph.getMaxIntrinsicWidth(1000)}',
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('video_meta_line'))).right,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(VideoOverlayActionColumn)).left,
+        ),
+      );
+    });
+
+    testWidgets('shows video loops without looking up a disabled total', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(_metaLine(tester), "50K this video's loops");
+      expect(lookups, 0);
+    });
+
+    testWidgets('uses the singular for a video that looped once', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '1'}, createdAt: 1735689600),
+        prefs: prefs,
+      );
+
+      final content = _metaLine(tester);
+      expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
+      expect(content, "1 this video's loop");
+    });
+
+    testWidgets('emphasizes the count, not matching digits in the name', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      // Japanese puts the creator name before the count, so the name's digits
+      // come first in the rendered text.
+      await pump(
+        tester,
+        video: _video(
+          authorName: 'Creator 123',
+          rawTags: {'views': '5'},
+          createdAt: 1735689600,
+        ),
+        authorTotalLoops: 123,
+        prefs: prefs,
+        locale: const Locale('ja'),
+      );
+
+      final spans = <TextSpan>[];
+      tester
+          .widget<Text>(find.byKey(const Key('video_meta_line')))
+          .textSpan!
+          .visitChildren((span) {
+            if (span is TextSpan && span.text != null) spans.add(span);
+            return true;
+          });
+      final emphasized = spans
+          .where((span) => span.style?.fontWeight == FontWeight.w600)
+          .toList();
+      final total = lookupAppLocalizations(
+        const Locale('ja'),
+      ).videoOverlayTotalLoops('123', 123, 'Creator 123');
+      final totalCount = emphasized.first;
+      final before = spans[spans.indexOf(totalCount) - 1].text!;
+
+      expect(totalCount.text, '123');
+      expect(before, startsWith('Creator 123'));
+      expect(total, startsWith(before + totalCount.text!));
+    });
+
+    testWidgets('uses the singular for a creator total of one loop', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '1'}, createdAt: 1735689600),
+        authorTotalLoops: 1,
+        prefs: prefs,
+      );
+
+      expect(_metaLine(tester), startsWith("1 Kayl's loop\u2009"));
+    });
+
+    testWidgets('shows only the publish date when it alone is enabled', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      expect(_metaLine(tester), '1/1/2025');
+    });
+
+    testWidgets('uses a short, readable date for a video from this year', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final published = DateTime.utc(2026, 1, 15);
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(createdAt: published.millisecondsSinceEpoch ~/ 1000),
+          prefs: prefs,
+        );
+
+        expect(_metaLine(tester), 'Jan 15');
+      });
+    });
+
+    testWidgets('shows no line when every setting is disabled', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      expect(find.byKey(const Key('video_meta_line')), findsNothing);
+    });
+
+    testWidgets('omits unavailable values even when enabled', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'platform': 'vine'}, createdAt: 1735689600),
+        authorTotalLoops: 0,
+        prefs: prefs,
+      );
+
+      expect(find.byKey(const Key('video_meta_line')), findsNothing);
+    });
+
+    testWidgets('uses a valid published date when creation time is unknown', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(createdAt: 0, publishedAt: '1735689600'),
+        prefs: prefs,
+      );
+
+      expect(find.text('1/1/2025'), findsOneWidget);
+    });
+
+    testWidgets('keeps the details on one line on a narrow screen', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      final line = find.byKey(const Key('video_meta_line'));
+      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
+      expect(
+        find.descendant(of: line, matching: find.text('1/1/2025')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getRect(line).right,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(VideoOverlayActionColumn)).left,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps the video count and date visible for a long name', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(
+            authorName: 'AnExtraordinarilyLongCreatorName',
+            rawTags: {'views': '3'},
+            createdAt: 1790726400,
+          ),
+          authorTotalLoops: 78600,
+          prefs: prefs,
+        );
+      });
+
+      final line = find.byKey(const Key('video_meta_line'));
+      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
+      expect(
+        find.descendant(of: line, matching: find.text("3 this video's loops")),
+        findsOneWidget,
+      );
+      final videoCount = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.text("3 this video's loops"),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(videoCount.didExceedMaxLines, isFalse);
+      expect(
+        find.descendant(of: line, matching: find.text('Sep 30')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('adds and removes each field while the video stays mounted', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(VideoOverlayActions)),
+      ).read(statsVisibilityPreferencesProvider);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(true));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
+      await tester.runAsync(() => settings.setShowVideoLoops(true));
+      await tester.pump();
+      expect(
+        find.textContaining(
+          "23.2M Kayl's loops\u2009·\u200950K this video's loops",
+        ),
+        findsOneWidget,
+      );
+      await tester.runAsync(() => settings.setShowPublishedDate(true));
+      await tester.pump();
+      expect(find.textContaining('1/1/2025'), findsOneWidget);
+      await tester.runAsync(() => settings.setShowTotalLoops(false));
+      await tester.pump();
+      expect(find.textContaining("Kayl's loops"), findsNothing);
+      expect(find.textContaining("50K this video's loops"), findsOneWidget);
+    });
+
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
       tester,
     ) async {
@@ -195,8 +590,7 @@ void main() {
         authorTotalLoops: 23200000,
       );
 
-      // The card reports the author's body of work, so the per-video view tag
-      // is ignored even when it is large.
+      // Video loops are off by default, so only the creator total appears.
       expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
@@ -291,16 +685,14 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('never shows the post date, even beside a count', (
-      tester,
-    ) async {
+    testWidgets('hides the publish date by default', (tester) async {
       await pump(
         tester,
-        video: _video(rawTags: {'views': '50000'}),
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
         authorTotalLoops: 50000,
       );
 
-      expect(find.textContaining(_l10n(tester).timeVerboseNow), findsNothing);
+      expect(find.textContaining('1/1/2025'), findsNothing);
       expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 
@@ -330,6 +722,10 @@ void main() {
         reason: 'the labelled node must be the one that opens the profile',
       );
       expect(data.flagsCollection.isButton, isTrue);
+      expect(
+        tester.getRect(find.bySemanticsIdentifier('video_author_name')).width,
+        lessThan(200),
+      );
       handle.dispose();
     });
   });

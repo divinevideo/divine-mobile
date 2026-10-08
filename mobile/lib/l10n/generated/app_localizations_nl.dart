@@ -363,6 +363,32 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hou feeds in het klassieke vierkante formaat';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 van $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 van deze video';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Totaal aantal loops tonen';
 
   @override

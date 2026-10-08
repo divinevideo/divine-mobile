@@ -367,6 +367,34 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mantenha os feeds no formato quadrado clássico';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      many: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 de $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      many: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 deste vídeo';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Mostrar loops totais';
 
   @override

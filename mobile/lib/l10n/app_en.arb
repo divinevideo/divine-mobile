@@ -268,6 +268,23 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
+  "videoOverlayTotalLoops": "{compactCount} {authorName}'s {count, plural, =1{loop} other{loops}}",
+  "@videoOverlayTotalLoops": {
+    "description": "The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.",
+    "placeholders": {
+      "compactCount": {"type": "String"},
+      "count": {"type": "int"},
+      "authorName": {"type": "String"}
+    }
+  },
+  "videoOverlayVideoLoops": "{compactCount} this video's {count, plural, =1{loop} other{loops}}",
+  "@videoOverlayVideoLoops": {
+    "description": "The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.",
+    "placeholders": {
+      "compactCount": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
   "generalSettingsShowTotalLoops": "Show total loops",
   "generalSettingsShowTotalLoopsSubtitle": "The creator's loop count across all their videos",
   "generalSettingsShowVideoLoops": "Show video loops",

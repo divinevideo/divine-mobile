@@ -3045,6 +3045,8 @@
     "appearanceSettingsSystem": "システムのデフォルト",
     "appearanceSettingsLight": "ライト",
     "appearanceSettingsDark": "ダーク",
+    "videoOverlayTotalLoops": "{count, plural, other{{authorName}のループ{compactCount}回}}",
+    "videoOverlayVideoLoops": "この動画{compactCount}回{count, plural, other{ループ}}",
     "generalSettingsClosedCaptions": "字幕",
     "generalSettingsClosedCaptionsSubtitle": "動画に字幕がある場合に表示するよ",
     "generalSettingsVideoShapeSquareOnly": "正方形の動画のみ",
