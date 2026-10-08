@@ -6433,6 +6433,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDeleteAction => 'జాబితాను తొలగించండి';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'జాబితాను తొలగించాలా?';
 
   @override

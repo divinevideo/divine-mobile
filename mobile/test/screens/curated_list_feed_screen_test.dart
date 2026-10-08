@@ -285,6 +285,64 @@ void main() {
     });
 
     group('viewer actions', () {
+      // Full-length hex, never truncated.
+      final listEventId = 'e' * 64;
+      final listAuthor = 'b' * 64;
+
+      CuratedList reportableList() => CuratedList(
+        id: 'external-list',
+        name: 'External List',
+        pubkey: listAuthor,
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        nostrEventId: listEventId,
+      );
+
+      testWidgets("reports someone else's list from its menu", (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listReportAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      });
+
+      testWidgets(
+        'looks the list up to report it when opened without its event',
+        (tester) async {
+          await tester.pumpWidget(
+            buildSubject(
+              authorPubkey: listAuthor,
+              extraOverrides: [
+                publicCuratedListProvider(
+                  authorPubkey: listAuthor,
+                  listId: 'external-list',
+                ).overrideWith((ref) async => reportableList()),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.listReportAction), findsOneWidget);
+        },
+      );
+
       testWidgets('shows follow pill and share action for a public list', (
         tester,
       ) async {
@@ -483,6 +541,8 @@ void main() {
         expect(find.text(l10n.listManageVideosAction), findsOneWidget);
         expect(find.text(l10n.listShareAction), findsOneWidget);
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
+        // Reporting your own list stays disabled, as it is for videos.
+        expect(find.text(l10n.listReportAction), findsNothing);
       });
 
       testWidgets('sheet tiles activate through the semantics owner', (

@@ -6170,6 +6170,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDeleteAction => 'Listeyi sil';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Liste silinsin mi?';
 
   @override

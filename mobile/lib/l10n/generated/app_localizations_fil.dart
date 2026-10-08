@@ -6276,6 +6276,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listDeleteAction => 'Burahin ang list';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Burahin ang list?';
 
   @override

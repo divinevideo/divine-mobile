@@ -6160,6 +6160,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get listDeleteAction => 'Hapus daftar';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Hapus daftar?';
 
   @override

@@ -10637,6 +10637,12 @@ abstract class AppLocalizations {
   /// **'Delete list'**
   String get listDeleteAction;
 
+  /// Menu action on someone else's video or people list that opens the report sheet for that list.
+  ///
+  /// In en, this message translates to:
+  /// **'Report list'**
+  String get listReportAction;
+
   /// No description provided for @peopleListsDeleteConfirmTitle.
   ///
   /// In en, this message translates to:

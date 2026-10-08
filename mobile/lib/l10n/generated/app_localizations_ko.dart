@@ -5923,6 +5923,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listDeleteAction => '목록 삭제';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => '목록을 삭제할까요?';
 
   @override

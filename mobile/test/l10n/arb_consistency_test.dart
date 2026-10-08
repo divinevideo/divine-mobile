@@ -571,6 +571,9 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Reporting a list (#9896).
+  'listReportAction',
+
   // A people list whose members are all hidden from the viewer (#9895).
   'peopleListsAllMembersHiddenTitle',
   'peopleListsAllMembersHiddenSubtitle',

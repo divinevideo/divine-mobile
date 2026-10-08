@@ -6238,6 +6238,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listDeleteAction => 'Padam senarai';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'Padam senarai?';
 
   @override

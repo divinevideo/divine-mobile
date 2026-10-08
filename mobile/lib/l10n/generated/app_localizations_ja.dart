@@ -5902,6 +5902,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listDeleteAction => 'リストを削除';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'リストを削除する?';
 
   @override

@@ -6095,6 +6095,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDeleteAction => 'ዝርዝር ሰርዝ';
 
   @override
+  String get listReportAction => 'Report list';
+
+  @override
   String get peopleListsDeleteConfirmTitle => 'ዝርዝር ይሰረዝ?';
 
   @override

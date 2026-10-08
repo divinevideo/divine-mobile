@@ -24,11 +24,12 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { edit, delete }
+enum _PeopleListAction { edit, delete, report }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -439,6 +440,17 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     widget.onDeleteConfirmed(userList.id);
   }
 
+  /// What a report on this list names, or null when the list cannot be
+  /// reported: the viewer's own list, a built-in list with no owner, or one
+  /// with no event to point at. Reporting your own list stays disabled, as
+  /// it is for videos.
+  ({String eventId, String owner})? _reportTarget(UserList userList) {
+    final owner = widget.ownerPubkey;
+    final eventId = userList.nostrEventId;
+    if (userList.isEditable || owner == null || eventId == null) return null;
+    return (eventId: eventId, owner: owner);
+  }
+
   @override
   Widget build(BuildContext context) {
     final userList = widget.userList;
@@ -465,8 +477,11 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
             ),
         ],
         customActions: [
-          if (userList.isEditable)
+          if (userList.isEditable || _reportTarget(userList) != null)
             _PeopleListActionsMenu(
+              actions: userList.isEditable
+                  ? const [_PeopleListAction.edit, _PeopleListAction.delete]
+                  : const [_PeopleListAction.report],
               onSelected: (action) {
                 switch (action) {
                   case _PeopleListAction.edit:
@@ -482,6 +497,22 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
                     runDetached(
                       _confirmDeleteList(userList),
                       'confirm people list deletion',
+                      logName: 'UserListPeopleScreen',
+                      category: LogCategory.ui,
+                    );
+                  case _PeopleListAction.report:
+                    final target = _reportTarget(userList);
+                    if (target == null) return;
+                    runDetached(
+                      ReportContentDialog.showForList(
+                        context,
+                        kind: ReportedListKind.people,
+                        eventId: target.eventId,
+                        authorPubkey: target.owner,
+                        dTag: userList.id,
+                        title: userList.name,
+                      ),
+                      'report people list',
                       logName: 'UserListPeopleScreen',
                       category: LogCategory.ui,
                     );
@@ -756,8 +787,12 @@ class _NoPeopleView extends StatelessWidget {
 }
 
 class _PeopleListActionsMenu extends StatelessWidget {
-  const _PeopleListActionsMenu({required this.onSelected});
+  const _PeopleListActionsMenu({
+    required this.actions,
+    required this.onSelected,
+  });
 
+  final List<_PeopleListAction> actions;
   final ValueChanged<_PeopleListAction> onSelected;
 
   @override
@@ -771,17 +806,18 @@ class _PeopleListActionsMenu extends StatelessWidget {
       ),
       onSelected: onSelected,
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _PeopleListAction.edit,
-          child: Text(context.l10n.listEditInfoAction),
-        ),
-        PopupMenuItem(
-          value: _PeopleListAction.delete,
-          child: Text(
-            context.l10n.listDeleteAction,
-            style: TextStyle(color: context.vineColors.primaryText),
+        for (final action in actions)
+          PopupMenuItem(
+            value: action,
+            child: switch (action) {
+              _PeopleListAction.edit => Text(context.l10n.listEditInfoAction),
+              _PeopleListAction.delete => Text(
+                context.l10n.listDeleteAction,
+                style: TextStyle(color: context.vineColors.primaryText),
+              ),
+              _PeopleListAction.report => Text(context.l10n.listReportAction),
+            },
           ),
-        ),
       ],
     );
   }
