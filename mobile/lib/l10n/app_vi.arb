@@ -737,11 +737,17 @@
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."
   },
   "videoErrorAdultContentHiddenTitle": "Nội dung người lớn đang tắt",
-  "@videoErrorAdultContentHiddenTitle": {"description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."},
+  "@videoErrorAdultContentHiddenTitle": {
+    "description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."
+  },
   "videoErrorAdultContentHiddenBody": "Bật trong bộ lọc nội dung để xem video này.",
-  "@videoErrorAdultContentHiddenBody": {"description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."},
+  "@videoErrorAdultContentHiddenBody": {
+    "description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."
+  },
   "videoErrorAdultContentHiddenAction": "Mở bộ lọc nội dung",
-  "@videoErrorAdultContentHiddenAction": {"description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."},
+  "@videoErrorAdultContentHiddenAction": {
+    "description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."
+  },
   "videoDetailLoadError": "Không thể tải video",
   "videoDetailLoadErrorBody": "Có gì đó trục trặc trên đường tới đây. Thử lại nhé.",
   "videoDetailNotFoundBody": "Có thể nó đã bị xoá, ngoài tầm với, hoặc bị ẩn bởi cài đặt của bạn.",
@@ -1965,15 +1971,6 @@
   },
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3596,7 +3593,13 @@
   "inboxRequestsRemoveAll": "Xóa tất cả yêu cầu",
   "messageRequestDeclineAndRemoveButton": "Từ chối và xóa",
   "messageRequestDeclinedSnackbar": "Đã từ chối yêu cầu của {displayName}",
-  "@messageRequestDeclinedSnackbar": {"placeholders": {"displayName": {"type": "String"}}},
+  "@messageRequestDeclinedSnackbar": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
   "messageRequestLoadFailed": "Không tải được yêu cầu này.",
   "messageRequestFollowersCount": "{count} người theo dõi",
   "@messageRequestFollowersCount": {
@@ -3654,7 +3657,9 @@
   },
   "deleteAccountDeleteAllContentButton": "Xóa tất cả nội dung",
   "deleteAccountDeletionUnavailable": "Hiện chưa thể xóa tài khoản. Chưa có gì bị xóa.",
-  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
+  "@deleteAccountDeletionUnavailable": {
+    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
+  },
   "deleteAccountDeletionIncomplete": "Bọn mình chưa xóa xong tài khoản của bạn. Thử lại nhé.",
   "@deleteAccountDeletionIncomplete": {
     "description": "Neutral error when account deletion could not complete and the username-burn state is uncertain (an unresolved network timeout). Makes no claim about the username; retrying resolves it."
@@ -3969,12 +3974,18 @@
   "blueskyEnabledSubtitle": "Video của bạn sẽ được đăng lên Bluesky",
   "blueskyDisabledSubtitle": "Video của bạn sẽ không được đăng lên Bluesky",
   "blueskyBackfillDisclosureTitle": "Video cũ của bạn cũng sẽ được đăng",
-  "@blueskyBackfillDisclosureTitle": {"description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."},
+  "@blueskyBackfillDisclosureTitle": {
+    "description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."
+  },
   "blueskyBackfillDisclosureSubtitle": "Khi bật tính năng này, Divine sẽ bắt đầu gửi các video cũ hơn của bạn lên Bluesky, từ cũ nhất trước, không vội chạm giới hạn hằng ngày.",
-  "@blueskyBackfillDisclosureSubtitle": {"description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."},
+  "@blueskyBackfillDisclosureSubtitle": {
+    "description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."
+  },
   "blueskyHandle": "Tên định danh Bluesky",
   "blueskyDid": "DID Bluesky",
-  "@blueskyDid": {"description": "Label for the ATProto DID shown when a Bluesky account is provisioned."},
+  "@blueskyDid": {
+    "description": "Label for the ATProto DID shown when a Bluesky account is provisioned."
+  },
   "blueskyStatus": "Trạng thái",
   "blueskyStatusReady": "Tài khoản đã cấp và sẵn sàng",
   "blueskyStatusPending": "Đang cấp tài khoản...",
@@ -6255,11 +6266,32 @@
   "crosspostingGenericError": "Có gì đó không ổn. Thử lại nhé.",
   "crosspostingCallbackTimeoutError": "Trang đăng nhập không phản hồi. Nếu bạn đã kết nối xong ở đó, hãy làm mới — tài khoản của bạn có thể đã được liên kết rồi.",
   "crosspostingConnectionSuccess": "Đã kết nối {platform}",
-  "@crosspostingConnectionSuccess": {"description": "Snackbar after returning from a successful platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionSuccess": {
+    "description": "Snackbar after returning from a successful platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionFailed": "Không kết nối được {platform}",
-  "@crosspostingConnectionFailed": {"description": "Snackbar after returning from a failed platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionFailed": {
+    "description": "Snackbar after returning from a failed platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionDenied": "Kết nối đã bị hủy trên {platform}",
-  "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionDenied": {
+    "description": "Snackbar when the user denied the connection on the provider's page.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "supporterTitle": "Người ủng hộ Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -6353,9 +6385,21 @@
   "soundSharedAs": "Chia sẻ dưới dạng",
   "soundOwnWork": "Tôi tạo ra âm thanh này",
   "soundCreatorBy": "Bởi {creator}",
-  "@soundCreatorBy": {"placeholders": {"creator": {"type": "String"}}},
+  "@soundCreatorBy": {
+    "placeholders": {
+      "creator": {
+        "type": "String"
+      }
+    }
+  },
   "soundSharedBy": "Chia sẻ bởi {publisher}",
-  "@soundSharedBy": {"placeholders": {"publisher": {"type": "String"}}},
+  "@soundSharedBy": {
+    "placeholders": {
+      "publisher": {
+        "type": "String"
+      }
+    }
+  },
   "soundRemixingAllowed": "Cho phép remix",
   "soundCreditOnly": "Chỉ ghi công",
   "soundCreditTitleLabel": "Tên âm thanh",
@@ -6601,17 +6645,39 @@
   "videoMetadataScheduleButton": "Lên lịch",
   "videoMetadataScheduleVideoHint": "Lên lịch video này vào {time}",
   "crosspostingBenefitTitle": "Mang loop của bạn đi khắp nơi",
-  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "@crosspostingBenefitTitle": {
+    "description": "Headline of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitBody": "Đăng một lần trên Divine, chia sẻ thẳng lên Instagram. Người của bạn đã ở đó rồi — đến gặp họ đi. Mỗi loop bạn gửi đều mang theo một liên kết nhỏ về nhà, để nhà sáng tạo tiếp theo cũng tìm thấy chúng ta.",
-  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "@crosspostingBenefitBody": {
+    "description": "Body of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitConnect": "Kết nối {platform}",
-  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingBenefitConnect": {
+    "description": "Primary action on the crossposting benefit card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoTitle": "Thiết lập một lần",
-  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "@crosspostingAutoTitle": {
+    "description": "Headline of the automatic crossposting encouragement card"
+  },
   "crosspostingAutoBody": "Mỗi loop mới bạn đăng sẽ tự động đến {platform} thay bạn — không cần thêm thao tác. Chỉ áp dụng cho những loop bạn đăng sau khi bật tính năng này.",
-  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingAutoBody": {
+    "description": "Body of the automatic crossposting encouragement card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoEnable": "Bật tự động",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "@crosspostingAutoEnable": {
+    "description": "Action that switches a platform to automatic crossposting"
+  },
   "analyticsConnectionIssue": "Phân tích nhà sáng tạo không thể kết nối. Kiểm tra kết nối của bạn rồi thử lại.",
   "analyticsDiagnosticsFailedSources": "Nguồn bị lỗi: {sources}",
   "analyticsServerUnavailable": "Phân tích nhà sáng tạo đang gặp sự cố máy chủ. Vui lòng thử lại sau một lát.",
@@ -6708,5 +6774,23 @@
   "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
   "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
   "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
-  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại."
+  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.",
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "peopleListsAddPeopleSearchHint": "Tìm người"
 }

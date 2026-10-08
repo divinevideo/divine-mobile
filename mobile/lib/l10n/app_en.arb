@@ -272,17 +272,27 @@
   "@videoOverlayTotalLoops": {
     "description": "The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.",
     "placeholders": {
-      "compactCount": {"type": "String"},
-      "count": {"type": "int"},
-      "authorName": {"type": "String"}
+      "compactCount": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "authorName": {
+        "type": "String"
+      }
     }
   },
   "videoOverlayVideoLoops": "{compactCount} this video's {count, plural, =1{loop} other{loops}}",
   "@videoOverlayVideoLoops": {
     "description": "The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.",
     "placeholders": {
-      "compactCount": {"type": "String"},
-      "count": {"type": "int"}
+      "compactCount": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "generalSettingsShowTotalLoops": "Show total loops",
@@ -2546,15 +2556,6 @@
   },
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3193,17 +3194,29 @@
   "listRemoveVideosButton": "{count, plural, =0{Remove video} =1{Remove video} other{Remove {count} videos}}",
   "@listRemoveVideosButton": {
     "description": "Manage-videos action button. Zero keeps the singular label on the disabled button.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "listRemoveVideosSuccess": "{count, plural, =1{Removed 1 video} other{Removed {count} videos}}",
   "@listRemoveVideosSuccess": {
     "description": "Snackbar after removing videos from a list in manage mode.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "listRemoveVideosFailure": "{count, plural, =1{Couldn't remove 1 video. Try again.} other{Couldn't remove {count} videos. Try again.}}",
   "@listRemoveVideosFailure": {
     "description": "Snackbar when selected videos are still in the list after a removal batch.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "listShareAction": "Share list",
   "listShareFailed": "Couldn't share this list. Try again.",
@@ -3649,7 +3662,7 @@
   },
   "inboxRemoveConfirmBodyGroup": "This removes the group conversation from your inbox. If anyone messages the group again, a new conversation starts.",
   "@inboxRemoveConfirmBodyGroup": {
-    "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty \u2014 the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
+    "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty — the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
   },
   "inboxRemoveConfirmConfirm": "Remove",
   "inboxCollabInviteCardTitle": "Collaborator invite",
@@ -4031,8 +4044,12 @@
   "@inboxGroupConversationTitle": {
     "description": "Names a group DM thread that carries no NIP-17 `subject` tag, from the first other participant plus how many participants remain beyond them. Example: 'Alice and 2 others'. A room that DOES carry a subject renders that instead, untranslated, because a participant chose it.",
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "inboxConversationTileLongPressHint": "Show conversation actions",
@@ -4728,43 +4745,86 @@
   },
   "deleteAccountDeleteAllContentButton": "Delete All Content",
   "accountDeletionRecoveryTitle": "Deleting your account",
-  "@accountDeletionRecoveryTitle": {"description": "Title of the full-screen gate that blocks account use while deletion is recoverable, processing, failed, or awaiting acknowledgement."},
+  "@accountDeletionRecoveryTitle": {
+    "description": "Title of the full-screen gate that blocks account use while deletion is recoverable, processing, failed, or awaiting acknowledgement."
+  },
   "accountDeletionRecoveryBody": "We couldn't finish deleting your account. Your username is reserved for you and can still be restored.",
-  "@accountDeletionRecoveryBody": {"description": "Explains that an interrupted deletion left the username safely reserved and recoverable."},
+  "@accountDeletionRecoveryBody": {
+    "description": "Explains that an interrupted deletion left the username safely reserved and recoverable."
+  },
   "accountDeletionRecoveryBodyWithExpiry": "We couldn't finish deleting your account. Your username is reserved for you until {expiryDate} and can still be restored.",
-  "@accountDeletionRecoveryBodyWithExpiry": {"description": "Explains that an interrupted deletion left the username safely reserved until the coordinator's expiry date.", "placeholders": {"expiryDate": {"type": "String"}}},
+  "@accountDeletionRecoveryBodyWithExpiry": {
+    "description": "Explains that an interrupted deletion left the username safely reserved until the coordinator's expiry date.",
+    "placeholders": {
+      "expiryDate": {
+        "type": "String"
+      }
+    }
+  },
   "accountDeletionRestoreUsername": "Restore my username",
-  "@accountDeletionRestoreUsername": {"description": "Button that cancels an interrupted account deletion and restores its pending username."},
+  "@accountDeletionRestoreUsername": {
+    "description": "Button that cancels an interrupted account deletion and restores its pending username."
+  },
   "accountDeletionProcessingBody": "Deleting your account can take up to a day. You can close the app or use another account while we finish.",
-  "@accountDeletionProcessingBody": {"description": "Shown while the server finishes a normal account deletion, which can take up to a day."},
+  "@accountDeletionProcessingBody": {
+    "description": "Shown while the server finishes a normal account deletion, which can take up to a day."
+  },
   "accountDeletionOverdueBody": "Deleting your account is taking longer than it should. Contact support and we'll finish it.",
-  "@accountDeletionOverdueBody": {"description": "Shown with a Contact Support button when an account deletion is still not finished long after it should have been."},
+  "@accountDeletionOverdueBody": {
+    "description": "Shown with a Contact Support button when an account deletion is still not finished long after it should have been."
+  },
   "accountDeletionOtherAccountPending": "Another account deletion is still being processed on this device. Wait for it to finish before deleting this account.",
-  "@accountDeletionOtherAccountPending": {"description": "Snackbar shown when this installation already holds a pending deletion receipt for a different account."},
+  "@accountDeletionOtherAccountPending": {
+    "description": "Snackbar shown when this installation already holds a pending deletion receipt for a different account."
+  },
   "accountDeletionCancellingBody": "We're cancelling your deletion. Check again before leaving this screen.",
-  "@accountDeletionCancellingBody": {"description": "Shown while the server is rolling back an account-deletion attempt the user asked to cancel."},
+  "@accountDeletionCancellingBody": {
+    "description": "Shown while the server is rolling back an account-deletion attempt the user asked to cancel."
+  },
   "accountDeletionRecoveryFailed": "We couldn't restore your username yet. Check your connection and try again.",
-  "@accountDeletionRecoveryFailed": {"description": "Shown when rollback of a pending username release was not confirmed."},
+  "@accountDeletionRecoveryFailed": {
+    "description": "Shown when rollback of a pending username release was not confirmed."
+  },
   "accountDeletionUsernameRestored": "Your username is restored. Your account was not deleted.",
-  "@accountDeletionUsernameRestored": {"description": "Confirms that cancelling an interrupted deletion restored the pending username."},
+  "@accountDeletionUsernameRestored": {
+    "description": "Confirms that cancelling an interrupted deletion restored the pending username."
+  },
   "accountDeletionRecoveryStatusFailed": "We couldn't check your deletion status. Check your connection and try again.",
-  "@accountDeletionRecoveryStatusFailed": {"description": "Shown when the app cannot load a durable account-deletion attempt."},
+  "@accountDeletionRecoveryStatusFailed": {
+    "description": "Shown when the app cannot load a durable account-deletion attempt."
+  },
   "accountDeletionCancelAttemptBody": "We couldn't finish deleting your account. You can cancel this attempt and keep your account.",
-  "@accountDeletionCancelAttemptBody": {"description": "Explains that an interrupted deletion without a reserved username can be cancelled safely."},
+  "@accountDeletionCancelAttemptBody": {
+    "description": "Explains that an interrupted deletion without a reserved username can be cancelled safely."
+  },
   "accountDeletionCancelAttempt": "Keep my account",
-  "@accountDeletionCancelAttempt": {"description": "Button that cancels an interrupted account-deletion attempt that has not begun server processing."},
+  "@accountDeletionCancelAttempt": {
+    "description": "Button that cancels an interrupted account-deletion attempt that has not begun server processing."
+  },
   "accountDeletionAttemptCancelled": "Account deletion cancelled. Your account was not deleted.",
-  "@accountDeletionAttemptCancelled": {"description": "Confirms cancellation of an interrupted account-deletion attempt without claiming a username was restored."},
+  "@accountDeletionAttemptCancelled": {
+    "description": "Confirms cancellation of an interrupted account-deletion attempt without claiming a username was restored."
+  },
   "accountDeletionTerminalFailureBody": "We couldn't delete your account. Contact support for help or sign out to leave this screen.",
-  "@accountDeletionTerminalFailureBody": {"description": "Fallback explanation for a terminal account-deletion failure when the server supplies no safe detail."},
+  "@accountDeletionTerminalFailureBody": {
+    "description": "Fallback explanation for a terminal account-deletion failure when the server supplies no safe detail."
+  },
   "accountDeletionSignOut": "Sign out",
-  "@accountDeletionSignOut": {"description": "Secondary action that leaves an account-deletion recovery gate without deleting local credentials."},
+  "@accountDeletionSignOut": {
+    "description": "Secondary action that leaves an account-deletion recovery gate without deleting local credentials."
+  },
   "deleteAccountDeletionUnavailable": "Account deletion isn't available right now. Nothing was deleted.",
-  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
+  "@deleteAccountDeletionUnavailable": {
+    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
+  },
   "deleteAccountDeletionIncomplete": "We couldn't finish deleting your account. Try again.",
-  "@deleteAccountDeletionIncomplete": {"description": "Neutral error when account deletion could not complete and no claim about username state is safe."},
+  "@deleteAccountDeletionIncomplete": {
+    "description": "Neutral error when account deletion could not complete and no claim about username state is safe."
+  },
   "deleteAccountDeletionNotStarted": "We couldn't start deleting your account. Nothing was deleted. Try again.",
-  "@deleteAccountDeletionNotStarted": {"description": "Error shown when account deletion could not be started — an unexpected preparation error, or the account's Divine name ownership could not be confirmed. Nothing was deleted; the user can retry."},
+  "@deleteAccountDeletionNotStarted": {
+    "description": "Error shown when account deletion could not be started — an unexpected preparation error, or the account's Divine name ownership could not be confirmed. Nothing was deleted; the user can retry."
+  },
   "deleteAccountFinalConfirmationTitle": "⚠️ Final Confirmation",
   "deleteAccountKeyDeletionWarning": "Deletion requests sent, but your keys may not have been fully removed from this device. Go to Settings → Nostr Keys → Remove Keys to retry.",
   "deleteAccountLocalDataDeletionFailed": "Deletion requests sent and you're signed out, but some local data could not be removed from this device.",
@@ -4860,9 +4920,13 @@
   "publishErrorThumbnailFailed": "The video uploaded, but the thumbnail could not be prepared. Please try again.",
   "publishErrorNostrPublishFailed": "The video uploaded but the post could not be published. Check your relay settings and try again.",
   "publishErrorAccountRestricted": "Your account is restricted, so this post couldn’t be published.",
-  "@publishErrorAccountRestricted": {"description": "Terminal publish error shown when the authoritative Divine relay rejects the signed-in account."},
+  "@publishErrorAccountRestricted": {
+    "description": "Terminal publish error shown when the authoritative Divine relay rejects the signed-in account."
+  },
   "uploadFailureSheetAccountStatusButton": "View Account Status",
-  "@uploadFailureSheetAccountStatusButton": {"description": "Button on a restricted-account publish failure that opens Account status instead of retrying."},
+  "@uploadFailureSheetAccountStatusButton": {
+    "description": "Button on a restricted-account publish failure that opens Account status instead of retrying."
+  },
   "publishErrorAudioReuseNotPermitted": "The video uploaded, but its sound isn't cleared for reuse. Pick a different sound to post it.",
   "publishErrorInterrupted": "This upload was interrupted. Would you like to try again?",
   "publishErrorAccountChanged": "This video belongs to a different account. Switch back to that account to post it.",
@@ -7091,7 +7155,7 @@
   "videoMetadataPublishVideoHint": "Publish video to feed",
   "videoMetadataPostingVideoHint": "Getting your video ready",
   "@videoMetadataPostingVideoHint": {
-    "description": "Accessibility hint on the post/schedule button while the handoff runs \u2014 the gallery copy and the upload starting (#3538)."
+    "description": "Accessibility hint on the post/schedule button while the handoff runs — the gallery copy and the upload starting (#3538)."
   },
   "videoMetadataShareReplyToFeedTitle": "Also share to my feed",
   "@videoMetadataShareReplyToFeedTitle": {
@@ -7332,27 +7396,61 @@
   "minorAccountReviewRestrictionMessaging": "Starting or replying to regular messages is paused",
   "minorAccountReviewRestrictionSupport": "Support and your moderation message remain available",
   "minorAccountReviewContentTitle": "What happens to your videos",
-  "@minorAccountReviewContentTitle": {"description": "Heading that explains how a restricted minor's existing videos are handled during and after review."},
+  "@minorAccountReviewContentTitle": {
+    "description": "Heading that explains how a restricted minor's existing videos are handled during and after review."
+  },
   "minorAccountReviewContentBody": "Your videos are hidden while this review is open. If your account is cleared, they come back. If the review closes without a response, your account is closed and your videos are deleted.",
-  "@minorAccountReviewContentBody": {"description": "Explains that existing videos are hidden during review, restored after clearance, and deleted if an unanswered review closes."},
+  "@minorAccountReviewContentBody": {
+    "description": "Explains that existing videos are hidden during review, restored after clearance, and deleted if an unanswered review closes."
+  },
   "minorAccountReviewResponseClockRunningTitle": "Time to respond",
   "minorAccountReviewResponseClockRunningDays": "{days, plural, =1 {1 day} other {{days} days}} left to respond. Deadline: {date}.",
-  "@minorAccountReviewResponseClockRunningDays": {"placeholders": {"days": {"type": "int"}, "date": {"type": "String"}}},
+  "@minorAccountReviewResponseClockRunningDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "minorAccountReviewResponseClockRunningHours": "{hours, plural, =1 {1 hour} other {{hours} hours}} left to respond. Deadline: {date}.",
-  "@minorAccountReviewResponseClockRunningHours": {"placeholders": {"hours": {"type": "int"}, "date": {"type": "String"}}},
+  "@minorAccountReviewResponseClockRunningHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "minorAccountReviewResponseClockPausedTitle": "Response clock paused",
   "minorAccountReviewResponseClockPausedBody": "The response clock is paused. About {days, plural, =1 {1 day} other {{days} days}} will remain when it restarts.",
-  "@minorAccountReviewResponseClockPausedBody": {"placeholders": {"days": {"type": "int"}}},
+  "@minorAccountReviewResponseClockPausedBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "minorAccountReviewResponseClockExpiredTitle": "Response deadline passed",
   "minorAccountReviewResponseClockExpiredBody": "The response deadline has passed. Contact Support Center if you need help.",
   "minorAccountReviewResponseClockUnavailableTitle": "Deadline unavailable",
   "minorAccountReviewResponseClockUnavailableBody": "We can't show your response deadline right now. Contact Support Center if you need help.",
   "minorAccountReviewAppealTitle": "Think we got this wrong?",
-  "@minorAccountReviewAppealTitle": {"description": "Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision."},
+  "@minorAccountReviewAppealTitle": {
+    "description": "Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision."
+  },
   "minorAccountReviewAppealTeenBody": "Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
-  "@minorAccountReviewAppealTeenBody": {"description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."},
+  "@minorAccountReviewAppealTeenBody": {
+    "description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."
+  },
   "minorAccountReviewAppealUnder13Body": "Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
-  "@minorAccountReviewAppealUnder13Body": {"description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."},
+  "@minorAccountReviewAppealUnder13Body": {
+    "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
+  },
   "minorAccountReviewOpenModerationMessage": "Open Moderation Message",
   "minorAccountReviewOpenReviewPage": "Open review page",
   "minorAccountReviewCheckAgain": "Check Again",
@@ -9140,69 +9238,128 @@
   "safetySettingsShowVerifiedOnly": "Only show camera-verified videos",
   "safetySettingsShowVerifiedOnlySubtitle": "Hide videos without a capture chain back to a camera. Vine archive videos are always shown.",
   "accountStatusTitle": "Account status",
-  "@accountStatusTitle": {"description": "Title of the account status screen, and of the settings row that opens it."},
+  "@accountStatusTitle": {
+    "description": "Title of the account status screen, and of the settings row that opens it."
+  },
   "accountStatusTileSubtitleRestricted": "Your account is restricted",
-  "@accountStatusTileSubtitleRestricted": {"description": "Settings row subtitle shown when the signed-in account is under enforcement."},
+  "@accountStatusTileSubtitleRestricted": {
+    "description": "Settings row subtitle shown when the signed-in account is under enforcement."
+  },
   "accountStatusAllClearHeading": "Everything looks good!",
-  "@accountStatusAllClearHeading": {"description": "Sole line on the account status screen when Funnelcake confirms there is no restriction. Deliberately has no body copy."},
+  "@accountStatusAllClearHeading": {
+    "description": "Sole line on the account status screen when Funnelcake confirms there is no restriction. Deliberately has no body copy."
+  },
   "profileAccountRestricted": "Account restricted",
-  "@profileAccountRestricted": {"description": "Persistent profile-avatar badge label shown when Divine has confirmed an account restriction."},
+  "@profileAccountRestricted": {
+    "description": "Persistent profile-avatar badge label shown when Divine has confirmed an account restriction."
+  },
   "accountStatusSuspendedHeading": "Your account is suspended",
-  "@accountStatusSuspendedHeading": {"description": "Heading shown when the account is suspended."},
+  "@accountStatusSuspendedHeading": {
+    "description": "Heading shown when the account is suspended."
+  },
   "accountStatusSuspendedBody": "You can't post, comment, or send messages on Divine right now. Your videos are hidden rather than deleted, and they come back if the suspension is lifted.",
-  "@accountStatusSuspendedBody": {"description": "Explains what a suspension restricts and that content is hidden rather than deleted."},
+  "@accountStatusSuspendedBody": {
+    "description": "Explains what a suspension restricts and that content is hidden rather than deleted."
+  },
   "accountStatusBannedHeading": "Your account is banned",
-  "@accountStatusBannedHeading": {"description": "Heading shown when the account is banned."},
+  "@accountStatusBannedHeading": {
+    "description": "Heading shown when the account is banned."
+  },
   "accountStatusBannedBody": "You can't post, comment, or send messages on Divine, and your videos have been taken down from Divine.",
-  "@accountStatusBannedBody": {"description": "Explains that a ban takes content down from Divine without claiming physical deletion."},
+  "@accountStatusBannedBody": {
+    "description": "Explains that a ban takes content down from Divine without claiming physical deletion."
+  },
   "accountStatusRestrictedHeading": "Your account is restricted",
-  "@accountStatusRestrictedHeading": {"description": "Heading shown when a publish rejection confirms a restriction this app version does not recognize."},
+  "@accountStatusRestrictedHeading": {
+    "description": "Heading shown when a publish rejection confirms a restriction this app version does not recognize."
+  },
   "accountStatusRestrictedBody": "Some things you can normally do on Divine are unavailable right now. Updating the app may show you more detail.",
-  "@accountStatusRestrictedBody": {"description": "Body shown when a publish rejection confirms a restriction this app version does not recognize."},
+  "@accountStatusRestrictedBody": {
+    "description": "Body shown when a publish rejection confirms a restriction this app version does not recognize."
+  },
   "accountStatusLastKnownBody": "We couldn't refresh your status. This is the last status we received.",
-  "@accountStatusLastKnownBody": {"description": "Shown with a retained confirmed restriction after its refresh fails."},
+  "@accountStatusLastKnownBody": {
+    "description": "Shown with a retained confirmed restriction after its refresh fails."
+  },
   "accountStatusUnavailableHeading": "We couldn't check your status",
-  "@accountStatusUnavailableHeading": {"description": "Heading shown when account enforcement status could not be checked and no confirmed restriction is retained."},
+  "@accountStatusUnavailableHeading": {
+    "description": "Heading shown when account enforcement status could not be checked and no confirmed restriction is retained."
+  },
   "accountStatusUnavailableBody": "Check your connection and try again.",
-  "@accountStatusUnavailableBody": {"description": "Body shown when account enforcement status could not be checked and no confirmed restriction is retained."},
+  "@accountStatusUnavailableBody": {
+    "description": "Body shown when account enforcement status could not be checked and no confirmed restriction is retained."
+  },
   "accountStatusSignedOutHeading": "Sign in to check your account status",
-  "@accountStatusSignedOutHeading": {"description": "Heading shown when the account-status route is opened without a signed-in account."},
+  "@accountStatusSignedOutHeading": {
+    "description": "Heading shown when the account-status route is opened without a signed-in account."
+  },
   "accountStatusSignedOutBody": "There isn't a signed-in account to check right now.",
-  "@accountStatusSignedOutBody": {"description": "Body shown when the account-status route is opened without a signed-in account."},
+  "@accountStatusSignedOutBody": {
+    "description": "Body shown when the account-status route is opened without a signed-in account."
+  },
   "accountStatusKeysUnaffectedHeading": "Your account still belongs to you",
-  "@accountStatusKeysUnaffectedHeading": {"description": "Heading for the section explaining that Divine's enforcement does not affect the user's Nostr identity."},
+  "@accountStatusKeysUnaffectedHeading": {
+    "description": "Heading for the section explaining that Divine's enforcement does not affect the user's Nostr identity."
+  },
   "accountStatusKeysUnaffectedBody": "This restriction applies to Divine. Your keys and your identity are yours, your followers travel with them, and you can keep using them on other apps and servers that Divine doesn't run.",
-  "@accountStatusKeysUnaffectedBody": {"description": "Explains that the restriction is limited to Divine-operated surfaces and the user's Nostr identity is untouched."},
+  "@accountStatusKeysUnaffectedBody": {
+    "description": "Explains that the restriction is limited to Divine-operated surfaces and the user's Nostr identity is untouched."
+  },
   "accountStatusAppealHeading": "If you think this is wrong",
-  "@accountStatusAppealHeading": {"description": "Heading for the appeal section."},
+  "@accountStatusAppealHeading": {
+    "description": "Heading for the appeal section."
+  },
   "accountStatusAppealBody": "Divine may review requests to reconsider a moderation decision, but is not obligated to. If you want to raise it, contact support and tell us what happened.",
-  "@accountStatusAppealBody": {"description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."},
+  "@accountStatusAppealBody": {
+    "description": "States the appeals policy plainly and points to support as the channel, without promising a formal appeals process."
+  },
   "accountStatusMoveAccount": "Move your account",
-  "@accountStatusMoveAccount": {"description": "Button opening the account portability page."},
+  "@accountStatusMoveAccount": {
+    "description": "Button opening the account portability page."
+  },
   "accountStatusRetry": "Try again",
-  "@accountStatusRetry": {"description": "Button that refetches the account status."},
+  "@accountStatusRetry": {
+    "description": "Button that refetches the account status."
+  },
   "updateGentleBanner": "A fresh update just dropped. Check it out →",
   "updateModerateTitle": "There's been an update since you last checked",
   "updateUrgentTitle": "You're missing important fixes",
   "updateNotNow": "Not now",
   "updateAction": "Update",
   "updateNewIn": "New in {version}:",
-  "@updateNewIn": {"description": "Heading before highlights for an available app update.", "placeholders": {"version": {"type": "String"}}},
+  "@updateNewIn": {
+    "description": "Heading before highlights for an available app update.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "settingsUpdateAvailable": "Update available",
   "soundUploadAction": "Upload a sound",
-  "@soundUploadAction": {"description": "Button on the Library Sounds tab that opens the standalone sound upload flow."},
+  "@soundUploadAction": {
+    "description": "Button on the Library Sounds tab that opens the standalone sound upload flow."
+  },
   "soundUploadTitle": "Upload a sound",
-  "@soundUploadTitle": {"description": "App bar title of the standalone sound upload screen."},
+  "@soundUploadTitle": {
+    "description": "App bar title of the standalone sound upload screen."
+  },
   "soundUploadIntro": "Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.",
   "soundUploadChooseFile": "Choose an audio file",
   "soundUploadSupportedFormats": "AAC, M4A, MP3, or WAV",
-  "@soundUploadSupportedFormats": {"description": "Hint under the file picker listing the accepted audio formats. The format names stay as written."},
+  "@soundUploadSupportedFormats": {
+    "description": "Hint under the file picker listing the accepted audio formats. The format names stay as written."
+  },
   "soundUploadChangeFile": "Change",
-  "@soundUploadChangeFile": {"description": "Small button next to the picked audio file that opens the file picker again."},
+  "@soundUploadChangeFile": {
+    "description": "Small button next to the picked audio file that opens the file picker again."
+  },
   "soundUploadReuseNotice": "Anyone on Divine can use this sound in their videos. You're credited every time.",
   "soundUploadShareAction": "Share sound",
   "soundUploadShared": "Your sound is live and saved to Sounds.",
-  "@soundUploadShared": {"description": "Snackbar after a standalone sound was published and added to the Library Sounds tab."},
+  "@soundUploadShared": {
+    "description": "Snackbar after a standalone sound was published and added to the Library Sounds tab."
+  },
   "soundUploadFailed": "Couldn't share that sound. Try again.",
   "soundUploadSignInFirst": "Sign in to share a sound.",
   "soundUploadAccountRestricted": "Your account is restricted, so this sound couldn't be shared.",
@@ -9210,14 +9367,20 @@
   "savedSoundDeleteConfirmMessage": "It's yours, so it comes off Divine's sound lists and credits for everyone. The audio file itself stays at its link for now, and videos that already use it keep their audio.",
   "savedSoundDeleteForEveryone": "Delete for everyone",
   "savedSoundRemoveLocallyOnly": "Just remove it from Sounds",
-  "@savedSoundRemoveLocallyOnly": {"description": "Secondary choice when removing one of the user's own published sounds: keep it public on Divine, drop it from the device library only."},
+  "@savedSoundRemoveLocallyOnly": {
+    "description": "Secondary choice when removing one of the user's own published sounds: keep it public on Divine, drop it from the device library only."
+  },
   "savedSoundDeleted": "Sound deleted",
   "savedSoundDeleteFailed": "Couldn't delete that sound. Try again.",
   "savedSoundDeleteFailedNotOwner": "You can only delete sounds you shared.",
   "audioPickerTypeGroup": "Audio",
-  "@audioPickerTypeGroup": {"description": "Name of the audio file-type filter in the system file picker (desktop pickers show it as the filter label)."},
+  "@audioPickerTypeGroup": {
+    "description": "Name of the audio file-type filter in the system file picker (desktop pickers show it as the filter label)."
+  },
   "soundUploadRetrySaveAction": "Retry saving to Sounds",
-  "@soundUploadRetrySaveAction": {"description": "Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save."},
+  "@soundUploadRetrySaveAction": {
+    "description": "Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save."
+  },
   "crosspostingBenefitTitle": "Take your loops everywhere",
   "@crosspostingBenefitTitle": {
     "description": "Headline of the crossposting benefit card in settings"
@@ -9230,7 +9393,10 @@
   "@crosspostingBenefitConnect": {
     "description": "Primary action on the crossposting benefit card",
     "placeholders": {
-      "platform": { "type": "String", "example": "Instagram" }
+      "platform": {
+        "type": "String",
+        "example": "Instagram"
+      }
     }
   },
   "crosspostingAutoTitle": "Set it once",
@@ -9241,7 +9407,10 @@
   "@crosspostingAutoBody": {
     "description": "Body of the automatic crossposting encouragement card",
     "placeholders": {
-      "platform": { "type": "String", "example": "Instagram" }
+      "platform": {
+        "type": "String",
+        "example": "Instagram"
+      }
     }
   },
   "crosspostingAutoEnable": "Turn on automatic",
@@ -9344,11 +9513,36 @@
   "listSearchPeopleUnavailable": "People lists are unavailable right now.",
   "listSearchVideosUnavailable": "Video lists are unavailable right now.",
   "@listSearchPeopleUnavailable": {
-      "description": "People-list search source could not answer; shown beside healthy video results with retry."
+    "description": "People-list search source could not answer; shown beside healthy video results with retry."
   },
   "@listSearchVideosUnavailable": {
-      "description": "Video-list search source could not answer; shown beside healthy people results with retry."
+    "description": "Video-list search source could not answer; shown beside healthy people results with retry."
   },
-  "@authAccountCleanupFailed": {"description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."},
-  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again."
+  "@authAccountCleanupFailed": {
+    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
+  },
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  },
+  "peopleListsAddPeopleSearchHint": "Search people"
 }

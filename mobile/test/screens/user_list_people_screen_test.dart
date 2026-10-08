@@ -35,7 +35,13 @@ import '../helpers/test_provider_overrides.dart';
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockVideosRepository extends Mock implements VideosRepository {
+  _MockVideosRepository() {
+    when(
+      () => applyContentPreferences(any()),
+    ).thenAnswer((call) => call.positionalArguments.single as List<VideoEvent>);
+  }
+}
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
@@ -1273,7 +1279,11 @@ void main() {
 
       await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsAddPeopleTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsIdentifier('people_list_add_people_option'),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Add people picker'), findsOneWidget);

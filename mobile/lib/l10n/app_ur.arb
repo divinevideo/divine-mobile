@@ -737,11 +737,17 @@
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."
   },
   "videoErrorAdultContentHiddenTitle": "بالغ مواد بند ہے",
-  "@videoErrorAdultContentHiddenTitle": {"description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."},
+  "@videoErrorAdultContentHiddenTitle": {
+    "description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."
+  },
   "videoErrorAdultContentHiddenBody": "یہ ویڈیو دیکھنے کے لیے اسے مواد فلٹرز میں چالو کریں۔",
-  "@videoErrorAdultContentHiddenBody": {"description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."},
+  "@videoErrorAdultContentHiddenBody": {
+    "description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."
+  },
   "videoErrorAdultContentHiddenAction": "مواد فلٹرز کھولیں",
-  "@videoErrorAdultContentHiddenAction": {"description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."},
+  "@videoErrorAdultContentHiddenAction": {
+    "description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."
+  },
   "videoDetailLoadError": "ویڈیو لوڈ نہیں ہو سکی",
   "videoDetailLoadErrorBody": "یہاں پہنچتے پہنچتے کچھ گڑبڑ ہو گئی۔ دوبارہ کوشش کریں۔",
   "videoDetailNotFoundBody": "ہو سکتا ہے یہ حذف ہو چکی ہو، ہماری پہنچ سے باہر ہو، یا آپ کی ترتیبات نے اسے چھپا دیا ہو۔",
@@ -1965,15 +1971,6 @@
   },
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3596,7 +3593,13 @@
   "inboxRequestsRemoveAll": "تمام درخواستیں ہٹائیں",
   "messageRequestDeclineAndRemoveButton": "انکار کر کے ہٹائیں",
   "messageRequestDeclinedSnackbar": "{displayName} کی درخواست مسترد کر دی",
-  "@messageRequestDeclinedSnackbar": {"placeholders": {"displayName": {"type": "String"}}},
+  "@messageRequestDeclinedSnackbar": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
   "messageRequestLoadFailed": "یہ درخواست لوڈ نہیں ہو سکی۔",
   "messageRequestFollowersCount": "{count} فالوورز",
   "@messageRequestFollowersCount": {
@@ -3654,7 +3657,9 @@
   },
   "deleteAccountDeleteAllContentButton": "تمام مواد حذف کریں",
   "deleteAccountDeletionUnavailable": "اکاؤنٹ حذف کرنے کی سہولت ابھی دستیاب نہیں ہے۔ کچھ بھی حذف نہیں ہوا۔",
-  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
+  "@deleteAccountDeletionUnavailable": {
+    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
+  },
   "deleteAccountDeletionIncomplete": "ہم آپ کا اکاؤنٹ مکمل حذف نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "@deleteAccountDeletionIncomplete": {
     "description": "Neutral error when account deletion could not complete and the username-burn state is uncertain (an unresolved network timeout). Makes no claim about the username; retrying resolves it."
@@ -3969,12 +3974,18 @@
   "blueskyEnabledSubtitle": "آپ کی ویڈیوز Bluesky پر شائع ہوں گی",
   "blueskyDisabledSubtitle": "آپ کی ویڈیوز Bluesky پر شائع نہیں ہوں گی",
   "blueskyBackfillDisclosureTitle": "آپ کی پچھلی ویڈیوز بھی پوسٹ ہوں گی",
-  "@blueskyBackfillDisclosureTitle": {"description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."},
+  "@blueskyBackfillDisclosureTitle": {
+    "description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."
+  },
   "blueskyBackfillDisclosureSubtitle": "جب آپ اسے آن کریں گے تو Divine آپ کی پرانی ویڈیوز Bluesky پر بھیجنا شروع کرے گا، سب سے پرانی پہلے، روزانہ حد میں جلدی کیے بغیر۔",
-  "@blueskyBackfillDisclosureSubtitle": {"description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."},
+  "@blueskyBackfillDisclosureSubtitle": {
+    "description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."
+  },
   "blueskyHandle": "Bluesky ہینڈل",
   "blueskyDid": "Bluesky DID",
-  "@blueskyDid": {"description": "Label for the ATProto DID shown when a Bluesky account is provisioned."},
+  "@blueskyDid": {
+    "description": "Label for the ATProto DID shown when a Bluesky account is provisioned."
+  },
   "blueskyStatus": "اسٹیٹس",
   "blueskyStatusReady": "اکاؤنٹ تیار اور دستیاب ہے",
   "blueskyStatusPending": "اکاؤنٹ تیار ہو رہا ہے...",
@@ -6255,11 +6266,32 @@
   "crosspostingGenericError": "کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔",
   "crosspostingCallbackTimeoutError": "سائن ان صفحے سے کوئی جواب نہیں آیا۔ اگر آپ نے وہاں منسلک کر لیا ہے تو ریفریش کریں — ہو سکتا ہے آپ کا اکاؤنٹ پہلے ہی منسلک ہو۔",
   "crosspostingConnectionSuccess": "{platform} منسلک ہو گیا",
-  "@crosspostingConnectionSuccess": {"description": "Snackbar after returning from a successful platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionSuccess": {
+    "description": "Snackbar after returning from a successful platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionFailed": "{platform} منسلک نہیں ہو سکا",
-  "@crosspostingConnectionFailed": {"description": "Snackbar after returning from a failed platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionFailed": {
+    "description": "Snackbar after returning from a failed platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionDenied": "{platform} پر کنکشن منسوخ کر دیا گیا",
-  "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionDenied": {
+    "description": "Snackbar when the user denied the connection on the provider's page.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "supporterTitle": "Divine سپورٹرز",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -6353,9 +6385,21 @@
   "soundSharedAs": "بطور شیئر کیا گیا",
   "soundOwnWork": "یہ ساؤنڈ میں نے بنایا ہے",
   "soundCreatorBy": "بذریعہ {creator}",
-  "@soundCreatorBy": {"placeholders": {"creator": {"type": "String"}}},
+  "@soundCreatorBy": {
+    "placeholders": {
+      "creator": {
+        "type": "String"
+      }
+    }
+  },
   "soundSharedBy": "{publisher} کی جانب سے شیئر کیا گیا",
-  "@soundSharedBy": {"placeholders": {"publisher": {"type": "String"}}},
+  "@soundSharedBy": {
+    "placeholders": {
+      "publisher": {
+        "type": "String"
+      }
+    }
+  },
   "soundRemixingAllowed": "ری مکسنگ کی اجازت ہے",
   "soundCreditOnly": "صرف کریڈٹ",
   "soundCreditTitleLabel": "ساؤنڈ کا عنوان",
@@ -6601,17 +6645,39 @@
   "videoMetadataScheduleButton": "شیڈول کریں",
   "videoMetadataScheduleVideoHint": "یہ ویڈیو {time} کے لیے شیڈول کرتا ہے",
   "crosspostingBenefitTitle": "اپنے لوپس کو ہر جگہ لے جائیں",
-  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "@crosspostingBenefitTitle": {
+    "description": "Headline of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitBody": "Divine پر ایک بار پوسٹ کریں، سیدھا Instagram پر شیئر کریں۔ آپ کے لوگ وہاں پہلے سے موجود ہیں — جا کر ان سے ملیں۔ آپ کا بھیجا ہوا ہر لوپ ساتھ ایک چھوٹا لنک گھر لے کر جاتا ہے، تاکہ اگلا تخلیق کار بھی ہمیں ڈھونڈ سکے۔",
-  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "@crosspostingBenefitBody": {
+    "description": "Body of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitConnect": "{platform} منسلک کریں",
-  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingBenefitConnect": {
+    "description": "Primary action on the crossposting benefit card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoTitle": "ایک بار سیٹ کریں",
-  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "@crosspostingAutoTitle": {
+    "description": "Headline of the automatic crossposting encouragement card"
+  },
   "crosspostingAutoBody": "آپ کا ہر نیا لوپ آپ کی طرف سے {platform} پر چلا جاتا ہے — بغیر کسی اضافی ٹیپ کے۔ صرف اُن لوپس پر لاگو ہوتا ہے جو آپ اسے آن کرنے کے بعد شائع کریں۔",
-  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingAutoBody": {
+    "description": "Body of the automatic crossposting encouragement card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoEnable": "خودکار آن کریں",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "@crosspostingAutoEnable": {
+    "description": "Action that switches a platform to automatic crossposting"
+  },
   "analyticsConnectionIssue": "کریئیٹر تجزیات سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
   "analyticsDiagnosticsFailedSources": "ناکام ذرائع: {sources}",
   "analyticsServerUnavailable": "کریئیٹر تجزیات کے سرور میں مسئلہ ہے۔ کچھ دیر بعد دوبارہ کوشش کریں۔",
@@ -6708,5 +6774,23 @@
   "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
   "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
   "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
-  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔"
+  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں"
 }

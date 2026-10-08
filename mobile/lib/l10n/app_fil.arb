@@ -2313,8 +2313,6 @@
   "notificationsEmptyTitle": "Wala pang activity",
   "notificationsViewProfileSemanticLabel": "Tingnan ang profile ni {displayName}",
   "notificationsViewProfilesSemanticLabel": "Tingnan ang mga profile",
-  "peopleListsAddButton": "Idagdag",
-  "peopleListsAddButtonWithCount": "Idagdag ang {count}",
   "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
   "peopleListsAddPeopleRetry": "Subukan ulit",
   "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan",
@@ -4478,5 +4476,23 @@
   "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
   "listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
   "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon.",
-  "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit."
+  "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
+  "peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
+  "peopleListsAddPeopleSearchHint": "Maghanap ng tao"
 }

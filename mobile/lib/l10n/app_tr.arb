@@ -3066,8 +3066,6 @@
   "peopleListsAddToListName": "{name} listesine ekle",
   "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
   "peopleListsAddPeopleRetry": "Tekrar dene",
-  "peopleListsAddButton": "Ekle",
-  "peopleListsAddButtonWithCount": "{count} ekle",
   "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
   "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
   "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",
@@ -5479,5 +5477,23 @@
   "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
   "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
   "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor.",
-  "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene."
+  "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+  "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
+  "peopleListsAddPeopleSearchHint": "Kişi ara"
 }

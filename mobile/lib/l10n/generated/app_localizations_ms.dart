@@ -3988,14 +3988,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Cuba lagi';
 
   @override
-  String get peopleListsAddButton => 'Tambah';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Tambah $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13075,4 +13067,21 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Tambah $name ke senarai';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Tidak dapat mengemas kini senarai. Sila cuba lagi.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alih keluar $name daripada senarai';
+  }
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Cari orang';
 }

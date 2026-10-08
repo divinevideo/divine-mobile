@@ -3066,8 +3066,6 @@
   "peopleListsAddToListName": "Aggiungi a {name}",
   "peopleListsAddPeopleError": "Impossibile caricare le persone. Riprova.",
   "peopleListsAddPeopleRetry": "Riprova",
-  "peopleListsAddButton": "Aggiungi",
-  "peopleListsAddButtonWithCount": "Aggiungi {count}",
   "peopleListsInNLists": "{count, plural, =1{In 1 lista} other{In {count} liste}}",
   "peopleListsRemoveConfirmTitle": "Rimuovere {name}?",
   "peopleListsRemoveConfirmBody": "Verrà rimosso/a da questa lista.",
@@ -5479,5 +5477,23 @@
   "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.",
   "listSearchPeopleUnavailable": "Le liste di persone non sono disponibili al momento.",
   "listSearchVideosUnavailable": "Le liste di video non sono disponibili al momento.",
-  "authAccountCleanupFailed": "Non è stato possibile cancellare i dati dell’account precedente. Riprova."
+  "authAccountCleanupFailed": "Non è stato possibile cancellare i dati dell’account precedente. Riprova.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Aggiungi {name} alla lista",
+  "peopleListsRemovePersonSemanticLabel": "Rimuovi {name} dalla lista",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Impossibile aggiornare la lista. Riprova.",
+  "peopleListsAddPeopleSearchHint": "Cerca persone"
 }

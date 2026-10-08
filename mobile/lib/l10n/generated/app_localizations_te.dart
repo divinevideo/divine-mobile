@@ -4145,14 +4145,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
-  String get peopleListsAddButton => 'జోడించండి';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'జోడించండి $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13417,4 +13409,21 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameని జాబితాకు జోడించండి';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameని జాబితా నుండి తీసివేయండి';
+  }
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
 }
