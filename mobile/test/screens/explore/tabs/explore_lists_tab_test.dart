@@ -2,6 +2,8 @@
 // ABOUTME: independent columns, per-column loading/error, empty state,
 // ABOUTME: and card navigation.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,8 +29,6 @@ import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'dart:async';
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -212,8 +212,9 @@ void main() {
       testWidgets(
         'video creation keeps its dialog during initialization failure=$failure',
         (tester) async {
-          if (failure)
+          if (failure) {
             _initializationError = StateError('initialization failed');
+          }
           await tester.pumpWidget(buildPage());
           await tester.pump();
           await tester.pump();
