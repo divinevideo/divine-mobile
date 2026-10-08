@@ -10,7 +10,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -23,11 +25,14 @@ void main() {
   late _MockNostrClient mockNostrClient;
   late _MockHttpClient mockHttpClient;
   late List<Duration> requestedDelays;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     mockNostrClient = _MockNostrClient();
     mockHttpClient = _MockHttpClient();
     requestedDelays = [];
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
   });
 
   setUpAll(() {
@@ -45,6 +50,7 @@ void main() {
         subtitlePollDelayProvider.overrideWithValue((duration) async {
           requestedDelays.add(duration);
         }),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
   }
@@ -59,6 +65,49 @@ void main() {
       );
 
       expect(cues, isEmpty);
+    });
+
+    test('requests the target language when the source differs', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      Uri? requested;
+      when(() => mockHttpClient.get(any())).thenAnswer((invocation) async {
+        requested = invocation.positionalArguments.first as Uri;
+        return http.Response(
+          'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nTranslated\n',
+          200,
+        );
+      });
+
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: 'test-id',
+          sha256: 'a' * 64,
+          sourceLang: 'ja',
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Translated'));
+      expect(requested, isNotNull);
+      expect(requested!.queryParameters['lang'], equals('en'));
+    });
+
+    test('does not translate when the source matches the app locale', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      const vttContent =
+          'WEBVTT\n\n1\n00:00:00.500 --> 00:00:03.200\nOriginal\n';
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: 'test-id',
+          textTrackContent: vttContent,
+          sourceLang: 'en',
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Original'));
     });
 
     test('parses embedded textTrackContent directly (REST API path)', () async {

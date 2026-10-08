@@ -133,6 +133,7 @@ SubtitleCuesProvider _subtitleCuesProvider(VideoEvent video) {
     textTrackRefs: video.textTrackRefs,
     textTrackContent: video.textTrackContent,
     sha256: video.sha256,
+    sourceLang: video.textTrackLang,
   );
 }
 

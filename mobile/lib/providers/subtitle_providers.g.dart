@@ -10,26 +10,32 @@ part of 'subtitle_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Fetches subtitle cues for a video, using ordered fallback.
 ///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-///    directly — zero network cost.
-/// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+/// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+///    viewer does not want a translation, parse it directly — zero network.
+/// 2. When the viewer wants a translation ([sourceLang] differs from their
+///    target and is not kept original), skip the embedded source track so the
+///    language-specific Blossom track is fetched instead.
+/// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
 ///    try HTTP fetch or relay query in order.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`.
-/// 4. Otherwise returns an empty list (no subtitles available).
+/// 4. If [sha256] is present, fetch from Blossom at
+///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+/// 5. Otherwise returns an empty list (no subtitles available).
 
 @ProviderFor(subtitleCues)
 final subtitleCuesProvider = SubtitleCuesFamily._();
 
 /// Fetches subtitle cues for a video, using ordered fallback.
 ///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-///    directly — zero network cost.
-/// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+/// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+///    viewer does not want a translation, parse it directly — zero network.
+/// 2. When the viewer wants a translation ([sourceLang] differs from their
+///    target and is not kept original), skip the embedded source track so the
+///    language-specific Blossom track is fetched instead.
+/// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
 ///    try HTTP fetch or relay query in order.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`.
-/// 4. Otherwise returns an empty list (no subtitles available).
+/// 4. If [sha256] is present, fetch from Blossom at
+///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+/// 5. Otherwise returns an empty list (no subtitles available).
 
 final class SubtitleCuesProvider
     extends
@@ -43,13 +49,16 @@ final class SubtitleCuesProvider
         $FutureProvider<List<SubtitleCue>> {
   /// Fetches subtitle cues for a video, using ordered fallback.
   ///
-  /// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-  ///    directly — zero network cost.
-  /// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+  /// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+  ///    viewer does not want a translation, parse it directly — zero network.
+  /// 2. When the viewer wants a translation ([sourceLang] differs from their
+  ///    target and is not kept original), skip the embedded source track so the
+  ///    language-specific Blossom track is fetched instead.
+  /// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
   ///    try HTTP fetch or relay query in order.
-  /// 3. If [sha256] is present, fetch from Blossom at
-  ///    `https://media.divine.video/{sha256}/vtt`.
-  /// 4. Otherwise returns an empty list (no subtitles available).
+  /// 4. If [sha256] is present, fetch from Blossom at
+  ///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+  /// 5. Otherwise returns an empty list (no subtitles available).
   SubtitleCuesProvider._({
     required SubtitleCuesFamily super.from,
     required ({
@@ -58,6 +67,7 @@ final class SubtitleCuesProvider
       List<String> textTrackRefs,
       String? textTrackContent,
       String? sha256,
+      String? sourceLang,
     })
     super.argument,
   }) : super(
@@ -94,6 +104,7 @@ final class SubtitleCuesProvider
               List<String> textTrackRefs,
               String? textTrackContent,
               String? sha256,
+              String? sourceLang,
             });
     return subtitleCues(
       ref,
@@ -102,6 +113,7 @@ final class SubtitleCuesProvider
       textTrackRefs: argument.textTrackRefs,
       textTrackContent: argument.textTrackContent,
       sha256: argument.sha256,
+      sourceLang: argument.sourceLang,
     );
   }
 
@@ -116,17 +128,20 @@ final class SubtitleCuesProvider
   }
 }
 
-String _$subtitleCuesHash() => r'c3fd08a7683dcbaaab2aa027784f6d3d74e91fb4';
+String _$subtitleCuesHash() => r'fbcbc154caaa74c9791dd2c38c8b5d8eb22e5919';
 
 /// Fetches subtitle cues for a video, using ordered fallback.
 ///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-///    directly — zero network cost.
-/// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+/// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+///    viewer does not want a translation, parse it directly — zero network.
+/// 2. When the viewer wants a translation ([sourceLang] differs from their
+///    target and is not kept original), skip the embedded source track so the
+///    language-specific Blossom track is fetched instead.
+/// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
 ///    try HTTP fetch or relay query in order.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`.
-/// 4. Otherwise returns an empty list (no subtitles available).
+/// 4. If [sha256] is present, fetch from Blossom at
+///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+/// 5. Otherwise returns an empty list (no subtitles available).
 
 final class SubtitleCuesFamily extends $Family
     with
@@ -138,6 +153,7 @@ final class SubtitleCuesFamily extends $Family
             List<String> textTrackRefs,
             String? textTrackContent,
             String? sha256,
+            String? sourceLang,
           })
         > {
   SubtitleCuesFamily._()
@@ -151,13 +167,16 @@ final class SubtitleCuesFamily extends $Family
 
   /// Fetches subtitle cues for a video, using ordered fallback.
   ///
-  /// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-  ///    directly — zero network cost.
-  /// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+  /// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+  ///    viewer does not want a translation, parse it directly — zero network.
+  /// 2. When the viewer wants a translation ([sourceLang] differs from their
+  ///    target and is not kept original), skip the embedded source track so the
+  ///    language-specific Blossom track is fetched instead.
+  /// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
   ///    try HTTP fetch or relay query in order.
-  /// 3. If [sha256] is present, fetch from Blossom at
-  ///    `https://media.divine.video/{sha256}/vtt`.
-  /// 4. Otherwise returns an empty list (no subtitles available).
+  /// 4. If [sha256] is present, fetch from Blossom at
+  ///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+  /// 5. Otherwise returns an empty list (no subtitles available).
 
   SubtitleCuesProvider call({
     required String videoId,
@@ -165,6 +184,7 @@ final class SubtitleCuesFamily extends $Family
     List<String> textTrackRefs = const [],
     String? textTrackContent,
     String? sha256,
+    String? sourceLang,
   }) => SubtitleCuesProvider._(
     argument: (
       videoId: videoId,
@@ -172,6 +192,7 @@ final class SubtitleCuesFamily extends $Family
       textTrackRefs: textTrackRefs,
       textTrackContent: textTrackContent,
       sha256: sha256,
+      sourceLang: sourceLang,
     ),
     from: this,
   );

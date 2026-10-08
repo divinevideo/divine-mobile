@@ -3,10 +3,12 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -24,15 +26,24 @@ final subtitlePollDelayProvider = Provider<SubtitlePollDelay>(
   (_) => Future<void>.delayed,
 );
 
+/// Owns the viewer's subtitle translation preferences.
+final subtitleLanguagePreferenceServiceProvider =
+    Provider<SubtitleLanguagePreferenceService>(
+      (_) => SubtitleLanguagePreferenceService(),
+    );
+
 /// Fetches subtitle cues for a video, using ordered fallback.
 ///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-///    directly — zero network cost.
-/// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
+/// 1. If [textTrackContent] is present (REST API embedded the VTT) and the
+///    viewer does not want a translation, parse it directly — zero network.
+/// 2. When the viewer wants a translation ([sourceLang] differs from their
+///    target and is not kept original), skip the embedded source track so the
+///    language-specific Blossom track is fetched instead.
+/// 3. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
 ///    try HTTP fetch or relay query in order.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`.
-/// 4. Otherwise returns an empty list (no subtitles available).
+/// 4. If [sha256] is present, fetch from Blossom at
+///    `https://media.divine.video/{sha256}/vtt`, translated when requested.
+/// 5. Otherwise returns an empty list (no subtitles available).
 @riverpod
 Future<List<SubtitleCue>> subtitleCues(
   Ref ref, {
@@ -41,8 +52,24 @@ Future<List<SubtitleCue>> subtitleCues(
   List<String> textTrackRefs = const [],
   String? textTrackContent,
   String? sha256,
+  String? sourceLang,
 }) async {
-  if (textTrackContent != null && textTrackContent.isNotEmpty) {
+  final service = ref.read(subtitleLanguagePreferenceServiceProvider);
+  await service.initialize();
+  final appLocaleCode = currentAppUiLocale(
+    ref.read(sharedPreferencesProvider),
+  ).languageCode;
+  final wantsTranslation = service.shouldTranslate(
+    sourceLanguage: sourceLang,
+    appLocaleCode: appLocaleCode,
+  );
+  final lang = wantsTranslation
+      ? service.effectiveTargetLanguage(appLocaleCode)
+      : null;
+
+  if (!wantsTranslation &&
+      textTrackContent != null &&
+      textTrackContent.isNotEmpty) {
     return SubtitleService.parseVtt(textTrackContent);
   }
 
@@ -53,9 +80,10 @@ Future<List<SubtitleCue>> subtitleCues(
     httpClient: ref.read(subtitleHttpClientProvider),
     nostrClient: ref.read(nostrServiceProvider),
     delay: ref.read(subtitlePollDelayProvider),
-    textTrackContent: textTrackContent,
+    textTrackContent: wantsTranslation ? null : textTrackContent,
     textTrackRefs: refs,
     sha256: sha256,
+    lang: lang,
   );
   return result.cues;
 }
