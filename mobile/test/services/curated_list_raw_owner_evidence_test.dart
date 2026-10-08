@@ -102,17 +102,22 @@ void main() {
     verifyNever(() => client.publishEventAwaitOk(any()));
   }
 
-  PrefsCuratedListStore store(CuratedListCacheWriteCoordinator coordinator) =>
-      PrefsCuratedListStore(
-        prefs: prefs,
-        writeCoordinator: coordinator,
-        listsStorageKey: CuratedListService.listsStorageKey,
-        subscriptionsStorageKey: CuratedListService.subscribedListsStorageKey,
-        defaultListDeletedStorageKey:
-            CuratedListService.defaultListDeletedStorageKey,
-      )..listsLoaded(service.lists);
+  PrefsCuratedListStore store(CuratedListCacheWriteCoordinator coordinator) {
+    final adapter = PrefsCuratedListStore(
+      prefs: prefs,
+      writeCoordinator: coordinator,
+      listsStorageKey: CuratedListService.listsStorageKey,
+      subscriptionsStorageKey: CuratedListService.subscribedListsStorageKey,
+      defaultListDeletedStorageKey:
+          CuratedListService.defaultListDeletedStorageKey,
+    );
+    // The recovery-held service deliberately hides uncertain live rows. The
+    // adapter still needs its own decoded disk baseline to retain those rows
+    // byte-for-byte while an unrelated coordinate is saved.
+    return adapter..listsLoaded(adapter.loadLists());
+  }
 
-  group('raw secondary owner labels', () {
+  group('raw owner evidence', () {
     for (final label in ['ownerPubkey', 'authorPubkey']) {
       for (final role in ['authenticated', 'remembered', 'guest']) {
         test('$role cannot mutate a null-primary $label record', () async {
@@ -130,7 +135,9 @@ void main() {
           ];
           for (final mutate in mutations) {
             expect(await mutate(), isFalse);
-            expect(service.getListById(':$_id'), source);
+            expect(service.getListById(':$_id'), isNull);
+            expect(service.lists, isEmpty);
+            expect(service.recoveryNeedsRepair, isTrue);
             expect(prefs.getString(CuratedListService.listsStorageKey), raw);
           }
           noSigning();
@@ -174,7 +181,9 @@ void main() {
         test('queued $role mutation rechecks later $label evidence', () async {
           final coordinator = CuratedListCacheWriteCoordinator();
           final source = row();
-          await load([rawRow(source)], role: role, coordinator: coordinator);
+          // A guest's unattributed pending privacy work is already held. Start
+          // with a genuine clean draft so this case reaches the queued save.
+          await load([source.toJson()], role: role, coordinator: coordinator);
           final entered = Completer<void>();
           final release = Completer<void>();
           final laterRaw = jsonEncode([rawRow(source)..[label] = _bob]);
@@ -192,12 +201,19 @@ void main() {
             }
           });
           final mutation = service.addVideoToList(':$_id', _added);
-          await reachedSave.future;
+          final enteredSave = await Future.any([
+            reachedSave.future.then((_) => true),
+            mutation.then((_) => false),
+          ]);
           release.complete();
           await writer;
+          expect(enteredSave, isTrue);
           expect(await mutation, isFalse);
           expect(prefs.getString(CuratedListService.listsStorageKey), laterRaw);
-          expect(service.getListById(':$_id'), source);
+          expect(
+            service.getListById(':$_id'),
+            source.copyWith(pendingPlaintextEventIds: const [_pending]),
+          );
           noSigning();
         });
       }
@@ -206,8 +222,10 @@ void main() {
         'unrelated save retains raw $label and pending privacy work',
         () async {
           final coordinator = CuratedListCacheWriteCoordinator();
-          final unknown = row();
-          final healthy = row(id: 'healthy', pubkey: _alice);
+          final unknown = CuratedList.fromJson(rawRow(row()));
+          final healthy = CuratedList.fromJson(
+            rawRow(row(id: 'healthy', pubkey: _alice)),
+          );
           final unknownRaw = rawRow(unknown)..[label] = _bob;
           await load([unknownRaw, rawRow(healthy)], coordinator: coordinator);
           expect(
@@ -278,7 +296,11 @@ void main() {
         () async {
           final coordinator = CuratedListCacheWriteCoordinator();
           final source = row();
-          await load([rawRow(source)], role: 'guest', coordinator: coordinator);
+          await load(
+            [source.toJson()],
+            role: 'guest',
+            coordinator: coordinator,
+          );
           final damaged = rawRow(source)
             ..[label] = _bob
             ..['createdAt'] = 'invalid-date';
@@ -299,9 +321,13 @@ void main() {
             }
           });
           final mutation = service.addVideoToList(':$_id', _added);
-          await reachedSave.future;
+          final enteredSave = await Future.any([
+            reachedSave.future.then((_) => true),
+            mutation.then((_) => false),
+          ]);
           release.complete();
           await writer;
+          expect(enteredSave, isTrue);
           expect(await mutation, isFalse);
           expect(prefs.getString(CuratedListService.listsStorageKey), laterRaw);
           expect(service.getListById(':$_id'), source);
@@ -362,10 +388,10 @@ void main() {
     }
   });
 
-  group('compatible edits', () {
+  group('genuine draft compatibility', () {
     for (final role in ['authenticated', 'remembered', 'guest']) {
       test('$role keeps genuine unlabelled draft compatibility', () async {
-        await load([rawRow(row())], role: role);
+        await load([row().toJson()], role: role);
         expect(await service.addVideoToList(':$_id', _added), isTrue);
         final key = role == 'authenticated' ? '$_alice:$_id' : ':$_id';
         expect(service.getListById(key)?.videoEventIds, [_video, _added]);
@@ -373,6 +399,29 @@ void main() {
       });
     }
 
+    test(
+      'guest retains unattributed pending privacy work under a shared hold',
+      () async {
+        final source = row();
+        final raw = await load([rawRow(source)], role: 'guest');
+        expect(service.recoveryNeedsRepair, isTrue);
+        expect(
+          await service.addVideoToList(source.authorScopedId, _added),
+          isFalse,
+        );
+        expect(
+          service.getListById(source.authorScopedId),
+          source.copyWith(
+            pendingPlaintextEventIds: const [_pending],
+          ),
+        );
+        expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+        noSigning();
+      },
+    );
+  });
+
+  group('authored mutation commit', () {
     test(
       'consistent full primary identity preserves secondary label on edit',
       () async {
@@ -389,8 +438,6 @@ void main() {
         ]);
       },
     );
-  });
-  group('queued owned mutations', () {
     for (final corruptedField in ['pubkey', 'id']) {
       test(
         'queued owned mutation retains late invalid $corruptedField evidence',
