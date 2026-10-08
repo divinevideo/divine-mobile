@@ -28,6 +28,12 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     configuredRelays: nostrService.configuredRelays,
     fallbackBaseUrl: relayWsToHttpBase(environmentConfig.relayUrl),
   );
+  final profileRepository = ref.watch(profileRepositoryProvider);
+
+  // ProfileRepository is nullable during early auth. Return null so the
+  // page can show a loading state until deps are ready.
+  if (profileRepository == null) return null;
+
   final nip98AuthService = ref.watch(nip98AuthServiceProvider);
   final httpClient = Nip98HttpClient(
     inner: http.Client(),
@@ -40,12 +46,6 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     httpClient: httpClient,
     appVersion: ref.watch(appVersionProvider),
   );
-  final profileRepository = ref.watch(profileRepositoryProvider);
-
-  // ProfileRepository is nullable during early auth. Return null so the
-  // page can show a loading state until deps are ready.
-  if (profileRepository == null) return null;
-
   final db = ref.watch(databaseProvider);
   final authService = ref.watch(authServiceProvider);
   final userPubkey = authService.currentPublicKeyHex ?? '';
