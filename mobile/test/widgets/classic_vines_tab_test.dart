@@ -38,6 +38,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
+import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
 
 // A funnelcake future the test controls, so it can dispose the widget while
@@ -220,7 +221,19 @@ void main() {
         ).thenAnswer((_) async {});
 
         await pumpLoadedTab(tester);
-        await tester.tap(find.byType(VideoThumbnailWidget).at(1));
+        final secondTile = find.byType(VideoThumbnailWidget).at(1);
+        await scrollUntilTappable(
+          tester,
+          secondTile,
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(CustomScrollView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(secondTile);
         await tester.pump();
 
         final args =
