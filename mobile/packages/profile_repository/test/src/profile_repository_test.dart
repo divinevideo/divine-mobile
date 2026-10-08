@@ -4682,6 +4682,33 @@ void main() {
         },
       );
 
+      test(
+        'progressive search ignores synthetic cached REST timestamps',
+        () async {
+          final cached = UserProfile(
+            pubkey: pkCachedVine,
+            displayName: 'Sam From Contacts',
+            createdAt: DateTime(2027),
+            eventId: 'rest-$pkCachedVine',
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached]);
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pkCachedVine,
+              displayName: 'Renamed Account',
+              createdAt: DateTime(2026),
+            ),
+          ]);
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+              .last;
+          expect(result.profiles, isEmpty);
+        },
+      );
+
       for (final clearedName in <String?>[null, '']) {
         test(
           'progressive search does not restore cleared server names '
