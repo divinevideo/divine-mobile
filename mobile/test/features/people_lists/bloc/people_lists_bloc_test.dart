@@ -42,7 +42,7 @@ UserList _buildList({
   );
 }
 
-Future<void> _flush() => Future<void>.delayed(Duration.zero);
+Future<void> _flush() => pumpEventQueue();
 
 void main() {
   setUpAll(() {
@@ -98,13 +98,17 @@ void main() {
 
     test('serializes add and remove through one mutation queue', () async {
       final pending = Completer<PeopleListPublishResult>();
+      final entered = Completer<void>();
       when(
         () => repository.addPubkey(
           ownerPubkey: _ownerA,
           listId: 'crew',
           pubkey: _memberAlice,
         ),
-      ).thenAnswer((_) => pending.future);
+      ).thenAnswer((_) {
+        entered.complete();
+        return pending.future;
+      });
       when(
         () => repository.removePubkey(
           ownerPubkey: _ownerA,
@@ -118,6 +122,12 @@ void main() {
       );
       final bloc = buildBloc(initialOwnerPubkey: _ownerA);
       addTearDown(bloc.close);
+      addTearDown(() async {
+        if (!pending.isCompleted) {
+          pending.complete(const PeopleListPublishResult.failed());
+        }
+        await pumpEventQueue();
+      });
       bloc.add(
         PeopleListsRepositoryListsChanged(
           ownerPubkey: _ownerA,
@@ -131,7 +141,9 @@ void main() {
           pubkey: _memberAlice,
         ),
       );
-      await _flush();
+      await entered.future;
+      expect(bloc.state.lists.single.pubkeys, [_memberAlice]);
+      expect(bloc.state.pendingMutations, hasLength(1));
       bloc.add(
         const PeopleListsPubkeyRemoveRequested(
           listId: 'crew',
@@ -146,13 +158,24 @@ void main() {
           pubkey: _memberAlice,
         ),
       );
+      final removed = bloc.stream.firstWhere(
+        (state) =>
+            state.pendingMutations.isEmpty &&
+            state.lists.single.pubkeys.isEmpty,
+      );
       pending.complete(
         const PeopleListPublishResult(
           status: PeopleListPublishStatus.submitted,
         ),
       );
-      await _flush();
-      await _flush();
+      await removed;
+      verify(
+        () => repository.removePubkey(
+          ownerPubkey: _ownerA,
+          listId: 'crew',
+          pubkey: _memberAlice,
+        ),
+      ).called(1);
       expect(bloc.state.lists.single.pubkeys, isEmpty);
     });
 
@@ -605,7 +628,7 @@ void main() {
     );
 
     blocTest<PeopleListsBloc, PeopleListsState>(
-      'emits optimistic state for add pubkey before repository returns',
+      'submits an add and updates the reverse index',
       build: buildBloc,
       setUp: () {
         when(
@@ -654,7 +677,7 @@ void main() {
     );
 
     blocTest<PeopleListsBloc, PeopleListsState>(
-      'emits optimistic state for remove pubkey before repository returns',
+      'submits a removal and updates the reverse index',
       build: buildBloc,
       setUp: () {
         when(

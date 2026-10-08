@@ -6,7 +6,5 @@
 test/blocs/camera_permission/camera_permission_bloc_test.dart	3
 test/blocs/inline_comment_composer/inline_comment_composer_cubit_test.dart	2
 test/blocs/video_feed/video_feed_bloc_test.dart	21
-test/features/people_lists/bloc/add_people_to_list_cubit_test.dart	1
-test/features/people_lists/bloc/people_lists_bloc_test.dart	1
 test/notifications/badge_converges_after_tap_read_back_test.dart	8
 test/providers/list_providers_test.dart	17
