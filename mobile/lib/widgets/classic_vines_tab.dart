@@ -275,7 +275,7 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
                 ),
                 'open classic video',
                 logName: 'ClassicVinesTab',
-                category: LogCategory.ui,
+                category: LogCategory.video,
               );
             },
           ),
