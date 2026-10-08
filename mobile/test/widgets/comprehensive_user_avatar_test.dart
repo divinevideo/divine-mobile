@@ -333,6 +333,46 @@ void main() {
         );
       });
 
+      for (final brightness in Brightness.values) {
+        testWidgets('keeps group artwork unbacked in ${brightness.name} mode', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: brightness == Brightness.dark
+                  ? VineTheme.theme
+                  : VineTheme.lightTheme,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => UserAvatar(
+                    size: 40,
+                    contentOverride: DivineIcon(
+                      icon: DivineIconName.users,
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          expect(find.byType(DivineIcon), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byType(ClipRRect),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is ColoredBox &&
+                    widget.color == VineTheme.accentLime,
+              ),
+            ),
+            findsNothing,
+          );
+        });
+      }
+
       testWidgets('uses explicit placeholder tone when provided', (
         tester,
       ) async {
