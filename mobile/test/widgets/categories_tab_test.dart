@@ -1,13 +1,21 @@
 // ABOUTME: Widget tests for the categories discovery surface.
 // ABOUTME: Verifies loading/error/empty states and the redesigned pinned-first list.
 
+import 'package:categories_repository/categories_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/categories/categories_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/category_gallery_screen.dart';
 import 'package:openvine/widgets/categories_tab.dart';
+
+class _MockCategoriesRepository extends Mock implements CategoriesRepository {}
 
 void main() {
   Widget buildSubject({
@@ -192,6 +200,54 @@ void main() {
         tappedCategory,
         const VideoCategory(name: 'animals', videoCount: 1500),
       );
+    });
+  });
+
+  group('CategoriesTab', () {
+    testWidgets('opens the category gallery route with the tapped category', (
+      tester,
+    ) async {
+      const animals = VideoCategory(name: 'animals', videoCount: 1500);
+      final repository = _MockCategoriesRepository();
+      when(repository.watchCategoriesCached)
+          .thenAnswer((_) => Stream.value(const CacheResult.live([animals])));
+      Object? galleryExtra;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(body: CategoriesTab()),
+          ),
+          GoRoute(
+            path: CategoryGalleryScreen.path,
+            builder: (context, state) {
+              galleryExtra = state.extra;
+              return Text('gallery:${state.pathParameters['categoryName']}');
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            categoriesRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Animals'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('gallery:animals'), findsOneWidget);
+      expect(galleryExtra, animals);
     });
   });
 }
