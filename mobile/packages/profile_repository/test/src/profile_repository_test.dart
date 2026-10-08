@@ -3610,6 +3610,8 @@ void main() {
           jsonEncode({
             'display_name': 'Alice',
             'picture': 'https://example.com/fresh.png',
+            'about': 'Fresh bio',
+            'banner': 'https://example.com/fresh-banner.png',
           }),
         );
 
@@ -3622,6 +3624,8 @@ void main() {
           (_) async => UserProfile(
             pubkey: searchPubkey,
             picture: 'https://example.com/stale.png',
+            about: 'Stale bio',
+            banner: 'https://example.com/stale-banner.png',
             rawData: const {},
             createdAt: DateTime(2026),
             eventId: searchEventId,
@@ -3634,6 +3638,11 @@ void main() {
         // Assert - search result picture preserved, not overwritten
         expect(result, hasLength(1));
         expect(result.first.picture, equals('https://example.com/fresh.png'));
+        expect(result.first.about, equals('Fresh bio'));
+        expect(
+          result.first.banner,
+          equals('https://example.com/fresh-banner.png'),
+        );
       });
 
       test('enriches missing and empty fields from cache', () async {
