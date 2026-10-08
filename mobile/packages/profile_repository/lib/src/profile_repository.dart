@@ -3067,9 +3067,15 @@ class ProfileRepository implements ProfileReader {
         profile.copyWith(
           name: profile.name ?? cached.name,
           displayName: profile.displayName ?? cached.displayName,
-          about: profile.about ?? cached.about,
-          picture: profile.picture ?? cached.picture,
-          banner: profile.banner ?? cached.banner,
+          about: profile.about?.trim().isNotEmpty == true
+              ? profile.about
+              : cached.about,
+          picture: profile.picture?.trim().isNotEmpty == true
+              ? profile.picture
+              : cached.picture,
+          banner: profile.banner?.trim().isNotEmpty == true
+              ? profile.banner
+              : cached.banner,
           website: profile.website ?? cached.website,
           nip05: profile.nip05 ?? cached.nip05,
           lud16: profile.lud16 ?? cached.lud16,

@@ -3636,7 +3636,7 @@ void main() {
         expect(result.first.picture, equals('https://example.com/fresh.png'));
       });
 
-      test('enriches multiple null fields from cache', () async {
+      test('enriches missing and empty fields from cache', () async {
         // Arrange - search result has minimal data
         final mockSearchEvent = MockEvent();
         const searchPubkey =
@@ -3652,7 +3652,13 @@ void main() {
         when(() => mockSearchEvent.id).thenReturn(searchEventId);
         when(
           () => mockSearchEvent.content,
-        ).thenReturn(jsonEncode({'display_name': 'Alice'}));
+        ).thenReturn(
+          jsonEncode({
+            'display_name': 'Alice',
+            'about': '',
+            'picture': '',
+          }),
+        );
 
         when(
           () => mockNostrClient.queryUsers('alice', limit: 200),
@@ -3675,7 +3681,7 @@ void main() {
         // Act
         final result = await profileRepository.searchUsers(query: 'alice');
 
-        // Assert - null fields enriched, non-null preserved
+        // Empty search fields must not hide a richer cached profile.
         expect(result, hasLength(1));
         expect(result.first.displayName, equals('Alice'));
         expect(result.first.about, equals('Bio from cache'));

@@ -12,14 +12,13 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Reusable tile widget for displaying a user profile in search results.
 ///
-/// Shows avatar, display name, and a secondary line that disambiguates users:
-/// REST video count when known, otherwise a NIP-05 handle, otherwise social
-/// proof via [resolveUserIdentifierLine]. Uses [ConsumerWidget] (Riverpod) for
+/// Shows avatar, display name, account details, and bio. Uses [ConsumerWidget] for
 /// the providers that gate the add-to-list action and NIP-05 verification.
 class SearchUserTile extends ConsumerWidget {
   const SearchUserTile({required this.profile, this.onTap, super.key});
@@ -42,22 +41,41 @@ class SearchUserTile extends ConsumerWidget {
         : null;
     final ownPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final secondaryText = videoCount != null && videoCount > 0
-        ? context.l10n.searchUserVideoCount(
-            videoCount,
-            CountFormatter.formatCompact(videoCount, locale: locale),
-          )
+    final relationship =
+        ref.watch(followRelationshipProvider(profile.pubkey)).value ??
+        FollowRelationship.none;
+    final relationshipLabel = switch (relationship) {
+      FollowRelationship.mutual => context.l10n.socialProofMutual,
+      FollowRelationship.followsYou => context.l10n.socialProofFollowsYou,
+      FollowRelationship.youFollow => context.l10n.socialProofYouFollow,
+      FollowRelationship.none => null,
+    };
+    final isOgViner = ref.watch(
+      ogVinerCacheServiceProvider.select(
+        (service) => service.isOgViner(profile.pubkey),
+      ),
+    );
+    final identifier = videoCount != null && videoCount > 0
+        ? profile.handle
         : resolveUserIdentifierLine(
             l10n: context.l10n,
             locale: locale,
             handle: claimedNip05,
             verificationStatus: verificationStatus,
             isOwnProfile: profile.pubkey == ownPubkey,
-            relationship:
-                ref.watch(followRelationshipProvider(profile.pubkey)).value ??
-                FollowRelationship.none,
             followerCount: profile.restFollowerCount,
           );
+    final details = [
+      ?relationshipLabel,
+      if (identifier != null && identifier.isNotEmpty) identifier,
+      if (isOgViner) context.l10n.ogVinerBadgeLabel,
+      if (videoCount != null && videoCount > 0)
+        context.l10n.searchUserVideoCount(
+          videoCount,
+          CountFormatter.formatCompact(videoCount, locale: locale),
+        ),
+    ].join(' · ');
+    final bio = profile.about?.trim();
 
     final profileListFeaturesEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
@@ -101,13 +119,22 @@ class SearchUserTile extends ConsumerWidget {
                         color: context.vineColors.primaryText,
                       ),
                     ),
-                    if (secondaryText != null)
+                    if (details.isNotEmpty)
                       Text(
-                        secondaryText,
+                        details,
                         style: VineTheme.bodyMediumFont(
                           color: context.vineColors.secondaryText,
                         ),
                         maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (bio != null && bio.isNotEmpty)
+                      Text(
+                        bio.replaceAll(RegExp(r'\s+'), ' '),
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.secondaryText,
+                        ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                   ],
