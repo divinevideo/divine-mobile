@@ -1546,12 +1546,6 @@ class CuratedListService extends ChangeNotifier {
     final userPubkey = _authService.currentPublicKeyHex;
     if (userPubkey == null) return;
 
-    Log.info(
-      "📋 Fetching user's curated lists from relays for pubkey: ${pubkeyForLogs(userPubkey)}",
-      name: 'CuratedListService',
-      category: LogCategory.system,
-    );
-
     try {
       final snapshot = await CuratedListRelaySnapshotReader(
         nostrClient: _nostrService,
