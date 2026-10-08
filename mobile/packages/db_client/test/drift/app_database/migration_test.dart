@@ -28,14 +28,14 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 20', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 20);
+    test('current schema version is 21', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 21);
     });
 
-    test('v20 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(20);
+    test('v21 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(21);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
@@ -415,10 +415,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v20', () async {
+    test('v8 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -440,45 +440,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v20', () async {
+    test('v7 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
-    test('v6 schema migrates to v20', () async {
+    test('v6 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
-    test('v5 schema migrates to v20', () async {
+    test('v5 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
-    test('v3 schema migrates to v20', () async {
+    test('v3 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
-    test('v2 schema migrates to v20', () async {
+    test('v2 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v20', () async {
+    test('legacy v1 schema migrates to v21', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 20);
+      await verifier.migrateAndValidate(db, 21);
       await db.close();
     });
 
@@ -521,6 +521,61 @@ void main() {
         expect(row.read<String>('publish_status'), equals('failed'));
         expect(row.read<String?>('rumor_event_json'), equals('{"kind":7}'));
         expect(row.read<String?>('recipient_pubkeys'), isNull);
+        await db.close();
+      },
+    );
+
+    test(
+      'a v20 database gains removed_message_ids and keeps its tombstones',
+      () async {
+        // #8179. `removed_message_ids` is a new table, so nothing migrates
+        // into it. The upgrade must leave the existing removal tombstone
+        // alone and hand back a table that works.
+        const conversationId =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        const ownerPubkey =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const rumorId =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        final schema = await verifier.schemaAt(20);
+        schema.rawDatabase.execute(
+          'INSERT INTO removed_conversations '
+          '(conversation_id, owner_pubkey, removed_at) VALUES (?, ?, ?)',
+          [conversationId, ownerPubkey, 1700000000],
+        );
+
+        final db = AppDatabase(schema.newConnection());
+        await verifier.migrateAndValidate(db, 21);
+
+        expect(
+          await db.removedConversationsDao.removedAtFor(
+            conversationId: conversationId,
+            ownerPubkey: ownerPubkey,
+          ),
+          1700000000,
+        );
+        final inserted = await db.directMessagesDao.insertMessage(
+          id: rumorId,
+          conversationId: conversationId,
+          senderPubkey: ownerPubkey,
+          content: 'written after the upgrade',
+          createdAt: 1700000001,
+          giftWrapId: 'dddddddddddddddddddddddddddddddd',
+          ownerPubkey: ownerPubkey,
+        );
+        expect(inserted, isTrue);
+        await db.removedMessageIdsDao.captureForConversations(
+          conversationIds: [conversationId],
+          ownerPubkey: ownerPubkey,
+          removedAt: 1700000002,
+        );
+        expect(
+          await db.removedMessageIdsDao.contains(
+            rumorId: rumorId,
+            ownerPubkey: ownerPubkey,
+          ),
+          isTrue,
+        );
         await db.close();
       },
     );

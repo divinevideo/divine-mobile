@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 20** (see `app_database.dart`).
+**Version: 21** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -153,6 +153,23 @@ well as `from`, like the v19 removal: migration tests validate intermediate
 versions, and a column added to an existing table shows up there as an extra
 one. It is idempotent and part of the guarded `beforeOpen` recovery chain,
 with the column in the repair probe.
+
+Version 21 adds the `removed_message_ids` table (#8179): the rumor id of every
+message and reaction deleted when its conversation was removed, owner-scoped,
+with `(owner_pubkey, rumor_id)` as the primary key. Removing a conversation
+deletes the rows a later NIP-09 kind 5 would apply to, so without the ids the
+wrap carrying that kind 5 stayed deferred and was decrypted again on relay
+redelivery until it aged out of the subscription window. The same ids stop a
+replayed message from being stored again, which
+the removal timestamp alone could not do: a sender chooses a rumor's
+`created_at`, so a future-dated message could clear the removal instant on a
+later replay. The table is new, so nothing migrates into it and conversations
+removed before this version are not backfilled; a retraction naming one of
+their messages stays deferred as before. Rows are kept for the account's
+lifetime like `removed_conversations` and are cleared with it when the
+account's data is deleted. A plain account switch keeps them. The step is a
+plain `createTable`, which needs no index step because the composite primary
+key is the only lookup, and it is not added to the `beforeOpen` recovery chain.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

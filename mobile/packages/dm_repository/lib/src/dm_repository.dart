@@ -528,6 +528,7 @@ class DmRepository {
     PendingGiftWrapsDao? pendingGiftWrapsDao,
     ProcessedGiftWrapsDao? processedGiftWrapsDao,
     RemovedConversationsDao? removedConversationsDao,
+    RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
     NIP17MessageService? messageService,
     String? userPubkey,
@@ -553,6 +554,7 @@ class DmRepository {
        _pendingGiftWrapsDao = pendingGiftWrapsDao,
        _processedGiftWrapsDao = processedGiftWrapsDao,
        _removedConversationsDao = removedConversationsDao,
+       _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
        _messageService = messageService,
        _userPubkey = userPubkey ?? '',
@@ -605,6 +607,13 @@ class DmRepository {
   /// Durable owner-scoped removal markers. Relay events are replayable, so a
   /// hard delete without this ledger would restore the thread on restart.
   final RemovedConversationsDao? _removedConversationsDao;
+
+  /// Ids of the messages and reactions removed with a conversation (#8179).
+  /// They settle a later kind 5 naming one and keep a replay from storing it
+  /// again. Nullable to keep older test fixtures working without rewiring;
+  /// pass it with [DmReactionsRepository], which deletes the reactions whose
+  /// ids are recorded.
+  final RemovedMessageIdsDao? _removedMessageIdsDao;
 
   final DmSyncState? _syncState;
   NIP17MessageService? _messageService;
@@ -763,6 +772,11 @@ class DmRepository {
   }
 
   static final _sendBatchIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// How many distinct deferred wrapped deletions are logged per session. The
+  /// capture ring keeps every line whatever the level and a sender chooses the
+  /// ids, so a flood of unresolvable retractions must not be able to fill it.
+  static const int maxLoggedDeferredDeletions = 64;
 
   /// Durable queue handle for one recipient of a group send.
   ///
@@ -2743,6 +2757,7 @@ class DmRepository {
     final tryReactionsFirst = _hasKindHint(rumor.tags, EventKind.reaction);
 
     var outcome = DmWrapOutcome.processed;
+    final unresolved = <String>[];
     for (final tag in rumor.tags) {
       if (tag.length < 2 || tag[0] != 'e') continue;
       final rumorId = tag[1];
@@ -2755,9 +2770,16 @@ class DmRepository {
       Future<DmWrapOutcome?> asMessage() async =>
           _applyMessageDeletion(rumorId: rumorId, deletion: rumor);
 
-      final resolved = tryReactionsFirst
+      var resolved = tryReactionsFirst
           ? await asReaction() ?? await asMessage()
           : await asMessage() ?? await asReaction();
+
+      // Removal deleted this target for good: settle by its id, never by a
+      // timestamp or the rumor's tags (#8179).
+      if (resolved == null &&
+          await _wasRemovedWithConversation(rumorId, _ownerPubkey)) {
+        resolved = DmWrapOutcome.processed;
+      }
 
       // Neither store holds the target — it may still arrive, since NIP-59
       // randomizes gift-wrap `created_at` and a deletion can drain ahead of
@@ -2765,10 +2787,51 @@ class DmRepository {
       // lands here too: that is "cannot resolve", not "nothing to do", and
       // cementing it would burn the wrap for every account on the device.
       if ((resolved ?? DmWrapOutcome.deferred) == DmWrapOutcome.deferred) {
+        unresolved.add(rumorId);
         outcome = DmWrapOutcome.deferred;
       }
     }
+    if (unresolved.isNotEmpty) _logDeferredDeletion(giftWrapId, unresolved);
     return outcome;
+  }
+
+  /// Wrap ids already logged by [_logDeferredDeletion] this session.
+  final Set<String> _loggedDeferredDeletions = <String>{};
+
+  static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// Logs why [giftWrapId] stays deferred, once per wrap and for at most
+  /// [maxLoggedDeferredDeletions] wraps a session, because a deferred wrap is
+  /// routed again on every launch. The target is sender text: only a
+  /// well-formed event id is printed.
+  void _logDeferredDeletion(String giftWrapId, List<String> targets) {
+    if (_loggedDeferredDeletions.length >= maxLoggedDeferredDeletions) return;
+    if (!_loggedDeferredDeletions.add(giftWrapId)) return;
+    final first = targets.first;
+    final shown = _eventIdPattern.hasMatch(first) ? first : '<not an event id>';
+    final more = targets.length > 1 ? ' (+${targets.length - 1} more)' : '';
+    Log.debug(
+      'Deferred wrapped deletion $giftWrapId: target $shown$more is not '
+      'resolved yet',
+      category: LogCategory.system,
+    );
+  }
+
+  /// Whether [rumorId] is a message or reaction that [removeConversation] or
+  /// [removeConversations] deleted for [ownerPubkey].
+  ///
+  /// Takes the owner rather than reading the live one: the ingest paths pass
+  /// the owner they started under.
+  Future<bool> _wasRemovedWithConversation(
+    String rumorId,
+    String? ownerPubkey,
+  ) async {
+    if (ownerPubkey == null) return false;
+    return await _removedMessageIdsDao?.contains(
+          rumorId: rumorId,
+          ownerPubkey: ownerPubkey,
+        ) ??
+        false;
   }
 
   /// Whether [tags] carries a `['k', <kind>]` hint naming [kind].
@@ -3363,7 +3426,9 @@ class DmRepository {
             conversationId: conversationId,
             ownerPubkey: ownerPubkey,
           );
-          if (removedAt != null && persistedCreatedAt <= removedAt!) {
+          // A sender picks `created_at`, so only the id proves a removal.
+          if ((removedAt != null && persistedCreatedAt <= removedAt!) ||
+              await _wasRemovedWithConversation(rumor.id, ownerPubkey)) {
             suppressedByRemovedConversation = true;
             return;
           }
@@ -3438,8 +3503,8 @@ class DmRepository {
           );
           Log.debug(
             'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
-            '$conversationId: createdAt $persistedCreatedAt is at or before '
-            'removal at $removedAt',
+            '$conversationId: removed with it, or createdAt '
+            '$persistedCreatedAt is at or before removal at $removedAt',
             category: LogCategory.system,
           );
           return;
@@ -4137,7 +4202,9 @@ class DmRepository {
           conversationId: conversationId,
           ownerPubkey: ownerPubkey,
         );
-        if (removedAt != null && persistedCreatedAt <= removedAt!) {
+        // See the NIP-17 path: the id, not the timestamp, says it was removed.
+        if ((removedAt != null && persistedCreatedAt <= removedAt!) ||
+            await _wasRemovedWithConversation(nip04Event.id, ownerPubkey)) {
           suppressedByRemovedConversation = true;
           return;
         }
@@ -4196,8 +4263,8 @@ class DmRepository {
         await _recordProcessedWrap(nip04Event.id);
         Log.debug(
           'Suppressed NIP-04 DM ${nip04Event.id} in removed conversation '
-          '$conversationId: createdAt $persistedCreatedAt is at or '
-          'before removal at $removedAt',
+          '$conversationId: removed with it, or createdAt '
+          '$persistedCreatedAt is at or before removal at $removedAt',
           category: LogCategory.system,
         );
         return;
@@ -8851,6 +8918,10 @@ class DmRepository {
   /// the sweep publishes a gift wrap into a conversation the user removed
   /// (#7857) — the reaction counterpart of the `outgoing_dms` delete above.
   ///
+  /// The ids of the removed messages and reactions are recorded in the same
+  /// transaction, before the delete, so a later kind 5 naming one can be
+  /// settled and a replay of it is not stored again (#8179).
+  ///
   /// Returns [ConversationRemovalOutcome.refused] without deleting anything
   /// when the injected [DmConversationRemovalPolicy] protects the peer — the
   /// single chokepoint every removal path inherits, so a new caller cannot
@@ -8898,6 +8969,11 @@ class DmRepository {
         ownerPubkey: owner,
         removedAt: removedAt,
       );
+      await _removedMessageIdsDao?.captureForConversations(
+        conversationIds: [conversationId],
+        ownerPubkey: owner,
+        removedAt: removedAt,
+      );
       await _directMessagesDao.deleteConversationMessages(
         conversationId,
         ownerPubkey: owner,
@@ -8919,7 +8995,7 @@ class DmRepository {
 
   /// Remove multiple conversations, their messages, their queued sends, and
   /// their queued reactions atomically. See [removeConversation] for why the
-  /// reaction rows go with them.
+  /// reaction rows go with them and for the ids it records.
   ///
   /// No-op when [conversationIds] is empty.
   ///
@@ -8966,6 +9042,11 @@ class DmRepository {
       // mid-flight must not mix one account's reads with another's writes.
       final removedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _removedConversationsDao?.recordAll(
+        conversationIds: removable,
+        ownerPubkey: owner,
+        removedAt: removedAt,
+      );
+      await _removedMessageIdsDao?.captureForConversations(
         conversationIds: removable,
         ownerPubkey: owner,
         removedAt: removedAt,

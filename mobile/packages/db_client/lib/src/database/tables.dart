@@ -1783,6 +1783,39 @@ class RemovedConversations extends Table {
   Set<Column> get primaryKey => {conversationId, ownerPubkey};
 }
 
+/// Owner-scoped ids of the messages and reactions removed with a conversation.
+///
+/// Removal deletes those rows, so a later NIP-09 kind 5 naming one of them can
+/// no longer be resolved against the message or reaction store. Without this
+/// record the wrap carrying it is deferred and decrypted again on every
+/// subscription until it leaves the relay window. A rumor id is globally
+/// unique, so an id found here is exact evidence that the target is gone and
+/// the deletion has nothing left to apply. A timestamp or a conversation guess
+/// cannot say that, and wrongly settling a deletion loses it for every account
+/// on the device. The same evidence keeps a replay from storing the message
+/// again: a rumor's `created_at` is chosen by its sender, so the removal
+/// instant in [RemovedConversations] alone cannot say it was already removed.
+///
+/// Retention: unbounded on purpose for the account's lifetime, like
+/// [RemovedConversations]. A row is about 150 bytes and exists only for a
+/// message the user removed. `RemovedMessageIdsDao.clearAllForUser` empties it
+/// when the account's data is deleted; a plain account switch keeps it.
+class RemovedMessageIds extends Table {
+  @override
+  String get tableName => 'removed_message_ids';
+
+  TextColumn get ownerPubkey => text().named('owner_pubkey')();
+
+  /// Rumor id of a kind 14/15 message or a kind 7 reaction.
+  TextColumn get rumorId => text().named('rumor_id')();
+
+  /// Unix timestamp when the owning conversation was removed.
+  IntColumn get removedAt => integer().named('removed_at')();
+
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, rumorId};
+}
+
 /// Cache of the NIP-39 identity-claims source event per profile.
 ///
 /// One row per viewed profile, mirroring the latest identity event seen on
