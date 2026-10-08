@@ -4504,5 +4504,6 @@
   "listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit.",
   "listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
   "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
-  "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit."
+  "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.",
+  "listPrivateConversionTooLarge": "Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save."
 }

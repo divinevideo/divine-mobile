@@ -20,6 +20,9 @@ enum CuratedListInfoStatus {
   /// The save failed; the form stays open so nothing typed is lost.
   failure,
 
+  /// This private target exceeds the encryption limit; retrying cannot fit it.
+  privateListFull,
+
   /// The permissions update has no confirmed relay outcome.
   permissionsUnconfirmed,
 

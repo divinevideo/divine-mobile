@@ -83,7 +83,9 @@ void main() {
         expect(cubit.state.description, original.description);
         expect(cubit.state.isPublic, original.isPublic);
         expect(cubit.state.collaboratorPubkeys, [_alice]);
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
         verifyNever(() => service.retryListSync(any()));
       },
     );
@@ -185,7 +187,9 @@ void main() {
         await cubit.submitted();
         expect(cubit.state.name, pending.name);
         expect(cubit.state.description, pending.description);
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
         when(() => service.retryListSync(pending.authorScopedId))
             .thenAnswer((_) async {
               current = pending.copyWith(
@@ -243,7 +247,7 @@ void main() {
 
     void stubUpdate(Future<bool> Function() answer) {
       when(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -255,7 +259,11 @@ void main() {
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
-        return answer();
+        return answer().then(
+          (saved) => saved
+              ? const CuratedListUpdateResult.saved()
+              : const CuratedListUpdateResult.failed(),
+        );
       });
     }
 
@@ -287,7 +295,9 @@ void main() {
         expect(cubit.state.canClose, isFalse);
         clearInteractions(service);
         await cubit.submitted();
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
       },
     );
 
@@ -338,7 +348,7 @@ void main() {
           when(() => service.getListById(existing.authorScopedId))
               .thenReturn(existing);
           when(
-            () => service.updateList(
+            () => service.updateListWithResult(
               listId: any(named: 'listId'),
               name: any(named: 'name'),
               description: any(named: 'description'),
@@ -352,7 +362,7 @@ void main() {
             expect(invocation.namedArguments[#onLocalSaved], isNull);
             (invocation.namedArguments[#onPublicationUnconfirmed]
                 as void Function())();
-            return false;
+            return const CuratedListUpdateResult.failed();
           });
           final cubit = buildCubit(existingList: existing);
           addTearDown(cubit.close);
@@ -387,7 +397,7 @@ void main() {
         await cubit.submitted();
         expect(cubit.state.status, CuratedListInfoStatus.failure);
         verifyNever(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: any(named: 'listId'),
             name: any(named: 'name'),
             description: any(named: 'description'),
@@ -755,7 +765,7 @@ void main() {
           ),
         ],
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
@@ -777,7 +787,7 @@ void main() {
         // resending what it opened with would flip the list straight back.
         // Leaving isPublic out of the matcher pins it to null.
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
@@ -796,7 +806,7 @@ void main() {
           await cubit.submitted();
         },
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
@@ -823,7 +833,7 @@ void main() {
           await cubit.submitted();
         },
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Marionettes',
             description: 'Strings attached',
@@ -845,7 +855,7 @@ void main() {
           await cubit.submitted();
         },
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',
@@ -869,7 +879,7 @@ void main() {
           await cubit.submitted();
         },
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',
@@ -890,7 +900,7 @@ void main() {
           await cubit.submitted();
         },
         verify: (_) => verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: 'Strings attached',

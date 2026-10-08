@@ -45,6 +45,53 @@ void main() {
       );
 
   test(
+    'private conversion rejection preserves every draft and saved baseline',
+    () async {
+      final service = _Service();
+      final saved = list(collaborators: [bob], pending: false);
+      when(() => service.getListById(saved.authorScopedId)).thenReturn(saved);
+      when(
+        () => service.updateListWithResult(
+          listId: saved.authorScopedId,
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+          onLocalSaved: any(named: 'onLocalSaved'),
+          onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+        ),
+      ).thenAnswer(
+        (_) async => const CuratedListUpdateResult.privateListFull(),
+      );
+      final cubit = editor(service, saved);
+      addTearDown(cubit.close);
+      cubit
+        ..nameChanged('Unsaved name')
+        ..descriptionChanged('Unsaved description')
+        ..collaboratorsPicked(offered: {bob, carol}, picked: {carol})
+        ..visibilityChanged(isPublic: false);
+      await cubit.submitted();
+      expect(cubit.state.status, CuratedListInfoStatus.privateListFull);
+      expect(cubit.state.canClose, isFalse);
+      expect(cubit.state.canEdit, isTrue);
+      expect(cubit.state.needsSync, isFalse);
+      expect(cubit.state.permissionRecoveryPending, isFalse);
+      expect(cubit.state.name, 'Unsaved name');
+      expect(cubit.state.description, 'Unsaved description');
+      expect(cubit.state.isPublic, isFalse);
+      expect(cubit.state.collaboratorPubkeys, [carol]);
+      expect(cubit.state.wasPublic, isTrue);
+      cubit.refreshRecoveryReadOnly();
+      expect(cubit.state.status, CuratedListInfoStatus.privateListFull);
+      expect(cubit.state.isPublic, isFalse);
+      expect(cubit.state.collaboratorPubkeys, [carol]);
+      expect(service.getListById(saved.authorScopedId), same(saved));
+      verifyNever(() => service.retryListSync(any()));
+    },
+  );
+
+  test(
     'Sync retries saved work without saving or dropping draft fields',
     () async {
       final service = _Service();
@@ -77,7 +124,9 @@ void main() {
       expect(cubit.state.status, CuratedListInfoStatus.editing);
       verify(() => service.retryListSync(saved.authorScopedId)).called(1);
       verifyNever(() => service.createList(name: any(named: 'name')));
-      verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      verifyNever(
+        () => service.updateListWithResult(listId: any(named: 'listId')),
+      );
     },
   );
 
@@ -90,7 +139,7 @@ void main() {
       when(() => service.retryListSync(saved.authorScopedId))
           .thenAnswer((_) async => false);
       when(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: saved.authorScopedId,
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -100,7 +149,7 @@ void main() {
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
       final cubit = editor(service, saved);
       addTearDown(cubit.close);
       cubit.collaboratorsPicked(offered: {bob, carol}, picked: {carol});
@@ -110,10 +159,12 @@ void main() {
       expect(cubit.state.collaboratorPubkeys, [carol]);
       expect(cubit.state.status, CuratedListInfoStatus.failure);
       expect(cubit.state.needsSync, isTrue);
-      verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      verifyNever(
+        () => service.updateListWithResult(listId: any(named: 'listId')),
+      );
       await cubit.submitted();
       verify(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: saved.authorScopedId,
           name: saved.name,
           description: saved.description,
@@ -161,7 +212,7 @@ void main() {
       var current = saved;
       when(() => service.getListById(any())).thenAnswer((_) => current);
       when(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -171,7 +222,7 @@ void main() {
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
       final cubit = editor(service, saved);
       addTearDown(cubit.close);
       cubit.nameChanged('Draft name');
@@ -186,7 +237,7 @@ void main() {
       expect(cubit.state.name, 'Draft name');
       await cubit.submitted();
       verify(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: saved.authorScopedId,
           name: 'Draft name',
           description: saved.description,
@@ -330,7 +381,9 @@ void main() {
       expect(cubit.state.isPublic, isTrue);
       expect(cubit.state.canEdit, isFalse);
       expect(cubit.state.canSubmit, isFalse);
-      verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      verifyNever(
+        () => service.updateListWithResult(listId: any(named: 'listId')),
+      );
     },
   );
 
@@ -405,7 +458,9 @@ void main() {
     expect(cubit.state.status, CuratedListInfoStatus.editing);
     expect(cubit.state.needsSync, isFalse);
     expect(cubit.state.name, 'Unsaved name');
-    verifyNever(() => service.updateList(listId: any(named: 'listId')));
+    verifyNever(
+      () => service.updateListWithResult(listId: any(named: 'listId')),
+    );
   });
 
   test('background delivery cannot hide an unrelated Save failure', () async {
@@ -414,7 +469,7 @@ void main() {
     var current = saved;
     when(() => service.getListById(any())).thenAnswer((_) => current);
     when(
-      () => service.updateList(
+      () => service.updateListWithResult(
         listId: any(named: 'listId'),
         name: any(named: 'name'),
         description: any(named: 'description'),
@@ -424,7 +479,7 @@ void main() {
         onLocalSaved: any(named: 'onLocalSaved'),
         onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
       ),
-    ).thenAnswer((_) async => false);
+    ).thenAnswer((_) async => const CuratedListUpdateResult.failed());
     final cubit = editor(service, saved);
     addTearDown(cubit.close);
     cubit.nameChanged('Unsaved name');
@@ -459,7 +514,9 @@ void main() {
     expect(cubit.state.isPublic, isFalse);
     expect(cubit.state.wasPublic, isTrue);
     expect(cubit.state.visibilityWillChange, isTrue);
-    verifyNever(() => service.updateList(listId: any(named: 'listId')));
+    verifyNever(
+      () => service.updateListWithResult(listId: any(named: 'listId')),
+    );
   });
 
   test('a collaborator draft survives matching intermediate saved choices', () {
@@ -479,7 +536,9 @@ void main() {
     cubit.refreshRecoveryReadOnly();
 
     expect(cubit.state.collaboratorPubkeys, [carol]);
-    verifyNever(() => service.updateList(listId: any(named: 'listId')));
+    verifyNever(
+      () => service.updateListWithResult(listId: any(named: 'listId')),
+    );
   });
 
   test('an explicit return to the opening privacy choice remains a draft', () {
@@ -532,7 +591,7 @@ void main() {
         var current = saved;
         when(() => service.getListById(any())).thenAnswer((_) => current);
         when(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: any(named: 'listId'),
             name: any(named: 'name'),
             description: any(named: 'description'),
@@ -544,7 +603,9 @@ void main() {
           ),
         ).thenAnswer((_) async {
           if (accepted) current = list(isPublic: false, pending: false);
-          return accepted;
+          return accepted
+              ? const CuratedListUpdateResult.saved()
+              : const CuratedListUpdateResult.failed();
         });
         final cubit = editor(service, saved);
         addTearDown(cubit.close);

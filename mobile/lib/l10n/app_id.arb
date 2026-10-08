@@ -5505,5 +5505,6 @@
   "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
   "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
   "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
-  "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda."
+  "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
+  "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan."
 }

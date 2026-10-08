@@ -5505,5 +5505,6 @@
   "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo.",
   "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización.",
   "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
-  "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada."
+  "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
+  "listPrivateConversionTooLarge": "Esta lista es demasiado grande para hacerla privada. Quitá algunos videos primero. Tus cambios siguen acá y no se guardaron."
 }

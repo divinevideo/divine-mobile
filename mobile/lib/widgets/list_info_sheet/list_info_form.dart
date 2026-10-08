@@ -122,13 +122,16 @@ class _SaveFailedMessage extends StatelessWidget {
       return const SizedBox.shrink();
     }
     if (status != CuratedListInfoStatus.failure &&
+        status != CuratedListInfoStatus.privateListFull &&
         status != CuratedListInfoStatus.permissionsUnconfirmed) {
       return const SizedBox.shrink();
     }
 
     final l10n = context.l10n;
     return ListInfoFailureMessage(
-      status == CuratedListInfoStatus.permissionsUnconfirmed
+      status == CuratedListInfoStatus.privateListFull
+          ? l10n.listPrivateConversionTooLarge
+          : status == CuratedListInfoStatus.permissionsUnconfirmed
           ? l10n.listPermissionsUnconfirmed
           : isEditing
           ? l10n.listUpdateFailed

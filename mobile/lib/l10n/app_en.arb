@@ -3219,6 +3219,10 @@
   "listShareFailed": "Couldn't share this list. Try again.",
   "listSave": "Save",
   "listContinue": "Continue",
+  "listPrivateConversionTooLarge": "This list is too large to make private. Remove some videos first. Your edits are kept here and haven't been saved.",
+  "@listPrivateConversionTooLarge": {
+    "description": "An oversized public list cannot become private; the open editor retains unsaved drafts."
+  },
   "listPrivateFull": "This private list is full. Remove something to add more.",
   "@listPrivateFull": {
     "description": "Shown when a video cannot be added to a private list because its encrypted payload would exceed the NIP-44 size limit. Retrying cannot succeed, so the copy must not suggest trying again."

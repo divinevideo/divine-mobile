@@ -126,6 +126,7 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
         settled.status == CuratedListInfoStatus.publishFailed ||
         (savePending &&
             (settled.status == CuratedListInfoStatus.failure ||
+                settled.status == CuratedListInfoStatus.privateListFull ||
                 settled.status ==
                     CuratedListInfoStatus.permissionsUnconfirmed));
     if (messenger.mounted && unreported) {
@@ -151,6 +152,7 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
       CuratedListInfoStatus.editing ||
       CuratedListInfoStatus.saving ||
       CuratedListInfoStatus.failure ||
+      CuratedListInfoStatus.privateListFull ||
       CuratedListInfoStatus.permissionsUnconfirmed =>
         ListInfoSheetOutcome.dismissed,
     };

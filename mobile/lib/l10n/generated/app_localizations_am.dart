@@ -4909,6 +4909,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listContinue => 'ቀጥል';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 

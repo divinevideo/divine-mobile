@@ -122,7 +122,7 @@ void main() {
 
     void stubUpdate(Future<bool> Function() answer) {
       when(
-        () => service.updateList(
+        () => service.updateListWithResult(
           listId: any(named: 'listId'),
           name: any(named: 'name'),
           description: any(named: 'description'),
@@ -134,7 +134,11 @@ void main() {
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
-        return answer();
+        return answer().then(
+          (saved) => saved
+              ? const CuratedListUpdateResult.saved()
+              : const CuratedListUpdateResult.failed(),
+        );
       });
     }
 
@@ -242,7 +246,9 @@ void main() {
       await tester.tap(find.bySemanticsLabel(l10n.commonClose));
       await tester.pumpAndSettle();
       expect(find.byType(ListInfoForm), findsNothing);
-      verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      verifyNever(
+        () => service.updateListWithResult(listId: any(named: 'listId')),
+      );
       verifyNever(() => service.retryListSync(any()));
       semantics.dispose();
     });
@@ -335,7 +341,9 @@ void main() {
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);
         expect(visibilityTile(tester).onChanged, isNull);
         verify(() => service.retryListSync(_listIdentity)).called(1);
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
       },
     );
 
@@ -385,13 +393,17 @@ void main() {
         expect(visibilityTile(tester).value, isFalse);
         expect(find.text(l10n.listRetrySync), findsNothing);
         verify(() => service.retryListSync(_listIdentity)).called(1);
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
         await tester.tap(saveButton(editing: true));
         await tester.pumpAndSettle();
         expect(find.text(l10n.listMakePrivateTitle), findsOneWidget);
         await tester.tap(find.text(l10n.commonCancel));
         await tester.pumpAndSettle();
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
         expect(find.text('Draft name'), findsOneWidget);
         expect(visibilityTile(tester).value, isFalse);
       },
@@ -427,7 +439,9 @@ void main() {
         expect(visibilityTile(tester).value, isFalse);
         expect(visibilityTile(tester).onChanged, isNotNull);
         verifyNever(() => service.retryListSync(any()));
-        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(
+          () => service.updateListWithResult(listId: any(named: 'listId')),
+        );
       },
     );
 
@@ -932,11 +946,108 @@ void main() {
     }
 
     group('editing', () {
+      for (final locale in const [Locale('en'), Locale('es')]) {
+        testWidgets(
+          'private size rejection preserves drafts in ${locale.languageCode}',
+          (tester) async {
+            final localized = lookupAppLocalizations(locale);
+            when(
+              () => service.updateListWithResult(
+                listId: any(named: 'listId'),
+                name: any(named: 'name'),
+                description: any(named: 'description'),
+                isPublic: any(named: 'isPublic'),
+                isCollaborative: any(named: 'isCollaborative'),
+                allowedCollaborators: any(named: 'allowedCollaborators'),
+                onLocalSaved: any(named: 'onLocalSaved'),
+                onPublicationUnconfirmed: any(
+                  named: 'onPublicationUnconfirmed',
+                ),
+              ),
+            ).thenAnswer(
+              (_) async => const CuratedListUpdateResult.privateListFull(),
+            );
+            await openSheet(tester, existingList: list(), locale: locale);
+            await tester.enterText(
+              find.byType(TextField).first,
+              'Unsaved name',
+            );
+            await tester.enterText(
+              find.byType(TextField).last,
+              'Unsaved description',
+            );
+            await tester.tap(find.byType(DivineSwitchTile));
+            await tester.pump();
+            await tester.tap(find.bySemanticsLabel(localized.listSave));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(localized.listContinue));
+            await tester.pumpAndSettle();
+            expect(
+              find.text(localized.listPrivateConversionTooLarge),
+              findsOneWidget,
+            );
+            expect(find.text(localized.listUpdateFailed), findsNothing);
+            expect(find.text('Unsaved name'), findsOneWidget);
+            expect(find.text('Unsaved description'), findsOneWidget);
+            expect(visibilityTile(tester).value, isFalse);
+            expect(visibilityTile(tester).onChanged, isNotNull);
+            expect(find.text(localized.listRetrySync), findsNothing);
+            expect(find.byType(ListInfoForm), findsOneWidget);
+            expect(find.text(localized.listPrivateFull), findsNothing);
+          },
+        );
+      }
+
+      testWidgets(
+        'a late size rejection after dismissal does not claim to retain drafts',
+        (tester) async {
+          final answer = Completer<CuratedListUpdateResult>();
+          addTearDown(() {
+            if (!answer.isCompleted) {
+              answer.complete(const CuratedListUpdateResult.failed());
+            }
+          });
+          when(
+            () => service.updateListWithResult(
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+              onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            ),
+          ).thenAnswer((_) => answer.future);
+          final outcomes = <ListInfoSheetOutcome>[];
+          await openSheet(tester, existingList: list(), outcomes: outcomes);
+          await tester.enterText(find.byType(TextField).first, 'Unsaved name');
+          await tester.tap(find.byType(DivineSwitchTile));
+          await tester.pump();
+          await tester.tap(saveButton(editing: true));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.listContinue));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          expect(find.byType(ListInfoForm), findsNothing);
+          expect(outcomes, isEmpty);
+          answer.complete(const CuratedListUpdateResult.privateListFull());
+          await tester.pumpAndSettle();
+          expect(outcomes, [ListInfoSheetOutcome.dismissed]);
+          expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+          expect(find.text(l10n.listPrivateConversionTooLarge), findsNothing);
+          expect(find.text(l10n.listPrivateFull), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
+
       testWidgets(
         'an unconfirmed privacy change keeps the draft and reports uncertainty once',
         (tester) async {
           when(
-            () => service.updateList(
+            () => service.updateListWithResult(
               listId: any(named: 'listId'),
               name: any(named: 'name'),
               description: any(named: 'description'),
@@ -949,7 +1060,7 @@ void main() {
           ).thenAnswer((invocation) async {
             (invocation.namedArguments[#onPublicationUnconfirmed]
                 as void Function())();
-            return false;
+            return const CuratedListUpdateResult.failed();
           });
           await openSheet(tester, existingList: list(isPublic: false));
           await tester.tap(find.byType(DivineSwitchTile));
@@ -978,7 +1089,7 @@ void main() {
             if (!answer.isCompleted) answer.complete(false);
           });
           when(
-            () => service.updateList(
+            () => service.updateListWithResult(
               listId: any(named: 'listId'),
               name: any(named: 'name'),
               description: any(named: 'description'),
@@ -992,7 +1103,11 @@ void main() {
             unconfirmed =
                 invocation.namedArguments[#onPublicationUnconfirmed]
                     as void Function()?;
-            return answer.future;
+            return answer.future.then(
+              (saved) => saved
+                  ? const CuratedListUpdateResult.saved()
+                  : const CuratedListUpdateResult.failed(),
+            );
           });
           await openSheet(tester, existingList: list(isPublic: false));
           await tester.tap(find.byType(DivineSwitchTile));
@@ -1029,7 +1144,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: '',
@@ -1082,7 +1197,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Marionettes',
             description: '',
@@ -1135,7 +1250,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
 
         verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: '',
@@ -1336,7 +1451,7 @@ void main() {
           await tester.tap(saveButton(editing: true));
           await tester.pumpAndSettle();
           verify(
-            () => service.updateList(
+            () => service.updateListWithResult(
               listId: _listIdentity,
               name: 'Puppets',
               description: '',
@@ -1512,7 +1627,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => service.updateList(
+          () => service.updateListWithResult(
             listId: _listIdentity,
             name: 'Puppets',
             description: '',

@@ -5505,5 +5505,6 @@
   "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
   "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
   "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
-  "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată."
+  "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
+  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate."
 }

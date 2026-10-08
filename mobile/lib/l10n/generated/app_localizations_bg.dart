@@ -5081,6 +5081,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listContinue => 'Продължи';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
