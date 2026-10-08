@@ -113,15 +113,17 @@ void main() {
           NostrCreatorBindingAssertion? result = binding;
           var done = false;
 
-          C2paCreatorBindingFactory(
-            bindingService: () => bindingService,
-            nip05: () => null,
-            sha256OfFile: (_) async => 'hash',
-            timeout: const Duration(seconds: 2),
-          ).create('clip.mp4').then((value) {
-            result = value;
-            done = true;
-          });
+          unawaited(
+            C2paCreatorBindingFactory(
+              bindingService: () => bindingService,
+              nip05: () => null,
+              sha256OfFile: (_) async => 'hash',
+              timeout: const Duration(seconds: 2),
+            ).create('clip.mp4').then((value) {
+              result = value;
+              done = true;
+            }),
+          );
           async.elapse(const Duration(seconds: 3));
 
           expect(done, isTrue);
