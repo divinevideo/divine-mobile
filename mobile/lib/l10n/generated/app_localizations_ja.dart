@@ -4255,7 +4255,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String postPublishCrosspostSetUp(String platform) {
-    return '一度の投稿で$platformにも届けよう。';
+    return '一度の投稿で$platformにも届けましょう。';
   }
 
   @override

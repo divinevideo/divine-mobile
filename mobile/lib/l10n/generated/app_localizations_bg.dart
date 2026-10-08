@@ -4575,7 +4575,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String postPublishCrosspostSuggest(String platforms) {
-    return 'Да пратим ли този лууп и в $platforms?';
+    return 'Да пратим ли този луп и в $platforms?';
   }
 
   @override

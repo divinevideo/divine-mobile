@@ -1720,7 +1720,7 @@
     "postPublishConfirmationView": "Виж",
     "postPublishConfirmationShare": "Сподели",
     "postPublishConfirmationThumbnailLabel": "Миниатюра на видеото, което току-що публикува",
-    "postPublishCrosspostSuggest": "Да пратим ли този лууп и в {platforms}?",
+    "postPublishCrosspostSuggest": "Да пратим ли този луп и в {platforms}?",
     "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
     "postPublishCrosspostSetUp": "Публикувай веднъж, появи се и в {platform}.",
     "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},

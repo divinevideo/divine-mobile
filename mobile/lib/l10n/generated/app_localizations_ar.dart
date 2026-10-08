@@ -4516,12 +4516,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String postPublishCrosspostSuggest(String platforms) {
-    return 'أرسل هذا التكرار إلى $platforms أيضًا؟';
+    return 'إرسال هذا التكرار إلى $platforms أيضًا؟';
   }
 
   @override
   String postPublishCrosspostSetUp(String platform) {
-    return 'انشر مرة واحدة، واظهر على $platform أيضًا.';
+    return 'النشر مرة واحدة يعني الظهور على $platform أيضًا.';
   }
 
   @override

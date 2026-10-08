@@ -1508,7 +1508,7 @@
     "postPublishConfirmationThumbnailLabel": "公開したばかりの動画のサムネイル",
     "postPublishCrosspostSuggest": "このループを{platforms}にも送りますか？",
     "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
-    "postPublishCrosspostSetUp": "一度の投稿で{platform}にも届けよう。",
+    "postPublishCrosspostSetUp": "一度の投稿で{platform}にも届けましょう。",
     "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
     "postPublishCrosspostAutomatic": "{platforms}に自動で投稿されます。",
     "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},

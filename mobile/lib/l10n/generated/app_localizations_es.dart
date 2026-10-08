@@ -4576,12 +4576,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String postPublishCrosspostSuggest(String platforms) {
-    return '¿Mandas este loop también a $platforms?';
+    return '¿Mandás este loop también a $platforms?';
   }
 
   @override
   String postPublishCrosspostSetUp(String platform) {
-    return 'Publica una vez y aparece también en $platform.';
+    return 'Publicá una vez y aparecé también en $platform.';
   }
 
   @override
