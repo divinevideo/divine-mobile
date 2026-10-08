@@ -1266,6 +1266,7 @@ void main() {
 
     testWidgets('opens Edit info with the current list values', (tester) async {
       final bloc = _MockPeopleListsBloc();
+      when(() => bloc.mutationSessionEpoch).thenReturn(0);
       final repository = _MockPeopleListsRepository();
       final list = _buildList(
         id: 'punk-friends',
