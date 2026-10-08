@@ -208,6 +208,25 @@ void main() {
 
       final profileRepo = _MockProfileRepository();
       when(
+        () => profileRepo.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (_) => Stream.value(
+          ProgressiveSearchResult(
+            profiles: [picked],
+            sources: const {},
+            isComplete: true,
+          ),
+        ),
+      );
+      when(
         () => profileRepo.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
       ).thenAnswer((_) async => [picked]);
       when(
@@ -248,6 +267,10 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Aki'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Rin');
+      // Advance the search's configured debounce before waiting for results.
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rin').last);
       await tester.pumpAndSettle();
