@@ -447,8 +447,6 @@ class _ConnectionAction extends StatelessWidget {
       key: ValueKey('crossposting-action-${entry.platform.wireName}'),
       label: label,
       type: entry.isConnected
-          ? DivineButtonType.ghostSecondary
-          : entry.needsReauth
           ? DivineButtonType.secondary
           : DivineButtonType.primary,
       size: DivineButtonSize.small,

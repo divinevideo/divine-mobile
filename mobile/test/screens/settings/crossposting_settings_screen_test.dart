@@ -74,12 +74,15 @@ void main() {
       when(() => authService.currentPublicKeyHex).thenReturn('pubkeyhex');
       when(() => authService.isRegistered).thenReturn(false);
       when(() => authService.canPublishNostrWritesNow).thenReturn(true);
-      when(() => authService.authRpcCapability)
-          .thenReturn(AuthRpcCapability.unavailable);
-      when(() => authService.authRpcCapabilityStream)
-          .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
-      when(() => authService.authenticationSource)
-          .thenReturn(AuthenticationSource.automatic);
+      when(
+        () => authService.authRpcCapability,
+      ).thenReturn(AuthRpcCapability.unavailable);
+      when(
+        () => authService.authRpcCapabilityStream,
+      ).thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+      when(
+        () => authService.authenticationSource,
+      ).thenReturn(AuthenticationSource.automatic);
       when(repository.loadSettings).thenAnswer((_) async => _defaultEntries);
     });
 
@@ -217,6 +220,26 @@ void main() {
       expect(find.text(l10n.crosspostingReconnect), findsOneWidget);
     });
 
+    testWidgets('renders every row action as a visibly bounded button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      DivineButtonType typeOf(String label) => tester
+          .widget<DivineButton>(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byType(DivineButton),
+            ),
+          )
+          .type;
+
+      expect(typeOf(l10n.crosspostingDisconnect), DivineButtonType.secondary);
+      expect(typeOf(l10n.crosspostingConnect), DivineButtonType.primary);
+      expect(typeOf(l10n.crosspostingReconnect), DivineButtonType.primary);
+    });
+
     testWidgets('uses external account ID when a connected name is absent', (
       tester,
     ) async {
@@ -270,8 +293,9 @@ void main() {
     testWidgets('shows all modes and only the selected Manual copy', (
       tester,
     ) async {
-      when(repository.loadSettings)
-          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
+      when(
+        repository.loadSettings,
+      ).thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -335,8 +359,9 @@ void main() {
     testWidgets('changes selected copy for Automatic and hides it for Off', (
       tester,
     ) async {
-      when(repository.loadSettings)
-          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
+      when(
+        repository.loadSettings,
+      ).thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
       when(() => repository.setMode(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(buildApp());
@@ -531,8 +556,9 @@ void main() {
       testWidgets('shows and acknowledges ${scenario.name} OAuth outcome', (
         tester,
       ) async {
-        when(repository.loadSettings)
-            .thenAnswer((_) async => [_disconnected()]);
+        when(
+          repository.loadSettings,
+        ).thenAnswer((_) async => [_disconnected()]);
         when(
           () => repository.startConnection(
             any(),
@@ -641,8 +667,9 @@ void main() {
           _disconnected(platform: CrosspostingPlatform.x),
         ],
       );
-      when(() => repository.disconnect(any(), any()))
-          .thenAnswer((_) => disconnect.future);
+      when(
+        () => repository.disconnect(any(), any()),
+      ).thenAnswer((_) => disconnect.future);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -729,10 +756,12 @@ void main() {
       tester,
     ) async {
       final saved = Completer<void>();
-      when(repository.loadSettings)
-          .thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
-      when(() => repository.setMode(any(), any()))
-          .thenAnswer((_) => saved.future);
+      when(
+        repository.loadSettings,
+      ).thenAnswer((_) async => [_connected(mode: CrosspostingMode.manual)]);
+      when(
+        () => repository.setMode(any(), any()),
+      ).thenAnswer((_) => saved.future);
 
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -917,8 +946,9 @@ void main() {
     testWidgets(
       'routes the benefit card connect through the awaited resolver',
       (tester) async {
-        when(repository.loadSettings)
-            .thenAnswer((_) async => [_disconnected()]);
+        when(
+          repository.loadSettings,
+        ).thenAnswer((_) async => [_disconnected()]);
         when(
           () => repository.startConnection(
             any(),
@@ -1160,12 +1190,15 @@ void main() {
       final authService = _MockAuthService();
       when(() => authService.isRegistered).thenReturn(false);
       when(() => authService.canPublishNostrWritesNow).thenReturn(true);
-      when(() => authService.authRpcCapability)
-          .thenReturn(AuthRpcCapability.unavailable);
-      when(() => authService.authRpcCapabilityStream)
-          .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
-      when(() => authService.authenticationSource)
-          .thenReturn(AuthenticationSource.automatic);
+      when(
+        () => authService.authRpcCapability,
+      ).thenReturn(AuthRpcCapability.unavailable);
+      when(
+        () => authService.authRpcCapabilityStream,
+      ).thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+      when(
+        () => authService.authenticationSource,
+      ).thenReturn(AuthenticationSource.automatic);
       when(() => authService.currentPublicKeyHex).thenReturn('pubkeyhex');
       SharedPreferences.setMockInitialValues({});
       final sharedPreferences = await SharedPreferences.getInstance();
