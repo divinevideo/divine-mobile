@@ -189,7 +189,10 @@ Future<SubtitleFetchResult?> _fetchBlossom({
 ///    query (Nostr NIP coords). [nostrClient] may be null; relay refs are
 ///    skipped when it is.
 /// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`, polling on 202.
+///    `https://media.divine.video/{sha256}/vtt`, polling on 202. When [lang]
+///    is set, request the translated track via `?lang=<lang>`; a server that
+///    does not know the parameter serves the original, so callers keep the
+///    original track as the fallback.
 ///
 /// A source that resolves to zero cues does not end the chain — the next
 /// source still gets a turn. When no source yields cues, the returned status
@@ -206,6 +209,7 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   String? textTrackContent,
   List<String> textTrackRefs = const [],
   String? sha256,
+  String? lang,
   SubtitleSourcePreference sourcePreference =
       SubtitleSourcePreference.embeddedFirst,
 }) async {
@@ -267,7 +271,11 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   }
 
   if (sha256 != null && sha256.isNotEmpty) {
-    final vttUrl = Uri.parse('https://media.divine.video/$sha256/vtt');
+    final vttUrl = (lang != null && lang.isNotEmpty)
+        ? Uri.parse(
+            'https://media.divine.video/$sha256/vtt',
+          ).replace(queryParameters: {'lang': lang})
+        : Uri.parse('https://media.divine.video/$sha256/vtt');
     try {
       final cues = accept(
         await _fetchBlossom(client: httpClient, delay: delay, vttUrl: vttUrl),

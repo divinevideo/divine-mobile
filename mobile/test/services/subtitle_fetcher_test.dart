@@ -65,6 +65,39 @@ void main() {
       expect(result.cues.map((cue) => cue.text), equals(['Göbekli', '你好 🌿']));
     });
 
+    test('requests the Blossom transcript with the language query', () async {
+      Uri? requested;
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient((request) async {
+          requested = request.url;
+          return http.Response(_vtt, 200);
+        }),
+        nostrClient: null,
+        delay: (_) async {},
+        sha256: 'abc123',
+        lang: 'es',
+      );
+
+      expect(result.status, SubtitleFetchStatus.available);
+      expect(requested?.queryParameters['lang'], equals('es'));
+    });
+
+    test('omits the language query when lang is null', () async {
+      Uri? requested;
+      await fetchSubtitleCues(
+        httpClient: _FakeClient((request) async {
+          requested = request.url;
+          return http.Response(_vtt, 200);
+        }),
+        nostrClient: null,
+        delay: (_) async {},
+        sha256: 'abc123',
+      );
+
+      expect(requested, isNotNull);
+      expect(requested!.queryParameters.containsKey('lang'), isFalse);
+    });
+
     test('parses embedded textTrackContent first (no network)', () async {
       final result = await fetchSubtitleCues(
         httpClient: _FakeClient((_) async => throw StateError('no network')),
