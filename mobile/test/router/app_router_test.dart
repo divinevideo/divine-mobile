@@ -380,9 +380,9 @@ void main() {
   });
 
   group('Offline recorder route', () {
-    test(
+    testWidgets(
       'unauthenticated users can navigate to recorder but not protected routes',
-      () async {
+      (tester) async {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final sharedPreferences = await SharedPreferences.getInstance();
         final authStateController = StreamController<AuthState>.broadcast(
@@ -410,13 +410,26 @@ void main() {
 
         final router = container.read(goRouterProvider);
 
-        router.go(VideoRecorderScreen.path);
-        await Future<void>.delayed(Duration.zero);
+        await tester.pumpWidget(const SizedBox());
+        final context = tester.element(find.byType(SizedBox));
 
-        expect(
-          router.routeInformationProvider.value.uri.toString(),
-          equals(VideoRecorderScreen.path),
-        );
+        router.go(VideoRecorderScreen.path);
+        final recorderMatch = await router.routeInformationParser
+            .parseRouteInformationWithDependencies(
+              router.routeInformationProvider.value,
+              context,
+            );
+        expect(recorderMatch.isError, isFalse);
+        expect(recorderMatch.uri.toString(), VideoRecorderScreen.path);
+
+        router.go(SavedVideosScreen.path);
+        final protectedMatch = await router.routeInformationParser
+            .parseRouteInformationWithDependencies(
+              router.routeInformationProvider.value,
+              context,
+            );
+        expect(protectedMatch.isError, isFalse);
+        expect(protectedMatch.uri.toString(), WelcomeScreen.path);
       },
     );
   });
