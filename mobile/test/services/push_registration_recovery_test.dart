@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -31,7 +30,7 @@ class _Notifications extends Mock implements NotificationService {}
 
 class _Settings extends Mock implements NotificationSettings {}
 
-class _KeyContainer extends Mock implements SecureKeyContainer {}
+class _LocalIdentity extends Mock implements LocalNostrIdentity {}
 
 enum _Failure {
   missingToken('missing token'),
@@ -97,10 +96,17 @@ void main() {
           final client = _Client();
           final signer = _Signer();
           final settings = _Settings();
-          final keys = _KeyContainer();
-          when(() => keys.publicKeyHex).thenReturn(pubkey);
+          final local = _LocalIdentity();
+          when(() => local.pubkey).thenReturn(pubkey);
+          when(() => local.signsWithLocalKey).thenReturn(true);
+          when(() => local.nip44Encrypt(any(), any())).thenAnswer(
+            (call) => signer.nip44Encrypt(
+              call.positionalArguments[0] as String,
+              call.positionalArguments[1] as String,
+            ),
+          );
           final NostrIdentity identity = switch (identityKind) {
-            _IdentityKind.localKey => LocalNostrIdentity(keyContainer: keys),
+            _IdentityKind.localKey => local,
             _IdentityKind.bunker => BunkerNostrIdentity(
               pubkey: pubkey,
               remoteSigner: signer,
@@ -114,7 +120,7 @@ void main() {
             ),
           };
           when(() => auth.currentIdentity).thenReturn(identity);
-          when(() => client.signer).thenReturn(signer);
+          when(() => client.signer).thenReturn(identity);
           when(() => client.hasKeys).thenReturn(true);
           when(() => client.publicKey).thenReturn(pubkey);
           when(() => settings.authorizationStatus)

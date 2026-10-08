@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -29,7 +28,7 @@ class _MockNotificationService extends Mock implements NotificationService {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
 
-class _MockSecureKeyContainer extends Mock implements SecureKeyContainer {}
+class _MockLocalIdentity extends Mock implements LocalNostrIdentity {}
 
 enum _SignerFailure {
   encryptionReturnsNull('NIP-44 encryption returns null'),
@@ -107,6 +106,9 @@ void main() {
     mockNostrSigner = _MockNostrSigner();
 
     when(() => mockNostrClient.signer).thenReturn(mockNostrSigner);
+    when(() => mockAuthService.currentIdentity).thenReturn(
+      BunkerNostrIdentity(pubkey: testPubkey, remoteSigner: mockNostrSigner),
+    );
     when(() => mockNostrSigner.nip44Encrypt(any(), any()))
         .thenAnswer((_) async => encryptedPayload);
 
@@ -402,9 +404,16 @@ void main() {
 
       group('when the signer is not ready', () {
         NostrIdentity identityFor(_SignerKind kind) {
-          final remoteSigner = _MockNostrSigner();
-          final keys = _MockSecureKeyContainer();
-          when(() => keys.publicKeyHex).thenReturn(testPubkey);
+          final remoteSigner = mockNostrSigner;
+          final local = _MockLocalIdentity();
+          when(() => local.pubkey).thenReturn(testPubkey);
+          when(() => local.signsWithLocalKey).thenReturn(true);
+          when(() => local.nip44Encrypt(any(), any())).thenAnswer(
+            (call) => mockNostrSigner.nip44Encrypt(
+              call.positionalArguments[0] as String,
+              call.positionalArguments[1] as String,
+            ),
+          );
           return switch (kind) {
             _SignerKind.keycast => KeycastNostrIdentity(
               pubkey: testPubkey,
@@ -413,7 +422,7 @@ void main() {
             _SignerKind.offlineRestore => PubkeyOnlyNostrIdentity(
               pubkey: testPubkey,
             ),
-            _SignerKind.localKey => LocalNostrIdentity(keyContainer: keys),
+            _SignerKind.localKey => local,
             _SignerKind.bunker => BunkerNostrIdentity(
               pubkey: testPubkey,
               remoteSigner: remoteSigner,
@@ -423,6 +432,11 @@ void main() {
 
         for (final kind in _SignerKind.values) {
           for (final failure in _SignerFailure.values) {
+            // A pubkey-only identity cannot reach event signing or RPC errors.
+            if (kind == _SignerKind.offlineRestore &&
+                failure != _SignerFailure.encryptionReturnsNull) {
+              continue;
+            }
             final expected = kind.retries
                 ? PushRegistrationResult.retryableFailure
                 : PushRegistrationResult.terminalFailure;
@@ -458,8 +472,12 @@ void main() {
                 final service = buildService();
                 expect(await service.register(testPubkey), expected);
 
-                verify(() => mockNostrSigner.nip44Encrypt(any(), any()))
-                    .called(1);
+                if (kind == _SignerKind.offlineRestore) {
+                  verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+                } else {
+                  verify(() => mockNostrSigner.nip44Encrypt(any(), any()))
+                      .called(1);
+                }
                 if (failure == _SignerFailure.signatureReturnsNull) {
                   verify(
                     () => mockAuthService.createAndSignEvent(
