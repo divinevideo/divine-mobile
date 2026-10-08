@@ -297,6 +297,7 @@ class UserDataCleanupService {
   ///
   /// Throws [StateError] when a preference cannot be removed and propagates
   /// database cleanup failures so callers can retry the incomplete deletion.
+  /// Unattributable retained recovery bytes keep deletion incomplete.
   Future<int> deleteAccountData(
     String userPubkey, {
     required String userNpub,
@@ -318,6 +319,30 @@ class UserDataCleanupService {
     required String userNpub,
     required bool preserveActiveSession,
   }) async {
+    final pending = PendingAccountCleanup.read(_prefs);
+    if (pending != null &&
+        !pending.covers(
+          userPubkey: userPubkey,
+          isIdentityChange: false,
+          deleteUserData: true,
+        )) {
+      throw const CuratedListRecoveryException();
+    }
+    final requiredCleanup =
+        pending ??
+        PendingAccountCleanup(
+          userPubkey: userPubkey,
+          isIdentityChange: false,
+          deleteUserData: true,
+        );
+    await requiredCleanup.record(_prefs);
+    if (!await CuratedListRecoveryStorage.verifyValue(
+      _prefs,
+      PendingAccountCleanup.storageKey,
+      _prefs.getString(PendingAccountCleanup.storageKey),
+    )) {
+      throw const CuratedListRecoveryException();
+    }
     await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
@@ -381,6 +406,14 @@ class UserDataCleanupService {
       preserveActiveSession: preserveActiveSession,
     );
     await sweepRowsOfUnknownAccounts();
+    await requiredCleanup.complete(_prefs);
+    if (!await CuratedListRecoveryStorage.verifyValue(
+      _prefs,
+      PendingAccountCleanup.storageKey,
+      null,
+    )) {
+      throw const CuratedListRecoveryException();
+    }
     return clearedCount;
   }
 

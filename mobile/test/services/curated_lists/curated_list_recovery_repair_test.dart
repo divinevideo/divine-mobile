@@ -364,8 +364,42 @@ void main() {
         badArchive,
       ]);
     });
+    test('uppercase shared owner proposals write only the canonical bucket', () async {
+      await prefs.setString('curated_lists', 'unreadable raw shared evidence');
+      await CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs);
+      final archiveBefore = jsonDecode(
+        prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
+      ) as Map;
+      expect(
+        await journal.repairVerifiedShared(
+          activeOwner: _incoming,
+          expectedSnapshot: journal.repairSnapshot(_incoming),
+          reconstructedJournals: {_owner.toUpperCase(): replacement},
+        ),
+        isTrue,
+      );
+      expect(journal.needsRepair(_incoming), isFalse);
+      expect(
+        prefs.containsKey(CuratedListRecoveryJournal.storageKey(_owner)),
+        isTrue,
+      );
+      expect(
+        prefs.containsKey(
+          '${CuratedListRecoveryJournal.storagePrefix}${_owner.toUpperCase()}',
+        ),
+        isFalse,
+      );
+      expect(journal.record(_owner, 'bad')!.plaintextEventIds, [_newId]);
+      final archive = jsonDecode(
+        prefs.getString(CuratedListRecoveryStorage.sharedQuarantineKey)!,
+      ) as Map;
+      expect(archive['rawBuckets'], archiveBefore['rawBuckets']);
+      expect(archive['originalLiveValue'], archiveBefore['originalLiveValue']);
+      expect(archive['needsRepair'], isFalse);
+    });
+
     test(
-      'uppercase shared owner proposals are refused before bucket writes',
+      'duplicate case aliases in a shared repair are refused before writes',
       () async {
         await prefs.setString(
           'curated_lists',
@@ -379,15 +413,16 @@ void main() {
           await journal.repairVerifiedShared(
             activeOwner: _incoming,
             expectedSnapshot: journal.repairSnapshot(_incoming),
-            reconstructedJournals: {_owner.toUpperCase(): replacement},
+            reconstructedJournals: {
+              _owner: replacement,
+              _owner.toUpperCase(): replacement,
+            },
           ),
           isFalse,
         );
         expect(journal.needsRepair(_incoming), isTrue);
         expect(
-          prefs.containsKey(
-            CuratedListRecoveryJournal.storageKey(_owner.toUpperCase()),
-          ),
+          prefs.containsKey(CuratedListRecoveryJournal.storageKey(_owner)),
           isFalse,
         );
         expect(

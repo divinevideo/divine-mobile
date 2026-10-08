@@ -9,6 +9,8 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_record.dar
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+part 'curated_list_recovery_shared_archive.dart';
+
 enum CuratedListRecoveryReadStatus { absent, healthy, corrupt }
 
 class CuratedListRecoveryException implements Exception {
@@ -56,8 +58,26 @@ abstract final class CuratedListRecoveryStorage {
   /// Unknown-owner bytes never become the incoming account's private records.
   static const List<String> deviceScopedPrefsKeys = [sharedQuarantineKey];
 
-  static String quarantineKey(String owner) => '$quarantinePrefix$owner';
-  static String generationKey(String owner) => '$generationPrefix$owner';
+  static String quarantineKey(String owner) =>
+      '$quarantinePrefix${owner.toLowerCase()}';
+  static String generationKey(String owner) =>
+      '$generationPrefix${owner.toLowerCase()}';
+
+  static Set<String> ownerKeys(
+    SharedPreferences prefs,
+    String prefix,
+    String owner,
+  ) {
+    final normalized = _provenRecoveryOwner(owner);
+    if (normalized == null) return {'$prefix$owner'};
+    return {
+      '$prefix$normalized',
+      for (final key in prefs.getKeys())
+        if (key.startsWith(prefix) &&
+            _provenRecoveryOwner(key.substring(prefix.length)) == normalized)
+          key,
+    };
+  }
 
   static String _raw(Object encoded) =>
       encoded is String ? encoded : jsonEncode(encoded);
@@ -70,7 +90,14 @@ abstract final class CuratedListRecoveryStorage {
     try {
       for (final row in jsonDecode(encoded as String) as List) {
         try {
-          rows.add(CuratedList.fromJson(row as Map<String, dynamic>));
+          final fields = row as Map<String, dynamic>;
+          final list = CuratedList.fromJson(fields);
+          final owner = _provenRecoveryOwner(list.pubkey);
+          if (owner != null && _provenRowOwner(fields) == null) {
+            corrupt = true;
+            continue;
+          }
+          rows.add(owner == null ? list : list.copyWith(pubkey: owner));
         } on Object {
           corrupt = true;
         }
@@ -88,22 +115,63 @@ abstract final class CuratedListRecoveryStorage {
   static List<CuratedList> legacyRows(SharedPreferences prefs) =>
       legacyRead(prefs).rows;
 
-  static bool legacyNeedsRepair(SharedPreferences prefs) {
-    final source = legacyRead(prefs);
+  static final _legacyVerdicts = Expando<_SharedRecoveryVerdict>();
+
+  static bool legacyNeedsRepair(SharedPreferences prefs, {String? owner}) {
+    // Session/readback flags are deliberately outside the content cache.
+    if (repairHeld(prefs)) return true;
+    final live = prefs.get('curated_lists');
     final marker = prefs.get('current_user_pubkey_hex');
-    final validOwner = RegExp(r'^[0-9a-fA-F]{64}$');
-    final unknown = source.rows.any((row) {
-      if (row.pendingPlaintextEventIds.isEmpty &&
-          !row.hasPendingPermissionRecovery) {
-        return false;
+    final archived = prefs.get(sharedQuarantineKey);
+    var verdict = _legacyVerdicts[prefs];
+    if (verdict == null ||
+        verdict.live != live ||
+        verdict.marker != marker ||
+        verdict.archive != archived) {
+      final scope = _sharedRecoveryScope(
+        live,
+        legacyOwner: _provenRecoveryOwner(marker),
+      );
+      if (archived != null) {
+        try {
+          scope.include(
+            _sharedRecoveryScope(_archive(prefs, sharedQuarantineKey)),
+          );
+        } on CuratedListRecoveryException {
+          scope.unknown = true;
+        }
       }
-      final owner = row.pubkey ?? (marker is String ? marker : null);
-      return owner == null || !validOwner.hasMatch(owner);
+      verdict = _SharedRecoveryVerdict(live, marker, archived, scope);
+      _legacyVerdicts[prefs] = verdict;
+    }
+    return verdict.scope.holds(_provenRecoveryOwner(owner));
+  }
+
+  /// Under cleanup's exclusive queue, remove every provable retained copy.
+  /// Opaque evidence is preserved and reports incomplete deletion explicitly.
+  static Future<void> removeOwnerFromSharedEvidence(
+    SharedPreferences prefs,
+    String owner,
+  ) async {
+    if (!prefs.containsKey('curated_lists') &&
+        !prefs.containsKey(sharedQuarantineKey)) {
+      return;
+    }
+    final normalized = _provenRecoveryOwner(owner);
+    if (normalized == null) throw const CuratedListRecoveryException();
+    var incomplete = false;
+    await holdRepair(prefs, () async {
+      for (final key in ['curated_lists', sharedQuarantineKey]) {
+        if (!prefs.containsKey(key)) continue;
+        final redacted = _redactSharedRecovery(prefs.get(key), normalized);
+        incomplete |= redacted.unknown;
+        if (redacted.changed &&
+            !await writeVerified(prefs, key, redacted.value! as String)) {
+          throw const CuratedListRecoveryException();
+        }
+      }
     });
-    return repairHeld(prefs) ||
-        source.corrupt ||
-        unknown ||
-        _held(prefs, sharedQuarantineKey);
+    if (incomplete) throw const CuratedListRecoveryException();
   }
 
   static bool repairHeld(SharedPreferences prefs) {
@@ -183,7 +251,9 @@ abstract final class CuratedListRecoveryStorage {
       List<String>.from(decoded['recordBackups'] as List? ?? const []);
       List<String>.from(decoded['unresolvedCoordinates'] as List? ?? const []);
       if (decoded['normalized'] != null && decoded['normalized'] is! bool ||
-          decoded['needsRepair'] != null && decoded['needsRepair'] is! bool) {
+          decoded['needsRepair'] != null && decoded['needsRepair'] is! bool ||
+          decoded['aliasRepairRequired'] != null &&
+              decoded['aliasRepairRequired'] is! bool) {
         throw const CuratedListRecoveryException();
       }
       final staged = _decode(jsonEncode(decoded['records']));
@@ -211,8 +281,9 @@ abstract final class CuratedListRecoveryStorage {
     SharedPreferences prefs,
     String owner, {
     String? liveKey,
+    String? archiveKey,
   }) {
-    final saved = _archive(prefs, quarantineKey(owner));
+    final saved = _archive(prefs, archiveKey ?? quarantineKey(owner));
     if (saved == null || saved['normalized'] == true) return {};
     // A crash can occur after the live write but before the final marker.
     // Once a readable live journal differs from its pre-write value, it is
@@ -229,7 +300,11 @@ abstract final class CuratedListRecoveryStorage {
   static bool needsRepair(SharedPreferences prefs, String key, String owner) =>
       repairHeld(prefs) ||
       read(prefs, key).status == CuratedListRecoveryReadStatus.corrupt ||
-      _held(prefs, quarantineKey(owner));
+      ownerKeys(
+        prefs,
+        quarantinePrefix,
+        owner,
+      ).any((alias) => _held(prefs, alias));
 
   static Future<Map<String, dynamic>> _preserveArchive(
     SharedPreferences prefs,
@@ -315,8 +390,13 @@ abstract final class CuratedListRecoveryStorage {
     Map<String, CuratedListRecoveryRecord> records,
   ) async {
     final readResult = read(prefs, key);
+    bool? aliasRepairRequired;
     try {
       final archive = _archive(prefs, quarantineKey(owner));
+      if (archive?['normalized'] == false &&
+          readResult.status == CuratedListRecoveryReadStatus.healthy) {
+        aliasRepairRequired = archive?['aliasRepairRequired'] as bool?;
+      }
       if (readResult.status != CuratedListRecoveryReadStatus.corrupt &&
           (archive == null || archive['normalized'] == true)) {
         return;
@@ -338,6 +418,10 @@ abstract final class CuratedListRecoveryStorage {
         throw const CuratedListRecoveryException();
       }
       envelope['normalized'] = true;
+      envelope.remove('aliasRepairRequired');
+      if (aliasRepairRequired != null) {
+        envelope['needsRepair'] = aliasRepairRequired;
+      }
       if (!await writeVerified(
         prefs,
         quarantineKey(owner),
@@ -348,21 +432,119 @@ abstract final class CuratedListRecoveryStorage {
     });
   }
 
-  /// A malformed shared row has no provable owner. Archive its original bytes
-  /// at device scope before replacing the active cache with validated rows.
+  /// Migrates prior case-variant keys with backup/readback before removal.
+  /// No normalization may replay the alias again after a later live ACK.
+  static Future<void> normalizeOwnerAliases(
+    SharedPreferences prefs,
+    String livePrefix,
+    String owner,
+    Map<String, CuratedListRecoveryRecord> records,
+  ) async {
+    final canonicalLive = '$livePrefix${owner.toLowerCase()}';
+    final canonicalArchive = quarantineKey(owner);
+    final aliases = {
+      ...ownerKeys(
+        prefs,
+        livePrefix,
+        owner,
+      ).where((key) => key != canonicalLive && prefs.containsKey(key)),
+      ...ownerKeys(
+        prefs,
+        quarantinePrefix,
+        owner,
+      ).where((key) => key != canonicalArchive && prefs.containsKey(key)),
+    };
+    if (aliases.isEmpty) return;
+    var requiresRepair =
+        read(prefs, canonicalLive).status ==
+        CuratedListRecoveryReadStatus.corrupt;
+    try {
+      final saved = _archive(prefs, canonicalArchive);
+      requiresRepair |=
+          saved?['aliasRepairRequired'] as bool? ??
+          _held(prefs, canonicalArchive);
+    } on CuratedListRecoveryException {
+      requiresRepair = true;
+    }
+    await holdRepair(prefs, () async {
+      var ownerWide = false;
+      final unresolved = <String>{};
+      final originalLiveValue = prefs.get(canonicalLive);
+      Map<String, dynamic>? envelope;
+      for (final key in aliases) {
+        if (key.startsWith(livePrefix)) {
+          final source = read(prefs, key);
+          requiresRepair |=
+              source.status == CuratedListRecoveryReadStatus.corrupt;
+          ownerWide |= source.ownerWide;
+          unresolved.addAll(source.corruptCoordinates);
+        } else {
+          requiresRepair |= _held(prefs, key);
+          try {
+            final source = _archive(prefs, key)!;
+            ownerWide |= source['ownerWide'] == true;
+            unresolved.addAll(
+              List<String>.from(
+                source['unresolvedCoordinates'] as List? ?? const [],
+              ),
+            );
+          } on CuratedListRecoveryException {
+            ownerWide = true;
+          }
+        }
+        envelope = await _preserveArchive(
+          prefs,
+          canonicalArchive,
+          records: records,
+          raw: _raw(prefs.get(key)!),
+          unresolvedCoordinates: unresolved,
+          ownerWide: ownerWide,
+          originalLiveValue: originalLiveValue,
+        );
+      }
+      envelope!['aliasRepairRequired'] = requiresRepair;
+      if (!await writeVerified(prefs, canonicalArchive, jsonEncode(envelope))) {
+        throw const CuratedListRecoveryException();
+      }
+      if (!await writeVerified(
+        prefs,
+        canonicalLive,
+        jsonEncode(envelope['records']),
+      )) {
+        throw const CuratedListRecoveryException();
+      }
+      for (final key in aliases) {
+        if (!await removeVerified(prefs, key)) {
+          throw const CuratedListRecoveryException();
+        }
+      }
+      envelope['normalized'] = true;
+      envelope['needsRepair'] = requiresRepair;
+      envelope.remove('aliasRepairRequired');
+      if (!await writeVerified(prefs, canonicalArchive, jsonEncode(envelope))) {
+        throw const CuratedListRecoveryException();
+      }
+    });
+  }
+
+  /// Preserves exact mixed-cache bytes before replacing invalid live rows.
+  /// Raw-row ownership determines which accounts retain a publication hold.
   static Future<void> normalizeLegacy(
     SharedPreferences prefs, {
     String? legacyOwner,
   }) async {
     final original = legacyRead(prefs);
-    final validOwner = RegExp(r'^[0-9a-fA-F]{64}$');
+    final unknownSource = _sharedRecoveryScope(
+      prefs.get('curated_lists'),
+      legacyOwner: _provenRecoveryOwner(legacyOwner),
+    ).unknown;
     final unknownRows = original.rows.where((row) {
       if (row.pendingPlaintextEventIds.isEmpty &&
           !row.hasPendingPermissionRecovery) {
         return false;
       }
       final owner = row.pubkey ?? legacyOwner;
-      return owner == null || !validOwner.hasMatch(owner);
+      return !NostrHexUtils.isValidPubkey(owner);
     }).toSet();
     var incompleteArchive = false;
     try {
@@ -371,7 +553,12 @@ abstract final class CuratedListRecoveryStorage {
     } on CuratedListRecoveryException {
       incompleteArchive = true;
     }
-    if (!original.corrupt && unknownRows.isEmpty && !incompleteArchive) return;
+    if (!original.corrupt &&
+        !unknownSource &&
+        unknownRows.isEmpty &&
+        !incompleteArchive) {
+      return;
+    }
     await holdRepair(prefs, () async {
       final envelope = await _preserveArchive(
         prefs,
@@ -379,7 +566,9 @@ abstract final class CuratedListRecoveryStorage {
         records: {},
         raw:
             original.raw ??
-            (unknownRows.isEmpty ? null : _raw(prefs.get('curated_lists')!)),
+            (unknownRows.isEmpty && !unknownSource
+                ? null
+                : _raw(prefs.get('curated_lists')!)),
         ownerWide: true,
         originalLiveValue: prefs.get('curated_lists'),
       );
@@ -507,6 +696,23 @@ abstract final class CuratedListRecoveryStorage {
     String value,
   ) async {
     if (!await persist(prefs, () => prefs.setString(key, value))) return false;
+    return verifyValue(prefs, key, value);
+  }
+
+  static Future<bool> removeVerified(
+    SharedPreferences prefs,
+    String key,
+  ) async {
+    if (!await persist(prefs, () => prefs.remove(key))) return false;
+    return verifyValue(prefs, key, null);
+  }
+
+  /// Readback is mandatory before claiming erasure or a generation fence.
+  static Future<bool> verifyValue(
+    SharedPreferences prefs,
+    String key,
+    Object? expected,
+  ) async {
     try {
       await prefs.reload();
     } on Object {
@@ -514,7 +720,9 @@ abstract final class CuratedListRecoveryStorage {
           .markRecoveryReadbackUnknown();
       throw const CuratedListRecoveryException();
     }
-    return prefs.get(key) == value;
+    return expected == null
+        ? !prefs.containsKey(key)
+        : prefs.get(key) == expected;
   }
 
   static Future<bool> persist(
