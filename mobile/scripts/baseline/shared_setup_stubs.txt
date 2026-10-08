@@ -29,7 +29,6 @@ test/services/auth_service_nip07_test.dart	15
 test/services/auth_service_oauth_local_signing_test.dart	12
 test/services/auth_service_oauth_recovery_test.dart	17
 test/services/auth_service_signing_mismatch_test.dart	16
-test/services/curated_list_service_crud_test.dart	10
 test/services/video_event_publisher_publish_confirmation_test.dart	12
 test/services/video_event_publisher_rest_publish_test.dart	13
 test/widgets/profile/profile_action_buttons_widget_test.dart	11

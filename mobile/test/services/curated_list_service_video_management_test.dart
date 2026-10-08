@@ -187,10 +187,24 @@ void main() {
       });
 
       test('updates list updatedAt timestamp', () async {
-        final list = await service.createList(name: 'Test List');
-        final originalUpdatedAt = list!.updatedAt;
-
-        await Future.delayed(const Duration(milliseconds: 10));
+        final list = (await service.createList(name: 'Test List'))!;
+        final originalUpdatedAt = DateTime.utc(2000);
+        final historicalList = service
+            .getListById(list.id)!
+            .copyWith(
+              createdAt: originalUpdatedAt,
+              updatedAt: originalUpdatedAt,
+            );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([historicalList.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(service.getListById(list.id)!.updatedAt, originalUpdatedAt);
         await service.addVideoToList(list.id, 'video_event_123');
 
         final updatedList = service.getListById(list.id);
@@ -303,11 +317,25 @@ void main() {
       });
 
       test('updates list updatedAt timestamp', () async {
-        final list = await service.createList(name: 'Test List');
-        await service.addVideoToList(list!.id, 'video_event_123');
-        final originalUpdatedAt = service.getListById(list.id)!.updatedAt;
-
-        await Future.delayed(const Duration(milliseconds: 10));
+        final list = (await service.createList(name: 'Test List'))!;
+        await service.addVideoToList(list.id, 'video_event_123');
+        final originalUpdatedAt = DateTime.utc(2000);
+        final historicalList = service
+            .getListById(list.id)!
+            .copyWith(
+              createdAt: originalUpdatedAt,
+              updatedAt: originalUpdatedAt,
+            );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([historicalList.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(service.getListById(list.id)!.updatedAt, originalUpdatedAt);
         await service.removeVideoFromList(list.id, 'video_event_123');
 
         final updatedList = service.getListById(list.id);
@@ -418,9 +446,7 @@ void main() {
     group('getListsContainingVideo()', () {
       test('returns all lists containing video', () async {
         final list1 = await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
         await service.createList(name: 'List 2');
-        await Future.delayed(const Duration(milliseconds: 5));
         final list3 = await service.createList(name: 'List 3');
 
         await service.addVideoToList(list1!.id, 'video_123');
@@ -456,7 +482,6 @@ void main() {
 
       test('updates after adding video to another list', () async {
         final list1 = await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
         final list2 = await service.createList(name: 'List 2');
 
         await service.addVideoToList(list1!.id, 'video_123');
@@ -468,7 +493,6 @@ void main() {
 
       test('updates after removing video from list', () async {
         final list1 = await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
         final list2 = await service.createList(name: 'List 2');
 
         await service.addVideoToList(list1!.id, 'video_123');
@@ -502,7 +526,6 @@ void main() {
 
       test('returns all list names when video in 2-3 lists', () async {
         final list1 = await service.createList(name: 'Favorites');
-        await Future.delayed(const Duration(milliseconds: 5));
         final list2 = await service.createList(name: 'Watch Later');
 
         await service.addVideoToList(list1!.id, 'video_123');
@@ -517,7 +540,6 @@ void main() {
         for (var i = 1; i <= 5; i++) {
           final list = await service.createList(name: 'List $i');
           await service.addVideoToList(list!.id, 'video_123');
-          await Future.delayed(const Duration(milliseconds: 5));
         }
 
         final summary = service.getVideoListSummary('video_123');
@@ -531,9 +553,7 @@ void main() {
         'handles adding same video to multiple lists simultaneously',
         () async {
           final list1 = await service.createList(name: 'List 1');
-          await Future.delayed(const Duration(milliseconds: 5));
           final list2 = await service.createList(name: 'List 2');
-          await Future.delayed(const Duration(milliseconds: 5));
           final list3 = await service.createList(name: 'List 3');
 
           // Add same video to all lists

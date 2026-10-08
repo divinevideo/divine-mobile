@@ -116,6 +116,15 @@ void main() {
       registerFallbackValue(<Filter>[]);
     });
 
+    void stubPrivateListEncryption() {
+      when(
+        () => mockSigner.nip44Encrypt(any(), any()),
+      ).thenAnswer((i) async => _seal(i.positionalArguments[1] as String));
+      when(
+        () => mockSigner.nip44Decrypt(any(), any()),
+      ).thenAnswer((i) async => _unseal(i.positionalArguments[1] as String));
+    }
+
     setUp(() async {
       mockNostr = _MockNostrClient();
       mockAuth = _MockAuthService();
@@ -128,12 +137,6 @@ void main() {
       when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownerPubkey);
       when(() => mockNostr.signer).thenReturn(mockSigner);
       when(mockSigner.getPublicKey).thenAnswer((_) async => _ownerPubkey);
-      when(
-        () => mockSigner.nip44Encrypt(any(), any()),
-      ).thenAnswer((i) async => _seal(i.positionalArguments[1] as String));
-      when(
-        () => mockSigner.nip44Decrypt(any(), any()),
-      ).thenAnswer((i) async => _unseal(i.positionalArguments[1] as String));
 
       // Mock successful event publishing. Both paths are stubbed: the service
       // confirms relay acceptance where a failure rolls local state back, and
@@ -194,6 +197,8 @@ void main() {
     });
 
     group('initialize()', () {
+      setUp(stubPrivateListEncryption);
+
       test('creates default list when none exists', () async {
         // Start with no lists
         expect(service.hasDefaultList(), isFalse);
@@ -1213,6 +1218,8 @@ void main() {
     });
 
     group('createList()', () {
+      setUp(stubPrivateListEncryption);
+
       test('creates list with name only', () async {
         final list = await service.createList(name: 'My Videos');
 
@@ -1557,9 +1564,6 @@ void main() {
       test('assigns unique IDs to multiple lists', () async {
         final list1 = await service.createList(name: 'List 1');
 
-        // Wait a bit to ensure different timestamp
-        await Future.delayed(const Duration(milliseconds: 5));
-
         final list2 = await service.createList(name: 'List 2');
 
         expect(list1!.id, isNot(equals(list2!.id)));
@@ -1573,12 +1577,27 @@ void main() {
     });
 
     group('updateList()', () {
-      test('updates list name', () async {
-        final list = await service.createList(name: 'Original Name');
-        final originalUpdatedAt = list!.updatedAt;
+      setUp(stubPrivateListEncryption);
 
-        // Wait a bit to ensure updatedAt changes
-        await Future.delayed(const Duration(milliseconds: 10));
+      test('updates list name', () async {
+        final list = (await service.createList(name: 'Original Name'))!;
+        final originalUpdatedAt = DateTime.utc(2000);
+        final historicalList = service
+            .getListById(list.id)!
+            .copyWith(
+              createdAt: originalUpdatedAt,
+              updatedAt: originalUpdatedAt,
+            );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([historicalList.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(service.getListById(list.id)!.updatedAt, originalUpdatedAt);
 
         final result = await service.updateList(
           listId: list.id,
@@ -2201,6 +2220,8 @@ void main() {
     });
 
     group('deleteOwnedList()', () {
+      setUp(stubPrivateListEncryption);
+
       test('publishes NIP-09 deletion for owned kind 30005 list', () async {
         final list = await service.createList(name: 'Owned Public List');
         // Creation publishes the kind 30005 event; reset so the capture
@@ -2575,9 +2596,7 @@ void main() {
 
       test('returns correct list when multiple lists exist', () async {
         await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
         final list2 = await service.createList(name: 'List 2');
-        await Future.delayed(const Duration(milliseconds: 5));
         await service.createList(name: 'List 3');
 
         final retrieved = service.getListById(list2!.id);
@@ -2611,9 +2630,7 @@ void main() {
 
       test('returns all lists', () async {
         await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
         await service.createList(name: 'List 2');
-        await Future.delayed(const Duration(milliseconds: 5));
         await service.createList(name: 'List 3');
 
         expect(service.lists.length, 3);
