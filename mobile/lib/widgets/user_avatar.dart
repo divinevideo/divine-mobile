@@ -124,6 +124,11 @@ class UserAvatar extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
+            // Backs pictures with an alpha channel so whatever sits behind
+            // the avatar never shows through them. Fixed artwork owns its
+            // background, including transparent group-conversation icons.
+            if (contentOverride == null)
+              const ColoredBox(color: VineTheme.accentLime),
             _buildContent(context),
             DecoratedBox(
               decoration: BoxDecoration(
