@@ -2417,10 +2417,9 @@ class ProfileRepository implements ProfileReader {
           final serverRevision = result.createdAt;
           // Compare event revisions before conversion: an older API can omit
           // created_at, and toUserProfile's fallback is not an event timestamp.
-          // Cached REST projections can also carry that fallback clock.
+          // Cached REST and bundled seed projections lack event provenance.
           if (cached != null &&
-              cached.eventId.isNotEmpty &&
-              !cached.isRestProjection &&
+              NostrHexUtils.isValidEventId(cached.eventId) &&
               serverRevision != null &&
               cached.createdAt.isAfter(serverRevision)) {
             continue;
