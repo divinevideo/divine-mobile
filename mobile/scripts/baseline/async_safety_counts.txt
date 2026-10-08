@@ -5,7 +5,6 @@
 # their futures and reduce the baseline when they touch these paths.
 discarded_futures|lib/app/divine_app.dart	4
 discarded_futures|lib/app_update/view/update_dialog.dart	1
-discarded_futures|lib/features/feature_flags/providers/feature_flag_providers.dart	1
 discarded_futures|lib/main.dart	1
 discarded_futures|lib/mixins/grid_prefetch_mixin.dart	2
 discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
