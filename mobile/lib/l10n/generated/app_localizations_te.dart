@@ -5129,13 +5129,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
 
   @override
-  String get listPublicList => 'పబ్లిక్ జాబితా';
-
-  @override
-  String get listPublicListSubtitle =>
-      'ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు';
-
-  @override
   String get listPrivateListSubtitle =>
       'వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.';
 
@@ -5148,9 +5141,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.';
-
-  @override
-  String get listEditTitle => 'జాబితాను సవరించండి';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5212,6 +5202,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listContinue => 'కొనసాగించండి';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5242,9 +5236,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineలో $name';
   }
-
-  @override
-  String get listCancel => 'రద్దు';
 
   @override
   String get listCreate => 'సృష్టించు';
@@ -13426,4 +13417,53 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
+
+  @override
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
+
+  @override
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
+
+  @override
+  String get listEditTitle => 'జాబితాను సవరించండి';
+
+  @override
+  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
+
+  @override
+  String get listCollaboratorSearchHint => 'శోధన Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'ఏదీ లేదు';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.';
+
+  @override
+  String get listVideoPendingSync =>
+      'మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.';
+
+  @override
+  String get listVideoNotAdded =>
+      'మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.';
+
+  @override
+  String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get listRecoveryPending =>
+      'ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
 }

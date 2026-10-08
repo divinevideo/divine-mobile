@@ -24,8 +24,8 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -210,7 +210,7 @@ void main() {
         },
       );
       testWidgets(
-        'video creation keeps its dialog during initialization failure=$failure',
+        'video creation keeps its approved sheet during initialization failure=$failure',
         (tester) async {
           if (failure) {
             _initializationError = StateError('initialization failed');
@@ -221,7 +221,7 @@ void main() {
           await tester.tap(find.text('New video list'));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
-          expect(find.byType(CreateListDialog), findsOneWidget);
+          expect(find.byType(ListInfoForm), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );

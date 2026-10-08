@@ -4637,12 +4637,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescriptionLabel => '描述（可选）';
 
   @override
-  String get listPublicList => '公开列表';
-
-  @override
-  String get listPublicListSubtitle => '其他人可以关注并查看此列表';
-
-  @override
   String get listPrivateListSubtitle => '视频保持私密。名称、描述、标签和封面仍会显示。';
 
   @override
@@ -4653,9 +4647,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileListsEmpty => '还没有列表。为想放在一起的循环建一个吧。';
-
-  @override
-  String get listEditTitle => '编辑列表';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4716,6 +4707,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listContinue => '继续';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4744,9 +4739,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine 上的 $name';
   }
-
-  @override
-  String get listCancel => '取消';
 
   @override
   String get listCreate => '创建';
@@ -12288,4 +12280,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => '搜索用户';
+
+  @override
+  String get listMakePublicLabel => '设为公开';
+
+  @override
+  String get listMakePublicSubtitle => '让其他人看到此列表';
+
+  @override
+  String get listEditTitle => '编辑列表';
+
+  @override
+  String get listAddCollaboratorTitle => '添加协作者';
+
+  @override
+  String get listCollaboratorSearchHint => '搜索 Divine...';
+
+  @override
+  String get listCollaboratorsNone => '无';
+
+  @override
+  String get listPrivateCollaboratorsWarning => '将此列表设为私密也会移除其协作者。只有你可以添加视频。';
+
+  @override
+  String get listVideoPendingSync => '你的列表和视频已保存在此设备上。视频正在等待同步。';
+
+  @override
+  String get listVideoNotAdded => '你的列表已创建，但未添加此视频。';
+
+  @override
+  String get listRetrySync => '立即同步';
+
+  @override
+  String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
+
+  @override
+  String get listRecoveryPending => '此列表有等待同步的更改。';
+
+  @override
+  String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
+
+  @override
+  String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
 }

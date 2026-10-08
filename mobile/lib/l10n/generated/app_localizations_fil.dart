@@ -4989,13 +4989,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listDescriptionLabel => 'Description (opsyonal)';
 
   @override
-  String get listPublicList => 'Public na Listahan';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Puwedeng i-follow at makita ng iba ang listahang ito';
-
-  @override
   String get listPrivateListSubtitle =>
       'Mananatiling pribado ang mga video. Nakikita pa rin ang pangalan, description, tags, at cover.';
 
@@ -5008,9 +5001,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.';
-
-  @override
-  String get listEditTitle => 'I-edit ang list';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5071,6 +5061,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listContinue => 'Magpatuloy';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5101,9 +5095,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sa Divine';
   }
-
-  @override
-  String get listCancel => 'Kanselahin';
 
   @override
   String get listCreate => 'Gumawa';
@@ -13198,4 +13189,53 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
+
+  @override
+  String get listMakePublicLabel => 'Gawing public';
+
+  @override
+  String get listMakePublicSubtitle => 'Hayaang makita ng iba ang list na ito';
+
+  @override
+  String get listEditTitle => 'I-edit ang list';
+
+  @override
+  String get listAddCollaboratorTitle => 'Magdagdag ng collaborator';
+
+  @override
+  String get listCollaboratorSearchHint => 'Maghanap sa Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Wala';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.';
+
+  @override
+  String get listRetrySync => 'I-sync ngayon';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Hindi makumpirma ang pagbabagong ito. Subukan ulit.';
+
+  @override
+  String get listRecoveryPending =>
+      'May mga pagbabago sa listahang ito na naghihintay ma-sync.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.';
 }

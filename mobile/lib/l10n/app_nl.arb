@@ -1696,13 +1696,10 @@
   "listNewPeopleList": "Nieuwe personenlijst",
   "listNameLabel": "Lijstnaam",
   "listDescriptionLabel": "Beschrijving (optioneel)",
-  "listPublicList": "Openbare lijst",
-  "listPublicListSubtitle": "Anderen kunnen deze lijst volgen en zien",
   "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
   "listVisibilityPublic": "Openbaar",
   "listVisibilityPrivate": "Privé",
   "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
-  "listEditTitle": "Lijst bewerken",
   "listShareAction": "Lijst delen",
   "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
   "listSave": "Opslaan",
@@ -1731,7 +1728,6 @@
       }
     }
   },
-  "listCancel": "Annuleren",
   "listCreate": "Maken",
   "listCreateFailed": "Lijst maken mislukt",
   "keyManagementTitle": "Nostr-sleutels",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
-  "peopleListsAddPeopleSearchHint": "Mensen zoeken"
+  "peopleListsAddPeopleSearchHint": "Mensen zoeken",
+  "listMakePublicSubtitle": "Laat anderen deze lijst zien",
+  "listMakePublicLabel": "Openbaar maken",
+  "listEditTitle": "Lijst bewerken",
+  "listAddCollaboratorTitle": "Medewerker toevoegen",
+  "listCollaboratorSearchHint": "Zoek in Divine...",
+  "listCollaboratorsNone": "Geen",
+  "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
+  "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
+  "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
+  "listRetrySync": "Nu synchroniseren",
+  "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
+  "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
+  "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
+  "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
+  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen."
 }

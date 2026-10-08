@@ -5104,13 +5104,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listDescriptionLabel => 'Descriere (opțional)';
 
   @override
-  String get listPublicList => 'Listă publică';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Alții pot urmări și vedea această listă';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.';
 
@@ -5123,9 +5116,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.';
-
-  @override
-  String get listEditTitle => 'Editează lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5186,6 +5176,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listContinue => 'Continuă';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5215,9 +5209,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name pe Divine';
   }
-
-  @override
-  String get listCancel => 'Anulează';
 
   @override
   String get listCreate => 'Creează';
@@ -13352,4 +13343,53 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Caută persoane';
+
+  @override
+  String get listMakePublicLabel => 'Fă lista publică';
+
+  @override
+  String get listMakePublicSubtitle => 'Lasă-i pe alții să vadă această listă';
+
+  @override
+  String get listEditTitle => 'Editează lista';
+
+  @override
+  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
+
+  @override
+  String get listCollaboratorSearchHint => 'Caută în Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Niciunul';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Lista ta a fost creată, dar acest videoclip nu a fost adăugat.';
+
+  @override
+  String get listRetrySync => 'Sincronizează acum';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nu am putut confirma această schimbare. Încearcă din nou.';
+
+  @override
+  String get listRecoveryPending =>
+      'Această listă are modificări care așteaptă sincronizarea.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
 }

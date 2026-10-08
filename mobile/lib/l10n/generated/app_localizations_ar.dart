@@ -4936,13 +4936,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listDescriptionLabel => 'الوصف (اختياري)';
 
   @override
-  String get listPublicList => 'قائمة عامة';
-
-  @override
-  String get listPublicListSubtitle =>
-      'يمكن للآخرين متابعة هذه القائمة ورؤيتها';
-
-  @override
   String get listPrivateListSubtitle =>
       'تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.';
 
@@ -4955,9 +4948,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.';
-
-  @override
-  String get listEditTitle => 'تعديل القائمة';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5018,6 +5008,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listContinue => 'متابعة';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5047,9 +5041,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name على Divine';
   }
-
-  @override
-  String get listCancel => 'إلغاء';
 
   @override
   String get listCreate => 'إنشاء';
@@ -13033,4 +13024,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
+
+  @override
+  String get listMakePublicLabel => 'جعل القائمة عامة';
+
+  @override
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
+
+  @override
+  String get listEditTitle => 'تعديل القائمة';
+
+  @override
+  String get listAddCollaboratorTitle => 'إضافة متعاون';
+
+  @override
+  String get listCollaboratorSearchHint => 'ابحث في Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'لا أحد';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.';
+
+  @override
+  String get listVideoPendingSync =>
+      'تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.';
+
+  @override
+  String get listVideoNotAdded =>
+      'تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.';
+
+  @override
+  String get listRetrySync => 'زامن الآن';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
+
+  @override
+  String get listRecoveryPending =>
+      'تحتوي هذه القائمة على تغييرات بانتظار المزامنة.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
 }

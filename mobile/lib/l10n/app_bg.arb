@@ -1891,13 +1891,10 @@
   "listNewPeopleList": "Нов списък с хора",
   "listNameLabel": "Име на списък",
   "listDescriptionLabel": "Описание (по избор)",
-  "listPublicList": "Публичен списък",
-  "listPublicListSubtitle": "Други могат да следват и да видят този списък",
   "listPrivateListSubtitle": "Видеата остават частни. Името, описанието, таговете и корицата остават видими.",
   "listVisibilityPublic": "Публичен",
   "listVisibilityPrivate": "Частен",
   "profileListsEmpty": "Още няма списъци. Направи един за луповете, които искаш да държиш заедно.",
-  "listEditTitle": "Редактирай списъка",
   "listShareAction": "Сподели списъка",
   "listShareFailed": "Списъкът не можа да бъде споделен. Опитай пак.",
   "listSave": "Запази",
@@ -1926,7 +1923,6 @@
       }
     }
   },
-  "listCancel": "Отказ",
   "listCreate": "Създай",
   "listCreateFailed": "Неуспешно създаване на списък",
   "keyManagementTitle": "Nostr Ключове",
@@ -5612,5 +5608,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
-  "peopleListsAddPeopleSearchHint": "Търси хора"
+  "peopleListsAddPeopleSearchHint": "Търси хора",
+  "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
+  "listMakePublicLabel": "Направи публичен",
+  "listEditTitle": "Редактирай списъка",
+  "listAddCollaboratorTitle": "Добави сътрудник",
+  "listCollaboratorSearchHint": "Търсене Divine...",
+  "listCollaboratorsNone": "Няма",
+  "listPrivateCollaboratorsWarning": "Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.",
+  "listVideoNotAdded": "Списъкът ти е създаден, но това видео не е добавено.",
+  "listVideoPendingSync": "Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.",
+  "listRetrySync": "Синхронизирай сега",
+  "listPermissionsUnconfirmed": "Не можахме да потвърдим тази промяна. Опитай отново.",
+  "listRecoveryPending": "Този списък има промени, които чакат синхронизиране.",
+  "listPermissionsRecoveryPending": "Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.",
+  "listRecoveryReadOnly": "Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.",
+  "listPrivateConversionTooLarge": "Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени."
 }

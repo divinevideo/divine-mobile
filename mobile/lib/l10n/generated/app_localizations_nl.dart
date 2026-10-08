@@ -4974,13 +4974,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listDescriptionLabel => 'Beschrijving (optioneel)';
 
   @override
-  String get listPublicList => 'Openbare lijst';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Anderen kunnen deze lijst volgen en zien';
-
-  @override
   String get listPrivateListSubtitle =>
       'Video\'s blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.';
 
@@ -4993,9 +4986,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.';
-
-  @override
-  String get listEditTitle => 'Lijst bewerken';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5057,6 +5047,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listContinue => 'Doorgaan';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5087,9 +5081,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name op Divine';
   }
-
-  @override
-  String get listCancel => 'Annuleren';
 
   @override
   String get listCreate => 'Maken';
@@ -13154,4 +13145,53 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
+
+  @override
+  String get listMakePublicLabel => 'Openbaar maken';
+
+  @override
+  String get listMakePublicSubtitle => 'Laat anderen deze lijst zien';
+
+  @override
+  String get listEditTitle => 'Lijst bewerken';
+
+  @override
+  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
+
+  @override
+  String get listCollaboratorSearchHint => 'Zoek in Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Geen';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Je lijst is gemaakt, maar deze video is niet toegevoegd.';
+
+  @override
+  String get listRetrySync => 'Nu synchroniseren';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
+
+  @override
+  String get listRecoveryPending =>
+      'Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
 }

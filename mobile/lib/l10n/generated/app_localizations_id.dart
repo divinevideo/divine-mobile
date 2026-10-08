@@ -4882,13 +4882,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get listDescriptionLabel => 'Deskripsi (opsional)';
 
   @override
-  String get listPublicList => 'Daftar Publik';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Orang lain bisa mengikuti dan melihat daftar ini';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videonya tetap privat. Nama, deskripsi, tag, dan sampul tetap terlihat.';
 
@@ -4901,9 +4894,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Belum ada daftar. Bikin satu untuk loop yang mau kamu simpan bareng.';
-
-  @override
-  String get listEditTitle => 'Edit daftar';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4964,6 +4954,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get listContinue => 'Lanjut';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4993,9 +4987,6 @@ class AppLocalizationsId extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Buat';
@@ -12989,4 +12980,53 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Cari orang';
+
+  @override
+  String get listMakePublicLabel => 'Jadikan publik';
+
+  @override
+  String get listMakePublicSubtitle => 'Biar orang lain bisa lihat daftar ini';
+
+  @override
+  String get listEditTitle => 'Edit daftar';
+
+  @override
+  String get listAddCollaboratorTitle => 'Tambah kolaborator';
+
+  @override
+  String get listCollaboratorSearchHint => 'Cari di Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Tidak ada';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.';
+
+  @override
+  String get listRetrySync => 'Sinkronkan sekarang';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
+
+  @override
+  String get listRecoveryPending =>
+      'Daftar ini memiliki perubahan yang menunggu sinkronisasi.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.';
 }

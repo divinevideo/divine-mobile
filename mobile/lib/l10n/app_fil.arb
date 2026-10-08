@@ -1253,13 +1253,10 @@
   "listNewPeopleList": "Bagong people list",
   "listNameLabel": "Pangalan ng Listahan",
   "listDescriptionLabel": "Description (opsyonal)",
-  "listPublicList": "Public na Listahan",
-  "listPublicListSubtitle": "Puwedeng i-follow at makita ng iba ang listahang ito",
   "listPrivateListSubtitle": "Mananatiling pribado ang mga video. Nakikita pa rin ang pangalan, description, tags, at cover.",
   "listVisibilityPublic": "Pampubliko",
   "listVisibilityPrivate": "Pribado",
   "profileListsEmpty": "Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.",
-  "listEditTitle": "I-edit ang list",
   "listShareAction": "I-share ang list",
   "listShareFailed": "Hindi na-share ang list na ito. Subukan ulit.",
   "listSave": "I-save",
@@ -1288,7 +1285,6 @@
       }
     }
   },
-  "listCancel": "Kanselahin",
   "listCreate": "Gumawa",
   "listCreateFailed": "Hindi nagawa ang listahan",
   "keyManagementTitle": "Mga Nostr key",
@@ -4494,5 +4490,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
-  "peopleListsAddPeopleSearchHint": "Maghanap ng tao"
+  "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
+  "listMakePublicSubtitle": "Hayaang makita ng iba ang list na ito",
+  "listMakePublicLabel": "Gawing public",
+  "listEditTitle": "I-edit ang list",
+  "listAddCollaboratorTitle": "Magdagdag ng collaborator",
+  "listCollaboratorSearchHint": "Maghanap sa Divine...",
+  "listCollaboratorsNone": "Wala",
+  "listPrivateCollaboratorsWarning": "Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.",
+  "listVideoNotAdded": "Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.",
+  "listVideoPendingSync": "Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.",
+  "listRetrySync": "I-sync ngayon",
+  "listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit.",
+  "listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
+  "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
+  "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.",
+  "listPrivateConversionTooLarge": "Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save."
 }

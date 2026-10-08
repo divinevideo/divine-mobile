@@ -68,11 +68,39 @@ class PrefsCuratedListStore {
     _savedLists = List.unmodifiable(lists);
   }
 
+  /// The row this adapter acknowledged in its own baseline, if present.
+  /// A later refusal restores that row rather than undoing its owner claim.
+  CuratedList? acknowledgedList(String authorScopedId) {
+    for (final row in _savedLists) {
+      if (row.authorScopedId == authorScopedId) return row;
+    }
+    return null;
+  }
+
   /// Sets [ids], as just loaded from storage, as the baseline the next
   /// [saveSubscriptions] diffs against.
   void subscriptionsLoaded(Set<String> ids) {
     _savedSubscriptions = Set.unmodifiable(ids);
   }
+
+  /// Decodes the existing list cache through the same guarded codec as saves.
+  List<CuratedList> loadLists() =>
+      _storedLists(fallback: const [], preserveDecoded: true);
+
+  /// Loads IDs and their readability together from one storage read.
+  ///
+  /// An absent record is a known empty snapshot. Malformed metadata remains
+  /// incomplete, so callers cannot treat the empty fallback as an unfollow.
+  /// IDs are immutable and the same decoded snapshot captures the write baseline.
+  ({Set<String> ids, bool isReadable}) loadSubscriptionSnapshot() {
+    final snapshot = _readStoredSubscriptions(fallback: const {});
+    subscriptionsLoaded(snapshot.ids);
+    return snapshot;
+  }
+
+  /// Loads the existing subscription cache and captures its write baseline.
+  Set<String> loadSubscriptions() =>
+      Set<String>.of(loadSubscriptionSnapshot().ids);
 
   /// Saves what changed in [lists] since the last load or successful save,
   /// keeping lists another writer stored in the meantime. Returns whether
@@ -480,33 +508,40 @@ class PrefsCuratedListStore {
   List<CuratedList> _storedLists({
     required List<CuratedList> fallback,
     void Function()? onUnreadable,
+    bool preserveDecoded = false,
   }) {
     final json = _prefs.getString(_listsKey);
     if (json == null) {
       _writes.cacheKeyRemoved(_listsKey);
       return const [];
     }
+    final decoded = <CuratedList>[];
     try {
-      return (jsonDecode(json) as List<dynamic>)
-          .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
-          .toList(growable: false);
+      for (final row in jsonDecode(json) as List<dynamic>) {
+        decoded.add(CuratedList.fromJson(row as Map<String, dynamic>));
+      }
+      return decoded;
     } on Object catch (error, stackTrace) {
       onUnreadable?.call();
       _logUnreadable('lists', error, stackTrace);
-      return fallback;
+      return preserveDecoded ? decoded : fallback;
     }
   }
 
   /// The stored ids, or [fallback] when they cannot be decoded.
   Set<String> _storedSubscriptions({required Set<String> fallback}) =>
-      readCuratedListSubscriptionSnapshot(
-        preferences: _prefs,
-        storageKey: _subscriptionsKey,
-        fallback: fallback,
-        onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
-        onUnreadable: (error, stackTrace) =>
-            _logUnreadable('subscriptions', error, stackTrace),
-      ).ids;
+      _readStoredSubscriptions(fallback: fallback).ids;
+
+  ({Set<String> ids, bool isReadable}) _readStoredSubscriptions({
+    required Set<String> fallback,
+  }) => readCuratedListSubscriptionSnapshot(
+    preferences: _prefs,
+    storageKey: _subscriptionsKey,
+    fallback: fallback,
+    onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
+    onUnreadable: (error, stackTrace) =>
+        _logUnreadable('subscriptions', error, stackTrace),
+  );
 
   void _logUnreadable(String what, Object error, StackTrace stackTrace) {
     // The error is left out: FormatException.toString() quotes the stored text.

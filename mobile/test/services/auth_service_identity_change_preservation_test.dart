@@ -2,14 +2,19 @@
 // ABOUTME: pending uploads must NOT be deleted on non-destructive identity change.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -24,7 +29,10 @@ class _MockUserDataCleanupService extends Mock
 class _RefusingPreferences extends Fake implements SharedPreferences {
   _RefusingPreferences(this.backing);
   final SharedPreferences backing;
+  final refusedKeys = <String>[];
 
+  @override
+  Object? get(String key) => backing.get(key);
   @override
   String? getString(String key) => backing.getString(key);
   @override
@@ -32,13 +40,47 @@ class _RefusingPreferences extends Fake implements SharedPreferences {
   @override
   Set<String> getKeys() => backing.getKeys();
   @override
-  Future<bool> remove(String key) async => false;
+  Future<bool> remove(String key) async {
+    refusedKeys.add(key);
+    return false;
+  }
+
   @override
   Future<bool> setString(String key, String value) =>
       backing.setString(key, value);
+  @override
+  Future<void> reload() => backing.reload();
 }
 
 class _MockCacheDao extends Mock implements CacheDao {}
+
+class _RefusingQuarantinePreferences extends Fake implements SharedPreferences {
+  _RefusingQuarantinePreferences(this.backing, {required this.throwing});
+  final SharedPreferences backing;
+  final bool throwing;
+  int quarantineAttempts = 0;
+
+  @override
+  Object? get(String key) => backing.get(key);
+  @override
+  String? getString(String key) => backing.getString(key);
+  @override
+  bool containsKey(String key) => backing.containsKey(key);
+  @override
+  Set<String> getKeys() => backing.getKeys();
+  @override
+  Future<void> reload() => backing.reload();
+  @override
+  Future<bool> setString(String key, String value) async {
+    if (key.startsWith(CuratedListRecoveryStorage.quarantinePrefix) ||
+        key == CuratedListRecoveryStorage.sharedQuarantineKey) {
+      quarantineAttempts++;
+      if (throwing) throw StateError('PRIVATE_CLEANUP_PAYLOAD');
+      return false;
+    }
+    return backing.setString(key, value);
+  }
+}
 
 /// Runs [body] while silencing unhandled async errors from `_performDiscovery`.
 ///
@@ -554,9 +596,20 @@ void main() {
         'real refused removal prevents $operation sign-in and database cleanup',
         () async {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('curated_lists', 'old account cache');
+          final outgoingCache = jsonEncode([
+            CuratedList(
+              id: 'outgoing-list',
+              name: 'Outgoing account list',
+              pubkey: oldPubkeyHex,
+              videoEventIds: const [],
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+            ).toJson(),
+          ]);
+          await prefs.setString('curated_lists', outgoingCache);
           await prefs.setString('subscribed_list_ids', 'old follows');
-          final cleanup = UserDataCleanupService(_RefusingPreferences(prefs));
+          final refusingPrefs = _RefusingPreferences(prefs);
+          final cleanup = UserDataCleanupService(refusingPrefs);
           var databaseCleanups = 0;
           cleanup.onDatabaseCleanup =
               ({
@@ -619,11 +672,251 @@ void main() {
               );
           }
           expect(authService.authState, AuthState.unauthenticated);
+          expect(refusingPrefs.refusedKeys, contains('curated_lists'));
           expect(prefs.getString('current_user_pubkey_hex'), oldPubkeyHex);
+          expect(prefs.getString('curated_lists'), outgoingCache);
           expect(prefs.getString('subscribed_list_ids'), 'old follows');
           expect(databaseCleanups, 0);
         },
       );
+    }
+
+    for (final operation in [
+      'create',
+      'nsec',
+      'hex',
+      'oauth',
+      'restore',
+      'initialize',
+    ]) {
+      test(
+        'durably preserved malformed shared data permits $operation with a publication hold',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          const raw = 'PRIVATE_SHARED_RECOVERY_PAYLOAD malformed';
+          await prefs.setString('curated_lists', raw);
+          final cleanup = UserDataCleanupService(prefs);
+          var databaseCleanups = 0;
+          cleanup.onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+              }) async {
+                expect(userPubkey, oldPubkeyHex);
+                databaseCleanups++;
+              };
+          await authService.dispose();
+          authService = AuthService(
+            backgroundActivityManager: BackgroundActivityManager(),
+            userDataCleanupService: cleanup,
+            keyStorage: mockKeyStorage,
+          );
+          await _ignoringDiscoveryErrors(() async {
+            switch (operation) {
+              case 'create':
+                expect((await authService.createNewIdentity()).success, isTrue);
+              case 'nsec':
+                expect(
+                  (await authService.importFromNsec(testNsec)).success,
+                  isTrue,
+                );
+              case 'hex':
+                expect(
+                  (await authService.importFromHex('1' * 64)).success,
+                  isTrue,
+                );
+              case 'oauth':
+                await authService.signInWithDivineOAuth(
+                  KeycastSession(
+                    bunkerUrl: 'https://keycast.example.com',
+                    accessToken: 'test-access',
+                    expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                    userPubkey: newKeyContainer.publicKeyHex,
+                  ),
+                );
+              case 'restore':
+                await authService.signInForAccount(
+                  newKeyContainer.publicKeyHex,
+                  AuthenticationSource.automatic,
+                );
+              case 'initialize':
+                await prefs.setString('last_used_npub', newKeyContainer.npub);
+                await authService.initialize();
+            }
+          });
+          expect(databaseCleanups, 1);
+          expect(authService.currentPublicKeyHex, newKeyContainer.publicKeyHex);
+          expect(authService.authState, isNot(AuthState.unauthenticated));
+          expect(prefs.containsKey('curated_lists'), isFalse);
+          final archive = jsonDecode(
+            prefs.getString(
+              CuratedListRecoveryStorage.sharedQuarantineKey,
+            )!,
+          ) as Map<String, dynamic>;
+          expect(archive['rawBuckets'], [raw]);
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (operation) => operation(),
+          );
+          expect(journal.needsRepair(newKeyContainer.publicKeyHex), isTrue);
+          expect(journal.records(newKeyContainer.publicKeyHex), isEmpty);
+          expect(
+            await journal.ticket(newKeyContainer.publicKeyHex, 'new-list'),
+            isNull,
+          );
+        },
+      );
+    }
+
+    for (final failure in [
+      'shared quarantine refusal',
+      'quarantine refusal',
+      'quarantine throw',
+    ]) {
+      for (final operation in [
+        'create',
+        'nsec',
+        'hex',
+        'oauth',
+        'restore',
+        'initialize',
+      ]) {
+        test(
+          'required cleanup $failure blocks $operation without tentative session',
+          () async {
+            final prefs = await SharedPreferences.getInstance();
+            final validCache = jsonEncode([
+              CuratedList(
+                id: 'outgoing-list',
+                name: 'Outgoing account list',
+                pubkey: oldPubkeyHex,
+                videoEventIds: const [],
+                createdAt: DateTime.utc(2026),
+                updatedAt: DateTime.utc(2026),
+              ).toJson(),
+            ]);
+            const privatePayload = 'PRIVATE_CLEANUP_PAYLOAD';
+            final outgoingCache = failure == 'shared quarantine refusal'
+                ? '{$privatePayload malformed cache'
+                : validCache;
+            final journalKey = CuratedListRecoveryJournal.storageKey(
+              oldPubkeyHex,
+            );
+            final journalRaw = failure.startsWith('quarantine')
+                ? '{$privatePayload malformed journal'
+                : jsonEncode({
+                    'healthy': {
+                      'plaintextEventIds': ['d' * 64],
+                    },
+                  });
+            await prefs.setString('curated_lists', outgoingCache);
+            await prefs.setString('subscribed_list_ids', 'old follows');
+            await prefs.setString(journalKey, journalRaw);
+            final refusingQuarantine =
+                (failure.startsWith('quarantine') ||
+                    failure.startsWith('shared quarantine'))
+                ? _RefusingQuarantinePreferences(
+                    prefs,
+                    throwing: failure == 'quarantine throw',
+                  )
+                : null;
+            final cleanup = UserDataCleanupService(refusingQuarantine ?? prefs);
+            var databaseCleanups = 0;
+            cleanup.onDatabaseCleanup =
+                ({
+                  String? userPubkey,
+                  bool deleteUserData = false,
+                  bool preserveActiveSession = false,
+                }) async {
+                  databaseCleanups++;
+                };
+            await authService.dispose();
+            authService = AuthService(
+              backgroundActivityManager: BackgroundActivityManager(),
+              userDataCleanupService: cleanup,
+              keyStorage: mockKeyStorage,
+            );
+            final logs = LogCaptureService();
+            await logs.clearAllLogs();
+            Log.info('required-cleanup probe', name: 'AuthCleanupRegression');
+            Object? caught;
+            bool? returnedSuccess;
+            AuthFailureReason? failureReason;
+            try {
+              switch (operation) {
+                case 'create':
+                  final result = await authService.createNewIdentity();
+                  returnedSuccess = result.success;
+                  failureReason = result.failureReason;
+                case 'nsec':
+                  final result = await authService.importFromNsec(testNsec);
+                  returnedSuccess = result.success;
+                  failureReason = result.failureReason;
+                case 'hex':
+                  final result = await authService.importFromHex('1' * 64);
+                  returnedSuccess = result.success;
+                  failureReason = result.failureReason;
+                case 'oauth':
+                  await authService.signInWithDivineOAuth(
+                    KeycastSession(
+                      bunkerUrl: 'https://keycast.example.com',
+                      accessToken: 'test-access',
+                      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                      userPubkey: newKeyContainer.publicKeyHex,
+                    ),
+                  );
+                case 'restore':
+                  await authService.signInForAccount(
+                    newKeyContainer.publicKeyHex,
+                    AuthenticationSource.automatic,
+                  );
+                case 'initialize':
+                  await prefs.setString('last_used_npub', newKeyContainer.npub);
+                  await authService.initialize();
+              }
+            } on Object catch (error) {
+              caught = error;
+            }
+            await prefs.reload();
+            expect(authService.authState, AuthState.unauthenticated);
+            expect(authService.currentProfile, isNull);
+            expect(authService.currentPublicKeyHex, isNull);
+            expect(prefs.getString('current_user_pubkey_hex'), oldPubkeyHex);
+            expect(prefs.getString(journalKey), journalRaw);
+            expect(
+              prefs.containsKey(TermsAcceptanceKeys.termsAcceptedAt),
+              isFalse,
+            );
+            expect(
+              prefs.getBool(TermsAcceptanceKeys.ageVerified16Plus),
+              isNot(isTrue),
+            );
+            expect(databaseCleanups, 0);
+            expect(prefs.getString('curated_lists'), outgoingCache);
+            expect(prefs.getString('subscribed_list_ids'), 'old follows');
+            if (refusingQuarantine != null) {
+              expect(refusingQuarantine.quarantineAttempts, 1);
+            }
+            verifyNever(() => mockKeyStorage.deleteKeys());
+            verifyNever(
+              () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
+            );
+            if (operation == 'initialize') {
+              verifyNever(() => mockKeyStorage.generateAndStoreKeys());
+            } else if (['create', 'nsec', 'hex'].contains(operation)) {
+              expect(returnedSuccess, isFalse);
+              expect(failureReason, AuthFailureReason.accountCleanupFailed);
+            } else {
+              expect(caught, isA<UserDataCleanupException>());
+              expect(caught.toString(), isNot(contains(privatePayload)));
+            }
+            final captured = (await logs.getAllLogsAsText()).join('\n');
+            expect(captured, contains('required-cleanup probe'));
+            expect(captured, isNot(contains(privatePayload)));
+          },
+        );
+      }
     }
 
     test('identity-change: isIdentityChange=true is still passed '

@@ -61,7 +61,11 @@ void main() {
       });
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
     }
 
@@ -98,7 +102,11 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       // Mock event creation
@@ -107,6 +115,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
         // Echoes what it was asked to sign, so a test can assert on the tags
@@ -114,7 +123,7 @@ void main() {
         (invocation) async => Event.fromJson({
           'id': 'test_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'created_at': invocation.namedArguments[#createdAt],
           'kind': invocation.namedArguments[#kind],
           'tags': invocation.namedArguments[#tags],
           'content': invocation.namedArguments[#content],

@@ -1,20 +1,96 @@
 // ABOUTME: Dialogs for adding videos to curated lists
-// ABOUTME: SelectListDialog and CreateListDialog for curated video lists
+// ABOUTME: Selects an existing list and opens the list info sheet to create one
+
+import 'dart:math' as math;
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
+import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+// Match the existing tile/link geometry, reserving a readable short word
+// instead of allowing a scaled action to squeeze the title into one column.
+({bool belowLabel, int maxLines, EdgeInsets padding}) _syncControlLayout(
+  BuildContext context, {
+  required double width,
+  required String title,
+  required String label,
+}) {
+  final theme = Theme.of(context);
+  final tileTheme = ListTileTheme.of(context);
+  final direction = Directionality.of(context);
+  final scaler = MediaQuery.textScalerOf(context);
+  final padding =
+      (tileTheme.contentPadding ??
+              (theme.useMaterial3
+                  ? const EdgeInsetsDirectional.only(start: 16, end: 24)
+                  : const EdgeInsets.symmetric(horizontal: 16)))
+          .resolve(direction);
+  final titleStyle =
+      tileTheme.titleTextStyle ??
+      (theme.useMaterial3
+          ? theme.textTheme.bodyLarge
+          : theme.textTheme.titleMedium) ??
+      DefaultTextStyle.of(context).style;
+  final titlePainter = TextPainter(
+    text: TextSpan(text: title, style: titleStyle),
+    textDirection: direction,
+    textScaler: scaler,
+  );
+  final actionPainter = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
+    ),
+    textDirection: direction,
+    textScaler: scaler,
+  );
+  try {
+    titlePainter.layout();
+    final wordWidth = titlePainter.minIntrinsicWidth;
+    titlePainter.text = TextSpan(text: 'MMMM', style: titleStyle);
+    titlePainter.layout();
+    final readableWidth = math.min(wordWidth, titlePainter.width);
+    actionPainter.layout();
+    final leadingWidth = math.max(
+      DivineIcon.scaleSize(context, 24),
+      tileTheme.minLeadingWidth ?? (theme.useMaterial3 ? 24 : 40),
+    );
+    final density =
+        tileTheme.visualDensity ??
+        (theme.useMaterial3 ? VisualDensity.standard : theme.visualDensity);
+    final gap = (tileTheme.horizontalTitleGap ?? 16) + density.horizontal * 2;
+    // The base link uses 24px horizontal padding on each side. When expanded
+    // below the title, its documented symmetric inset is 12px on each side.
+    final inlineWidth =
+        padding.horizontal + leadingWidth + gap * 2 + actionPainter.width + 48;
+    if (inlineWidth + readableWidth <= width) {
+      return (belowLabel: false, maxLines: 1, padding: padding);
+    }
+    actionPainter.layout(
+      maxWidth: math.max(1, width - padding.horizontal - 24),
+    );
+    return (
+      belowLabel: true,
+      maxLines: math.max(1, actionPainter.computeLineMetrics().length),
+      padding: padding,
+    );
+  } finally {
+    titlePainter.dispose();
+    actionPainter.dispose();
+  }
+}
 
 class _LoadingIndicator extends StatelessWidget {
   const _LoadingIndicator();
@@ -38,104 +114,308 @@ class _LoadingIndicator extends StatelessWidget {
 }
 
 /// Dialog for selecting an existing list to add a video to.
-class SelectListDialog extends StatelessWidget {
+class SelectListDialog extends ConsumerStatefulWidget {
   const SelectListDialog({required this.video, super.key});
   final VideoEvent video;
 
   @override
-  Widget build(BuildContext context) => Consumer(
-    builder: (context, ref, child) {
-      final listServiceAsync = ref.watch(curatedListsStateProvider);
+  ConsumerState<SelectListDialog> createState() => _SelectListDialogState();
+}
 
-      return listServiceAsync.when(
-        data: (lists) {
-          final availableLists = lists.toList();
+class _SelectListDialogState extends ConsumerState<SelectListDialog> {
+  ListInfoSheetOutcome? _creationOutcome;
+  final _syncingListIds = <String>{};
+  final _failedSyncListIds = <String>{};
+  late final CuratedListEditorSession _session;
+  late final String? _openingOwner;
 
-          final l10n = context.l10n;
-          return AlertDialog(
-            backgroundColor: context.vineColors.card,
-            title: Text(
-              l10n.listAddToList,
-              style: TextStyle(color: context.vineColors.primaryText),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: ListView.builder(
-                itemCount: availableLists.length,
-                itemBuilder: (context, index) {
-                  final list = availableLists[index];
-                  final isInList = list.videoEventIds.contains(video.id);
+  @override
+  void initState() {
+    super.initState();
+    _session = ref.read(curatedListEditorSessionProvider);
+    _openingOwner = _session.currentOwnerPubkey;
+  }
 
-                  return ListTile(
-                    leading: DivineIcon(
-                      icon: isInList
-                          ? DivineIconName.checkCircle
-                          : DivineIconName.playlist,
-                      color: isInList
-                          ? context.vineColors.accentPositive
-                          : context.vineColors.primaryText,
-                    ),
-                    title: Text(
-                      list.name,
-                      style: TextStyle(color: context.vineColors.primaryText),
-                    ),
-                    subtitle: Text(
-                      '${l10n.listVideoCount(list.videoEventIds.length)} • '
-                      '${list.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
-                      style: TextStyle(color: context.vineColors.secondaryText),
-                    ),
-                    onTap: () => _toggleVideoInList(
-                      context,
-                      ref.read(curatedListsStateProvider.notifier).service!,
-                      list,
-                      isInList,
-                    ),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  runDetached(
-                    showDialog<void>(
-                      context: context,
-                      builder: (_) => CreateListDialog(video: video),
-                    ),
-                    'open list creation dialog',
-                    logName: 'SelectListDialog',
-                    category: LogCategory.ui,
-                  );
-                },
-                child: Text(l10n.listNewList),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.listDone),
-              ),
-            ],
-          );
-        },
-        loading: () => const _LoadingIndicator(),
-        error: (_, _) => AlertDialog(
+  bool get _isSessionCurrent =>
+      _openingOwner != null &&
+      _openingOwner.isNotEmpty &&
+      _session.currentOwnerPubkey == _openingOwner;
+
+  Future<void> _createList() async {
+    if (!_isSessionCurrent || _session.service?.recoveryNeedsRepair == true) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final failureMessage = l10n.listVideoNotAdded;
+    final outcome = await showListInfoSheet(context, video: widget.video);
+    if (!_isSessionCurrent) return;
+    if (!mounted) {
+      if ((outcome == ListInfoSheetOutcome.createdWithoutVideo ||
+              outcome == ListInfoSheetOutcome.createdWithVideoPendingSync) &&
+          messenger.mounted) {
+        messenger.showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            outcome == ListInfoSheetOutcome.createdWithVideoPendingSync
+                ? l10n.listVideoPendingSync
+                : failureMessage,
+            error: outcome == ListInfoSheetOutcome.createdWithoutVideo,
+          ),
+        );
+      }
+      return;
+    }
+    setState(() {
+      _creationOutcome = outcome;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final listServiceAsync = ref.watch(curatedListsStateProvider);
+
+    return listServiceAsync.when(
+      data: (lists) {
+        final availableLists = lists.toList();
+        final recoveryReadOnly =
+            ref
+                .read(curatedListsStateProvider.notifier)
+                .service
+                ?.recoveryNeedsRepair ??
+            false;
+
+        final l10n = context.l10n;
+        final pendingLists = {
+          for (final list in availableLists)
+            if (list.hasPendingPermissionRecovery ||
+                list.pendingPlaintextEventIds.isNotEmpty ||
+                (list.pendingRepublish &&
+                    list.videoEventIds.contains(widget.video.id)))
+              list.id,
+        };
+        final syncFailed = availableLists.any(
+          (list) =>
+              _failedSyncListIds.contains(list.id) &&
+              pendingLists.contains(list.id) &&
+              !list.hasPendingPermissionRecovery,
+        );
+        return AlertDialog(
           backgroundColor: context.vineColors.card,
-          title: Text(context.l10n.listAddToList),
-          content: CuratedListInitializationFailure(
-            onRetry: () => ref.invalidate(curatedListsStateProvider),
+          title: Text(
+            l10n.listAddToList,
+            style: TextStyle(color: context.vineColors.primaryText),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: CustomScrollView(
+              semanticChildCount: availableLists.length,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (recoveryReadOnly)
+                        const CuratedListRecoveryReadOnlyNotice(),
+                      if (_creationOutcome ==
+                          ListInfoSheetOutcome.createdWithoutVideo)
+                        ListInfoFailureMessage(l10n.listVideoNotAdded),
+                      if (!recoveryReadOnly &&
+                          availableLists.any(
+                            (list) =>
+                                list.hasPendingPermissionRecovery ||
+                                list.pendingPlaintextEventIds.isNotEmpty,
+                          ))
+                        ListInfoRecoveryPendingMessage(
+                          permissionRecoveryPending: availableLists.any(
+                            (list) => list.hasPendingPermissionRecovery,
+                          ),
+                        )
+                      else if (!recoveryReadOnly && pendingLists.isNotEmpty)
+                        const ListInfoPendingSyncMessage(),
+                      if (!recoveryReadOnly && syncFailed)
+                        ListInfoFailureMessage(l10n.listUpdateFailed),
+                    ],
+                  ),
+                ),
+                SliverPadding(
+                  padding: MediaQuery.paddingOf(context).copyWith(
+                    left: 0,
+                    right: 0,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final list = availableLists[index];
+                        final isInList = list.videoEventIds.contains(
+                          widget.video.id,
+                        );
+
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final pending = pendingLists.contains(list.id);
+                            final syncLayout = pending
+                                ? _syncControlLayout(
+                                    context,
+                                    width: constraints.maxWidth,
+                                    title: list.name,
+                                    label: l10n.listRetrySync,
+                                  )
+                                : (
+                                    belowLabel: false,
+                                    maxLines: 1,
+                                    padding: EdgeInsets.zero,
+                                  );
+                            final syncControl = !pending
+                                ? null
+                                : _syncingListIds.contains(list.id)
+                                ? const SizedBox(
+                                    width: 40,
+                                    child: _LoadingIndicator(),
+                                  )
+                                : DivineButton(
+                                    label: l10n.listRetrySync,
+                                    type: DivineButtonType.link,
+                                    expanded: syncLayout.belowLabel,
+                                    maxLines: syncLayout.maxLines,
+                                    onPressed: recoveryReadOnly
+                                        ? null
+                                        : () => runDetached(
+                                            _retrySync(list),
+                                            'retry list sync',
+                                            logName: 'SelectListDialog',
+                                            category: LogCategory.ui,
+                                          ),
+                                  );
+                            final tile = ListTile(
+                              leading: DivineIcon(
+                                icon: isInList
+                                    ? DivineIconName.checkCircle
+                                    : DivineIconName.playlist,
+                                color: isInList
+                                    ? context.vineColors.accentPositive
+                                    : context.vineColors.primaryText,
+                              ),
+                              title: Text(
+                                list.name,
+                                style: TextStyle(
+                                  color: context.vineColors.primaryText,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${l10n.listVideoCount(list.videoEventIds.length)} • '
+                                '${list.publicationTarget.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
+                                style: TextStyle(
+                                  color: context.vineColors.secondaryText,
+                                ),
+                              ),
+                              trailing: syncLayout.belowLabel
+                                  ? null
+                                  : syncControl,
+                              onTap:
+                                  recoveryReadOnly ||
+                                      _syncingListIds.contains(list.id) ||
+                                      list.hasPendingPermissionRecovery
+                                  ? null
+                                  : () => _toggleVideoInList(
+                                      context,
+                                      ref
+                                          .read(
+                                            curatedListsStateProvider.notifier,
+                                          )
+                                          .service!,
+                                      list,
+                                      isInList,
+                                    ),
+                            );
+                            if (!syncLayout.belowLabel) return tile;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                tile,
+                                Padding(
+                                  padding: syncLayout.padding,
+                                  child: syncControl,
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      childCount: availableLists.length,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
-            DivineButton(
-              label: context.l10n.listDone,
-              type: DivineButtonType.secondary,
-              size: DivineButtonSize.small,
+            TextButton(
+              onPressed: recoveryReadOnly
+                  ? null
+                  : () {
+                      runDetached(
+                        _createList(),
+                        'open list creation sheet',
+                        logName: 'SelectListDialog',
+                        category: LogCategory.ui,
+                      );
+                    },
+              child: Text(l10n.listNewList),
+            ),
+            TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.listDone),
             ),
           ],
+        );
+      },
+      loading: () => const _LoadingIndicator(),
+      error: (_, _) => AlertDialog(
+        backgroundColor: context.vineColors.card,
+        title: Text(context.l10n.listAddToList),
+        content: CuratedListInitializationFailure(
+          onRetry: () => ref.invalidate(curatedListsStateProvider),
         ),
+        actions: [
+          DivineButton(
+            label: context.l10n.listDone,
+            type: DivineButtonType.secondary,
+            size: DivineButtonSize.small,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _retrySync(CuratedList list) async {
+    if (!_isSessionCurrent || _syncingListIds.contains(list.id)) return;
+    final service = ref.read(curatedListsStateProvider.notifier).service;
+    if (service == null || service.recoveryNeedsRepair) return;
+    setState(() {
+      _syncingListIds.add(list.id);
+      _failedSyncListIds.remove(list.id);
+    });
+    var synced = false;
+    try {
+      synced = await service.retryListSync(list.id);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Could not confirm list sync',
+        name: 'SelectListDialog',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
       );
-    },
-  );
+    }
+    if (!mounted || !_isSessionCurrent) return;
+    setState(() {
+      _syncingListIds.remove(list.id);
+      if (!synced) _failedSyncListIds.add(list.id);
+    });
+  }
 
   Future<void> _toggleVideoInList(
     BuildContext context,
@@ -143,15 +423,19 @@ class SelectListDialog extends StatelessWidget {
     CuratedList list,
     bool isCurrentlyInList,
   ) async {
+    if (!_isSessionCurrent || listService.recoveryNeedsRepair) return;
     try {
       bool success;
       if (isCurrentlyInList) {
-        success = await listService.removeVideoFromList(list.id, video.id);
+        success = await listService.removeVideoFromList(
+          list.id,
+          widget.video.id,
+        );
       } else {
-        success = await listService.addVideoToList(list.id, video.id);
+        success = await listService.addVideoToList(list.id, widget.video.id);
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted || !_isSessionCurrent) return;
 
       if (success) {
         final message = isCurrentlyInList
@@ -172,7 +456,10 @@ class SelectListDialog extends StatelessWidget {
       // does not ask the user to try again.
       final atSizeLimit =
           !isCurrentlyInList &&
-          CuratedListConverter.wouldExceedPrivateItemLimit(list, video.id);
+          CuratedListConverter.wouldExceedPrivateItemLimit(
+            list,
+            widget.video.id,
+          );
       final failureMessage = atSizeLimit
           ? context.l10n.listPrivateFull
           : context.l10n.listUpdateFailed;
@@ -194,260 +481,5 @@ class SelectListDialog extends StatelessWidget {
         category: LogCategory.ui,
       );
     }
-  }
-}
-
-/// Dialog for creating a new curated list, optionally adding [video] to it.
-///
-/// Like [SelectListDialog] this is always presented with `showDialog` and is
-/// never registered as a `go_router` route, so every dismissal here goes
-/// through [Navigator] — the navigator that owns the dialog route — rather
-/// than `context.pop`.
-class CreateListDialog extends ConsumerStatefulWidget {
-  const CreateListDialog({this.video, this.existingList, super.key});
-  final VideoEvent? video;
-  final CuratedList? existingList;
-
-  @override
-  ConsumerState<CreateListDialog> createState() => _CreateListDialogState();
-}
-
-class _CreateListDialogState extends ConsumerState<CreateListDialog> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  bool _isPublic = true;
-
-  bool get _isEditing => widget.existingList != null;
-
-  @override
-  void initState() {
-    super.initState();
-    final list = widget.existingList;
-    if (list == null) return;
-    _nameController.text = list.name;
-    _descriptionController.text = list.description ?? '';
-    _isPublic = list.isPublic;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return AlertDialog(
-      backgroundColor: context.vineColors.card,
-      title: Text(
-        _isEditing ? l10n.listEditTitle : l10n.listCreateNewList,
-        style: TextStyle(color: context.vineColors.primaryText),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            enableInteractiveSelection: true,
-            style: TextStyle(color: context.vineColors.primaryText),
-            decoration: InputDecoration(
-              labelText: l10n.listNameLabel,
-              labelStyle: TextStyle(color: context.vineColors.secondaryText),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _descriptionController,
-            enableInteractiveSelection: true,
-            style: TextStyle(color: context.vineColors.primaryText),
-            decoration: InputDecoration(
-              labelText: l10n.listDescriptionLabel,
-              labelStyle: TextStyle(color: context.vineColors.secondaryText),
-            ),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: Text(
-              l10n.listPublicList,
-              style: TextStyle(color: context.vineColors.primaryText),
-            ),
-            subtitle: Text(
-              _isPublic
-                  ? l10n.listPublicListSubtitle
-                  : l10n.listPrivateListSubtitle,
-              style: TextStyle(color: context.vineColors.secondaryText),
-            ),
-            value: _isPublic,
-            onChanged: (value) => setState(() => _isPublic = value),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.listCancel),
-        ),
-        TextButton(
-          onPressed: _saveList,
-          child: Text(_isEditing ? l10n.listSave : l10n.listCreate),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _saveList() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) return;
-
-    try {
-      final listService = ref.read(curatedListsStateProvider.notifier).service;
-      final existingList = widget.existingList;
-      if (existingList != null) {
-        final visibilityChanged = existingList.isPublic != _isPublic;
-        if (visibilityChanged &&
-            !await _confirmVisibilityChange(existingList.isPublic)) {
-          return;
-        }
-        if (!mounted) return;
-        if (listService == null) {
-          _showSaveFailed();
-          return;
-        }
-
-        final updateFuture = listService.updateList(
-          listId: existingList.id,
-          name: name,
-          description: _descriptionController.text.trim(),
-          isPublic: _isPublic,
-        );
-
-        // Visibility is the one field updateList holds back until a relay
-        // accepts the change, so a rejection means the switch the user flipped
-        // did not take. Wait for the answer and keep the editor open on
-        // failure, so that flip survives a retry.
-        if (visibilityChanged) {
-          final updated = await updateFuture;
-          if (!mounted) return;
-          if (updated) {
-            Navigator.of(context).pop();
-          } else {
-            _showSaveFailed();
-          }
-          return;
-        }
-
-        // Name and description are already stored locally before updateList
-        // awaits the relay, so nothing the user typed is riding on the answer.
-        // Close now rather than let a slow relay make the save look
-        // unresponsive; the messenger and message have to be resolved first
-        // because the pop can unmount this State.
-        final messenger = ScaffoldMessenger.of(context);
-        final failureMessage = context.l10n.listUpdateFailed;
-        Navigator.of(context).pop();
-
-        if (!await updateFuture && messenger.mounted) {
-          _showSaveFailedDetached(messenger, failureMessage);
-        }
-        return;
-      }
-
-      // The generated ID is only known once createList returns, so the create
-      // path cannot dismiss early the way the edit path does.
-      final newList = await listService?.createList(
-        name: name,
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-        isPublic: _isPublic,
-      );
-
-      if (!mounted) return;
-
-      // createList catches its own exceptions and returns null; without
-      // feedback here the dialog used to sit open doing nothing.
-      if (newList == null) {
-        _showSaveFailed();
-        return;
-      }
-
-      final video = widget.video;
-      if (video != null) {
-        await listService?.addVideoToList(newList.id, video.id);
-      }
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      Log.error(
-        'Failed to create list: $e',
-        name: 'CreateListDialog',
-        category: LogCategory.ui,
-      );
-
-      if (mounted) {
-        _showSaveFailed();
-      }
-    }
-  }
-
-  Future<bool> _confirmVisibilityChange(bool wasPublic) async {
-    final confirmed = await context.showVideoPausingDialog<bool>(
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: context.vineColors.card,
-        title: Text(
-          wasPublic
-              ? context.l10n.listMakePrivateTitle
-              : context.l10n.listMakePublicTitle,
-          style: VineTheme.titleMediumFont(
-            color: context.vineColors.primaryText,
-          ),
-        ),
-        content: Text(
-          wasPublic
-              ? context.l10n.listMakePrivateWarning
-              : context.l10n.listMakePublicWarning,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
-          ),
-        ),
-        actions: [
-          DivineButton(
-            label: context.l10n.commonCancel,
-            type: DivineButtonType.link,
-            onPressed: () => dialogContext.popModalIfMounted(false),
-          ),
-          DivineButton(
-            label: context.l10n.listContinue,
-            type: DivineButtonType.link,
-            onPressed: () => dialogContext.popModalIfMounted(true),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
-  }
-
-  /// Reports a failure while this dialog is still on screen.
-  void _showSaveFailed() => _showSaveFailedDetached(
-    ScaffoldMessenger.of(context),
-    _isEditing ? context.l10n.listUpdateFailed : context.l10n.listCreateFailed,
-  );
-
-  /// Reports a failure once the dialog may already be gone.
-  ///
-  /// Both arguments must be resolved before the async gap: after the pop this
-  /// State can be unmounted, so neither the messenger nor the message can be
-  /// recovered from [context].
-  void _showSaveFailedDetached(
-    ScaffoldMessengerState messenger,
-    String message,
-  ) {
-    messenger.showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-    );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
   }
 }

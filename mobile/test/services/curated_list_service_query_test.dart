@@ -49,7 +49,10 @@ void main() {
 
       mockNostr = _MockNostrClient();
 
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(
+        mockNostr,
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
@@ -57,7 +60,9 @@ void main() {
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Mock successful event publishing
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
@@ -86,7 +91,11 @@ void main() {
         ),
       ).thenAnswer((_) => const Stream.empty());
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       // Mock event creation
@@ -95,17 +104,16 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
-        (_) async => Event.fromJson({
-          'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test content',
-          'sig': 'test_signature',
-        }),
+        (invocation) async => Event(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          invocation.namedArguments[#kind] as int,
+          invocation.namedArguments[#tags] as List<List<String>>,
+          invocation.namedArguments[#content] as String,
+          createdAt: invocation.namedArguments[#createdAt] as int?,
+        ),
       );
 
       // Create fresh service instance after clearing prefs
@@ -115,6 +123,28 @@ void main() {
         prefs: prefs,
       );
     });
+
+    test(
+      'publication fixture reaches confirmed relay with the signed revision',
+      () async {
+        final publicationService = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(publicationService.dispose);
+        final created = await publicationService.createList(name: 'Fixture');
+        final event =
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(created!.nostrEventId, event.id);
+        expect(event.kind, 30005);
+        expect(event.tags, contains(equals(['title', 'Fixture'])));
+        expect(event.createdAt, greaterThan(0));
+      },
+    );
 
     group('searchLists()', () {
       test('finds lists by name', () async {

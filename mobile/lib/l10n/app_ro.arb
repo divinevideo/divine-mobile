@@ -1696,13 +1696,10 @@
   "listNewPeopleList": "Listă nouă de persoane",
   "listNameLabel": "Numele listei",
   "listDescriptionLabel": "Descriere (opțional)",
-  "listPublicList": "Listă publică",
-  "listPublicListSubtitle": "Alții pot urmări și vedea această listă",
   "listPrivateListSubtitle": "Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.",
   "listVisibilityPublic": "Publică",
   "listVisibilityPrivate": "Privată",
   "profileListsEmpty": "Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.",
-  "listEditTitle": "Editează lista",
   "listShareAction": "Distribuie lista",
   "listShareFailed": "N-am putut distribui lista. Mai încearcă.",
   "listSave": "Salvează",
@@ -1731,7 +1728,6 @@
       }
     }
   },
-  "listCancel": "Anulează",
   "listCreate": "Creează",
   "listCreateFailed": "N-am putut crea lista",
   "keyManagementTitle": "Chei Nostr",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
-  "peopleListsAddPeopleSearchHint": "Caută persoane"
+  "peopleListsAddPeopleSearchHint": "Caută persoane",
+  "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
+  "listMakePublicLabel": "Fă lista publică",
+  "listEditTitle": "Editează lista",
+  "listAddCollaboratorTitle": "Adaugă un colaborator",
+  "listCollaboratorSearchHint": "Caută în Divine...",
+  "listCollaboratorsNone": "Niciunul",
+  "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
+  "listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
+  "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
+  "listRetrySync": "Sincronizează acum",
+  "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
+  "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
+  "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
+  "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
+  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate."
 }

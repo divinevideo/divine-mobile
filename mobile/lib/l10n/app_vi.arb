@@ -2431,13 +2431,10 @@
   "listNewPeopleList": "Danh sách người mới",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
-  "listPublicList": "Danh sách công khai",
-  "listPublicListSubtitle": "Người khác có thể theo dõi và xem danh sách này",
   "listPrivateListSubtitle": "Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.",
   "listVisibilityPublic": "Công khai",
   "listVisibilityPrivate": "Riêng tư",
   "profileListsEmpty": "Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.",
-  "listEditTitle": "Sửa danh sách",
   "listShareAction": "Chia sẻ danh sách",
   "listShareFailed": "Không chia sẻ được danh sách này. Thử lại nhé.",
   "listSave": "Lưu",
@@ -2466,7 +2463,6 @@
       }
     }
   },
-  "listCancel": "Hủy",
   "listCreate": "Tạo",
   "listCreateFailed": "Không tạo được danh sách",
   "keyManagementTitle": "Khóa Nostr",
@@ -6792,5 +6788,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
-  "peopleListsAddPeopleSearchHint": "Tìm người"
+  "peopleListsAddPeopleSearchHint": "Tìm người",
+  "listMakePublicSubtitle": "Cho người khác xem danh sách này",
+  "listMakePublicLabel": "Đặt công khai",
+  "listEditTitle": "Sửa danh sách",
+  "listAddCollaboratorTitle": "Thêm cộng tác viên",
+  "listCollaboratorSearchHint": "Tìm trên Divine...",
+  "listCollaboratorsNone": "Không có",
+  "listPrivateCollaboratorsWarning": "Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.",
+  "listVideoNotAdded": "Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.",
+  "listVideoPendingSync": "Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.",
+  "listRetrySync": "Đồng bộ ngay",
+  "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
+  "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
+  "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
+  "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
+  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu."
 }

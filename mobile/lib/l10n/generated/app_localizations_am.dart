@@ -4837,12 +4837,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
 
   @override
-  String get listPublicList => 'የህዝብ ዝርዝር';
-
-  @override
-  String get listPublicListSubtitle => 'ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።';
-
-  @override
   String get listPrivateListSubtitle =>
       'ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።';
 
@@ -4855,9 +4849,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get listEditTitle => 'ዝርዝር አርትዕ';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4918,6 +4909,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listContinue => 'ቀጥል';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4947,9 +4942,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name በDivine ላይ';
   }
-
-  @override
-  String get listCancel => 'ሰርዝ';
 
   @override
   String get listCreate => 'ፍጠር';
@@ -12749,4 +12741,50 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
+
+  @override
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
+
+  @override
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
+
+  @override
+  String get listEditTitle => 'ዝርዝር አርትዕ';
+
+  @override
+  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
+
+  @override
+  String get listCollaboratorsNone => 'ምንም';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።';
+
+  @override
+  String get listVideoPendingSync =>
+      'ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።';
+
+  @override
+  String get listVideoNotAdded => 'ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።';
+
+  @override
+  String get listRetrySync => 'አሁን አመሳስል';
+
+  @override
+  String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
 }

@@ -152,7 +152,11 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       // Mock event creation
@@ -161,9 +165,12 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((invocation) {
-        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final now =
+            invocation.namedArguments[#createdAt] as int? ??
+            DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final kind = invocation.namedArguments[#kind] as int;
         final content = invocation.namedArguments[#content] as String;
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -234,9 +241,12 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) {
-          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final now =
+              invocation.namedArguments[#createdAt] as int? ??
+              DateTime.now().millisecondsSinceEpoch ~/ 1000;
           final event = Event.fromJson({
             'id': sha256
                 .convert(
@@ -273,7 +283,9 @@ void main() {
         });
 
         // Mock subscription to return collected lists
-        when(() => mockNostr.subscribe(any())).thenAnswer((invocation) {
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
+          invocation,
+        ) {
           final filters = invocation.positionalArguments[0] as List<Filter>;
 
           if (filters.isNotEmpty) {
@@ -390,7 +402,7 @@ void main() {
 
       test('calls fetchUserListsFromRelays during initialization', () async {
         // Mock subscription for relay sync
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_list_event',
@@ -410,12 +422,12 @@ void main() {
         await service.initialize();
 
         // Should have called subscribeToEvents
-        verify(() => mockNostr.subscribe(any())).called(1);
+        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
       });
 
       test('re-queries relays only when the fetch is forced', () async {
         when(
-          () => mockNostr.subscribe(any()),
+          () => mockNostr.subscribe(any(), closeOnEose: true),
         ).thenAnswer((_) => const Stream.empty());
         await service.fetchUserListsFromRelays();
         clearInteractions(mockNostr);
@@ -423,14 +435,14 @@ void main() {
         // The session sync already ran, so an unforced call is a no-op and a
         // list created on another device would stay invisible until restart.
         await service.fetchUserListsFromRelays();
-        verifyNever(() => mockNostr.subscribe(any()));
+        verifyNever(() => mockNostr.subscribe(any(), closeOnEose: true));
 
         await service.fetchUserListsFromRelays(force: true);
-        verify(() => mockNostr.subscribe(any())).called(1);
+        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
       });
 
       test('relay-synced own lists stay in myLists', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_list_event',
@@ -510,7 +522,9 @@ void main() {
         });
         final neverCompletes = StreamController<Event>();
         var subscriptionCount = 0;
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) {
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
+          _,
+        ) {
           subscriptionCount++;
           return subscriptionCount == 1
               ? neverCompletes.stream
@@ -551,7 +565,7 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'other_device_event',
@@ -615,7 +629,7 @@ void main() {
           expect(deleted, isTrue);
           clearInteractions(mockNostr);
 
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'stale_default_event',
@@ -669,7 +683,7 @@ void main() {
               event: invocation.positionalArguments[0] as Event,
             ),
           );
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'stale_relay_event',
@@ -722,7 +736,7 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_collaborative_event',
@@ -770,7 +784,7 @@ void main() {
               ).toJson(),
             ]),
           });
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'relay_collaborative_event',
@@ -813,11 +827,15 @@ void main() {
               .single;
           expect(warning.level, LogLevel.warning);
 
-          final republished =
-              verify(
-                    () => mockNostr.publishEventAwaitOk(captureAny()),
-                  ).captured.last
-                  as Event;
+          final sent = verify(() => mockNostr.publishEventAwaitOk(captureAny()))
+              .captured
+              .cast<Event>();
+          final republished = sent.singleWhere((event) => event.kind == 30005);
+          final deletion = sent.singleWhere((event) => event.kind == 5);
+          expect(
+            deletion.tags,
+            contains(equals(['e', 'relay_collaborative_event'])),
+          );
           expect(
             republished.tags,
             isNot(contains(equals(['e', 'local_video']))),
@@ -1010,7 +1028,7 @@ void main() {
       });
 
       test('reconstructs a private list from its sealed content', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_private_event',
@@ -1054,7 +1072,7 @@ void main() {
             ['e', 'legacy_private_video_id'],
           ]),
         );
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_nip04_private_event',
@@ -1080,7 +1098,7 @@ void main() {
       });
 
       test('skips a sealed list signed by another user', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_foreign_event',
@@ -1111,7 +1129,9 @@ void main() {
 
       test('skips a sealed event if the user signs out during sync', () async {
         final events = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => events.stream);
+        when(
+          () => mockNostr.subscribe(any(), closeOnEose: true),
+        ).thenAnswer((_) => events.stream);
 
         final sync = service.fetchUserListsFromRelays();
         when(() => mockAuth.isAuthenticated).thenReturn(false);
@@ -1145,7 +1165,7 @@ void main() {
         when(
           () => mockSigner.nip44Decrypt(any(), any()),
         ).thenAnswer((_) async => null);
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_legacy_event',
@@ -1186,7 +1206,7 @@ void main() {
           when(
             () => mockSigner.nip44Decrypt(any(), any()),
           ).thenAnswer((_) async => null);
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'relay_private_unreadable_event',
@@ -1268,6 +1288,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1310,6 +1331,7 @@ void main() {
             kind: 30005,
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
         verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
@@ -1383,6 +1405,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -1487,6 +1510,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1531,6 +1555,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1546,6 +1571,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1570,10 +1596,13 @@ void main() {
         expect(list1!.id, isNot(equals(list2!.id)));
       });
 
-      test('sets createdAt and updatedAt to same time', () async {
+      test('records the signed second in updatedAt on creation', () async {
         final list = await service.createList(name: 'Test List');
 
-        expect(list!.createdAt, list.updatedAt);
+        expect(
+          list!.createdAt.millisecondsSinceEpoch ~/ 1000,
+          list.updatedAt.millisecondsSinceEpoch ~/ 1000,
+        );
       });
     });
 
@@ -1738,9 +1767,9 @@ void main() {
           );
 
           expect(flipped, isTrue);
-          final redaction =
-              verify(() => mockNostr.publishEvent(captureAny())).captured.single
-                  as Event;
+          final redaction = verify(
+            () => mockNostr.publishEventAwaitOk(captureAny()),
+          ).captured.cast<Event>().singleWhere((event) => event.kind == 5);
           expect(redaction.kind, EventKind.eventDeletion);
           expect(redaction.tags, contains(equals(['e', plaintextEventId])));
           expect(redaction.tags, contains(equals(['k', '30005'])));
@@ -1806,11 +1835,9 @@ void main() {
         // Kind 30005 is addressable: republishing under the same d-tag
         // replaces the public copy, with the items moved out of plain tags
         // into sealed content.
-        final published =
-            verify(
-                  () => mockNostr.publishEventAwaitOk(captureAny()),
-                ).captured.single
-                as Event;
+        final published = verify(
+          () => mockNostr.publishEventAwaitOk(captureAny()),
+        ).captured.cast<Event>().singleWhere((event) => event.kind == 30005);
         expect(published.kind, 30005);
         expect(published.tags, contains(equals(['d', list.id])));
         expect(
@@ -1847,9 +1874,9 @@ void main() {
         // to be an `e` tag on the old event id: NIP-09 honours an `a` tag on
         // the coordinate for every version up to the request, which would
         // take the sealed replacement down with the original.
-        final redaction =
-            verify(() => mockNostr.publishEvent(captureAny())).captured.single
-                as Event;
+        final redaction = verify(
+          () => mockNostr.publishEventAwaitOk(captureAny()),
+        ).captured.cast<Event>().singleWhere((event) => event.kind == 5);
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', plaintextEventId])));
         expect(redaction.tags, contains(equals(['k', '30005'])));
@@ -1885,7 +1912,7 @@ void main() {
         // flip commits and the relays that rejected it get the redaction.
         expect(result, isTrue);
         expect(service.getListById(list.id)!.isPublic, isFalse);
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(2);
       });
 
       test('keeps a list private when its redaction fails', () async {
@@ -1893,8 +1920,10 @@ void main() {
         reset(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
-          (invocation) async =>
-              _accepted(invocation.positionalArguments[0] as Event),
+          (invocation) async {
+            final event = invocation.positionalArguments.single as Event;
+            return event.kind == 5 ? _rejected(event) : _accepted(event);
+          },
         );
         when(
           () => mockNostr.publishEvent(any()),
@@ -1909,6 +1938,10 @@ void main() {
         // depend on it — the sealed replacement is already accepted.
         expect(result, isTrue);
         expect(service.getListById(list.id)!.isPublic, isFalse);
+        expect(
+          service.getListById(list.id)!.pendingPlaintextEventIds,
+          isNotEmpty,
+        );
       });
 
       test('unsets the description when the edit clears it', () async {
@@ -2188,8 +2221,8 @@ void main() {
         expect(await pendingPrivacy, isTrue);
         expect(await pendingAdd, isTrue);
 
-        // The flip also fires a kind 5 redaction of the plaintext event
-        // through the same unconfirmed path, so pick the list event out.
+        // The flip's kind-5 redaction uses confirmed publishing. The queued
+        // item write is the only unconfirmed list event captured here.
         final addEvent = verify(
           () => mockNostr.publishEvent(captureAny()),
         ).captured.cast<Event>().singleWhere((event) => event.kind == 30005);
@@ -2253,7 +2286,7 @@ void main() {
           // NIP-09 is advisory. A relay that never saw the deletion, or chose
           // not to honour it, keeps serving the original kind 30005 event.
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(any(), closeOnEose: true),
           ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
 
           await service.fetchUserListsFromRelays(force: true);
@@ -2301,7 +2334,7 @@ void main() {
           expect(await service.deleteOwnedList(listId), isTrue);
 
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(any(), closeOnEose: true),
           ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
 
           final relaunched = CuratedListService(
@@ -2337,7 +2370,7 @@ void main() {
           final defaultList = relaunched.getDefaultList();
           expect(defaultList, isNotNull);
 
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(_listEvent(defaultList!.id, 'My List')),
           );
           await relaunched.fetchUserListsFromRelays(force: true);
@@ -2364,7 +2397,7 @@ void main() {
           // identifier is a different coordinate entirely.
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_otherPubkey);
           when(mockSigner.getPublicKey).thenAnswer((_) async => _otherPubkey);
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) =>
                 Stream.value(_listEvent(listId, 'Someone Else', _otherPubkey)),
           );

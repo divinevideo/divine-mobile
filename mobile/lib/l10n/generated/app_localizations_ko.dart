@@ -4675,12 +4675,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listDescriptionLabel => '설명 (선택)';
 
   @override
-  String get listPublicList => '공개 목록';
-
-  @override
-  String get listPublicListSubtitle => '다른 사람들이 이 목록을 팔로우하고 볼 수 있어요';
-
-  @override
   String get listPrivateListSubtitle =>
       '동영상은 비공개로 유지돼요. 이름, 설명, 태그, 커버는 계속 보여요.';
 
@@ -4692,9 +4686,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileListsEmpty => '아직 목록이 없어요. 함께 모아 두고 싶은 루프로 하나 만들어 보세요.';
-
-  @override
-  String get listEditTitle => '목록 편집';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4755,6 +4746,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listContinue => '계속';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      '이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4783,9 +4778,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine의 $name';
   }
-
-  @override
-  String get listCancel => '취소';
 
   @override
   String get listCreate => '만들기';
@@ -12450,4 +12442,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => '사람 검색';
+
+  @override
+  String get listMakePublicLabel => '공개로 설정';
+
+  @override
+  String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
+
+  @override
+  String get listEditTitle => '목록 편집';
+
+  @override
+  String get listAddCollaboratorTitle => '협업자 추가';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine 검색...';
+
+  @override
+  String get listCollaboratorsNone => '없음';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      '이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.';
+
+  @override
+  String get listVideoPendingSync => '목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.';
+
+  @override
+  String get listVideoNotAdded => '목록은 만들어졌지만 이 동영상은 추가되지 않았어요.';
+
+  @override
+  String get listRetrySync => '지금 동기화';
+
+  @override
+  String get listPermissionsUnconfirmed => '이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get listRecoveryPending => '이 목록에 동기화를 기다리는 변경 사항이 있어요.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.';
 }

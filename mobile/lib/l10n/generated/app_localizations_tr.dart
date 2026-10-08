@@ -4898,13 +4898,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
 
   @override
-  String get listPublicList => 'Herkese Açık Liste';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Diğerleri bu listeyi takip edebilir ve görebilir';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.';
 
@@ -4917,9 +4910,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.';
-
-  @override
-  String get listEditTitle => 'Listeyi düzenle';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4980,6 +4970,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listContinue => 'Devam';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5009,9 +5003,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine\'da $name';
   }
-
-  @override
-  String get listCancel => 'İptal';
 
   @override
   String get listCreate => 'Oluştur';
@@ -13009,4 +13000,53 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Kişi ara';
+
+  @override
+  String get listMakePublicLabel => 'Herkese açık yap';
+
+  @override
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
+
+  @override
+  String get listEditTitle => 'Listeyi düzenle';
+
+  @override
+  String get listAddCollaboratorTitle => 'Ortak ekle';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine\'da ara...';
+
+  @override
+  String get listCollaboratorsNone => 'Yok';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Listen oluşturuldu, ancak bu video eklenmedi.';
+
+  @override
+  String get listRetrySync => 'Şimdi eşitle';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Bu değişiklik doğrulanamadı. Tekrar dene.';
+
+  @override
+  String get listRecoveryPending =>
+      'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
 }

@@ -1696,13 +1696,10 @@
   "listNewPeopleList": "Ny personlista",
   "listNameLabel": "Listnamn",
   "listDescriptionLabel": "Beskrivning (valfritt)",
-  "listPublicList": "Publik lista",
-  "listPublicListSubtitle": "Andra kan följa och se den här listan",
   "listPrivateListSubtitle": "Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.",
   "listVisibilityPublic": "Offentlig",
   "listVisibilityPrivate": "Privat",
   "profileListsEmpty": "Inga listor än. Skapa en för looparna du vill hålla ihop.",
-  "listEditTitle": "Redigera lista",
   "listShareAction": "Dela lista",
   "listShareFailed": "Kunde inte dela listan. Försök igen.",
   "listSave": "Spara",
@@ -1731,7 +1728,6 @@
       }
     }
   },
-  "listCancel": "Avbryt",
   "listCreate": "Skapa",
   "listCreateFailed": "Kunde inte skapa listan",
   "keyManagementTitle": "Nostr-nycklar",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
-  "peopleListsAddPeopleSearchHint": "Sök personer"
+  "peopleListsAddPeopleSearchHint": "Sök personer",
+  "listMakePublicSubtitle": "Låt andra se den här listan",
+  "listMakePublicLabel": "Gör offentlig",
+  "listEditTitle": "Redigera lista",
+  "listAddCollaboratorTitle": "Lägg till medarbetare",
+  "listCollaboratorSearchHint": "Sök i Divine...",
+  "listCollaboratorsNone": "Inga",
+  "listPrivateCollaboratorsWarning": "Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.",
+  "listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
+  "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
+  "listRetrySync": "Synkronisera nu",
+  "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
+  "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
+  "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
+  "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
+  "listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än."
 }

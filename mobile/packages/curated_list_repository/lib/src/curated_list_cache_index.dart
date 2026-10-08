@@ -32,6 +32,12 @@ class CuratedListCacheIndex {
       )
       .firstOrNull;
 
+  /// Requires an authenticated owner, never an unattributed legacy row.
+  bool isOwned(String id) {
+    final owner = ownerPubkey;
+    return owner != null && owner.isNotEmpty && find(id)?.pubkey == owner;
+  }
+
   /// Returns the selected record's cache index, or -1 when absent.
   int indexOf(String id) {
     final list = find(id);

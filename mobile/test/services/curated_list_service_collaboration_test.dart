@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for CuratedListService collaboration features
 // ABOUTME: Tests adding/removing collaborators and permission checks
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -62,19 +63,28 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       mockNostr = _MockNostrClient();
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(
+        mockNostr,
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
 
       stubPublishEvent();
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       when(
@@ -82,15 +92,16 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
-        (_) async => Event.fromJson({
+        (invocation) async => Event.fromJson({
           'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test',
+          'pubkey': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          'created_at': invocation.namedArguments[#createdAt],
+          'kind': invocation.namedArguments[#kind],
+          'tags': invocation.namedArguments[#tags],
+          'content': invocation.namedArguments[#content],
           'sig': 'test_sig',
         }),
       );
@@ -192,7 +203,7 @@ void main() {
 
         await service.addCollaborator(list.id, 'collaborator_1');
 
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
       });
 
       test('updates updatedAt timestamp', () async {
@@ -272,7 +283,7 @@ void main() {
 
         await service.removeCollaborator(list.id, 'collaborator_1');
 
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
       });
 
       test('handles removing last collaborator', () async {
@@ -299,7 +310,7 @@ void main() {
 
         final result = service.canCollaborate(
           list!.id,
-          'test_pubkey_123456789abcdef', // Owner's pubkey
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', // Owner's pubkey
         );
 
         expect(result, isTrue);
@@ -412,20 +423,30 @@ void main() {
         );
       });
 
-      test('many collaborators (100)', () async {
-        final list = await service.createList(
-          name: 'Test List',
-          isCollaborative: true,
-        );
-        final listId = list!.id;
-
-        for (var i = 0; i < 100; i++) {
-          await service.addCollaborator(listId, 'collaborator_$i');
-        }
-
-        final updatedList = service.getListById(listId);
-        expect(updatedList!.allowedCollaborators.length, 100);
-      });
+      test(
+        'many acknowledged collaborators (100) as the clock advances',
+        () async {
+          var now = DateTime.now();
+          await withClock(Clock(() => now), () async {
+            final list = (await service.createList(
+              name: 'Test List',
+              isCollaborative: true,
+            ))!;
+            for (var i = 0; i < 100; i++) {
+              now = now.add(const Duration(seconds: 1));
+              final collaborator = (i + 1).toRadixString(16).padLeft(64, '0');
+              expect(
+                await service.addCollaborator(list.id, collaborator),
+                isTrue,
+              );
+            }
+            expect(
+              service.getListById(list.id)!.allowedCollaborators,
+              hasLength(100),
+            );
+          });
+        },
+      );
 
       test('canCollaborate with null pubkey', () {
         expect(service.canCollaborate('any_list', ''), isFalse);

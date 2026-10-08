@@ -1686,13 +1686,10 @@
   "listNewPeopleList": "قائمة أشخاص جديدة",
   "listNameLabel": "اسم القائمة",
   "listDescriptionLabel": "الوصف (اختياري)",
-  "listPublicList": "قائمة عامة",
-  "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
   "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
   "listVisibilityPublic": "عامة",
   "listVisibilityPrivate": "خاصة",
   "profileListsEmpty": "لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.",
-  "listEditTitle": "تعديل القائمة",
   "listShareAction": "مشاركة القائمة",
   "listShareFailed": "تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.",
   "listSave": "حفظ",
@@ -1721,7 +1718,6 @@
       }
     }
   },
-  "listCancel": "إلغاء",
   "listCreate": "إنشاء",
   "listCreateFailed": "تعذر إنشاء القائمة",
   "keyManagementTitle": "مفاتيح Nostr",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
-  "peopleListsAddPeopleSearchHint": "البحث عن أشخاص"
+  "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
+  "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
+  "listMakePublicLabel": "جعل القائمة عامة",
+  "listEditTitle": "تعديل القائمة",
+  "listAddCollaboratorTitle": "إضافة متعاون",
+  "listCollaboratorSearchHint": "ابحث في Divine...",
+  "listCollaboratorsNone": "لا أحد",
+  "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
+  "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
+  "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
+  "listRetrySync": "زامن الآن",
+  "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
+  "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة.",
+  "listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.",
+  "listRecoveryReadOnly": "تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.",
+  "listPrivateConversionTooLarge": "هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة."
 }

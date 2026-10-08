@@ -21,8 +21,8 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:people_lists_repository/people_lists_repository.dart'
     show PeopleListSearchResult;
 import 'package:unified_logger/unified_logger.dart';
@@ -496,11 +496,8 @@ class _ExploreCreationHeader extends ConsumerWidget {
           leadingIcon: .plus,
           label: context.l10n.listNewVideoList,
           onPressed: () => runDetached(
-            showDialog<void>(
-              context: context,
-              builder: (_) => const CreateListDialog(),
-            ),
-            'open list creation dialog',
+            showListInfoSheet(context),
+            'open list creation sheet',
             logName: 'ExploreListsTab',
             category: LogCategory.ui,
           ),

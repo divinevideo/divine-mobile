@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -12,6 +13,10 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -98,13 +103,17 @@ void main() {
       });
     });
 
-    group('publishList ownership', () {
-      setUp(() {
+    group('ownership across signing and publication', () {
+      late SharedPreferences prefs;
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        prefs = await SharedPreferences.getInstance();
         when(
           () => mockAuth.createAndSignEvent(
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer(
           (invocation) async => _event(
@@ -125,18 +134,48 @@ void main() {
         );
       });
 
+      Future<bool> publish(CuratedList source, {bool confirmed = false}) {
+        var stored = source;
+        return CuratedListPublisher(
+          client: mockNostr,
+          gateway: gateway,
+          publishClock: CuratedListPublishClock(),
+          findList: (coordinate) =>
+              stored.authorScopedId == coordinate ? stored : null,
+          persistList: (current, replacement) async {
+            if (stored != current) return false;
+            stored = replacement;
+            return true;
+          },
+          recoveryJournal: CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (operation) => operation(),
+          ),
+          isCurrentSession: () => true,
+        ).publish(source, confirmed: confirmed);
+      }
+
       for (final isPublic in [false, true]) {
         test(
           'rejects foreign ${isPublic ? 'public' : 'private'} record before signing or sealing',
           () async {
             final foreign = _list(isPublic: isPublic)
                 .copyWith(pubkey: _strangerPubkey);
-            expect(await gateway.publishList(foreign), isNull);
+            expect(
+              await gateway.signList(
+                foreign,
+                ownerPubkey: _ownerPubkey,
+                createdAt: () => 1786000000,
+              ),
+              isNull,
+            );
+            expect(await publish(foreign), isFalse);
             verifyNever(
               () => mockAuth.createAndSignEvent(
                 kind: any(named: 'kind'),
                 content: any(named: 'content'),
                 tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
               ),
             );
             verifyNever(mockSigner.getPublicKey);
@@ -154,16 +193,17 @@ void main() {
                   kind: any(named: 'kind'),
                   content: any(named: 'content'),
                   tags: any(named: 'tags'),
+                  createdAt: any(named: 'createdAt'),
                 ),
               ).thenAnswer(
                 (_) async => _event(content: '', pubkey: _strangerPubkey),
               );
               expect(
-                await gateway.publishList(
+                await publish(
                   _list(isPublic: isPublic),
                   confirmed: confirmed,
                 ),
-                isNull,
+                isFalse,
               );
               verifyNever(() => mockNostr.publishEvent(any()));
               verifyNever(() => mockNostr.publishEventAwaitOk(any()));
@@ -179,14 +219,15 @@ void main() {
                 kind: any(named: 'kind'),
                 content: any(named: 'content'),
                 tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
               ),
             ).thenAnswer((_) => signed.future);
-            final pending = gateway.publishList(_list(isPublic: isPublic));
+            final pending = publish(_list(isPublic: isPublic));
             await pumpEventQueue();
             when(() => mockAuth.currentPublicKeyHex)
                 .thenReturn(_strangerPubkey);
             signed.complete(_event(content: '', pubkey: _ownerPubkey));
-            expect(await pending, isNull);
+            expect(await pending, isFalse);
             verifyNever(() => mockNostr.publishEvent(any()));
             verifyNever(() => mockNostr.publishEventAwaitOk(any()));
           },
@@ -205,16 +246,35 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) => signed.future);
-        final pending = gateway.publishList(_list(isPublic: true));
+        final pending = publish(_list(isPublic: true));
         await pumpEventQueue();
         active = false;
         signed.complete(_event(content: '', pubkey: _ownerPubkey));
-        expect(await pending, isNull);
+        expect(await pending, isFalse);
         verifyNever(() => mockNostr.publishEvent(any()));
         verifyNever(() => mockNostr.publishEventAwaitOk(any()));
       });
+      for (final confirmed in [false, true]) {
+        test(
+          'matching signed owner reaches ${confirmed ? 'confirmed' : 'queued'} dispatch',
+          () async {
+            expect(
+              await publish(_list(isPublic: true), confirmed: confirmed),
+              isTrue,
+            );
+            if (confirmed) {
+              verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+              verifyNever(() => mockNostr.publishEvent(any()));
+            } else {
+              verify(() => mockNostr.publishEvent(any())).called(1);
+              verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+            }
+          },
+        );
+      }
       test(
         'private sealing refuses a foreign owner before signer access',
         () async {
@@ -231,6 +291,21 @@ void main() {
     });
 
     group('unsealItemTags', () {
+      test('malformed decrypted JSON never enters support logs', () async {
+        const privatePayload = '[PRIVATE_ITEM_PAYLOAD_INVALID_JSON';
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        when(() => mockSigner.nip44Decrypt(any(), any()))
+            .thenAnswer((_) async => privatePayload);
+        final result = await gateway.unsealItemTags(
+          _event(content: sealForTest(privatePayload), pubkey: _ownerPubkey),
+        );
+        expect(result.status, UnsealItemTagsStatus.failed);
+        final captured = await logs.getAllLogsAsText();
+        expect(captured.join('\n'), contains('FormatException'));
+        expect(captured.join('\n'), isNot(contains(privatePayload)));
+      });
+
       test('recovers the tags it sealed', () async {
         final sealed = await gateway.sealItemTags(_list());
 
@@ -300,6 +375,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer(
           (i) async => Event(
@@ -309,8 +385,8 @@ void main() {
             i.namedArguments[#content] as String,
           ),
         );
-        when(() => mockNostr.publishEvent(any())).thenAnswer(
-          (i) async => PublishSuccess(event: i.positionalArguments[0] as Event),
+        when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+          (i) async => acceptedOutcome(i.positionalArguments.single as Event),
         );
       });
 
@@ -318,7 +394,9 @@ void main() {
         await gateway.redactPlaintextListEvent(_plaintextEventId);
 
         final redaction =
-            verify(() => mockNostr.publishEvent(captureAny())).captured.single
+            verify(() => mockNostr.publishEventAwaitOk(captureAny()))
+                    .captured
+                    .single
                 as Event;
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', _plaintextEventId])));
@@ -340,6 +418,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -347,7 +426,7 @@ void main() {
           gateway.redactPlaintextListEvent(_plaintextEventId),
           completes,
         );
-        verifyNever(() => mockNostr.publishEvent(any()));
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
       });
     });
 

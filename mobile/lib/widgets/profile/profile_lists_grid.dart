@@ -19,11 +19,11 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
+import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// Independently loaded people and video lists owned by the profile viewer.
 class ProfileListsGrid extends ConsumerWidget {
@@ -115,25 +115,31 @@ class _VideoListsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listsAsync = ref.watch(curatedListsStateProvider);
+    final service = ref.read(curatedListsStateProvider.notifier).service;
+    final recoveryReadOnly = service?.recoveryNeedsRepair ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionHeading(title: context.l10n.exploreVideoLists),
+        if (recoveryReadOnly) const CuratedListRecoveryReadOnlyNotice(),
         DivineButton(
           label: context.l10n.listNewVideoList,
           leadingIcon: DivineIconName.plus,
           type: DivineButtonType.secondary,
           expanded: true,
-          onPressed: () => context.showVideoPausingDialog<void>(
-            builder: (_) => const CreateListDialog(),
-          ),
+          onPressed: recoveryReadOnly
+              ? null
+              : () => runDetached(
+                  showListInfoSheet(context),
+                  'open list creation sheet',
+                  logName: 'ProfileListsGrid',
+                  category: LogCategory.ui,
+                ),
         ),
         const _BookmarksEntry(),
         listsAsync.when(
           data: (_) {
-            final ownLists =
-                ref.read(curatedListsStateProvider.notifier).service?.myLists ??
-                const <CuratedList>[];
+            final ownLists = service?.myLists ?? const <CuratedList>[];
             if (ownLists.isEmpty) {
               return _ListMessage(text: context.l10n.profileListsEmpty);
             }

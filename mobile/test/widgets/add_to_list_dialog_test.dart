@@ -1,9 +1,10 @@
-// ABOUTME: Tests for SelectListDialog and CreateListDialog widgets
+// ABOUTME: Tests for SelectListDialog and its list creation entry point
 // ABOUTME: Verifies list selection, list item interactions, and list creation form
 
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -12,10 +13,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 /// Test data for the fake notifier - set before each test
 List<CuratedList> _fakeLists = [];
@@ -41,6 +46,8 @@ class _FakeCuratedListsState extends CuratedListsState {
     }
     return _fakeLists;
   }
+
+  void replaceLists(List<CuratedList> lists) => state = AsyncData(lists);
 }
 
 void main() {
@@ -69,6 +76,7 @@ void main() {
     });
 
     Widget buildSubject() => testProviderScope(
+      mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
       additionalOverrides: [
         curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
       ],
@@ -78,6 +86,151 @@ void main() {
         home: Scaffold(body: SelectListDialog(video: testVideo)),
       ),
     );
+
+    testWidgets('recovery preserves rows and pauses all editing actions', (
+      tester,
+    ) async {
+      mockListService.recoveryNeedsRepair = true;
+      _fakeLists = [
+        CuratedList(
+          id: 'pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending list',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+        CuratedList(
+          id: 'empty-list',
+          pubkey: 'a' * 64,
+          name: 'Empty list',
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ];
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      expect(find.byType(ListTile), findsNWidgets(2));
+      expect(
+        tester
+            .widgetList<ListTile>(find.byType(ListTile))
+            .every((tile) => tile.onTap == null),
+        isTrue,
+      );
+      final sync = tester.widget<DivineButton>(
+        find.ancestor(
+          of: find.text(l10n.listRetrySync),
+          matching: find.byType(DivineButton),
+        ),
+      );
+      expect(sync.onPressed, isNull);
+      final create = tester.widget<TextButton>(
+        find.ancestor(
+          of: find.text(l10n.listNewList),
+          matching: find.byType(TextButton),
+        ),
+      );
+      expect(create.onPressed, isNull);
+      await tester.tap(find.text('Empty list'));
+      await tester.pump();
+      verifyNever(() => mockListService.addVideoToList(any(), any()));
+      verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      verifyNever(() => mockListService.retryListSync(any()));
+      verifyNever(() => mockListService.createList(name: any(named: 'name')));
+    });
+
+    testWidgets('Done dismisses the picker while recovery holds editing', (
+      tester,
+    ) async {
+      mockListService.recoveryNeedsRepair = true;
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        testProviderScope(
+          mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: SizedBox()),
+          ),
+        ),
+      );
+      unawaited(
+        showDialog<void>(
+          context: navigator.currentContext!,
+          builder: (_) => SelectListDialog(video: testVideo),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      await tester.tap(find.text(l10n.listDone));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectListDialog), findsNothing);
+    });
+
+    testWidgets('a newly held service rejects captured picker callbacks', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final pending = CuratedList(
+        id: 'pending-list',
+        pubkey: 'a' * 64,
+        name: 'Pending list',
+        videoEventIds: [testVideo.id],
+        pendingRepublish: true,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      _fakeLists = [pending];
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final toggle = tester.widget<ListTile>(find.byType(ListTile)).onTap!;
+      final sync = tester
+          .widget<DivineButton>(
+            find.ancestor(
+              of: find.text(l10n.listRetrySync),
+              matching: find.byType(DivineButton),
+            ),
+          )
+          .onPressed!;
+      final create = tester
+          .widget<TextButton>(
+            find.ancestor(
+              of: find.text(l10n.listNewList),
+              matching: find.byType(TextButton),
+            ),
+          )
+          .onPressed!;
+      mockListService.recoveryNeedsRepair = true;
+      toggle();
+      sync();
+      create();
+      await tester.pumpAndSettle();
+      verifyNever(() => mockListService.addVideoToList(any(), any()));
+      verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      verifyNever(() => mockListService.retryListSync(any()));
+      expect(find.byType(ListInfoForm), findsNothing);
+
+      final notifier = ProviderScope.containerOf(
+        tester.element(find.byType(SelectListDialog)),
+      ).read(curatedListsStateProvider.notifier) as _FakeCuratedListsState;
+      notifier.replaceLists([pending]);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      mockListService.recoveryNeedsRepair = false;
+      notifier.replaceLists([pending]);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+      expect(tester.widget<ListTile>(find.byType(ListTile)).onTap, isNotNull);
+    });
 
     testWidgets(
       'failed initialization can retry locally without exposing mutations',
@@ -318,6 +471,259 @@ void main() {
       expect(find.text(l10n.listPrivateFull), findsNothing);
     });
 
+    testWidgets('shows a refused video inline after creating a list', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final created = CuratedList(
+        id: 'new-list',
+        pubkey: testVideo.pubkey,
+        name: 'New collection',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      when(
+        () => mockListService.createList(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) async => created);
+      when(
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
+      ).thenAnswer((_) async => false);
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.listNewList));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, created.name);
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ListInfoForm), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(SelectListDialog),
+          matching: find.text(l10n.listVideoNotAdded),
+        ),
+        findsOneWidget,
+      );
+      verify(
+        () => mockListService.createList(
+          name: created.name,
+        ),
+      ).called(1);
+      verify(
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
+      ).called(1);
+    });
+
+    testWidgets('reports a refused creation after both dialogs close', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final pending = Completer<CuratedList?>();
+      final created = CuratedList(
+        id: 'new-list',
+        pubkey: testVideo.pubkey,
+        name: 'New collection',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      when(
+        () => mockListService.createList(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) => pending.future);
+      when(
+        () => mockListService.addVideoToList(
+          created.authorScopedId,
+          testVideo.id,
+        ),
+      ).thenAnswer((_) async => false);
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        testProviderScope(
+          mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: Text('Underlying screen')),
+          ),
+        ),
+      );
+      unawaited(
+        showDialog<void>(
+          context: navigator.currentContext!,
+          builder: (_) => SelectListDialog(video: testVideo),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.listNewList));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, created.name);
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+      await tester.pump();
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.listDone));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectListDialog), findsNothing);
+      expect(find.byType(ListInfoForm), findsNothing);
+
+      pending.complete(created);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Underlying screen'), findsOneWidget);
+      expect(find.text(l10n.listVideoNotAdded), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'pending creation notice follows durable list state and clears after external sync',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final pending = CuratedList(
+          id: 'new-pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending collection',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(
+          () => mockListService.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => pending.copyWith(videoEventIds: const []));
+        when(
+          () => mockListService.getListById(pending.authorScopedId),
+        ).thenReturn(pending);
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListDialog)),
+        );
+        final notifier = container.read(
+          curatedListsStateProvider.notifier,
+        ) as _FakeCuratedListsState;
+        when(
+          () => mockListService.addVideoToList(
+            pending.authorScopedId,
+            testVideo.id,
+          ),
+        ).thenAnswer((_) async {
+          notifier.replaceLists([pending]);
+          return false;
+        });
+        await tester.tap(find.text(l10n.listNewList));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, pending.name);
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
+        final notice = tester.widget<Text>(
+          find.text(l10n.listVideoPendingSync),
+        );
+        final context = tester.element(find.byType(SelectListDialog));
+        expect(notice.style!.color, context.vineColors.onSurfaceVariant);
+        expect(find.text(l10n.listVideoNotAdded), findsNothing);
+        notifier.replaceLists([pending.copyWith(pendingRepublish: false)]);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsNothing);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        expect(_divineIcon(DivineIconName.checkCircle), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sync retry shows progress, reports rejection, and clears after confirmed sync',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final pending = CuratedList(
+          id: 'pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending collection',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        _fakeLists = [pending];
+        final answer = Completer<bool>();
+        addTearDown(() {
+          if (!answer.isCompleted) answer.complete(false);
+        });
+        when(
+          () => mockListService.retryListSync(pending.id),
+        ).thenAnswer((_) => answer.future);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pump();
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        answer.complete(false);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListDialog)),
+        );
+        final notifier = container.read(
+          curatedListsStateProvider.notifier,
+        ) as _FakeCuratedListsState;
+        when(() => mockListService.retryListSync(pending.id)).thenAnswer((
+          _,
+        ) async {
+          notifier.replaceLists([pending.copyWith(pendingRepublish: false)]);
+          return true;
+        });
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        expect(_divineIcon(DivineIconName.checkCircle), findsOneWidget);
+        verify(() => mockListService.retryListSync(pending.id)).called(2);
+        verifyNever(() => mockListService.addVideoToList(any(), any()));
+        verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      },
+    );
+
     testWidgets('renders Done button', (tester) async {
       _fakeLists = [];
 
@@ -353,403 +759,6 @@ void main() {
 
       expect(find.text('Favorites'), findsOneWidget);
       expect(find.text('Watch Later'), findsOneWidget);
-    });
-  });
-
-  group(CreateListDialog, () {
-    late VideoEvent testVideo;
-    late _MockCuratedListService mockListService;
-    final l10n = lookupAppLocalizations(const Locale('en'));
-
-    setUp(() {
-      testVideo = VideoEvent(
-        id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        pubkey:
-            'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-        createdAt: 1757385263,
-        content: 'Test video',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-        videoUrl: 'https://example.com/video.mp4',
-        title: 'Test Video',
-      );
-      mockListService = _MockCuratedListService();
-      _fakeService = mockListService;
-    });
-
-    CuratedList createdList(String name) => CuratedList(
-      id: 'list_created_456789abcdef0123456789abcdef0123456789abcdef012345',
-      pubkey:
-          'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-      name: name,
-      videoEventIds: const [],
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-
-    Widget buildSubject({VideoEvent? video, CuratedList? existingList}) =>
-        testProviderScope(
-          additionalOverrides: [
-            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: CreateListDialog(video: video, existingList: existingList),
-            ),
-          ),
-        );
-
-    /// Hosts the dialog on a real dialog route so dismissal — and the snackbar
-    /// that has to outlive it — can be asserted the way a user sees them.
-    Widget buildDialogLauncher({
-      VideoEvent? video,
-      CuratedList? existingList,
-    }) => testProviderScope(
-      additionalOverrides: [
-        curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) =>
-                    CreateListDialog(video: video, existingList: existingList),
-              ),
-              child: const Text('Open list editor'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    testWidgets('renders Create New List form', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      expect(find.text('Create New List'), findsOneWidget);
-      expect(find.text('List Name'), findsOneWidget);
-      expect(find.text('Description (optional)'), findsOneWidget);
-      expect(find.text('Public List'), findsOneWidget);
-      expect(find.text('Create'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-    });
-
-    testWidgets('public list switch toggles', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      // Public switch should be on by default
-      final switchWidget = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(switchWidget.value, isTrue);
-
-      // Tap to toggle off
-      await tester.tap(find.byType(SwitchListTile));
-      await tester.pump();
-
-      final updatedSwitch = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(updatedSwitch.value, isFalse);
-    });
-
-    testWidgets('shows subtitle text for public list switch', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      expect(find.text('Others can follow and see this list'), findsOneWidget);
-    });
-
-    testWidgets('editing shows the current private visibility and warning', (
-      tester,
-    ) async {
-      final list = createdList('Puppets').copyWith(isPublic: false);
-
-      await tester.pumpWidget(buildSubject(existingList: list));
-
-      expect(find.text('Edit list'), findsOneWidget);
-      expect(find.text('Puppets'), findsOneWidget);
-      expect(
-        find.text(
-          'Videos stay private. Name, description, tags, and cover stay visible.',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-        isFalse,
-      );
-    });
-
-    testWidgets('confirms before publishing a private list', (tester) async {
-      final list = createdList('Puppets').copyWith(isPublic: false);
-      when(
-        () => mockListService.updateList(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => true);
-
-      await tester.pumpWidget(buildDialogLauncher(existingList: list));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(SwitchListTile));
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Make this list public?'), findsOneWidget);
-      verifyNever(
-        () => mockListService.updateList(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      );
-
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.updateList(
-          listId: list.id,
-          name: 'Puppets',
-          description: '',
-          isPublic: true,
-        ),
-      ).called(1);
-    });
-
-    testWidgets('dismisses a renamed list before reporting relay failure', (
-      tester,
-    ) async {
-      final list = createdList('Puppets');
-      final updateCompleter = Completer<bool>();
-      addTearDown(() {
-        if (!updateCompleter.isCompleted) updateCompleter.complete(true);
-      });
-      when(
-        () => mockListService.updateList(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) => updateCompleter.future);
-
-      await tester.pumpWidget(buildDialogLauncher(existingList: list));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Marionettes');
-      await tester.tap(find.text(l10n.listSave));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.updateList(
-          listId: list.id,
-          name: 'Marionettes',
-          description: '',
-          isPublic: true,
-        ),
-      ).called(1);
-      expect(find.text(l10n.listEditTitle), findsNothing);
-
-      updateCompleter.complete(false);
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-    });
-
-    testWidgets(
-      'waits on the relay before dismissing a visibility change',
-      (
-        tester,
-      ) async {
-        final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<bool>();
-        addTearDown(() {
-          if (!updateCompleter.isCompleted) updateCompleter.complete(true);
-        });
-        when(
-          () => mockListService.updateList(
-            listId: any(named: 'listId'),
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) => updateCompleter.future);
-
-        await tester.pumpWidget(buildDialogLauncher(existingList: list));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.tap(find.text(l10n.listSave));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listContinue));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockListService.updateList(
-            listId: list.id,
-            name: 'Puppets',
-            description: '',
-            isPublic: true,
-          ),
-        ).called(1);
-        expect(find.text(l10n.listEditTitle), findsOneWidget);
-
-        updateCompleter.complete(true);
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.listEditTitle), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'keeps a rejected visibility change on screen for a retry',
-      (tester) async {
-        final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<bool>();
-        addTearDown(() {
-          if (!updateCompleter.isCompleted) updateCompleter.complete(true);
-        });
-        when(
-          () => mockListService.updateList(
-            listId: any(named: 'listId'),
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) => updateCompleter.future);
-
-        await tester.pumpWidget(buildDialogLauncher(existingList: list));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField).first, 'Marionettes');
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.tap(find.text(l10n.listSave));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listContinue));
-        await tester.pumpAndSettle();
-
-        updateCompleter.complete(false);
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-
-        // The service leaves isPublic at its old value on a rejected publish
-        // (curated_list_service_crud_test.dart, "keeps a list private when
-        // publication is rejected"), so the flip only survives if the editor
-        // holding it is still on screen with the typed name intact.
-        expect(find.text(l10n.listEditTitle), findsOneWidget);
-        expect(find.text('Marionettes'), findsOneWidget);
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isTrue,
-        );
-      },
-    );
-
-    testWidgets('Create button does nothing when name is empty', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject());
-
-      // Tap Create with empty name
-      await tester.tap(find.text('Create'));
-      await tester.pumpAndSettle();
-
-      // Should not call createList
-      verifyNever(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      );
-    });
-
-    testWidgets('creates list and pops without adding video when no video '
-        'is provided', (tester) async {
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => createdList('Fresh List'));
-
-      await tester.pumpWidget(buildDialogLauncher());
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Fresh List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.createList(
-          name: 'Fresh List',
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).called(1);
-      verifyNever(() => mockListService.addVideoToList(any(), any()));
-      expect(find.text(l10n.listCreateNewList), findsNothing);
-    });
-
-    testWidgets('creates list and adds video when a video is provided', (
-      tester,
-    ) async {
-      final newList = createdList('Video List');
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => newList);
-      when(
-        () => mockListService.addVideoToList(any(), any()),
-      ).thenAnswer((_) async => true);
-
-      await tester.pumpWidget(buildDialogLauncher(video: testVideo));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Video List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.addVideoToList(newList.id, testVideo.id),
-      ).called(1);
-      expect(find.text(l10n.listCreateNewList), findsNothing);
-    });
-
-    testWidgets('shows failure snackbar and keeps dialog open when '
-        'createList returns null', (tester) async {
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      await tester.pumpWidget(buildDialogLauncher());
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Doomed List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.listCreateFailed), findsOneWidget);
-      expect(find.text(l10n.listCreateNewList), findsOneWidget);
-      verifyNever(() => mockListService.addVideoToList(any(), any()));
     });
   });
 }

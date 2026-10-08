@@ -8417,18 +8417,6 @@ abstract class AppLocalizations {
   /// **'Description (optional)'**
   String get listDescriptionLabel;
 
-  /// No description provided for @listPublicList.
-  ///
-  /// In en, this message translates to:
-  /// **'Public List'**
-  String get listPublicList;
-
-  /// No description provided for @listPublicListSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Others can follow and see this list'**
-  String get listPublicListSubtitle;
-
   /// No description provided for @listPrivateListSubtitle.
   ///
   /// In en, this message translates to:
@@ -8452,12 +8440,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lists yet. Make one for the loops you want to keep together.'**
   String get profileListsEmpty;
-
-  /// No description provided for @listEditTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit list'**
-  String get listEditTitle;
 
   /// No description provided for @listEditInfoAction.
   ///
@@ -8525,6 +8507,12 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get listContinue;
 
+  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
+  String get listPrivateConversionTooLarge;
+
   /// Shown when a video cannot be added to a private list because its encrypted payload would exceed the NIP-44 size limit. Retrying cannot succeed, so the copy must not suggest trying again.
   ///
   /// In en, this message translates to:
@@ -8572,12 +8560,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} on Divine'**
   String listShareSubject(String name);
-
-  /// No description provided for @listCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get listCancel;
 
   /// No description provided for @listCreate.
   ///
@@ -21900,6 +21882,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search people'**
   String get peopleListsAddPeopleSearchHint;
+
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
+  ///
+  /// In en, this message translates to:
+  /// **'Make public'**
+  String get listMakePublicLabel;
+
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
+
+  /// No description provided for @listEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit list'**
+  String get listEditTitle;
+
+  /// No description provided for @listAddCollaboratorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a collaborator'**
+  String get listAddCollaboratorTitle;
+
+  /// No description provided for @listCollaboratorSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Divine...'**
+  String get listCollaboratorSearchHint;
+
+  /// No description provided for @listCollaboratorsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get listCollaboratorsNone;
+
+  /// Confirmation explains that making a list private revokes its collaborators.
+  ///
+  /// In en, this message translates to:
+  /// **'Making this list private also removes its collaborators. Only you will be able to add videos.'**
+  String get listPrivateCollaboratorsWarning;
+
+  /// Video added locally to a newly created list but publication has not succeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list and video are saved here. The video is waiting to sync.'**
+  String get listVideoPendingSync;
+
+  /// A newly created list exists but could not accept the requested video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list was created, but this video wasn\'t added.'**
+  String get listVideoNotAdded;
+
+  /// Retry publishing the saved list without adding or removing videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get listRetrySync;
+
+  /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm this change. Try again.'**
+  String get listPermissionsUnconfirmed;
+
+  /// Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure.
+  ///
+  /// In en, this message translates to:
+  /// **'This list has changes waiting to sync.'**
+  String get listRecoveryPending;
+
+  /// A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
+  String get listPermissionsRecoveryPending;
+
+  /// No description provided for @listRecoveryReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
+  String get listRecoveryReadOnly;
 }
 
 class _AppLocalizationsDelegate

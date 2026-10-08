@@ -2886,13 +2886,10 @@
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
-  "listPublicList": "పబ్లిక్ జాబితా",
-  "listPublicListSubtitle": "ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు",
   "listPrivateListSubtitle": "వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.",
   "listVisibilityPublic": "పబ్లిక్",
   "listVisibilityPrivate": "ప్రైవేట్",
   "profileListsEmpty": "ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.",
-  "listEditTitle": "జాబితాను సవరించండి",
   "listShareAction": "షేర్ జాబితా",
   "listShareFailed": "ఈ జాబితాను భాగస్వామ్యం చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "listSave": "సేవ్ చేయండి",
@@ -2921,7 +2918,6 @@
       }
     }
   },
-  "listCancel": "రద్దు",
   "listCreate": "సృష్టించు",
   "listCreateFailed": "జాబితాను రూపొందించడంలో విఫలమైంది",
   "keyManagementTitle": "Nostr కీలు",
@@ -8461,5 +8457,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి"
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
+  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
+  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
+  "listEditTitle": "జాబితాను సవరించండి",
+  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
+  "listCollaboratorSearchHint": "శోధన Divine...",
+  "listCollaboratorsNone": "ఏదీ లేదు",
+  "listPrivateCollaboratorsWarning": "ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.",
+  "listVideoNotAdded": "మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.",
+  "listVideoPendingSync": "మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.",
+  "listRetrySync": "ఇప్పుడే సింక్ చేయండి",
+  "listPermissionsUnconfirmed": "ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
+  "listRecoveryPending": "ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.",
+  "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
+  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు."
 }

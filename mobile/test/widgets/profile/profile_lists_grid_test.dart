@@ -21,15 +21,18 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -466,6 +469,98 @@ void main() {
         );
       });
 
+      testWidgets('recovery pauses creation and preserves video browsing', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        when(() => mockListService.myLists).thenReturn([_videoList('skate')]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNull);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        final peopleCreate = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewPeopleList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(peopleCreate.onPressed, isNotNull);
+        await tester.tap(find.text('Video skate'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/list/skate');
+        expect(find.byType(ListInfoForm), findsNothing);
+      });
+
+      testWidgets('video recovery leaves people-list navigation usable', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        whenListen(
+          peopleBloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: owner,
+            lists: [_peopleList('crew')],
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('People crew'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/people-lists/crew');
+      });
+
+      testWidgets('refreshes the recovery notice after service changes', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ProfileListsGrid)),
+        );
+        mockListService.recoveryNeedsRepair = true;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+
+        mockListService.recoveryNeedsRepair = false;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNotNull);
+      });
+
+      testWidgets('video recovery preserves independent people creation', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        await tester.tap(find.text(l10n.listNewPeopleList));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, CreatePeopleListPage.path);
+        expect(find.byType(ListInfoForm), findsNothing);
+      });
+
       testWidgets('keeps an owned list visible before it has any videos', (
         tester,
       ) async {
@@ -506,7 +601,7 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('opens the create dialog from the create button', (
+      testWidgets('opens the create sheet from the create button', (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -514,13 +609,13 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.byType(CreateListDialog), findsNothing);
+        expect(find.byType(ListInfoForm), findsNothing);
 
         await tester.tap(find.text(l10n.listNewVideoList));
         await tester.pumpAndSettle();
 
-        expect(find.byType(CreateListDialog), findsOneWidget);
-        // Main retains a type-specific creation label; the existing dialog
+        expect(find.byType(ListInfoForm), findsOneWidget);
+        // Main retains its type-specific creation label; the approved sheet
         // keeps its own title and confirmation action.
         expect(find.text(l10n.listNewVideoList), findsOneWidget);
         expect(find.text(l10n.listCreateNewList), findsOneWidget);

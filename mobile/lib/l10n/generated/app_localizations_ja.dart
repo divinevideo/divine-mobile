@@ -4657,12 +4657,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listDescriptionLabel => '説明 (任意)';
 
   @override
-  String get listPublicList => '公開リスト';
-
-  @override
-  String get listPublicListSubtitle => 'みんながフォロー・閲覧できるよ';
-
-  @override
   String get listPrivateListSubtitle => '動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。';
 
   @override
@@ -4673,9 +4667,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileListsEmpty => 'まだリストがないよ。まとめておきたいループでひとつ作ってみて。';
-
-  @override
-  String get listEditTitle => 'リストを編集';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4736,6 +4727,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listContinue => '続ける';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4764,9 +4759,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineの$name';
   }
-
-  @override
-  String get listCancel => 'キャンセル';
 
   @override
   String get listCreate => '作成';
@@ -12436,4 +12428,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
+
+  @override
+  String get listMakePublicLabel => '公開する';
+
+  @override
+  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
+
+  @override
+  String get listEditTitle => 'リストを編集';
+
+  @override
+  String get listAddCollaboratorTitle => 'コラボレーターを追加';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divineを検索...';
+
+  @override
+  String get listCollaboratorsNone => 'なし';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。';
+
+  @override
+  String get listVideoPendingSync => 'リストと動画はこの端末に保存されています。動画は同期を待っています。';
+
+  @override
+  String get listVideoNotAdded => 'リストは作成されましたが、この動画は追加されませんでした。';
+
+  @override
+  String get listRetrySync => '今すぐ同期';
+
+  @override
+  String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。';
 }

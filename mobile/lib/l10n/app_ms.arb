@@ -2431,13 +2431,10 @@
   "listNewPeopleList": "Senarai orang baharu",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
-  "listPublicList": "Senarai Awam",
-  "listPublicListSubtitle": "Orang lain boleh mengikuti dan melihat senarai ini",
   "listPrivateListSubtitle": "Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.",
   "listVisibilityPublic": "Awam",
   "listVisibilityPrivate": "Peribadi",
   "profileListsEmpty": "Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.",
-  "listEditTitle": "Edit senarai",
   "listShareAction": "Kongsi senarai",
   "listShareFailed": "Senarai ini tidak dapat dikongsi. Cuba lagi.",
   "listSave": "Simpan",
@@ -2466,7 +2463,6 @@
       }
     }
   },
-  "listCancel": "Batal",
   "listCreate": "Cipta",
   "listCreateFailed": "Gagal mencipta senarai",
   "keyManagementTitle": "Kunci Nostr",
@@ -6792,5 +6788,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
-  "peopleListsAddPeopleSearchHint": "Cari orang"
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
+  "listMakePublicLabel": "Jadikan awam",
+  "listEditTitle": "Edit senarai",
+  "listAddCollaboratorTitle": "Tambah kolaborator",
+  "listCollaboratorSearchHint": "Cari Divine...",
+  "listCollaboratorsNone": "Tiada",
+  "listPrivateCollaboratorsWarning": "Menjadikan senarai ini peribadi turut mengalih keluar kolaboratornya. Hanya anda yang boleh menambah video.",
+  "listVideoNotAdded": "Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.",
+  "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
+  "listRetrySync": "Segerakkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
+  "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
+  "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
+  "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
+  "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan."
 }

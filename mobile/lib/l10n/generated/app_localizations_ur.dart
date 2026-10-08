@@ -4963,13 +4963,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
 
   @override
-  String get listPublicList => 'عوامی فہرست';
-
-  @override
-  String get listPublicListSubtitle =>
-      'دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں';
-
-  @override
   String get listPrivateListSubtitle =>
       'ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔';
 
@@ -4982,9 +4975,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ابھی کوئی فہرست نہیں۔ جو لوپ ساتھ رکھنے ہیں، ان کے لیے ایک بنائیں۔';
-
-  @override
-  String get listEditTitle => 'فہرست میں ترمیم کریں';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5045,6 +5035,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listContinue => 'جاری رکھیں';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5075,9 +5069,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine پر $name';
   }
-
-  @override
-  String get listCancel => 'منسوخ کریں';
 
   @override
   String get listCreate => 'بنائیں';
@@ -13077,4 +13068,53 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
+
+  @override
+  String get listMakePublicLabel => 'عوامی بنائیں';
+
+  @override
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
+
+  @override
+  String get listEditTitle => 'فہرست میں ترمیم کریں';
+
+  @override
+  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
+
+  @override
+  String get listCollaboratorsNone => 'کوئی نہیں';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔';
+
+  @override
+  String get listVideoPendingSync =>
+      'آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔';
+
+  @override
+  String get listVideoNotAdded =>
+      'آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔';
+
+  @override
+  String get listRetrySync => 'اب ہم آہنگ کریں';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get listRecoveryPending =>
+      'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
 }

@@ -5039,12 +5039,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listDescriptionLabel => 'Description (optional)';
 
   @override
-  String get listPublicList => 'Public List';
-
-  @override
-  String get listPublicListSubtitle => 'Others can follow and see this list';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videos stay private. Name, description, tags, and cover stay visible.';
 
@@ -5057,9 +5051,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'No lists yet. Make one for the loops you want to keep together.';
-
-  @override
-  String get listEditTitle => 'Edit list';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5120,6 +5111,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listContinue => 'Continue';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5149,9 +5144,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name on Divine';
   }
-
-  @override
-  String get listCancel => 'Cancel';
 
   @override
   String get listCreate => 'Create';
@@ -13176,4 +13168,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Search people';
+
+  @override
+  String get listMakePublicLabel => 'Make public';
+
+  @override
+  String get listMakePublicSubtitle => 'Let others see this list';
+
+  @override
+  String get listEditTitle => 'Edit list';
+
+  @override
+  String get listAddCollaboratorTitle => 'Add a collaborator';
+
+  @override
+  String get listCollaboratorSearchHint => 'Search Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'None';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Your list and video are saved here. The video is waiting to sync.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Your list was created, but this video wasn\'t added.';
+
+  @override
+  String get listRetrySync => 'Sync now';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Couldn\'t confirm this change. Try again.';
+
+  @override
+  String get listRecoveryPending => 'This list has changes waiting to sync.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.';
 }

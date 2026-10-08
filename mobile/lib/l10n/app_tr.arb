@@ -1693,13 +1693,10 @@
   "listNewPeopleList": "Yeni kişi listesi",
   "listNameLabel": "Liste Adı",
   "listDescriptionLabel": "Açıklama (opsiyonel)",
-  "listPublicList": "Herkese Açık Liste",
-  "listPublicListSubtitle": "Diğerleri bu listeyi takip edebilir ve görebilir",
   "listPrivateListSubtitle": "Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.",
   "listVisibilityPublic": "Herkese açık",
   "listVisibilityPrivate": "Özel",
   "profileListsEmpty": "Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.",
-  "listEditTitle": "Listeyi düzenle",
   "listShareAction": "Listeyi paylaş",
   "listShareFailed": "Bu liste paylaşılamadı. Tekrar dene.",
   "listSave": "Kaydet",
@@ -1728,7 +1725,6 @@
       }
     }
   },
-  "listCancel": "İptal",
   "listCreate": "Oluştur",
   "listCreateFailed": "Liste oluşturulamadı",
   "keyManagementTitle": "Nostr Anahtarları",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
-  "peopleListsAddPeopleSearchHint": "Kişi ara"
+  "peopleListsAddPeopleSearchHint": "Kişi ara",
+  "listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
+  "listMakePublicLabel": "Herkese açık yap",
+  "listEditTitle": "Listeyi düzenle",
+  "listAddCollaboratorTitle": "Ortak ekle",
+  "listCollaboratorSearchHint": "Divine'da ara...",
+  "listCollaboratorsNone": "Yok",
+  "listPrivateCollaboratorsWarning": "Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.",
+  "listVideoNotAdded": "Listen oluşturuldu, ancak bu video eklenmedi.",
+  "listVideoPendingSync": "Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.",
+  "listRetrySync": "Şimdi eşitle",
+  "listPermissionsUnconfirmed": "Bu değişiklik doğrulanamadı. Tekrar dene.",
+  "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
+  "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
+  "listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
+  "listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi."
 }

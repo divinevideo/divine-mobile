@@ -1696,13 +1696,10 @@
   "listNewPeopleList": "Nuova lista persone",
   "listNameLabel": "Nome lista",
   "listDescriptionLabel": "Descrizione (opzionale)",
-  "listPublicList": "Lista pubblica",
-  "listPublicListSubtitle": "Altri possono seguire e vedere questa lista",
   "listPrivateListSubtitle": "I video restano privati. Nome, descrizione, tag e copertina restano visibili.",
   "listVisibilityPublic": "Pubblica",
   "listVisibilityPrivate": "Privata",
   "profileListsEmpty": "Ancora nessuna lista. Creane una per i loop che vuoi tenere insieme.",
-  "listEditTitle": "Modifica lista",
   "listShareAction": "Condividi lista",
   "listShareFailed": "Impossibile condividere questa lista. Riprova.",
   "listSave": "Salva",
@@ -1731,7 +1728,6 @@
       }
     }
   },
-  "listCancel": "Annulla",
   "listCreate": "Crea",
   "listCreateFailed": "Impossibile creare la lista",
   "keyManagementTitle": "Chiavi Nostr",
@@ -5495,5 +5491,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Impossibile aggiornare la lista. Riprova.",
-  "peopleListsAddPeopleSearchHint": "Cerca persone"
+  "peopleListsAddPeopleSearchHint": "Cerca persone",
+  "listMakePublicSubtitle": "Lascia che altri vedano questa lista",
+  "listMakePublicLabel": "Rendi pubblica",
+  "listEditTitle": "Modifica lista",
+  "listAddCollaboratorTitle": "Aggiungi un collaboratore",
+  "listCollaboratorSearchHint": "Cerca su Divine...",
+  "listCollaboratorsNone": "Nessuno",
+  "listPrivateCollaboratorsWarning": "Rendere questa lista privata rimuove anche i suoi collaboratori. Solo tu potrai aggiungere video.",
+  "listVideoNotAdded": "La tua lista è stata creata, ma questo video non è stato aggiunto.",
+  "listVideoPendingSync": "La tua lista e il tuo video sono salvati qui. Il video è in attesa di sincronizzazione.",
+  "listRetrySync": "Sincronizza ora",
+  "listPermissionsUnconfirmed": "Non è stato possibile confermare questa modifica. Riprova.",
+  "listRecoveryPending": "Questa lista ha modifiche in attesa di sincronizzazione.",
+  "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.",
+  "listRecoveryReadOnly": "Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.",
+  "listPrivateConversionTooLarge": "Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate."
 }

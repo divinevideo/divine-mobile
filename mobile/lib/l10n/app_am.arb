@@ -2133,13 +2133,10 @@
   "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
   "listNameLabel": "የዝርዝር ስም",
   "listDescriptionLabel": "መግለጫ (አማራጭ)",
-  "listPublicList": "የህዝብ ዝርዝር",
-  "listPublicListSubtitle": "ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።",
   "listPrivateListSubtitle": "ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።",
   "listVisibilityPublic": "ይፋዊ",
   "listVisibilityPrivate": "የግል",
   "profileListsEmpty": "እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።",
-  "listEditTitle": "ዝርዝር አርትዕ",
   "listShareAction": "ዝርዝር አጋራ",
   "listShareFailed": "ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።",
   "listSave": "አስቀምጥ",
@@ -2168,7 +2165,6 @@
       }
     }
   },
-  "listCancel": "ሰርዝ",
   "listCreate": "ፍጠር",
   "listCreateFailed": "ዝርዝር መፍጠር አልተሳካም።",
   "keyManagementTitle": "Nostr ቁልፎች",
@@ -5572,5 +5568,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
-  "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ"
+  "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
+  "listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
+  "listMakePublicLabel": "ይፋዊ ያድርጉ",
+  "listEditTitle": "ዝርዝር አርትዕ",
+  "listAddCollaboratorTitle": "ተባባሪ ጨምር",
+  "listCollaboratorSearchHint": "Divine ፈልግ...",
+  "listCollaboratorsNone": "ምንም",
+  "listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
+  "listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
+  "listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
+  "listRetrySync": "አሁን አመሳስል",
+  "listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
+  "listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
+  "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
+  "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
+  "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።"
 }

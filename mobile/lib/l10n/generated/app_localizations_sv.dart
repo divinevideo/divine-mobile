@@ -4949,12 +4949,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listDescriptionLabel => 'Beskrivning (valfritt)';
 
   @override
-  String get listPublicList => 'Publik lista';
-
-  @override
-  String get listPublicListSubtitle => 'Andra kan följa och se den här listan';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.';
 
@@ -4967,9 +4961,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Inga listor än. Skapa en för looparna du vill hålla ihop.';
-
-  @override
-  String get listEditTitle => 'Redigera lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5030,6 +5021,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listContinue => 'Fortsätt';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5059,9 +5054,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name på Divine';
   }
-
-  @override
-  String get listCancel => 'Avbryt';
 
   @override
   String get listCreate => 'Skapa';
@@ -13089,4 +13081,53 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Sök personer';
+
+  @override
+  String get listMakePublicLabel => 'Gör offentlig';
+
+  @override
+  String get listMakePublicSubtitle => 'Låt andra se den här listan';
+
+  @override
+  String get listEditTitle => 'Redigera lista';
+
+  @override
+  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
+
+  @override
+  String get listCollaboratorSearchHint => 'Sök i Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Inga';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Din lista och video är sparade här. Videon väntar på synkronisering.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Din lista skapades, men den här videon lades inte till.';
+
+  @override
+  String get listRetrySync => 'Synkronisera nu';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Det gick inte att bekräfta ändringen. Försök igen.';
+
+  @override
+  String get listRecoveryPending =>
+      'Den här listan har ändringar som väntar på synkronisering.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
 }

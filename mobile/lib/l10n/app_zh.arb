@@ -2431,13 +2431,10 @@
   "listNewPeopleList": "新人物列表",
   "listNameLabel": "列表名称",
   "listDescriptionLabel": "描述（可选）",
-  "listPublicList": "公开列表",
-  "listPublicListSubtitle": "其他人可以关注并查看此列表",
   "listPrivateListSubtitle": "视频保持私密。名称、描述、标签和封面仍会显示。",
   "listVisibilityPublic": "公开",
   "listVisibilityPrivate": "私密",
   "profileListsEmpty": "还没有列表。为想放在一起的循环建一个吧。",
-  "listEditTitle": "编辑列表",
   "listShareAction": "分享列表",
   "listShareFailed": "无法分享此列表，请重试。",
   "listSave": "保存",
@@ -2466,7 +2463,6 @@
       }
     }
   },
-  "listCancel": "取消",
   "listCreate": "创建",
   "listCreateFailed": "创建列表失败",
   "keyManagementTitle": "Nostr 密钥",
@@ -6792,5 +6788,20 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
-  "peopleListsAddPeopleSearchHint": "搜索用户"
+  "peopleListsAddPeopleSearchHint": "搜索用户",
+  "listMakePublicSubtitle": "让其他人看到此列表",
+  "listMakePublicLabel": "设为公开",
+  "listEditTitle": "编辑列表",
+  "listAddCollaboratorTitle": "添加协作者",
+  "listCollaboratorSearchHint": "搜索 Divine...",
+  "listCollaboratorsNone": "无",
+  "listPrivateCollaboratorsWarning": "将此列表设为私密也会移除其协作者。只有你可以添加视频。",
+  "listVideoNotAdded": "你的列表已创建，但未添加此视频。",
+  "listVideoPendingSync": "你的列表和视频已保存在此设备上。视频正在等待同步。",
+  "listRetrySync": "立即同步",
+  "listPermissionsUnconfirmed": "无法确认此更改。请重试。",
+  "listRecoveryReadOnly": "视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。",
+  "listRecoveryPending": "此列表有等待同步的更改。",
+  "listPermissionsRecoveryPending": "更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。",
+  "listPrivateConversionTooLarge": "此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。"
 }

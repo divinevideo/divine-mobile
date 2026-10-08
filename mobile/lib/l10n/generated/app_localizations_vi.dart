@@ -4921,13 +4921,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listDescriptionLabel => 'Mô tả (không bắt buộc)';
 
   @override
-  String get listPublicList => 'Danh sách công khai';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Người khác có thể theo dõi và xem danh sách này';
-
-  @override
   String get listPrivateListSubtitle =>
       'Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.';
 
@@ -4940,9 +4933,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.';
-
-  @override
-  String get listEditTitle => 'Sửa danh sách';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5004,6 +4994,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listContinue => 'Tiếp tục';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5034,9 +5028,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name trên Divine';
   }
-
-  @override
-  String get listCancel => 'Hủy';
 
   @override
   String get listCreate => 'Tạo';
@@ -13028,4 +13019,53 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Tìm người';
+
+  @override
+  String get listMakePublicLabel => 'Đặt công khai';
+
+  @override
+  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
+
+  @override
+  String get listEditTitle => 'Sửa danh sách';
+
+  @override
+  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
+
+  @override
+  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Không có';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.';
+
+  @override
+  String get listRetrySync => 'Đồng bộ ngay';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Không thể xác nhận thay đổi này. Hãy thử lại.';
+
+  @override
+  String get listRecoveryPending =>
+      'Danh sách này có các thay đổi đang chờ đồng bộ.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
 }

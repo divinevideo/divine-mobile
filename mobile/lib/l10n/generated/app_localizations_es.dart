@@ -5007,12 +5007,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get listDescriptionLabel => 'Descripción (opcional)';
 
   @override
-  String get listPublicList => 'Lista pública';
-
-  @override
-  String get listPublicListSubtitle => 'Otros pueden seguir y ver esta lista';
-
-  @override
   String get listPrivateListSubtitle =>
       'Los videos quedan privados. El nombre, la descripción, las etiquetas y la portada siguen visibles.';
 
@@ -5025,9 +5019,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Todavía no tenés listas. Armá una con los loops que querés tener juntos.';
-
-  @override
-  String get listEditTitle => 'Editar lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5089,6 +5080,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get listContinue => 'Continuar';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Esta lista es demasiado grande para hacerla privada. Quitá algunos videos primero. Tus cambios siguen acá y no se guardaron.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5119,9 +5114,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name en Divine';
   }
-
-  @override
-  String get listCancel => 'Cancelar';
 
   @override
   String get listCreate => 'Crear';
@@ -13225,4 +13217,54 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Buscar personas';
+
+  @override
+  String get listMakePublicLabel => 'Hacer pública';
+
+  @override
+  String get listMakePublicSubtitle =>
+      'Dejá que otras personas vean esta lista';
+
+  @override
+  String get listEditTitle => 'Editar lista';
+
+  @override
+  String get listAddCollaboratorTitle => 'Añadir colaborador';
+
+  @override
+  String get listCollaboratorSearchHint => 'Buscar en Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Ninguno';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.';
+
+  @override
+  String get listVideoNotAdded =>
+      'Tu lista se creó, pero este video no se añadió.';
+
+  @override
+  String get listRetrySync => 'Sincronizar ahora';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'No se pudo confirmar este cambio. Probá de nuevo.';
+
+  @override
+  String get listRecoveryPending =>
+      'Esta lista tiene cambios pendientes de sincronización.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.';
 }
