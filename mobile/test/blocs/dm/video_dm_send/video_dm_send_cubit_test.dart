@@ -302,6 +302,30 @@ void main() {
       },
     );
 
+    test('signs own recordings left unsigned before checking them', () async {
+      final events = <String>[];
+      when(() => verifier.verify(any())).thenAnswer((invocation) async {
+        events.add('verify ${invocation.positionalArguments.single}');
+        return const ClipProvenanceResult(ClipProvenanceStatus.verified);
+      });
+      final cubit = VideoDmSendCubit(
+        service: service,
+        clipVerifier: verifier,
+        signOwnRecordings: (clips) async =>
+            events.add('sign ${clips.map((clip) => clip.id).join(',')}'),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.sendClips(
+        recipientPubkey: _recipientPubkey,
+        clips: [_clip('clip-a')],
+      );
+
+      // A recording whose signing failed offline would otherwise fail the
+      // sender's own check.
+      expect(events, ['sign clip-a', 'verify /documents/clip-a.mp4']);
+    });
+
     test('a clip that fails the check is never uploaded', () async {
       when(() => verifier.verify(any())).thenAnswer(
         (_) async =>

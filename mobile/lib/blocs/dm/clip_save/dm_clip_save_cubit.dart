@@ -19,6 +19,7 @@ typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required String senderPubkey,
   required String c2paManifestId,
   AspectRatio? targetAspectRatio,
+  List<String> contributorPubkeys,
 });
 
 /// Returns the [ReceivedClipImporter] for the signed-in account's library.
@@ -136,6 +137,7 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
         senderPubkey: message.senderPubkey,
         c2paManifestId: provenance.activeManifestId!,
         targetAspectRatio: message.clipTargetAspectRatio,
+        contributorPubkeys: provenance.contributors,
       );
       switch (result) {
         case VideoClipImportSuccess():

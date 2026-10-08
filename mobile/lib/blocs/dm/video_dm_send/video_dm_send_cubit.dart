@@ -119,15 +119,22 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
   /// [clipVerifier] checks a library clip before [sendClips] uploads it.
   /// Without one the check is left to the recipient, whose own check is the
   /// one that decides whether the clip may enter their library.
+  ///
+  /// [signOwnRecordings] signs the sender's own recordings among the clips
+  /// whose signing at record time failed, for example offline, so they can
+  /// still be sent as clips.
   VideoDmSendCubit({
     required DmVideoSendService service,
     ClipProvenanceVerifier? clipVerifier,
+    Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
   }) : _service = service,
        _clipVerifier = clipVerifier,
+       _signOwnRecordings = signOwnRecordings,
        super(const VideoDmSendState());
 
   final DmVideoSendService _service;
   final ClipProvenanceVerifier? _clipVerifier;
+  final Future<void> Function(List<DivineVideoClip> clips)? _signOwnRecordings;
 
   /// Sends [videoFile] to [recipientPubkey] as a NIP-17 kind 15 file message.
   ///
@@ -221,6 +228,7 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
       final verifier = _clipVerifier;
       if (verifier != null) {
         emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.checking));
+        await _signOwnRecordings?.call(clips);
         for (final path in paths) {
           final provenance = await verifier.verify(path);
           if (provenance.isRejected) {

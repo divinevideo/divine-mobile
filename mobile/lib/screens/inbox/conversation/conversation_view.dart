@@ -47,6 +47,7 @@ import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -809,8 +810,11 @@ class _SendBar extends ConsumerWidget {
     final clipVerifier = ref.watch(clipProvenanceVerifierProvider);
     return BlocProvider<VideoDmSendCubit>(
       key: ValueKey((service, clipVerifier)),
-      create: (_) =>
-          VideoDmSendCubit(service: service, clipVerifier: clipVerifier),
+      create: (_) => VideoDmSendCubit(
+        service: service,
+        clipVerifier: clipVerifier,
+        signOwnRecordings: NativeProofModeService.signOwnRecordings,
+      ),
       child: _SendBarBody(participantPubkeys: participantPubkeys),
     );
   }

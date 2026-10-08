@@ -372,7 +372,7 @@ void main() {
         });
 
         test('rejects an edit chain deeper than the limit', () {
-          final depth = ClipProvenanceVerifier.maxChainDepth + 2;
+          const depth = ClipProvenanceVerifier.maxChainDepth + 2;
           final manifests = <String, Map<String, dynamic>>{
             for (var i = 0; i < depth; i++)
               'm$i': _edit([_ingredient('m${i + 1}')]),

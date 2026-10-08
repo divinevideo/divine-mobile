@@ -28,6 +28,7 @@ class _MockVideoClipImportService extends Mock
 const _decryptedPath = '/tmp/dm_video_playback/dm_video_clip_0.mp4';
 const _manifestId = 'urn:c2pa:3fa85f64-5717-4562-b3fc-2c963f66afa6';
 final String _senderPubkey = 'b' * 64;
+final String _recorderPubkey = 'c' * 64;
 
 DmMessage _clipMessage({String? id, String fileType = 'video/mp4'}) =>
     DmMessage(
@@ -73,13 +74,17 @@ void main() {
     resolveImporter: () => importService.importReceivedClip,
   );
 
-  void stubVerification(ClipProvenanceStatus status) {
+  void stubVerification(
+    ClipProvenanceStatus status, {
+    List<String> contributors = const [],
+  }) {
     when(() => verifier.verify(_decryptedPath)).thenAnswer(
       (_) async => ClipProvenanceResult(
         status,
         activeManifestId: status == ClipProvenanceStatus.verified
             ? _manifestId
             : null,
+        contributors: contributors,
       ),
     );
   }
@@ -92,6 +97,7 @@ void main() {
         senderPubkey: any(named: 'senderPubkey'),
         c2paManifestId: any(named: 'c2paManifestId'),
         targetAspectRatio: any(named: 'targetAspectRatio'),
+        contributorPubkeys: any(named: 'contributorPubkeys'),
       ),
     ).thenAnswer(
       (_) async => VideoClipImportSuccess(
@@ -112,7 +118,10 @@ void main() {
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'adds a verified clip with its sender, credential and crop',
         setUp: () {
-          stubVerification(ClipProvenanceStatus.verified);
+          stubVerification(
+            ClipProvenanceStatus.verified,
+            contributors: [_recorderPubkey],
+          );
           stubImportSuccess();
         },
         build: buildCubit,
@@ -130,6 +139,8 @@ void main() {
                       senderPubkey: _senderPubkey,
                       c2paManifestId: _manifestId,
                       targetAspectRatio: AspectRatio.square,
+                      // Everyone the clip's signed history credits.
+                      contributorPubkeys: [_recorderPubkey],
                     ),
                   ).captured.single
                   as File;
