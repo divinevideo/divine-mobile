@@ -75,6 +75,27 @@ void main() {
       );
     });
 
+    testWidgets('hides a failed NIP-05 claim even when videos are present', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(
+            nip05: 'claimed@example.com',
+            rawData: const {'video_count': 18},
+          ),
+          verificationStatus: Nip05VerificationStatus.failed,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.textContaining('claimed@example.com'), findsNothing);
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('singularizes one video', (tester) async {
       await tester.pumpWidget(
         buildSubject(profileWith(rawData: const {'video_count': 1})),

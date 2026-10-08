@@ -30,10 +30,7 @@ class SearchUserTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final videoCount = profile.restVideoCount;
     final claimedNip05 = profile.shortDisplayNip05;
-    final shouldCheckNip05 =
-        (videoCount == null || videoCount <= 0) &&
-        claimedNip05 != null &&
-        claimedNip05.isNotEmpty;
+    final shouldCheckNip05 = claimedNip05 != null && claimedNip05.isNotEmpty;
     final verificationStatus = shouldCheckNip05
         ? ref
               .watch(nip05VerificationProvider(profile.pubkey))
@@ -55,16 +52,18 @@ class SearchUserTile extends ConsumerWidget {
         (service) => service.isOgViner(profile.pubkey),
       ),
     );
-    final identifier = videoCount != null && videoCount > 0
-        ? profile.handle
-        : resolveUserIdentifierLine(
-            l10n: context.l10n,
-            locale: locale,
-            handle: claimedNip05,
-            verificationStatus: verificationStatus,
-            isOwnProfile: profile.pubkey == ownPubkey,
-            followerCount: profile.restFollowerCount,
-          );
+    final identifier = resolveUserIdentifierLine(
+      l10n: context.l10n,
+      locale: locale,
+      handle: claimedNip05?.isNotEmpty == true
+          ? claimedNip05
+          : videoCount != null && videoCount > 0
+          ? profile.handle
+          : null,
+      verificationStatus: verificationStatus,
+      isOwnProfile: profile.pubkey == ownPubkey,
+      followerCount: profile.restFollowerCount,
+    );
     final details = [
       ?relationshipLabel,
       if (identifier != null && identifier.isNotEmpty) identifier,
