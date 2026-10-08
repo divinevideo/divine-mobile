@@ -28,12 +28,10 @@ void main() {
       mockPrefs = _MockSharedPreferences();
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(
-          () => mockPrefs.setBool('ff_${flag.name}', any()),
-        ).thenAnswer((_) async => true);
-        when(
-          () => mockPrefs.remove('ff_${flag.name}'),
-        ).thenAnswer((_) async => true);
+        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
+            .thenAnswer((_) async => true);
+        when(() => mockPrefs.remove('ff_${flag.name}'))
+            .thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
     });
