@@ -1,8 +1,9 @@
 // ABOUTME: Widget tests for the Classics explore tab.
 // ABOUTME: Covers the #6157 refresh guard and opening a tapped classic.
 //
-// Regression test for issue #6157: ClassicVinesTab._refreshClassics used `ref`
-// after `await` gaps without a `mounted` guard. If the tab was disposed while a
+// The first test is the regression test for issue #6157:
+// ClassicVinesTab._refreshClassics used `ref` after `await` gaps without a
+// `mounted` guard. If the tab was disposed while a
 // throttled-network refresh was still in flight, the resumed refresh called
 // `ref.invalidate` on the unmounted widget and threw
 // `Bad state: Using "ref" when a widget ... has been unmounted is unsafe`.
