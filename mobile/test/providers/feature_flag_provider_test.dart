@@ -126,6 +126,11 @@ void main() {
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
       when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.enhancedAnalytics),
+        isFalse,
+        reason: 'the override must differ from the build default to be seen',
+      );
 
       final container = ProviderContainer(
         overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
