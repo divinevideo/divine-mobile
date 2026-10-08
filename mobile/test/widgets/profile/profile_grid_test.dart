@@ -119,6 +119,16 @@ class _FakeCuratedListsState extends CuratedListsState {
   }
 }
 
+/// Keeps hydration mounted while tests exercise stale refresh completions.
+CuratedList _ownedRefreshList(String ownerPubkey) => CuratedList(
+  id: 'refresh-safety-list',
+  pubkey: ownerPubkey,
+  name: 'Refresh safety list',
+  videoEventIds: const [],
+  createdAt: DateTime.utc(2026),
+  updatedAt: DateTime.utc(2026),
+);
+
 VideoEvent _fallbackVideoEvent() {
   final now = DateTime(2024);
   return VideoEvent(
@@ -736,8 +746,8 @@ void main() {
       final original = _MockCuratedListService();
       final replacement = _MockCuratedListService();
       for (final service in [original, replacement]) {
-        when(() => service.lists).thenReturn(const []);
-        when(() => service.myLists).thenReturn(const []);
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
       }
       final release = Completer<void>();
       addTearDown(() {
@@ -819,8 +829,8 @@ void main() {
         tester,
       ) async {
         final service = _MockCuratedListService();
-        when(() => service.lists).thenReturn(const []);
-        when(() => service.myLists).thenReturn(const []);
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
         final release = Completer<void>();
         addTearDown(() {
           if (!release.isCompleted) release.complete();
@@ -874,8 +884,8 @@ void main() {
         tester,
       ) async {
         final service = _MockCuratedListService();
-        when(() => service.lists).thenReturn(const []);
-        when(() => service.myLists).thenReturn(const []);
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
         when(
           () => service.fetchUserListsFromRelays(force: any(named: 'force')),
         ).thenAnswer((_) async => throw StateError('sync failed'));
@@ -914,8 +924,8 @@ void main() {
         tester,
       ) async {
         final service = _MockCuratedListService();
-        when(() => service.lists).thenReturn(const []);
-        when(() => service.myLists).thenReturn(const []);
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
         final release = Completer<void>();
         addTearDown(() {
           if (!release.isCompleted) release.complete();
