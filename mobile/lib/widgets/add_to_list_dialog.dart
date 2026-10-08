@@ -223,7 +223,7 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   bool _isPublic = true;
-  String? _sheetSaveError;
+  String? _saveError;
 
   bool get _isEditing => widget.existingList != null;
 
@@ -293,7 +293,7 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_sheetSaveError case final message?) ...[
+                    if (_saveError case final message?) ...[
                       Semantics(
                         liveRegion: true,
                         child: Text(
@@ -327,7 +327,24 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
         title,
         style: TextStyle(color: context.vineColors.primaryText),
       ),
-      content: fields,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          fields,
+          if (_saveError case final message?) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onErrorContainer,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
       actions: actions,
     );
   }
@@ -335,8 +352,8 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
   Future<void> _saveList() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    if (widget._isSheet && _sheetSaveError != null) {
-      setState(() => _sheetSaveError = null);
+    if (_saveError != null) {
+      setState(() => _saveError = null);
     }
 
     try {
@@ -354,29 +371,32 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
           return;
         }
 
-        final updateFuture = listService.updateList(
+        final updateFuture = listService.updateListWithResult(
           listId: existingList.id,
           name: name,
           description: _descriptionController.text.trim(),
           isPublic: _isPublic,
         );
 
-        // Visibility is the one field updateList holds back until a relay
-        // accepts the change, so a rejection means the switch the user flipped
-        // did not take. Wait for the answer and keep the editor open on
-        // failure, so that flip survives a retry.
+        // Visibility changes keep the editor open until relay acceptance.
         if (visibilityChanged) {
           final updated = await updateFuture;
           if (!mounted) return;
-          if (updated) {
+          if (updated.succeeded) {
             Navigator.of(context).pop();
           } else {
-            _showSaveFailed();
+            _showSaveFailed(
+              rejectionMessage:
+                  updated.rejection ==
+                      CuratedListUpdateRejection.privateListFull
+                  ? context.l10n.listPrivateConversionTooLarge
+                  : null,
+            );
           }
           return;
         }
 
-        // Name and description are already stored locally before updateList
+        // Name and description are already stored locally before the update
         // awaits the relay, so nothing the user typed is riding on the answer.
         // Close now rather than let a slow relay make the save look
         // unresponsive; the messenger and message have to be resolved first
@@ -385,7 +405,7 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
         final failureMessage = context.l10n.listUpdateFailed;
         Navigator.of(context).pop();
 
-        if (!await updateFuture && messenger.mounted) {
+        if (!(await updateFuture).succeeded && messenger.mounted) {
           _showSaveFailedDetached(messenger, failureMessage);
         }
         return;
@@ -468,14 +488,15 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
     return confirmed ?? false;
   }
 
-  /// Keeps sheet errors above its controls; an underlying snackbar would be
-  /// obscured by the modal. Existing dialog callers retain their snackbar.
-  void _showSaveFailed() {
-    final message = _isEditing
-        ? context.l10n.listUpdateFailed
-        : context.l10n.listCreateFailed;
-    if (widget._isSheet) {
-      setState(() => _sheetSaveError = message);
+  /// Keeps sheet and specific rejection feedback visible inside the modal.
+  void _showSaveFailed({String? rejectionMessage}) {
+    final message =
+        rejectionMessage ??
+        (_isEditing
+            ? context.l10n.listUpdateFailed
+            : context.l10n.listCreateFailed);
+    if (widget._isSheet || rejectionMessage != null) {
+      setState(() => _saveError = message);
       return;
     }
     _showSaveFailedDetached(ScaffoldMessenger.of(context), message);

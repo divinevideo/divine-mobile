@@ -5045,6 +5045,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listContinue => 'Devam';
 
   @override
+  String get listPrivateConversionTooLarge =>
+      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
+
+  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
