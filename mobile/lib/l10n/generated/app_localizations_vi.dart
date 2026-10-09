@@ -7770,20 +7770,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get newMessageNoUsersFound => 'Không tìm thấy người dùng nào';
 
   @override
-  String get hashtagSearchTitle => 'Tìm hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Khám phá chủ đề và nội dung thịnh hành';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Không tìm thấy hashtag nào cho \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Tìm kiếm thất bại';
-
-  @override
   String get userNotAvailableTitle => 'Tài khoản không khả dụng';
 
   @override

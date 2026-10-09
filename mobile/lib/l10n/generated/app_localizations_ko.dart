@@ -7420,20 +7420,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newMessageNoUsersFound => '사용자를 찾지 못했어요';
 
   @override
-  String get hashtagSearchTitle => '해시태그 검색';
-
-  @override
-  String get hashtagSearchSubtitle => '인기 토픽과 콘텐츠를 둘러봐요';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\"$query\"에 대한 해시태그를 찾지 못했어요';
-  }
-
-  @override
-  String get hashtagSearchFailed => '검색에 실패했어요';
-
-  @override
   String get userNotAvailableTitle => '계정을 사용할 수 없어요';
 
   @override

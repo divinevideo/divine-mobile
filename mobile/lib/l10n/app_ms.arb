@@ -3956,17 +3956,6 @@
   "newMessageFindPeople": "Cari orang",
   "newMessageNoContacts": "Tiada kenalan ditemui.\nIkut orang untuk melihat mereka di sini.",
   "newMessageNoUsersFound": "Tiada pengguna ditemui",
-  "hashtagSearchTitle": "Cari hashtag",
-  "hashtagSearchSubtitle": "Temui topik dan kandungan trending",
-  "hashtagSearchNoResults": "Tiada hashtag ditemui untuk \"{query}\"",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "Carian gagal",
   "userNotAvailableTitle": "Akaun tidak tersedia",
   "userNotAvailableBody": "Akaun ini tidak tersedia sekarang.",
   "classicVinersTitle": "OG Viners",

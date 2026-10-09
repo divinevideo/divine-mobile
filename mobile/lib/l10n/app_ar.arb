@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "ابحث عن أشخاص",
     "newMessageNoContacts": "لا جهات اتصال.\nتابع الناس لتراهم هنا.",
     "newMessageNoUsersFound": "لم يُعثر على مستخدمين",
-    "hashtagSearchTitle": "ابحث عن وسوم",
-    "hashtagSearchSubtitle": "اكتشف المواضيع والمحتوى الرائج",
-    "hashtagSearchNoResults": "لم يُعثر على وسوم لـ \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "فشل البحث",
     "userNotAvailableTitle": "الحساب غير متاح",
     "userNotAvailableBody": "هذا الحساب غير متاح في الوقت الحالي.",
     "blossomValidServerUrl": "أدخل رابط خادم صالحًا (مثال: https://blossom.band)",

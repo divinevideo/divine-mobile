@@ -7857,20 +7857,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get newMessageNoUsersFound => 'Walang nakitang user';
 
   @override
-  String get hashtagSearchTitle => 'Maghanap ng hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Tuklasin ang trending topics at content';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Walang nakitang hashtag para sa \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Nabigo ang paghahanap';
-
-  @override
   String get userNotAvailableTitle => 'Hindi available ang account';
 
   @override

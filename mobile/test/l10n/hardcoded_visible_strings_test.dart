@@ -135,9 +135,6 @@ void main() {
       final otherFollowingSource = File(
         'lib/screens/following/others_following_screen.dart',
       ).readAsStringSync();
-      final hashtagSearchSource = File(
-        'lib/widgets/hashtag_search_view.dart',
-      ).readAsStringSync();
 
       for (final source in [bugReportSource, featureRequestSource]) {
         expect(source, isNot(contains("label: 'Subject *'")));
@@ -267,11 +264,6 @@ void main() {
         expect(source, isNot(contains("'Not following anyone yet'")));
         expect(source, contains('followingEmptyTitle'));
       }
-
-      expect(hashtagSearchSource, isNot(contains("'No hashtags found for")));
-      expect(hashtagSearchSource, isNot(contains("'Search failed'")));
-      expect(hashtagSearchSource, contains('hashtagSearchNoResults'));
-      expect(hashtagSearchSource, contains('hashtagSearchFailed'));
     });
   });
 }

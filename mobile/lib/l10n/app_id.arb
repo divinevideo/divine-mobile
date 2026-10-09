@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "Cari orang",
     "newMessageNoContacts": "Tidak ada kontak ditemukan.\nIkuti orang untuk melihat mereka di sini.",
     "newMessageNoUsersFound": "Pengguna tidak ditemukan",
-    "hashtagSearchTitle": "Cari hashtag",
-    "hashtagSearchSubtitle": "Temukan topik dan konten yang lagi tren",
-    "hashtagSearchNoResults": "Tidak ada hashtag untuk \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Pencarian gagal",
     "userNotAvailableTitle": "Akun tidak tersedia",
     "userNotAvailableBody": "Akun ini tidak tersedia saat ini.",
     "blossomValidServerUrl": "Masukkan URL server yang valid (contoh: https://blossom.band)",

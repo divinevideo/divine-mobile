@@ -7626,20 +7626,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get newMessageNoUsersFound => 'ምንም ተጠቃሚዎች አልተገኙም';
 
   @override
-  String get hashtagSearchTitle => 'ሃሽታጎችን ይፈልጉ';
-
-  @override
-  String get hashtagSearchSubtitle => 'በመታየት ላይ ያሉ ርዕሶችን እና ይዘትን ያግኙ';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'ለ\"$query\" ምንም ሃሽታጎች አልተገኙም';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'ፍለጋው አልተሳካም';
-
-  @override
   String get userNotAvailableTitle => 'መለያው አይገኝም';
 
   @override

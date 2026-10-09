@@ -2685,17 +2685,6 @@
     "newMessageFindPeople": "ሰዎችን ይፈልጉ",
     "newMessageNoContacts": "ምንም እውቂያዎች አልተገኙም።\nሰዎችን ይከተሉ እና እዚህ ያያሉ።",
     "newMessageNoUsersFound": "ምንም ተጠቃሚዎች አልተገኙም",
-    "hashtagSearchTitle": "ሃሽታጎችን ይፈልጉ",
-    "hashtagSearchSubtitle": "በመታየት ላይ ያሉ ርዕሶችን እና ይዘትን ያግኙ",
-    "hashtagSearchNoResults": "ለ\"{query}\" ምንም ሃሽታጎች አልተገኙም",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "ፍለጋው አልተሳካም",
     "userNotAvailableTitle": "መለያው አይገኝም",
     "userNotAvailableBody": "ይህ መለያ አሁን አይገኝም።",
     "classicVinersTitle": "OG Viners",

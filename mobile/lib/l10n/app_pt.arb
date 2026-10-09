@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "Encontrar pessoas",
     "newMessageNoContacts": "Nenhum contato encontrado.\nSiga pessoas para vê-las aqui.",
     "newMessageNoUsersFound": "Nenhum usuário encontrado",
-    "hashtagSearchTitle": "Buscar hashtags",
-    "hashtagSearchSubtitle": "Descubra tópicos em alta e conteúdo",
-    "hashtagSearchNoResults": "Nenhuma hashtag encontrada para \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Busca falhou",
     "userNotAvailableTitle": "Conta indisponível",
     "userNotAvailableBody": "Esta conta não está disponível agora.",
     "blossomValidServerUrl": "Insira uma URL de servidor válida (ex.: https://blossom.band)",

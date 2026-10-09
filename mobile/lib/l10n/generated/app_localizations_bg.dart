@@ -7879,20 +7879,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get newMessageNoUsersFound => 'Не са намерени потребители';
 
   @override
-  String get hashtagSearchTitle => 'Търси хаштагове';
-
-  @override
-  String get hashtagSearchSubtitle => 'Открий популярни теми и съдържание';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Няма намерени хаштагове за „$query“';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Търсенето не успя';
-
-  @override
   String get userNotAvailableTitle => 'Акаунтът не е наличен';
 
   @override

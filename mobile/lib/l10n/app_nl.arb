@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "Mensen zoeken",
     "newMessageNoContacts": "Geen contacten gevonden.\nVolg mensen om ze hier te zien.",
     "newMessageNoUsersFound": "Geen gebruikers gevonden",
-    "hashtagSearchTitle": "Zoek hashtags",
-    "hashtagSearchSubtitle": "Ontdek trending onderwerpen en inhoud",
-    "hashtagSearchNoResults": "Geen hashtags gevonden voor \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Zoeken mislukt",
     "userNotAvailableTitle": "Account niet beschikbaar",
     "userNotAvailableBody": "Dit account is op dit moment niet beschikbaar.",
     "blossomValidServerUrl": "Voer een geldige server-URL in (bijv. https://blossom.band)",

@@ -7721,20 +7721,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get newMessageNoUsersFound => 'Pengguna tidak ditemukan';
 
   @override
-  String get hashtagSearchTitle => 'Cari hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Temukan topik dan konten yang lagi tren';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Tidak ada hashtag untuk \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Pencarian gagal';
-
-  @override
   String get userNotAvailableTitle => 'Akun tidak tersedia';
 
   @override

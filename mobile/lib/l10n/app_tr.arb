@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "İnsan bul",
     "newMessageNoContacts": "Kişi bulunamadı.\nBurada görmek için insanları takip et.",
     "newMessageNoUsersFound": "Kullanıcı bulunamadı",
-    "hashtagSearchTitle": "Etiket ara",
-    "hashtagSearchSubtitle": "Trend olan konuları ve içerikleri keşfet",
-    "hashtagSearchNoResults": "\"{query}\" için etiket bulunamadı",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Arama başarısız",
     "userNotAvailableTitle": "Hesap kullanılamıyor",
     "userNotAvailableBody": "Bu hesap şu anda kullanılamıyor.",
     "blossomValidServerUrl": "Lütfen geçerli bir sunucu URL'si gir (örn. https://blossom.band)",

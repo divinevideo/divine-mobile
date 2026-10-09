@@ -3956,17 +3956,6 @@
   "newMessageFindPeople": "Tìm người",
   "newMessageNoContacts": "Không tìm thấy liên hệ nào.\nTheo dõi mọi người để thấy họ ở đây.",
   "newMessageNoUsersFound": "Không tìm thấy người dùng nào",
-  "hashtagSearchTitle": "Tìm hashtag",
-  "hashtagSearchSubtitle": "Khám phá chủ đề và nội dung thịnh hành",
-  "hashtagSearchNoResults": "Không tìm thấy hashtag nào cho \"{query}\"",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "Tìm kiếm thất bại",
   "userNotAvailableTitle": "Tài khoản không khả dụng",
   "userNotAvailableBody": "Tài khoản này hiện không khả dụng.",
   "classicVinersTitle": "OG Viners",
