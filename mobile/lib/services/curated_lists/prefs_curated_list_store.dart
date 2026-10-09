@@ -122,29 +122,27 @@ class PrefsCuratedListStore {
         cacheKey: _listsKey,
         isCurrent: () =>
             (_isCurrentSession?.call() ?? true) && (isCurrent?.call() ?? true),
-        read: () => _storedLists(
-          fallback: baseline,
-          onUnreadable: () => storedListsReadable = false,
-        ),
-        preflightConflicts: (acknowledged) {
-          // This runs inside the shared barrier after earlier writers finish.
-          ownerEvidence = _rawOwnerEvidence();
-          return {
-            if (!ownerEvidence.readable) ...{
-              for (final row in [...baseline, ...requested]) row.authorScopedId,
-            },
-            ...ownerEvidence.mutationConflicts(baseline, requested),
-            if (activeClaims.isNotEmpty)
-              ...(storedListsReadable && ownerEvidence.readable
-                  ? _ownershipClaimConflicts(activeClaims, acknowledged)
-                  : activeClaims.keys.toSet()),
-          };
+        read: () {
+          final raw = _prefs.getString(_listsKey);
+          ownerEvidence = _ownerEvidenceFromJson(raw);
+          return _decodeStoredLists(
+            raw,
+            fallback: baseline,
+            onUnreadable: () => storedListsReadable = false,
+          );
         },
-        // A row the model cannot decode cut the load short, so the merge
-        // would drop it and every row after it: refuse like other bad rows.
-        write: (merged) => ownerEvidence.readable && storedListsReadable
-            ? _writeString(_listsKey, jsonEncode(ownerEvidence.encode(merged)))
-            : Future<bool>.value(false),
+        isReadValid: () => storedListsReadable && ownerEvidence.readable,
+        preflightConflicts: (acknowledged) => {
+          ...ownerEvidence.mutationConflicts(baseline, requested),
+          if (activeClaims.isNotEmpty)
+            ..._ownershipClaimConflicts(
+              activeClaims,
+              acknowledged,
+              ownerEvidence: ownerEvidence,
+            ),
+        },
+        write: (merged) =>
+            _writeString(_listsKey, jsonEncode(ownerEvidence.encode(merged))),
       );
       _savedLists = result.nextBaseline;
       return result;
@@ -184,15 +182,23 @@ class PrefsCuratedListStore {
   /// The coordinated save repeats this condition after all queued writers.
   bool canClaimLocalList(CuratedList source, String destination) {
     var readable = true;
+    final raw = _prefs.getString(_listsKey);
+    final evidence = _ownerEvidenceFromJson(raw);
+    final stored = _decodeStoredLists(
+      raw,
+      fallback: _savedLists,
+      onUnreadable: () => readable = false,
+    );
+    if (!readable || !evidence.readable) return false;
     final acknowledged = _writes.readAcknowledgedLists(
       cacheKey: _listsKey,
-      read: () => _storedLists(
-        fallback: _savedLists,
-        onUnreadable: () => readable = false,
-      ),
+      read: () => stored,
     );
-    return readable &&
-        _ownershipClaimConflicts({destination: source}, acknowledged).isEmpty;
+    return _ownershipClaimConflicts(
+      {destination: source},
+      acknowledged,
+      ownerEvidence: evidence,
+    ).isEmpty;
   }
 
   /// Secondary labels cannot establish an absent or contradictory primary.
@@ -209,6 +215,10 @@ class PrefsCuratedListStore {
     } on Object {
       return const _RawListOwnerEvidence(readable: false);
     }
+    return _ownerEvidenceFromJson(raw);
+  }
+
+  _RawListOwnerEvidence _ownerEvidenceFromJson(String? raw) {
     if (_ownerEvidence != null && raw == _ownerEvidenceJson) {
       return _ownerEvidence!;
     }
@@ -220,8 +230,9 @@ class PrefsCuratedListStore {
   /// Timestamp precedence cannot establish ownership of an existing coordinate.
   Set<String> _ownershipClaimConflicts(
     Map<String, CuratedList> claims,
-    List<CuratedList> acknowledged,
-  ) {
+    List<CuratedList> acknowledged, {
+    _RawListOwnerEvidence? ownerEvidence,
+  }) {
     var followsReadable = true;
     final follows = _writes.readAcknowledgedSubscriptions(
       cacheKey: _subscriptionsKey,
@@ -239,8 +250,10 @@ class PrefsCuratedListStore {
       final storedSources = acknowledged.where(
         (list) => list.authorScopedId == source.authorScopedId,
       );
+      final evidence = ownerEvidence ?? _rawOwnerEvidence();
       if (!followsReadable ||
-          !hasUnambiguousOwnerEvidence(source) ||
+          !evidence.readable ||
+          evidence.isUncertain(source.authorScopedId) ||
           source.pubkey != null ||
           source.nostrEventId != null ||
           storedSources.length != 1 ||
@@ -479,11 +492,11 @@ class PrefsCuratedListStore {
   /// baseline as [fallback] makes it rewrite every list the caller holds. An
   /// absent key is empty, not unreadable: the account-switch sweep removes it,
   /// and the lists of the previous account must not be written back.
-  List<CuratedList> _storedLists({
+  List<CuratedList> _decodeStoredLists(
+    String? json, {
     required List<CuratedList> fallback,
     void Function()? onUnreadable,
   }) {
-    final json = _prefs.getString(_listsKey);
     if (json == null) {
       _writes.cacheKeyRemoved(_listsKey);
       return const [];

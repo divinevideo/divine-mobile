@@ -18,6 +18,195 @@ void main() {
           updatedAt: DateTime.utc(2026).add(Duration(seconds: revision)),
         );
 
+    test('an invalid read cannot discard a later repaired row', () async {
+      final writer = CuratedListCacheWriteCoordinator();
+      final repaired = list(author);
+      final added = list(other);
+      var reads = 0;
+      var writes = 0;
+      var preflights = 0;
+      final refused = await writer.saveListsWithResult(
+        baseline: [],
+        current: [repaired],
+        cacheKey: 'lists',
+        read: () {
+          reads++;
+          return [];
+        },
+        isReadValid: () => false,
+        preflightConflicts: (_) {
+          preflights++;
+          return {};
+        },
+        write: (_) async {
+          writes++;
+          return false;
+        },
+      );
+
+      expect(refused.status, CuratedCacheWriteStatus.storageRejected);
+      expect(refused.baseline, isEmpty);
+      expect(refused.persisted, isNull);
+      expect(refused.acknowledgedBeforeWrite, isNull);
+      expect(refused.nextBaseline, isEmpty);
+      expect(refused.reconcile([repaired]), isEmpty);
+      expect(reads, 1);
+      expect(writes, 0);
+      expect(preflights, 0);
+
+      var stored = [repaired];
+      final retry = await writer.saveListsWithResult(
+        baseline: [repaired],
+        current: [repaired, added],
+        cacheKey: 'lists',
+        read: () => stored,
+        isReadValid: () => true,
+        write: (merged) async {
+          stored = merged;
+          return true;
+        },
+      );
+      expect(retry.succeeded, isTrue);
+      expect(stored, [repaired, added]);
+    });
+
+    test('an invalid read retains an existing rejected overlay', () async {
+      final writer = CuratedListCacheWriteCoordinator();
+      final original = list(author);
+      final refusedEdit = list(author, name: 'Rejected edit');
+      final added = list(other);
+      var stored = [original];
+      final rejected = await writer.saveListsWithResult(
+        baseline: [original],
+        current: [refusedEdit],
+        cacheKey: 'lists',
+        read: () => stored,
+        write: (merged) async {
+          stored = merged;
+          return false;
+        },
+      );
+      expect(rejected.status, CuratedCacheWriteStatus.storageRejected);
+      expect(stored, [refusedEdit]);
+
+      var writes = 0;
+      final invalid = await writer.saveListsWithResult(
+        baseline: [],
+        current: [],
+        cacheKey: 'lists',
+        read: () => [],
+        isReadValid: () => false,
+        write: (_) async {
+          writes++;
+          return true;
+        },
+      );
+      expect(invalid.status, CuratedCacheWriteStatus.storageRejected);
+      expect(invalid.acknowledgedBeforeWrite, isNull);
+      expect(writes, 0);
+
+      final next = await writer.saveListsWithResult(
+        baseline: [original],
+        current: [original, added],
+        cacheKey: 'lists',
+        read: () => stored,
+        write: (merged) async {
+          stored = merged;
+          return true;
+        },
+      );
+      expect(next.succeeded, isTrue);
+      expect(stored, [original, added]);
+    });
+
+    test(
+      'list preflight reads distinguish rejection from replacement',
+      () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        final original = list(author);
+        final attempted = list(author, name: 'Rejected edit');
+        final replacement = list(other);
+        var stored = [original];
+        final rejected = await writer.saveListsWithResult(
+          baseline: [original],
+          current: [attempted],
+          cacheKey: 'lists',
+          read: () => stored,
+          write: (merged) async {
+            stored = merged;
+            return false;
+          },
+        );
+        expect(rejected.status, CuratedCacheWriteStatus.storageRejected);
+        expect(stored, [attempted]);
+        expect(
+          writer.readAcknowledgedLists(cacheKey: 'lists', read: () => stored),
+          [original],
+        );
+
+        stored = [replacement];
+        expect(
+          writer.readAcknowledgedLists(cacheKey: 'lists', read: () => stored),
+          [replacement],
+        );
+        stored = [attempted];
+        expect(
+          writer.readAcknowledgedLists(cacheKey: 'lists', read: () => stored),
+          [attempted],
+        );
+      },
+    );
+
+    test('read validation waits for the preceding writer', () async {
+      final writer = CuratedListCacheWriteCoordinator();
+      final original = list(author);
+      final started = Completer<void>();
+      final release = Completer<void>();
+      var stored = <CuratedList>[];
+      final previous = writer.saveListsWithResult(
+        baseline: [],
+        current: [original],
+        read: () => stored,
+        write: (merged) async {
+          started.complete();
+          await release.future;
+          stored = merged;
+          return true;
+        },
+      );
+      await started.future;
+      var readable = true;
+      var reads = 0;
+      var validations = 0;
+      var writes = 0;
+      final pending = writer.saveListsWithResult(
+        baseline: [],
+        current: [list(other)],
+        read: () {
+          reads++;
+          return stored;
+        },
+        isReadValid: () {
+          validations++;
+          return readable;
+        },
+        write: (_) async {
+          writes++;
+          return true;
+        },
+      );
+      expect(reads, 0);
+      expect(validations, 0);
+      readable = false;
+      release.complete();
+      expect((await previous).succeeded, isTrue);
+      expect((await pending).status, CuratedCacheWriteStatus.storageRejected);
+      expect(reads, 1);
+      expect(validations, 1);
+      expect(writes, 0);
+      expect(stored, [original]);
+    });
+
     test(
       'preflight conflict aborts before writes '
       'and exposes acknowledged rows for reconciliation',
