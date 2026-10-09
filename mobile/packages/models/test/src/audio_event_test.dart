@@ -1871,10 +1871,10 @@ void main() {
       });
 
       test('is never published in Kind 1063 tags', () {
-        final tags = equalized.toTags().expand((tag) => tag);
-
-        expect(tags.any((value) => value.contains('bass')), isFalse);
-        expect(tags.any((value) => value.contains('treble')), isFalse);
+        expect(
+          equalized.toTags(),
+          equalized.copyWith(equalizer: EqualizerSettings.none).toTags(),
+        );
       });
     });
 

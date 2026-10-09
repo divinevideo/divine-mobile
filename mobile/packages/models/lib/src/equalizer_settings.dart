@@ -33,7 +33,8 @@ class EqualizerSettings {
     if (gains is! List) return none;
     return EqualizerSettings.fromGains([
       for (final gain in gains)
-        if (gain is num) gain.round() else 0,
+        // round() throws on infinity and NaN.
+        if (gain is num && gain.isFinite) gain.round() else 0,
     ]);
   }
 

@@ -92,6 +92,12 @@ void main() {
           }),
           EqualizerSettings.none.withGain(1, 3),
         );
+        expect(
+          EqualizerSettings.fromJson(const {
+            'gains': [double.infinity, double.nan, 4],
+          }),
+          EqualizerSettings.none.withGain(2, 4),
+        );
       });
     });
 
