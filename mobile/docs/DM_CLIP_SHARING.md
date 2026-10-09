@@ -76,7 +76,7 @@ sign without one.
   without the hash, and a recording used as a chroma-key backdrop, or kept as
   the footage under a key, is named without one. A clip loaded from the
   library, or edited from such a source, therefore cannot have its recording
-  signed late, and cannot be sent as a clip.
+  signed late, and cannot be sent as a clip. Fixing this is tracked in #9982.
 
 ## The C2PA check
 
