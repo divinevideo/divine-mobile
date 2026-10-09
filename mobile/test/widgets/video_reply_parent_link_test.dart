@@ -39,7 +39,11 @@ void main() {
     ],
   );
 
-  Future<void> pumpLink(WidgetTester tester, MockGoRouter router) async {
+  Future<void> pumpLink(
+    WidgetTester tester,
+    MockGoRouter router, {
+    VoidCallback? onInteracted,
+  }) async {
     await tester.pumpWidget(
       MockGoRouterProvider(
         goRouter: router,
@@ -54,6 +58,7 @@ void main() {
               body: VideoReplyParentLink(
                 video: reply,
                 variant: VideoReplyParentLinkVariant.metadata,
+                onInteracted: onInteracted,
               ),
             ),
           ),
@@ -127,6 +132,26 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Opened $parentId'), findsOneWidget);
+      });
+
+      testWidgets('reports the interaction before opening the parent route', (
+        tester,
+      ) async {
+        final calls = <String>[];
+        final router = MockGoRouter();
+        when(() => router.push<void>(any())).thenAnswer((_) async {
+          calls.add('push');
+        });
+
+        await pumpLink(
+          tester,
+          router,
+          onInteracted: () => calls.add('interacted'),
+        );
+        await tester.tap(find.text(fallbackLabel));
+        await tester.pump();
+
+        expect(calls, equals(['interacted', 'push']));
       });
 
       testWidgets('keeps the feed paused until the parent route closes', (
