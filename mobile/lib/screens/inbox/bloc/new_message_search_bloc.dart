@@ -39,6 +39,8 @@ class NewMessageSearchBloc
     );
     on<NewMessageSearchCleared>(_onCleared);
     on<NewMessageSearchPeerLabelsChanged>(_onPeerLabelsChanged);
+    on<NewMessageSearchGroupModeChanged>(_onGroupModeChanged);
+    on<NewMessageSearchRecipientToggled>(_onRecipientToggled);
     on<_NewMessageSearchVanishedPubkeysChanged>(_onVanishedPubkeysChanged);
     _subscribeToVanishedPubkeys();
   }
@@ -147,6 +149,52 @@ class NewMessageSearchBloc
         query: '',
         results: const [],
         networkResults: const [],
+      ),
+    );
+  }
+
+  void _onGroupModeChanged(
+    NewMessageSearchGroupModeChanged event,
+    Emitter<NewMessageSearchState> emit,
+  ) {
+    if (event.enabled == state.isGroupMode) return;
+    // Cleared in both directions: a selection only means something inside
+    // the mode, so none may be carried into it or out of it.
+    emit(
+      state.copyWith(
+        isGroupMode: event.enabled,
+        selectedRecipients: const [],
+      ),
+    );
+  }
+
+  void _onRecipientToggled(
+    NewMessageSearchRecipientToggled event,
+    Emitter<NewMessageSearchState> emit,
+  ) {
+    if (!state.isGroupMode) return;
+
+    final pubkey = event.profile.pubkey;
+    // The lists this bloc builds already leave the viewer out (#8351). Refused
+    // here as well, so the selection cannot hold them whoever dispatches this.
+    if (_isSelf(pubkey)) return;
+
+    if (state.isSelected(pubkey)) {
+      emit(
+        state.copyWith(
+          selectedRecipients: [
+            for (final recipient in state.selectedRecipients)
+              if (!pubkeysEqual(recipient.pubkey, pubkey)) recipient,
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (state.isGroupFull) return;
+    emit(
+      state.copyWith(
+        selectedRecipients: [...state.selectedRecipients, event.profile],
       ),
     );
   }

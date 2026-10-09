@@ -2686,6 +2686,16 @@
     "newMessageFindPeople": "ሰዎችን ይፈልጉ",
     "newMessageNoContacts": "ምንም እውቂያዎች አልተገኙም።\nሰዎችን ይከተሉ እና እዚህ ያያሉ።",
     "newMessageNoUsersFound": "ምንም ተጠቃሚዎች አልተገኙም",
+    "newMessageNewGroup": "አዲስ ቡድን",
+    "newMessageStartChat": "ውይይት ይጀምሩ",
+    "newMessageGroupFull": "{count, plural, one{ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ {count} ሰው።} other{ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ {count} ሰዎች።}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "መለያው አይገኝም",
     "userNotAvailableBody": "ይህ መለያ አሁን አይገኝም።",
     "classicVinersTitle": "OG Viners",

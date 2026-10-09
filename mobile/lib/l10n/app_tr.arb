@@ -3426,6 +3426,16 @@
     "newMessageFindPeople": "İnsan bul",
     "newMessageNoContacts": "Kişi bulunamadı.\nBurada görmek için insanları takip et.",
     "newMessageNoUsersFound": "Kullanıcı bulunamadı",
+    "newMessageNewGroup": "Yeni grup",
+    "newMessageStartChat": "Sohbeti başlat",
+    "newMessageGroupFull": "{count, plural, one{Sınır bu: sen dahil {count} kişi.} other{Sınır bu: sen dahil {count} kişi.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Hesap kullanılamıyor",
     "userNotAvailableBody": "Bu hesap şu anda kullanılamıyor.",
     "blossomValidServerUrl": "Lütfen geçerli bir sunucu URL'si gir (örn. https://blossom.band)",

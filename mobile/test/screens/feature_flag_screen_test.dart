@@ -96,6 +96,7 @@ void main() {
         findsNothing,
       );
       expect(find.text(FeatureFlag.feedTuning.displayName), findsNothing);
+      expect(find.text(FeatureFlag.groupMessages.displayName), findsNothing);
     });
 
     testWidgets('drives the account-switching flag through its automation id', (
@@ -157,6 +158,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(FeatureFlag.feedTuning.displayName), findsOneWidget);
+      expect(find.text(FeatureFlag.groupMessages.displayName), findsOneWidget);
     });
 
     testWidgets('should show app bar with title', (tester) async {

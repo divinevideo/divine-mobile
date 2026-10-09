@@ -7798,6 +7798,23 @@ class AppLocalizationsSv extends AppLocalizations {
   String get newMessageNoUsersFound => 'Inga användare hittades';
 
   @override
+  String get newMessageNewGroup => 'Ny grupp';
+
+  @override
+  String get newMessageStartChat => 'Starta chatt';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Det är max: $count personer, inklusive dig.',
+      one: 'Det är max: $count person, inklusive dig.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Konto ej tillgängligt';
 
   @override

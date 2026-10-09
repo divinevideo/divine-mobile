@@ -7773,6 +7773,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get newMessageNoUsersFound => 'Không tìm thấy người dùng nào';
 
   @override
+  String get newMessageNewGroup => 'Nhóm mới';
+
+  @override
+  String get newMessageStartChat => 'Bắt đầu trò chuyện';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tối đa rồi: $count người, tính cả bạn.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Tài khoản không khả dụng';
 
   @override

@@ -8047,6 +8047,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String get newMessageNoUsersFound => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override
+  String get newMessageNewGroup => 'కొత్త గ్రూప్';
+
+  @override
+  String get newMessageStartChat => 'చాట్ ప్రారంభించండి';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ఇదే గరిష్ఠం: మీతో సహా $count మంది.',
+      one: 'ఇదే గరిష్ఠం: మీతో సహా $count వ్యక్తి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'ఖాతా అందుబాటులో లేదు';
 
   @override

@@ -2259,6 +2259,16 @@
     "newMessageFindPeople": "Maghanap ng tao",
     "newMessageNoContacts": "Walang nakitang contact.\nMag-follow ng mga tao para makita sila dito.",
     "newMessageNoUsersFound": "Walang nakitang user",
+    "newMessageNewGroup": "Bagong group",
+    "newMessageStartChat": "Simulan ang chat",
+    "newMessageGroupFull": "{count, plural, one{Hanggang diyan lang: {count} tao, kasama ka.} other{Hanggang diyan lang: {count} tao, kasama ka.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "newMessageTitle": "Bagong message",
     "nostrAppPermissionAllow": "Payagan",
     "nostrAppPermissionCapability": "Kakayahan",

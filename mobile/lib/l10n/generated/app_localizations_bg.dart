@@ -7882,6 +7882,23 @@ class AppLocalizationsBg extends AppLocalizations {
   String get newMessageNoUsersFound => 'Не са намерени потребители';
 
   @override
+  String get newMessageNewGroup => 'Нова група';
+
+  @override
+  String get newMessageStartChat => 'Започни чат';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Това е максимумът: $count души заедно с теб.',
+      one: 'Това е максимумът: $count човек заедно с теб.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Акаунтът не е наличен';
 
   @override

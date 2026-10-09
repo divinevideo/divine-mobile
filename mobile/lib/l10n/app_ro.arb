@@ -3426,6 +3426,16 @@
     "newMessageFindPeople": "Găsește oameni",
     "newMessageNoContacts": "Niciun contact găsit.\nUrmărește oameni ca să-i vezi aici.",
     "newMessageNoUsersFound": "Niciun utilizator găsit",
+    "newMessageNewGroup": "Grup nou",
+    "newMessageStartChat": "Începe conversația",
+    "newMessageGroupFull": "{count, plural, one{Acesta e maximul: {count} persoană, cu tot cu tine.} few{Acesta e maximul: {count} persoane, cu tot cu tine.} other{Acesta e maximul: {count} de persoane, cu tot cu tine.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Cont indisponibil",
     "userNotAvailableBody": "Acest cont nu e disponibil acum.",
     "blossomValidServerUrl": "Introdu un URL valid de server (ex.: https://blossom.band)",

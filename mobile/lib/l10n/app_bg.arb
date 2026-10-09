@@ -3543,6 +3543,16 @@
     "newMessageFindPeople": "Намери хора",
     "newMessageNoContacts": "Не са намерени контакти.\nПоследвай хора, за да ги виждаш тук.",
     "newMessageNoUsersFound": "Не са намерени потребители",
+    "newMessageNewGroup": "Нова група",
+    "newMessageStartChat": "Започни чат",
+    "newMessageGroupFull": "{count, plural, one{Това е максимумът: {count} човек заедно с теб.} other{Това е максимумът: {count} души заедно с теб.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Акаунтът не е наличен",
     "userNotAvailableBody": "Този акаунт в момента не е наличен.",
     "blossomValidServerUrl": "Въведи валиден URL на сървър (напр. https://blossom.band)",

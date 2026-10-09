@@ -7780,6 +7780,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newMessageNoUsersFound => 'لم يُعثر على مستخدمين';
 
   @override
+  String get newMessageNewGroup => 'مجموعة جديدة';
+
+  @override
+  String get newMessageStartChat => 'بدء المحادثة';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'هذا هو الحد الأقصى: $count شخص، بمن فيهم أنت.',
+      many: 'هذا هو الحد الأقصى: $count شخصًا، بمن فيهم أنت.',
+      few: 'هذا هو الحد الأقصى: $count أشخاص، بمن فيهم أنت.',
+      two: 'هذا هو الحد الأقصى: شخصان، أحدهما أنت.',
+      one: 'هذا هو الحد الأقصى: شخص واحد، وهو أنت.',
+      zero: 'هذا هو الحد الأقصى: $count شخص، بمن فيهم أنت.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'الحساب غير متاح';
 
   @override

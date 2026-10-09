@@ -13229,6 +13229,24 @@ abstract class AppLocalizations {
   /// **'No users found'**
   String get newMessageNoUsersFound;
 
+  /// Row in the New message sheet that switches the people picker to multi-select, and the sheet's title while it is in that mode. A group is a direct-message conversation with two or more other people.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get newMessageNewGroup;
+
+  /// Primary button pinned at the bottom of the New message sheet in group mode. Opens the conversation with everyone selected; disabled until two people are picked.
+  ///
+  /// In en, this message translates to:
+  /// **'Start chat'**
+  String get newMessageStartChat;
+
+  /// Inline notice under the selected-people chips in the New message sheet once the group is full. {count} is the size limit of a group, counting the person creating it. The app passes a fixed limit (10 today), so only the arm for that number is ever shown.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{That\'s the max: {count} person, you included.} other{That\'s the max: {count} people, you included.}}'**
+  String newMessageGroupFull(int count);
+
   /// No description provided for @userNotAvailableTitle.
   ///
   /// In en, this message translates to:

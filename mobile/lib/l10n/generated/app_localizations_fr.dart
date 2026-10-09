@@ -7917,6 +7917,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get newMessageNoUsersFound => 'Aucun utilisateur trouvé';
 
   @override
+  String get newMessageNewGroup => 'Nouveau groupe';
+
+  @override
+  String get newMessageStartChat => 'Démarrer la conversation';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'C\'est le maximum : $count personnes, y compris toi.',
+      many: 'C\'est le maximum : $count personnes, y compris toi.',
+      one: 'C\'est le maximum : $count personne, y compris toi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Compte indisponible';
 
   @override

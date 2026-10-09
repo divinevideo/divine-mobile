@@ -3957,6 +3957,16 @@
   "newMessageFindPeople": "Tìm người",
   "newMessageNoContacts": "Không tìm thấy liên hệ nào.\nTheo dõi mọi người để thấy họ ở đây.",
   "newMessageNoUsersFound": "Không tìm thấy người dùng nào",
+  "newMessageNewGroup": "Nhóm mới",
+  "newMessageStartChat": "Bắt đầu trò chuyện",
+  "newMessageGroupFull": "{count, plural, other{Tối đa rồi: {count} người, tính cả bạn.}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "Tài khoản không khả dụng",
   "userNotAvailableBody": "Tài khoản này hiện không khả dụng.",
   "classicVinersTitle": "OG Viners",

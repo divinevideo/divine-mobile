@@ -124,6 +124,16 @@ void main() {
       );
     });
 
+    test('groupMessages is off by default and maps to FF_GROUP_MESSAGES', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.groupMessages), isFalse);
+      expect(
+        config.getEnvironmentKey(FeatureFlag.groupMessages),
+        equals('FF_GROUP_MESSAGES'),
+      );
+    });
+
     test('integratedApps should map to FF_INTEGRATED_APPS env var', () {
       const config = BuildConfiguration();
 

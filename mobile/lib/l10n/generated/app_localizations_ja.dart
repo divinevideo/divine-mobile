@@ -7405,6 +7405,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newMessageNoUsersFound => 'ユーザーが見つからなかった';
 
   @override
+  String get newMessageNewGroup => '新しいグループ';
+
+  @override
+  String get newMessageStartChat => 'チャットを開始';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'あなたを含めて $count 人が上限です。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'アカウントは利用できないよ';
 
   @override

@@ -46,6 +46,28 @@ final class NewMessageSearchPeerLabelsChanged extends NewMessageSearchEvent {
   List<Object?> get props => [labels];
 }
 
+/// User entered or left group mode, where the picker chooses several people
+/// instead of closing on the first tap. Leaving discards the selection.
+final class NewMessageSearchGroupModeChanged extends NewMessageSearchEvent {
+  const NewMessageSearchGroupModeChanged({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+/// User tapped a candidate in group mode, or the chip of one already picked:
+/// picks [profile] when they are not selected, drops them when they are.
+final class NewMessageSearchRecipientToggled extends NewMessageSearchEvent {
+  const NewMessageSearchRecipientToggled(this.profile);
+
+  final UserProfile profile;
+
+  @override
+  List<Object?> get props => [profile];
+}
+
 /// The live vanished set changed. Private: only this BLoC's own subscription
 /// to `ProfileRepository.watchVanishedPubkeys()` raises it.
 final class _NewMessageSearchVanishedPubkeysChanged

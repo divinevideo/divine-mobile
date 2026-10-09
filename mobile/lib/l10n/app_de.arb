@@ -3426,6 +3426,16 @@
     "newMessageFindPeople": "Leute finden",
     "newMessageNoContacts": "Keine Kontakte gefunden.\nFolg Leuten, um sie hier zu sehen.",
     "newMessageNoUsersFound": "Keine Nutzer gefunden",
+    "newMessageNewGroup": "Neue Gruppe",
+    "newMessageStartChat": "Chat starten",
+    "newMessageGroupFull": "{count, plural, one{Mehr geht nicht: {count} Person, dich eingeschlossen.} other{Mehr geht nicht: {count} Personen, dich eingeschlossen.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Konto nicht verfügbar",
     "userNotAvailableBody": "Dieses Konto ist gerade nicht verfügbar.",
     "blossomValidServerUrl": "Bitte gib eine gültige Server-URL ein (z. B. https://blossom.band)",
