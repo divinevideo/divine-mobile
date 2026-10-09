@@ -498,7 +498,6 @@ class _ExploreCreationHeader extends ConsumerWidget {
           label: context.l10n.listNewVideoList,
           onPressed: () => runDetached(
             context.showVideoPausingVineBottomSheet<void>(
-              useRootNavigator: true,
               scrollable: false,
               showHeader: false,
               showHeaderDivider: false,
