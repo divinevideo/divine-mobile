@@ -247,9 +247,9 @@ VideoLayer buildDetachedClipVideoLayer({
       bodySize: bodySize,
       logicalSize: box,
       mapping: mapping,
-      timelineMap: timelineMap,
       turnedRaster: false,
     ),
+    keyframeClock: layer.divineKeyframeClockForExport(timelineMap: timelineMap),
     clips: [
       VideoSegment(
         video: resolvedVideo,

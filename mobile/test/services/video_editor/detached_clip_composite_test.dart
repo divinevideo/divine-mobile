@@ -11,7 +11,13 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ChromaKey, EditorVideo, SegmentFit;
+    show
+        ChromaKey,
+        ClipTransition,
+        ClipTransitionType,
+        EditorVideo,
+        KeyframeClockPoint,
+        SegmentFit;
 
 DivineVideoClip _clip({
   String id = 'clip-1',
@@ -237,6 +243,50 @@ void main() {
       expect(keyframe.opacity, 0.25);
       // At the layer's own place, the keyframe's corner is the clip's.
       expect(keyframe.offset, layer.clips.single.transform!.offset);
+    });
+
+    test('times a keyframed clip on the editor timeline through its clock', () {
+      final exportItem = item(_clip(), startTime: const Duration(seconds: 1));
+      exportItem.layer.keyframes = const [
+        LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+        LayerKeyframe(time: Duration(seconds: 4), offset: Offset(10, 0)),
+      ];
+      // A 1 s dissolve the editor shows from 5 s to 7 s and the output plays
+      // from 5 s to 6 s.
+      final overlapMap = TransitionTimelineMap.fromClips([
+        _clip(id: 'track-1').copyWith(
+          transition: const ClipTransition(
+            type: ClipTransitionType.dissolve,
+            duration: Duration(seconds: 1),
+          ),
+        ),
+        _clip(id: 'track-2'),
+      ]);
+
+      final layer = buildDetachedClipVideoLayer(
+        item: exportItem,
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: overlapMap,
+        speedFlattened: false,
+      );
+
+      expect(layer.keyframes.map((k) => k.time), [
+        const Duration(seconds: 1),
+        const Duration(seconds: 5),
+      ]);
+      expect(layer.keyframeClock, const [
+        KeyframeClockPoint(
+          output: Duration(seconds: 5),
+          keyframe: Duration(seconds: 5),
+        ),
+        KeyframeClockPoint(
+          output: Duration(seconds: 6),
+          keyframe: Duration(seconds: 7),
+        ),
+      ]);
     });
 
     test('starts a split tail partway into the clip', () {

@@ -1163,12 +1163,14 @@ class VideoEditorRenderService {
       // Loops between two keyframes, timed on the output timeline.
       ...item.layer.divineKeyframeEffectsForExport(timelineMap: timelineMap),
     ];
-    // Absolute times on the output timeline, so every split frame carries the
-    // same motion.
+    // Absolute times on the editor's timeline, read through the clock, so
+    // every split frame carries the same motion.
     final keyframes = item.layer.divineKeyframesForExport(
       bodySize: bodySize,
       logicalSize: item.logicalSize,
       mapping: mapping,
+    );
+    final keyframeClock = item.layer.divineKeyframeClockForExport(
       timelineMap: timelineMap,
     );
     final frames = item.frames;
@@ -1190,6 +1192,7 @@ class VideoEditorRenderService {
           size: size,
           animations: animations,
           keyframes: keyframes,
+          keyframeClock: keyframeClock,
           // A layer without a start or end begins or ends with the video, so
           // its implicit range is the output's. Left null, the native
           // renderer falls back to each split frame's own start or end: an

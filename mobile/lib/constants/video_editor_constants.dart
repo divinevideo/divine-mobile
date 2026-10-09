@@ -131,16 +131,6 @@ class VideoEditorConstants {
   /// a keyframe would add a second keyframe next to it instead of changing it.
   static const keyframeTolerance = Duration(microseconds: 33334);
 
-  /// How often per second of output the export samples a keyframed motion
-  /// that eases across a clip transition.
-  ///
-  /// A transition plays both clips at once, so the export's clock runs at
-  /// half the editor's through it, and an easing curve cut there is none of
-  /// the 13 curves any more. The export follows such a stretch through linear
-  /// keyframes this close together instead, within a fraction of a pixel of
-  /// the preview.
-  static const exportedMotionSamplesPerSecond = 240;
-
   /// One cycle of a looping wiggle, a hop and a pulse when first picked: a
   /// wiggle swings like a pendulum, a hop lands and takes off again, a pulse
   /// breathes slower than either.

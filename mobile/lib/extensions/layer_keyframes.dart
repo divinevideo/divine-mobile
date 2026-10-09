@@ -3,7 +3,6 @@
 
 import 'dart:ui';
 
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -64,11 +63,12 @@ extension LayerKeyframeTimeline on Layer {
 /// Maps a layer's keyframes into the export.
 extension LayerExportKeyframes on Layer {
   /// This layer's keyframes as pro_video_editor [pve.TimelineKeyframe]s, in
-  /// the video's pixels and on the output timeline. Empty when it has none.
+  /// the video's pixels and at their times on the editor's timeline, which
+  /// [divineKeyframeClockForExport] maps the output onto. Empty when it has
+  /// none.
   ///
   /// [bodySize], [logicalSize] and [mapping] place a keyframe's corner the way
-  /// [exportedLayerTopLeft] places the layer's own one, and [timelineMap]
-  /// puts its time on the output timeline as it does the layer's window.
+  /// [exportedLayerTopLeft] places the layer's own one.
   ///
   /// The export draws an image of the layer as it is laid out: at its own
   /// [Layer.scale], and for a raster also turned by [Layer.rotation] and its
@@ -80,15 +80,14 @@ extension LayerExportKeyframes on Layer {
     required Size bodySize,
     required Size logicalSize,
     required ExportLayerMapping mapping,
-    required TransitionTimelineMap timelineMap,
     bool turnedRaster = true,
   }) {
     if (keyframes.isEmpty) return const [];
     final mirrored = flipX != flipY;
     return [
-      for (final keyframe in _exportKeyframes(timelineMap))
+      for (final keyframe in keyframes)
         pve.TimelineKeyframe(
-          time: _outputTime(timelineMap, keyframeOrigin + keyframe.time),
+          time: keyframeOrigin + keyframe.time,
           offset: exportedLayerTopLeft(
             anchor: keyframe.offset,
             bodySize: bodySize,
@@ -105,81 +104,34 @@ extension LayerExportKeyframes on Layer {
     ];
   }
 
-  /// The keyframes the export moves the layer through: its own, and where a
-  /// motion crosses a change in the export's pace, more on that motion.
+  /// The clock [divineKeyframesForExport] are timed on: each frame of the
+  /// output at its time on the editor's timeline. Empty when this layer has
+  /// no keyframes or [timelineMap] runs as fast as the editor throughout.
   ///
-  /// On each piece of the timeline the export's clock runs at one pace
-  /// against the editor's: as fast outside a clip transition, half as fast
-  /// through one, where it plays both clips at once. A linear motion stays
-  /// linear on each piece, so a keyframe where it crosses into the next one,
-  /// on the motion itself, keeps it exact. An eased motion cut there is none
-  /// of the 13 curves any more, so the export follows it through linear
-  /// keyframes [VideoEditorConstants.exportedMotionSamplesPerSecond] times a
-  /// second instead.
-  Iterable<LayerKeyframe> _exportKeyframes(
-    TransitionTimelineMap timelineMap,
-  ) sync* {
-    for (var i = 0; i < keyframes.length; i++) {
-      final from = keyframes[i];
-      if (i + 1 == keyframes.length) {
-        yield from;
-        break;
-      }
-      final start = keyframeOrigin + from.time;
-      final end = keyframeOrigin + keyframes[i + 1].time;
-      final crossings = _paceChangesWithin(timelineMap, start, end);
-      if (crossings.isEmpty) {
-        yield from;
-      } else if (from.curve == AnimationCurve.linear) {
-        yield from;
-        for (final crossing in crossings) {
-          yield _keyframeAt(crossing);
-        }
-      } else {
-        yield from.copyWith(curve: AnimationCurve.linear);
-        yield* _sampledMotion(timelineMap, start, end);
-      }
-    }
+  /// A clip transition plays both clips at once, where the editor shows one
+  /// after the other, so the output runs at half the editor's pace through
+  /// it. A point at each edge of every transition lets the export place every
+  /// frame where the editor shows the layer at that moment, whichever curve
+  /// the layer moves along and however short the stretch.
+  List<pve.KeyframeClockPoint> divineKeyframeClockForExport({
+    required TransitionTimelineMap timelineMap,
+  }) {
+    if (keyframes.isEmpty) return const [];
+    return [
+      for (final boundary in timelineMap.clockBoundaries)
+        pve.KeyframeClockPoint(
+          output: timelineMap.editorToOutput(boundary),
+          keyframe: boundary,
+        ),
+    ];
   }
-
-  /// Linear keyframes on the motion from [start] to [end] (video time), on a
-  /// fixed grid of the output's time between the two.
-  Iterable<LayerKeyframe> _sampledMotion(
-    TransitionTimelineMap timelineMap,
-    Duration start,
-    Duration end,
-  ) sync* {
-    const rate = VideoEditorConstants.exportedMotionSamplesPerSecond;
-    const usPerSecond = Duration.microsecondsPerSecond;
-    final outputStartUs = _outputTime(timelineMap, start).inMicroseconds;
-    final outputEndUs = _outputTime(timelineMap, end).inMicroseconds;
-    for (
-      var sample = (outputStartUs * rate / usPerSecond).floor() + 1;
-      ;
-      sample++
-    ) {
-      final outputUs = (sample * usPerSecond / rate).round();
-      if (outputUs >= outputEndUs) break;
-      if (outputUs <= outputStartUs) continue;
-      yield _keyframeAt(
-        _editorTime(timelineMap, Duration(microseconds: outputUs)),
-      );
-    }
-  }
-
-  /// A linear keyframe holding the placement the keyframes give the layer at
-  /// [time] (video time).
-  LayerKeyframe _keyframeAt(Duration time) => LayerKeyframe.fromPlacement(
-    keyframePlacementAt(time)!,
-    time: time - keyframeOrigin,
-  );
 
   /// The [Layer.keyframeEffects] as pro_video_editor loops that repeat only
   /// over their stretch of the output timeline. Empty when there are none.
   ///
   /// The export runs at its own pace on each piece of the timeline (see
-  /// [_exportKeyframes]), so an effect that crosses into another piece is
-  /// split there. Each part repeats at the pace of its piece and starts at the
+  /// [divineKeyframeClockForExport]), so an effect that crosses into another
+  /// piece is split there. Each part repeats at the pace of its piece and starts at the
   /// phase the editor shows there, so the effect runs on in step and the layer
   /// rests on both keyframes, as in the editor. A part before the video's
   /// start is left out; the first part on the output starts at the phase the
@@ -203,16 +155,11 @@ List<Duration> _paceChangesWithin(
     if (boundary > start && boundary < end) boundary,
 ];
 
-/// [time] on the output timeline as video time, the inverse of [_outputTime].
-Duration _editorTime(TransitionTimelineMap timelineMap, Duration time) =>
-    time.isNegative ? time : timelineMap.outputToEditor(time);
-
 /// [time] (video time) on the output timeline.
 ///
-/// A keyframe before the video's start, where no transition has shortened
-/// anything yet, keeps its time instead of being held at 0, as
-/// [TransitionTimelineMap.editorToOutput] would: it still shapes the motion
-/// after it, and held at 0 it would hurry the layer to the next keyframe.
+/// A time before the video's start, where no transition has shortened
+/// anything yet, keeps its value instead of being held at 0, as
+/// [TransitionTimelineMap.editorToOutput] would.
 Duration _outputTime(TransitionTimelineMap timelineMap, Duration time) =>
     time.isNegative ? time : timelineMap.editorToOutput(time);
 

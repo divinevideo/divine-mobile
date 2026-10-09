@@ -116,7 +116,7 @@ Keyframes, per layer (text, sticker, drawing and detached clip):
 - Between two keyframes the layer moves along one of the 13 easing curves, linear by default, and can play a wiggle, a hop or a pulse on the way, with its strength; the sheet edits the stretch the playhead is in and names its two keyframes. The effect's cycle is fitted so the layer rests on both keyframes. A detached clip offers no effect, as it has no animations. Before the first keyframe and after the last one the layer holds still.
 - A layer's timeline bar shows its keyframes on its bottom edge: as yellow diamonds while it is selected, the one at the playhead filled in, and tapping one moves the playhead onto it; as small marks otherwise.
 - Trimming the layer's start, splitting it or duplicating it keeps the motion where it was on the video. A detached clip's footage moves along when its start is trimmed, and its motion goes with the footage. Removing the last keyframe leaves the layer where it showed at the playhead.
-- Enter, leave and loop animations play on top of the keyframed motion, and the export moves the layer as the canvas does.
+- Enter, leave and loop animations play on top of the keyframed motion, and the export moves the layer as the canvas does, through clip transitions too.
 
 ## Captions
 

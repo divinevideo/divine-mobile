@@ -1,12 +1,15 @@
 // ABOUTME: Tests how layer keyframes stay in place through timeline edits and
 // ABOUTME: how they map into the pro_video_editor export.
 
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' as model;
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show
@@ -152,7 +155,6 @@ void main() {
       bodySize: bodySize,
       logicalSize: logicalSize,
       mapping: mapping,
-      timelineMap: timelineMap,
       turnedRaster: turnedRaster,
     );
 
@@ -160,7 +162,7 @@ void main() {
       expect(export(Layer()), isEmpty);
     });
 
-    test('places a keyframe like the layer and times it on the video', () {
+    test('places a keyframe like the layer and times it on the editor', () {
       const anchor = Offset(30, -60);
       final layer = Layer(
         startTime: ms * 1000,
@@ -262,6 +264,61 @@ void main() {
       expect(loop.loopStart, Duration.zero);
       expect(loop.loopPhase, ms * 560);
       expect(loop.loopEnd, ms * 2000);
+    });
+  });
+
+  group('divineKeyframeClockForExport', () {
+    DivineVideoClip clip(String id, {pve.ClipTransition? transition}) =>
+        DivineVideoClip(
+          id: id,
+          video: pve.EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+          transition: transition,
+        );
+
+    // Overlap transitions default to 500 ms.
+    const dissolve = pve.ClipTransition(type: pve.ClipTransitionType.dissolve);
+    final keyed = Layer(keyframes: [keyframe(0), keyframe(3000)]);
+
+    test('is empty without keyframes', () {
+      final timelineMap = TransitionTimelineMap.fromClips([
+        clip('a', transition: dissolve),
+        clip('b'),
+      ]);
+
+      expect(
+        Layer().divineKeyframeClockForExport(timelineMap: timelineMap),
+        isEmpty,
+      );
+    });
+
+    test('is empty when the output runs as fast as the editor', () {
+      final timelineMap = TransitionTimelineMap.fromClips([
+        clip('a'),
+        clip('b'),
+      ]);
+
+      expect(
+        keyed.divineKeyframeClockForExport(timelineMap: timelineMap),
+        isEmpty,
+      );
+    });
+
+    test('maps each edge of a transition to its editor time', () {
+      // The editor shows the 500 ms dissolve from 1.5 s to 2.5 s; the output
+      // plays it from 1.5 s to 2 s.
+      final timelineMap = TransitionTimelineMap.fromClips([
+        clip('a', transition: dissolve),
+        clip('b'),
+      ]);
+
+      expect(keyed.divineKeyframeClockForExport(timelineMap: timelineMap), [
+        pve.KeyframeClockPoint(output: ms * 1500, keyframe: ms * 1500),
+        pve.KeyframeClockPoint(output: ms * 2000, keyframe: ms * 2500),
+      ]);
     });
   });
 
