@@ -84,8 +84,11 @@ class PrefsCuratedListStore {
   }
 
   /// Decodes the existing list cache through the same guarded codec as saves.
-  List<CuratedList> loadLists() =>
-      _storedLists(fallback: const [], preserveDecoded: true);
+  List<CuratedList> loadLists() => _decodeStoredLists(
+    _prefs.getString(_listsKey),
+    fallback: const [],
+    preserveDecoded: true,
+  );
 
   /// Loads IDs and their readability together from one storage read.
   ///
