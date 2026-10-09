@@ -42,6 +42,22 @@ void main() {
 
         expect(proof.withDeviceAttestation('token').unattestedSources, isTrue);
       });
+
+      test('is cleared on a copy that keeps everything else', () {
+        const proof = NativeProofData(
+          videoHash: 'hash',
+          deviceAttestation: 'token',
+          unattestedSources: true,
+        );
+
+        final copy = proof.withUnattestedSources(unattested: false);
+
+        expect(copy.unattestedSources, isFalse);
+        expect(
+          copy.toJson(),
+          equals(proof.toJson()..remove('unattestedSources')),
+        );
+      });
     });
   });
 }

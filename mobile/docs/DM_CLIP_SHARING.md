@@ -62,9 +62,12 @@ sign without one.
   editor does not offer to retry signing then, since a retry cannot change it.
 - **Recordings signed late.** A recording whose capture signing failed, for
   example offline, keeps the hash the camera wrote
-  (`DivineVideoClip.recordingSha256`). It is signed as a capture the next time
-  it is sent or used in an edit, but only while the file still matches that
-  hash; nothing else is ever signed as a capture after the fact.
+  (`DivineVideoClip.recordingSha256`), and every clip edited from it carries
+  that hash in its sources (`C2paEditSource.recordingSha256`). It is signed as
+  a capture the next time it is sent or used in an edit, but only while the
+  file still matches that hash; nothing else is ever signed as a capture after
+  the fact. While such a recording is still unsigned, an edit of it is left
+  unsigned too, and the editor offers to retry signing.
 
 ## The C2PA check
 

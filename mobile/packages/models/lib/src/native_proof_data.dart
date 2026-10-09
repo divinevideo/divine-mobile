@@ -143,6 +143,23 @@ class NativeProofData {
     unattestedSources: unattestedSources,
   );
 
+  /// Copy reporting [unattested] as [unattestedSources].
+  NativeProofData withUnattestedSources({required bool unattested}) =>
+      NativeProofData(
+        videoHash: videoHash,
+        sensorDataCsv: sensorDataCsv,
+        pgpSignature: pgpSignature,
+        publicKey: publicKey,
+        deviceAttestation: deviceAttestation,
+        timestamp: timestamp,
+        c2paManifestId: c2paManifestId,
+        creatorBindingAssertionLabel: creatorBindingAssertionLabel,
+        cawgIdentityAssertionLabel: cawgIdentityAssertionLabel,
+        creatorBindingPayloadJson: creatorBindingPayloadJson,
+        verifiedIdentityBundleJson: verifiedIdentityBundleJson,
+        unattestedSources: unattested,
+      );
+
   /// Check if creator identity metadata was attached to the proof payload
   bool get hasCreatorIdentityMetadata =>
       creatorBindingAssertionLabel != null ||

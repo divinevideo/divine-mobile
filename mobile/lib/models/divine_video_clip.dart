@@ -257,7 +257,8 @@ class DivineVideoClip {
   ///
   /// Marks a recording whose capture signing may be retried later, for
   /// example after it failed offline. A file that no longer matches has been
-  /// changed since and is never signed as a capture.
+  /// changed since and is never signed as a capture. It is carried in
+  /// [signingSources], so clips edited from this one keep it.
   final String? recordingSha256;
 
   /// The files to name as this clip's sources when an edit of it is signed:
@@ -268,7 +269,9 @@ class DivineVideoClip {
   List<C2paEditSource>? get signingSources {
     if (derivedFrom case final sources?) return sources;
     final path = video?.file?.path;
-    return path == null ? null : [C2paEditSource(path: path)];
+    return path == null
+        ? null
+        : [C2paEditSource(path: path, recordingSha256: recordingSha256)];
   }
 
   /// The sources of the footage this clip's chroma key was applied to, or of

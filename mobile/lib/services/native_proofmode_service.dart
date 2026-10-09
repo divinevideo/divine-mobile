@@ -326,6 +326,11 @@ class NativeProofModeService {
   /// (see [signOwnRecordings]). When a clip's media cannot be named, such as
   /// stop-motion stills, the output is not C2PA-signed at all rather than
   /// signed with part of its history.
+  ///
+  /// An own recording that still could not be signed, for example offline,
+  /// leaves the output unsigned too, but not as footage without a camera
+  /// proof: signing again later can succeed, so the proof does not report
+  /// [NativeProofData.unattestedSources] and the editor keeps offering it.
   static Future<NativeProofData?> proofEdit(
     File output, {
     required List<DivineVideoClip> clips,
@@ -335,7 +340,7 @@ class NativeProofModeService {
     VoidCallback? onRecordingsSigned,
   }) async {
     final allClips = [...clips, ...layerClips];
-    await signOwnRecordings(allClips);
+    final recordingsLeftUnsigned = await signOwnRecordings(allClips);
     onRecordingsSigned?.call();
     final clipSources = allClips.map((clip) => clip.signingSources).toList();
     final sources = clipSources.contains(null)
@@ -344,46 +349,68 @@ class NativeProofModeService {
             for (final sources in clipSources) ...sources!,
             ...otherSources,
           }.toList();
-    return proofFile(
+    final proof = await proofFile(
       output,
       clips: clips,
       editorStateHistory: editorStateHistory,
       derivedFrom: sources,
     );
+    if (recordingsLeftUnsigned && (proof?.unattestedSources ?? false)) {
+      return proof!.withUnattestedSources(unattested: false);
+    }
+    return proof;
   }
 
   /// Signs the app's own recordings among [clips]' sources as camera
   /// captures when their signing at record time did not happen, for example
   /// because the device was offline.
   ///
-  /// Only a file that still hashes to its clip's
-  /// [DivineVideoClip.recordingSha256] qualifies: anything edited, imported
-  /// or received since is never signed as a capture.
-  static Future<void> signOwnRecordings(
-    Iterable<DivineVideoClip> clips,
-  ) async {
+  /// Only a source that still hashes to its
+  /// [C2paEditSource.recordingSha256] qualifies: anything edited, imported or
+  /// received since is never signed as a capture. Returns whether such a
+  /// recording is still unsigned afterwards. A failure on one recording is
+  /// logged and does not stop the others or the edit they are part of.
+  static Future<bool> signOwnRecordings(Iterable<DivineVideoClip> clips) async {
     C2paSigningService? signingService;
+    final checked = <String>{};
+    var leftUnsigned = false;
     for (final clip in clips) {
-      final recordingHash = clip.recordingSha256;
-      if (recordingHash == null) continue;
       for (final source in clip.signingSources ?? const <C2paEditSource>[]) {
-        if (source.kind != C2paSourceKind.video) continue;
-        final file = File(source.path);
-        if (!file.existsSync()) continue;
-        signingService ??=
-            c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
-        final manifest = await signingService.readManifest(source.path);
-        if (manifest?.activeManifest != null) continue;
-        final hash = await _sha256OfFile(source.path);
-        if (hash.toLowerCase() != recordingHash.toLowerCase()) continue;
-        Log.info(
-          '🔐 Signing recording ${clip.id} that was left unsigned',
-          name: 'NativeProofModeService',
-          category: LogCategory.video,
-        );
-        await proofFile(file);
+        final recordingHash = source.recordingSha256;
+        if (recordingHash == null || source.kind != C2paSourceKind.video) {
+          continue;
+        }
+        // Split halves and edits of one recording name the same file.
+        if (!checked.add(source.path)) continue;
+        try {
+          final file = File(source.path);
+          if (!file.existsSync()) continue;
+          signingService ??=
+              c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
+          final manifest = await signingService.readManifest(source.path);
+          if (manifest?.activeManifest != null) continue;
+          final hash = await generateSha256FileHash(source.path);
+          if (hash.toLowerCase() != recordingHash.toLowerCase()) continue;
+          Log.info(
+            '🔐 Signing recording ${clip.id} that was left unsigned',
+            name: 'NativeProofModeService',
+            category: LogCategory.video,
+          );
+          final proof = await proofFile(file);
+          if (proof?.c2paManifestId == null) leftUnsigned = true;
+        } on Exception catch (error, stackTrace) {
+          Log.warning(
+            'Could not sign recording "${source.path}" late: $error',
+            name: 'NativeProofModeService',
+            category: LogCategory.video,
+            error: error,
+            stackTrace: stackTrace,
+          );
+          leftUnsigned = true;
+        }
       }
     }
+    return leftUnsigned;
   }
 
   /// Generate proof for a media file using native ProofMode library

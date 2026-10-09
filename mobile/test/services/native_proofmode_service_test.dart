@@ -441,6 +441,36 @@ void main() {
         expect(c2paService.signVideoInPlaceCallCount, 1);
       });
 
+      test('signs a recording that a merged clip was made from', () async {
+        final merged = clipAt('${directory.path}/merged.mp4').copyWith(
+          derivedFrom: [
+            C2paEditSource(
+              path: recording.path,
+              recordingSha256: recordingHash,
+            ),
+          ],
+        );
+
+        await NativeProofModeService.signOwnRecordings([merged]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+      });
+
+      test('keeps an edit retryable while its recording is unsigned', () async {
+        c2paService.editFailure = C2paSigningFailureReason.sourceUnattested;
+
+        final proofData = await NativeProofModeService.proofEdit(
+          output,
+          clips: [clipAt(recording.path, recordingSha256: recordingHash)],
+        );
+
+        // Signing the recording failed, as it does offline, so the edit is
+        // unsigned for now but not footage without a camera proof.
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+        expect(proofData?.c2paManifestId, isNull);
+        expect(proofData?.unattestedSources, isFalse);
+      });
+
       test('leaves a recording that changed since alone', () async {
         await NativeProofModeService.signOwnRecordings([
           clipAt(recording.path, recordingSha256: 'f' * 64),

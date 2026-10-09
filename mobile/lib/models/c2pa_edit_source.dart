@@ -22,7 +22,11 @@ enum C2paSourceKind {
 @immutable
 class C2paEditSource {
   /// Creates a [C2paEditSource] for the file at [path].
-  const C2paEditSource({required this.path, this.kind = C2paSourceKind.video});
+  const C2paEditSource({
+    required this.path,
+    this.kind = C2paSourceKind.video,
+    this.recordingSha256,
+  });
 
   /// Restores a source, resolving [json]'s path against [documentsPath] the
   /// way clip file paths are resolved.
@@ -46,6 +50,7 @@ class C2paEditSource {
       kind:
           C2paSourceKind.values.asNameMap()[json['kind']] ??
           C2paSourceKind.video,
+      recordingSha256: json['recordingSha256'] as String?,
     );
   }
 
@@ -55,6 +60,14 @@ class C2paEditSource {
   /// What the source is.
   final C2paSourceKind kind;
 
+  /// SHA-256 of [path] as the camera wrote it, when the source is one of this
+  /// app's own recordings whose capture signing may still be retried.
+  ///
+  /// Travels with the source into every clip edited from it, so a merge or a
+  /// freeze frame made offline can still have its recordings signed later.
+  /// See `DivineVideoClip.recordingSha256`.
+  final String? recordingSha256;
+
   /// Serializes to JSON, storing only the basename like every clip path.
   ///
   /// The key is `path` so the clip library counts the file as referenced and
@@ -62,14 +75,18 @@ class C2paEditSource {
   Map<String, dynamic> toJson() => {
     'path': p.basename(path),
     'kind': kind.name,
+    'recordingSha256': ?recordingSha256,
   };
 
   @override
   bool operator ==(Object other) =>
-      other is C2paEditSource && other.path == path && other.kind == kind;
+      other is C2paEditSource &&
+      other.path == path &&
+      other.kind == kind &&
+      other.recordingSha256 == recordingSha256;
 
   @override
-  int get hashCode => Object.hash(path, kind);
+  int get hashCode => Object.hash(path, kind, recordingSha256);
 
   @override
   String toString() => 'C2paEditSource(${kind.name}: $path)';

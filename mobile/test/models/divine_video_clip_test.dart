@@ -735,8 +735,12 @@ void main() {
     );
 
     test('round-trips its sources and recording hash through JSON', () {
+      const unsignedRecording = C2paEditSource(
+        path: '/videos/recording.mp4',
+        recordingSha256: 'def456',
+      );
       final edited = clip('/videos/clip.mp4').copyWith(
-        derivedFrom: const [recording, backdrop],
+        derivedFrom: const [unsignedRecording, backdrop],
         recordingSha256: 'abc123',
       );
 
@@ -744,13 +748,13 @@ void main() {
       // Stored like every clip path, under the key the library counts as a
       // reference, so the files are not reclaimed while the edit needs them.
       expect(json['derivedFrom'], [
-        {'path': 'recording.mp4', 'kind': 'video'},
+        {'path': 'recording.mp4', 'kind': 'video', 'recordingSha256': 'def456'},
         {'path': 'beach.jpg', 'kind': 'image'},
       ]);
 
       final restored = DivineVideoClip.fromJson(json, '/videos');
       expect(restored.derivedFrom, const [
-        recording,
+        unsignedRecording,
         C2paEditSource(path: '/videos/beach.jpg', kind: C2paSourceKind.image),
       ]);
       expect(restored.recordingSha256, 'abc123');
@@ -759,6 +763,19 @@ void main() {
     test('signs an unedited clip against its own file', () {
       expect(clip('/videos/clip.mp4').signingSources, const [
         C2paEditSource(path: '/videos/clip.mp4'),
+      ]);
+    });
+
+    test('passes its recording hash on to clips edited from it', () {
+      final unsigned = clip(
+        '/videos/recording.mp4',
+      ).copyWith(recordingSha256: 'abc123');
+
+      expect(unsigned.signingSources, const [
+        C2paEditSource(
+          path: '/videos/recording.mp4',
+          recordingSha256: 'abc123',
+        ),
       ]);
     });
 
