@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_reply_parent_provider.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -54,7 +55,14 @@ class VideoReplyParentLink extends ConsumerWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () {
           onInteracted?.call();
-          context.pushWithVideoPause(VideoDetailScreen.pathForId(routeId));
+          runDetached(
+            context.pushWithVideoPause<void>(
+              VideoDetailScreen.pathForId(routeId),
+            ),
+            'open reply parent video',
+            logName: 'VideoReplyParentLink',
+            category: LogCategory.video,
+          );
         },
         child: variant == VideoReplyParentLinkVariant.overlay
             ? _OverlayReplyLink(label: label)
