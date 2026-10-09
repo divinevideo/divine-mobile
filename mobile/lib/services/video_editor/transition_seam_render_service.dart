@@ -451,7 +451,7 @@ class TransitionSeamRenderService {
   /// v7: pro_video_editor 2.14.1–2.15.0 fix an HDR color cast on iOS/macOS and
   /// a dip transition under a letterbox, so an earlier seam can carry either.
   /// v8: pro_video_editor 2.32.0 plays each clip's volume and equalizer in
-  /// an overlap blend, which earlier seams played at the clips' own level.
+  /// an overlap blend, where earlier seams played both clips as recorded.
   static const _seamCacheVersion = 8;
 
   String _key(

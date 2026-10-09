@@ -241,8 +241,9 @@ List<AudioTrack> buildRenderAudioTracks({
 ///
 /// Each track takes its fade and its equalizer from the [audioEvents] entry
 /// with its id. The render [AudioTrack] cannot carry either, so the editor's
-/// timeline events are the source. The fade out ends where the clamped window does, so a track
-/// cut short by the end of the video still fades out rather than stopping.
+/// timeline events are the source. The fade out ends where the clamped window
+/// does, so a track cut short by the end of the video still fades out rather
+/// than stopping.
 Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioTrack> customTracks, {
   required String logName,

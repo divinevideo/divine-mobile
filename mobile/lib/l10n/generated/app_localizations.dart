@@ -16559,13 +16559,13 @@ abstract class AppLocalizations {
   /// **'{gain} dB'**
   String videoEditorEqualizerGainValue(String gain);
 
-  /// The frequency of an equalizer band under 1000 hertz, e.g. "250 Hz". Shown under the band's point on the equalizer curve and read out with it.
+  /// The frequency of an equalizer band under 1000 hertz, e.g. "250 Hz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
   ///
   /// In en, this message translates to:
   /// **'{frequency} Hz'**
   String videoEditorEqualizerHertz(String frequency);
 
-  /// The frequency of an equalizer band in kilohertz, e.g. "4 kHz". Shown under the band's point on the equalizer curve and read out with it.
+  /// The frequency of an equalizer band in kilohertz, e.g. "4 kHz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
   ///
   /// In en, this message translates to:
   /// **'{frequency} kHz'**

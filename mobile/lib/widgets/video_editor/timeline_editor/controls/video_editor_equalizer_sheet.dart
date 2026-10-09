@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for raising or lowering ten octave bands of the
-// ABOUTME: selected clip or sound on a curve; pops the EqualizerSettings or null.
+// ABOUTME: selected clip or sound on a curve; pops the settings or null.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
