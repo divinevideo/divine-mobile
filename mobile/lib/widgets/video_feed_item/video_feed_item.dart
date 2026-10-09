@@ -167,6 +167,19 @@ class VideoOverlayActions extends ConsumerWidget {
     final hasTextContent =
         descriptionText.isNotEmpty || (titleText?.isNotEmpty ?? false);
 
+    // Anything rendered below the author row. Without it, the row's bottom
+    // gap (kept so the follow target stays hit-testable) would read as empty
+    // space, so the block drops by that gap instead.
+    final hasContentBelowAuthorRow =
+        hasTextContent ||
+        (video != null &&
+            (video.hasCollaborators ||
+                video.isVideoReply ||
+                video.hasAudioReference ||
+                (showListAttribution &&
+                    listSources != null &&
+                    listSources!.isNotEmpty)));
+
     // Shared by the title and the description, and on the description it is
     // attached twice: once to the semantics node that carries the label, once
     // to the detector that takes the real pointer.
@@ -290,7 +303,9 @@ class VideoOverlayActions extends ConsumerWidget {
           ),
         // Author info and video description overlay at bottom left.
         Positioned(
-          bottom: bottomOffset,
+          bottom: hasContentBelowAuthorRow
+              ? bottomOffset
+              : bottomOffset - _authorRowBottomGap,
           left: 16,
           right: 68, // Leave space for action buttons
           child: AnimatedOpacity(
