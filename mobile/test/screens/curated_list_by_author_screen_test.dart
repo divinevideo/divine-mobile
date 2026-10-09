@@ -78,6 +78,8 @@ void main() {
         id: 'my-vines',
         name: 'Warm Vines',
         pubkey: _authorPubkey,
+        // Relay discovery supplies the event ID used by reporting.
+        nostrEventId: 'e' * 64,
         videoEventIds: const [],
         createdAt: DateTime.utc(2026),
         updatedAt: DateTime.utc(2026),
