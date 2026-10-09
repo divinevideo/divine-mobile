@@ -7649,6 +7649,23 @@ class DmRepository {
             rumorId,
             ownerPubkey: _ownerPubkey,
           );
+          // A pending retraction stays in the thread, so the refresh at
+          // delete time could still pick this message. It has only now left,
+          // which makes this the first refresh able to move past it.
+          try {
+            await _refreshConversationPreview(conversationId);
+          } on Object catch (e, stackTrace) {
+            // The durable outcome is already sent and the sweep has dropped
+            // the row. A denormalized preview failure must not relabel it
+            // unconfirmed.
+            Log.error(
+              'Failed to refresh conversation preview after confirmed '
+              'deletion of $rumorId: $e',
+              category: LogCategory.system,
+              error: e,
+              stackTrace: stackTrace,
+            );
+          }
           Log.info(
             'Deleted message $rumorId via wrapped kind 5',
             category: LogCategory.system,
@@ -7946,8 +7963,9 @@ class DmRepository {
   /// Refreshes the denormalized preview columns of [conversationId] from its
   /// actual messages (called after a deletion and after a duplicate merge).
   ///
-  /// If the last shown message was deleted, the preview falls back to the
-  /// next most recent non-deleted message.
+  /// The preview becomes the newest message still shown in the thread. The
+  /// sender's own retraction stays there until it is confirmed, so a delete
+  /// for everyone moves the preview only when this runs after confirmation.
   ///
   /// This is a preview-only operation: it forwards the conversation's current
   /// `isRead` back through the upsert so read state is never changed here.
