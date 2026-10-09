@@ -282,6 +282,43 @@ void main() {
           );
         },
       );
+
+      test(
+        'keeps the lists after a row it cannot decode instead of deleting them',
+        () async {
+          final original = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          await original.createList(name: 'Kept');
+          await original.createList(name: 'Later');
+          addTearDown(original.dispose);
+          final rows = jsonDecode(
+            prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List<dynamic>;
+          // A map from another build or schema that the model cannot parse.
+          final undecodable = {
+            ...(rows.first as Map<String, dynamic>),
+            'id': 'undecodable',
+            'createdAt': 'not a date',
+          };
+          final raw = jsonEncode([rows.first, undecodable, ...rows.skip(1)]);
+          await prefs.setString(CuratedListService.listsStorageKey, raw);
+          final service = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          addTearDown(service.dispose);
+          clearInteractions(mockNostr);
+
+          expect(await service.createList(name: 'Added'), isNull);
+          expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          verifyNever(() => mockNostr.publishEvent(any()));
+        },
+      );
     });
 
     group('Load from Preferences', () {
