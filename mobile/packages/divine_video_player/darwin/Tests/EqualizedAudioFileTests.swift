@@ -13,6 +13,7 @@ enum EqualizedAudioFileTests {
         await onlyTheStretchAskedForIsRendered()
         await aStretchPastTheEndStopsWhereTheSourceDoes()
         await aCancelledRenderRendersNothing()
+        await aRenderCancelledPartWayStopsReading()
         copiesListsTheCopiesAndNothingElse()
         print("Equalized audio file tests passed")
     }
@@ -107,6 +108,33 @@ enum EqualizedAudioFileTests {
         let copy = await render.value
         copy.map { try? FileManager.default.removeItem(at: $0.url) }
         precondition(copy == nil)
+    }
+
+    /// A render cancelled part-way, as a superseded one is when the curve
+    /// settles again, stops reading there instead of rendering the rest of
+    /// its stretch and then dropping it. Timed against an uncancelled render
+    /// of the same stretch, so the bound holds on a slower machine.
+    static func aRenderCancelledPartWayStopsReading() async {
+        let source = writeTone(amplitude: 0.1, channels: 2, seconds: 60)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let clock = ContinuousClock()
+        let full = await clock.measure {
+            let copy = await EqualizedAudioFile.render(
+                source: source, equalizer: bassBoost(6), from: 0, to: 60)
+            precondition(copy != nil, "no copy rendered")
+            copy.map { try? FileManager.default.removeItem(at: $0.url) }
+        }
+        let render = Task {
+            await EqualizedAudioFile.render(source: source, equalizer: bassBoost(6), from: 0, to: 60)
+        }
+        try? await Task.sleep(for: full / 20)
+        let cancelled = clock.now
+        render.cancel()
+        let copy = await render.value
+        let afterCancel = clock.now - cancelled
+        copy.map { try? FileManager.default.removeItem(at: $0.url) }
+        precondition(copy == nil)
+        precondition(afterCancel < full / 3, "\(afterCancel) after cancel; full render \(full)")
     }
 
     /// The copies and downloads are listed by their name; other files in the
