@@ -40,7 +40,9 @@ import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bar.dart';
 import 'package:openvine/widgets/profile/profile_tab_bloc_lifetime.dart';
 import 'package:openvine/widgets/profile/profile_tab_kind.dart';
+import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
+import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 
 /// Profile grid view showing header, stats, action buttons, and tabbed content.
 class ProfileGridView extends ConsumerStatefulWidget {
@@ -255,6 +257,11 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   double _safeAreaTop = 0;
   double _safeAreaBottom = 0;
 
+  /// The active tab's layout sizes, measured after layout by
+  /// [_scheduleScrollMeasurement] and read by [_outerScrollLimit].
+  _ProfileScrollMeasurements? _scrollMeasurements;
+  bool _scrollMeasurementScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -292,17 +299,44 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     _syncCurrentTabIfNeeded();
 
     if (!tabController.indexIsChanging) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _settleOuterScrollToLimit(),
-      );
+      _scrollMeasurements = null;
+      _scheduleScrollMeasurement();
     }
   }
 
   /// How far the header may scroll for the active tab, so a tab with only a
   /// row or two cannot be pushed up into an empty screen.
+  ///
+  /// The scroll physics call this mid-layout, so it only does arithmetic on
+  /// [_scrollMeasurements]; reading a render box here would trip Flutter's
+  /// layout-scope assertion.
   double? _outerScrollLimit(double viewportExtent) {
-    final tabContext =
-        _tabContentKeys[_tabKinds[tabController.index]]?.currentContext;
+    final measurements = _scrollMeasurements;
+    if (measurements == null) return null;
+    return profileOuterScrollExtentFor(
+      header: measurements.header,
+      tabBar: measurements.tabBar,
+      safeAreaTop: _safeAreaTop,
+      content: math.max(measurements.content, measurements.minimumContent),
+      viewport: viewportExtent,
+    );
+  }
+
+  /// Measures the inputs of [_outerScrollLimit] once the current frame has
+  /// been laid out, then brings the header down if the active tab shrank.
+  void _scheduleScrollMeasurement() {
+    if (_scrollMeasurementScheduled) return;
+    _scrollMeasurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollMeasurementScheduled = false;
+      if (!mounted) return;
+      _scrollMeasurements = _measureScrollInputs();
+      _settleOuterScrollToLimit();
+    });
+  }
+
+  _ProfileScrollMeasurements? _measureScrollInputs() {
+    final tabContext = _activeTabContext;
     final content = profileTabContentExtent(tabContext);
     final tabBox = tabContext?.findRenderObject();
     final header = _measuredHeight(_headerSliverKey);
@@ -314,28 +348,54 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         tabBar == null) {
       return null;
     }
-    final minimumContent = profileTabMinimumContentExtent(
-      tabWidth: tabBox.size.width,
-      bottomSafeArea: _safeAreaBottom,
-    );
-    return profileOuterScrollExtentFor(
+    return (
       header: header,
       tabBar: tabBar,
-      safeAreaTop: _safeAreaTop,
-      content: math.max(content, minimumContent),
-      viewport: viewportExtent,
+      content: content,
+      minimumContent: profileTabMinimumContentExtent(
+        tabWidth: tabBox.size.width,
+        bottomSafeArea: _safeAreaBottom,
+      ),
     );
   }
+
+  BuildContext? get _activeTabContext =>
+      _tabContentKeys[_tabKinds[tabController.index]]?.currentContext;
 
   double? _measuredHeight(GlobalKey key) {
     final box = key.currentContext?.findRenderObject();
     return box is RenderBox && box.hasSize ? box.size.height : null;
   }
 
-  bool _onScrollEnd(ScrollEndNotification _) {
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _releaseInnerOverscroll(),
-    );
+  /// Whether the active tab is still showing its loading placeholder, whose
+  /// height says nothing about the content on its way.
+  bool _activeTabIsLoading() {
+    final tabContext = _activeTabContext;
+    if (tabContext is! Element) return false;
+    var loading = false;
+    void visit(Element element) {
+      if (loading) return;
+      final widget = element.widget;
+      if (widget is ProfileTabLoadingState ||
+          widget is ProfileVideosGridSkeleton) {
+        loading = true;
+        return;
+      }
+      element.visitChildren(visit);
+    }
+
+    tabContext.visitChildren(visit);
+    return loading;
+  }
+
+  bool _onTabScrollNotification(Notification notification) {
+    if (notification is ScrollEndNotification) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _releaseInnerOverscroll(),
+      );
+    } else if (notification is ScrollMetricsNotification) {
+      _scheduleScrollMeasurement();
+    }
     return false;
   }
 
@@ -354,14 +414,18 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     }
   }
 
-  /// Brings the header back down when the newly selected tab is shorter
-  /// than the offset the previous tab was scrolled to.
+  /// Brings the header back down when the active tab became shorter than
+  /// the offset the header is scrolled to: after a switch from a longer tab,
+  /// or when a tab's content shrinks. A tab that is still loading is left
+  /// alone until its content arrives.
   void _settleOuterScrollToLimit() {
     final controller = widget.scrollController;
-    if (!mounted || controller == null || !controller.hasClients) return;
+    if (controller == null || !controller.hasClients) return;
     final position = controller.position;
+    if (position.isScrollingNotifier.value) return;
     final limit = _outerScrollLimit(position.viewportDimension);
     if (limit == null || position.pixels <= limit) return;
+    if (_activeTabIsLoading()) return;
     final duration = kThemeAnimationDuration.autoReduceMotion(context);
     if (duration == Duration.zero) {
       controller.jumpTo(limit);
@@ -652,6 +716,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   Widget build(BuildContext context) {
     _safeAreaTop = MediaQuery.paddingOf(context).top;
     _safeAreaBottom = MediaQuery.viewPaddingOf(context).bottom;
+    _scheduleScrollMeasurement();
     final followRepository = ref.watch(followRepositoryProvider);
     final likesRepository = ref.watch(likesRepositoryProvider);
     final repostsRepository = ref.watch(repostsRepositoryProvider);
@@ -848,8 +913,8 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         color: context.vineColors.isLight
             ? context.vineColors.surface
             : context.vineColors.surfaceContainerHigh,
-        child: NotificationListener<ScrollEndNotification>(
-          onNotification: _onScrollEnd,
+        child: NotificationListener<Notification>(
+          onNotification: _onTabScrollNotification,
           child: TabBarView(
             controller: tabController,
             children: [
@@ -961,3 +1026,11 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     return content;
   }
 }
+
+/// Layout sizes the profile's outer scroll limit is computed from.
+typedef _ProfileScrollMeasurements = ({
+  double header,
+  double tabBar,
+  double content,
+  double minimumContent,
+});

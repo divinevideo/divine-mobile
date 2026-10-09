@@ -1262,10 +1262,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // The drag stops short of the limit, so the fling has to cover the rest.
       await tester.fling(
         find.byType(NestedScrollView),
-        const Offset(0, -300),
-        4000,
+        const Offset(0, -60),
+        1500,
       );
       await tester.pumpAndSettle();
 
@@ -1359,6 +1360,101 @@ void main() {
         scrollController.offset,
         equals(scrollController.position.maxScrollExtent),
       );
+    });
+
+    testWidgets('brings the header down on a switch to a shorter tab', (
+      tester,
+    ) async {
+      when(
+        likesRepository.getOrderedLikedEventIds,
+      ).thenAnswer((_) async => const <String>[]);
+      when(
+        likesRepository.syncUserReactions,
+      ).thenAnswer((_) async => const LikesSyncResult.empty());
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      final collapsedOffset = scrollController.offset;
+      expect(collapsedOffset, greaterThan(0));
+
+      await tester.tap(find.bySemanticsIdentifier(SemanticIds.profileLikedTab));
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, lessThan(collapsedOffset));
+    });
+
+    testWidgets('waits for a loading tab before bringing the header down', (
+      tester,
+    ) async {
+      final likes = Completer<LikesSyncResult>();
+      addTearDown(() {
+        if (!likes.isCompleted) likes.complete(const LikesSyncResult.empty());
+      });
+      when(
+        likesRepository.getOrderedLikedEventIds,
+      ).thenAnswer((_) async => const <String>[]);
+      when(likesRepository.syncUserReactions).thenAnswer((_) => likes.future);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      final collapsedOffset = scrollController.offset;
+
+      await tester.tap(find.bySemanticsIdentifier(SemanticIds.profileLikedTab));
+      // The loading indicator never settles, so pump past the tab switch.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(scrollController.offset, equals(collapsedOffset));
+
+      likes.complete(const LikesSyncResult.empty());
+      await tester.pumpAndSettle();
+      expect(scrollController.offset, lessThan(collapsedOffset));
+    });
+
+    testWidgets('flings back down from under a status bar without errors', (
+      tester,
+    ) async {
+      const statusBar = 47.0;
+      final topInset = FakeViewPadding(
+        top: statusBar * tester.view.devicePixelRatio,
+      );
+      tester.view
+        ..padding = topInset
+        ..viewPadding = topInset;
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(9),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+
+      await tester.fling(find.byType(TabBar), const Offset(0, 200), 3000);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 }
