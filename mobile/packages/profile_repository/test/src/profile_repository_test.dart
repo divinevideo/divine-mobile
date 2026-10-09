@@ -3610,6 +3610,8 @@ void main() {
           jsonEncode({
             'display_name': 'Alice',
             'picture': 'https://example.com/fresh.png',
+            'about': 'Fresh bio',
+            'banner': 'https://example.com/fresh-banner.png',
           }),
         );
 
@@ -3622,6 +3624,8 @@ void main() {
           (_) async => UserProfile(
             pubkey: searchPubkey,
             picture: 'https://example.com/stale.png',
+            about: 'Stale bio',
+            banner: 'https://example.com/stale-banner.png',
             rawData: const {},
             createdAt: DateTime(2026),
             eventId: searchEventId,
@@ -3634,9 +3638,14 @@ void main() {
         // Assert - search result picture preserved, not overwritten
         expect(result, hasLength(1));
         expect(result.first.picture, equals('https://example.com/fresh.png'));
+        expect(result.first.about, equals('Fresh bio'));
+        expect(
+          result.first.banner,
+          equals('https://example.com/fresh-banner.png'),
+        );
       });
 
-      test('enriches multiple null fields from cache', () async {
+      test('enriches missing and empty fields from cache', () async {
         // Arrange - search result has minimal data
         final mockSearchEvent = MockEvent();
         const searchPubkey =
@@ -3652,7 +3661,13 @@ void main() {
         when(() => mockSearchEvent.id).thenReturn(searchEventId);
         when(
           () => mockSearchEvent.content,
-        ).thenReturn(jsonEncode({'display_name': 'Alice'}));
+        ).thenReturn(
+          jsonEncode({
+            'display_name': 'Alice',
+            'about': '',
+            'picture': '',
+          }),
+        );
 
         when(
           () => mockNostrClient.queryUsers('alice', limit: 200),
@@ -3675,7 +3690,7 @@ void main() {
         // Act
         final result = await profileRepository.searchUsers(query: 'alice');
 
-        // Assert - null fields enriched, non-null preserved
+        // Empty search fields must not hide a richer cached profile.
         expect(result, hasLength(1));
         expect(result.first.displayName, equals('Alice'));
         expect(result.first.about, equals('Bio from cache'));
@@ -4610,6 +4625,232 @@ void main() {
         },
       );
 
+      for (final serverRevision in [
+        DateTime(2025),
+        DateTime(2026),
+        DateTime(2027),
+        null,
+      ]) {
+        test(
+          'progressive search uses actual profile revision $serverRevision',
+          () async {
+            final cached = UserProfile(
+              pubkey: pkCachedVine,
+              displayName: 'Sam From Contacts',
+              createdAt: DateTime(2026),
+              eventId: 'a' * 64,
+              rawData: const {},
+            );
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => [cached]);
+            stubRestResults([
+              ProfileSearchResult(
+                pubkey: pkCachedVine,
+                displayName: 'Renamed Account',
+                createdAt: serverRevision,
+              ),
+            ]);
+            final result = await repoWithFunnelcake
+                .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+                .last;
+            if (serverRevision != null &&
+                serverRevision.isBefore(cached.createdAt)) {
+              expect(result.profiles.single.displayName, 'Sam From Contacts');
+            } else {
+              expect(result.profiles, isEmpty);
+            }
+          },
+        );
+      }
+
+      test(
+        'progressive search keeps server follower and video counts on a newer '
+        'cached revision',
+        () async {
+          final cached = UserProfile(
+            pubkey: pkCachedVine,
+            displayName: 'Sam From Contacts',
+            createdAt: DateTime(2026),
+            eventId: 'a' * 64,
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached]);
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pk1Video,
+              displayName: 'Sam Newcomer',
+              createdAt: DateTime(2026),
+              followerCount: 10,
+              videoCount: 1,
+            ),
+            ProfileSearchResult(
+              pubkey: pkCachedVine,
+              displayName: 'Sam Old Name',
+              createdAt: DateTime(2025),
+              followerCount: 500,
+              videoCount: 40,
+            ),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+              .last;
+
+          final kept = result.profiles.first;
+          expect(kept.pubkey, pkCachedVine);
+          expect(kept.displayName, 'Sam From Contacts');
+          expect(kept.restFollowerCount, 500);
+          expect(kept.restVideoCount, 40);
+        },
+      );
+
+      test(
+        'progressive search preserves cleared server media fields',
+        () async {
+          final cached = UserProfile(
+            pubkey: pkCachedVine,
+            name: 'sam',
+            picture: 'https://example.com/old-avatar.jpg',
+            banner: 'https://example.com/old-banner.jpg',
+            createdAt: DateTime(2025),
+            eventId: 'a' * 64,
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached]);
+          when(
+            () => mockUserProfilesDao.getProfile(pkCachedVine),
+          ).thenAnswer((_) async => cached);
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pkCachedVine,
+              name: 'sam',
+              createdAt: DateTime(2026),
+            ),
+          ]);
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+              .last;
+          expect(result.profiles.single.picture, isNull);
+          expect(result.profiles.single.banner, isNull);
+        },
+      );
+
+      for (final eventId in [
+        '',
+        'rest-$pkCachedVine',
+        'rest-bulk-$pkCachedVine',
+        'classic-viner-seed-$pkCachedVine',
+        'invalid',
+        'z' * 64,
+      ]) {
+        test(
+          'progressive search ignores noncanonical cached event ID ($eventId)',
+          () async {
+            final cached = UserProfile(
+              pubkey: pkCachedVine,
+              displayName: 'Sam From Contacts',
+              createdAt: DateTime(2027),
+              eventId: eventId,
+              rawData: const {},
+            );
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => [cached]);
+            stubRestResults([
+              ProfileSearchResult(
+                pubkey: pkCachedVine,
+                displayName: 'Renamed Account',
+                createdAt: DateTime(2026),
+              ),
+            ]);
+            final result = await repoWithFunnelcake
+                .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+                .last;
+            expect(result.profiles, isEmpty);
+          },
+        );
+      }
+
+      for (final clearedName in <String?>[null, '']) {
+        test(
+          'progressive search does not restore cleared server names '
+          '($clearedName) from cache',
+          () async {
+            final cached = UserProfile(
+              pubkey: pkCachedVine,
+              name: 'sam',
+              displayName: 'Sam From Contacts',
+              createdAt: DateTime(2025),
+              eventId: 'a' * 64,
+              rawData: const {},
+            );
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => [cached]);
+            when(
+              () => mockUserProfilesDao.getProfile(pkCachedVine),
+            ).thenAnswer((_) async => cached);
+            stubRestResults([
+              ProfileSearchResult(
+                pubkey: pkCachedVine,
+                name: clearedName,
+                displayName: clearedName,
+                nip05: clearedName,
+                createdAt: DateTime(2026),
+              ),
+            ]);
+            final result = await repoWithFunnelcake
+                .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+                .last;
+            expect(result.profiles, isEmpty);
+          },
+        );
+      }
+
+      test('progressive search keeps identity matches and drops bio-only '
+          'server hits', () async {
+        final cached = UserProfile(
+          pubkey: pkCachedVine,
+          displayName: 'Sam From Contacts',
+          createdAt: DateTime(2026),
+          eventId: 'cached',
+          rawData: const {},
+        );
+        when(
+          () => mockUserProfilesDao.getAllProfiles(),
+        ).thenAnswer((_) async => [cached]);
+        stubRestResults([
+          ProfileSearchResult(
+            pubkey: pk18Videos,
+            displayName: 'Unrelated Account',
+            about: 'A friend of Sam',
+            createdAt: DateTime(2026),
+            followerCount: 1000,
+          ),
+          ProfileSearchResult(
+            pubkey: pk1Video,
+            displayName: 'Sam Newcomer',
+            createdAt: DateTime(2026),
+            followerCount: 1,
+          ),
+        ]);
+
+        final emissions = await repoWithFunnelcake
+            .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+            .toList();
+
+        expect(emissions.first.profiles.map((p) => p.pubkey), [pkCachedVine]);
+        expect(emissions.last.profiles.map((p) => p.pubkey), [
+          pk1Video,
+          pkCachedVine,
+        ]);
+      });
+
       test(
         'reports REST pagination independently of merged profile count',
         () async {
@@ -5455,9 +5696,9 @@ void main() {
               ),
             ).thenAnswer(
               (_) async => [
-                restResult(pubA, 'Zoe'),
-                restResult(pubB, 'Liz'),
-                restResult(pubC, 'Maya'),
+                restResult(pubA, 'Liz Zoe'),
+                restResult(pubB, 'Liz Bea'),
+                restResult(pubC, 'Liz Maya'),
               ],
             );
 
@@ -5478,7 +5719,7 @@ void main() {
 
             expect(
               result.profiles.map((p) => p.displayName).toList(),
-              equals(['Liz', 'Zoe', 'Maya']),
+              equals(['Liz Bea', 'Liz Zoe', 'Liz Maya']),
             );
           },
         );
@@ -5496,10 +5737,10 @@ void main() {
               ),
             ).thenAnswer(
               (_) async => [
-                restResult(pubA, 'A'), // boosted
-                restResult(pubB, 'B'), // not boosted
-                restResult(pubC, 'C'), // boosted
-                restResult('d' * 64, 'D'), // not boosted
+                restResult(pubA, 'Test A'), // boosted
+                restResult(pubB, 'Test B'), // not boosted
+                restResult(pubC, 'Test C'), // boosted
+                restResult('d' * 64, 'Test D'), // not boosted
               ],
             );
 
@@ -5520,7 +5761,7 @@ void main() {
 
             expect(
               result.profiles.map((p) => p.displayName).toList(),
-              equals(['A', 'C', 'B', 'D']),
+              equals(['Test A', 'Test C', 'Test B', 'Test D']),
             );
           },
         );
@@ -5535,7 +5776,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5555,7 +5799,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
 
@@ -5569,7 +5813,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5585,7 +5832,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
 
@@ -5599,7 +5846,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5619,7 +5869,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
       });

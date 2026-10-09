@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for the search-result user tile's secondary line.
-// ABOUTME: Pins video-count disambiguation over per-row NIP-05 verification.
+// ABOUTME: Widget tests for account details shown in search-result user tiles.
+// ABOUTME: Ensures handles, counts, and bios help distinguish shared names.
 
 import 'package:count_formatter/count_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +19,7 @@ void main() {
 
     UserProfile profileWith({
       String nip05 = '_@lauren.divine.video',
+      String? about,
       Map<String, dynamic> rawData = const {},
     }) {
       return UserProfile(
@@ -26,6 +27,7 @@ void main() {
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         name: 'Lauren Test',
         nip05: nip05,
+        about: about,
         rawData: rawData,
         createdAt: DateTime(2024),
         eventId: 'event1',
@@ -54,18 +56,44 @@ void main() {
       );
     }
 
-    testWidgets('shows the video count as the secondary line', (tester) async {
+    testWidgets('shows the handle and video count together', (tester) async {
       await tester.pumpWidget(
         buildSubject(
           profileWith(rawData: const {'video_count': 18}),
           verificationStatus: Nip05VerificationStatus.verified,
+          relationship: FollowRelationship.youFollow,
         ),
       );
+      await tester.pump();
 
-      // For archive-imported search rows, the REST count distinguishes
-      // same-named creators better than the duplicated claimed NIP-05.
-      expect(find.text(l10n.searchUserVideoCount(18, '18')), findsOneWidget);
-      expect(find.textContaining('_@lauren'), findsNothing);
+      expect(
+        find.text(
+          '${l10n.socialProofYouFollow} · @lauren · '
+          '${l10n.searchUserVideoCount(18, '18')}',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides a failed NIP-05 claim even when videos are present', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(
+            nip05: 'claimed@example.com',
+            rawData: const {'video_count': 18},
+          ),
+          verificationStatus: Nip05VerificationStatus.failed,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.textContaining('claimed@example.com'), findsNothing);
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('singularizes one video', (tester) async {
@@ -73,7 +101,10 @@ void main() {
         buildSubject(profileWith(rawData: const {'video_count': 1})),
       );
 
-      expect(find.text(l10n.searchUserVideoCount(1, '1')), findsOneWidget);
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(1, '1')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('compacts large video counts', (tester) async {
@@ -83,7 +114,7 @@ void main() {
 
       final formattedCount = CountFormatter.formatCompact(12483, locale: 'en');
       expect(
-        find.text(l10n.searchUserVideoCount(12483, formattedCount)),
+        find.textContaining(l10n.searchUserVideoCount(12483, formattedCount)),
         findsOneWidget,
       );
       expect(find.textContaining('12483'), findsNothing);
@@ -162,6 +193,19 @@ void main() {
       // An npub here would be noise, not disambiguation.
       expect(find.text('Lauren Test'), findsOneWidget);
       expect(find.textContaining('npub'), findsNothing);
+    });
+
+    testWidgets('shows a compact bio below account details', (tester) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(
+            about: 'Maker of tiny videos\nfrom the garden',
+            rawData: const {'video_count': 4},
+          ),
+        ),
+      );
+
+      expect(find.text('Maker of tiny videos from the garden'), findsOneWidget);
     });
   });
 }

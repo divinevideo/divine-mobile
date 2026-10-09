@@ -300,7 +300,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
       // applied) against pagination state. The new page is the slice
       // that the repository computed for offset > 0.
       final unfilteredPageCount = result.profiles.length;
-      final newPage = _visibleProfiles(result.profiles);
+      // The first page also merges local cache and NIP-50 hits, which the REST
+      // pages can return again further down.
+      final shownPubkeys = {
+        for (final profile in state.results) profile.pubkey,
+      };
+      final newPage = _visibleProfiles(
+        result.profiles,
+      ).where((profile) => !shownPubkeys.contains(profile.pubkey));
       final allResults = [...state.results, ...newPage];
 
       emit(
