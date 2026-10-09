@@ -25,13 +25,6 @@ import 'package:videos_repository/videos_repository.dart';
 
 part 'list_providers.g.dart';
 
-/// Provider for all curated video lists (kind 30005)
-@riverpod
-Future<List<CuratedList>> curatedLists(Ref ref) async {
-  final service = await ref.watch(curatedListsStateProvider.future);
-  return service;
-}
-
 /// Provider for videos in a specific curated list
 @riverpod
 Future<List<String>> curatedListVideos(Ref ref, String listId) async {

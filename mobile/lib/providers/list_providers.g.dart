@@ -8,52 +8,6 @@ part of 'list_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider for all curated video lists (kind 30005)
-
-@ProviderFor(curatedLists)
-final curatedListsProvider = CuratedListsProvider._();
-
-/// Provider for all curated video lists (kind 30005)
-
-final class CuratedListsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<CuratedList>>,
-          List<CuratedList>,
-          FutureOr<List<CuratedList>>
-        >
-    with
-        $FutureModifier<List<CuratedList>>,
-        $FutureProvider<List<CuratedList>> {
-  /// Provider for all curated video lists (kind 30005)
-  CuratedListsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'curatedListsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$curatedListsHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<List<CuratedList>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<CuratedList>> create(Ref ref) {
-    return curatedLists(ref);
-  }
-}
-
-String _$curatedListsHash() => r'74de3f9b86d5444e78e7f2c797370ca75f29f9f5';
-
 /// Provider for videos in a specific curated list
 
 @ProviderFor(curatedListVideos)
