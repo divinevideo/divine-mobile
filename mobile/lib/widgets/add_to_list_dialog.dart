@@ -48,8 +48,15 @@ class SelectListDialog extends StatelessWidget {
       final listServiceAsync = ref.watch(curatedListsStateProvider);
 
       return listServiceAsync.when(
-        data: (lists) {
-          final availableLists = lists.toList();
+        data: (_) {
+          // Followed lists are cached too, and one can share an owned list's
+          // d-tag; adding by that id would edit the viewer's own list.
+          final availableLists =
+              ref
+                  .watch(curatedListsStateProvider.notifier)
+                  .service
+                  ?.editableLists ??
+              const <CuratedList>[];
 
           final l10n = context.l10n;
           return AlertDialog(
@@ -146,9 +153,15 @@ class SelectListDialog extends StatelessWidget {
     try {
       bool success;
       if (isCurrentlyInList) {
-        success = await listService.removeVideoFromList(list.id, video.id);
+        success = await listService.removeVideoFromList(
+          list.authorScopedId,
+          video.id,
+        );
       } else {
-        success = await listService.addVideoToList(list.id, video.id);
+        success = await listService.addVideoToList(
+          list.authorScopedId,
+          video.id,
+        );
       }
 
       if (!context.mounted) return;
