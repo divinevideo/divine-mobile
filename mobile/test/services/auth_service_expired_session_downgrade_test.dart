@@ -1760,6 +1760,27 @@ void main() {
         );
       });
 
+      test(
+        'concurrent 401s share one refresh and flip the flag once',
+        () async {
+          final (authService, _) = await arrangeKeycastOnlyAccount();
+          final expired = authService.expiredOAuthSessionListenable;
+          final notified = <bool>[];
+          void record() => notified.add(expired.value);
+          expired.addListener(record);
+          addTearDown(() => expired.removeListener(record));
+
+          final results = await Future.wait([
+            for (var i = 0; i < 3; i++) signNote(authService),
+          ]);
+          await pumpEventQueue();
+
+          expect(results, everyElement(isNull));
+          verifyRefreshRanOnce();
+          expect(notified, equals([true]));
+        },
+      );
+
       test('an unreachable Keycast leaves the session alone', () async {
         final (authService, _) = await arrangeKeycastOnlyAccount();
         when(

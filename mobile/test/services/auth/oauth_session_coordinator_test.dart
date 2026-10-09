@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/auth/oauth_session_coordinator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
@@ -507,6 +508,65 @@ void main() {
               oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
         ).called(1);
         expect(rejections, equals(2));
+      });
+
+      group('rejection log', () {
+        const markedLine = 'marking the OAuth session expired';
+        const staleLine = 'signer that is no longer live';
+
+        int linesContaining(String text) => LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.message.contains(text))
+            .length;
+
+        setUp(() => LogCaptureService().clearAllLogs());
+
+        test('logs one line when many 401s share a rejected refresh', () async {
+          // Several in-flight RPCs 401 together and join one refresh. A line
+          // per caller would flood the log the way #9943's 401s did.
+          final gate = Completer<KeycastSession?>();
+          stubRefresh(() => gate.future);
+
+          final coordinator = build();
+          final callers = [
+            for (var i = 0; i < 3; i++) coordinator.refreshAccessToken(),
+          ];
+          gate.complete(null);
+          await Future.wait(callers);
+
+          expect(rejections, equals(3));
+          expect(linesContaining(markedLine), equals(1));
+          expect(linesContaining(staleLine), isZero);
+        });
+
+        test('logs a later rejected refresh again', () async {
+          stubRefresh(() async => null);
+          final coordinator = build();
+
+          await coordinator.refreshAccessToken();
+          await coordinator.refreshAccessToken();
+
+          expect(linesContaining(markedLine), equals(2));
+        });
+
+        test('logs one stale line, and no marking line, when the signer is '
+            'gone', () async {
+          final gate = Completer<KeycastSession?>();
+          stubRefresh(() => gate.future);
+
+          final coordinator = build();
+          final callers = [
+            coordinator.refreshAccessToken(),
+            coordinator.refreshAccessToken(),
+          ];
+          currentSigner = null;
+          gate.complete(null);
+          await Future.wait(callers);
+
+          expect(rejections, isZero);
+          expect(linesContaining(staleLine), equals(1));
+          expect(linesContaining(markedLine), isZero);
+        });
       });
 
       test('ignores a rejection that lands after sign-out and a new sign-in '
