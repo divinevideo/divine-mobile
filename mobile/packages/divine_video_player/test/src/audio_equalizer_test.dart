@@ -43,6 +43,63 @@ void main() {
       expect(band(), isNot(band(q: 2)));
     });
 
+    group('responseDb', () {
+      const octave = 1.4142135623730951;
+
+      test('gives a peak its whole gain at its frequency, none far off', () {
+        const peak = AudioEqualizerBand(
+          type: AudioEqualizerBandType.peak,
+          frequency: 1000,
+          gain: 6,
+          q: octave,
+        );
+        expect(peak.responseDb(1000), closeTo(6, 1e-9));
+        expect(peak.responseDb(16000), closeTo(0, 0.01));
+      });
+
+      test('gives a shelf half its gain at its corner', () {
+        const low = AudioEqualizerBand(
+          type: AudioEqualizerBandType.lowShelf,
+          frequency: 31,
+          gain: 6,
+        );
+        const high = AudioEqualizerBand(
+          type: AudioEqualizerBandType.highShelf,
+          frequency: 16000,
+          gain: 6,
+        );
+        expect(low.responseDb(31), closeTo(3, 1e-6));
+        expect(low.responseDb(20), closeTo(5.07, 0.01));
+        expect(low.responseDb(1000), closeTo(0, 0.001));
+        expect(high.responseDb(16000), closeTo(3, 1e-6));
+      });
+
+      test('is nothing for a band without gain', () {
+        const flat = AudioEqualizerBand(
+          type: AudioEqualizerBandType.peak,
+          frequency: 1000,
+        );
+        expect(flat.responseDb(1000), 0);
+      });
+
+      test('lowers a corner near half the sample rate as the filters do', () {
+        const shelf = AudioEqualizerBand(
+          type: AudioEqualizerBandType.highShelf,
+          frequency: 16000,
+          gain: 6,
+        );
+        const lowered = AudioEqualizerBand(
+          type: AudioEqualizerBandType.highShelf,
+          frequency: 14400,
+          gain: 6,
+        );
+        expect(
+          shelf.responseDb(10000, sampleRate: 32000),
+          lowered.responseDb(10000, sampleRate: 32000),
+        );
+      });
+    });
+
     test('toString names its type, frequency, gain and q', () {
       expect(
         const AudioEqualizerBand(
@@ -115,6 +172,51 @@ void main() {
         equalizer([bassCut, presenceBoost]),
         isNot(equalizer([presenceBoost, bassCut])),
       );
+    });
+
+    group('responseDb', () {
+      /// The editor's ten octave bands at [gains].
+      AudioEqualizer octaves(List<double> gains) => AudioEqualizer(
+        bands: [
+          for (var i = 0; i < gains.length; i++)
+            AudioEqualizerBand(
+              type: i == 0
+                  ? AudioEqualizerBandType.lowShelf
+                  : (i == gains.length - 1
+                        ? AudioEqualizerBandType.highShelf
+                        : AudioEqualizerBandType.peak),
+              frequency: const [
+                31.0,
+                62.0,
+                125.0,
+                250.0,
+                500.0,
+                1000.0,
+                2000.0,
+                4000.0,
+                8000.0,
+                16000.0,
+              ][i],
+              gain: gains[i],
+              q: 1.4142135623730951,
+            ),
+        ],
+      );
+
+      test('adds up its bands, beyond any one where they overlap', () {
+        expect(
+          octaves(List.filled(10, 18)).responseDb(500),
+          closeTo(29.26, 0.01),
+        );
+        expect(
+          octaves([0, 0, 0, 6, 6, 6, 0, 0, 0, 0]).responseDb(500),
+          closeTo(8.27, 0.01),
+        );
+      });
+
+      test('is nothing without bands', () {
+        expect(const AudioEqualizer().responseDb(500), 0);
+      });
     });
 
     test('toString lists its bands', () {

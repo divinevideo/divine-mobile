@@ -86,8 +86,10 @@ await controller.setAudioTrackVolume(0, 0.8); // overlay track at index
 
 // Equalizer bands, applied in order and changeable while playing (players
 // created with VideoBufferProfile.full; Android, iOS and macOS). On iOS and
-// macOS an overlay track plays an equalized copy of its file, rendered once a
-// change has rested for 500 ms; a remote track is downloaded for it first.
+// macOS an overlay track plays an equalized copy of the stretch of its file
+// it plays (at most 300 s when neither its video end nor its track end bounds
+// it), rendered once a change has rested for 500 ms; a remote track is
+// downloaded for it first. responseDb gives what the bands add up to.
 const warmer = AudioEqualizer(
   bands: [
     AudioEqualizerBand(

@@ -1,17 +1,20 @@
 // ABOUTME: Bottom sheet for raising or lowering ten octave bands of the
 // ABOUTME: selected clip or sound on a curve; pops the settings or null.
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show EqualizerSettings;
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/equalizer_preset.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 
 /// Lets the creator raise or lower a clip's or a sound's audio in ten octave
-/// bands from 31 Hz to 16 kHz, by dragging the points of a curve, with
-/// one-tap presets above it.
+/// bands from 31 Hz to 16 kHz, by dragging a point per band, with one-tap
+/// presets above them. The line through them draws what the bands add up to.
 ///
 /// Every change is handed to [onChanged] as it happens, so the editor preview
 /// can play it at once. The sheet pops the settings when confirmed, and
@@ -195,8 +198,9 @@ class _PresetChip extends StatelessWidget {
   }
 }
 
-/// The bands as points on a curve, lowest frequency on the left, with the
-/// frequency and gain of the point last touched above it.
+/// The bands as points, lowest frequency on the left, under the line of what
+/// they add up to, with the frequency and gain of the point last touched
+/// above them.
 ///
 /// Ten points share the width of a phone, too little for a gain under each,
 /// so only the one being touched says its value. On a narrow screen a point's
@@ -370,8 +374,8 @@ const double _curveHeight = 180;
 /// handle there is drawn whole.
 const double _curveInset = 12;
 
-/// The vertical position of [gain] in a curve [height] tall.
-double _gainY(int gain, double height) {
+/// The vertical position of [gain], in decibels, in a curve [height] tall.
+double _gainY(num gain, double height) {
   const range = EqualizerSettings.maxGain - EqualizerSettings.minGain;
   final fraction = (EqualizerSettings.maxGain - gain) / range;
   return _curveInset + fraction * (height - 2 * _curveInset);
@@ -476,8 +480,14 @@ class _AxisLabel extends StatelessWidget {
   }
 }
 
-/// Draws the curve through the bands' points, the area between it and zero,
-/// and the zero and half-range lines behind it.
+/// Draws what the bands add up to as a line, the area between it and zero,
+/// the zero and half-range lines behind it, and each band's point at its own
+/// gain.
+///
+/// The line is the response the preview and the export play, so it does not
+/// run through every point: neighbouring octave peaks overlap and add up, and
+/// a shelf gives half its gain at its own frequency. Beyond the range of the
+/// points it is cut off at the edge.
 class _CurvePainter extends CustomPainter {
   _CurvePainter({
     required this.gains,
@@ -492,6 +502,9 @@ class _CurvePainter extends CustomPainter {
   final Color lineColor;
   final Color gridColor;
   final Color handleBorderColor;
+
+  /// How far apart, in logical pixels, the line is sampled.
+  static const double _responseStep = 2;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -519,21 +532,24 @@ class _CurvePainter extends CustomPainter {
       grid..strokeWidth = 2,
     );
 
-    final curve = _curveThrough(points, size.width);
-    final area = Path.from(curve)
+    final response = _response(size, columnWidth);
+    final area = Path.from(response)
       ..lineTo(size.width, zeroY)
       ..lineTo(0, zeroY)
       ..close();
     canvas
+      ..save()
+      ..clipRect(Offset.zero & size)
       ..drawPath(area, Paint()..color = lineColor.withValues(alpha: 0.16))
       ..drawPath(
-        curve,
+        response,
         Paint()
           ..color = lineColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3
           ..strokeCap = StrokeCap.round,
-      );
+      )
+      ..restore();
 
     final handle = Paint()..color = lineColor;
     final border = Paint()
@@ -548,30 +564,22 @@ class _CurvePainter extends CustomPainter {
     }
   }
 
-  /// A smooth line through every point, level from each edge to the point
-  /// nearest it, as the shelves there are.
-  static Path _curveThrough(List<Offset> points, double width) {
-    final path = Path()
-      ..moveTo(0, points.first.dy)
-      ..lineTo(points.first.dx, points.first.dy);
-    for (var i = 0; i < points.length - 1; i++) {
-      final previous = points[i == 0 ? 0 : i - 1];
-      final start = points[i];
-      final end = points[i + 1];
-      final next = points[i + 2 < points.length ? i + 2 : i + 1];
-      // Catmull-Rom tangents, as cubic Bézier control points.
-      final control1 = start + (end - previous) / 6;
-      final control2 = end - (next - start) / 6;
-      path.cubicTo(
-        control1.dx,
-        control1.dy,
-        control2.dx,
-        control2.dy,
-        end.dx,
-        end.dy,
-      );
+  /// The response of the bands across the width: each band in the middle of
+  /// its column, an octave from the next, so 1 kHz sits in the sixth.
+  Path _response(Size size, double columnWidth) {
+    final equalizer = EqualizerSettings.fromGains(gains).toPlayerEqualizer();
+    final path = Path();
+    for (var x = 0.0; ; x = math.min(x + _responseStep, size.width)) {
+      final frequency = 1000 * math.pow(2, x / columnWidth - 5.5).toDouble();
+      final y = _gainY(equalizer?.responseDb(frequency) ?? 0, size.height);
+      if (x == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+      if (x >= size.width) break;
     }
-    return path..lineTo(width, points.last.dy);
+    return path;
   }
 
   @override
