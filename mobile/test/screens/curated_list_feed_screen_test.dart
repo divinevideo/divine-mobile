@@ -301,6 +301,11 @@ void main() {
       testWidgets('offers no report on your own uncached discovered list', (
         tester,
       ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+
         // A deep link can resolve before the background owner-list sync.
         // The local store is ready but does not contain this list yet.
         final auth = createMockAuthService(
@@ -324,6 +329,11 @@ void main() {
       testWidgets("reports someone else's list from its menu", (
         tester,
       ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+
         final auth = createMockAuthService(
           authState: AuthState.authenticated,
           currentPublicKeyHex: 'a' * 64,
@@ -349,6 +359,12 @@ void main() {
       testWidgets(
         'looks the list up to report it when opened without its event',
         (tester) async {
+          when(() => mockService.isOwnedList('$listAuthor:external-list'))
+              .thenReturn(false);
+          when(
+            () => mockService.isSubscribedToList('$listAuthor:external-list'),
+          ).thenReturn(false);
+
           await tester.pumpWidget(
             buildSubject(
               authorPubkey: listAuthor,
