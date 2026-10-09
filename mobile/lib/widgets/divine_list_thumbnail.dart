@@ -733,9 +733,10 @@ class _DescriptionBox extends StatelessWidget {
   }
 }
 
-/// Descriptions that allow identity resolution retain the existing inline
-/// links with neutral styling. Public people previews use passive text
-/// instead so mentions cannot fetch profiles or navigate out of the card.
+/// Descriptions that allow identity resolution render mentions as names in
+/// the description's neutral style. The whole card is the tap target, so the
+/// text ignores pointers rather than opening links it does not look like.
+/// Public people previews use passive text so mentions cannot fetch profiles.
 class _PlainLinkText extends StatelessWidget {
   const _PlainLinkText({required this.text, required this.style});
 
@@ -744,13 +745,15 @@ class _PlainLinkText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LinkifiedText(
-      text: text,
-      style: style,
-      linkStyle: style,
-      mentionStyle: style,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+    return IgnorePointer(
+      child: LinkifiedText(
+        text: text,
+        style: style,
+        linkStyle: style,
+        mentionStyle: style,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
