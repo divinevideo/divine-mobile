@@ -814,7 +814,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
     cubit.pin();
   }
 
-  /// Restores the feed's chrome when the viewer explicitly undoes the pin.
+  /// Restores the feed's chrome by clearing the pin, either because the viewer
+  /// undid it or because the active video carries a warning or moderation
+  /// overlay the pin must not hide.
   void _clearPinnedImmersive() {
     final cubit = _immersiveCubit;
     if (cubit == null || cubit.isClosed) return;
