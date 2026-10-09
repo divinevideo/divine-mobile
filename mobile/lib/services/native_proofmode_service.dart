@@ -343,26 +343,45 @@ class NativeProofModeService {
     Map<String, dynamic>? editorStateHistory,
     VoidCallback? onRecordingsSigned,
   }) async {
-    final allClips = [...clips, ...layerClips];
-    final recordingsLeftUnsigned = await signOwnRecordings(allClips);
+    final recordingsLeftUnsigned = await signOwnRecordings([
+      ...clips,
+      ...layerClips,
+    ]);
     onRecordingsSigned?.call();
-    final clipSources = allClips.map((clip) => clip.signingSources).toList();
-    final sources = clipSources.contains(null)
-        ? const <C2paEditSource>[]
-        : {
-            for (final sources in clipSources) ...sources!,
-            ...otherSources,
-          }.toList();
     final proof = await proofFile(
       output,
       clips: clips,
       editorStateHistory: editorStateHistory,
-      derivedFrom: sources,
+      derivedFrom: editSources(
+        clips: clips,
+        layerClips: layerClips,
+        otherSources: otherSources,
+      ),
     );
     if (recordingsLeftUnsigned && (proof?.unattestedSources ?? false)) {
       return proof!.withUnattestedSources(unattested: false);
     }
     return proof;
+  }
+
+  /// The sources an edit made from [clips], [layerClips] and [otherSources]
+  /// is signed against, as [proofEdit] signs it.
+  ///
+  /// Empty when a clip's media cannot be named, so such an edit is never
+  /// signed rather than signed with part of its history.
+  static List<C2paEditSource> editSources({
+    required List<DivineVideoClip> clips,
+    List<DivineVideoClip> layerClips = const [],
+    List<C2paEditSource> otherSources = const [],
+  }) {
+    final clipSources = [
+      for (final clip in [...clips, ...layerClips]) clip.signingSources,
+    ];
+    if (clipSources.contains(null)) return const [];
+    return {
+      for (final sources in clipSources) ...sources!,
+      ...otherSources,
+    }.toList();
   }
 
   /// Signs the app's own recordings among [clips]' sources as camera
@@ -683,10 +702,9 @@ class NativeProofModeService {
   /// Streams [filePath] through SHA-256 and returns the hex digest. Runs on a
   /// background isolate (see [generateSha256FileHash]).
   static Future<String> _sha256OfFile(String filePath) async {
-    final digest = await File(filePath)
-        .openRead()
-        .transform(crypto.sha256)
-        .first;
+    final digest = await File(
+      filePath,
+    ).openRead().transform(crypto.sha256).first;
     return digest.toString();
   }
 

@@ -115,8 +115,14 @@ class VideoEditorClipLibrarySaveService {
       sourceCredits: clip.sourceCredits,
       proofManifestJson: proof == null ? null : jsonEncode(proof),
       // Left unsigned, for example offline, it stays an editor intermediate,
-      // like a merge: an edit of it is signed against the media it came from.
-      derivedFrom: proof?.c2paManifestId == null ? clip.signingSources : null,
+      // like a merge: an edit of it is signed against the media it came from,
+      // including video layers baked over the clip.
+      derivedFrom: proof?.c2paManifestId == null
+          ? await VideoEditorRenderService.renderedVideoSources(
+              clips: [clip],
+              parameters: parameters,
+            )
+          : null,
     );
   }
 

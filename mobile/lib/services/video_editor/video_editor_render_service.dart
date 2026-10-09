@@ -12,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
@@ -413,6 +414,38 @@ class VideoEditorRenderService {
     Map<String, dynamic> editorStateHistory = const {},
     VoidCallback? onRecordingsSigned,
   }) async {
+    final (:layerClips, :otherSources) = await _renderInputs(parameters);
+    return NativeProofModeService.proofEdit(
+      output,
+      clips: clips,
+      layerClips: layerClips,
+      otherSources: otherSources,
+      editorStateHistory: editorStateHistory,
+      onRecordingsSigned: onRecordingsSigned,
+    );
+  }
+
+  /// The sources [proofRenderedVideo] signs a video rendered from [clips]
+  /// with [parameters] against: the same set, so a render left unsigned can
+  /// remember everything that went into it, layers included.
+  static Future<List<C2paEditSource>> renderedVideoSources({
+    required List<DivineVideoClip> clips,
+    CompleteParameters? parameters,
+  }) async {
+    final (:layerClips, :otherSources) = await _renderInputs(parameters);
+    return NativeProofModeService.editSources(
+      clips: clips,
+      layerClips: layerClips,
+      otherSources: otherSources,
+    );
+  }
+
+  /// The clips detached onto the canvas by [parameters], and the images and
+  /// sounds that go in besides: their chroma-key backdrops and sound tracks.
+  static Future<
+    ({List<DivineVideoClip> layerClips, List<C2paEditSource> otherSources})
+  >
+  _renderInputs(CompleteParameters? parameters) async {
     final layers = parameters?.capturedLayers ?? const [];
     final detached = layers.isEmpty
         ? const <DetachedClipExportLayer>[]
@@ -420,16 +453,12 @@ class VideoEditorRenderService {
             layers,
             await getDocumentsPath(),
           ).detached;
-    return NativeProofModeService.proofEdit(
-      output,
-      clips: clips,
+    return (
       layerClips: [for (final layer in detached) layer.clip],
       otherSources: [
         for (final layer in detached) ...?layer.chromaKey?.backdropSources,
         ...renderAudioSources(parameters?.audioTracks ?? const []),
       ],
-      editorStateHistory: editorStateHistory,
-      onRecordingsSigned: onRecordingsSigned,
     );
   }
 
