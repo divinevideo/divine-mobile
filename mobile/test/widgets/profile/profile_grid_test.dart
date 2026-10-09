@@ -1237,7 +1237,9 @@ void main() {
       await scrollAllTheWayUp(tester);
 
       final lastRowBottom = tester
-          .getBottomLeft(find.bySemanticsIdentifier('video_thumbnail_2'))
+          .getBottomLeft(
+            find.bySemanticsIdentifier(SemanticIds.videoThumbnail(2)),
+          )
           .dy;
       final screenBottom = tester
           .getBottomLeft(find.byType(NestedScrollView))
@@ -1274,7 +1276,9 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(
         tester
-            .getBottomLeft(find.bySemanticsIdentifier('video_thumbnail_2'))
+            .getBottomLeft(
+              find.bySemanticsIdentifier(SemanticIds.videoThumbnail(2)),
+            )
             .dy,
         moreOrLessEquals(
           tester.getBottomLeft(find.byType(NestedScrollView)).dy,
