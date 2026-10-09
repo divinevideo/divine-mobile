@@ -47,12 +47,17 @@ internal data class AudioEqualizerBand(
             if (map !is Map<*, *>) return null
             val type = AudioEqualizerBandType.fromKey(map["type"]) ?: return null
             val frequency = (map["frequencyHz"] as? Number)?.toDouble()
-                ?.takeIf { it > 0 } ?: return null
+                ?.takeIf { it > 0 && it.isFinite() } ?: return null
+            // A gain that is not a number would turn every sample into one;
+            // the export drops such a band too.
+            val gain = (map["gainDb"] as? Number)?.toDouble() ?: 0.0
+            if (!gain.isFinite()) return null
             return AudioEqualizerBand(
                 type = type,
                 frequencyHz = frequency,
-                gainDb = (map["gainDb"] as? Number)?.toDouble() ?: 0.0,
-                q = (map["q"] as? Number)?.toDouble()?.takeIf { it > 0 } ?: DEFAULT_Q,
+                gainDb = gain,
+                q = (map["q"] as? Number)?.toDouble()
+                    ?.takeIf { it > 0 && it.isFinite() } ?: DEFAULT_Q,
             )
         }
     }
@@ -299,6 +304,9 @@ internal object EqualizerPcm {
     /** Full scale of 16-bit PCM as a float sample of 1.0. */
     private const val SHORT_SCALE = 32768f
 
+    /** How many frames [apply] filters at once. */
+    private const val BLOCK_FRAMES = 8192
+
     /**
      * Equalizes interleaved 16-bit [samples] of [channels] channels in place,
      * limiting a boost at the export's ceiling. A null [equalizer] leaves
@@ -311,10 +319,20 @@ internal object EqualizerPcm {
         equalizer: AudioEqualizer?,
     ) {
         if (equalizer == null || equalizer.isFlat || samples.isEmpty()) return
-        val floats = FloatArray(samples.size) { samples[it] / SHORT_SCALE }
-        BandEqualizer(sampleRate, channels).apply { retune(equalizer) }.process(floats)
-        if (equalizer.boosts) PeakLimiter(sampleRate).process(floats, channels)
-        for (i in samples.indices) samples[i] = toShort(floats[i])
+        val filters = BandEqualizer(sampleRate, channels).apply { retune(equalizer) }
+        val limiter = if (equalizer.boosts) PeakLimiter(sampleRate) else null
+        // A block at a time, so a long decode is not held a second time as
+        // floats; the filters and the limiter carry their state across.
+        val block = FloatArray(BLOCK_FRAMES * channels.coerceAtLeast(1))
+        var start = 0
+        while (start < samples.size) {
+            val count = minOf(block.size, samples.size - start)
+            for (i in 0 until count) block[i] = samples[start + i] / SHORT_SCALE
+            filters.process(block, count)
+            limiter?.process(block, channels, count)
+            for (i in 0 until count) samples[start + i] = toShort(block[i])
+            start += count
+        }
     }
 
     /** [sample] as 16-bit PCM, rounded and clamped. */

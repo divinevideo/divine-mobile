@@ -105,6 +105,12 @@ class AudioEqualizerTest {
                     mapOf("type" to "notch", "frequencyHz" to 1000, "gainDb" to 6),
                     mapOf("type" to "peak", "frequencyHz" to 0, "gainDb" to 6),
                     mapOf("type" to "peak", "gainDb" to 6),
+                    mapOf("type" to "peak", "frequencyHz" to 1000, "gainDb" to Double.NaN),
+                    mapOf(
+                        "type" to "peak",
+                        "frequencyHz" to Double.POSITIVE_INFINITY,
+                        "gainDb" to 6,
+                    ),
                     mapOf("type" to "lowShelf", "frequencyHz" to 200, "gainDb" to 6),
                 ),
             ),
@@ -187,6 +193,25 @@ class AudioEqualizerTest {
 
         val ceiling = (PeakLimiter.CEILING * 32768).toInt()
         assertTrue(loud.all { abs(it.toInt()) <= ceiling + 1 })
+    }
+
+    @Test
+    fun `pcm equalized a block at a time matches one pass over the whole decode`() {
+        val equalizer = bassBoost(12.0)
+        val channels = 2
+        // A loud 60 Hz tone in both channels, long enough for several blocks,
+        // that the boost pushes into the limiter.
+        val pcm = ShortArray(channels * 20_000) {
+            (28000 * sin(2 * PI * 60.0 * (it / channels) / 48000)).toInt().toShort()
+        }
+        val floats = FloatArray(pcm.size) { EqualizerPcm.toFloat(pcm[it]) }
+        BandEqualizer(48000, channels).apply { retune(equalizer) }.process(floats)
+        PeakLimiter(48000).process(floats, channels)
+        val expected = ShortArray(floats.size) { EqualizerPcm.toShort(floats[it]) }
+
+        EqualizerPcm.apply(pcm, channels, 48000, equalizer)
+
+        assertTrue(pcm.contentEquals(expected))
     }
 
     @Test

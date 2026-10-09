@@ -47,10 +47,7 @@ internal class ClipEqualizerAudioRenderer(
     audioSink,
 ) {
     /** The clip of every recent stream, by the offset of its samples. */
-    private val clipsByStreamOffset = object : LinkedHashMap<Long, Int>() {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Int>?) =
-            size > MAX_REMEMBERED_STREAMS
-    }
+    private val clipsByStreamOffset = RecentStreamClips(MAX_REMEMBERED_STREAMS)
 
     private val period = Timeline.Period()
 
@@ -65,7 +62,7 @@ internal class ClipEqualizerAudioRenderer(
     }
 
     override fun onOutputStreamOffsetUsChanged(outputStreamOffsetUs: Long) {
-        processor.nextClipIndex = clipsByStreamOffset[outputStreamOffsetUs] ?: -1
+        processor.nextClipIndex = clipsByStreamOffset[outputStreamOffsetUs]
         super.onOutputStreamOffsetUsChanged(outputStreamOffsetUs)
     }
 
@@ -78,7 +75,7 @@ internal class ClipEqualizerAudioRenderer(
         // A seek onto a stream that was already queued makes it the output
         // stream without reporting a new offset. The sink flushes again at
         // the first buffer after the seek, which picks this up.
-        processor.nextClipIndex = clipsByStreamOffset[outputStreamOffsetUs] ?: -1
+        processor.nextClipIndex = clipsByStreamOffset[outputStreamOffsetUs]
     }
 
     /** The clip [mediaPeriodId] plays, or -1 when the timeline cannot tell. */
