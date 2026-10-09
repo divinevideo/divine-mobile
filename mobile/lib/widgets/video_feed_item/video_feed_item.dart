@@ -422,272 +422,277 @@ class VideoOverlayActions extends ConsumerWidget {
           child: AnimatedOpacity(
             opacity: isActive ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
-            child: CollaboratorVisibilityBuilder(
-              video: video,
-              builder: (context, collaborators) {
-                final belowAuthorRow = [
-                  ...belowAuthorRowBeforeCollaborators,
-                  // These are video relationships, not caption content. Keep
-                  // them visible when stripping wire-format attribution leaves
-                  // an otherwise captionless video.
-                  if (collaborators.visiblePubkeys.isNotEmpty)
-                    CollaboratorAvatarRowBody(
-                      visibility: collaborators,
-                      padding: const EdgeInsets.only(top: 4),
-                    ),
-                  ...belowAuthorRowAfterCollaborators,
-                ];
-                // The author row's bottom gap keeps the follow target's
-                // overhang hit-testable. With nothing below the row it would
-                // read as empty space, so the block sits that gap lower and
-                // adds it back only when the row has company.
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: belowAuthorRow.isEmpty ? 0 : _authorRowBottomGap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ?subtitleLayer,
+
+                // Repost banner (if video is a repost)
+                if (video != null &&
+                    video.isRepost &&
+                    video.reposterPubkey != null) ...[
+                  VideoRepostHeader(
+                    reposterPubkey: video.reposterPubkey!,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ?subtitleLayer,
+                  const SizedBox(height: 8),
+                ],
+                // Author avatar and info row
+                Consumer(
+                  builder: (context, ref, _) {
+                    final profile = ref
+                        .watch(userProfileReactiveProvider(authorPubkey))
+                        .value;
+                    // Use embedded author data from REST API as fallback
+                    // This avoids WebSocket profile fetches for videos
+                    // that already have author_name/author_avatar embedded
+                    final avatarUrl = profile?.picture ?? video?.authorAvatar;
+                    final displayName =
+                        profile?.bestDisplayName ??
+                        video?.displayAuthorName ??
+                        UserProfile.generatedNameFor(authorPubkey);
+                    final isOgViner = ref.watch(
+                      ogVinerCacheServiceProvider.select(
+                        (service) => service.isOgViner(authorPubkey),
+                      ),
+                    );
+                    final showCheckmark = shouldShowSpecialProfileCheckmark(
+                      authorPubkey,
+                    );
+                    // The beta chit yields to both the checkmark and the OG
+                    // Viner chit, so a name never carries two of them. Team
+                    // members can also be eligible beta testers.
+                    final isOgBetaTester =
+                        !isOgViner &&
+                        !showCheckmark &&
+                        (ref
+                                .watch(
+                                  ogDivinerEligibilityProvider(
+                                    authorPubkey,
+                                  ),
+                                )
+                                .value ??
+                            false);
 
-                      // Repost banner (if video is a repost)
-                      if (video != null &&
-                          video.isRepost &&
-                          video.reposterPubkey != null) ...[
-                        VideoRepostHeader(
-                          reposterPubkey: video.reposterPubkey!,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      // Author avatar and info row
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final profile = ref
-                              .watch(userProfileReactiveProvider(authorPubkey))
-                              .value;
-                          // Use embedded author data from REST API as fallback
-                          // This avoids WebSocket profile fetches for videos
-                          // that already have author_name/author_avatar embedded
-                          final avatarUrl =
-                              profile?.picture ?? video?.authorAvatar;
-                          final displayName =
-                              profile?.bestDisplayName ??
-                              video?.displayAuthorName ??
-                              UserProfile.generatedNameFor(authorPubkey);
-                          final isOgViner = ref.watch(
-                            ogVinerCacheServiceProvider.select(
-                              (service) => service.isOgViner(authorPubkey),
-                            ),
-                          );
-                          final showCheckmark =
-                              shouldShowSpecialProfileCheckmark(
-                                authorPubkey,
-                              );
-                          // The beta chit yields to both the checkmark and the OG
-                          // Viner chit, so a name never carries two of them. Team
-                          // members can also be eligible beta testers.
-                          final isOgBetaTester =
-                              !isOgViner &&
-                              !showCheckmark &&
-                              (ref
-                                      .watch(
-                                        ogDivinerEligibilityProvider(
-                                          authorPubkey,
-                                        ),
-                                      )
-                                      .value ??
-                                  false);
+                    void navigateToProfile() {
+                      onInteracted?.call();
+                      Log.info(
+                        '👤 User tapped profile: videoId=${video?.id ?? "preview"}, authorPubkey=${pubkeyForLogs(authorPubkey)}',
+                        name: 'VideoFeedItem',
+                        category: LogCategory.ui,
+                      );
+                      final npub = normalizeToNpub(authorPubkey);
+                      if (npub != null) {
+                        runDetached(
+                          context.push(
+                            OtherProfileScreen.pathForNpub(npub),
+                          ),
+                          'open author profile',
+                          logName: 'VideoOverlayActions',
+                          category: LogCategory.ui,
+                        );
+                      }
+                    }
 
-                          void navigateToProfile() {
-                            onInteracted?.call();
-                            Log.info(
-                              '👤 User tapped profile: videoId=${video?.id ?? "preview"}, authorPubkey=${pubkeyForLogs(authorPubkey)}',
-                              name: 'VideoFeedItem',
-                              category: LogCategory.ui,
-                            );
-                            final npub = normalizeToNpub(authorPubkey);
-                            if (npub != null) {
-                              runDetached(
-                                context.push(
-                                  OtherProfileScreen.pathForNpub(npub),
-                                ),
-                                'open author profile',
-                                logName: 'VideoOverlayActions',
-                                category: LogCategory.ui,
-                              );
-                            }
-                          }
-
-                          return Stack(
+                    return Stack(
+                      children: [
+                        Padding(
+                          // The gap to the caption lives inside the Stack so
+                          // the follow target, which overhangs the avatar into
+                          // it, stays within the Stack's bounds: a hit outside
+                          // a box is rejected before it reaches the child.
+                          padding: const EdgeInsetsDirectional.only(
+                            bottom: _authorRowBottomGap,
+                          ),
+                          child: Row(
+                            // Top-aligned so the avatar cannot drift down the
+                            // row at a large text scale. The follow target is
+                            // positioned from the row's top, so a centred
+                            // avatar would detach from it.
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                // The gap to the caption lives inside the Stack so
-                                // the follow target, which overhangs the avatar into
-                                // it, stays within the Stack's bounds: a hit outside
-                                // a box is rejected before it reaches the child.
-                                padding: const EdgeInsetsDirectional.only(
-                                  bottom: _authorRowBottomGap,
-                                ),
-                                child: Row(
-                                  // Top-aligned so the avatar cannot drift down the
-                                  // row at a large text scale. The follow target is
-                                  // positioned from the row's top, so a centred
-                                  // avatar would detach from it.
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Avatar (tappable to go to profile). Its box is
-                                    // its tap target; nothing pads it.
-                                    UserAvatar(
-                                      imageUrl: avatarUrl,
-                                      name: displayName,
-                                      // Pinned explicitly even though it equals the
-                                      // component default: the feed's row geometry
-                                      // is built on this number, so a default change
-                                      // must not resize it silently.
-                                      // ignore: avoid_redundant_argument_values
-                                      size: _authorAvatarSize,
-                                      semanticLabel: context
-                                          .l10n
-                                          .videoAuthorAvatarSemanticLabel,
-                                      onTap: navigateToProfile,
-                                    ),
-                                    const SizedBox(width: _authorNameGap),
-                                    // User name and loop count (tappable to go to profile)
-                                    Expanded(
-                                      child: Align(
-                                        // Aligned OUTSIDE the detector so the target hugs
-                                        // the author content. Inside it, the detector
-                                        // filled the whole Expanded, and an opaque hit box
-                                        // that wide swallowed the empty video to the right
-                                        // of a short name — taking double-tap-to-like and
-                                        // press-and-hold-to-peek with it.
-                                        alignment:
-                                            AlignmentDirectional.centerStart,
-                                        child: GestureDetector(
-                                          // Opaque, so the target is tappable across its
-                                          // full height rather than only on the painted
-                                          // glyphs: deferring to the child leaves the 44dp
-                                          // node it advertises just 20dp of real target.
-                                          behavior: HitTestBehavior.opaque,
-                                          // The gesture owns no semantics of its own: the
-                                          // labelled node inside carries the profile
-                                          // action, so the tap target is never rendered
-                                          // as an unlabelled node.
-                                          excludeFromSemantics: true,
-                                          onTap: navigateToProfile,
-                                          child: Semantics(
-                                            identifier: 'video_author_name',
-                                            container: true,
-                                            explicitChildNodes: true,
-                                            button: true,
-                                            label: context.l10n
-                                                .videoAuthorSemanticLabel(
-                                                  displayName,
-                                                ),
-                                            onTap: navigateToProfile,
-                                            // Constrained to the avatar's height and
-                                            // centred, so the name and meta line sit
-                                            // vertically aligned with the avatar; that
-                                            // height is also the column's tap target,
-                                            // Apple's 44pt minimum. minHeight, not a
-                                            // fixed height, so it still grows with the
-                                            // system font scale
-                                            // (.claude/rules/accessibility.md); minWidth
-                                            // covers a display name too short to reach a
-                                            // minimum on its own.
-                                            child: ConstrainedBox(
-                                              constraints: const BoxConstraints(
-                                                minWidth:
-                                                    kMinInteractiveDimension,
-                                                minHeight: _authorAvatarSize,
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Row(
-                                                    // Hugs the name and its badges, so
-                                                    // the detector above can hug in
-                                                    // turn.
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Flexible(
-                                                        child: DivineHeartText(
-                                                          displayName,
-                                                          style:
-                                                              VineTheme.titleLargeFont(
-                                                                color: VineTheme
-                                                                    .whiteText,
-                                                              ),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
-                                                      ),
-                                                      if (showCheckmark)
-                                                        const SpecialProfileCheckmark(
-                                                          iconSize: 14,
-                                                          padding: 3,
-                                                        ),
-                                                      if (isOgViner)
-                                                        const OgVinerBadge(
-                                                          size: 20,
-                                                        ),
-                                                      if (isOgBetaTester)
-                                                        OgBetaBadge(
-                                                          size: 20,
-                                                          onTap: () =>
-                                                              showProfileBadgeExplanationSheet(
-                                                                context,
-                                                                ProfileBadgeExplanationType
-                                                                    .ogBetaTester,
-                                                              ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                  _VideoCardMetaLine(
-                                                    authorPubkey: authorPubkey,
-                                                    authorName: displayName,
-                                                    video: video,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
+                              // Avatar (tappable to go to profile). Its box is
+                              // its tap target; nothing pads it.
+                              UserAvatar(
+                                imageUrl: avatarUrl,
+                                name: displayName,
+                                // Pinned explicitly even though it equals the
+                                // component default: the feed's row geometry
+                                // is built on this number, so a default change
+                                // must not resize it silently.
+                                // ignore: avoid_redundant_argument_values
+                                size: _authorAvatarSize,
+                                semanticLabel:
+                                    context.l10n.videoAuthorAvatarSemanticLabel,
+                                onTap: navigateToProfile,
+                              ),
+                              const SizedBox(width: _authorNameGap),
+                              // User name and loop count (tappable to go to profile)
+                              Expanded(
+                                child: Align(
+                                  // Aligned OUTSIDE the detector so the target hugs
+                                  // the author content. Inside it, the detector
+                                  // filled the whole Expanded, and an opaque hit box
+                                  // that wide swallowed the empty video to the right
+                                  // of a short name — taking double-tap-to-like and
+                                  // press-and-hold-to-peek with it.
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: GestureDetector(
+                                    // Opaque, so the target is tappable across its
+                                    // full height rather than only on the painted
+                                    // glyphs: deferring to the child leaves the 44dp
+                                    // node it advertises just 20dp of real target.
+                                    behavior: HitTestBehavior.opaque,
+                                    // The gesture owns no semantics of its own: the
+                                    // labelled node inside carries the profile
+                                    // action, so the tap target is never rendered
+                                    // as an unlabelled node.
+                                    excludeFromSemantics: true,
+                                    onTap: navigateToProfile,
+                                    child: Semantics(
+                                      identifier: 'video_author_name',
+                                      container: true,
+                                      explicitChildNodes: true,
+                                      button: true,
+                                      label: context.l10n
+                                          .videoAuthorSemanticLabel(
+                                            displayName,
                                           ),
+                                      onTap: navigateToProfile,
+                                      // Constrained to the avatar's height and
+                                      // centred, so the name and meta line sit
+                                      // vertically aligned with the avatar; that
+                                      // height is also the column's tap target,
+                                      // Apple's 44pt minimum. minHeight, not a
+                                      // fixed height, so it still grows with the
+                                      // system font scale
+                                      // (.claude/rules/accessibility.md); minWidth
+                                      // covers a display name too short to reach a
+                                      // minimum on its own.
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: kMinInteractiveDimension,
+                                          minHeight: _authorAvatarSize,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Row(
+                                              // Hugs the name and its badges, so
+                                              // the detector above can hug in
+                                              // turn.
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Flexible(
+                                                  child: DivineHeartText(
+                                                    displayName,
+                                                    style:
+                                                        VineTheme.titleLargeFont(
+                                                          color: VineTheme
+                                                              .whiteText,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (showCheckmark)
+                                                  const SpecialProfileCheckmark(
+                                                    iconSize: 14,
+                                                    padding: 3,
+                                                  ),
+                                                if (isOgViner)
+                                                  const OgVinerBadge(
+                                                    size: 20,
+                                                  ),
+                                                if (isOgBetaTester)
+                                                  OgBetaBadge(
+                                                    size: 20,
+                                                    onTap: () =>
+                                                        showProfileBadgeExplanationSheet(
+                                                          context,
+                                                          ProfileBadgeExplanationType
+                                                              .ogBetaTester,
+                                                        ),
+                                                  ),
+                                              ],
+                                            ),
+                                            _VideoCardMetaLine(
+                                              authorPubkey: authorPubkey,
+                                              authorName: displayName,
+                                              video: video,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              // Follow target, overlaid on the row rather than
-                              // nested inside it: a positioned child does not size
-                              // its parent, so the target costs no layout, and it
-                              // is hit-tested before the avatar it overhangs, so
-                              // their shared corner follows rather than opening the
-                              // profile.
-                              if (video != null)
-                                PositionedDirectional(
-                                  start: _followTargetOffset,
-                                  top: _followTargetOffset,
-                                  child: VideoFollowButton(
-                                    pubkey: authorPubkey,
                                   ),
                                 ),
+                              ),
                             ],
-                          );
-                        },
+                          ),
+                        ),
+                        // Follow target, overlaid on the row rather than
+                        // nested inside it: a positioned child does not size
+                        // its parent, so the target costs no layout, and it
+                        // is hit-tested before the avatar it overhangs, so
+                        // their shared corner follows rather than opening the
+                        // profile.
+                        if (video != null)
+                          PositionedDirectional(
+                            start: _followTargetOffset,
+                            top: _followTargetOffset,
+                            child: VideoFollowButton(
+                              pubkey: authorPubkey,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                // Rebuilt alone when collaborator status arrives, so
+                // the author row and its follow state stay mounted.
+                CollaboratorVisibilityBuilder(
+                  video: video,
+                  builder: (context, collaborators) {
+                    final belowAuthorRow = [
+                      ...belowAuthorRowBeforeCollaborators,
+                      // These are video relationships, not caption
+                      // content. Keep them visible when stripping
+                      // wire-format attribution leaves an otherwise
+                      // captionless video.
+                      if (collaborators.visiblePubkeys.isNotEmpty)
+                        CollaboratorAvatarRowBody(
+                          visibility: collaborators,
+                          padding: const EdgeInsets.only(top: 4),
+                        ),
+                      ...belowAuthorRowAfterCollaborators,
+                    ];
+                    // The author row's bottom gap keeps the follow
+                    // target's overhang hit-testable. With nothing
+                    // below the row it would read as empty space, so
+                    // the block sits that gap lower and adds it back
+                    // only when the row has company.
+                    if (belowAuthorRow.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: _authorRowBottomGap,
                       ),
-                      ...belowAuthorRow,
-                    ],
-                  ),
-                );
-              },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: belowAuthorRow,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),

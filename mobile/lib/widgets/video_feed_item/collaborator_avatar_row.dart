@@ -136,10 +136,8 @@ class _StatusAwareVisibility extends StatelessWidget {
 
 /// Renders the avatar row from a [CollaboratorVisibility].
 ///
-/// Promoted to a top-level class with [visibleForTesting] so widget tests
-/// can exercise every render branch without standing up a Riverpod
-/// container, a `BlocProvider`, or a mock repository.
-@visibleForTesting
+/// Takes the visibility rather than resolving it, so a caller can lay out
+/// around what renders; [CollaboratorVisibilityBuilder] resolves it.
 class CollaboratorAvatarRowBody extends StatelessWidget {
   const CollaboratorAvatarRowBody({
     required this.visibility,
@@ -215,7 +213,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
     runDetached(
       _showCollaboratorPicker(context, pubkeys),
       'present collaborator picker',
-      logName: 'CollaboratorAvatarRow',
+      logName: 'CollaboratorAvatarRowBody',
       category: LogCategory.ui,
     );
   }
@@ -256,7 +254,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
   void _navigateToCollaborator(BuildContext context, String pubkey) {
     Log.info(
       'Navigating to collaborator profile: ${pubkeyForLogs(pubkey)}',
-      name: 'CollaboratorAvatarRow',
+      name: 'CollaboratorAvatarRowBody',
       category: LogCategory.ui,
     );
 
@@ -265,7 +263,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
       runDetached(
         context.push(OtherProfileScreen.pathForNpub(npub)),
         'open collaborator profile',
-        logName: 'CollaboratorAvatarRow',
+        logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,
       );
     }
@@ -377,7 +375,7 @@ class _CollaboratorPickerTile extends ConsumerWidget {
       runDetached(
         hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
         'open collaborator profile',
-        logName: 'CollaboratorAvatarRow',
+        logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,
       );
     });

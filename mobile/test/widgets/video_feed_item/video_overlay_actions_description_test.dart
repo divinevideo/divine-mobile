@@ -318,7 +318,6 @@ void main() {
       Future<void> pumpAsThirdPartyViewer(
         WidgetTester tester, {
         required CollaboratorStatus status,
-        bool isFullscreen = false,
       }) async {
         const viewerPubkey =
             'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
@@ -352,7 +351,6 @@ void main() {
               repository,
             ),
           ],
-          isFullscreen: isFullscreen,
         );
       }
 
@@ -434,6 +432,28 @@ void main() {
 
         expect(
           tester.getRect(find.byType(AudioAttributionRow)).bottom,
+          closeTo(captionBottom, _layoutTolerance),
+        );
+      });
+
+      testWidgets('a visible collaborator row ends where a title-only '
+          'caption does', (tester) async {
+        testVideo = captionless(title: 'Only a title');
+        await pumpOverlay(tester, isFullscreen: true);
+        final captionBottom = tester.getRect(find.text('Only a title')).bottom;
+        await unmount(tester);
+
+        // No confirmation repository in this scope, so the row falls back to
+        // showing every tagged collaborator.
+        testVideo = captionless().copyWith(
+          collaboratorPubkeys: const [collaboratorPubkey],
+        );
+        await pumpOverlay(tester, isFullscreen: true);
+
+        expect(
+          tester
+              .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
+              .bottom,
           closeTo(captionBottom, _layoutTolerance),
         );
       });
