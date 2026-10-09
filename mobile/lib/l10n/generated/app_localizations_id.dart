@@ -304,27 +304,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$compactCount putaran $authorName',
+      other: 'loop',
     );
-    return '$_temp0';
+    return '$compactCount $_temp0 sepanjang waktu';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'putaran',
-    );
-    return '$compactCount $_temp0 video ini';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount sepanjang waktu';
   }
 
   @override
@@ -4450,6 +4441,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Thumbnail video yang baru saja kamu publikasikan';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Kirim loop ini ke $platforms juga?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Posting sekali, muncul juga di $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Otomatis menuju $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Tidak ada pengguna ditemukan';
 
   @override
@@ -5877,6 +5883,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Percakapan ini sudah ditutup.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Akun moderasi sebelumnya';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7719,20 +7728,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Pengguna tidak ditemukan';
-
-  @override
-  String get hashtagSearchTitle => 'Cari hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Temukan topik dan konten yang lagi tren';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Tidak ada hashtag untuk \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Pencarian gagal';
 
   @override
   String get userNotAvailableTitle => 'Akun tidak tersedia';
@@ -13053,6 +13048,19 @@ class AppLocalizationsId extends AppLocalizations {
         'private': '$name, Privat, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hubungkan ulang akun-akun ini di pengaturan crossposting untuk tetap bisa memposting: $platforms.',
+      one:
+          'Hubungkan ulang $platforms di pengaturan crossposting untuk tetap bisa memposting.',
     );
     return '$_temp0';
   }

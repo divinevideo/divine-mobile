@@ -334,29 +334,19 @@ class AppLocalizationsFil extends AppLocalizations {
       'Panatilihin ang feeds sa classic na square format';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$compactCount loop ni $authorName',
-      one: '$compactCount loop ni $authorName',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'loops',
       one: 'loop',
     );
-    return '$compactCount $_temp0 ng video na ito';
+    return '$compactCount $_temp0 sa lahat ng panahon';
+  }
+
+  @override
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount sa lahat ng panahon';
   }
 
   @override
@@ -4554,6 +4544,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Thumbnail ng video na kaka-publish mo lang';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Ipadala rin ang loop na ito sa $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Mag-post nang isang beses, lumabas din sa $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Papunta sa $platforms nang awtomatiko.';
+  }
+
+  @override
   String get userSearchNoResults => 'Walang nahanap na user';
 
   @override
@@ -5990,6 +5995,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Sarado na ang usapang ito.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Dating account ng moderasyon';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7855,20 +7863,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Walang nakitang user';
-
-  @override
-  String get hashtagSearchTitle => 'Maghanap ng hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Tuklasin ang trending topics at content';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Walang nakitang hashtag para sa \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Nabigo ang paghahanap';
 
   @override
   String get userNotAvailableTitle => 'Hindi available ang account';
@@ -13264,6 +13258,19 @@ class AppLocalizationsFil extends AppLocalizations {
         'private': '$name, Pribado, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: $platforms.',
+      one:
+          'I-reconnect ang $platforms sa crossposting settings para makapag-post pa rin.',
     );
     return '$_temp0';
   }

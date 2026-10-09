@@ -334,27 +334,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$compactCount lượt lặp của $authorName',
+      other: 'loop',
     );
-    return '$_temp0';
+    return '$compactCount $_temp0 tổng cộng';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'lượt',
-    );
-    return 'video này lặp $compactCount $_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount tổng cộng';
   }
 
   @override
@@ -4492,6 +4483,21 @@ class AppLocalizationsVi extends AppLocalizations {
       'Ảnh thu nhỏ của video bạn vừa đăng';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Gửi loop này lên $platforms luôn nhé?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Đăng một lần, xuất hiện cả trên $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Đang tự động lên $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Không tìm thấy người dùng nào';
 
   @override
@@ -5918,6 +5924,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Cuộc trò chuyện này đã đóng.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Tài khoản kiểm duyệt cũ';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7768,20 +7777,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Không tìm thấy người dùng nào';
-
-  @override
-  String get hashtagSearchTitle => 'Tìm hashtag';
-
-  @override
-  String get hashtagSearchSubtitle => 'Khám phá chủ đề và nội dung thịnh hành';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Không tìm thấy hashtag nào cho \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Tìm kiếm thất bại';
 
   @override
   String get userNotAvailableTitle => 'Tài khoản không khả dụng';
@@ -13095,6 +13090,18 @@ class AppLocalizationsVi extends AppLocalizations {
         'private': '$name, Riêng tư, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: $platforms.',
+      one: 'Kết nối lại $platforms trong cài đặt đăng chéo để tiếp tục đăng.',
     );
     return '$_temp0';
   }

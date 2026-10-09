@@ -1,16 +1,23 @@
-// ABOUTME: Widget tests for status-aware CollaboratorAvatarRow rendering.
-// ABOUTME: Tests CollaboratorAvatarRowBody directly via CollaboratorVisibility.
+// ABOUTME: Widget tests for status-aware collaborator row rendering.
+// ABOUTME: Tests CollaboratorVisibilityBuilder and CollaboratorAvatarRowBody.
 
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../helpers/test_provider_overrides.dart';
+
+class _MockCollaboratorConfirmationRepository extends Mock
+    implements CollaboratorConfirmationRepository {}
 
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == icon,
@@ -36,7 +43,10 @@ UserProfile _makeProfile(String pubkey, String name) => UserProfile(
   eventId: 'evt_$pubkey',
 );
 
-VideoEvent _video({List<String> collaborators = const []}) => VideoEvent(
+VideoEvent _video({
+  List<String> collaborators = const [],
+  String? addressableDTag,
+}) => VideoEvent(
   id: 'test_video_id_00000000000000000000000000000000000000000000000000',
   pubkey: _creatorPubkey,
   createdAt: 1700000000,
@@ -44,6 +54,7 @@ VideoEvent _video({List<String> collaborators = const []}) => VideoEvent(
   timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
   videoUrl: 'https://example.com/video.mp4',
   collaboratorPubkeys: collaborators,
+  addressableDTag: addressableDTag,
 );
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
@@ -59,13 +70,137 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
 
 AppLocalizations get _l10n => lookupAppLocalizations(const Locale('en'));
 
+/// A third-party viewer whose collaborators have all accepted, so every
+/// tagged pubkey renders without the pending decoration.
+CollaboratorVisibility _allConfirmed(List<String> pubkeys) =>
+    CollaboratorVisibility(
+      taggedPubkeys: pubkeys,
+      statusByPubkey: {
+        for (final pubkey in pubkeys) pubkey: CollaboratorStatus.confirmed,
+      },
+      currentUserPubkey: _thirdPartyPubkey,
+      creatorPubkey: _creatorPubkey,
+      isResolved: true,
+    );
+
 void main() {
-  group(CollaboratorAvatarRow, () {
-    testWidgets('renders SizedBox.shrink when video has no collaborators', (
+  group(CollaboratorVisibilityBuilder, () {
+    Future<CollaboratorVisibility> resolve(
+      WidgetTester tester,
+      VideoEvent? video,
+    ) async {
+      late CollaboratorVisibility resolved;
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorVisibilityBuilder(
+            video: video,
+            builder: (context, visibility) {
+              resolved = visibility;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      return resolved;
+    }
+
+    testWidgets('resolves no one when the video tags no collaborators', (
       tester,
     ) async {
-      await tester.pumpWidget(_wrap(CollaboratorAvatarRow(video: _video())));
-      expect(_divineIcon(DivineIconName.users), findsNothing);
+      final visibility = await resolve(tester, _video());
+      expect(visibility.visiblePubkeys, isEmpty);
+    });
+
+    testWidgets('resolves no one when there is no video', (tester) async {
+      final visibility = await resolve(tester, null);
+      expect(visibility.visiblePubkeys, isEmpty);
+    });
+
+    // Before a video's acceptance status can be looked up, an unaccepted
+    // collaborator must not be shown to anyone but the author (#10001).
+    group('while acceptance status is unavailable', () {
+      Future<void> pumpRow(
+        WidgetTester tester, {
+        required String? viewerPubkey,
+        CollaboratorConfirmationRepository? repository,
+        String? addressableDTag = 'collab-video',
+      }) async {
+        await tester.pumpWidget(
+          _wrap(
+            // Rendered the way the feed overlay renders it.
+            CollaboratorVisibilityBuilder(
+              video: _video(
+                collaborators: const [_collab1],
+                addressableDTag: addressableDTag,
+              ),
+              builder: (context, visibility) =>
+                  CollaboratorAvatarRowBody(visibility: visibility),
+            ),
+            overrides: [
+              authServiceProvider.overrideWithValue(
+                createMockAuthService(currentPublicKeyHex: viewerPubkey),
+              ),
+              collaboratorConfirmationRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+              fetchUserProfileProvider(
+                _collab1,
+              ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            ],
+          ),
+        );
+        await tester.pump();
+      }
+
+      testWidgets(
+        'hides them from another viewer before the repository is ready',
+        (tester) async {
+          await pumpRow(tester, viewerPubkey: _thirdPartyPubkey);
+
+          expect(_divineIcon(DivineIconName.users), findsNothing);
+        },
+      );
+
+      testWidgets('hides them from a viewer with no pubkey', (tester) async {
+        await pumpRow(
+          tester,
+          viewerPubkey: null,
+          repository: _MockCollaboratorConfirmationRepository(),
+        );
+
+        expect(_divineIcon(DivineIconName.users), findsNothing);
+      });
+
+      testWidgets('hides them on a video with no addressable id', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          viewerPubkey: _thirdPartyPubkey,
+          repository: _MockCollaboratorConfirmationRepository(),
+          addressableDTag: null,
+        );
+
+        expect(_divineIcon(DivineIconName.users), findsNothing);
+      });
+
+      testWidgets('still shows the author their own invitees', (
+        tester,
+      ) async {
+        await pumpRow(tester, viewerPubkey: _creatorPubkey);
+
+        expect(_divineIcon(DivineIconName.users), findsOneWidget);
+        // Unconfirmed until status loads, so the invitee renders as pending.
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.label ==
+                    _l10n.videoCollaboratorPendingSemanticLabel,
+          ),
+          findsOneWidget,
+        );
+      });
     });
   });
 
@@ -104,15 +239,13 @@ void main() {
       testWidgets('adds the padding above a visible row', (tester) async {
         await tester.pumpWidget(
           _wrap(
-            const Column(
+            Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CollaboratorAvatarRowBody(
-                  visibility: CollaboratorVisibility.fallback(
-                    taggedPubkeys: [_collab1],
-                  ),
-                  padding: EdgeInsets.only(top: 4),
+                  visibility: _allConfirmed(const [_collab1]),
+                  padding: const EdgeInsets.only(top: 4),
                 ),
               ],
             ),
@@ -128,24 +261,6 @@ void main() {
         expect(pillTop.dy - rowTop.dy, equals(4));
       });
     });
-
-    testWidgets(
-      'fallback mode: renders all tagged pubkeys with no decoration',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            const CollaboratorAvatarRowBody(
-              visibility: CollaboratorVisibility.fallback(
-                taggedPubkeys: [_collab1, _collab2],
-              ),
-            ),
-          ),
-        );
-
-        expect(_divineIcon(DivineIconName.users), findsOneWidget);
-        expect(find.byType(Opacity), findsNothing);
-      },
-    );
 
     testWidgets(
       'inviter view: pending collaborator avatar dimmed with semantic label',
@@ -411,10 +526,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _wrap(
-          const CollaboratorAvatarRowBody(
-            visibility: CollaboratorVisibility.fallback(
-              taggedPubkeys: [_collab1, _collab2, _collab3],
-            ),
+          CollaboratorAvatarRowBody(
+            visibility: _allConfirmed(const [_collab1, _collab2, _collab3]),
           ),
           overrides: [
             fetchUserProfileProvider(

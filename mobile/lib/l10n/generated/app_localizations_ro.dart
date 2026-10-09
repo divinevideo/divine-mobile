@@ -384,11 +384,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -396,19 +392,12 @@ class AppLocalizationsRo extends AppLocalizations {
       few: 'bucle',
       one: 'buclă',
     );
-    return '$authorName: $compactCount $_temp0';
+    return '$compactCount $_temp0 din toate timpurile';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'de bucle ale acestui videoclip',
-      few: 'bucle ale acestui videoclip',
-      one: 'buclă a acestui videoclip',
-    );
-    return '$compactCount $_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount din toate timpurile';
   }
 
   @override
@@ -4664,6 +4653,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Miniatura videoclipului pe care tocmai l-ai publicat';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Trimiți bucla asta și pe $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Postează o dată, apari și pe $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Pleacă automat pe $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Niciun utilizator găsit';
 
   @override
@@ -6116,6 +6120,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Această conversație este închisă.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Fost cont de moderare';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7986,21 +7993,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Niciun utilizator găsit';
-
-  @override
-  String get hashtagSearchTitle => 'Caută hashtaguri';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'Descoperă subiecte și conținut în tendințe';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Niciun hashtag găsit pentru „$query”';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Căutarea a eșuat';
 
   @override
   String get userNotAvailableTitle => 'Cont indisponibil';
@@ -13418,6 +13410,21 @@ class AppLocalizationsRo extends AppLocalizations {
         'private': '$name, Privată, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconectează aceste conturi în setările de crosspost ca să continui să postezi: $platforms.',
+      few:
+          'Reconectează aceste conturi în setările de crosspost ca să continui să postezi: $platforms.',
+      one:
+          'Reconectează $platforms în setările de crosspost ca să continui să postezi.',
     );
     return '$_temp0';
   }

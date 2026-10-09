@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Vezi",
     "postPublishConfirmationShare": "Partajează",
     "postPublishConfirmationThumbnailLabel": "Miniatura videoclipului pe care tocmai l-ai publicat",
+    "postPublishCrosspostSuggest": "Trimiți bucla asta și pe {platforms}?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Postează o dată, apari și pe {platform}.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Pleacă automat pe {platforms}.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Videoclip publicat pe profilul tău} few{{count} videoclipuri publicate pe profilul tău} other{{count} de videoclipuri publicate pe profilul tău}}",
     "userSearchNoResults": "Niciun utilizator găsit",
     "userPickerFilterByNameHint": "Filtrează după nume...",
@@ -2162,6 +2168,7 @@
     "dmDeleteRefusedMessage": "Ștergerea pentru toată lumea nu a reușit.",
     "dmDeleteRefusedDetails": "Este posibil ca unele persoane să vadă în continuare acest mesaj.",
     "dmRetiredThreadClosedTitle": "Această conversație este închisă.",
+    "dmFormerModerationAccountName": "Fost cont de moderare",
     "messageRequestModerationNoticeCannotBeRemoved": "Această notificare de la Divine Moderation nu poate fi eliminată.",
     "dmRetiredThreadClosedBody": "Am mutat Divine Moderation pe un cont nou. Acesta nu mai este citit de nimeni.",
     "dmRetiredThreadOpenSupport": "Scrie către Divine Moderation",
@@ -3071,8 +3078,8 @@
     "appearanceSettingsSystem": "Implicit de sistem",
     "appearanceSettingsLight": "Luminos",
     "appearanceSettingsDark": "Întunecat",
-    "videoOverlayTotalLoops": "{authorName}: {compactCount} {count, plural, =1{buclă} few{bucle} other{de bucle}}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{buclă a acestui videoclip} few{bucle ale acestui videoclip} other{de bucle ale acestui videoclip}}",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{buclă} few{bucle} other{de bucle}} din toate timpurile",
+    "videoOverlayTotalLoopsScope": "{compactCount} din toate timpurile",
     "generalSettingsClosedCaptions": "Subtitrări",
     "generalSettingsClosedCaptionsSubtitle": "Afișează subtitrările când videoclipurile le includ",
     "generalSettingsVideoShapeSquareOnly": "Doar videoclipuri pătrate",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "Găsește oameni",
     "newMessageNoContacts": "Niciun contact găsit.\nUrmărește oameni ca să-i vezi aici.",
     "newMessageNoUsersFound": "Niciun utilizator găsit",
-    "hashtagSearchTitle": "Caută hashtaguri",
-    "hashtagSearchSubtitle": "Descoperă subiecte și conținut în tendințe",
-    "hashtagSearchNoResults": "Niciun hashtag găsit pentru „{query}”",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Căutarea a eșuat",
     "userNotAvailableTitle": "Cont indisponibil",
     "userNotAvailableBody": "Acest cont nu e disponibil acum.",
     "blossomValidServerUrl": "Introdu un URL valid de server (ex.: https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconectează {platforms} în setările de crosspost ca să continui să postezi.} few{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.} other{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.}}"
 }

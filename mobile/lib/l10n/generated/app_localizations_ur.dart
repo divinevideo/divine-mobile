@@ -365,29 +365,19 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$authorName کے $compactCount لوپس',
-      one: '$authorName کا $compactCount لوپ',
+      other: 'لوپس',
+      one: 'لوپ',
     );
-    return '$_temp0';
+    return '$compactCount $_temp0 کل';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'اس ویڈیو کے $compactCount لوپس',
-      one: 'اس ویڈیو کا $compactCount لوپ',
-    );
-    return '$_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount کل';
   }
 
   @override
@@ -4536,6 +4526,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس ویڈیو کا تھمب نیل جو آپ نے ابھی شائع کی';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'کیا یہ لوپ $platforms پر بھی بھیجیں؟';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'ایک بار پوسٹ کریں، $platform پر بھی نظر آئیں۔';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'خودکار طور پر $platforms پر جا رہا ہے۔';
+  }
+
+  @override
   String get userSearchNoResults => 'کوئی صارف نہیں ملا';
 
   @override
@@ -5960,6 +5965,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'یہ گفتگو بند ہو چکی ہے۔';
+
+  @override
+  String get dmFormerModerationAccountName => 'سابقہ ماڈریشن اکاؤنٹ';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7805,20 +7813,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'کوئی صارف نہیں ملا';
-
-  @override
-  String get hashtagSearchTitle => 'ہیش ٹیگز تلاش کریں';
-
-  @override
-  String get hashtagSearchSubtitle => 'مقبول موضوعات اور مواد دریافت کریں';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\"$query\" کے لیے کوئی ہیش ٹیگ نہیں ملا';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'تلاش ناکام';
 
   @override
   String get userNotAvailableTitle => 'اکاؤنٹ دستیاب نہیں';
@@ -13142,6 +13136,19 @@ class AppLocalizationsUr extends AppLocalizations {
         'private': '$name، نجی، $count',
         'other': '$name، $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: $platforms۔',
+      one:
+          'پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں $platforms دوبارہ منسلک کریں۔',
     );
     return '$_temp0';
   }

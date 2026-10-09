@@ -375,11 +375,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Garde les fils dans le format carré classique';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -387,19 +383,12 @@ class AppLocalizationsFr extends AppLocalizations {
       many: 'boucles',
       one: 'boucle',
     );
-    return '$compactCount $_temp0 de $authorName';
+    return '$compactCount $_temp0 de tous les temps';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'boucles',
-      many: 'boucles',
-      one: 'boucle',
-    );
-    return '$compactCount $_temp0 de cette vidéo';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount de tous les temps';
   }
 
   @override
@@ -4599,6 +4588,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Miniature de la vidéo que tu viens de publier';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Envoyer aussi ce loop sur $platforms ?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Publie une fois, apparais aussi sur $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Part automatiquement sur $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Aucun utilisateur trouvé';
 
   @override
@@ -6036,6 +6040,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Cette conversation est fermée.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Ancien compte de modération';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7912,21 +7919,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Aucun utilisateur trouvé';
-
-  @override
-  String get hashtagSearchTitle => 'Rechercher des hashtags';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'Découvre les sujets et contenus tendance';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Aucun hashtag trouvé pour « $query »';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Échec de la recherche';
 
   @override
   String get userNotAvailableTitle => 'Compte indisponible';
@@ -13351,6 +13343,21 @@ class AppLocalizationsFr extends AppLocalizations {
         'private': '$name, Privée, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      many:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      one:
+          'Reconnecte $platforms dans les réglages de crosspost pour continuer à publier.',
     );
     return '$_temp0';
   }

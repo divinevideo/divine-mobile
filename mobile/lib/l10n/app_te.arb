@@ -249,8 +249,8 @@
   "appearanceSettingsSystem": "సిస్టమ్ డిఫాల్ట్",
   "appearanceSettingsLight": "కాంతి",
   "appearanceSettingsDark": "చీకటి",
-  "videoOverlayTotalLoops": "{authorName} {compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}}",
-  "videoOverlayVideoLoops": "ఈ వీడియోకు {compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}}",
+  "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}} మొత్తం",
+  "videoOverlayTotalLoopsScope": "{compactCount} మొత్తం",
   "generalSettingsClosedCaptions": "సంవృత శీర్షికలు",
   "generalSettingsClosedCaptionsSubtitle": "వీడియోలు వాటిని చేర్చినప్పుడు వాటిని చూపండి",
   "generalSettingsVideoShapeSquareOnly": "స్క్వేర్ వీడియోలు మాత్రమే",
@@ -3464,6 +3464,7 @@
   "@dmRetiredThreadClosedTitle": {
     "description": "Heading of the notice that replaces the message composer in a DM thread keyed on a retired Divine Moderation account (#6416)."
   },
+  "dmFormerModerationAccountName": "మునుపటి మోడరేషన్ ఖాతా",
   "messageRequestModerationNoticeCannotBeRemoved": "ఈ Divine మోడరేషన్ నోటీసు తీసివేయబడదు.",
   "@messageRequestModerationNoticeCannotBeRemoved": {
     "description": "SnackBar shown when a user tries to remove a conversation that resolves to a protected Divine Moderation notice. Used on the request-preview decline, the Message Requests bulk sweep, and the inbox long-press remove (#6971, #8347, #8391)."
@@ -4721,17 +4722,6 @@
   "newMessageFindPeople": "వ్యక్తులను కనుగొనండి",
   "newMessageNoContacts": "పరిచయాలు ఏవీ కనుగొనబడలేదు.\nవ్యక్తులను ఇక్కడ చూడటానికి వారిని అనుసరించండి.",
   "newMessageNoUsersFound": "వినియోగదారులు ఎవరూ కనుగొనబడలేదు",
-  "hashtagSearchTitle": "హ్యాష్‌ట్యాగ్‌ల కోసం శోధించండి",
-  "hashtagSearchSubtitle": "ట్రెండింగ్ విషయాలు మరియు కంటెంట్‌ను కనుగొనండి",
-  "hashtagSearchNoResults": "\" కోసం హ్యాష్‌ట్యాగ్‌లు ఏవీ కనుగొనబడలేదు{query}\"",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "శోధన విఫలమైంది",
   "userNotAvailableTitle": "ఖాతా అందుబాటులో లేదు",
   "userNotAvailableBody": "ఈ ఖాతా ప్రస్తుతం అందుబాటులో లేదు.",
   "classicVinersTitle": "OG Viners",
@@ -8479,5 +8469,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో {platforms}ను మళ్లీ కనెక్ట్ చేయండి.} other{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: {platforms}.}}"
 }

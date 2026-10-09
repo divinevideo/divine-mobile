@@ -218,6 +218,7 @@ abstract class SemanticIds {
   static const String profileListsTab = 'lists_tab';
   static const String profileCommentsTab = 'comments_tab';
 
+  static String videoThumbnail(int index) => 'video_thumbnail_$index';
   static String likedVideoThumbnail(int index) =>
       'liked_video_thumbnail_$index';
   static String savedVideoThumbnail(int index) =>

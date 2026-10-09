@@ -1720,6 +1720,12 @@
     "postPublishConfirmationView": "Виж",
     "postPublishConfirmationShare": "Сподели",
     "postPublishConfirmationThumbnailLabel": "Миниатюра на видеото, което току-що публикува",
+    "postPublishCrosspostSuggest": "Да пратим ли този луп и в {platforms}?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Публикувай веднъж, появи се и в {platform}.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Отива в {platforms} автоматично.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Видеото е публикувано в профила ти} other{{count} видеа са публикувани в профила ти}}",
     "userSearchNoResults": "Няма намерени потребители",
     "userPickerFilterByNameHint": "Филтриране по име...",
@@ -2216,6 +2222,7 @@
     "dmDeleteRefusedMessage": "Изтриването за всички не се получи.",
     "dmDeleteRefusedDetails": "Някои хора все още може да виждат това съобщение.",
     "dmRetiredThreadClosedTitle": "Този разговор е затворен.",
+    "dmFormerModerationAccountName": "Бивш акаунт за модерация",
     "messageRequestModerationNoticeCannotBeRemoved": "Това известие от Divine Moderation не може да бъде премахнато.",
     "dmRetiredThreadClosedBody": "Преместихме Divine Moderation в нов профил. Този вече не се чете от никого.",
     "dmRetiredThreadOpenSupport": "Пишете на Divine Moderation",
@@ -3225,8 +3232,8 @@
     "appearanceSettingsSystem": "Системна настройка",
     "appearanceSettingsLight": "Светла",
     "appearanceSettingsDark": "Тъмна",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} на {authorName}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} на това видео",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{луп} other{лупа}} за всички времена",
+    "videoOverlayTotalLoopsScope": "{compactCount} за всички времена",
     "generalSettingsClosedCaptions": "Субтитри",
     "generalSettingsClosedCaptionsSubtitle": "Показвай субтитри, когато видеата ги имат",
     "generalSettingsVideoShapeSquareOnly": "Само квадратни видеа",
@@ -3550,17 +3557,6 @@
     "newMessageFindPeople": "Намери хора",
     "newMessageNoContacts": "Не са намерени контакти.\nПоследвай хора, за да ги виждаш тук.",
     "newMessageNoUsersFound": "Не са намерени потребители",
-    "hashtagSearchTitle": "Търси хаштагове",
-    "hashtagSearchSubtitle": "Открий популярни теми и съдържание",
-    "hashtagSearchNoResults": "Няма намерени хаштагове за „{query}“",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Търсенето не успя",
     "userNotAvailableTitle": "Акаунтът не е наличен",
     "userNotAvailableBody": "Този акаунт в момента не е наличен.",
     "blossomValidServerUrl": "Въведи валиден URL на сървър (напр. https://blossom.band)",
@@ -5092,5 +5088,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Свържи отново {platforms} в настройките за кръстосано публикуване, за да продължиш да публикуваш.} other{Свържи отново тези акаунти в настройките за кръстосано публикуване, за да продължиш да публикуваш: {platforms}.}}"
 }

@@ -4,9 +4,9 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
+import 'package:openvine/models/moderation_presentation.dart';
+import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Profile card shown when a conversation has no messages yet.
@@ -17,6 +17,7 @@ class EmptyConversation extends StatelessWidget {
   const EmptyConversation({
     required this.displayName,
     required this.pubkey,
+    required this.moderation,
     this.imageUrl,
     this.nip05,
     this.onViewProfile,
@@ -27,6 +28,11 @@ class EmptyConversation extends StatelessWidget {
 
   final String displayName;
   final String pubkey;
+
+  /// How [pubkey] is presented, resolved by the caller together with
+  /// [displayName] so the artwork cannot present a key more officially than its
+  /// name does (#9963).
+  final ModerationPresentation moderation;
   final String? imageUrl;
   final String? nip05;
   final VoidCallback? onViewProfile;
@@ -46,6 +52,11 @@ class EmptyConversation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatar = dmPeerAvatar(
+      isVanished: false,
+      moderation: moderation,
+      pictureUrl: imageUrl,
+    );
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
       child: Column(
@@ -57,13 +68,11 @@ class EmptyConversation extends StatelessWidget {
               isLoading: isIdentityResolving,
               excludeSemantics: true,
               child: UserAvatar(
-                imageUrl: imageUrl,
+                imageUrl: avatar.imageUrl,
                 name: displayName,
                 placeholderSeed: pubkey,
                 size: 96,
-                contentOverride: isModerationAccount(pubkey)
-                    ? const ModerationAvatar()
-                    : null,
+                contentOverride: avatar.contentOverride,
               ),
             ),
           ),

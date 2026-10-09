@@ -2329,6 +2329,7 @@ class ProfileRepository implements ProfileReader {
     if (_isSearchCancelled(cancellationToken)) return;
 
     final resultMap = <String, UserProfile>{};
+    final serverSelectedPubkeys = <String>{};
     final sources = <SearchSource, SearchSourceStatus>{
       for (final source in SearchSource.values)
         source: const SearchSourcePending(),
@@ -2412,7 +2413,29 @@ class ProfileRepository implements ProfileReader {
         nextRestOffset = offset + restResults.length;
         restHasMore = restResults.length == limit;
         for (final result in restResults) {
+          final cached = resultMap[result.pubkey];
+          final serverRevision = result.createdAt;
+          // Compare event revisions before conversion: an older API can omit
+          // created_at, and toUserProfile's fallback is not an event timestamp.
+          // Cached REST and bundled seed projections lack event provenance.
+          if (cached != null &&
+              NostrHexUtils.isValidEventId(cached.eventId) &&
+              serverRevision != null &&
+              cached.createdAt.isAfter(serverRevision)) {
+            // Counts are not part of the profile event, so the newer revision
+            // still ranks and renders with the server's numbers.
+            resultMap[result.pubkey] = cached.copyWith(
+              rawData: {
+                ...cached.rawData,
+                if (result.followerCount != null)
+                  'follower_count': result.followerCount,
+                if (result.videoCount != null) 'video_count': result.videoCount,
+              },
+            );
+            continue;
+          }
           resultMap[result.pubkey] = result.toUserProfile();
+          serverSelectedPubkeys.add(result.pubkey);
         }
         sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
           resultCount: resultMap.length - preRestCount,
@@ -2486,6 +2509,7 @@ class ProfileRepository implements ProfileReader {
         final enriched = await _enrichFromCache(
           resultMap.values.toList(),
           cancellationToken: cancellationToken,
+          preserveRevisions: serverSelectedPubkeys,
         );
         if (_isSearchCancelled(cancellationToken)) return;
         final result = snapshot(
@@ -2512,6 +2536,7 @@ class ProfileRepository implements ProfileReader {
     final enriched = await _enrichFromCache(
       resultMap.values.toList(),
       cancellationToken: cancellationToken,
+      preserveRevisions: serverSelectedPubkeys,
     );
     if (_isSearchCancelled(cancellationToken)) return;
     final result = snapshot(
@@ -2611,18 +2636,24 @@ class ProfileRepository implements ProfileReader {
     List<UserProfile> profiles,
     String? sortBy,
   ) {
-    final popularityRanked = _rankServerSortedPage(profiles, sortBy);
+    final normalizedQuery = query.trim().toLowerCase();
+    final queryHex = _npubQueryToHex(normalizedQuery);
+    // The search endpoint can return accounts whose visible identity does not
+    // match the query. Keeping them lets a later REST page bury good cached
+    // matches under unrelated, more popular accounts.
+    final matching = profiles
+        .where((p) => _searchRelevance(p, normalizedQuery, queryHex) > 0)
+        .toList();
+    final popularityRanked = _rankServerSortedPage(matching, sortBy);
     final popularityIndex = {
       for (final (index, profile) in popularityRanked.indexed)
         profile.pubkey: index,
     };
-    final normalizedQuery = query.trim().toLowerCase();
-    final queryHex = _npubQueryToHex(normalizedQuery);
     final relevanceByPubkey = {
-      for (final profile in profiles)
+      for (final profile in matching)
         profile.pubkey: _searchRelevance(profile, normalizedQuery, queryHex),
     };
-    return [...profiles]..sort((a, b) {
+    return matching..sort((a, b) {
       final relevance = relevanceByPubkey[b.pubkey]!.compareTo(
         relevanceByPubkey[a.pubkey]!,
       );
@@ -3008,12 +3039,19 @@ class ProfileRepository implements ProfileReader {
   Future<List<UserProfile>> _enrichFromCache(
     List<UserProfile> profiles, {
     SearchCancellationToken? cancellationToken,
+    Set<String> preserveRevisions = const {},
   }) async {
     final enriched = <UserProfile>[];
     var cacheHits = 0;
     var pictureEnriched = 0;
     for (final profile in profiles) {
       if (_isSearchCancelled(cancellationToken)) break;
+      // A selected server revision includes intentional omissions. Mixing in
+      // older cached fields would restore removed names and other metadata.
+      if (preserveRevisions.contains(profile.pubkey)) {
+        enriched.add(profile);
+        continue;
+      }
       final cached = await _userProfilesDao.getProfile(profile.pubkey);
       if (_isSearchCancelled(cancellationToken)) break;
       if (cached == null) {
@@ -3029,9 +3067,15 @@ class ProfileRepository implements ProfileReader {
         profile.copyWith(
           name: profile.name ?? cached.name,
           displayName: profile.displayName ?? cached.displayName,
-          about: profile.about ?? cached.about,
-          picture: profile.picture ?? cached.picture,
-          banner: profile.banner ?? cached.banner,
+          about: profile.about?.trim().isNotEmpty == true
+              ? profile.about
+              : cached.about,
+          picture: profile.picture?.trim().isNotEmpty == true
+              ? profile.picture
+              : cached.picture,
+          banner: profile.banner?.trim().isNotEmpty == true
+              ? profile.banner
+              : cached.banner,
           website: profile.website ?? cached.website,
           nip05: profile.nip05 ?? cached.nip05,
           lud16: profile.lud16 ?? cached.lud16,

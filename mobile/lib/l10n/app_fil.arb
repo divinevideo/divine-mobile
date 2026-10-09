@@ -1115,6 +1115,12 @@
     "postPublishConfirmationView": "Tingnan",
     "postPublishConfirmationShare": "I-share",
     "postPublishConfirmationThumbnailLabel": "Thumbnail ng video na kaka-publish mo lang",
+    "postPublishCrosspostSuggest": "Ipadala rin ang loop na ito sa {platforms}?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Mag-post nang isang beses, lumabas din sa {platform}.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Papunta sa {platforms} nang awtomatiko.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Na-publish na ang video sa profile mo} other{Na-publish na ang {count} na video sa profile mo}}",
     "userSearchNoResults": "Walang nahanap na user",
     "userPickerFilterByNameHint": "I-filter ayon sa pangalan...",
@@ -1453,6 +1459,7 @@
     "dmDeleteRefusedMessage": "Hindi na-delete para sa lahat.",
     "dmDeleteRefusedDetails": "Maaaring nakikita pa rin ng ilang tao ang mensaheng ito.",
     "dmRetiredThreadClosedTitle": "Sarado na ang usapang ito.",
+    "dmFormerModerationAccountName": "Dating account ng moderasyon",
     "messageRequestModerationNoticeCannotBeRemoved": "Hindi maaalis ang abisong ito mula sa Divine Moderation.",
     "dmRetiredThreadClosedBody": "Inilipat namin ang Divine Moderation sa bagong account. Wala nang nagbabasa nito.",
     "dmRetiredThreadOpenSupport": "I-message ang Divine Moderation",
@@ -2263,10 +2270,6 @@
     "followingEmptyTitle": "Wala ka pang fino-follow",
     "followingTitle": "Fino-follow",
     "followingTitleForName": "Fino-follow ni {displayName}",
-    "hashtagSearchFailed": "Nabigo ang paghahanap",
-    "hashtagSearchNoResults": "Walang nakitang hashtag para sa \"{query}\"",
-    "hashtagSearchSubtitle": "Tuklasin ang trending topics at content",
-    "hashtagSearchTitle": "Maghanap ng hashtag",
     "newMessageFindPeople": "Maghanap ng tao",
     "newMessageNoContacts": "Walang nakitang contact.\nMag-follow ng mga tao para makita sila dito.",
     "newMessageNoUsersFound": "Walang nakitang user",
@@ -2511,8 +2514,8 @@
     "appearanceSettingsSystem": "Default ng system",
     "appearanceSettingsLight": "Maliwanag",
     "appearanceSettingsDark": "Madilim",
-    "videoOverlayTotalLoops": "{count, plural, one{{compactCount} loop ni {authorName}} other{{compactCount} loop ni {authorName}}}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} ng video na ito",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, one{loop} other{loops}} sa lahat ng panahon",
+    "videoOverlayTotalLoopsScope": "{compactCount} sa lahat ng panahon",
     "generalSettingsClosedCaptions": "Closed Captions",
     "generalSettingsClosedCaptionsSubtitle": "Ipakita ang captions kapag may captions ang video",
     "generalSettingsVideoShapeSquareOnly": "Square videos lang",
@@ -3960,5 +3963,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{I-reconnect ang {platforms} sa crossposting settings para makapag-post pa rin.} other{I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: {platforms}.}}"
 }

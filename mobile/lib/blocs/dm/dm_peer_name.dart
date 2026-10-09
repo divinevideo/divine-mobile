@@ -5,6 +5,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/models/moderation_presentation.dart';
 
 /// The conversation participants other than the signed-in viewer.
 ///
@@ -36,12 +37,14 @@ String dmConversationFirstPeer({
 /// Injected rather than read from `context.l10n`, because the search index
 /// that matches on them lives in a BLoC. Both values are already-translated
 /// ARB keys: [deletedAccount] is `profileDeletedAccountName`, [moderation] is
-/// `inboxSupportRowTitle`, and [retiredConversationClosed] is
+/// `inboxSupportRowTitle`, [formerModeration] is
+/// `dmFormerModerationAccountName`, and [retiredConversationClosed] is
 /// `dmRetiredThreadClosedTitle`.
 class DmPeerLabels extends Equatable {
   const DmPeerLabels({
     required this.deletedAccount,
     required this.moderation,
+    required this.formerModeration,
     required this.retiredConversationClosed,
   });
 
@@ -51,6 +54,10 @@ class DmPeerLabels extends Equatable {
   /// Shown instead of the kind-0 name of a Divine Moderation key.
   final String moderation;
 
+  /// Shown instead of the kind-0 name of a retired moderation key whose
+  /// official branding is withdrawn ([ModerationPresentation.former]).
+  final String formerModeration;
+
   /// Shown instead of message content for a retired moderation thread.
   final String retiredConversationClosed;
 
@@ -58,6 +65,7 @@ class DmPeerLabels extends Equatable {
   List<Object?> get props => [
     deletedAccount,
     moderation,
+    formerModeration,
     retiredConversationClosed,
   ];
 }
@@ -119,18 +127,23 @@ String dmConversationTitle({
 /// Resolves the profile-independent prefix shared by the row and action sheet.
 String? dmPeerSubstituteName({
   required bool isVanished,
-  required bool isModeration,
+  required ModerationPresentation moderation,
   required DmPeerLabels labels,
   String? displayNameOverride,
 }) {
   if (isVanished) return labels.deletedAccount;
   if (displayNameOverride != null) return displayNameOverride;
-  if (isModeration) return labels.moderation;
-  return null;
+  return switch (moderation) {
+    ModerationPresentation.official => labels.moderation,
+    // A retired key someone could still sign as is never named as Divine, and
+    // never by a kind-0 name its holder chose (#9963).
+    ModerationPresentation.former => labels.formerModeration,
+    ModerationPresentation.ordinary => null,
+  };
 }
 
 /// The peer's name, in the precedence every DM surface has to agree on:
-/// vanished, override, moderation, profile, generated.
+/// vanished, override, moderation (official or former), profile, generated.
 ///
 /// This function exists because that precedence used to be written twice — the
 /// widget chain rendered all five steps while `ConversationListBloc` matched on
@@ -154,7 +167,7 @@ String? dmPeerSubstituteName({
 String dmPeerName({
   required String pubkeyHex,
   required bool isVanished,
-  required bool isModeration,
+  required ModerationPresentation moderation,
   required DmPeerLabels labels,
   String? profileName,
   String? displayNameOverride,
@@ -162,7 +175,7 @@ String dmPeerName({
 }) {
   final substitute = dmPeerSubstituteName(
     isVanished: isVanished,
-    isModeration: isModeration,
+    moderation: moderation,
     labels: labels,
     displayNameOverride: displayNameOverride,
   );

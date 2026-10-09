@@ -301,10 +301,11 @@ class MyProfileBloc extends Bloc<MyProfileEvent, MyProfileState> {
     }
     if (isClosed) return;
 
-    // The repository owns the skip-or-verify (stale-while-revalidate)
-    // decision; the bloc just renders whatever it resolves to (#3936). The
-    // currently-rendered claims ride along so a rate-limited (inconclusive)
-    // outcome cannot clear visible chips.
+    // The repository owns the skip-or-verify (stale-while-revalidate) decision;
+    // the bloc just renders whatever it resolves to (#3936). The
+    // currently-rendered claims ride along so an inconclusive outcome
+    // (rate-limited, or the platform couldn't be checked) cannot clear visible
+    // chips.
     try {
       final claims = await repo.resolveClaims(
         pubkey: profile.pubkey,

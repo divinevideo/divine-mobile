@@ -138,8 +138,8 @@
   "appearanceSettingsSystem": "Theo hệ thống",
   "appearanceSettingsLight": "Sáng",
   "appearanceSettingsDark": "Tối",
-  "videoOverlayTotalLoops": "{count, plural, other{{compactCount} lượt lặp của {authorName}}}",
-  "videoOverlayVideoLoops": "video này lặp {compactCount} {count, plural, other{lượt}}",
+  "videoOverlayTotalLoops": "{compactCount} {count, plural, other{loop}} tổng cộng",
+  "videoOverlayTotalLoopsScope": "{compactCount} tổng cộng",
   "generalSettingsClosedCaptions": "Phụ đề",
   "generalSettingsClosedCaptionsSubtitle": "Hiện phụ đề khi video có sẵn",
   "generalSettingsVideoShapeSquareOnly": "Chỉ video vuông",
@@ -2244,6 +2244,12 @@
   "postPublishConfirmationView": "Xem",
   "postPublishConfirmationShare": "Chia sẻ",
   "postPublishConfirmationThumbnailLabel": "Ảnh thu nhỏ của video bạn vừa đăng",
+  "postPublishCrosspostSuggest": "Gửi loop này lên {platforms} luôn nhé?",
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+  "postPublishCrosspostSetUp": "Đăng một lần, xuất hiện cả trên {platform}.",
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+  "postPublishCrosspostAutomatic": "Đang tự động lên {platforms}.",
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "Không tìm thấy người dùng nào",
   "userPickerFilterByNameHint": "Lọc theo tên...",
   "userPickerSearchByNameHint": "Tìm theo tên...",
@@ -2923,6 +2929,7 @@
     "dmDeleteRefusedMessage": "Không xóa được với mọi người.",
     "dmDeleteRefusedDetails": "Một số người vẫn có thể nhìn thấy tin nhắn này.",
   "dmRetiredThreadClosedTitle": "Cuộc trò chuyện này đã đóng.",
+  "dmFormerModerationAccountName": "Tài khoản kiểm duyệt cũ",
   "messageRequestModerationNoticeCannotBeRemoved": "Không thể xóa thông báo Divine Moderation này.",
   "dmRetiredThreadClosedBody": "Chúng tôi đã chuyển Divine Moderation sang một tài khoản mới. Không còn ai đọc tài khoản này nữa.",
   "dmRetiredThreadOpenSupport": "Nhắn tin cho Divine Moderation",
@@ -3956,17 +3963,6 @@
   "newMessageFindPeople": "Tìm người",
   "newMessageNoContacts": "Không tìm thấy liên hệ nào.\nTheo dõi mọi người để thấy họ ở đây.",
   "newMessageNoUsersFound": "Không tìm thấy người dùng nào",
-  "hashtagSearchTitle": "Tìm hashtag",
-  "hashtagSearchSubtitle": "Khám phá chủ đề và nội dung thịnh hành",
-  "hashtagSearchNoResults": "Không tìm thấy hashtag nào cho \"{query}\"",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "Tìm kiếm thất bại",
   "userNotAvailableTitle": "Tài khoản không khả dụng",
   "userNotAvailableBody": "Tài khoản này hiện không khả dụng.",
   "classicVinersTitle": "OG Viners",
@@ -6735,5 +6731,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Kết nối lại {platforms} trong cài đặt đăng chéo để tiếp tục đăng.} other{Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: {platforms}.}}"
 }

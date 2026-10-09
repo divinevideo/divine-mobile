@@ -169,6 +169,39 @@ void main() {
         expect(find.byType(SliverGrid), findsOneWidget);
       });
 
+      testWidgets('ends with the bottom safe area', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          ProfileCollabVideosState(
+            status: ProfileCollabVideosStatus.success,
+            videos: _createTestVideos(count: 30),
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        final scrollable = find.descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        );
+        final withoutInset = tester
+            .state<ScrollableState>(scrollable)
+            .position
+            .maxScrollExtent;
+        expect(withoutInset, greaterThan(0));
+
+        const bottomInset = 34.0;
+        tester.view.viewPadding = FakeViewPadding(
+          bottom: bottomInset * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewPadding);
+        await tester.pumpAndSettle();
+
+        // The last row can be scrolled clear of the home indicator.
+        expect(
+          tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+          moreOrLessEquals(withoutInset + bottomInset, epsilon: 1),
+        );
+      });
+
       testWidgets('bottom loading indicator when loading more', (
         tester,
       ) async {

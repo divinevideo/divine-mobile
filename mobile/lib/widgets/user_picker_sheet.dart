@@ -901,20 +901,42 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _NoResults extends StatelessWidget {
-  const _NoResults();
+  const _NoResults({this.onShowMore, this.isLoadingMore = false});
+
+  final VoidCallback? onShowMore;
+  final bool isLoadingMore;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Text(
-          context.l10n.userSearchNoResults,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.onSurfaceMuted,
-          ),
-        ),
+        child: onShowMore == null
+            ? Text(
+                context.l10n.userSearchNoResults,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              )
+            : _ShowMoreButton(onPressed: onShowMore, isLoading: isLoadingMore),
       ),
+    );
+  }
+}
+
+class _ShowMoreButton extends StatelessWidget {
+  const _ShowMoreButton({required this.onPressed, required this.isLoading});
+
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DivineButton(
+      label: context.l10n.profileShowMore,
+      type: DivineButtonType.secondary,
+      onPressed: isLoading ? null : onPressed,
+      isLoading: isLoading,
     );
   }
 }
@@ -924,6 +946,9 @@ class _ResultsList extends StatelessWidget {
     required this.scrollController,
     required this.results,
     required this.onUserSelected,
+    this.onNearEnd,
+    this.onShowMore,
+    this.isLoadingMore = false,
     this.excludePubkeys = const {},
     this.selectedPubkeys = const {},
     this.hidePubkeys = const {},
@@ -932,40 +957,65 @@ class _ResultsList extends StatelessWidget {
   final ScrollController? scrollController;
   final List<UserProfile> results;
   final ValueChanged<UserProfile> onUserSelected;
+  final VoidCallback? onNearEnd;
+  final VoidCallback? onShowMore;
+  final bool isLoadingMore;
   final Set<String> excludePubkeys;
   final Set<String> selectedPubkeys;
   final Set<String> hidePubkeys;
+
+  /// Remaining scroll extent below which a settled scroll asks for more.
+  static const _loadMoreExtent = 400.0;
 
   @override
   Widget build(BuildContext context) {
     final visible = hidePubkeys.isEmpty
         ? results
         : results.where((p) => !hidePubkeys.contains(p.pubkey)).toList();
-    return ListView.separated(
-      controller: scrollController,
-      itemCount: visible.length,
-      padding: EdgeInsets.fromLTRB(
-        0,
-        32,
-        0,
-        32 + MediaQuery.viewPaddingOf(context).bottom,
-      ),
-      separatorBuilder: (context, index) => Divider(
-        height: 40,
-        thickness: 1,
-        color: context.vineColors.outlineDisabled,
-      ),
-      itemBuilder: (context, index) {
-        final profile = visible[index];
-        final isDisabled = excludePubkeys.contains(profile.pubkey);
-        return _UserSearchTile(
-          key: ValueKey('${profile.pubkey}_$isDisabled'),
-          profile: profile,
-          isDisabled: isDisabled,
-          isSelected: selectedPubkeys.contains(profile.pubkey),
-          onTap: () => onUserSelected(profile),
-        );
+    return NotificationListener<ScrollEndNotification>(
+      onNotification: (notification) {
+        if (notification.depth == 0 &&
+            notification.metrics.axis == Axis.vertical &&
+            notification.metrics.extentAfter < _loadMoreExtent) {
+          onNearEnd?.call();
+        }
+        return false;
       },
+      child: ListView.separated(
+        controller: scrollController,
+        itemCount: visible.length + (onShowMore == null ? 0 : 1),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          32,
+          0,
+          32 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
+        separatorBuilder: (context, index) => Divider(
+          height: 40,
+          thickness: 1,
+          color: context.vineColors.outlineDisabled,
+        ),
+        itemBuilder: (context, index) {
+          if (index == visible.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: _ShowMoreButton(
+                onPressed: onShowMore,
+                isLoading: isLoadingMore,
+              ),
+            );
+          }
+          final profile = visible[index];
+          final isDisabled = excludePubkeys.contains(profile.pubkey);
+          return _UserSearchTile(
+            key: ValueKey('${profile.pubkey}_$isDisabled'),
+            profile: profile,
+            isDisabled: isDisabled,
+            isSelected: selectedPubkeys.contains(profile.pubkey),
+            onTap: () => onUserSelected(profile),
+          );
+        },
+      ),
     );
   }
 }
@@ -989,6 +1039,8 @@ class _NetworkResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void loadMore() => searchBloc.add(const UserSearchLoadMore());
+
     return BlocBuilder<UserSearchBloc, UserSearchState>(
       bloc: searchBloc,
       builder: (context, state) {
@@ -1010,12 +1062,17 @@ class _NetworkResults extends StatelessWidget {
             child: BrandedLoadingIndicator(),
           ),
           UserSearchStatus.failure => const _ErrorState(),
-          UserSearchStatus.success when state.results.isEmpty =>
-            const _NoResults(),
+          UserSearchStatus.success when state.results.isEmpty => _NoResults(
+            onShowMore: state.hasMore ? loadMore : null,
+            isLoadingMore: state.isLoadingMore,
+          ),
           UserSearchStatus.success => _ResultsList(
             scrollController: scrollController,
             results: state.results,
             onUserSelected: onUserSelected,
+            onNearEnd: state.hasMore && !state.isLoadingMore ? loadMore : null,
+            onShowMore: state.hasMore ? loadMore : null,
+            isLoadingMore: state.isLoadingMore,
             excludePubkeys: excludePubkeys,
             selectedPubkeys: selectedPubkeys,
             hidePubkeys: hidePubkeys,

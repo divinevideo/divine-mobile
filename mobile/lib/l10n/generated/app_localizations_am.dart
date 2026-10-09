@@ -363,29 +363,19 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'ዙሮች',
-      one: 'ዙር',
+      other: 'ሉፖች',
+      one: 'ሉፕ',
     );
-    return 'የ$authorName $compactCount $_temp0';
+    return '$compactCount ጠቅላላ $_temp0';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ዙሮች',
-      one: 'ዙር',
-    );
-    return 'የዚህ ቪዲዮ $compactCount $_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount ጠቅላላ';
   }
 
   @override
@@ -4425,6 +4415,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => 'አሁን ያሳተሙት ቪዲዮ ድንክዬ';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'ምንም ተጠቃሚዎች አልተገኙም።';
 
   @override
@@ -5817,6 +5822,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'ይህ ውይይት ተዘግቷል።';
+
+  @override
+  String get dmFormerModerationAccountName => 'የቀድሞ የቁጥጥር መለያ';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7624,20 +7632,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'ምንም ተጠቃሚዎች አልተገኙም';
-
-  @override
-  String get hashtagSearchTitle => 'ሃሽታጎችን ይፈልጉ';
-
-  @override
-  String get hashtagSearchSubtitle => 'በመታየት ላይ ያሉ ርዕሶችን እና ይዘትን ያግኙ';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'ለ\"$query\" ምንም ሃሽታጎች አልተገኙም';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'ፍለጋው አልተሳካም';
 
   @override
   String get userNotAvailableTitle => 'መለያው አይገኝም';
@@ -12816,6 +12810,17 @@ class AppLocalizationsAm extends AppLocalizations {
         'private': '$name፣ የግል፣ $count',
         'other': '$name፣ $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ $platforms።',
+      one: 'መለጠፍን ለመቀጠል $platformsን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።',
     );
     return '$_temp0';
   }

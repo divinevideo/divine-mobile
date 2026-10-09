@@ -48,7 +48,9 @@ class VerificationResult extends Equatable {
   /// Free-form error string when [verified] is false. Not a stable key.
   final String? error;
 
-  /// Stable machine-readable rejection reason, when the verifier sends one.
+  /// Stable machine-readable reason the claim isn't verified, when the verifier
+  /// sends one. Most codes are rejections, but `temporarily_unavailable` means
+  /// the claim couldn't be checked right now: no verdict either way.
   ///
   /// Unlike [error], this is safe to branch on: the service treats these as a
   /// fixed vocabulary. It is null for platforms that have not adopted codes and

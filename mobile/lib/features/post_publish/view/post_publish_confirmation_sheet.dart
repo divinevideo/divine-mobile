@@ -17,6 +17,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
     required this.onView,
     required this.onShare,
     this.thumbnailBytes,
+    this.crosspostSection,
     super.key,
   });
 
@@ -31,6 +32,10 @@ class PostPublishConfirmationSheet extends StatelessWidget {
   final VoidCallback onView;
   final VoidCallback onShare;
 
+  /// Optional crossposting prompt rendered above View and Share.
+  /// The section owns its spacing so hidden prompts leave no empty gap.
+  final Widget? crosspostSection;
+
   /// Shows the confirmation over [context]'s navigator.
   ///
   /// [onView] and [onShare] pop the sheet and then fire. `Navigator.pop` only
@@ -42,6 +47,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
     required VoidCallback onView,
     required VoidCallback onShare,
     Uint8List? thumbnailBytes,
+    Widget? crosspostSection,
   }) {
     final navigator = Navigator.of(context);
     return VineBottomSheet.show<void>(
@@ -62,6 +68,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
       ),
       body: PostPublishConfirmationSheet(
         thumbnailBytes: thumbnailBytes,
+        crosspostSection: crosspostSection,
         onView: () {
           navigator.pop();
           onView();
@@ -82,9 +89,9 @@ class PostPublishConfirmationSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        spacing: 24,
         children: [
           _Preview(thumbnailBytes: thumbnailBytes),
+          const SizedBox(height: 24),
           Text(
             l10n.postPublishConfirmationTitle,
             textAlign: TextAlign.center,
@@ -92,6 +99,8 @@ class PostPublishConfirmationSheet extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
+          ?crosspostSection,
+          const SizedBox(height: 24),
           Row(
             spacing: 12,
             children: [

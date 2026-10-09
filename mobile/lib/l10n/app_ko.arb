@@ -1052,6 +1052,12 @@
     "postPublishConfirmationView": "보기",
     "postPublishConfirmationShare": "공유",
     "postPublishConfirmationThumbnailLabel": "방금 게시한 영상의 썸네일",
+    "postPublishCrosspostSuggest": "이 루프를 {platforms}에도 보낼까요?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "한 번 올리고 {platform}에도 나타나요.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "{platforms}에 자동으로 올라가요.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{프로필에 영상을 게시했어요} other{프로필에 영상 {count}개를 게시했어요}}",
     "userSearchNoResults": "사용자를 찾을 수 없어요",
     "userPickerFilterByNameHint": "이름으로 필터링...",
@@ -1698,6 +1704,7 @@
     "dmDeleteRefusedMessage": "모두에게서 삭제하지 못했어요.",
     "dmDeleteRefusedDetails": "일부 사람에게는 이 메시지가 아직 보일 수 있어요.",
     "dmRetiredThreadClosedTitle": "이 대화는 종료되었습니다.",
+    "dmFormerModerationAccountName": "이전 검수 계정",
     "messageRequestModerationNoticeCannotBeRemoved": "이 Divine Moderation 알림은 삭제할 수 없습니다.",
     "dmRetiredThreadClosedBody": "Divine Moderation을 새 계정으로 옮겼습니다. 이 계정은 더 이상 아무도 읽지 않습니다.",
     "dmRetiredThreadOpenSupport": "Divine Moderation에 메시지 보내기",
@@ -2610,8 +2617,8 @@
     "appearanceSettingsSystem": "시스템 기본값",
     "appearanceSettingsLight": "라이트",
     "appearanceSettingsDark": "다크",
-    "videoOverlayTotalLoops": "{count, plural, other{{authorName}의 반복 {compactCount}회}}",
-    "videoOverlayVideoLoops": "이 동영상 {compactCount}{count, plural, other{회 반복}}",
+    "videoOverlayTotalLoops": "전체 {compactCount} {count, plural, other{루프}}",
+    "videoOverlayTotalLoopsScope": "전체 {compactCount}회",
     "generalSettingsClosedCaptions": "자막",
     "generalSettingsClosedCaptionsSubtitle": "영상에 자막이 있을 때 보여줘요",
     "generalSettingsVideoShapeSquareOnly": "정사각형 영상만",
@@ -2979,17 +2986,6 @@
     "newMessageFindPeople": "사람 찾기",
     "newMessageNoContacts": "연락처가 없어요.\n사람들을 팔로우하면 여기서 볼 수 있어요.",
     "newMessageNoUsersFound": "사용자를 찾지 못했어요",
-    "hashtagSearchTitle": "해시태그 검색",
-    "hashtagSearchSubtitle": "인기 토픽과 콘텐츠를 둘러봐요",
-    "hashtagSearchNoResults": "\"{query}\"에 대한 해시태그를 찾지 못했어요",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "검색에 실패했어요",
     "userNotAvailableTitle": "계정을 사용할 수 없어요",
     "userNotAvailableBody": "이 계정은 지금 사용할 수 없어요.",
     "blossomValidServerUrl": "올바른 서버 URL을 입력해주세요 (예: https://blossom.band)",
@@ -4514,5 +4510,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}"
 }

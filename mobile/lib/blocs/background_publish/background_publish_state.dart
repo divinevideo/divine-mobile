@@ -44,18 +44,23 @@ class PublishedVideo extends Equatable {
   const PublishedVideo({
     required this.draftId,
     this.stableId,
+    this.eventId,
     this.thumbnailBytes,
   });
 
   final String draftId;
   final String? stableId;
+
+  /// The published event's id, when known. Crossposting addresses the event
+  /// rather than the video, so the post-publish suggestion needs it.
+  final String? eventId;
   final Uint8List? thumbnailBytes;
 
   /// [thumbnailBytes] is deliberately absent: it is read from the draft
   /// identified by [draftId], so it cannot vary independently, and comparing
   /// it would mean an element-wise walk of a JPEG on every state comparison.
   @override
-  List<Object?> get props => [draftId, stableId];
+  List<Object?> get props => [draftId, stableId, eventId];
 }
 
 class BackgroundPublishState extends Equatable {

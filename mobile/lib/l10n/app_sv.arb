@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Visa",
     "postPublishConfirmationShare": "Dela",
     "postPublishConfirmationThumbnailLabel": "Miniatyr av videon du precis publicerade",
+    "postPublishCrosspostSuggest": "Skicka den här loopen till {platforms} också?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Posta en gång, syns på {platform} också.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Skickas automatiskt till {platforms}.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Videon publicerad till din profil} other{{count} videor publicerade till din profil}}",
     "userSearchNoResults": "Inga användare hittades",
     "userPickerFilterByNameHint": "Filtrera efter namn...",
@@ -2162,6 +2168,7 @@
     "dmDeleteRefusedMessage": "Det gick inte att radera för alla.",
     "dmDeleteRefusedDetails": "Vissa personer kan fortfarande se det här meddelandet.",
     "dmRetiredThreadClosedTitle": "Den här konversationen är stängd.",
+    "dmFormerModerationAccountName": "Tidigare modereringskonto",
     "messageRequestModerationNoticeCannotBeRemoved": "Det här meddelandet från Divine Moderation kan inte tas bort.",
     "dmRetiredThreadClosedBody": "Vi har flyttat Divine Moderation till ett nytt konto. Det här kontot läser ingen längre.",
     "dmRetiredThreadOpenSupport": "Skriv till Divine Moderation",
@@ -3071,8 +3078,8 @@
     "appearanceSettingsSystem": "Systemstandard",
     "appearanceSettingsLight": "Ljust",
     "appearanceSettingsDark": "Mörkt",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loopar}} av {authorName}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loopar}} i den här videon",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loopar}} genom tiderna",
+    "videoOverlayTotalLoopsScope": "{compactCount} genom tiderna",
     "generalSettingsClosedCaptions": "Undertexter",
     "generalSettingsClosedCaptionsSubtitle": "Visa undertexter när videor har dem",
     "generalSettingsVideoShapeSquareOnly": "Endast kvadratiska videor",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "Hitta personer",
     "newMessageNoContacts": "Inga kontakter hittades.\nFölj personer för att se dem här.",
     "newMessageNoUsersFound": "Inga användare hittades",
-    "hashtagSearchTitle": "Sök efter hashtags",
-    "hashtagSearchSubtitle": "Upptäck trendande ämnen och innehåll",
-    "hashtagSearchNoResults": "Inga hashtags hittades för \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Sökning misslyckades",
     "userNotAvailableTitle": "Konto ej tillgängligt",
     "userNotAvailableBody": "Det här kontot är inte tillgängligt just nu.",
     "blossomValidServerUrl": "Ange en giltig server-URL (t.ex. https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Återanslut {platforms} i korspostningsinställningarna för att fortsätta publicera.} other{Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: {platforms}.}}"
 }

@@ -15,6 +15,7 @@ import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
@@ -209,18 +210,23 @@ class _ForYouContentState extends ConsumerState<_ForYouContent>
                   'videoId=${videoList[index].id}',
                   category: LogCategory.video,
                 );
-                context.push(
-                  PooledFullscreenVideoFeedScreen.pathForVideoId(
-                    videoList[index].id,
+                runDetached(
+                  context.push<void>(
+                    PooledFullscreenVideoFeedScreen.pathForVideoId(
+                      videoList[index].id,
+                    ),
+                    extra: PooledFullscreenVideoFeedArgs(
+                      source: const ForYouViewSource(),
+                      feedRepository: ref.read(feedRepositoryProvider),
+                      initialIndex: index,
+                      initialVideoId: videoList[index].id,
+                      contextTitle: context.l10n.feedModeForYou,
+                      trafficSource: ViewTrafficSource.discoveryForYou,
+                    ),
                   ),
-                  extra: PooledFullscreenVideoFeedArgs(
-                    source: const ForYouViewSource(),
-                    feedRepository: ref.read(feedRepositoryProvider),
-                    initialIndex: index,
-                    initialVideoId: videoList[index].id,
-                    contextTitle: context.l10n.feedModeForYou,
-                    trafficSource: ViewTrafficSource.discoveryForYou,
-                  ),
+                  'open For You video',
+                  logName: 'ForYouTab',
+                  category: LogCategory.ui,
                 );
               },
               onRefresh: () async {

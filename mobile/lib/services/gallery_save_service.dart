@@ -148,8 +148,12 @@ class GallerySaveService {
       );
       return const GallerySaveFailure('Gallery save timed out');
     } on GalException catch (e) {
+      // gal maps only a few Photos error codes; the rest arrive as
+      // `unexpected`. The native message (the NSError's localized
+      // description on iOS) is all that survives of the real cause.
       Log.warning(
-        'Failed to save video to gallery: ${e.type.name}',
+        'Failed to save video to gallery: ${e.type.name} '
+        '(native: ${e.platformException.message})',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );

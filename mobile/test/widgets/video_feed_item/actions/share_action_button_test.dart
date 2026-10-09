@@ -39,6 +39,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -830,6 +831,7 @@ void main() {
             WidgetTester tester,
             ShareableUser contact, {
             bool isVanished = false,
+            List<Override> extraOverrides = const [],
           }) async {
             when(() => mockVideoSharingService.recentlySharedWith)
                 .thenReturn([contact]);
@@ -843,6 +845,7 @@ void main() {
                   ),
                   profileVanishedProvider(contact.pubkey)
                       .overrideWith((ref) => isVanished),
+                  ...extraOverrides,
                 ],
                 mockAuthService: createMockAuthService(),
                 mockProfileRepository: mockProfileRepository,
@@ -882,6 +885,59 @@ void main() {
             // The selection chip in the composer header names the recipient
             // the row named, not the kind-0 identity behind it.
             expect(find.text('Aeontropy'), findsNothing);
+          });
+
+          // Official branding follows recorded custody (#9963). The row hands
+          // the resolved recipient to the sheet, handle included.
+          group('a retired moderation key, by recorded custody', () {
+            final retired = ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              handle: '@looks.official',
+            );
+
+            ShareableUser selectedRecipient(WidgetTester tester) => tester
+                .element(find.text(l10n.shareWithTitle))
+                .read<ShareSheetBloc>()
+                .state
+                .selectedRecipients
+                .single;
+
+            for (final custody in keptCustodies) {
+              testWidgets('${custody.name}: hands on the handle the key '
+                  'published', (tester) async {
+                await pumpWithContact(
+                  tester,
+                  retired,
+                  extraOverrides: [retiredKeyCustody(custody)],
+                );
+
+                await tester.tap(find.text(l10n.inboxSupportRowTitle));
+                await tester.pumpAndSettle();
+
+                expect(
+                  selectedRecipient(tester).handle,
+                  equals('@looks.official'),
+                );
+              });
+            }
+
+            for (final custody in withdrawnCustodies) {
+              testWidgets('${custody.name}: hands on no handle', (
+                tester,
+              ) async {
+                await pumpWithContact(
+                  tester,
+                  retired,
+                  extraOverrides: [retiredKeyCustody(custody)],
+                );
+
+                await tester.tap(find.text(l10n.dmFormerModerationAccountName));
+                await tester.pumpAndSettle();
+
+                expect(selectedRecipient(tester).handle, isNull);
+              });
+            }
           });
         });
 

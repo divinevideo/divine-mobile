@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Ver",
     "postPublishConfirmationShare": "Compartilhar",
     "postPublishConfirmationThumbnailLabel": "Miniatura do vídeo que você acabou de publicar",
+    "postPublishCrosspostSuggest": "Mandar este loop para {platforms} também?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Publique uma vez e apareça no {platform} também.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Indo para {platforms} automaticamente.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Vídeo publicado no seu perfil} other{{count} vídeos publicados no seu perfil}}",
     "userSearchNoResults": "Nenhum usuário encontrado",
     "userPickerFilterByNameHint": "Filtrar por nome...",
@@ -2162,6 +2168,7 @@
     "dmDeleteRefusedMessage": "Não foi possível excluir para todos.",
     "dmDeleteRefusedDetails": "Algumas pessoas talvez ainda consigam ver esta mensagem.",
     "dmRetiredThreadClosedTitle": "Esta conversa está encerrada.",
+    "dmFormerModerationAccountName": "Conta de moderação anterior",
     "messageRequestModerationNoticeCannotBeRemoved": "Este aviso da Divine Moderation não pode ser removido.",
     "dmRetiredThreadClosedBody": "Movemos a Divine Moderation para uma nova conta. Ninguém lê mais esta.",
     "dmRetiredThreadOpenSupport": "Enviar mensagem para a Divine Moderation",
@@ -3071,8 +3078,8 @@
     "appearanceSettingsSystem": "Padrão do sistema",
     "appearanceSettingsLight": "Claro",
     "appearanceSettingsDark": "Escuro",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} many{loops} other{loops}} de {authorName}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} many{loops} other{loops}} deste vídeo",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} many{loops} other{loops}} de todos os tempos",
+    "videoOverlayTotalLoopsScope": "{compactCount} de todos os tempos",
     "generalSettingsClosedCaptions": "Legendas",
     "generalSettingsClosedCaptionsSubtitle": "Mostrar legendas quando os vídeos tiverem",
     "generalSettingsVideoShapeSquareOnly": "Só vídeos quadrados",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "Encontrar pessoas",
     "newMessageNoContacts": "Nenhum contato encontrado.\nSiga pessoas para vê-las aqui.",
     "newMessageNoUsersFound": "Nenhum usuário encontrado",
-    "hashtagSearchTitle": "Buscar hashtags",
-    "hashtagSearchSubtitle": "Descubra tópicos em alta e conteúdo",
-    "hashtagSearchNoResults": "Nenhuma hashtag encontrada para \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Busca falhou",
     "userNotAvailableTitle": "Conta indisponível",
     "userNotAvailableBody": "Esta conta não está disponível agora.",
     "blossomValidServerUrl": "Insira uma URL de servidor válida (ex.: https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconecte o {platforms} nas configurações de crosspost para continuar publicando.} many{Reconecte estas contas nas configurações de crosspost para continuar publicando: {platforms}.} other{Reconecte estas contas nas configurações de crosspost para continuar publicando: {platforms}.}}"
 }

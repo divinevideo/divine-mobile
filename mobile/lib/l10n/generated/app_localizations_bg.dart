@@ -369,29 +369,19 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запази емисиите в класическия квадратен формат';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'повторения',
-      one: 'повторение',
+      other: 'лупа',
+      one: 'луп',
     );
-    return '$compactCount $_temp0 на $authorName';
+    return '$compactCount $_temp0 за всички времена';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'повторения',
-      one: 'повторение',
-    );
-    return '$compactCount $_temp0 на това видео';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount за всички времена';
   }
 
   @override
@@ -4574,6 +4564,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Миниатюра на видеото, което току-що публикува';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Да пратим ли този луп и в $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Публикувай веднъж, появи се и в $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Отива в $platforms автоматично.';
+  }
+
+  @override
   String get userSearchNoResults => 'Няма намерени потребители';
 
   @override
@@ -6009,6 +6014,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Този разговор е затворен.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Бивш акаунт за модерация';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7877,20 +7885,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Не са намерени потребители';
-
-  @override
-  String get hashtagSearchTitle => 'Търси хаштагове';
-
-  @override
-  String get hashtagSearchSubtitle => 'Открий популярни теми и съдържание';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Няма намерени хаштагове за „$query“';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Търсенето не успя';
 
   @override
   String get userNotAvailableTitle => 'Акаунтът не е наличен';
@@ -13276,6 +13270,19 @@ class AppLocalizationsBg extends AppLocalizations {
         'private': '$name, Частен, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Свържи отново тези акаунти в настройките за кръстосано публикуване, за да продължиш да публикуваш: $platforms.',
+      one:
+          'Свържи отново $platforms в настройките за кръстосано публикуване, за да продължиш да публикуваш.',
     );
     return '$_temp0';
   }

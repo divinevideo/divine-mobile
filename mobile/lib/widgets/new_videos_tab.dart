@@ -15,6 +15,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
@@ -234,16 +235,21 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
           'videoId=${videoList[index].id}',
           category: LogCategory.video,
         );
-        context.push(
-          PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
-          extra: PooledFullscreenVideoFeedArgs(
-            source: const NewVideosViewSource(),
-            feedRepository: ref.read(feedRepositoryProvider),
-            initialIndex: index,
-            initialVideoId: videoList[index].id,
-            contextTitle: 'New Videos',
-            trafficSource: ViewTrafficSource.discoveryNew,
+        runDetached(
+          context.push<void>(
+            PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
+            extra: PooledFullscreenVideoFeedArgs(
+              source: const NewVideosViewSource(),
+              feedRepository: ref.read(feedRepositoryProvider),
+              initialIndex: index,
+              initialVideoId: videoList[index].id,
+              contextTitle: 'New Videos',
+              trafficSource: ViewTrafficSource.discoveryNew,
+            ),
           ),
+          'open new video',
+          logName: 'NewVideosTab',
+          category: LogCategory.ui,
         );
       },
       onRefresh: () async {

@@ -42,6 +42,7 @@ void main() {
       profileRepository: mockProfileRepo,
       followRepository: mockFollowRepo,
       currentUserPubkey: currentUserPubkey,
+      moderationPresentation: moderationPresentationOf,
     );
 
     UserProfile createTestProfile(
@@ -577,6 +578,7 @@ void main() {
       const labels = DmPeerLabels(
         deletedAccount: 'Deleted account',
         moderation: 'Divine Moderation',
+        formerModeration: 'Former moderation account',
         retiredConversationClosed: 'Conversation closed',
       );
 
@@ -773,6 +775,7 @@ void main() {
               DmPeerLabels(
                 deletedAccount: 'Removed account',
                 moderation: 'Divine Moderation',
+                formerModeration: 'Former moderation account',
                 retiredConversationClosed: 'Conversation closed',
               ),
             ),
@@ -805,6 +808,67 @@ void main() {
           );
         },
       );
+
+      // Official branding follows recorded custody (#9963): the picker renders
+      // a withdrawn retired key under the neutral label, so that is what the
+      // search must match, and Divine's name must not find it.
+      for (final custody in RetiredKeyCustody.values) {
+        final retired = 'c' * 64;
+        final withdrawn = custody.canStillSign;
+
+        NewMessageSearchBloc createBlocFor() => NewMessageSearchBloc(
+          profileRepository: mockProfileRepo,
+          followRepository: mockFollowRepo,
+          currentUserPubkey: currentUserPubkey,
+          moderationPresentation: (pubkey) => moderationPresentationOf(
+            pubkey,
+            retiredKeys: [
+              RetiredModerationKey(pubkeyHex: retired, custody: custody),
+            ],
+          ),
+        );
+
+        blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+          '${custody.name}: ${withdrawn ? "found by the neutral label, not "
+                    "Divine's name" : "found by Divine's name, not the neutral "
+                    "label"}',
+          setUp: () {
+            stubVanished(const {});
+            when(() => mockFollowRepo.followingPubkeys).thenReturn([retired]);
+            stubContact(retired, 'Looks Official');
+            stubNoNetworkResults();
+          },
+          build: createBlocFor,
+          act: (bloc) => loadThenSearch(
+            bloc,
+            withdrawn ? labels.formerModeration : labels.moderation,
+          ),
+          verify: (bloc) {
+            expect(bloc.state.results.map((p) => p.pubkey), contains(retired));
+          },
+        );
+
+        blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+          '${custody.name}: ${withdrawn ? "not found by Divine's name" : "not found by the neutral label"}',
+          setUp: () {
+            stubVanished(const {});
+            when(() => mockFollowRepo.followingPubkeys).thenReturn([retired]);
+            stubContact(retired, 'Looks Official');
+            stubNoNetworkResults();
+          },
+          build: createBlocFor,
+          act: (bloc) => loadThenSearch(
+            bloc,
+            withdrawn ? labels.moderation : labels.formerModeration,
+          ),
+          verify: (bloc) {
+            expect(
+              bloc.state.results.map((p) => p.pubkey),
+              isNot(contains(retired)),
+            );
+          },
+        );
+      }
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
         'orders contacts by the rendered name, not the raw one',

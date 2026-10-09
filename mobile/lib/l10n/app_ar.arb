@@ -1506,6 +1506,12 @@
     "postPublishConfirmationView": "عرض",
     "postPublishConfirmationShare": "مشاركة",
     "postPublishConfirmationThumbnailLabel": "صورة مصغرة للفيديو الذي نشرته للتو",
+    "postPublishCrosspostSuggest": "إرسال هذا التكرار إلى {platforms} أيضًا؟",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "النشر مرة واحدة يعني الظهور على {platform} أيضًا.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "في الطريق إلى {platforms} تلقائيًا.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{تم نشر الفيديو في ملفك الشخصي} other{تم نشر {count} مقاطع فيديو في ملفك الشخصي}}",
     "userSearchNoResults": "لم يُعثر على مستخدمين",
     "userPickerFilterByNameHint": "التصفية بالاسم...",
@@ -2152,6 +2158,7 @@
     "dmDeleteRefusedMessage": "تعذّر الحذف لدى الجميع.",
     "dmDeleteRefusedDetails": "قد يظل بعض الأشخاص قادرين على رؤية هذه الرسالة.",
     "dmRetiredThreadClosedTitle": "هذه المحادثة مغلقة.",
+    "dmFormerModerationAccountName": "حساب إشراف سابق",
     "messageRequestModerationNoticeCannotBeRemoved": "لا يمكن إزالة إشعار Divine Moderation هذا.",
     "dmRetiredThreadClosedBody": "نقلنا Divine Moderation إلى حساب جديد. لم يعد أحد يقرأ هذا الحساب.",
     "dmRetiredThreadOpenSupport": "راسل Divine Moderation",
@@ -3064,8 +3071,8 @@
     "appearanceSettingsSystem": "إعداد النظام",
     "appearanceSettingsLight": "فاتح",
     "appearanceSettingsDark": "داكن",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, zero{تكرار} =1{تكرار} two{تكرار} few{تكرارات} many{تكرارًا} other{تكرار}} لـ{authorName}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, zero{دورة} =1{دورة} two{دورة} few{دورات} many{دورةً} other{دورة}} لهذا الفيديو",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, zero{تكرار} =1{تكرار} two{تكرار} few{تكرارات} many{تكرارًا} other{تكرار}} الإجمالي",
+    "videoOverlayTotalLoopsScope": "{compactCount} الإجمالي",
     "generalSettingsClosedCaptions": "الترجمة المصاحبة",
     "generalSettingsClosedCaptionsSubtitle": "اعرض الترجمة عندما تتضمّنها الفيديوهات",
     "generalSettingsVideoShapeSquareOnly": "فيديوهات مربّعة فقط",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "ابحث عن أشخاص",
     "newMessageNoContacts": "لا جهات اتصال.\nتابع الناس لتراهم هنا.",
     "newMessageNoUsersFound": "لم يُعثر على مستخدمين",
-    "hashtagSearchTitle": "ابحث عن وسوم",
-    "hashtagSearchSubtitle": "اكتشف المواضيع والمحتوى الرائج",
-    "hashtagSearchNoResults": "لم يُعثر على وسوم لـ \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "فشل البحث",
     "userNotAvailableTitle": "الحساب غير متاح",
     "userNotAvailableBody": "هذا الحساب غير متاح في الوقت الحالي.",
     "blossomValidServerUrl": "أدخل رابط خادم صالحًا (مثال: https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{إعادة ربط {platforms} في إعدادات النشر المتقاطع لمواصلة النشر.} zero{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} two{إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} few{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} many{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} other{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.}}"
 }

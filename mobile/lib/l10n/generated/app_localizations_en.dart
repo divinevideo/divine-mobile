@@ -369,29 +369,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep feeds in the classic square format';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'loops',
       one: 'loop',
     );
-    return '$compactCount $authorName\'s $_temp0';
+    return '$compactCount all-time $_temp0';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'loops',
-      one: 'loop',
-    );
-    return '$compactCount this video\'s $_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount all-time';
   }
 
   @override
@@ -4603,6 +4593,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Thumbnail of the video you just published';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'No users found';
 
   @override
@@ -6038,6 +6043,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'This conversation is closed.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Former moderation account';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7901,20 +7909,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'No users found';
-
-  @override
-  String get hashtagSearchTitle => 'Search for hashtags';
-
-  @override
-  String get hashtagSearchSubtitle => 'Discover trending topics and content';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'No hashtags found for \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Search failed';
 
   @override
   String get userNotAvailableTitle => 'Account not available';
@@ -13240,6 +13234,18 @@ class AppLocalizationsEn extends AppLocalizations {
         'private': '$name, Private, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconnect these accounts in crossposting settings to keep posting: $platforms.',
+      one: 'Reconnect $platforms in crossposting settings to keep posting.',
     );
     return '$_temp0';
   }

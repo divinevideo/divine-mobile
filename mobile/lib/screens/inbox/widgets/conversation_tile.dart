@@ -10,6 +10,7 @@ import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -77,11 +78,13 @@ class ConversationTile extends ConsumerWidget {
     // and a NIP-62 vanish cannot retract them. Only the counterparty's identity
     // is replaced.
     final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
+    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
 
     final peerName = dmPeerDisplayName(
       context,
       pubkeyHex: otherPubkey,
       isVanished: isDeleted,
+      moderation: moderation,
       displayNameOverride: displayNameOverride,
       profile: profileAsync.asData?.value,
       isResolving: isResolving,
@@ -108,12 +111,16 @@ class ConversationTile extends ConsumerWidget {
         ? UserProfile.defaultDisplayNameFor(otherPubkey)
         : displayName;
 
-    final imageUrl = isDeleted
-        ? null
-        : profileAsync.maybeWhen(
-            data: (profile) => profile?.picture,
-            orElse: () => null,
-          );
+    // The name above and the artwork here resolve through the same pair of
+    // helpers so a row cannot name a peer one way and picture it another.
+    final avatar = dmPeerAvatar(
+      isVanished: isDeleted,
+      moderation: moderation,
+      pictureUrl: profileAsync.maybeWhen(
+        data: (profile) => profile?.picture,
+        orElse: () => null,
+      ),
+    );
 
     final relativeTime = conversation.lastMessageTimestamp != null
         ? LocalizedTimeFormatter.formatConversationTimestamp(
@@ -174,20 +181,18 @@ class ConversationTile extends ConsumerWidget {
                     child: UserAvatar(
                       // A group has no single member's photo to show; the room
                       // icon matches the room title beside it.
-                      imageUrl: conversation.isGroup ? null : imageUrl,
+                      imageUrl: conversation.isGroup ? null : avatar.imageUrl,
                       name: visualDisplayName,
                       placeholderSeed: otherPubkey,
                       size: 40,
-                      // Bundled artwork for the moderation account, whose
-                      // kind-0 picture does not survive the SVG parser.
+                      // Bundled artwork for an official moderation account,
+                      // whose kind-0 picture does not survive the SVG parser.
                       contentOverride: conversation.isGroup
                           ? DivineIcon(
                               icon: DivineIconName.users,
                               color: context.vineColors.primaryText,
                             )
-                          : isModerationAccount(otherPubkey)
-                          ? const ModerationAvatar()
-                          : null,
+                          : avatar.contentOverride,
                     ),
                   ),
                 ),

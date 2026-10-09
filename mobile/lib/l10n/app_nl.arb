@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Bekijken",
     "postPublishConfirmationShare": "Delen",
     "postPublishConfirmationThumbnailLabel": "Miniatuur van de video die je zojuist hebt gepubliceerd",
+    "postPublishCrosspostSuggest": "Deze loop ook naar {platforms} sturen?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Eén keer posten, ook verschijnen op {platform}.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Gaat automatisch naar {platforms}.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Video gepubliceerd op je profiel} other{{count} videos gepubliceerd op je profiel}}",
     "userSearchNoResults": "Geen gebruikers gevonden",
     "userPickerFilterByNameHint": "Filteren op naam...",
@@ -2162,6 +2168,7 @@
     "dmDeleteRefusedMessage": "Verwijderen voor iedereen is niet gelukt.",
     "dmDeleteRefusedDetails": "Sommige mensen kunnen dit bericht mogelijk nog zien.",
     "dmRetiredThreadClosedTitle": "Dit gesprek is gesloten.",
+    "dmFormerModerationAccountName": "Voormalig moderatieaccount",
     "messageRequestModerationNoticeCannotBeRemoved": "Deze melding van Divine Moderation kan niet worden verwijderd.",
     "dmRetiredThreadClosedBody": "We hebben Divine Moderation naar een nieuw account verplaatst. Dit account leest niemand meer.",
     "dmRetiredThreadOpenSupport": "Bericht sturen naar Divine Moderation",
@@ -3071,8 +3078,8 @@
     "appearanceSettingsSystem": "Systeemstandaard",
     "appearanceSettingsLight": "Licht",
     "appearanceSettingsDark": "Donker",
-    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loops}} van {authorName}",
-    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} van deze video",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loops}} aller tijden",
+    "videoOverlayTotalLoopsScope": "{compactCount} aller tijden",
     "generalSettingsClosedCaptions": "Ondertiteling",
     "generalSettingsClosedCaptionsSubtitle": "Toon ondertiteling als video's die hebben",
     "generalSettingsVideoShapeSquareOnly": "Alleen vierkante video's",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "Mensen zoeken",
     "newMessageNoContacts": "Geen contacten gevonden.\nVolg mensen om ze hier te zien.",
     "newMessageNoUsersFound": "Geen gebruikers gevonden",
-    "hashtagSearchTitle": "Zoek hashtags",
-    "hashtagSearchSubtitle": "Ontdek trending onderwerpen en inhoud",
-    "hashtagSearchNoResults": "Geen hashtags gevonden voor \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Zoeken mislukt",
     "userNotAvailableTitle": "Account niet beschikbaar",
     "userNotAvailableBody": "Dit account is op dit moment niet beschikbaar.",
     "blossomValidServerUrl": "Voer een geldige server-URL in (bijv. https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Verbind {platforms} opnieuw in de crosspost-instellingen om te blijven posten.} other{Verbind deze accounts opnieuw in de crosspost-instellingen om te blijven posten: {platforms}.}}"
 }

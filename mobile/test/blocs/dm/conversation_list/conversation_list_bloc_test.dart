@@ -2391,6 +2391,7 @@ void main() {
       labels = DmPeerLabels(
         deletedAccount: l10n.profileDeletedAccountName,
         moderation: l10n.inboxSupportRowTitle,
+        formerModeration: l10n.dmFormerModerationAccountName,
         retiredConversationClosed: l10n.dmRetiredThreadClosedTitle,
       );
     });
@@ -2428,7 +2429,7 @@ void main() {
         followRepository: mockFollowRepository,
         profileRepository: mockProfileRepository,
         recomputeDebounce: Duration.zero,
-        moderationAccount: isModerationAccount,
+        moderationPresentation: moderationPresentationOf,
         retiredModerationAccount: isRetiredModerationAccount,
       );
       if (withLabels != null) {
@@ -2462,6 +2463,92 @@ void main() {
       bloc.add(ConversationListSearchQueryChanged(query));
       return bloc.stream.firstWhere((s) => s.searchQuery == query);
     }
+
+    // Official branding follows recorded custody (#9963). The index matches the
+    // string the row renders, so a withdrawn key is found by the neutral label
+    // and no longer by Divine's name; the closed-thread line is a safety
+    // behavior and still matches for every custody.
+    group('a retired key, by recorded custody (#9963)', () {
+      setUp(stubPeerSearchDependencies);
+      setUp(() => stubVanished(const {}));
+      final retired = 'c' * 64;
+
+      ConversationListBloc createBlocFor(RetiredKeyCustody custody) {
+        final bloc = ConversationListBloc(
+          dmRepository: mockDmRepository,
+          followRepository: mockFollowRepository,
+          profileRepository: mockProfileRepository,
+          recomputeDebounce: Duration.zero,
+          moderationPresentation: (pubkey) => moderationPresentationOf(
+            pubkey,
+            retiredKeys: [
+              RetiredModerationKey(pubkeyHex: retired, custody: custody),
+            ],
+          ),
+          retiredModerationAccount: (pubkey) => pubkey == retired,
+        )..add(ConversationListPeerLabelsChanged(labels));
+        addTearDown(bloc.close);
+        return bloc;
+      }
+
+      void stubRetiredThread() => _stubStreams(
+        mockDmRepository,
+        accepted: [
+          _createConversation(
+            id: 'retired',
+            participantPubkeys: [_testPubkey1, retired],
+          ),
+        ],
+      );
+
+      for (final custody in [
+        RetiredKeyCustody.unrecovered,
+        RetiredKeyCustody.destroyed,
+      ]) {
+        test('${custody.name}: found by the official name, not the neutral '
+            'one', () async {
+          stubRetiredThread();
+          final bloc = createBlocFor(custody);
+
+          final official = await search(bloc, labels.moderation);
+          expect(official.visibleConversations.map((c) => c.id), ['retired']);
+
+          final neutral = await search(bloc, labels.formerModeration);
+          expect(neutral.visibleConversations, isEmpty);
+        });
+      }
+
+      for (final custody in [
+        RetiredKeyCustody.archived,
+        RetiredKeyCustody.compromised,
+      ]) {
+        test('${custody.name}: found by the neutral label, not the official '
+            'name', () async {
+          stubRetiredThread();
+          final bloc = createBlocFor(custody);
+
+          final neutral = await search(bloc, labels.formerModeration);
+          expect(neutral.visibleConversations.map((c) => c.id), ['retired']);
+
+          final official = await search(bloc, labels.moderation);
+          expect(official.visibleConversations, isEmpty);
+        });
+      }
+
+      for (final custody in RetiredKeyCustody.values) {
+        test(
+          '${custody.name}: still found by the closed-thread line',
+          () async {
+            stubRetiredThread();
+            final bloc = createBlocFor(custody);
+
+            final state = await search(bloc, labels.retiredConversationClosed);
+
+            expect(state.visibleConversations.map((c) => c.id), ['retired']);
+          },
+        );
+      }
+    });
 
     // The row for a titled group renders its NIP-17 subject and no
     // participant's name at all, so the index has to match on the subject or a
@@ -2851,6 +2938,7 @@ void main() {
           DmPeerLabels(
             deletedAccount: german.profileDeletedAccountName,
             moderation: german.inboxSupportRowTitle,
+            formerModeration: german.dmFormerModerationAccountName,
             retiredConversationClosed: german.dmRetiredThreadClosedTitle,
           ),
         ),

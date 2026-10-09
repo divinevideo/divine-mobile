@@ -10,12 +10,15 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reactions_detail_sheet.dart';
+import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../../../../helpers/retired_key_custody.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 
 class _MockConversationReactionsCubit
@@ -477,6 +480,82 @@ void main() {
       );
 
       semantics.dispose();
+    });
+
+    // Official branding follows recorded custody (#9963). A reactor can be any
+    // participant, so the sheet resolves it through the same helpers as the
+    // inbox row.
+    group('a retired moderation key as reactor, by recorded custody (#9963)', () {
+      final retired = shippedRetiredKey;
+
+      Future<void> openAs(
+        WidgetTester tester,
+        RetiredKeyCustody custody,
+      ) async {
+        primeState([
+          makeReaction(
+            id: 'retired1',
+            reactorPubkey: retired,
+            emoji: '😂',
+            publishStatus: DmReactionPublishStatus.received,
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          host(
+            cubit,
+            additionalOverrides: [
+              retiredKeyCustody(custody),
+              // The key's holder controls its kind-0, so the test gives it one
+              // that tries to look official.
+              userProfileReactiveProvider(retired).overrideWith(
+                (ref) => Stream.value(
+                  UserProfile(
+                    pubkey: retired,
+                    displayName: 'Looks Official',
+                    picture: 'https://example.invalid/looks-official.png',
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: 'c' * 64,
+                  ),
+                ),
+              ),
+              profileVanishedProvider(retired).overrideWith((ref) => false),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+      }
+
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: Divine's name and wordmark", (
+          tester,
+        ) async {
+          await openAs(tester, custody);
+
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+          expect(
+            tester.widget<UserAvatar>(find.byType(UserAvatar)).contentOverride,
+            isA<ModerationAvatar>(),
+          );
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark, no photo', (
+          tester,
+        ) async {
+          await openAs(tester, custody);
+
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text('Looks Official'), findsNothing);
+          final avatar = tester.widget<UserAvatar>(find.byType(UserAvatar));
+          expect(avatar.imageUrl, isNull);
+          expect(avatar.contentOverride, isNull);
+        });
+      }
     });
 
     group('deleted accounts', () {

@@ -138,8 +138,8 @@
   "appearanceSettingsSystem": "跟随系统",
   "appearanceSettingsLight": "浅色",
   "appearanceSettingsDark": "深色",
-  "videoOverlayTotalLoops": "{count, plural, other{{authorName} 的 {compactCount} 次循环}}",
-  "videoOverlayVideoLoops": "此视频 {compactCount} {count, plural, other{次循环}}",
+  "videoOverlayTotalLoops": "累计 {compactCount} {count, plural, other{次循环}}",
+  "videoOverlayTotalLoopsScope": "累计 {compactCount} 次",
   "generalSettingsClosedCaptions": "隐藏字幕",
   "generalSettingsClosedCaptionsSubtitle": "视频带字幕时自动显示",
   "generalSettingsVideoShapeSquareOnly": "仅方形视频",
@@ -2244,6 +2244,12 @@
   "postPublishConfirmationView": "查看",
   "postPublishConfirmationShare": "分享",
   "postPublishConfirmationThumbnailLabel": "你刚发布的视频缩略图",
+  "postPublishCrosspostSuggest": "也把这个循环发到 {platforms} 吗？",
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+  "postPublishCrosspostSetUp": "发布一次，也出现在 {platform} 上。",
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+  "postPublishCrosspostAutomatic": "正在自动发布到 {platforms}。",
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "没有找到用户",
   "userPickerFilterByNameHint": "按名字筛选...",
   "userPickerSearchByNameHint": "按名字搜索...",
@@ -2923,6 +2929,7 @@
     "dmDeleteRefusedMessage": "无法对所有人删除。",
     "dmDeleteRefusedDetails": "有些人可能仍然能看到这条消息。",
   "dmRetiredThreadClosedTitle": "此对话已关闭。",
+  "dmFormerModerationAccountName": "以前的审核账号",
   "messageRequestModerationNoticeCannotBeRemoved": "无法移除此 Divine Moderation 通知。",
   "dmRetiredThreadClosedBody": "我们已把 Divine Moderation 迁移到新账号。这个账号已经没人看了。",
   "dmRetiredThreadOpenSupport": "给 Divine Moderation 发私信",
@@ -3956,17 +3963,6 @@
   "newMessageFindPeople": "找人",
   "newMessageNoContacts": "没有找到联系人。\n关注一些人，他们就会出现在这里。",
   "newMessageNoUsersFound": "没有找到用户",
-  "hashtagSearchTitle": "搜索话题标签",
-  "hashtagSearchSubtitle": "发现热门话题和内容",
-  "hashtagSearchNoResults": "没有找到“{query}”相关的话题标签",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "搜索失败",
   "userNotAvailableTitle": "账号不可用",
   "userNotAvailableBody": "该账号暂时不可用。",
   "classicVinersTitle": "OG Viners",
@@ -6735,5 +6731,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{在跨平台发布设置中重新连接 {platforms}，才能继续发布。} other{在跨平台发布设置中重新连接这些账号，才能继续发布：{platforms}。}}"
 }

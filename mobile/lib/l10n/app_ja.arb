@@ -1506,6 +1506,12 @@
     "postPublishConfirmationView": "表示",
     "postPublishConfirmationShare": "共有",
     "postPublishConfirmationThumbnailLabel": "公開したばかりの動画のサムネイル",
+    "postPublishCrosspostSuggest": "このループを{platforms}にも送りますか？",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "一度の投稿で{platform}にも届けましょう。",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "{platforms}に自動で投稿されます。",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{動画をプロフィールに公開したよ} other{{count}本の動画をプロフィールに公開したよ}}",
     "userSearchNoResults": "ユーザーが見つからない",
     "userPickerFilterByNameHint": "名前で絞り込み...",
@@ -2152,6 +2158,7 @@
     "dmDeleteRefusedMessage": "全員から削除できませんでした。",
     "dmDeleteRefusedDetails": "一部の人には、このメッセージがまだ表示されている可能性があります。",
     "dmRetiredThreadClosedTitle": "このスレッドは終了しました。",
+    "dmFormerModerationAccountName": "以前のモデレーションアカウント",
     "messageRequestModerationNoticeCannotBeRemoved": "このDivine Moderationのお知らせは削除できません。",
     "dmRetiredThreadClosedBody": "Divine Moderation は新しいアカウントに移りました。こちらはもう誰も読んでいません。",
     "dmRetiredThreadOpenSupport": "Divine Moderation にメッセージを送る",
@@ -3064,8 +3071,8 @@
     "appearanceSettingsSystem": "システムのデフォルト",
     "appearanceSettingsLight": "ライト",
     "appearanceSettingsDark": "ダーク",
-    "videoOverlayTotalLoops": "{count, plural, other{{authorName}のループ{compactCount}回}}",
-    "videoOverlayVideoLoops": "この動画{compactCount}回{count, plural, other{ループ}}",
+    "videoOverlayTotalLoops": "通算{compactCount}回{count, plural, other{ループ}}",
+    "videoOverlayTotalLoopsScope": "通算{compactCount}回",
     "generalSettingsClosedCaptions": "字幕",
     "generalSettingsClosedCaptionsSubtitle": "動画に字幕がある場合に表示するよ",
     "generalSettingsVideoShapeSquareOnly": "正方形の動画のみ",
@@ -3433,17 +3440,6 @@
     "newMessageFindPeople": "人を探す",
     "newMessageNoContacts": "連絡先が見つからなかった。\n人をフォローするとここに出るよ。",
     "newMessageNoUsersFound": "ユーザーが見つからなかった",
-    "hashtagSearchTitle": "ハッシュタグを検索",
-    "hashtagSearchSubtitle": "トレンドのトピックとコンテンツを見つけよう",
-    "hashtagSearchNoResults": "「{query}」のハッシュタグは見つからなかった",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "検索に失敗",
     "userNotAvailableTitle": "アカウントは利用できないよ",
     "userNotAvailableBody": "このアカウントは今は利用できないよ。",
     "blossomValidServerUrl": "有効なサーバー URL を入力してね (例: https://blossom.band)",
@@ -4968,5 +4964,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}"
 }

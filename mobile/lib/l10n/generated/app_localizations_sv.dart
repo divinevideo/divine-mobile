@@ -352,29 +352,19 @@ class AppLocalizationsSv extends AppLocalizations {
       'Behåll flöden i klassiskt kvadratiskt format';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'loopar',
       one: 'loop',
     );
-    return '$compactCount $_temp0 av $authorName';
+    return '$compactCount $_temp0 genom tiderna';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'loopar',
-      one: 'loop',
-    );
-    return '$compactCount $_temp0 i den här videon';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount genom tiderna';
   }
 
   @override
@@ -4520,6 +4510,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Miniatyr av videon du precis publicerade';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Skicka den här loopen till $platforms också?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Posta en gång, syns på $platform också.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Skickas automatiskt till $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Inga användare hittades';
 
   @override
@@ -5944,6 +5949,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'Den här konversationen är stängd.';
+
+  @override
+  String get dmFormerModerationAccountName => 'Tidigare modereringskonto';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7793,20 +7801,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'Inga användare hittades';
-
-  @override
-  String get hashtagSearchTitle => 'Sök efter hashtags';
-
-  @override
-  String get hashtagSearchSubtitle => 'Upptäck trendande ämnen och innehåll';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Inga hashtags hittades för \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Sökning misslyckades';
 
   @override
   String get userNotAvailableTitle => 'Konto ej tillgängligt';
@@ -13154,6 +13148,19 @@ class AppLocalizationsSv extends AppLocalizations {
         'private': '$name, Privat, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: $platforms.',
+      one:
+          'Återanslut $platforms i korspostningsinställningarna för att fortsätta publicera.',
     );
     return '$_temp0';
   }

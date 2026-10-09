@@ -350,11 +350,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'أبقِ التغذيات بالشكل المربّع الكلاسيكي';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -365,22 +361,12 @@ class AppLocalizationsAr extends AppLocalizations {
       one: 'تكرار',
       zero: 'تكرار',
     );
-    return '$compactCount $_temp0 لـ$authorName';
+    return '$compactCount $_temp0 الإجمالي';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'دورة',
-      many: 'دورةً',
-      few: 'دورات',
-      two: 'دورة',
-      one: 'دورة',
-      zero: 'دورة',
-    );
-    return '$compactCount $_temp0 لهذا الفيديو';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount الإجمالي';
   }
 
   @override
@@ -4515,6 +4501,21 @@ class AppLocalizationsAr extends AppLocalizations {
       'صورة مصغرة للفيديو الذي نشرته للتو';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'إرسال هذا التكرار إلى $platforms أيضًا؟';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'النشر مرة واحدة يعني الظهور على $platform أيضًا.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'في الطريق إلى $platforms تلقائيًا.';
+  }
+
+  @override
   String get userSearchNoResults => 'لم يُعثر على مستخدمين';
 
   @override
@@ -5930,6 +5931,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'هذه المحادثة مغلقة.';
+
+  @override
+  String get dmFormerModerationAccountName => 'حساب إشراف سابق';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7775,20 +7779,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'لم يُعثر على مستخدمين';
-
-  @override
-  String get hashtagSearchTitle => 'ابحث عن وسوم';
-
-  @override
-  String get hashtagSearchSubtitle => 'اكتشف المواضيع والمحتوى الرائج';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'لم يُعثر على وسوم لـ \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'فشل البحث';
 
   @override
   String get userNotAvailableTitle => 'الحساب غير متاح';
@@ -13105,6 +13095,26 @@ class AppLocalizationsAr extends AppLocalizations {
         'private': '$name، خاصة، $count',
         'other': '$name، $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      many:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      few:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      two:
+          'إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      zero:
+          'إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: $platforms.',
+      one: 'إعادة ربط $platforms في إعدادات النشر المتقاطع لمواصلة النشر.',
     );
     return '$_temp0';
   }

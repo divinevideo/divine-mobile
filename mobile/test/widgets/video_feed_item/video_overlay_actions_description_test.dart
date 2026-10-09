@@ -19,6 +19,7 @@ import 'package:openvine/services/auth_service.dart' show AuthService;
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
@@ -132,6 +133,7 @@ void main() {
       WidgetTester tester, {
       AuthService? authService,
       List<Override> overrides = const [],
+      bool isFullscreen = false,
     }) async {
       await tester.pumpWidget(
         testProviderScope(
@@ -150,6 +152,7 @@ void main() {
                   video: testVideo,
                   isVisible: true,
                   isActive: true,
+                  isFullscreen: isFullscreen,
                 ),
               ),
             ),
@@ -290,26 +293,6 @@ void main() {
         },
       );
 
-      testWidgets('keeps a 4 pt gap above a visible collaborator row', (
-        tester,
-      ) async {
-        // No confirmation repository in this scope, so the row falls back to
-        // showing every tagged collaborator.
-        testVideo = testVideo.copyWith(
-          collaboratorPubkeys: const [collaboratorPubkey],
-        );
-
-        await pumpOverlay(tester);
-
-        final rowTop = tester
-            .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
-            .top;
-        expect(
-          rowTop - descriptionBottom(tester),
-          closeTo(4, _layoutTolerance),
-        );
-      });
-
       // Pumps the overlay for a third-party viewer, with the collaborator's
       // acceptance resolved to [status].
       Future<void> pumpAsThirdPartyViewer(
@@ -377,15 +360,138 @@ void main() {
           status: CollaboratorStatus.pending,
         );
 
-        // The row is mounted but shows the third-party viewer nothing.
-        expect(find.byType(CollaboratorAvatarRow), findsOneWidget);
-        expect(
-          find.bySemanticsIdentifier('collaborator_avatar_row'),
-          findsNothing,
-        );
+        // The collaborator is tagged but the third-party viewer sees no one.
+        expect(testVideo.hasCollaborators, isTrue);
+        expect(find.byType(CollaboratorAvatarRowBody), findsNothing);
         expect(
           tester.getRect(captionBlock()).bottom,
           closeTo(descriptionBottom(tester), _layoutTolerance),
+        );
+      });
+    });
+
+    group('with nothing captioned below the author row', () {
+      // Every feed pumps the overlay in fullscreen, so these do too.
+      const audioEventId =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const collaboratorPubkey =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+      VideoEvent captionless({String? title, String? audio}) => VideoEvent(
+        id: testVideo.id,
+        pubkey: testVideo.pubkey,
+        createdAt: testVideo.createdAt,
+        content: '',
+        timestamp: testVideo.timestamp,
+        videoUrl: testVideo.videoUrl,
+        title: title,
+        audioEventId: audio,
+      );
+
+      Future<void> unmount(WidgetTester tester) async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('an audio row ends where a title-only caption does', (
+        tester,
+      ) async {
+        testVideo = captionless(title: 'Only a title');
+        await pumpOverlay(tester, isFullscreen: true);
+        final captionBottom = tester.getRect(find.text('Only a title')).bottom;
+        await unmount(tester);
+
+        testVideo = captionless(audio: audioEventId);
+        await pumpOverlay(
+          tester,
+          isFullscreen: true,
+          overrides: [
+            soundByIdProvider(audioEventId).overrideWith((ref) async => null),
+          ],
+        );
+
+        expect(
+          tester.getRect(find.byType(AudioAttributionRow)).bottom,
+          closeTo(captionBottom, _layoutTolerance),
+        );
+      });
+
+      testWidgets('a visible collaborator row ends where a title-only '
+          'caption does', (tester) async {
+        testVideo = captionless(title: 'Only a title');
+        await pumpOverlay(tester, isFullscreen: true);
+        final captionBottom = tester.getRect(find.text('Only a title')).bottom;
+        await unmount(tester);
+
+        // No confirmation repository in this scope, so only the author sees
+        // their invitees (#10001).
+        testVideo = captionless().copyWith(
+          collaboratorPubkeys: const [collaboratorPubkey],
+        );
+        await pumpOverlay(
+          tester,
+          isFullscreen: true,
+          authService: createMockAuthService(
+            currentPublicKeyHex: testVideo.pubkey,
+          ),
+        );
+
+        expect(
+          tester
+              .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
+              .bottom,
+          closeTo(captionBottom, _layoutTolerance),
+        );
+      });
+
+      testWidgets('a collaborator the viewer cannot see leaves no gap', (
+        tester,
+      ) async {
+        testVideo = captionless();
+        await pumpOverlay(tester, isFullscreen: true);
+        final avatarBottom = tester.getRect(find.byType(UserAvatar)).bottom;
+        await unmount(tester);
+
+        const viewerPubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        testVideo = captionless().copyWith(
+          collaboratorPubkeys: const [collaboratorPubkey],
+          addressableDTag: 'captionless',
+        );
+        final repository = _MockCollaboratorConfirmationRepository();
+        when(() => repository.release(any())).thenReturn(null);
+        when(
+          () => repository.watch(
+            any(),
+            creatorPubkey: any(named: 'creatorPubkey'),
+            taggedPubkeys: any(named: 'taggedPubkeys'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value(
+            VideoCollaboratorStatus(
+              videoAddress: testVideo.addressableId!,
+              statusByPubkey: const {
+                collaboratorPubkey: CollaboratorStatus.pending,
+              },
+              isResolved: true,
+            ),
+          ),
+        );
+        await pumpOverlay(
+          tester,
+          isFullscreen: true,
+          authService: createMockAuthService(currentPublicKeyHex: viewerPubkey),
+          overrides: [
+            collaboratorConfirmationRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+
+        expect(find.byType(CollaboratorAvatarRowBody), findsNothing);
+        expect(
+          tester.getRect(find.byType(UserAvatar)).bottom,
+          closeTo(avatarBottom, _layoutTolerance),
         );
       });
     });
@@ -431,6 +537,11 @@ void main() {
 
         await tester.pumpWidget(
           testProviderScope(
+            // No confirmation repository in this scope, so only the author
+            // sees their invitees (#10001).
+            mockAuthService: createMockAuthService(
+              currentPublicKeyHex: testVideo.pubkey,
+            ),
             additionalOverrides: [
               repostsRepositoryProvider.overrideWithValue(
                 mockRepostsRepository,
@@ -455,7 +566,7 @@ void main() {
         await tester.pump();
 
         expect(testVideo.displayContent, isEmpty);
-        expect(find.byType(CollaboratorAvatarRow), findsOneWidget);
+        expect(find.byType(CollaboratorAvatarRowBody), findsOneWidget);
         expect(find.byType(VideoReplyParentLink), findsOneWidget);
       },
     );
@@ -537,7 +648,7 @@ void main() {
       final l10n = _l10n(tester);
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(
+          l10n.videoOverlayTotalLoops(
             StringUtils.formatCompactNumber(10000),
             10000,
           ),

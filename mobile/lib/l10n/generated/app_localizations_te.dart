@@ -371,29 +371,19 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'లూప్‌లు',
       one: 'లూప్',
     );
-    return '$authorName $compactCount $_temp0';
+    return '$compactCount $_temp0 మొత్తం';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'లూప్‌లు',
-      one: 'లూప్',
-    );
-    return 'ఈ వీడియోకు $compactCount $_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount మొత్తం';
   }
 
   @override
@@ -4687,6 +4677,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీరు ఇప్పుడే ప్రచురించిన వీడియో యొక్క సూక్ష్మచిత్రం';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override
@@ -6139,6 +6144,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'ఈ సంభాషణ మూసివేయబడింది.';
+
+  @override
+  String get dmFormerModerationAccountName => 'మునుపటి మోడరేషన్ ఖాతా';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -8042,21 +8050,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
-
-  @override
-  String get hashtagSearchTitle => 'హ్యాష్‌ట్యాగ్‌ల కోసం శోధించండి';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'ట్రెండింగ్ విషయాలు మరియు కంటెంట్‌ను కనుగొనండి';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\" కోసం హ్యాష్‌ట్యాగ్‌లు ఏవీ కనుగొనబడలేదు$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'శోధన విఫలమైంది';
 
   @override
   String get userNotAvailableTitle => 'ఖాతా అందుబాటులో లేదు';
@@ -13492,6 +13485,19 @@ class AppLocalizationsTe extends AppLocalizations {
         'private': '$name, ప్రైవేట్, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: $platforms.',
+      one:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో $platformsను మళ్లీ కనెక్ట్ చేయండి.',
     );
     return '$_temp0';
   }

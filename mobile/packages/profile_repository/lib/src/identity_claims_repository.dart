@@ -76,9 +76,10 @@ class IdentityClaimStatus {
   /// Lowercased `platform:identity` keys the verifier confirmed.
   final Set<String> verifiedKeys;
 
-  /// False when the verifier could not be reached, so [verifiedKeys] is empty
-  /// for lack of an answer rather than for lack of verified claims. UI should
-  /// say "could not check" rather than "not verified".
+  /// False when the verifier could not be reached, or could not check a claim
+  /// that therefore shows without a verdict. A claim missing from
+  /// [verifiedKeys] may then lack an answer rather than a positive verdict, so
+  /// UI should say "could not check" rather than "not verified".
   final bool verifierReachable;
 
   /// Whether [claim] carries a positive verdict.
@@ -104,16 +105,21 @@ class CachedVerifiedClaims {
 class _VerificationOutcome {
   const _VerificationOutcome({
     required this.verified,
-    required this.rateLimited,
+    this.inconclusiveKeys = const {},
     this.confirmedNegativeKeys = const {},
   });
 
   final List<IdentityClaim> verified;
-  final bool rateLimited;
+
+  /// Lowercased `platform:identity` keys the verifier could not check right
+  /// now.
+  final Set<String> inconclusiveKeys;
+
+  bool get inconclusive => inconclusiveKeys.isNotEmpty;
 
   /// Lowercased `platform:identity` keys the verifier explicitly judged
-  /// negative with a non-rate-limited result. Honored even inside a
-  /// rate-limited batch, where they must still drop their claim.
+  /// negative with a conclusive result. Honored even inside an inconclusive
+  /// batch, where they must still drop their claim.
   final Set<String> confirmedNegativeKeys;
 }
 
@@ -195,18 +201,15 @@ class IdentityClaimsRepository {
   /// results (divine-identify-verification-service/src/utils/cache.ts:4).
   static const Duration verifiedTtl = Duration(hours: 24);
 
-  /// Prefix of the verifier's rate-limit rejection message
-  /// (divine-identify-verification-service/src/routes/verify.ts:59-81). The
-  /// verifier returns rate-limit rejections as HTTP-200 `verified: false`
-  /// bodies it never caches server-side, so a batch containing this prefix
-  /// must not write new verdicts to the local snapshot — otherwise a
-  /// rate-limit burst could overwrite real verdicts. (Per-claim confirmed
-  /// negatives inside such a batch are conclusive and are still pruned.)
-  ///
-  /// [VerificationResult.error] is documented as a free-form, non-stable
-  /// string, so this is a best-effort prefix match; a stable server-side
-  /// rate-limit flag would remove the fragility entirely.
-  static const String rateLimitErrorPrefix = 'Rate limit exceeded';
+  /// The verifier's stable code for "couldn't be checked right now": the
+  /// platform did not answer, the check itself failed, or the verifier's own
+  /// rate limit was hit
+  /// (divine-identify-verification-service/src/routes/verify.ts). In each case
+  /// there is no verdict on the proof, so a batch containing it must not write
+  /// new verdicts to the local snapshot; otherwise an outage or a rate-limit
+  /// burst could overwrite real verdicts. (Per-claim confirmed negatives inside
+  /// such a batch are conclusive and are still pruned.)
+  static const String _temporarilyUnavailableCode = 'temporarily_unavailable';
 
   final VerifierClient _verifierClient;
   final IdentityVerificationsDao? _verificationsDao;
@@ -307,15 +310,15 @@ class IdentityClaimsRepository {
   /// refreshes the persistent snapshot. The source tags are parsed exactly
   /// once regardless of which branch is taken.
   ///
-  /// [renderedClaims] is the caller's currently-rendered last-known-good
-  /// claim set. A rate-limited verifier outcome is inconclusive (the
-  /// service never caches it server-side), so it must not clear chips the
-  /// user can already see: any rendered or snapshot-cached claim still
-  /// present in [freshTags] is preserved, matched per `platform:identity`
-  /// case-insensitively (proof-agnostic, so a proof rotation coinciding
-  /// with a rate-limit window keeps the chip). Only a per-claim confirmed
-  /// negative verdict from a non-rate-limited result, or the claim's
-  /// removal from the source tags, drops a claim from the result.
+  /// [renderedClaims] is the caller's currently-rendered last-known-good claim
+  /// set. A rate-limited or couldn't-check verifier outcome is inconclusive (no
+  /// verdict on the proof), so it must not clear chips the user can already
+  /// see: any rendered or snapshot-cached claim still present in [freshTags] is
+  /// preserved, matched per `platform:identity` case-insensitively
+  /// (proof-agnostic, so a proof rotation coinciding with an inconclusive
+  /// answer keeps the chip). Only a per-claim confirmed negative verdict from a
+  /// conclusive result, or the claim's removal from the source tags, drops a
+  /// claim from the result.
   ///
   /// Throws [VerifierClientException] subtypes on the verify path — callers
   /// should catch and keep the last-known-good claims rather than clearing
@@ -326,28 +329,49 @@ class IdentityClaimsRepository {
     required CachedVerifiedClaims? cached,
     List<IdentityClaim> renderedClaims = const [],
   }) async {
+    final resolved = await _resolveClaims(
+      pubkey: pubkey,
+      freshTags: freshTags,
+      cached: cached,
+      renderedClaims: renderedClaims,
+    );
+    return resolved.claims;
+  }
+
+  /// [resolveClaims], also reporting whether a claim the verifier could not
+  /// check is left out of the result, so it shows without a verdict.
+  Future<({List<IdentityClaim> claims, bool unchecked})> _resolveClaims({
+    required String pubkey,
+    required List<List<String>> freshTags,
+    required CachedVerifiedClaims? cached,
+    required List<IdentityClaim> renderedClaims,
+  }) async {
     final freshClaims = parseClaims(pubkey, freshTags);
     if (cached != null && cached.isFresh) {
       final verifiedSet = cached.claims.toSet();
       if (freshClaims.every(verifiedSet.contains)) {
-        return freshClaims;
+        return (claims: freshClaims, unchecked: false);
       }
     }
     final outcome = await _verifyClaims(pubkey: pubkey, claims: freshClaims);
-    if (outcome.rateLimited) {
-      return _preserveKnownGoodClaims(
-        freshClaims: freshClaims,
-        knownGoodClaims: [...?cached?.claims, ...renderedClaims],
-        outcome: outcome,
-      );
+    if (!outcome.inconclusive) {
+      return (claims: outcome.verified, unchecked: false);
     }
-    return outcome.verified;
+    final kept = _preserveKnownGoodClaims(
+      freshClaims: freshClaims,
+      knownGoodClaims: [...?cached?.claims, ...renderedClaims],
+      outcome: outcome,
+    );
+    final keptKeys = {for (final claim in kept) _identityKeyOf(claim)};
+    final unchecked = !keptKeys.containsAll(outcome.inconclusiveKeys);
+    return (claims: kept, unchecked: unchecked);
   }
 
   /// Reads [pubkey]'s claims together with the verifier's verdict on each.
   ///
-  /// A verifier that cannot be reached is not a failure here: the links are
-  /// the user's own data and stay visible, flagged as unchecked through
+  /// A verifier that cannot be reached, or that could not check one of the
+  /// claims right now, is not a failure here: the links are the user's own data
+  /// and stay visible, flagged as unchecked through
   /// [IdentityClaimStatus.verifierReachable]. Only the relay read can throw.
   ///
   /// Throws [StateError] if the repository was built without write
@@ -356,15 +380,18 @@ class IdentityClaimsRepository {
     final tags = await _currentIdentityTags(pubkey, forWrite: false);
     final claims = parseClaims(pubkey, tags);
     try {
-      final verified = await resolveClaims(
+      final resolved = await _resolveClaims(
         pubkey: pubkey,
         freshTags: tags,
         cached: await cachedVerifiedClaims(pubkey: pubkey, tags: tags),
+        renderedClaims: const [],
       );
       return IdentityClaimStatus(
         claims: claims,
-        verifiedKeys: {for (final claim in verified) _identityKeyOf(claim)},
-        verifierReachable: true,
+        verifiedKeys: {
+          for (final claim in resolved.claims) _identityKeyOf(claim),
+        },
+        verifierReachable: !resolved.unchecked,
       );
     } on VerifierClientException {
       return IdentityClaimStatus(
@@ -1087,14 +1114,14 @@ class IdentityClaimsRepository {
   /// ones, preserving input order.
   ///
   /// On success the persistent snapshot for [pubkey] is updated: verified
-  /// tuples are stored with the batch's minimum `checked_at`; a
-  /// zero-verified response deletes the snapshot. Only positive verdicts
-  /// are ever persisted — and when any result carries the verifier's
-  /// rate-limit error (see [rateLimitErrorPrefix]) no new verdicts are
-  /// written, so a rate-limit burst cannot overwrite real verdicts. The
-  /// one exception: entries whose own result is a confirmed negative are
-  /// pruned from the snapshot even in a rate-limited batch, so a negated
-  /// claim cannot keep resurrecting from cache.
+  /// tuples are stored with the batch's minimum `checked_at`; a zero-verified
+  /// response deletes the snapshot. Only positive verdicts are ever persisted —
+  /// and when any result is inconclusive (see [_temporarilyUnavailableCode]) no
+  /// new verdicts are written, so a rate-limit burst or a platform outage
+  /// cannot overwrite real verdicts. The one exception: entries whose own
+  /// result is a confirmed negative are pruned from the snapshot even in an
+  /// inconclusive batch, so a negated claim cannot keep resurrecting from
+  /// cache.
   ///
   /// Throws [VerifierClientException] subtypes.
   Future<_VerificationOutcome> _verifyClaims({
@@ -1102,7 +1129,7 @@ class IdentityClaimsRepository {
     required List<IdentityClaim> claims,
   }) async {
     if (claims.isEmpty) {
-      return const _VerificationOutcome(verified: [], rateLimited: false);
+      return const _VerificationOutcome(verified: []);
     }
     final results = await _verifierClient.verifyBatch(claims);
     final verifiedKeys = <String>{
@@ -1110,36 +1137,39 @@ class IdentityClaimsRepository {
         if (r.verified)
           '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
     };
+    final inconclusiveKeys = <String>{
+      for (final r in results)
+        if (_isInconclusiveResult(r))
+          '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
+    };
     final confirmedNegativeKeys = <String>{
       for (final r in results)
-        if (!r.verified && !_isRateLimitResult(r))
+        if (!r.verified && !_isInconclusiveResult(r))
           '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
     };
     final verified = claims
         .where((c) => verifiedKeys.contains(_identityKeyOf(c)))
         .toList();
-    final rateLimited = results.any(_isRateLimitResult);
     await _persistOutcome(
       pubkey: pubkey,
       results: results,
       verified: verified,
-      rateLimited: rateLimited,
+      inconclusive: inconclusiveKeys.isNotEmpty,
       confirmedNegativeKeys: confirmedNegativeKeys,
     );
     return _VerificationOutcome(
       verified: verified,
-      rateLimited: rateLimited,
+      inconclusiveKeys: inconclusiveKeys,
       confirmedNegativeKeys: confirmedNegativeKeys,
     );
   }
 
-  /// Preservation for a rate-limited (inconclusive) batch: a fresh claim
-  /// survives when its own result verified it, or when it was known-good
-  /// (snapshot or rendered) and its own result was not a confirmed
-  /// negative. Matching is per `platform:identity`, case-insensitive and
-  /// proof-agnostic — the verifier judges identities, not proof strings,
-  /// so a rotated proof must not silently drop a chip while the verdict
-  /// is inconclusive.
+  /// Preservation for an inconclusive batch: a fresh claim survives when its
+  /// own result verified it, or when it was known-good (snapshot or rendered)
+  /// and its own result was not a confirmed negative. Matching is per
+  /// `platform:identity`, case-insensitive and proof-agnostic — the verifier
+  /// judges identities, not proof strings, so a rotated proof must not silently
+  /// drop a chip while the verdict is inconclusive.
   List<IdentityClaim> _preserveKnownGoodClaims({
     required List<IdentityClaim> freshClaims,
     required List<IdentityClaim> knownGoodClaims,
@@ -1164,14 +1194,14 @@ class IdentityClaimsRepository {
     required String pubkey,
     required List<VerificationResult> results,
     required List<IdentityClaim> verified,
-    required bool rateLimited,
+    required bool inconclusive,
     required Set<String> confirmedNegativeKeys,
   }) async {
     final dao = _verificationsDao;
     if (dao == null) return;
 
-    if (rateLimited) {
-      // A rate-limited batch persists no new verdicts, but any per-claim
+    if (inconclusive) {
+      // An inconclusive batch persists no new verdicts, but any per-claim
       // confirmed negative inside it is conclusive — prune those tuples
       // so a negated claim cannot resurrect from the snapshot through
       // the instant path or the fresh-and-covering skip.
@@ -1199,8 +1229,8 @@ class IdentityClaimsRepository {
   }
 
   /// Removes snapshot entries whose `platform:identity` key received a
-  /// confirmed (non-rate-limited) negative verdict. Rows that are missing
-  /// or malformed are left alone — the read path already treats them as
+  /// confirmed (conclusive) negative verdict. Rows that are missing or
+  /// malformed are left alone — the read path already treats them as
   /// no-snapshot.
   Future<void> _pruneConfirmedNegatives(
     IdentityVerificationsDao dao,
@@ -1237,9 +1267,8 @@ class IdentityClaimsRepository {
     }
   }
 
-  static bool _isRateLimitResult(VerificationResult result) =>
-      !result.verified &&
-      (result.error?.startsWith(rateLimitErrorPrefix) ?? false);
+  static bool _isInconclusiveResult(VerificationResult result) =>
+      !result.verified && result.code == _temporarilyUnavailableCode;
 
   /// Normalized comparison tuple for snapshot matching.
   static (String, String, String) _tupleOf(IdentityClaim claim) =>

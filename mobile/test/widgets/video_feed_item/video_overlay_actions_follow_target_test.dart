@@ -60,6 +60,8 @@ void main() {
     WidgetTester tester, {
     required bool alreadyFollowing,
     TextScaler textScaler = TextScaler.noScaling,
+    VideoEvent? video,
+    bool isFullscreen = false,
   }) async {
     final follow = createMockFollowRepository();
     when(() => follow.isFollowing(any())).thenReturn(alreadyFollowing);
@@ -95,9 +97,10 @@ void main() {
                 child: BlocProvider<VideoInteractionsBloc>.value(
                   value: mockInteractionsBloc,
                   child: VideoOverlayActions(
-                    video: testVideo,
+                    video: video ?? testVideo,
                     isVisible: true,
                     isActive: true,
+                    isFullscreen: isFullscreen,
                   ),
                 ),
               ),
@@ -107,6 +110,34 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  VideoEvent captionless({String? title}) => VideoEvent(
+    id: testVideo.id,
+    pubkey: testVideo.pubkey,
+    createdAt: testVideo.createdAt,
+    content: '',
+    timestamp: testVideo.timestamp,
+    videoUrl: testVideo.videoUrl,
+    title: title,
+  );
+
+  bool followOwns(WidgetTester tester, Offset point) {
+    final badgeRenderObjects = <RenderObject>{};
+    void collect(Element e) {
+      final ro = e.renderObject;
+      if (ro != null) badgeRenderObjects.add(ro);
+      e.visitChildren(collect);
+    }
+
+    collect(find.byType(VideoFollowButton).evaluate().single);
+
+    final viewId = View.of(
+      tester.element(find.byType(VideoOverlayActions)),
+    ).viewId;
+    final result = HitTestResult();
+    WidgetsBinding.instance.hitTestInView(result, point, viewId);
+    return result.path.any((e) => badgeRenderObjects.contains(e.target));
   }
 
   Finder authorRow() => find
@@ -199,34 +230,25 @@ void main() {
       expect(target.right, avatarRight + _targetOffset);
       expect(nameLeft, target.right);
 
-      final badgeRenderObjects = <RenderObject>{};
-      void collect(Element e) {
-        final ro = e.renderObject;
-        if (ro != null) badgeRenderObjects.add(ro);
-        e.visitChildren(collect);
-      }
-
-      collect(find.byType(VideoFollowButton).evaluate().single);
-
-      final viewId = View.of(
-        tester.element(find.byType(VideoOverlayActions)),
-      ).viewId;
-      bool followOwns(Offset point) {
-        final result = HitTestResult();
-        WidgetsBinding.instance.hitTestInView(result, point, viewId);
-        return result.path.any((e) => badgeRenderObjects.contains(e.target));
-      }
-
       // Inside the gap between avatar and name: the target's.
-      expect(followOwns(Offset(avatarRight + 8, target.center.dy)), isTrue);
+      expect(
+        followOwns(tester, Offset(avatarRight + 8, target.center.dy)),
+        isTrue,
+      );
       // Just past the target, on the name: not the target's.
-      expect(followOwns(Offset(target.right + 4, target.center.dy)), isFalse);
+      expect(
+        followOwns(tester, Offset(target.right + 4, target.center.dy)),
+        isFalse,
+      );
       // The avatar's bottom-end corner, under the overhang: the target's.
       // Measured from the avatar's bottom, not the target's: the target
       // reaches 16dp below the avatar, so a point measured from its bottom
       // lies outside the avatar and cannot tell which of the two wins.
       final avatarBottom = tester.getRect(find.byType(UserAvatar)).bottom;
-      expect(followOwns(Offset(avatarRight - 8, avatarBottom - 8)), isTrue);
+      expect(
+        followOwns(tester, Offset(avatarRight - 8, avatarBottom - 8)),
+        isTrue,
+      );
     });
 
     testWidgets('the target ends where the caption starts', (tester) async {
@@ -240,6 +262,50 @@ void main() {
       expect(
         title.top,
         tester.getRect(find.byType(UserAvatar)).bottom + _targetOffset,
+      );
+    });
+
+    testWidgets(
+      'without a caption, the avatar sits where the caption would end',
+      (tester) async {
+        // Nothing follows the row, so its bottom gap would read as empty
+        // space under the avatar. The block drops by that gap instead.
+        await pumpOverlay(
+          tester,
+          alreadyFollowing: false,
+          video: captionless(title: 'Only a title'),
+          isFullscreen: true,
+        );
+        final captionBottom = tester.getRect(find.text('Only a title')).bottom;
+
+        await pumpOverlay(
+          tester,
+          alreadyFollowing: false,
+          video: captionless(),
+          isFullscreen: true,
+        );
+
+        expect(
+          tester.getRect(find.byType(UserAvatar)).bottom,
+          captionBottom,
+        );
+      },
+    );
+
+    testWidgets('without a caption, the overhang still takes taps', (
+      tester,
+    ) async {
+      await pumpOverlay(
+        tester,
+        alreadyFollowing: false,
+        video: captionless(),
+        isFullscreen: true,
+      );
+
+      final target = tester.getRect(find.byType(VideoFollowButton));
+      expect(
+        followOwns(tester, Offset(target.center.dx, target.bottom - 4)),
+        isTrue,
       );
     });
 

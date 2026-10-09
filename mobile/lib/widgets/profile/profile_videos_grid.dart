@@ -15,6 +15,7 @@ import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/grid_prefetch_mixin.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
@@ -550,7 +551,7 @@ class _VideoGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    identifier: 'video_thumbnail_$index',
+    identifier: SemanticIds.videoThumbnail(index),
     label: context.l10n.profileVideoThumbnailLabel(index + 1),
     // Read after the label ("Video thumbnail 2, Pinned"): the badge itself
     // is decorative, so this is the only way a screen reader learns of the

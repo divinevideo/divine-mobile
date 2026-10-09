@@ -2,17 +2,20 @@
 // ABOUTME: Verifies empty state, avatar rendering, and user tap callback.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/following_bar.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockMyFollowingBloc extends MockBloc<MyFollowingEvent, MyFollowingState>
@@ -223,6 +226,77 @@ void main() {
           expect(tappedPubkey, equals(pubkey1));
         },
       );
+    });
+
+    // Official branding follows recorded custody (#9963). Before it, this strip
+    // named an official moderation key but pictured it with a generic
+    // placeholder, so the name and the avatar disagreed.
+    group('a retired moderation key, by recorded custody (#9963)', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final retired = shippedRetiredKey;
+
+      Finder wordmarkFinder() => find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.logo,
+        description: 'bundled Divine wordmark',
+      );
+
+      Future<void> pumpBarFor(
+        WidgetTester tester,
+        RetiredKeyCustody custody,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: MyFollowingState(
+              status: MyFollowingStatus.success,
+              followingPubkeys: [retired],
+            ),
+            additionalOverrides: [
+              retiredKeyCustody(custody),
+              // The key's holder controls its kind-0, so the test gives it one
+              // that tries to look official.
+              fetchUserProfileProvider(retired).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: retired,
+                  displayName: 'Looks Official',
+                  picture: 'https://example.invalid/looks-official.png',
+                  rawData: const {},
+                  createdAt: now,
+                  eventId: 'c' * 64,
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: Divine's name over the wordmark", (
+          tester,
+        ) async {
+          await pumpBarFor(tester, custody);
+
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+          expect(wordmarkFinder(), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark, no picture', (
+          tester,
+        ) async {
+          await pumpBarFor(tester, custody);
+
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(wordmarkFinder(), findsNothing);
+          expect(
+            tester.widget<UserAvatar>(find.byType(UserAvatar)).imageUrl,
+            isNull,
+          );
+        });
+      }
     });
 
     group('deleted accounts', () {

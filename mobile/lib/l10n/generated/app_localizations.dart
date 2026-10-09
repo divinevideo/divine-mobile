@@ -649,21 +649,17 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
-  /// The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.
+  /// The creator's lifetime loop count across every video they have published, shown on the video overlay when this video's own loop count is hidden. compactCount is the formatted number; count selects the plural form.
   ///
   /// In en, this message translates to:
-  /// **'{compactCount} {authorName}\'s {count, plural, =1{loop} other{loops}}'**
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  );
+  /// **'{compactCount} all-time {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayTotalLoops(String compactCount, int count);
 
-  /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
+  /// The creator's lifetime loop total with its scope but no unit, paired after this video's loop count on the video overlay, e.g. '12 loops · 340 all-time'. compactCount is the formatted number.
   ///
   /// In en, this message translates to:
-  /// **'{compactCount} this video\'s {count, plural, =1{loop} other{loops}}'**
-  String videoOverlayVideoLoops(String compactCount, int count);
+  /// **'{compactCount} all-time'**
+  String videoOverlayTotalLoopsScope(String compactCount);
 
   /// No description provided for @generalSettingsShowTotalLoops.
   ///
@@ -7643,6 +7639,24 @@ abstract class AppLocalizations {
   /// **'Thumbnail of the video you just published'**
   String get postPublishConfirmationThumbnailLabel;
 
+  /// Shown on the post-publish confirmation when the creator has a platform connected in manual crossposting mode. {platforms} is a comma-separated list of platform brand names, such as Instagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Send this loop to {platforms} too?'**
+  String postPublishCrosspostSuggest(String platforms);
+
+  /// Shown on the post-publish confirmation when crossposting is not set up yet. {platform} is a platform brand name, such as Instagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Post once, show up on {platform} too.'**
+  String postPublishCrosspostSetUp(String platform);
+
+  /// Shown on the post-publish confirmation when every connected platform crossposts automatically. {platforms} is a comma-separated list of platform brand names.
+  ///
+  /// In en, this message translates to:
+  /// **'Heading to {platforms} automatically.'**
+  String postPublishCrosspostAutomatic(String platforms);
+
   /// No description provided for @userSearchNoResults.
   ///
   /// In en, this message translates to:
@@ -10162,6 +10176,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This conversation is closed.'**
   String get dmRetiredThreadClosedTitle;
+
+  /// Neutral name shown in place of the official "Divine Moderation" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`.
+  ///
+  /// In en, this message translates to:
+  /// **'Former moderation account'**
+  String get dmFormerModerationAccountName;
 
   /// SnackBar shown when a user tries to remove a conversation that resolves to a protected Divine Moderation notice. Used on the request-preview decline, the Message Requests bulk sweep, and the inbox long-press remove (#6971, #8347, #8391).
   ///
@@ -13222,30 +13242,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No users found'**
   String get newMessageNoUsersFound;
-
-  /// No description provided for @hashtagSearchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Search for hashtags'**
-  String get hashtagSearchTitle;
-
-  /// No description provided for @hashtagSearchSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover trending topics and content'**
-  String get hashtagSearchSubtitle;
-
-  /// No description provided for @hashtagSearchNoResults.
-  ///
-  /// In en, this message translates to:
-  /// **'No hashtags found for \"{query}\"'**
-  String hashtagSearchNoResults(String query);
-
-  /// No description provided for @hashtagSearchFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Search failed'**
-  String get hashtagSearchFailed;
 
   /// No description provided for @userNotAvailableTitle.
   ///
@@ -22014,6 +22010,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
   String listCardSemanticLabel(String name, String visibility, String count);
+
+  /// Post-publish reconnect prompt. Count is the number of lapsed accounts; platforms is their comma-separated display-name list. Use singular grammar only for one account.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Reconnect {platforms} in crossposting settings to keep posting.} other{Reconnect these accounts in crossposting settings to keep posting: {platforms}.}}'**
+  String postPublishCrosspostReconnect(int count, String platforms);
 }
 
 class _AppLocalizationsDelegate

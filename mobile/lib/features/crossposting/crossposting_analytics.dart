@@ -8,7 +8,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Where a crossposting CTA is shown.
 enum CrosspostCtaSurface {
   settings('settings'),
-  shareSheet('share_sheet');
+  shareSheet('share_sheet'),
+
+  /// The confirmation shown right after a video publishes.
+  postPublish('post_publish');
 
   const CrosspostCtaSurface(this.wireName);
 
@@ -25,7 +28,13 @@ enum CrosspostCta {
   connect('connect'),
 
   /// Switch a connected platform to automatic crossposting.
-  automaticMode('automatic_mode');
+  automaticMode('automatic_mode'),
+
+  /// Crosspost one specific video to connected manual-mode platforms.
+  crosspostVideo('crosspost_video'),
+
+  /// Reconnect a platform whose authorization lapsed.
+  reconnect('reconnect');
 
   const CrosspostCta(this.wireName);
 

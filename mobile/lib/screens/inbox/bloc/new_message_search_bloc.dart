@@ -26,9 +26,11 @@ class NewMessageSearchBloc
     required ProfileRepository profileRepository,
     required FollowRepository followRepository,
     required String currentUserPubkey,
+    required ModerationPresentationResolver moderationPresentation,
   }) : _profileRepository = profileRepository,
        _followRepository = followRepository,
        _currentUserPubkey = currentUserPubkey,
+       _moderationPresentation = moderationPresentation,
        super(const NewMessageSearchState()) {
     on<NewMessageSearchStarted>(_onStarted);
     on<NewMessageSearchQueryChanged>(
@@ -44,6 +46,10 @@ class NewMessageSearchBloc
   final ProfileRepository _profileRepository;
   final FollowRepository _followRepository;
   final String _currentUserPubkey;
+
+  /// How each result's key is presented, so the sort and the search match the
+  /// name the row renders, including a withdrawn key's neutral label (#9963).
+  final ModerationPresentationResolver _moderationPresentation;
 
   /// Live mirror of the durable `vanished_profiles` table.
   StreamSubscription<Set<String>>? _vanishedSubscription;
@@ -163,7 +169,7 @@ class NewMessageSearchBloc
   /// `ConversationListBloc`: it lets a row be found by a string it does not
   /// show — a vanished peer surfacing under a generated "Adjective Animal N"
   /// the viewer has never seen — and hides it from the name it does show.
-  static List<UserProfile> _filterContacts(
+  List<UserProfile> _filterContacts(
     List<UserProfile> contacts,
     String query, {
     required Set<String> vanishedPubkeys,
@@ -180,7 +186,7 @@ class NewMessageSearchBloc
       .toList();
 
   /// Whether [query] matches the name [profile]'s row renders, or its NIP-05.
-  static bool _matchesRenderedName(
+  bool _matchesRenderedName(
     UserProfile profile,
     String query, {
     required Set<String> vanishedPubkeys,
@@ -207,7 +213,7 @@ class NewMessageSearchBloc
   /// including the npub paste `NewMessageSheet` documents as a supported
   /// query. So only a peer Divine renames is re-checked, which is where the
   /// backend really did match a name the row will never show (#8421).
-  static List<UserProfile> _visibleNetworkResults(
+  List<UserProfile> _visibleNetworkResults(
     List<UserProfile> networkResults,
     String query, {
     required Set<String> vanishedPubkeys,
@@ -217,7 +223,7 @@ class NewMessageSearchBloc
     return networkResults.where((profile) {
       final substitute = dmPeerSubstituteName(
         isVanished: vanishedPubkeys.contains(profile.pubkey),
-        isModeration: isModerationAccount(profile.pubkey),
+        moderation: _moderationPresentation(profile.pubkey),
         labels: labels,
       );
       if (substitute == null) return true;
@@ -237,7 +243,7 @@ class NewMessageSearchBloc
   ///
   /// Falls back to the profile-or-generated value while [labels] is null,
   /// which is the pre-delivery window only.
-  static String _peerNameFor(
+  String _peerNameFor(
     UserProfile profile, {
     required Set<String> vanishedPubkeys,
     required DmPeerLabels? labels,
@@ -246,14 +252,14 @@ class NewMessageSearchBloc
     return dmPeerName(
       pubkeyHex: profile.pubkey,
       isVanished: vanishedPubkeys.contains(profile.pubkey),
-      isModeration: isModerationAccount(profile.pubkey),
+      moderation: _moderationPresentation(profile.pubkey),
       labels: labels,
       profileName: profile.bestDisplayName,
     );
   }
 
   /// [contacts] ordered by the name each row renders.
-  static List<UserProfile> _sortedByPeerName(
+  List<UserProfile> _sortedByPeerName(
     List<UserProfile> contacts, {
     required Set<String> vanishedPubkeys,
     required DmPeerLabels? labels,

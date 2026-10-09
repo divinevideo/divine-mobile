@@ -15,23 +15,31 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 // ---------------------------------------------------------------------------
 // Test doubles
@@ -59,6 +67,12 @@ class _FakeDraft extends Fake implements DivineVideoDraft {
 }
 
 class _MockGoRouter extends Mock implements GoRouter {}
+
+class _MockCrosspostingRepository extends Mock
+    implements CrosspostingRepository {}
+
+class _MockCrosspostingApiClient extends Mock
+    implements CrosspostingApiClient {}
 
 class _MockRouteInformationProvider extends Mock
     implements GoRouteInformationProvider {}
@@ -99,6 +113,32 @@ class _NoOpAnalytics implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async {}
 }
 
+class _RecordingAnalytics implements AnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  Iterable<String> get tapNames => events
+      .map((event) => event.name)
+      .where((name) => name.endsWith('_tapped'));
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
+
+  @override
+  Future<void> logScreenView({
+    required String screenName,
+    String? screenClass,
+    Map<String, Object>? parameters,
+  }) async {}
+
+  @override
+  Future<void> setUserId(String? userId) async {}
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -116,6 +156,7 @@ Widget _buildHarness({
   bool wireRootNavigatorKey = true,
   PostPublishExperiment? experiment,
   GoRouter? router,
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderScope(
     overrides: [
@@ -123,6 +164,7 @@ Widget _buildHarness({
       if (experiment != null)
         postPublishExperimentProvider.overrideWithValue(experiment),
       if (router != null) goRouterProvider.overrideWithValue(router),
+      ...extraOverrides,
     ],
     child: BlocProvider<BackgroundPublishBloc>.value(
       value: publishBloc,
@@ -199,12 +241,14 @@ BackgroundPublishState _succeededState(
   String id, {
   String? secondId,
   String? stableId = _publishedStableId,
+  String? eventId,
   Uint8List? thumbnailBytes,
 }) => BackgroundPublishState(
   recentlyPublished: [
     PublishedVideo(
       draftId: id,
       stableId: stableId,
+      eventId: eventId,
       thumbnailBytes: thumbnailBytes,
     ),
     if (secondId != null)
@@ -213,6 +257,17 @@ BackgroundPublishState _succeededState(
 );
 
 const _publishedStableId = 'published-d-tag';
+
+final AppLocalizations _l10nEn = lookupAppLocalizations(const Locale('en'));
+
+const _publishedEventId =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+const _instagramConnected = CrosspostingConnection(
+  id: 'conn-instagram',
+  platform: CrosspostingPlatform.instagram,
+  status: CrosspostingConnectionStatus.connected,
+);
 
 /// A [BackgroundPublishState] where upload [id] disappeared without a success
 /// signal — mirrors what the bloc emits on [BackgroundPublishVanished].
@@ -223,8 +278,13 @@ BackgroundPublishState _vanishedState() => const BackgroundPublishState();
 // ---------------------------------------------------------------------------
 
 /// An experiment with [publishId] already assigned to the treatment arm.
-Future<PostPublishExperiment> _treatmentExperiment(String publishId) async {
-  final experiment = PostPublishExperiment(analytics: _NoOpAnalytics());
+Future<PostPublishExperiment> _treatmentExperiment(
+  String publishId, {
+  AnalyticsEventSink? analytics,
+}) async {
+  final experiment = PostPublishExperiment(
+    analytics: analytics ?? _NoOpAnalytics(),
+  );
   await experiment.screenShown(
     publishId: publishId,
     destination: 'profile',
@@ -482,6 +542,352 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+    });
+
+    group('crosspost prompt', () {
+      late _MockCrosspostingRepository repository;
+      late _MockCrosspostingApiClient apiClient;
+      late _MockGoRouter router;
+      late _RecordingAnalytics analytics;
+
+      setUp(() {
+        repository = _MockCrosspostingRepository();
+        apiClient = _MockCrosspostingApiClient();
+        router = _routerAt(_ownProfileLocation);
+        analytics = _RecordingAnalytics();
+        when(() => repository.loadSettings()).thenAnswer(
+          (_) async => const [
+            CrosspostingPlatformSettings(
+              platform: CrosspostingPlatform.instagram,
+              supportsAutomatic: true,
+              mode: CrosspostingMode.manual,
+              connection: _instagramConnected,
+            ),
+          ],
+        );
+        when(() => authService.isAuthenticated).thenReturn(true);
+        when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
+      });
+
+      Future<void> pumpPublished(
+        WidgetTester tester, {
+        required AuthenticationSource source,
+        CrosspostingAvailability availability = CrosspostingAvailability.native,
+        String? eventId = _publishedEventId,
+        List<Override> gateOverrides = const [],
+        bool useRealAvailability = false,
+        bool protectedMinor = false,
+      }) async {
+        stubPublishBloc(const BackgroundPublishState());
+        when(() => authService.authenticationSource).thenReturn(source);
+        final experiment = await _treatmentExperiment(
+          'draft-treatment',
+          analytics: analytics,
+        );
+
+        await tester.pumpWidget(
+          _buildHarness(
+            publishBloc: publishBloc,
+            authService: authService,
+            experiment: experiment,
+            router: router,
+            extraOverrides: [
+              if (!useRealAvailability)
+                crosspostingAvailabilityProvider.overrideWithValue(
+                  availability,
+                ),
+              crosspostingRepositoryProvider.overrideWithValue(repository),
+              crosspostingApiClientProvider.overrideWithValue(apiClient),
+              analyticsEventSinkProvider.overrideWithValue(analytics),
+              isProtectedMinorProvider.overrideWithValue(protectedMinor),
+              ...gateOverrides,
+            ],
+          ),
+        );
+
+        publishStream.add(
+          _succeededState('draft-treatment', eventId: eventId),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      /// What `openCrosspostingSetup` reads to pick the native settings route.
+      void stubSetupRouting() {
+        when(() => authService.authState).thenReturn(AuthState.authenticated);
+        when(
+          () => authService.authStateStream,
+        ).thenAnswer((_) => const Stream<AuthState>.empty());
+        when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+        when(() => authService.isRegistered).thenReturn(true);
+      }
+
+      testWidgets('suggests crossposting above view and share', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
+        expect(
+          find.text(l10n.postPublishCrosspostSuggest('Instagram')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('crosspost swaps the confirmation for the crosspost sheet', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.crosspostSubmit));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.postPublishConfirmationTitle), findsNothing);
+        expect(find.text(l10n.crosspostSheetTitle), findsOneWidget);
+      });
+
+      testWidgets('stays out of the way of a signer that may prompt', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.amber);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
+        expect(
+          find.text(l10n.postPublishCrosspostSuggest('Instagram')),
+          findsNothing,
+        );
+        verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('offers nothing to an ineligible account', (tester) async {
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.divineOAuth,
+          availability: CrosspostingAvailability.unavailable,
+        );
+
+        expect(
+          find.text(_l10nEn.postPublishConfirmationShare),
+          findsOneWidget,
+        );
+        verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('offers nothing when the publish result has no event id', (
+        tester,
+      ) async {
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.divineOAuth,
+          eventId: null,
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
+        verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('loads after cold OAuth availability resolves', (
+        tester,
+      ) async {
+        final oauthSupport = Completer<bool>();
+        stubSetupRouting();
+        when(() => authService.authRpcCapability)
+            .thenReturn(AuthRpcCapability.unavailable);
+        when(() => authService.authRpcCapabilityStream)
+            .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+        when(() => authService.isRegistered).thenReturn(false);
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.importedKeys,
+          useRealAvailability: true,
+          gateOverrides: [
+            appOAuthSupportProvider.overrideWith((ref) => oauthSupport.future),
+          ],
+        );
+        verifyNever(() => repository.loadSettings());
+
+        oauthSupport.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(_l10nEn.postPublishCrosspostSuggest('Instagram')),
+          findsOneWidget,
+        );
+        verify(() => repository.loadSettings()).called(1);
+      });
+
+      testWidgets('keeps View and Share still when the card arrives', (
+        tester,
+      ) async {
+        final settings = Completer<List<CrosspostingPlatformSettings>>();
+        when(() => repository.loadSettings())
+            .thenAnswer((_) => settings.future);
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+        final view = find.text(_l10nEn.postPublishConfirmationView);
+        final share = find.text(_l10nEn.postPublishConfirmationShare);
+        final beforeView = tester.getCenter(view);
+        final beforeShare = tester.getCenter(share);
+
+        settings.complete(const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.manual,
+            connection: _instagramConnected,
+          ),
+        ]);
+        await tester.pumpAndSettle();
+
+        expect(find.text(_l10nEn.crosspostSubmit), findsOneWidget);
+        expect(tester.getCenter(view), beforeView);
+        expect(tester.getCenter(share), beforeShare);
+      });
+
+      testWidgets('offers no unsolicited prompt to a protected minor', (
+        tester,
+      ) async {
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.divineOAuth,
+          protectedMinor: true,
+        );
+
+        expect(find.text(_l10nEn.postPublishConfirmationShare), findsOneWidget);
+        expect(find.text(_l10nEn.crosspostSubmit), findsNothing);
+        verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('crosspost submits the just-published event', (
+        tester,
+      ) async {
+        when(
+          () => apiClient.createCrossposts(
+            eventId: any(named: 'eventId'),
+            platforms: any(named: 'platforms'),
+          ),
+        ).thenAnswer(
+          (_) async => const [
+            CrosspostJob(
+              id: 'job-instagram',
+              platform: 'instagram',
+              status: CrosspostJobStatus.posted,
+            ),
+          ],
+        );
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        // The confirmation's Crosspost opens the sheet, whose Crosspost posts.
+        await tester.tap(find.text(l10n.crosspostSubmit));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.crosspostSubmit));
+        await tester.pumpAndSettle();
+
+        // The event id, not the d tag: crossposting addresses one event.
+        verify(
+          () => apiClient.createCrossposts(
+            eventId: _publishedEventId,
+            platforms: ['instagram'],
+          ),
+        ).called(1);
+      });
+
+      testWidgets(
+        'connect closes the confirmation and opens crossposting settings',
+        (tester) async {
+          stubSetupRouting();
+          when(() => repository.loadSettings()).thenAnswer(
+            (_) async => const [
+              CrosspostingPlatformSettings(
+                platform: CrosspostingPlatform.instagram,
+                supportsAutomatic: true,
+                mode: CrosspostingMode.disabled,
+              ),
+            ],
+          );
+          await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(
+            find.text(l10n.crosspostingBenefitConnect('Instagram')),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.postPublishConfirmationTitle), findsNothing);
+          verify(
+            () => router.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'reconnect closes the confirmation and opens crossposting settings',
+        (tester) async {
+          stubSetupRouting();
+          when(() => repository.loadSettings()).thenAnswer(
+            (_) async => const [
+              CrosspostingPlatformSettings(
+                platform: CrosspostingPlatform.instagram,
+                supportsAutomatic: true,
+                mode: CrosspostingMode.manual,
+                connection: CrosspostingConnection(
+                  id: 'conn-instagram',
+                  platform: CrosspostingPlatform.instagram,
+                  status: CrosspostingConnectionStatus.needsReauth,
+                ),
+              ),
+            ],
+          );
+          await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.crosspostReconnect));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.postPublishConfirmationTitle), findsNothing);
+          verify(
+            () => router.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
+        },
+      );
+
+      testWidgets('logs a crosspost tap as a crossposting CTA only', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.crosspostSubmit));
+        await tester.pumpAndSettle();
+
+        expect(analytics.tapNames, equals(['crosspost_cta_tapped']));
+        expect(
+          analytics.events
+              .singleWhere((event) => event.name == 'crosspost_cta_tapped')
+              .parameters,
+          equals({'surface': 'post_publish', 'cta': 'crosspost_video'}),
+        );
+      });
+
+      testWidgets('Share keeps the OS share sheet beside the prompt', (
+        tester,
+      ) async {
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.postPublishCrosspostSuggest('Instagram')),
+          findsOneWidget,
+        );
+        await tester.tap(find.text(l10n.postPublishConfirmationShare));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+        expect(analytics.tapNames, equals(['post_publish_share_tapped']));
+      });
     });
 
     testWidgets('falls back to the snackbar once the user has moved on', (

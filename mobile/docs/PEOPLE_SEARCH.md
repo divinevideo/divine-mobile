@@ -40,6 +40,32 @@ NostrClient.queryUsers                      mobile/packages/nostr_client/
   • tempRelays = [relay.nostr.band, search.nos.today, nostr.wine]
 ```
 
+## Matching and profile revisions
+
+The app uses progressive people search with server sorting (`sortBy` is set).
+That path matches visible identity: name, display name, NIP-05, and the whole
+public key (including a decoded npub query). Bio-only matches from
+REST or NIP-50 are excluded even when they are the only server results. This
+keeps broader server search from filling people results with accounts whose
+visible identity does not match. Other callers of `SearchUtils.matchProfile`
+can still use that helper's broader bio matching. Callers without `sortBy`
+retain their configured filter, or the display-name fallback when none is set.
+
+Reconcile each REST profile before matching. A cached profile wins only with a
+canonical event ID and an event timestamp strictly newer than the server's
+known timestamp, and keeps the server's follower and video counts, which are
+not part of the profile event. Equal or missing server timestamps select the
+server copy; synthetic REST and bundled seed IDs cannot establish an event
+revision. Preserve the selected server fields through enrichment, including
+cleared names and media, then apply identity matching again. A renamed account
+can therefore disappear from a query for its old name.
+
+Pagination uses the raw REST response size, not the number of matching profiles.
+An empty or short matching page may still have later results. Appended pages
+skip accounts already shown, because the first page also merges cache and
+NIP-50 hits. The user picker loads the next page near the end of its list and
+offers Show more whenever another page exists.
+
 ## Source consultation order
 
 The repository consults sources in a fixed, sequential order:

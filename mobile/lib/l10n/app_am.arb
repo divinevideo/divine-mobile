@@ -156,8 +156,8 @@
     "appearanceSettingsSystem": "የሥርዓት ነባሪ",
     "appearanceSettingsLight": "ብሩህ",
     "appearanceSettingsDark": "ጨለማ",
-    "videoOverlayTotalLoops": "የ{authorName} {compactCount} {count, plural, =1{ዙር} other{ዙሮች}}",
-    "videoOverlayVideoLoops": "የዚህ ቪዲዮ {compactCount} {count, plural, =1{ዙር} other{ዙሮች}}",
+    "videoOverlayTotalLoops": "{compactCount} ጠቅላላ {count, plural, =1{ሉፕ} other{ሉፖች}}",
+    "videoOverlayTotalLoopsScope": "{compactCount} ጠቅላላ",
     "generalSettingsClosedCaptions": "የተዘጉ መግለጫዎች",
     "generalSettingsClosedCaptionsSubtitle": "ቪዲዮዎች መግለጫዎችን ሲያካትቱ አሳይ",
     "generalSettingsVideoShapeSquareOnly": "ካሬ ቪዲዮዎች ብቻ",
@@ -2411,6 +2411,7 @@
     "dmDeleteRefusedMessage": "ለሁሉም ሰው መሰረዝ አልተቻለም።",
     "dmDeleteRefusedDetails": "አንዳንድ ሰዎች አሁንም ይህን መልእክት ማየት ይችላሉ።",
     "dmRetiredThreadClosedTitle": "ይህ ውይይት ተዘግቷል።",
+    "dmFormerModerationAccountName": "የቀድሞ የቁጥጥር መለያ",
     "messageRequestModerationNoticeCannotBeRemoved": "ይህ የDivine Moderation ማሳወቂያ ሊወገድ አይችልም።",
     "dmRetiredThreadClosedBody": "Divine Moderation ወደ አዲስ መለያ አዛውረናል። ይህን መለያ የሚያነበው የለም።",
     "dmRetiredThreadOpenSupport": "Divine Moderation ላይ መልእክት ይላኩ",
@@ -2685,17 +2686,6 @@
     "newMessageFindPeople": "ሰዎችን ይፈልጉ",
     "newMessageNoContacts": "ምንም እውቂያዎች አልተገኙም።\nሰዎችን ይከተሉ እና እዚህ ያያሉ።",
     "newMessageNoUsersFound": "ምንም ተጠቃሚዎች አልተገኙም",
-    "hashtagSearchTitle": "ሃሽታጎችን ይፈልጉ",
-    "hashtagSearchSubtitle": "በመታየት ላይ ያሉ ርዕሶችን እና ይዘትን ያግኙ",
-    "hashtagSearchNoResults": "ለ\"{query}\" ምንም ሃሽታጎች አልተገኙም",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "ፍለጋው አልተሳካም",
     "userNotAvailableTitle": "መለያው አይገኝም",
     "userNotAvailableBody": "ይህ መለያ አሁን አይገኝም።",
     "classicVinersTitle": "OG Viners",
@@ -5074,5 +5064,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{መለጠፍን ለመቀጠል {platforms}ን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።} other{መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ {platforms}።}}"
 }

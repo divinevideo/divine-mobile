@@ -5,14 +5,18 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/for_you_tab.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -27,6 +31,22 @@ class _EmptyForYouFeed extends ForYouFeed {
   Future<VideoFeedState> build() async =>
       const VideoFeedState(videos: [], hasMoreContent: false);
 }
+
+class _OneVideoForYouFeed extends ForYouFeed {
+  @override
+  Future<VideoFeedState> build() async =>
+      VideoFeedState(videos: [_video('route-video')], hasMoreContent: false);
+}
+
+VideoEvent _video(String id) => VideoEvent(
+  id: id,
+  pubkey: 'test-pubkey',
+  createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
+  content: 'Test video',
+  timestamp: DateTime(2026),
+  videoUrl: 'https://example.com/$id.mp4',
+  thumbnailUrl: 'https://example.com/$id.jpg',
+);
 
 Widget _host({double textScale = 1}) => ProviderScope(
   overrides: [
@@ -108,6 +128,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.forYouAlgorithmSubtitle), findsOneWidget);
+    });
+
+    testWidgets('tapping a video opens its fullscreen route', (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(body: ForYouTab()),
+          ),
+          GoRoute(
+            path: PooledFullscreenVideoFeedScreen.path,
+            builder: (context, state) => Scaffold(
+              body: Text(
+                'opened video '
+                '${state.uri.queryParameters[PooledFullscreenVideoFeedScreen.videoQueryParameter]}',
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            funnelcakeAvailableProvider.overrideWith(_AvailableFunnelcake.new),
+            forYouFeedProvider.overrideWith(_OneVideoForYouFeed.new),
+            sharedPreferencesProvider.overrideWithValue(
+              createMockSharedPreferences(),
+            ),
+            authServiceProvider.overrideWithValue(createMockAuthService()),
+            nostrServiceProvider.overrideWithValue(createMockNostrService()),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final grid = tester.widget<ComposableVideoGrid>(
+        find.byType(ComposableVideoGrid),
+      );
+      grid.onVideoTap([_video('route-video')], 0);
+      await tester.pumpAndSettle();
+
+      expect(find.text('opened video route-video'), findsOneWidget);
+      router.dispose();
     });
 
     // The largest scale is deliberate: at the default scale the title's

@@ -1102,6 +1102,61 @@ void main() {
         expect(writtenKeyframes(), isNull);
       });
     });
+
+    group('layer row move', () {
+      testWidgets('reorders the layer through the editor when only its row '
+          'changes', (tester) async {
+        final editor = _MockProImageEditorState();
+        final layers = [
+          EmojiLayer(emoji: '🍎', id: 'bottom'),
+          EmojiLayer(emoji: '🍌', id: 'middle'),
+          EmojiLayer(emoji: '🍒', id: 'top'),
+        ];
+        when(() => editor.activeLayers).thenReturn(layers);
+        when(
+          () => mockOverlayBloc.state,
+        ).thenReturn(
+          TimelineOverlayState(
+            items: [
+              for (final (row, layer) in layers.indexed)
+                TimelineOverlayItem(
+                  id: layer.id,
+                  type: .layer,
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 2),
+                  row: row,
+                ),
+            ],
+          ),
+        );
+        when(() => mockClipBloc.state).thenReturn(
+          ClipEditorState(clips: [_createTestClip(id: 'a')]),
+        );
+
+        await tester.pumpWidget(buildWidget(editor: editor));
+        await tester.pump();
+
+        final body = tester.widget<VideoEditorTimelineInteractiveBody>(
+          find.byType(VideoEditorTimelineInteractiveBody),
+        );
+        body.onOverlayItemMoved(
+          item: mockOverlayBloc.state.items.last,
+          startTime: Duration.zero,
+          row: 0,
+          insertAbove: true,
+        );
+
+        // A row-only move leaves the time unchanged, so only this call tells
+        // the canvas to redraw the stacking order.
+        verify(
+          () => editor.moveLayerListPosition(
+            oldIndex: 2,
+            newIndex: 0,
+            skipUpdateHistory: true,
+          ),
+        ).called(1);
+      });
+    });
   });
 }
 

@@ -292,27 +292,18 @@ class AppLocalizationsKo extends AppLocalizations {
       '피드를 클래식한 정사각형으로 유지해요';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$authorName의 반복 $compactCount회',
+      other: '루프',
     );
-    return '$_temp0';
+    return '전체 $compactCount $_temp0';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '회 반복',
-    );
-    return '이 동영상 $compactCount$_temp0';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '전체 $compactCount회';
   }
 
   @override
@@ -4265,6 +4256,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '방금 게시한 영상의 썸네일';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '이 루프를 $platforms에도 보낼까요?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '한 번 올리고 $platform에도 나타나요.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platforms에 자동으로 올라가요.';
+  }
+
+  @override
   String get userSearchNoResults => '사용자를 찾을 수 없어요';
 
   @override
@@ -5647,6 +5653,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => '이 대화는 종료되었습니다.';
+
+  @override
+  String get dmFormerModerationAccountName => '이전 검수 계정';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7418,20 +7427,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => '사용자를 찾지 못했어요';
-
-  @override
-  String get hashtagSearchTitle => '해시태그 검색';
-
-  @override
-  String get hashtagSearchSubtitle => '인기 토픽과 콘텐츠를 둘러봐요';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\"$query\"에 대한 해시태그를 찾지 못했어요';
-  }
-
-  @override
-  String get hashtagSearchFailed => '검색에 실패했어요';
 
   @override
   String get userNotAvailableTitle => '계정을 사용할 수 없어요';
@@ -12516,6 +12511,17 @@ class AppLocalizationsKo extends AppLocalizations {
         'private': '$name, 비공개, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: $platforms.',
+      one: '계속 게시하려면 크로스 포스팅 설정에서 $platforms 계정을 다시 연결해주세요.',
     );
     return '$_temp0';
   }

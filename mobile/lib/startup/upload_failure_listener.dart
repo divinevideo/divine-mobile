@@ -8,8 +8,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/features/post_publish/view/post_publish_confirmation_sheet.dart';
+import 'package:openvine/features/post_publish/view/post_publish_crosspost.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -21,6 +23,7 @@ import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/share_sheet.dart';
+import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -229,13 +232,17 @@ bool _showPublishSuccess(
       offer != null &&
       stableId != null &&
       _isOnOwnProfile(container)) {
+    final eventId = video!.eventId;
     unawaited(
       PostPublishConfirmationSheet.show(
         context: navContext,
-        thumbnailBytes: video!.thumbnailBytes,
+        thumbnailBytes: video.thumbnailBytes,
         onView: () => _onConfirmationView(container, offer, stableId),
         onShare: () =>
             _onConfirmationShare(navContext, container, offer, stableId),
+        crosspostSection: eventId != null
+            ? _postPublishCrosspost(navContext, container, eventId)
+            : null,
       ),
     );
     return true;
@@ -252,6 +259,39 @@ bool _showPublishSuccess(
     ),
   );
   return true;
+}
+
+/// The crossposting prompt for the confirmation. Each action closes the
+/// confirmation first, the same order [PostPublishConfirmationSheet.show]
+/// uses for View and Share, so the next sheet or route opens on a clear
+/// navigator. Its events are logged as crossposting CTAs, never as
+/// post-publish experiment taps.
+PostPublishCrosspost _postPublishCrosspost(
+  BuildContext context,
+  ProviderContainer container,
+  String eventId,
+) {
+  final navigator = Navigator.of(context);
+  void openSetup() {
+    navigator.pop();
+    unawaited(openCrosspostingSetup(container));
+  }
+
+  return PostPublishCrosspost(
+    onCrosspost: (connections) {
+      navigator.pop();
+      unawaited(
+        showCrosspostSheetForEvent(
+          context: context,
+          container: container,
+          eventId: eventId,
+          connections: connections,
+        ),
+      );
+    },
+    onSetUp: openSetup,
+    onReconnect: openSetup,
+  );
 }
 
 /// Whether the router is currently showing the signed-in user's own profile.

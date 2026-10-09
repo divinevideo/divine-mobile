@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockPermissionsService extends Mock implements PermissionsService {}
 
@@ -184,5 +185,62 @@ void main() {
         tempDir.deleteSync(recursive: true);
       },
     );
+
+    group('when gal rejects the save', () {
+      const galChannel = MethodChannel('gal');
+      const nativeMessage =
+          'The operation couldn’t be completed. '
+          '(PHPhotosErrorDomain error 3302.)';
+
+      late Directory tempDir;
+      late File tempFile;
+
+      setUp(() async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        // Gal.putVideo asks for access first on the same channel. Let that
+        // succeed so only the save itself is rejected, as Photos does.
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, (call) async {
+              if (call.method != 'putVideo') return true;
+              throw PlatformException(
+                code: 'UNEXPECTED',
+                message: nativeMessage,
+              );
+            });
+        await LogCaptureService().clearAllLogs();
+
+        tempDir = Directory.systemTemp.createTempSync('gallery_test_');
+        tempFile = File('${tempDir.path}/test_video.mp4')
+          ..writeAsBytesSync([0, 1, 2, 3]);
+      });
+
+      tearDown(() async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, null);
+        await LogCaptureService().clearAllLogs();
+        tempDir.deleteSync(recursive: true);
+      });
+
+      test('returns the gal error type as the failure reason', () async {
+        final result = await service.saveVideoToGallery(
+          EditorVideo.file(tempFile.path),
+        );
+
+        expect(result, isA<GallerySaveFailure>());
+        expect(
+          (result as GallerySaveFailure).reason,
+          equals('Gallery error: unexpected'),
+        );
+      });
+
+      test('logs the native error message gal reported', () async {
+        await service.saveVideoToGallery(EditorVideo.file(tempFile.path));
+
+        expect(
+          LogCaptureService().getRecentLogs().map((entry) => entry.message),
+          contains(contains('(native: $nativeMessage)')),
+        );
+      });
+    });
   });
 }

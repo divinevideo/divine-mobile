@@ -138,8 +138,8 @@
   "appearanceSettingsSystem": "سسٹم ڈیفالٹ",
   "appearanceSettingsLight": "لائٹ",
   "appearanceSettingsDark": "ڈارک",
-  "videoOverlayTotalLoops": "{count, plural, one{{authorName} کا {compactCount} لوپ} other{{authorName} کے {compactCount} لوپس}}",
-  "videoOverlayVideoLoops": "{count, plural, one{اس ویڈیو کا {compactCount} لوپ} other{اس ویڈیو کے {compactCount} لوپس}}",
+  "videoOverlayTotalLoops": "{compactCount} {count, plural, one{لوپ} other{لوپس}} کل",
+  "videoOverlayTotalLoopsScope": "{compactCount} کل",
   "generalSettingsClosedCaptions": "کلوزڈ کیپشنز",
   "generalSettingsClosedCaptionsSubtitle": "جب ویڈیوز میں کیپشن شامل ہوں تو دکھائیں",
   "generalSettingsVideoShapeSquareOnly": "صرف چوکور ویڈیوز",
@@ -2244,6 +2244,12 @@
   "postPublishConfirmationView": "دیکھیں",
   "postPublishConfirmationShare": "شیئر",
   "postPublishConfirmationThumbnailLabel": "اس ویڈیو کا تھمب نیل جو آپ نے ابھی شائع کی",
+  "postPublishCrosspostSuggest": "کیا یہ لوپ {platforms} پر بھی بھیجیں؟",
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+  "postPublishCrosspostSetUp": "ایک بار پوسٹ کریں، {platform} پر بھی نظر آئیں۔",
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+  "postPublishCrosspostAutomatic": "خودکار طور پر {platforms} پر جا رہا ہے۔",
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "کوئی صارف نہیں ملا",
   "userPickerFilterByNameHint": "نام سے فلٹر کریں...",
   "userPickerSearchByNameHint": "نام سے تلاش کریں...",
@@ -2923,6 +2929,7 @@
     "dmDeleteRefusedMessage": "سب کے لیے حذف نہیں ہو سکا۔",
     "dmDeleteRefusedDetails": "کچھ لوگ اب بھی یہ پیغام دیکھ سکتے ہیں۔",
   "dmRetiredThreadClosedTitle": "یہ گفتگو بند ہو چکی ہے۔",
+  "dmFormerModerationAccountName": "سابقہ ماڈریشن اکاؤنٹ",
   "messageRequestModerationNoticeCannotBeRemoved": "Divine Moderation کا یہ نوٹس ہٹایا نہیں جا سکتا۔",
   "dmRetiredThreadClosedBody": "ہم نے Divine Moderation کو نئے اکاؤنٹ پر منتقل کر دیا ہے۔ اسے اب کوئی نہیں پڑھتا۔",
   "dmRetiredThreadOpenSupport": "Divine Moderation کو پیغام بھیجیں",
@@ -3956,17 +3963,6 @@
   "newMessageFindPeople": "لوگ تلاش کریں",
   "newMessageNoContacts": "کوئی رابطہ نہیں ملا۔\nلوگوں کو یہاں دیکھنے کے لیے انہیں فالو کریں۔",
   "newMessageNoUsersFound": "کوئی صارف نہیں ملا",
-  "hashtagSearchTitle": "ہیش ٹیگز تلاش کریں",
-  "hashtagSearchSubtitle": "مقبول موضوعات اور مواد دریافت کریں",
-  "hashtagSearchNoResults": "\"{query}\" کے لیے کوئی ہیش ٹیگ نہیں ملا",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "تلاش ناکام",
   "userNotAvailableTitle": "اکاؤنٹ دستیاب نہیں",
   "userNotAvailableBody": "یہ اکاؤنٹ ابھی دستیاب نہیں ہے۔",
   "classicVinersTitle": "OG Viners",
@@ -6735,5 +6731,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں {platforms} دوبارہ منسلک کریں۔} other{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: {platforms}۔}}"
 }

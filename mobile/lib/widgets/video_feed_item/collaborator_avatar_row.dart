@@ -1,4 +1,5 @@
-// ABOUTME: Collaborator avatar row for video feed overlay
+// ABOUTME: Collaborator avatar row for video feed overlay, and the builder
+// ABOUTME: that resolves which collaborators the viewer can see.
 // ABOUTME: Status-aware: hides current user's avatar when ignored locally,
 // ABOUTME: greys pending avatars on the inviter's own video, otherwise
 // ABOUTME: renders only confirmed collaborators to third-party viewers.
@@ -29,34 +30,39 @@ const _pickerMaxInitialChildSize = 0.68;
 const _pickerMinChildSize = 0.28;
 const _pickerMaxChildSize = 0.8;
 
-/// Displays collaborator avatars on a video feed item.
+/// Resolves which of [video]'s collaborators the viewer can see.
 ///
 /// Hides the current user's own avatar when their local invite store says
 /// `ignored` for this video. On the inviter's own video, pending
-/// collaborator avatars render greyed until a kind-34238 acceptance flips
-/// them to confirmed. Third-party viewers only see confirmed collaborators
-/// after the acceptance query resolves.
+/// collaborators stay visible so they can render greyed until a kind-34238
+/// acceptance flips them to confirmed. Third-party viewers only see
+/// confirmed collaborators after the acceptance query resolves.
 ///
-/// Returns [SizedBox.shrink] if the video has no collaborators after the
-/// status-aware filter.
-class CollaboratorAvatarRow extends ConsumerWidget {
-  /// Creates a CollaboratorAvatarRow.
-  const CollaboratorAvatarRow({
+/// Hands [builder] an empty visibility when [video] is null or tags no
+/// collaborators, so callers can lay out around what actually renders.
+class CollaboratorVisibilityBuilder extends ConsumerWidget {
+  /// Creates a CollaboratorVisibilityBuilder.
+  const CollaboratorVisibilityBuilder({
     required this.video,
-    this.padding = EdgeInsets.zero,
+    required this.builder,
     super.key,
   });
 
-  /// The video event to display collaborators for.
-  final VideoEvent video;
+  /// The video whose collaborators are resolved.
+  final VideoEvent? video;
 
-  /// Space around the row, applied only when the row renders.
-  final EdgeInsetsGeometry padding;
+  /// Builds the subtree from the resolved visibility.
+  final Widget Function(BuildContext context, CollaboratorVisibility visibility)
+  builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!video.hasCollaborators) {
-      return const SizedBox.shrink();
+    final video = this.video;
+    if (video == null || !video.hasCollaborators) {
+      return builder(
+        context,
+        const CollaboratorVisibility.fallback(taggedPubkeys: []),
+      );
     }
 
     final pubkeys = video.collaboratorPubkeys;
@@ -65,13 +71,17 @@ class CollaboratorAvatarRow extends ConsumerWidget {
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
     final videoAddress = video.addressableId;
 
-    // Fallback: render the raw p-tag list (current behaviour) when the
-    // status pipeline is not available (repo gated on isNostrReady, or
-    // the video has no addressable id).
+    // No acceptance status to look up (repo null until the Nostr session is
+    // ready, no addressable id, or no current user): only the author sees
+    // invitees.
     if (repo == null || videoAddress == null || currentUserPubkey.isEmpty) {
-      return CollaboratorAvatarRowBody(
-        visibility: CollaboratorVisibility.fallback(taggedPubkeys: pubkeys),
-        padding: padding,
+      return builder(
+        context,
+        CollaboratorVisibility.fallback(
+          taggedPubkeys: pubkeys,
+          currentUserPubkey: currentUserPubkey,
+          creatorPubkey: video.pubkey,
+        ),
       );
     }
 
@@ -83,28 +93,29 @@ class CollaboratorAvatarRow extends ConsumerWidget {
         creatorPubkey: video.pubkey,
         taggedPubkeys: pubkeys,
       ),
-      child: _StatusAwareRow(
+      child: _StatusAwareVisibility(
         video: video,
         pubkeys: pubkeys,
         currentUserPubkey: currentUserPubkey,
-        padding: padding,
+        builder: builder,
       ),
     );
   }
 }
 
-class _StatusAwareRow extends StatelessWidget {
-  const _StatusAwareRow({
+class _StatusAwareVisibility extends StatelessWidget {
+  const _StatusAwareVisibility({
     required this.video,
     required this.pubkeys,
     required this.currentUserPubkey,
-    required this.padding,
+    required this.builder,
   });
 
   final VideoEvent video;
   final List<String> pubkeys;
   final String currentUserPubkey;
-  final EdgeInsetsGeometry padding;
+  final Widget Function(BuildContext context, CollaboratorVisibility visibility)
+  builder;
 
   @override
   Widget build(BuildContext context) {
@@ -114,25 +125,23 @@ class _StatusAwareRow extends StatelessWidget {
     final isResolved = context.select(
       (VideoCollaboratorStatusCubit c) => c.state.isResolved,
     );
-    return CollaboratorAvatarRowBody(
-      visibility: CollaboratorVisibility(
+    return builder(
+      context,
+      CollaboratorVisibility(
         taggedPubkeys: pubkeys,
         statusByPubkey: statusByPubkey,
         currentUserPubkey: currentUserPubkey,
         creatorPubkey: video.pubkey,
         isResolved: isResolved,
       ),
-      padding: padding,
     );
   }
 }
 
 /// Renders the avatar row from a [CollaboratorVisibility].
 ///
-/// Promoted to a top-level class with [visibleForTesting] so widget tests
-/// can exercise every render branch without standing up a Riverpod
-/// container, a `BlocProvider`, or a mock repository.
-@visibleForTesting
+/// Takes the visibility rather than resolving it, so a caller can lay out
+/// around what renders; [CollaboratorVisibilityBuilder] resolves it.
 class CollaboratorAvatarRowBody extends StatelessWidget {
   const CollaboratorAvatarRowBody({
     required this.visibility,
@@ -208,7 +217,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
     runDetached(
       _showCollaboratorPicker(context, pubkeys),
       'present collaborator picker',
-      logName: 'CollaboratorAvatarRow',
+      logName: 'CollaboratorAvatarRowBody',
       category: LogCategory.ui,
     );
   }
@@ -249,7 +258,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
   void _navigateToCollaborator(BuildContext context, String pubkey) {
     Log.info(
       'Navigating to collaborator profile: ${pubkeyForLogs(pubkey)}',
-      name: 'CollaboratorAvatarRow',
+      name: 'CollaboratorAvatarRowBody',
       category: LogCategory.ui,
     );
 
@@ -258,7 +267,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
       runDetached(
         context.push(OtherProfileScreen.pathForNpub(npub)),
         'open collaborator profile',
-        logName: 'CollaboratorAvatarRow',
+        logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,
       );
     }
@@ -370,7 +379,7 @@ class _CollaboratorPickerTile extends ConsumerWidget {
       runDetached(
         hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
         'open collaborator profile',
-        logName: 'CollaboratorAvatarRow',
+        logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,
       );
     });

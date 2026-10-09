@@ -291,27 +291,18 @@ class AppLocalizationsJa extends AppLocalizations {
       'クラシックな正方形フォーマットでフィードを保つ';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$authorNameのループ$compactCount回',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'ループ',
     );
-    return 'この動画$compactCount回$_temp0';
+    return '通算$compactCount回$_temp0';
+  }
+
+  @override
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '通算$compactCount回';
   }
 
   @override
@@ -4249,6 +4240,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '公開したばかりの動画のサムネイル';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'このループを$platformsにも送りますか？';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '一度の投稿で$platformにも届けましょう。';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platformsに自動で投稿されます。';
+  }
+
+  @override
   String get userSearchNoResults => 'ユーザーが見つからない';
 
   @override
@@ -5626,6 +5632,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dmRetiredThreadClosedTitle => 'このスレッドは終了しました。';
+
+  @override
+  String get dmFormerModerationAccountName => '以前のモデレーションアカウント';
 
   @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
@@ -7400,20 +7409,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get newMessageNoUsersFound => 'ユーザーが見つからなかった';
-
-  @override
-  String get hashtagSearchTitle => 'ハッシュタグを検索';
-
-  @override
-  String get hashtagSearchSubtitle => 'トレンドのトピックとコンテンツを見つけよう';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '「$query」のハッシュタグは見つからなかった';
-  }
-
-  @override
-  String get hashtagSearchFailed => '検索に失敗';
 
   @override
   String get userNotAvailableTitle => 'アカウントは利用できないよ';
@@ -12503,6 +12498,17 @@ class AppLocalizationsJa extends AppLocalizations {
         'private': '$name、非公開、$count',
         'other': '$name、$count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：$platforms。',
+      one: '投稿を続けるには、クロス投稿設定で $platforms を再接続してください。',
     );
     return '$_temp0';
   }

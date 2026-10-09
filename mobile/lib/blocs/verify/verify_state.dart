@@ -80,7 +80,8 @@ class VerifyState extends Equatable {
   /// Platforms the verifier currently accepts links for.
   final List<VerifierPlatform> platforms;
 
-  /// False when the verifier could not be reached, so an unverified row means
+  /// False when the verifier could not be reached, or could not check a claim
+  /// that therefore shows without a verdict. An unverified row may then mean
   /// "could not check" rather than "did not verify".
   final bool verifierReachable;
 
@@ -99,6 +100,11 @@ class VerifyState extends Equatable {
 
   /// Whether [claim] carries a positive verdict.
   bool isVerified(IdentityClaim claim) => verifiedKeys.contains(keyOf(claim));
+
+  /// Whether to tell the user some verdicts are unknown: the verifier could
+  /// not check everything, and a link still reads as unverified.
+  bool get showsUncheckedNote =>
+      !verifierReachable && claims.any((claim) => !isVerified(claim));
 
   /// Whether [claim] is the one currently being unlinked.
   bool isRemoving(IdentityClaim claim) => removingKey == keyOf(claim);

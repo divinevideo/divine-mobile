@@ -7,10 +7,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A section displaying trending hashtags in a horizontal scrollable list.
 ///
-/// Shows a title "Trending Hashtags" followed by tappable hashtag chips.
+/// Shows the localized trending title followed by tappable hashtag chips.
 /// Tapping a hashtag navigates to the hashtag feed.
 class TrendingHashtagsSection extends StatelessWidget {
   const TrendingHashtagsSection({
@@ -31,7 +33,7 @@ class TrendingHashtagsSection extends StatelessWidget {
   final Widget? leading;
 
   /// Optional callback when a hashtag is tapped.
-  /// If not provided, defaults to navigating via goHashtag.
+  /// If not provided, tapping pushes the hashtag's feed route.
   final void Function(String hashtag)? onHashtagTap;
 
   @override
@@ -132,7 +134,12 @@ class _HashtagChipList extends StatelessWidget {
               if (onHashtagTap != null) {
                 onHashtagTap!(hashtag);
               } else {
-                context.push(HashtagScreenRouter.pathForTag(hashtag));
+                runDetached(
+                  context.push<void>(HashtagScreenRouter.pathForTag(hashtag)),
+                  'open hashtag feed',
+                  logName: 'TrendingHashtagsSection',
+                  category: LogCategory.ui,
+                );
               }
             },
           );
