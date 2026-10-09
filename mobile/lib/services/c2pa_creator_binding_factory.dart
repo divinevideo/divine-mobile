@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:openvine/services/nostr_creator_binding_service.dart';
@@ -70,11 +71,12 @@ class C2paCreatorBindingFactory {
     }
   }
 
-  static Future<String> _sha256(String filePath) async {
-    final digest = await File(filePath)
-        .openRead()
-        .transform(crypto.sha256)
-        .first;
+  // Hashing a whole video is tens of MB of pure-Dart SHA-256; on the UI
+  // isolate it drops frames right as the recorder returns to preview.
+  static Future<String> _sha256(String filePath) => Isolate.run(() async {
+    final digest = await File(
+      filePath,
+    ).openRead().transform(crypto.sha256).first;
     return digest.toString();
-  }
+  });
 }

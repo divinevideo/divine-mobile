@@ -190,9 +190,13 @@ class NativeProofModeService {
       // the proof metadata below. Otherwise the signed-in account's binding is
       // embedded in the manifest only, so a recording or edit names its maker
       // without changing what that metadata reports.
+      // Not built for an edit with no sources: it is never signed, and the
+      // binding costs a hash of the file and possibly a remote signer call.
       final embeddedBinding =
           creatorBindingAssertion ??
-          await creatorBindingFactory?.call(videoFile.path);
+          (derivedFrom?.isEmpty ?? false
+              ? null
+              : await creatorBindingFactory?.call(videoFile.path));
 
       // Replaces videoFile's bytes in place — deliberately, so the ProofMode
       // hash below covers the credentialed media.
