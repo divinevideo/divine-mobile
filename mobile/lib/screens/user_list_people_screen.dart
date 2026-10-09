@@ -1013,7 +1013,9 @@ class _PeopleListActionsMenu extends StatelessWidget {
               _PeopleListAction.addPeople => Text(
                 context.l10n.peopleListsAddPeopleTooltip,
               ),
-              _PeopleListAction.editInfo => Text(context.l10n.listEditInfoAction),
+              _PeopleListAction.editInfo => Text(
+                context.l10n.listEditInfoAction,
+              ),
               _PeopleListAction.delete => Text(
                 context.l10n.listDeleteAction,
                 style: TextStyle(color: context.vineColors.primaryText),
