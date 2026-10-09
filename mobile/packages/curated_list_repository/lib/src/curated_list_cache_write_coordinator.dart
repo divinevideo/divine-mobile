@@ -177,6 +177,56 @@ class CuratedListCacheWriteCoordinator {
     return observed;
   }
 
+  /// Inspects acknowledged rows without retiring refused optimistic evidence.
+  ///
+  /// The caller must supply a completely readable observation. This grants
+  /// display evidence only; queued saves still run their own preflight.
+  List<CuratedList> inspectAcknowledgedLists({
+    required Object? cacheKey,
+    required List<CuratedList> observed,
+  }) {
+    final snapshot = List<CuratedList>.unmodifiable(observed);
+    final rejected = _rejectedLists[cacheKey];
+    return rejected != null && _sameLists(snapshot, rejected.attempted)
+        ? rejected.before
+        : snapshot;
+  }
+
+  /// Conservatively inspects a single intact row from a damaged array.
+  ///
+  /// A refused owner stamp cannot become display proof merely because an
+  /// unrelated damaged row prevented full-array optimistic-overlay matching.
+  CuratedList? inspectAcknowledgedListRow({
+    required Object? cacheKey,
+    required CuratedList observed,
+  }) {
+    final rejected = _rejectedLists[cacheKey];
+    if (rejected == null ||
+        !rejected.attempted.any(
+          (row) => row.authorScopedId == observed.authorScopedId,
+        )) {
+      return observed;
+    }
+    final before = rejected.before.where(
+      (row) => row.authorScopedId == observed.authorScopedId,
+    );
+    return before.length == 1 ? before.single : null;
+  }
+
+  /// Inspects readable follow evidence without changing refused overlays.
+  Set<String> inspectAcknowledgedSubscriptions({
+    required Object? cacheKey,
+    required Set<String> observed,
+  }) {
+    final snapshot = Set<String>.unmodifiable(observed);
+    final rejected = _rejectedSubscriptions[cacheKey];
+    return rejected != null &&
+            snapshot.length == rejected.attempted.length &&
+            snapshot.containsAll(rejected.attempted)
+        ? rejected.before
+        : snapshot;
+  }
+
   /// Compatibility wrapper reporting whether subscription deltas were saved.
   Future<bool> saveSubscriptions({
     required Set<String> baseline,
@@ -199,6 +249,13 @@ class CuratedListCacheWriteCoordinator {
     required Set<String> Function() read,
   }) {
     final observed = Set<String>.unmodifiable(read());
+    return _acknowledgedSubscriptions(cacheKey: cacheKey, observed: observed);
+  }
+
+  Set<String> _acknowledgedSubscriptions({
+    required Object? cacheKey,
+    required Set<String> observed,
+  }) {
     final rejected = _rejectedSubscriptions[cacheKey];
     if (rejected != null &&
         observed.length == rejected.attempted.length &&
@@ -217,6 +274,7 @@ class CuratedListCacheWriteCoordinator {
     required Future<bool> Function(Set<String>) write,
     Object? cacheKey,
     bool Function()? isCurrent,
+    bool Function()? isReadValid,
   }) {
     final beforeSnapshot = Set<String>.unmodifiable(baseline);
     final requested = Set<String>.unmodifiable(current);
@@ -235,9 +293,15 @@ class CuratedListCacheWriteCoordinator {
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
       }
-      final observed = readAcknowledgedSubscriptions(
+      final rawObserved = Set<String>.unmodifiable(read());
+      // An unreadable fallback is not a new acknowledged set. No native write
+      // or rejected-overlay retirement has taken place at this boundary.
+      if (isReadValid != null && !isReadValid()) {
+        return result(CuratedCacheWriteStatus.storageRejected);
+      }
+      final observed = _acknowledgedSubscriptions(
         cacheKey: cacheKey,
-        read: read,
+        observed: rawObserved,
       );
       final merged = Set<String>.unmodifiable({
         ...observed.difference(beforeSnapshot.difference(requested)),

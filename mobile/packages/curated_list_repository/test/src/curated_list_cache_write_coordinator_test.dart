@@ -18,6 +18,149 @@ void main() {
           updatedAt: DateTime.utc(2026).add(Duration(seconds: revision)),
         );
 
+    group('intact row evidence after refused storage', () {
+      test('a row without a refused overlay retains its exact value', () {
+        final writer = CuratedListCacheWriteCoordinator();
+        final original = list(author);
+        expect(
+          writer.inspectAcknowledgedListRow(
+            cacheKey: 'lists',
+            observed: original,
+          ),
+          original,
+        );
+      });
+
+      test(
+        'changing a refused owner stamp payload cannot establish ownership',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          final unowned = list(null);
+          final claimed = list(author);
+          var stored = [unowned];
+          final refusal = await writer.saveListsWithResult(
+            baseline: [unowned],
+            current: [claimed],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return false;
+            },
+          );
+          expect(refusal.status, CuratedCacheWriteStatus.storageRejected);
+          expect(stored, [claimed]);
+          final changedPayload = list(
+            author,
+            revision: 2,
+            name: 'Changed claim',
+          );
+          expect(
+            writer.inspectAcknowledgedListRow(
+              cacheKey: 'lists',
+              observed: changedPayload,
+            ),
+            isNull,
+          );
+          expect(
+            writer.readAcknowledgedLists(cacheKey: 'lists', read: () => stored),
+            [unowned],
+          );
+        },
+      );
+
+      for (final copies in [0, 1, 2]) {
+        test(
+          'a refused edit exposes only a unique prior row ($copies copies)',
+          () async {
+            final writer = CuratedListCacheWriteCoordinator();
+            final original = list(author);
+            final attempted = list(author, revision: 2, name: 'Refused edit');
+            final before = List<CuratedList>.filled(copies, original);
+            var stored = before;
+            final refusal = await writer.saveListsWithResult(
+              baseline: before,
+              current: [attempted],
+              cacheKey: 'lists',
+              read: () => stored,
+              write: (value) async {
+                stored = value;
+                return false;
+              },
+            );
+            expect(refusal.status, CuratedCacheWriteStatus.storageRejected);
+            expect(stored, [attempted]);
+            expect(
+              writer.inspectAcknowledgedListRow(
+                cacheKey: 'lists',
+                observed: attempted,
+              ),
+              copies == 1 ? original : isNull,
+            );
+            final independent = list(other);
+            expect(
+              writer.inspectAcknowledgedListRow(
+                cacheKey: 'lists',
+                observed: independent,
+              ),
+              independent,
+            );
+            // Inspection must not retire the refused optimistic snapshot.
+            expect(
+              writer.readAcknowledgedLists(
+                cacheKey: 'lists',
+                read: () => stored,
+              ),
+              before,
+            );
+          },
+        );
+      }
+    });
+
+    test(
+      'an unreadable follow fallback cannot retire refused write evidence',
+      () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        var stored = {'confirmed'};
+        var writes = 0;
+        final refused = await writer.saveSubscriptionsWithResult(
+          baseline: stored,
+          current: {'confirmed', 'refused'},
+          cacheKey: 'follows',
+          read: () => stored,
+          write: (value) async {
+            writes++;
+            stored = value;
+            return false;
+          },
+        );
+        expect(refused.status, CuratedCacheWriteStatus.storageRejected);
+        expect(stored, {'confirmed', 'refused'});
+        final unreadable = await writer.saveSubscriptionsWithResult(
+          baseline: {'confirmed'},
+          current: {'later'},
+          cacheKey: 'follows',
+          read: () => {},
+          isReadValid: () => false,
+          write: (_) async {
+            writes++;
+            return true;
+          },
+        );
+        expect(unreadable.status, CuratedCacheWriteStatus.storageRejected);
+        expect(unreadable.acknowledgedBeforeWrite, isNull);
+        expect(writes, 1);
+        expect(
+          writer.readAcknowledgedSubscriptions(
+            cacheKey: 'follows',
+            read: () => stored,
+          ),
+          {'confirmed'},
+        );
+      },
+    );
+
     test('exclusive cleanup drains an already dispatched cache save', () async {
       final writer = CuratedListCacheWriteCoordinator();
       final started = Completer<void>();
