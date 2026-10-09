@@ -533,6 +533,11 @@ void main() {
             .where((entry) => entry.message.contains(text))
             .length;
 
+        int coordinatorWarnings() => LogCaptureService()
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .where((entry) => entry.name == 'OAuthSessionCoordinator')
+            .length;
+
         setUp(() => LogCaptureService().clearAllLogs());
 
         test('logs one line when many 401s share a rejected refresh', () async {
@@ -553,7 +558,7 @@ void main() {
           expect(linesContaining(staleLine), isZero);
         });
 
-        test('logs one line for serial refused refreshes while the session '
+        test('logs one warning for serial refused refreshes while the session '
             'stays expired', () async {
           // Once the refresh token is gone each 401 starts its own refresh,
           // which fails at once: #9943's device log had dozens a minute.
@@ -571,6 +576,11 @@ void main() {
           ).called(3);
           expect(rejections, equals(1));
           expect(linesContaining(markedLine), equals(1));
+          expect(
+            coordinatorWarnings(),
+            equals(1),
+            reason: 'No warning per refresh, only the one that expires it',
+          );
         });
 
         test('warns again once a sign-in has cleared the flag', () async {

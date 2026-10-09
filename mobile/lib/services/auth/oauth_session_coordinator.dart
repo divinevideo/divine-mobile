@@ -216,9 +216,11 @@ class OAuthSessionCoordinator {
       final refreshed = await oauthClient.refreshSession(userPubkey: pubkey);
       // A null result without an exception means there was no refresh token
       // to use, Keycast refused it (KeycastOAuth deletes a refused token), or
-      // sign-out cleared storage mid-flight.
+      // sign-out cleared storage mid-flight. Debug only: with the refresh
+      // token gone this runs on every 401, and refreshAccessToken warns once
+      // when the session actually expires.
       if (refreshed == null || !refreshed.hasRpcAccess) {
-        Log.warning(
+        Log.debug(
           '_refreshOAuthSession: no session — refresh token refused or gone',
           name: 'OAuthSessionCoordinator',
           category: LogCategory.auth,
