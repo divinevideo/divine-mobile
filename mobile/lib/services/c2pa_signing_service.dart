@@ -7,10 +7,13 @@ import 'dart:io';
 import 'package:c2pa_flutter/c2pa.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/c2pa_identity_manifest_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+export 'package:openvine/models/c2pa_edit_source.dart';
 
 /// C2PA edit actions recorded when carrying a manifest forward onto a
 /// re-encoded ("derived") video via [C2paSigningService.resignDerived].
@@ -29,6 +32,10 @@ abstract class C2paEditActions {
 /// High-level reason a C2PA signing operation failed.
 enum C2paSigningFailureReason {
   inputMissing,
+
+  /// A video the output was made from carries no manifest, so the output's
+  /// history cannot be shown and nothing is signed.
+  sourceUnattested,
 
   /// Signing produced no usable output: nothing was written, the file it
   /// wrote was empty, or that file carries no readable active C2PA manifest.
@@ -363,23 +370,64 @@ class C2paSigningService {
   ///
   /// [outputPath] is a freshly re-encoded file — an aspect-ratio crop or a
   /// watermark burn-in — that has lost the provenance embedded in its source.
-  /// [sourcePath] is the already-signed original it was produced from. The
-  /// source's active manifest is attached as a `parentOf` ingredient, [action]
-  /// (a `c2pa.*` edit action such as [C2paEditActions.edited]) is recorded,
-  /// and the result is signed and embedded back into [outputPath] in place.
-  ///
-  /// Returns `success: false` without touching [outputPath] when [sourcePath]
-  /// carries no manifest — third-party downloads are never given fabricated
-  /// provenance. Signing is best-effort and never throws.
+  /// [sourcePath] is the already-signed original it was produced from. See
+  /// [signEditInPlace], which this delegates to with that single source.
   Future<C2paSigningResult> resignDerived({
     required String outputPath,
     required String sourcePath,
     required String action,
+  }) => signEditInPlace(
+    outputPath: outputPath,
+    sources: [C2paEditSource(path: sourcePath)],
+    actions: [action],
+  );
+
+  /// Signs [outputPath] in place as a video made from [sources].
+  ///
+  /// The output is recorded as what it is rather than as a fresh camera
+  /// capture. Made from one video, it is an edit of that video: the source is
+  /// its `parentOf` ingredient, [actions] record what was done, and C2PA adds
+  /// a `c2pa.opened` action for the source. Made from several videos, it is a
+  /// composite: it is `c2pa.created` and every video is a `componentOf`
+  /// ingredient. Its source type is `compositeCapture` when every history it
+  /// embeds names nothing but captures, and the plain `composite` otherwise,
+  /// so footage another tool generated is never relabelled as captured.
+  /// Either way, each video's own manifest is embedded with it, so a verifier
+  /// can follow the history back to the recordings.
+  ///
+  /// Every video source must carry a manifest that validates, apart from its
+  /// signer not being among this app's (empty) trust anchors; when one does
+  /// not, nothing is signed and the result is
+  /// [C2paSigningFailureReason.sourceUnattested], so no history is
+  /// fabricated. Images and sounds are added as `componentOf`
+  /// ingredients, with their own manifest when they have one and as a plain
+  /// declaration when they do not.
+  ///
+  /// Files are streamed on the native side, so large sources never pass
+  /// through Dart memory. As with [signVideoInPlace], the output is replaced
+  /// only after the signed copy has been read back with a usable manifest.
+  ///
+  /// Signing is best-effort and never throws.
+  Future<C2paSigningResult> signEditInPlace({
+    required String outputPath,
+    required List<C2paEditSource> sources,
+    List<String> actions = const [C2paEditActions.edited],
+    NostrCreatorBindingAssertion? creatorBindingAssertion,
   }) async {
+    String? signedPath;
     try {
+      if (!isSigningConfigured) {
+        return C2paSigningResult(
+          signedFilePath: outputPath,
+          success: false,
+          error: 'C2PA signing is disabled for this build',
+          failureReason: C2paSigningFailureReason.disabled,
+        );
+      }
       if (!_hasToken) {
+        // The callers discard this result, so the skip is only visible here.
         Log.info(
-          'Skipping derived re-sign: this build has no signing token',
+          'Skipping derived signing: this build has no signing token',
           name: 'C2paSigningService',
           category: LogCategory.video,
         );
@@ -397,113 +445,240 @@ class C2paSigningService {
           signedFilePath: outputPath,
           success: false,
           error: 'Output file does not exist',
+          failureReason: C2paSigningFailureReason.inputMissing,
         );
       }
 
-      // Gate: only carry provenance forward when the source actually has some.
-      final sourceManifest = await readManifest(sourcePath);
-      if (sourceManifest?.activeManifest == null) {
-        Log.info(
-          'Skipping derived re-sign: source has no manifest to carry forward',
+      final videos = <C2paEditSource>[];
+      final attested = <C2paEditSource>[];
+      final declared = <Ingredient>[];
+      var onlyCaptures = true;
+      for (final source in sources) {
+        // A sound streamed from the library is declared by its URL; only a
+        // local file can carry a manifest.
+        final manifest = File(source.path).existsSync()
+            ? await readManifest(source.path)
+            : null;
+        final hasManifest = manifest?.activeManifest != null;
+        if (source.kind == C2paSourceKind.video) {
+          final rejection = _describeUnusableManifest(manifest);
+          if (rejection != null) {
+            Log.info(
+              'Not signing "$outputPath": source "${source.path}" $rejection',
+              name: 'C2paSigningService',
+              category: LogCategory.video,
+            );
+            return C2paSigningResult(
+              signedFilePath: outputPath,
+              success: false,
+              error: 'A source video $rejection',
+              failureReason: C2paSigningFailureReason.sourceUnattested,
+            );
+          }
+          videos.add(source);
+          onlyCaptures = onlyCaptures && _namesOnlyCaptures(manifest!);
+        } else if (hasManifest) {
+          attested.add(source);
+          onlyCaptures = onlyCaptures && _namesOnlyCaptures(manifest!);
+        } else {
+          declared.add(
+            Ingredient(
+              title: _titleOf(source.path),
+              format: _mimeTypeFor(source),
+              relationship: Relationship.componentOf,
+            ),
+          );
+        }
+      }
+      if (videos.isEmpty) {
+        return C2paSigningResult(
+          signedFilePath: outputPath,
+          success: false,
+          error: 'No source video to derive from',
+          failureReason: C2paSigningFailureReason.sourceUnattested,
+        );
+      }
+
+      final packageInfo = await PackageInfo.fromPlatform();
+      final claimGenerator = '${packageInfo.appName}/${packageInfo.version}';
+      final manifestJson = _manifestService
+          .buildDerivedVideoManifest(
+            claimGenerator: claimGenerator,
+            title: outputFile.path.split('/').last,
+            creatorBindingAssertion: creatorBindingAssertion,
+            declaredIngredients: declared,
+          )
+          .manifestJson;
+
+      final isEdit = videos.length == 1;
+      final builder = await _c2pa.createBuilder(manifestJson);
+      try {
+        if (isEdit) {
+          builder.setIntent(ManifestIntent.edit);
+        } else {
+          builder.setIntent(
+            ManifestIntent.create,
+            onlyCaptures
+                ? DigitalSourceType.compositeCapture
+                : DigitalSourceType.composite,
+          );
+        }
+        for (final video in videos) {
+          await builder.addIngredientFromFile(
+            path: video.path,
+            config: IngredientConfig(
+              title: video.path.split('/').last,
+              relationship: isEdit
+                  ? Relationship.parentOf
+                  : Relationship.componentOf,
+            ),
+          );
+        }
+        // IngredientConfig defaults to componentOf, which is what an image or
+        // sound that went into the video is.
+        for (final source in attested) {
+          await builder.addIngredientFromFile(
+            path: source.path,
+            config: IngredientConfig(title: source.path.split('/').last),
+          );
+        }
+        for (final action in actions) {
+          builder.addAction(
+            ActionConfig(
+              action: action,
+              softwareAgent: claimGenerator,
+              when: DateTime.now().toUtc(),
+            ),
+          );
+        }
+
+        signedPath =
+            '${outputFile.parent.path}/'
+            'c2pa_signed_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        final signFuture = builder.signFile(
+          sourcePath: outputPath,
+          destPath: signedPath,
+          signer: await _createSigner(),
+        );
+        try {
+          await signFuture.timeout(_signingTimeout);
+        } on TimeoutException {
+          unawaited(_deleteAbandonedSignedFile(signFuture, signedPath));
+          rethrow;
+        }
+      } finally {
+        builder.dispose();
+      }
+
+      final signedFile = File(signedPath);
+      if (!signedFile.existsSync() || signedFile.lengthSync() == 0) {
+        _deleteSignedOutput(signedPath);
+        return C2paSigningResult(
+          signedFilePath: outputPath,
+          success: false,
+          error: 'Signed file was not written',
+          failureReason: C2paSigningFailureReason.outputMissing,
+        );
+      }
+      final manifest = await readManifest(signedPath);
+      final rejection = _describeUnusableManifest(manifest);
+      if (rejection != null) {
+        _deleteSignedOutput(signedPath);
+        Log.warning(
+          'Refusing to replace "$outputPath": $rejection',
           name: 'C2paSigningService',
           category: LogCategory.video,
         );
         return C2paSigningResult(
           signedFilePath: outputPath,
           success: false,
-          error: 'Source has no manifest to carry forward',
+          error: 'Signed file $rejection',
+          failureReason: C2paSigningFailureReason.outputMissing,
         );
       }
 
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final String claimGenerator =
-          '${packageInfo.appName}/${packageInfo.version}';
-      final String outputTitle = outputFile.path.split('/').last;
-
-      final manifestJson = _manifestService
-          .buildDerivedVideoManifest(
-            claimGenerator: claimGenerator,
-            title: outputTitle,
-          )
-          .manifestJson;
-
-      final builder = await _c2pa.createBuilder(manifestJson);
-      try {
-        builder.setIntent(ManifestIntent.edit);
-
-        final sourceBytes = await File(sourcePath).readAsBytes();
-        await builder.addIngredient(
-          data: sourceBytes,
-          mimeType: _videoMimeType,
-          config: IngredientConfig(
-            title: sourcePath.split('/').last,
-            relationship: Relationship.parentOf,
-          ),
-        );
-
-        builder.addAction(
-          ActionConfig(
-            action: action,
-            softwareAgent: claimGenerator,
-            when: DateTime.now().toUtc(),
-          ),
-        );
-
-        final outputBytes = await outputFile.readAsBytes();
-        final signer = await _createSigner();
-        final result = await builder.sign(
-          sourceData: outputBytes,
-          mimeType: _videoMimeType,
-          signer: signer,
-        );
-
-        if (result.signedData.isEmpty) {
-          // The sole caller discards this result, so without a log the
-          // failure would be invisible in the field — the exact conditions
-          // that let #7739's debris go unnoticed.
-          Log.warning(
-            'Derived re-sign produced empty signed data; leaving '
-            '"$outputPath" unsigned',
-            name: 'C2paSigningService',
-            category: LogCategory.video,
-          );
-          return C2paSigningResult(
-            signedFilePath: outputPath,
-            success: false,
-            error: 'Signed derived file is empty',
-            failureReason: C2paSigningFailureReason.outputMissing,
-          );
-        }
-
-        await outputFile.writeAsBytes(result.signedData, flush: true);
-
-        Log.info(
-          'C2PA manifest carried forward onto derived file '
-          '($action): $outputPath (${result.signedData.length ~/ 1024} KB)',
-          name: 'C2paSigningService',
-          category: LogCategory.video,
-        );
-
-        return C2paSigningResult(signedFilePath: outputPath, success: true);
-      } finally {
-        builder.dispose();
-      }
+      final signed = signedFile.renameSync(outputPath);
+      Log.info(
+        'C2PA ${isEdit ? 'edit' : 'composite'} signed from '
+        '${sources.length} source(s): ${signed.path}',
+        name: 'C2paSigningService',
+        category: LogCategory.video,
+      );
+      return C2paSigningResult(
+        signedFilePath: signed.path,
+        success: true,
+        manifest: manifest,
+      );
     } catch (e, stackTrace) {
+      final failureReason = classifyFailureReason(e);
       Log.error(
-        'C2PA derived re-sign failed: $e',
+        'C2PA derived signing failed (${failureReason.name}): $e',
         name: 'C2paSigningService',
         category: LogCategory.video,
         error: e,
         stackTrace: stackTrace,
       );
-
-      // Best-effort: leave the (unsigned) re-encoded file as-is on failure.
+      _deleteSignedOutput(signedPath);
       return C2paSigningResult(
         signedFilePath: outputPath,
         success: false,
         error: e.toString(),
+        failureReason: failureReason,
       );
     }
+  }
+
+  /// Whether every action in [store] that names a source type names a camera
+  /// capture or a composite of captures.
+  static bool _namesOnlyCaptures(ManifestStoreInfo store) {
+    for (final manifest in store.manifests.values) {
+      for (final assertion in manifest.assertions) {
+        if (!assertion.label.startsWith('c2pa.actions')) continue;
+        final actions = assertion.data['actions'];
+        if (actions is! List) continue;
+        for (final action in actions.whereType<Map<dynamic, dynamic>>()) {
+          final type = action['digitalSourceType'];
+          if (type == null) continue;
+          final sourceType = type is String
+              ? DigitalSourceType.fromUrl(type)
+              : null;
+          if (sourceType != DigitalSourceType.digitalCapture &&
+              sourceType != DigitalSourceType.compositeCapture) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /// The file name of [path], or of the URL path when [path] is a URL.
+  static String _titleOf(String path) {
+    final uri = Uri.tryParse(path);
+    if (uri != null && uri.hasScheme && uri.pathSegments.isNotEmpty) {
+      return uri.pathSegments.last;
+    }
+    return path.split('/').last;
+  }
+
+  static String _mimeTypeFor(C2paEditSource source) {
+    final extension = _titleOf(source.path).split('.').last.toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'heic' => 'image/heic',
+      'm4a' => 'audio/mp4',
+      'mp3' => 'audio/mpeg',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      'mov' => 'video/quicktime',
+      _ => switch (source.kind) {
+        C2paSourceKind.image => 'image/jpeg',
+        C2paSourceKind.audio => 'audio/mp4',
+        C2paSourceKind.video => _videoMimeType,
+      },
+    };
   }
 
   /// Why [manifest] does not establish that signing worked, or null when it

@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -1985,6 +1986,13 @@ void main() {
                 'chromaKeySourcePath',
                 isNull,
               )
+              // The render carries no manifest, so an edit of it is signed
+              // against the footage it was reversed from.
+              .having(
+                (s) => s.clips.first.derivedFrom,
+                'derivedFrom',
+                const [C2paEditSource(path: '/path/clip-local.mp4')],
+              )
               .having(
                 (s) => s.lastReverseResult,
                 'lastReverseResult',
@@ -2430,6 +2438,36 @@ void main() {
       );
 
       blocTest<ClipEditorBloc, ClipEditorState>(
+        'names the footage and the backdrop as what the keyed clip is made of',
+        build: () => buildBloc(
+          bakeChromaKey:
+              ({
+                required sourceClip,
+                required chromaKey,
+                required renderId,
+              }) async => (
+                video: EditorVideo.file('/path/keyed.mp4'),
+                source: '/path/clip-1.mp4',
+              ),
+        ),
+        seed: () => ClipEditorState(clips: [_createClip()]),
+        act: (bloc) => bloc.add(
+          ClipEditorChromaKeyRequested(
+            clipId: 'clip-1',
+            chromaKey: ClipChromaKey(
+              key: ChromaKey(
+                backgroundImage: EditorLayerImage.file('/path/beach.jpg'),
+              ),
+            ),
+          ),
+        ),
+        verify: (bloc) => expect(bloc.state.clips.single.derivedFrom, const [
+          C2paEditSource(path: '/path/clip-1.mp4'),
+          C2paEditSource(path: '/path/beach.jpg', kind: C2paSourceKind.image),
+        ]),
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
         're-keys from the recorded source, not the baked video',
         build: () => buildBloc(
           bakeChromaKey:
@@ -2640,6 +2678,7 @@ void main() {
           expect(clip.video?.file?.path, sourcePath);
           expect(clip.chromaKey, isNull);
           expect(clip.chromaKeySourcePath, isNull);
+          expect(clip.derivedFrom, [C2paEditSource(path: sourcePath)]);
           expect(bloc.state.lastChromaKeyResult, isA<ChromaKeySuccess>());
           // The keyed render is what this drops; the pre-key file is what the
           // clip now plays, so queuing it would be queuing the live video.
@@ -3169,11 +3208,13 @@ void main() {
           expect(
             supersededPaths,
             containsAll(<String>[
-              '/path/clip-local.mp4',
               '/forward/clip-local-cache.mp4',
               '/reversed/clip-local.mp4',
             ]),
           );
+          // The transformed clip is signed against the footage it was cut
+          // from, so that file stays for as long as the clip does.
+          expect(supersededPaths, isNot(contains('/path/clip-local.mp4')));
           expect(
             supersededPaths,
             isNot(contains('/transformed/clip-local_clip-local_transform.mp4')),

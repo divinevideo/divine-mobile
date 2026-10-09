@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bip340/bip340.dart' as schnorr;
+import 'package:crypto/crypto.dart';
 import 'package:meta/meta.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 
@@ -81,6 +83,70 @@ class NostrCreatorBindingService {
 
   static const assertionLabel = 'video.divine.nostr.creator_binding';
   static const signatureAlgorithm = 'nostr.secp256k1';
+
+  static final RegExp _hex64 = RegExp(r'^[0-9a-f]{64}$');
+  static final RegExp _hex128 = RegExp(r'^[0-9a-f]{128}$');
+
+  /// Returns the pubkey that signed a creator-binding assertion, or null when
+  /// [assertionData] is not one or its signature does not verify.
+  ///
+  /// The signed bytes are the payload without its `signature`, encoded in the
+  /// field order [createAssertion] writes. That order is rebuilt here from
+  /// the parsed values rather than taken from [assertionData], because a C2PA
+  /// reader may hand the assertion back with its keys reordered. A payload
+  /// with any field this version does not write is rejected.
+  static String? verifiedSigner(Map<String, dynamic> assertionData) {
+    try {
+      final pubkey = assertionData['pubkey'];
+      final signature = assertionData['signature'];
+      if (pubkey is! String || !_hex64.hasMatch(pubkey)) return null;
+      if (signature is! String || !_hex128.hasMatch(signature)) return null;
+      if (assertionData['sig_alg'] != signatureAlgorithm) return null;
+
+      const known = {
+        'version',
+        'pubkey',
+        'sig_alg',
+        'created_at',
+        'claims',
+        'referenced_assertions',
+        'hard_binding',
+        'signature',
+      };
+      if (assertionData.keys.any((key) => !known.contains(key))) return null;
+
+      final claims = assertionData['claims'] as Map<String, dynamic>;
+      final hardBinding = assertionData['hard_binding'] as Map<String, dynamic>;
+      final handles = claims['social_handles'] as List<dynamic>?;
+      final unsignedPayload = <String, dynamic>{
+        'version': assertionData['version'],
+        'pubkey': pubkey,
+        'sig_alg': signatureAlgorithm,
+        'created_at': assertionData['created_at'],
+        'claims': <String, dynamic>{
+          if (claims['nip05'] != null) 'nip05': claims['nip05'],
+          if (claims['website'] != null) 'website': claims['website'],
+          if (handles != null)
+            'social_handles': [
+              for (final handle in handles.cast<Map<String, dynamic>>())
+                {'platform': handle['platform'], 'handle': handle['handle']},
+            ],
+        },
+        'referenced_assertions': assertionData['referenced_assertions'],
+        'hard_binding': {
+          'alg': hardBinding['alg'],
+          'value': hardBinding['value'],
+        },
+      };
+      final digest = sha256
+          .convert(utf8.encode(jsonEncode(unsignedPayload)))
+          .toString();
+      return schnorr.verify(pubkey, digest, signature) ? pubkey : null;
+    } on Object {
+      // Anything malformed in an untrusted manifest is simply not a binding.
+      return null;
+    }
+  }
 
   final NostrIdentity? _identity;
   final DateTime Function() _now;

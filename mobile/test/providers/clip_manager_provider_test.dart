@@ -159,6 +159,7 @@ void main() {
           verifiedIdentityBundle,
           clips,
           editorStateHistory,
+          derivedFrom,
         }) async => null;
       });
 

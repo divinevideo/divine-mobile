@@ -17,6 +17,7 @@ import 'package:openvine/services/c2pa_debris_janitor.dart';
 import 'package:openvine/services/classic_viner_seed_preload_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/hive_storage_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/seed_data_preload_service.dart';
@@ -68,6 +69,12 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
     name: 'Main',
     category: LogCategory.system,
   );
+
+  // Static signing utility: its creator-binding seam needs the container, so
+  // it is assigned here rather than with the reporter seams in bootstrap.
+  NativeProofModeService.creatorBindingFactory = container
+      .read(c2paCreatorBindingFactoryProvider)
+      .create;
 
   await restorePendingEmailVerificationOnStartup(container);
 

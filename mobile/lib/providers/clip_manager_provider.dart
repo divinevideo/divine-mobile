@@ -391,7 +391,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         // skip the update entirely.
         final current = getClipById(clip.id);
         if (current == null) return;
-        refreshClip(current.copyWith(proofManifestJson: jsonEncode(proofData)));
+        refreshClip(
+          current.copyWith(
+            proofManifestJson: jsonEncode(proofData),
+            // Without a C2PA manifest the proof's hash is the recording's as
+            // the camera wrote it. It marks the file as the app's own
+            // unaltered recording, which may be signed later, for example
+            // once the device is back online.
+            recordingSha256: proofData.c2paManifestId == null
+                ? proofData.videoHash
+                : null,
+          ),
+        );
         _triggerAutosave();
 
         Log.info(

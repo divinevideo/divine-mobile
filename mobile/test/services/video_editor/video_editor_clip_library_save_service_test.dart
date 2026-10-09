@@ -5,16 +5,29 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show CompleteParameters, ExportedLayer, FilterState, Layer;
+    show
+        CompleteParameters,
+        ExportedLayer,
+        FilterState,
+        Layer,
+        WidgetLayer,
+        WidgetLayerExportConfigs;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 DivineVideoClip _createClip({
@@ -48,6 +61,183 @@ void main() {
     tearDown(() {
       VideoEditorRenderService.renderVideoOverride = null;
     });
+
+    test('signs the library clip as an edit of its source', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/flattened.mp4';
+      List<C2paEditSource>? signedFrom;
+      NativeProofModeService.proofFileOverride =
+          (
+            videoFile, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async {
+            signedFrom = derivedFrom;
+            return const NativeProofData(
+              videoHash: 'flattened',
+              c2paManifestId: 'urn:c2pa:flattened',
+            );
+          };
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result =
+          await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+            clip: _createClip(),
+            renderId: 'save-1',
+          );
+
+      expect(signedFrom, const [C2paEditSource(path: '/path/a.mp4')]);
+      expect(result?.proofManifestJson, contains('urn:c2pa:flattened'));
+      expect(result?.derivedFrom, isNull);
+    });
+
+    test("keeps the clip's sources when it could not be signed", () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/flattened.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => const NativeProofData(videoHash: 'flattened');
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result =
+          await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+            clip: _createClip(),
+            renderId: 'save-1',
+          );
+
+      // Saved offline, a later edit is still signed against the original.
+      expect(result?.derivedFrom, const [C2paEditSource(path: '/path/a.mp4')]);
+    });
+
+    test('names the unsigned file itself when its media has no name', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/flattened.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => const NativeProofData(videoHash: 'flattened');
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+      final streamed = _createClip().copyWith(
+        video: EditorVideo.network('https://example.com/a.mp4'),
+      );
+      expect(streamed.signingSources, isNull);
+
+      final result =
+          await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+            clip: streamed,
+            renderId: 'save-1',
+          );
+
+      // An empty list would read as "made from nothing" and be dropped from a
+      // later edit; the unsigned file has no manifest, so it blocks signing.
+      expect(result?.derivedFrom, isNull);
+      expect(result?.signingSources, const [
+        C2paEditSource(path: '/documents/flattened.mp4'),
+      ]);
+    });
+
+    test(
+      'keeps the sources of video layers baked over an unsigned clip',
+      () async {
+        VideoEditorRenderService.renderVideoOverride = ({
+          required clips,
+          required usePersistentStorage,
+          aspectRatio,
+          parameters,
+          taskId,
+          maxOutputDuration,
+        }) async => '/documents/flattened.mp4';
+        List<C2paEditSource>? signedFrom;
+        NativeProofModeService.proofFileOverride =
+            (
+              videoFile, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) async {
+              signedFrom = derivedFrom;
+              return const NativeProofData(videoHash: 'flattened');
+            };
+        addTearDown(() => NativeProofModeService.proofFileOverride = null);
+        final layerMeta = DetachedClipLayerData(
+          clip: _createClip(id: 'layer'),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        final result =
+            await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+              clip: _createClip(),
+              renderId: 'save-1',
+              overlays: EditorOverlaySnapshot(
+                bodySize: const Size(100, 200),
+                capturedLayers: [
+                  ExportedLayer(
+                    layer: WidgetLayer(
+                      widget: const SizedBox.shrink(),
+                      meta: layerMeta,
+                      exportConfigs: WidgetLayerExportConfigs(
+                        id: 'l-layer',
+                        meta: layerMeta,
+                      ),
+                    ),
+                    bytes: Uint8List(0),
+                    logicalSize: const Size(10, 10),
+                  ),
+                ],
+              ),
+            );
+
+        // A later edit of the saved clip must still name the layer's footage,
+        // or it would be signed as an edit of the base clip alone.
+        final layerPath = p.join(await getDocumentsPath(), 'layer.mp4');
+        final expected = [
+          const C2paEditSource(path: '/path/a.mp4'),
+          C2paEditSource(path: layerPath),
+        ];
+        expect(signedFrom, expected);
+        expect(result?.derivedFrom, expected);
+      },
+    );
 
     test(
       'renders the source clip and returns it as a fresh library clip',

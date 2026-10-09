@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:models/models.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -421,6 +422,51 @@ void main() {
         expect(result.single.fadeInDuration, equals(Duration.zero));
         expect(result.single.fadeOutDuration, equals(Duration.zero));
       });
+    });
+  });
+
+  group('renderAudioSources', () {
+    AudioTrack assetTrack(String path) => AudioTrack(
+      id: path,
+      title: path,
+      subtitle: 'test',
+      duration: const Duration(seconds: 3),
+      audio: EditorAudio.asset(path),
+      startTime: Duration.zero,
+      endTime: const Duration(seconds: 3),
+    );
+
+    test('names a local file by its path and a library sound by its URL', () {
+      final sources = renderAudioSources([
+        _fileTrack(id: 'voice', path: '/documents/voice.m4a'),
+        _networkTrack('library', url: 'https://example.com/sound.mp3'),
+      ]);
+
+      expect(sources, const [
+        C2paEditSource(
+          path: '/documents/voice.m4a',
+          kind: C2paSourceKind.audio,
+        ),
+        C2paEditSource(
+          path: 'https://example.com/sound.mp3',
+          kind: C2paSourceKind.audio,
+        ),
+      ]);
+    });
+
+    test('names a bundled sound by its asset path', () {
+      final sources = renderAudioSources([assetTrack('assets/sounds/pop.mp3')]);
+
+      expect(sources, const [
+        C2paEditSource(
+          path: 'assets/sounds/pop.mp3',
+          kind: C2paSourceKind.audio,
+        ),
+      ]);
+    });
+
+    test('names nothing when the render has no sound tracks', () {
+      expect(renderAudioSources(const []), isEmpty);
     });
   });
 

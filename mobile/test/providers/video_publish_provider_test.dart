@@ -14,6 +14,7 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -24,13 +25,15 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/c2pa_creator_binding_factory.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/nostr_creator_binding_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -44,6 +47,17 @@ class MockProfileRepository extends Mock implements ProfileRepository {}
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _FakeDivineVideoDraft extends Fake implements DivineVideoDraft {}
+
+class _FixedBindingFactory extends Fake implements C2paCreatorBindingFactory {
+  @override
+  Future<NostrCreatorBindingAssertion?> create(String filePath) async =>
+      const NostrCreatorBindingAssertion(
+        assertionLabel: NostrCreatorBindingService.assertionLabel,
+        payloadJson: '{}',
+        signature: 'signature',
+        pubkey: 'pubkey',
+      );
+}
 
 /// A clip manager whose shared chroma-key bake keys a take at once, or fails.
 class _BakingClipManager extends ClipManagerNotifier {
@@ -572,6 +586,7 @@ void main() {
         WidgetTester tester, {
         LayerRasterizer? rasterizer,
         ClipManagerNotifier Function()? clipManager,
+        C2paCreatorBindingFactory? bindingFactory,
       }) async {
         SharedPreferences.setMockInitialValues({});
         final prefs = await SharedPreferences.getInstance();
@@ -587,6 +602,10 @@ void main() {
               layerRasterizerProvider.overrideWithValue(rasterizer),
             if (clipManager != null)
               clipManagerProvider.overrideWith(clipManager),
+            if (bindingFactory != null)
+              c2paCreatorBindingFactoryProvider.overrideWithValue(
+                bindingFactory,
+              ),
           ],
         );
         addTearDown(container.dispose);
@@ -636,6 +655,47 @@ void main() {
               'a lone clip used to skip the render and ship the raw recording, '
               'losing every layer plus trim, speed and volume',
         );
+      });
+
+      testWidgets('never signs the rendered video as a fresh capture', (
+        tester,
+      ) async {
+        final container = await pumpHarness(
+          tester,
+          bindingFactory: _FixedBindingFactory(),
+        );
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (clip(), null);
+        final proofCalls = <List<C2paEditSource>?>[];
+        NativeProofModeService.proofFileOverride =
+            (
+              videoFile, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) async {
+              proofCalls.add(derivedFrom);
+              return null;
+            };
+        addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(context, draft());
+
+        // The render left the video unsigned; attaching the poster's identity
+        // must not sign it as a camera capture after all (#9893).
+        expect(proofCalls, hasLength(1));
+        expect(proofCalls.single, isEmpty);
       });
 
       testWidgets('renders a take still waiting on its recorded key keyed', (

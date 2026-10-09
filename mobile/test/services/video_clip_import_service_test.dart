@@ -786,38 +786,70 @@ void main() {
       bitrate: 0,
     );
 
-    test('saves a copy that credits the sender and carries the proof, so '
-        'the render step does not re-sign it as the recipient', () async {
-      final service = buildService(
-        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
-      );
+    test(
+      'saves a copy that credits the sender and carries the proof',
+      () async {
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
 
-      final result = await service.importReceivedClip(
-        source: sourceVideo,
-        messageId: _messageId,
-        senderPubkey: _senderPubkey,
-        c2paManifestId: _c2paManifestId,
-        targetAspectRatio: models.AspectRatio.square,
-      );
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          targetAspectRatio: models.AspectRatio.square,
+        );
 
-      final clip = (result as VideoClipImportSuccess).clip;
-      expect(clip.video!.file!.path, startsWith(docsDir.path));
-      expect(File(clip.video!.file!.path).existsSync(), isTrue);
-      expect(sourceVideo.existsSync(), isTrue);
-      expect(clip.duration, equals(const Duration(milliseconds: 5800)));
-      expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
-      expect(clip.originalAspectRatio, closeTo(9 / 16, 0.0001));
-      expect(clip.sourceAuthorPubkey, equals(_senderPubkey));
-      expect(
-        models.NativeProofData.fromJson(
-          jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
-        ),
-        isA<models.NativeProofData>()
-            .having((p) => p.videoHash, 'videoHash', _receivedClipHash)
-            .having((p) => p.c2paManifestId, 'c2paManifestId', _c2paManifestId),
-      );
-      verify(() => clipLibraryService.saveClip(clip)).called(1);
-    });
+        final clip = (result as VideoClipImportSuccess).clip;
+        expect(clip.video!.file!.path, startsWith(docsDir.path));
+        expect(File(clip.video!.file!.path).existsSync(), isTrue);
+        expect(sourceVideo.existsSync(), isTrue);
+        expect(clip.duration, equals(const Duration(milliseconds: 5800)));
+        expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
+        expect(clip.originalAspectRatio, closeTo(9 / 16, 0.0001));
+        expect(clip.sourceAuthorPubkey, equals(_senderPubkey));
+        expect(
+          models.NativeProofData.fromJson(
+            jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
+          ),
+          isA<models.NativeProofData>()
+              .having((p) => p.videoHash, 'videoHash', _receivedClipHash)
+              .having(
+                (p) => p.c2paManifestId,
+                'c2paManifestId',
+                _c2paManifestId,
+              ),
+        );
+        verify(() => clipLibraryService.saveClip(clip)).called(1);
+      },
+    );
+
+    test(
+      'credits everyone the signed history names after the sender',
+      () async {
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+        final recorder = 'a' * 64;
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          contributorPubkeys: [recorder, _senderPubkey],
+        );
+
+        // The sender edited footage a friend recorded; both are credited, the
+        // sender once.
+        final clip = (result as VideoClipImportSuccess).clip;
+        expect(
+          clip.sourceCredits.map((credit) => credit.authorPubkey),
+          equals([_senderPubkey, recorder]),
+        );
+      },
+    );
 
     test('derives the crop from the file when the sender named none', () async {
       final service = buildService(

@@ -562,6 +562,7 @@ void main() {
             verifiedIdentityBundle,
             clips,
             editorStateHistory,
+            derivedFrom,
           }) => Completer<models.NativeProofData?>().future;
           addTearDown(() => NativeProofModeService.proofFileOverride = null);
 
@@ -645,6 +646,7 @@ void main() {
             verifiedIdentityBundle,
             clips,
             editorStateHistory,
+            derivedFrom,
           }) => Completer<models.NativeProofData?>().future;
           addTearDown(() => NativeProofModeService.proofFileOverride = null);
 
@@ -776,6 +778,7 @@ void main() {
             verifiedIdentityBundle,
             clips,
             editorStateHistory,
+            derivedFrom,
           }) => Completer<models.NativeProofData?>().future;
           addTearDown(() => NativeProofModeService.proofFileOverride = null);
 

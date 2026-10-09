@@ -142,6 +142,45 @@ void main() {
       },
     );
 
+    group('verifiedSigner', () {
+      Future<Map<String, dynamic>> signedPayload() async {
+        final assertion = await service.createAssertion(
+          claims: const CreatorBindingClaims(
+            nip05: 'alice@example.com',
+            socialHandles: <CreatorSocialHandle>[
+              CreatorSocialHandle(platform: 'x', handle: '@alice'),
+            ],
+          ),
+          hardBinding: const CreatorBindingHardBinding(
+            alg: 'sha256',
+            value: 'ef5d3d4f69d72df6d4d08f625f66ecfb17b3a6dd4e03f6f5a6a5f0e31ecfe8ee',
+          ),
+          referencedAssertions: const <String>['c2pa.actions.v2'],
+        );
+        return jsonDecode(assertion!.payloadJson) as Map<String, dynamic>;
+      }
+
+      test('verifies what createAssertion signed, whatever the key order the '
+          'manifest returns', () async {
+        final payload = await signedPayload();
+        final reordered = Map<String, dynamic>.fromEntries(
+          payload.entries.toList().reversed,
+        );
+
+        expect(
+          NostrCreatorBindingService.verifiedSigner(reordered),
+          equals(testPublicKey),
+        );
+      });
+
+      test('rejects a payload changed after signing', () async {
+        final payload = await signedPayload()
+          ..['claims'] = <String, dynamic>{'nip05': 'mallory@example.com'};
+
+        expect(NostrCreatorBindingService.verifiedSigner(payload), isNull);
+      });
+    });
+
     test('throws when no authenticated signer is available', () async {
       final unauthenticatedService = NostrCreatorBindingService(
         identity: null,
