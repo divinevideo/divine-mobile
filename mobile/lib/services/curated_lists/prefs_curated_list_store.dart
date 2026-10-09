@@ -140,7 +140,9 @@ class PrefsCuratedListStore {
                   : activeClaims.keys.toSet()),
           };
         },
-        write: (merged) => ownerEvidence.readable
+        // A row the model cannot decode cut the load short, so the merge
+        // would drop it and every row after it: refuse like other bad rows.
+        write: (merged) => ownerEvidence.readable && storedListsReadable
             ? _writeString(_listsKey, jsonEncode(ownerEvidence.encode(merged)))
             : Future<bool>.value(false),
       );
