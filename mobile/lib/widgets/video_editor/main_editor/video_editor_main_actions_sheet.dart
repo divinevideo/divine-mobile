@@ -155,10 +155,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                 label: context.l10n.videoEditorTuneLabel,
                 semanticLabel: context.l10n.videoEditorOpenTuneSemanticLabel,
                 onTap: () {
-                  final mainBloc = context.read<VideoEditorMainBloc>();
                   final tuneBloc = context.read<VideoEditorTuneBloc>();
                   Navigator.pop(context);
-                  openTuneEditor(mainBloc, tuneBloc, scope);
+                  openTuneEditor(tuneBloc, scope);
                 },
               ),
               _ItemButton(

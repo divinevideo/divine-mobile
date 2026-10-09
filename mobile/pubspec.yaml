@@ -390,25 +390,8 @@ dependencies:
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
   pro_video_editor: ^2.28.0
-  # 14.0.0 is the first release built on material_ui; before it the editor's
-  # ThemeData is the framework's and no longer interchangeable with ours.
-  # 14.2.0 adds the paint-layer raster cache the video editor turns on.
-  # 14.5.0 adds the text outline that text and caption styles draw.
-  # 14.6.0 adds TextLayer.highlights and ExportedLayer.frames, which karaoke
-  # captions light their words and export their timed overlays through.
-  # 14.6.2 stops a layer hidden outside its time range from taking touches
-  # meant for the visible layer under it (#9736).
-  # 14.7.0 adds TextEditorConfigs.layerBounds, which wraps text layers at the
-  # edges of the visible video when they are scaled up or moved there.
-  # 14.8.0 adds CensorConfigs.pixelateInLayerSpace and per-area censor
-  # strength, which let the censor tool's preview show the blur and the blocks
-  # the export draws (#9562). Self-enforcing: videoEditorCensorConfigs passes
-  # pixelateInLayerSpace and the draw editor calls setCensorStrength, so a
-  # relaxed floor is a compile error.
-  # 14.9.0 adds the typewriter and word-by-word text reveals with
-  # ExportedLayer.revealBytes, and previews wiggle, bounce and loops with the
-  # export's own easing (#9849, hm21/pro_image_editor#883).
-  pro_image_editor: ^14.9.0
+  # 14.10.2: the tune editor reports that it opened (#9955).
+  pro_image_editor: ^14.10.2
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0

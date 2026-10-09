@@ -2270,11 +2270,6 @@ void main() {
           await tester.pump();
 
           verify(() => mockEditor.openTuneEditor()).called(1);
-          verify(
-            () => mainBloc.add(
-              const VideoEditorMainOpenSubEditor(SubEditorType.tune),
-            ),
-          ).called(1);
           expect(tuneBloc.state.editingSetId, 'set-1');
         },
       );
