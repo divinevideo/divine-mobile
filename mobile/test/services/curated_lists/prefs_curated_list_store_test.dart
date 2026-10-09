@@ -368,6 +368,95 @@ void main() {
         );
 
         test(
+          'keeps a repaired row that matches a previously refused request',
+          () async {
+            final repaired = _list('repaired');
+            final added = _list('added');
+            final damaged = _list('damaged').toJson()
+              ..['createdAt'] = 'not-a-date';
+            final raw = jsonEncode([damaged]);
+            expect(await prefs.setString(_listsKey, raw), isTrue);
+            final coordinator = CuratedListCacheWriteCoordinator();
+            final store = _store(prefs, coordinator: coordinator);
+
+            final refused = await store.saveListsWithResult([repaired]);
+
+            expect(refused.status, CuratedCacheWriteStatus.storageRejected);
+            expect(refused.persisted, isNull);
+            expect(prefs.getString(_listsKey), raw);
+
+            // This backing write acknowledges the repaired row independently
+            // of the refused request; a fresh store reads that new baseline.
+            expect(
+              await prefs.setString(_listsKey, jsonEncode([repaired.toJson()])),
+              isTrue,
+            );
+            final restarted = _store(prefs, coordinator: coordinator)
+              ..listsLoaded(_storedLists(prefs));
+            expect(await restarted.saveLists([repaired, added]), isTrue);
+            expect(_storedLists(prefs), unorderedEquals([repaired, added]));
+          },
+        );
+
+        test(
+          'an unreadable ownership check keeps rejected edits refused',
+          () async {
+            final local = CuratedList(
+              id: 'local',
+              name: 'Local draft',
+              videoEventIds: const [],
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+            );
+            final original = _list('original');
+            final renamed = _list(
+              'original',
+              revision: 2,
+              name: 'Rejected edit',
+            );
+            final added = _list('added');
+            final refusing = _RefusingPrefs(cachesRefusedWrites: true)
+              ..accepts = true;
+            expect(
+              await refusing.setString(
+                _listsKey,
+                jsonEncode([local.toJson(), original.toJson()]),
+              ),
+              isTrue,
+            );
+            final store = _store(refusing)..listsLoaded([local, original]);
+            refusing.accepts = false;
+            expect(await store.saveLists([local, renamed]), isFalse);
+            expect(_storedLists(refusing), [local, renamed]);
+
+            final damaged = _list('damaged').toJson()
+              ..['createdAt'] = 'not-a-date';
+            expect(
+              await refusing.setString(
+                _listsKey,
+                jsonEncode([local.toJson(), damaged]),
+              ),
+              isFalse,
+            );
+            expect(store.hasUnambiguousOwnerEvidence(local), isTrue);
+            expect(store.canClaimLocalList(local, '$_owner:local'), isFalse);
+
+            // Restoring the optimistic cache without a backing acknowledgement
+            // must not authorize another save to publish the rejected rename.
+            expect(
+              await refusing.setString(
+                _listsKey,
+                jsonEncode([local.toJson(), renamed.toJson()]),
+              ),
+              isFalse,
+            );
+            refusing.accepts = true;
+            expect(await store.saveLists([local, original, added]), isTrue);
+            expect(_storedLists(refusing), [local, original, added]);
+          },
+        );
+
+        test(
           'logs unreadable storage without quoting the stored data',
           () async {
             await prefs.setString(_listsKey, '$_storedText {{{');

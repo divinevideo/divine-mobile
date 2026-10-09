@@ -226,23 +226,47 @@ void main() {
       );
 
       test(
-        'unloaded malformed row still retains raw $label evidence',
+        'unloaded malformed row refuses saves and retains raw $label evidence',
         () async {
           final coordinator = CuratedListCacheWriteCoordinator();
           final damaged = rawRow(row())
             ..[label] = _bob
             ..['createdAt'] = 'invalid-date';
-          await load([damaged], coordinator: coordinator);
+          final raw = await load([damaged], coordinator: coordinator);
           expect(service.lists, isEmpty);
           final healthy = row(id: 'healthy', pubkey: _alice);
-          expect(await store(coordinator).saveLists([healthy]), isTrue);
+          final result = await store(coordinator)
+              .saveListsWithResult([healthy]);
+          expect(result.status, CuratedCacheWriteStatus.storageRejected);
+          expect(result.succeeded, isFalse);
+          expect(result.persisted, isNull);
+          expect(result.acknowledgedBeforeWrite, isNull);
+          expect(prefs.getString(CuratedListService.listsStorageKey), raw);
           final persisted = jsonDecode(
             prefs.getString(CuratedListService.listsStorageKey)!,
           ) as List;
-          expect(persisted, hasLength(2));
+          expect(persisted, hasLength(1));
           expect(persisted.singleWhere((row) => row['id'] == _id), damaged);
+          expect(persisted.any((row) => row['id'] == 'healthy'), isFalse);
+
+          final repaired = rawRow(row())..[label] = _bob;
           expect(
-            persisted.singleWhere((row) => row['id'] == 'healthy'),
+            await prefs.setString(
+              CuratedListService.listsStorageKey,
+              jsonEncode([repaired]),
+            ),
+            isTrue,
+          );
+          final acknowledged = CuratedList.fromJson(repaired);
+          final restarted = store(coordinator)..listsLoaded([acknowledged]);
+          expect(await restarted.saveLists([acknowledged, healthy]), isTrue);
+          final afterRepair = jsonDecode(
+            prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List;
+          expect(afterRepair, hasLength(2));
+          expect(afterRepair.singleWhere((row) => row['id'] == _id), repaired);
+          expect(
+            afterRepair.singleWhere((row) => row['id'] == 'healthy'),
             healthy.toJson(),
           );
           noSigning();

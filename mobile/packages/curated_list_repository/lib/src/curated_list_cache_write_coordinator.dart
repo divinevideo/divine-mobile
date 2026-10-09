@@ -42,6 +42,9 @@ class CuratedListCacheWriteCoordinator {
   )).succeeded;
 
   /// Merges author coordinates and reports storage rejection separately.
+  ///
+  /// An invalid read retains only [baseline] and never creates or retires a
+  /// rejected optimistic overlay, because persistence has not been attempted.
   Future<CuratedCacheWriteResult<List<CuratedList>>> saveListsWithResult({
     required List<CuratedList> baseline,
     required List<CuratedList> current,
@@ -49,6 +52,7 @@ class CuratedListCacheWriteCoordinator {
     required Future<bool> Function(List<CuratedList>) write,
     Object? cacheKey,
     bool Function()? isCurrent,
+    bool Function()? isReadValid,
     Set<String> Function(List<CuratedList> acknowledged)? preflightConflicts,
   }) {
     final beforeSnapshot = List<CuratedList>.unmodifiable(baseline);
@@ -70,7 +74,14 @@ class CuratedListCacheWriteCoordinator {
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
       }
-      final observed = readAcknowledgedLists(cacheKey: cacheKey, read: read);
+      final rawObserved = List<CuratedList>.unmodifiable(read());
+      if (isReadValid != null && !isReadValid()) {
+        return result(CuratedCacheWriteStatus.storageRejected);
+      }
+      final observed = _acknowledgedLists(
+        cacheKey: cacheKey,
+        observed: rawObserved,
+      );
       // Preconditions inspect acknowledged storage inside this shared barrier,
       // after preceding writers finish and before any merge or backing write.
       final blocked = preflightConflicts?.call(observed) ?? const <String>{};
@@ -151,6 +162,13 @@ class CuratedListCacheWriteCoordinator {
     required List<CuratedList> Function() read,
   }) {
     final observed = List<CuratedList>.unmodifiable(read());
+    return _acknowledgedLists(cacheKey: cacheKey, observed: observed);
+  }
+
+  List<CuratedList> _acknowledgedLists({
+    required Object? cacheKey,
+    required List<CuratedList> observed,
+  }) {
     final rejected = _rejectedLists[cacheKey];
     if (rejected != null && _sameLists(observed, rejected.attempted)) {
       return rejected.before;
