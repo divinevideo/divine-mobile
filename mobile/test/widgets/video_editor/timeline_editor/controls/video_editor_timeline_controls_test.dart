@@ -33,6 +33,79 @@ void main() {
       expect(find.text('Split'), findsNothing);
     });
 
+    group('equalizer placement', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Future<List<String>> labels(
+        WidgetTester tester,
+        VideoEditorTimelineControls controls,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: controls),
+          ),
+        );
+        return [
+          for (final button in tester.widgetList<TimelineActionButton>(
+            find.byType(TimelineActionButton),
+          ))
+            button.label,
+        ];
+      }
+
+      testWidgets("sits with a clip's audio, after extract audio", (
+        tester,
+      ) async {
+        final order = await labels(
+          tester,
+          VideoEditorTimelineControls(
+            onDelete: () {},
+            onEqualizer: () {},
+            onDuplicated: () {},
+            onReversed: () {},
+            onExtractAudio: () {},
+            onFreezeFrame: () {},
+            onDone: () {},
+          ),
+        );
+
+        expect(order, [
+          l10n.videoEditorDeleteLabel,
+          l10n.videoEditorDuplicateLabel,
+          l10n.videoEditorReverseLabel,
+          l10n.videoEditorExtractAudioLabel,
+          l10n.videoEditorEqualizerLabel,
+          l10n.videoEditorFreezeFrameLabel,
+          l10n.videoEditorDoneLabel,
+        ]);
+      });
+
+      testWidgets("sits with a sound's actions, after the voice effect", (
+        tester,
+      ) async {
+        final order = await labels(
+          tester,
+          VideoEditorTimelineControls(
+            onDelete: () {},
+            onVoiceEffect: () {},
+            onEqualizer: () {},
+            onDuplicated: () {},
+            onDone: () {},
+          ),
+        );
+
+        expect(order, [
+          l10n.videoEditorDeleteLabel,
+          l10n.videoEditorVoiceEffectLabel,
+          l10n.videoEditorEqualizerLabel,
+          l10n.videoEditorDuplicateLabel,
+          l10n.videoEditorDoneLabel,
+        ]);
+      });
+    });
+
     testWidgets('triggers button callbacks', (tester) async {
       var doneCount = 0;
       var deleteCount = 0;

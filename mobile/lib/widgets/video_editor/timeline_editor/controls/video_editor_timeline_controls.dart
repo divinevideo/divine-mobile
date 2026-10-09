@@ -69,6 +69,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   final bool hasVoiceEffect;
 
   /// Opens the equalizer of the selected clip or sound.
+  ///
+  /// A sound shows it with its other sound actions, after the voice effect.
+  /// A clip, whose bar leads with the actions used most, shows it with its
+  /// other audio action, right after [onExtractAudio].
   final VoidCallback? onEqualizer;
 
   /// Whether the selected clip or sound already plays with an equalizer, so
@@ -169,6 +173,18 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final equalizer = onEqualizer == null
+        ? null
+        : TimelineActionButton(
+            icon: .faders,
+            label: context.l10n.videoEditorEqualizerLabel,
+            semanticLabel:
+                equalizerSemanticLabel ??
+                context.l10n.videoEditorEqualizerSoundSemanticLabel,
+            onPressed: onEqualizer,
+            type: hasEqualizer ? .primary : .secondary,
+          );
+    final equalizerWithClipAudio = onExtractAudio != null;
     return TimelineActionBar(
       actions: [
         if (onDelete != null)
@@ -204,16 +220,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
             onPressed: onVoiceEffect,
             type: hasVoiceEffect ? .primary : .secondary,
           ),
-        if (onEqualizer != null)
-          TimelineActionButton(
-            icon: .faders,
-            label: context.l10n.videoEditorEqualizerLabel,
-            semanticLabel:
-                equalizerSemanticLabel ??
-                context.l10n.videoEditorEqualizerSoundSemanticLabel,
-            onPressed: onEqualizer,
-            type: hasEqualizer ? .primary : .secondary,
-          ),
+        if (equalizer != null && !equalizerWithClipAudio) equalizer,
         if (onDuplicated != null)
           TimelineActionButton(
             icon: .copy,
@@ -319,6 +326,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
             onPressed: isExtractingAudio ? null : onExtractAudio,
             isLoading: isExtractingAudio,
           ),
+        if (equalizer != null && equalizerWithClipAudio) equalizer,
         if (onFreezeFrame != null)
           TimelineActionButton(
             icon: .pauseCircle,
