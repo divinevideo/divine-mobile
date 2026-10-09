@@ -417,6 +417,23 @@ void main() {
         expect(tapped, isTrue);
       });
 
+      testWidgets('a tap on the empty description box opens the list', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(), onTap: () => tapped = true),
+        );
+
+        await tester.tapAt(
+          tester.getBottomLeft(find.byType(DivineListThumbnail)) +
+              const Offset(8, -4),
+        );
+        await tester.pump();
+
+        expect(tapped, isTrue);
+      });
+
       testWidgets('speaks the name and video count as one label', (
         tester,
       ) async {
@@ -1232,6 +1249,27 @@ void main() {
       // Three of five slots are bones; the two the list can never fill
       // keep their flat placeholder.
       expect(slotClips(), findsNWidgets(1 + 2));
+    });
+
+    testWidgets('a tap on the shimmering fan still opens the list', (
+      tester,
+    ) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(videoEventIds: [videoIdFor(1)]),
+            thumbnailsPending: true,
+            onTap: () => tapped = true,
+          ),
+        ),
+      );
+
+      // The skeleton swallows hit tests, so the tap lands on the card.
+      await tester.tap(skeletonizer(), warnIfMissed: false);
+      await tester.pump();
+
+      expect(tapped, isTrue);
     });
 
     testWidgets('keeps every slot flat once thumbnails are resolved', (

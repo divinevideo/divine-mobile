@@ -148,6 +148,9 @@ class DivineListThumbnail extends StatelessWidget {
       excludeSemantics: true,
       onTap: onTap,
       child: GestureDetector(
+        // Skeleton bones and an empty description box do not hit-test, so
+        // the card claims taps across its whole area.
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
