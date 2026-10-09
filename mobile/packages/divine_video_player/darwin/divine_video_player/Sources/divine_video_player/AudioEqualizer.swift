@@ -33,16 +33,21 @@ struct AudioEqualizerBand: Hashable {
     /// Parses a band from a platform-channel map; nil for one this player
     /// cannot filter, which is skipped rather than failing the equalizer.
     static func from(_ map: Any?) -> AudioEqualizerBand? {
+        // A gain that is not a number would turn every sample into one; the
+        // export drops such a band too.
         guard let map = map as? [String: Any],
             let type = (map["type"] as? String).flatMap(AudioEqualizerBandType.init(rawValue:)),
-            let frequency = (map["frequencyHz"] as? NSNumber)?.doubleValue, frequency > 0
+            let frequency = (map["frequencyHz"] as? NSNumber)?.doubleValue,
+            frequency > 0, frequency.isFinite
         else { return nil }
+        let gain = (map["gainDb"] as? NSNumber)?.doubleValue ?? 0
+        guard gain.isFinite else { return nil }
         let q = (map["q"] as? NSNumber)?.doubleValue ?? defaultQ
         return AudioEqualizerBand(
             type: type,
             frequencyHz: frequency,
-            gainDb: (map["gainDb"] as? NSNumber)?.doubleValue ?? 0,
-            q: q > 0 ? q : defaultQ
+            gainDb: gain,
+            q: q > 0 && q.isFinite ? q : defaultQ
         )
     }
 }

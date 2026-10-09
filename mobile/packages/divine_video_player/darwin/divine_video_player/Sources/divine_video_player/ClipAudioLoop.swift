@@ -217,7 +217,8 @@ final class ClipAudioLoop {
             shaping: shaping,
             sampleRate: decoded.sampleRate,
             itemStart: source.itemStart.seconds,
-            seamDescription: "\(prepared.loopFrames) frames at \(Int(decoded.sampleRate))Hz "
+            seamDescription: "\(prepared.loopFrames) frames of \(decoded.channels) channel(s) "
+                + "at \(Int(decoded.sampleRate))Hz "
                 + "from \(Int(source.fileStart.seconds * 1_000_000)) us into \(origin), "
                 + "decoded from \(Int(decoded.firstTime.seconds * 1_000_000)) us, \(seam)"
                 + (shaping.shapes ? ", shaped per clip" : "")
@@ -281,10 +282,35 @@ final class ClipAudioLoop {
             await MainActor.run { [weak self] in
                 guard let self, generation == self.reshapeGeneration else { return }
                 self.buffer = buffer
-                if self.isRunning, let item = item() { self.start(alignedTo: item) }
+                self.placeReshaped(buffer, alignedTo: item)
             }
         }
     }
+
+    /// Places a reshaped [buffer] on the running loop, again a moment later
+    /// while the item's clock stands — as it does at every `AVPlayerLooper`
+    /// seam — so a change landing there is heard without waiting for a seek.
+    /// A loop that is stopped takes it when it starts.
+    private func placeReshaped(
+        _ buffer: AVAudioPCMBuffer,
+        alignedTo item: @escaping () -> AVPlayerItem?,
+        attempt: Int = 0
+    ) {
+        guard buffer === self.buffer, isRunning, nodeBuffers[active] !== buffer,
+            let current = item()
+        else { return }
+        if start(alignedTo: current) || attempt >= Self.reshapePlacementAttempts { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.reshapePlacementRetrySeconds) {
+            [weak self] in
+            self?.placeReshaped(buffer, alignedTo: item, attempt: attempt + 1)
+        }
+    }
+
+    /// How often, [reshapePlacementRetrySeconds] apart, a reshape is placed
+    /// again while the item's clock stands: longer than the ~200 ms the
+    /// longest seam hold measured.
+    private static let reshapePlacementAttempts = 20
+    private static let reshapePlacementRetrySeconds = 0.025
 
     /// Starts the loop in step with [item]'s picture.
     ///
@@ -466,20 +492,28 @@ final class ClipAudioLoop {
     /// Every audio track of [composition], mixed as the player item plays
     /// them, as interleaved floats from its start.
     ///
-    /// Read at the rate and up to two of the channels of its first audio
-    /// track, and at the time pitch the item plays its retimed clips with.
+    /// Read at the rate of its first audio, with as many channels as its
+    /// widest clip has up to two — a mono camera clip first must not fold a
+    /// stereo one after it to mono — and at the time pitch the item plays its
+    /// retimed clips with.
     private static func decode(composition: AVAsset) async -> Decoded? {
         do {
             let tracks = try await composition.loadTracks(withMediaType: .audio)
-            guard let first = tracks.first else { return nil }
-            var sampleRate = 44_100.0
-            var channels = 2
-            if let description = try await first.load(.formatDescriptions).first,
-                let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)
-            {
-                if basic.pointee.mSampleRate > 0 { sampleRate = basic.pointee.mSampleRate }
-                channels = min(max(Int(basic.pointee.mChannelsPerFrame), 1), 2)
+            guard !tracks.isEmpty else { return nil }
+            var sampleRate = 0.0
+            var channels = 0
+            for track in tracks {
+                for description in try await track.load(.formatDescriptions) {
+                    guard let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)
+                    else { continue }
+                    if sampleRate == 0, basic.pointee.mSampleRate > 0 {
+                        sampleRate = basic.pointee.mSampleRate
+                    }
+                    channels = max(channels, min(Int(basic.pointee.mChannelsPerFrame), 2))
+                }
             }
+            if sampleRate == 0 { sampleRate = 44_100 }
+            if channels == 0 { channels = 2 }
             let reader = try AVAssetReader(asset: composition)
             let output = AVAssetReaderAudioMixOutput(audioTracks: tracks, audioSettings: [
                 AVFormatIDKey: kAudioFormatLinearPCM,

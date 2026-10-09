@@ -1637,6 +1637,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             self.textureOutput?.forceRefresh(for: targetTime)
             self.syncAudioOverlays()
+            // As after handleSeekTo: the loop's sound runs on its own clock.
+            self.realignClipAudioLoop(force: true)
             // Same stuck-frame guard as handleSeekTo: a paused player
             // landing on a clip boundary keeps returning the pre-seek
             // buffer until preroll primes the output pipeline.
@@ -1778,12 +1780,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         Task { @MainActor [weak self] in
             let loop = await ClipAudioLoop.make(source: source, shaping: shaping)
             guard let self, generation == self.clipAudioGeneration,
-                !self.diagnosticDisposed, let loop
+                !self.diagnosticDisposed
             else {
                 loop?.release()
                 return
             }
+            // Cleared on a failed decode too, so the next equalizer change
+            // tries again rather than waiting for a decode that is over.
             self.clipAudioDecoding = false
+            guard let loop else { return }
             self.clipAudioLoopShapesVolumes = shapesVolumes
             self.adoptClipAudioLoop(loop)
             // Volumes or equalizers changed while it decoded.

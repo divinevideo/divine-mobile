@@ -27,11 +27,14 @@ enum EqualizedAudioFileTests {
         let (samples, channels, frames) = read(copy)
         precondition(channels == 2)
         precondition(frames == 48_000, "\(frames)")
-        let settled = stride(from: 24_000 * channels, to: samples.count, by: channels).map {
-            abs(samples[$0])
+        // Each channel through its own filters, both lifted alike.
+        for channel in 0..<channels {
+            let settled = stride(
+                from: 24_000 * channels + channel, to: samples.count, by: channels
+            ).map { abs(samples[$0]) }
+            let peak = settled.max() ?? 0
+            precondition(abs(peak - 0.392) < 0.01, "channel \(channel): \(peak)")
         }
-        let peak = settled.max() ?? 0
-        precondition(abs(peak - 0.392) < 0.01, "\(peak)")
     }
 
     static func aBoostIsLimitedAtTheExportCeiling() async {

@@ -145,6 +145,8 @@ enum AudioEqualizerTests {
                 ["type": "notch", "frequencyHz": 1000, "gainDb": 6],
                 ["type": "peak", "frequencyHz": 0, "gainDb": 6],
                 ["type": "peak", "gainDb": 6],
+                ["type": "peak", "frequencyHz": 1000, "gainDb": Double.nan],
+                ["type": "peak", "frequencyHz": Double.infinity, "gainDb": 6],
                 ["type": "lowShelf", "frequencyHz": 200, "gainDb": 6],
             ]
         ])
