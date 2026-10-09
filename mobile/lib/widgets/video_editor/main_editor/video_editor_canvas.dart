@@ -116,6 +116,33 @@ class VideoEditorCanvas extends StatelessWidget {
         previous.clips != current.clips;
   }
 
+  /// Syncs the canvas and [bloc] with the sub-editor pro_image_editor opened.
+  ///
+  /// Draw, filter and tune cannot zoom by design and their route covers only
+  /// the canvas body, so a zoomed canvas would stay visible around them
+  /// (#9955); their zoom is reset before they open.
+  @visibleForTesting
+  static void handleOpenSubEditor(
+    SubEditor editorMode, {
+    required ProImageEditorState? editor,
+    required VideoEditorMainBloc bloc,
+  }) {
+    if (editorMode case .paint || .filter || .tune) {
+      editor?.resetZoom();
+    }
+    final SubEditorType? subEditorType = switch (editorMode) {
+      .paint => .draw,
+      .text => .text,
+      .filter => .filter,
+      .tune => .tune,
+      .sticker => .stickers,
+      _ => null,
+    };
+    if (subEditorType != null) {
+      bloc.add(VideoEditorMainOpenSubEditor(subEditorType));
+    }
+  }
+
   /// Whether this editor session needs the Android legacy texture surface.
   ///
   /// The choice is sticky once enabled: changing surface implementations more
@@ -3098,17 +3125,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   name: 'VideoEditorCanvas',
                   category: LogCategory.video,
                 );
-                final SubEditorType? subEditorType = switch (editorMode) {
-                  .paint => .draw,
-                  .text => .text,
-                  .filter => .filter,
-                  .tune => .tune,
-                  .sticker => .stickers,
-                  _ => null,
-                };
-                if (subEditorType != null) {
-                  bloc.add(VideoEditorMainOpenSubEditor(subEditorType));
-                }
+                VideoEditorCanvas.handleOpenSubEditor(
+                  editorMode,
+                  editor: scope.editor,
+                  bloc: bloc,
+                );
               },
               onStartCloseSubEditor: (_) {
                 Log.debug(

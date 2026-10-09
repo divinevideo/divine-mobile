@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
@@ -18,7 +19,8 @@ import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
-import 'package:pro_image_editor/pro_image_editor.dart' show ProVideoController;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show ProImageEditorState, ProVideoController, SubEditor;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
@@ -751,6 +753,61 @@ void main() {
       expect(VideoEditorCanvas.clipsChanged([a], []), isTrue);
     });
   });
+
+  group('VideoEditorCanvas.handleOpenSubEditor', () {
+    late _MockProImageEditorState editor;
+    late _SpyVideoEditorMainBloc bloc;
+
+    setUp(() {
+      editor = _MockProImageEditorState();
+      bloc = _SpyVideoEditorMainBloc();
+      addTearDown(bloc.close);
+    });
+
+    for (final (mode, type) in [
+      (SubEditor.paint, SubEditorType.draw),
+      (SubEditor.filter, SubEditorType.filter),
+      (SubEditor.tune, SubEditorType.tune),
+    ]) {
+      test('resets the zoom and opens $type for $mode', () {
+        VideoEditorCanvas.handleOpenSubEditor(
+          mode,
+          editor: editor,
+          bloc: bloc,
+        );
+
+        verify(() => editor.resetZoom()).called(1);
+        expect(bloc.events, [VideoEditorMainOpenSubEditor(type)]);
+      });
+    }
+
+    for (final (mode, type) in [
+      (SubEditor.text, SubEditorType.text),
+      (SubEditor.sticker, SubEditorType.stickers),
+    ]) {
+      test('keeps the zoom and opens $type for $mode', () {
+        VideoEditorCanvas.handleOpenSubEditor(
+          mode,
+          editor: editor,
+          bloc: bloc,
+        );
+
+        verifyNever(() => editor.resetZoom());
+        expect(bloc.events, [VideoEditorMainOpenSubEditor(type)]);
+      });
+    }
+
+    test('keeps the zoom and opens nothing for an unmapped editor', () {
+      VideoEditorCanvas.handleOpenSubEditor(
+        SubEditor.cropRotate,
+        editor: editor,
+        bloc: bloc,
+      );
+
+      verifyNever(() => editor.resetZoom());
+      expect(bloc.events, isEmpty);
+    });
+  });
 }
 
 DivineVideoClip _createClip({
@@ -783,6 +840,12 @@ DivineVideoClip _createStopMotionClip({
     targetAspectRatio: model.AspectRatio.vertical,
     originalAspectRatio: 9 / 16,
   );
+}
+
+class _MockProImageEditorState extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockProImageEditorState';
 }
 
 /// Captures every event added to the bloc so tests can assert

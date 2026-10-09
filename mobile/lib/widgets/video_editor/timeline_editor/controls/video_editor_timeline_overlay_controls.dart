@@ -586,7 +586,6 @@ class _TuneOverlayControls extends StatelessWidget {
 
   void _editTuneSet({required BuildContext context}) {
     openTuneEditor(
-      context.read<VideoEditorMainBloc>(),
       context.read<VideoEditorTuneBloc>(),
       VideoEditorScope.of(context),
       editSetId: item.id,

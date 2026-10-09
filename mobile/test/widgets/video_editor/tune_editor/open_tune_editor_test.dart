@@ -1,9 +1,8 @@
 // ABOUTME: Tests for the openTuneEditor helper.
-// ABOUTME: Verifies it flips the main bloc into the tune sub-editor state.
+// ABOUTME: Verifies it records the tune session kind on the tune bloc.
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
@@ -13,7 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   // A scope with no mounted editor: `scope.editor` is null, so the
-  // pro_image_editor call is a no-op and only the bloc dispatch is exercised.
+  // pro_image_editor call is a no-op and only the tune bloc dispatch is exercised.
   VideoEditorScope buildScope() {
     final bodySize = ValueNotifier(Size.zero);
     addTearDown(bodySize.dispose);
@@ -40,36 +39,27 @@ void main() {
   }
 
   group('openTuneEditor', () {
-    test(
-      'opening for a new set flips the main bloc and records no set',
-      () async {
-        final mainBloc = VideoEditorMainBloc();
-        addTearDown(mainBloc.close);
-        final tuneBloc = VideoEditorTuneBloc();
-        addTearDown(tuneBloc.close);
-
-        expect(mainBloc.state.openSubEditor, isNull);
-
-        openTuneEditor(mainBloc, tuneBloc, buildScope());
-        await pumpEventQueue();
-
-        expect(mainBloc.state.openSubEditor, SubEditorType.tune);
-        expect(mainBloc.state.isSubEditorOpen, isTrue);
-        expect(tuneBloc.state.editingSetId, isNull);
-      },
-    );
-
     test('opening for an existing set records the edited set id', () async {
-      final mainBloc = VideoEditorMainBloc();
-      addTearDown(mainBloc.close);
       final tuneBloc = VideoEditorTuneBloc();
       addTearDown(tuneBloc.close);
 
-      openTuneEditor(mainBloc, tuneBloc, buildScope(), editSetId: 'set-1');
+      openTuneEditor(tuneBloc, buildScope(), editSetId: 'set-1');
       await pumpEventQueue();
 
-      expect(mainBloc.state.openSubEditor, SubEditorType.tune);
       expect(tuneBloc.state.editingSetId, 'set-1');
+    });
+
+    test('opening for a new set clears the previously edited set id', () async {
+      final tuneBloc = VideoEditorTuneBloc();
+      addTearDown(tuneBloc.close);
+      openTuneEditor(tuneBloc, buildScope(), editSetId: 'set-1');
+      await pumpEventQueue();
+      expect(tuneBloc.state.editingSetId, 'set-1');
+
+      openTuneEditor(tuneBloc, buildScope());
+      await pumpEventQueue();
+
+      expect(tuneBloc.state.editingSetId, isNull);
     });
   });
 }
