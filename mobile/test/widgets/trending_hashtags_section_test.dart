@@ -147,6 +147,7 @@ void main() {
           ),
         ],
       );
+      addTearDown(router.dispose);
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -160,7 +161,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('opened hashtag feed'), findsOneWidget);
-      router.dispose();
     });
 
     testWidgets('logs a rejected hashtag route push instead of leaking it', (
