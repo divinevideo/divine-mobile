@@ -8,6 +8,7 @@ require 'open3'
 
 SCHEMA_VERSION = 1
 HEX_SHA = /\A[0-9a-f]{40}\z/
+PUBLIC_PEOPLE_LIST_POLICY = 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS'
 
 def abort_with(message)
   warn("ERROR: #{message}")
@@ -117,6 +118,26 @@ def require_options(options, *names)
   abort_with("missing option(s): #{missing.map { |name| "--#{name.to_s.tr('_', '-')}" }.join(', ')}") unless missing.empty?
 end
 
+def authenticated_record(options)
+  record = read_json(options[:record], 'release provenance')
+  abort_with('release provenance must contain a JSON object') unless record.is_a?(Hash)
+  abort_with('unsupported release provenance schema') unless record['schema_version'] == SCHEMA_VERSION
+  abort_with('release provenance platform does not match the requested platform') unless record['platform'] == options[:platform]
+  abort_with('release provenance version does not match the requested release') unless record['release_version'] == options[:release_version]
+  abort_with('target release is not patchable because verified release configuration is unavailable') unless record['patchable'] == true
+
+  current_key_id = required_env('SHOREBIRD_PROVENANCE_HMAC_KEY_ID')
+  abort_with('release provenance uses a different configuration fingerprint key') unless record['config_fingerprint_key_id'] == current_key_id
+  expected_record_hmac = record['record_hmac']
+  calculated_record_hmac = record_hmac(record, fingerprint_key)
+  unless secure_compare(expected_record_hmac, calculated_record_hmac)
+    abort_with('release provenance authentication failed')
+  end
+
+  abort_with('release provenance config_fingerprints is invalid') unless record['config_fingerprints'].is_a?(Hash)
+  record
+end
+
 command = ARGV.shift
 options = parse_options(ARGV)
 
@@ -165,6 +186,12 @@ when 'emit'
   record['record_hmac'] = record_hmac(record, fingerprint_key)
 
   File.write(options[:output], JSON.pretty_generate(record) + "\n", mode: 'w', perm: 0o600)
+when 'policy-required'
+  require_options(options, :platform, :release_version, :record)
+  # Preserve a legacy release's actual define shape, rather than forgiving an
+  # extra key during verification. No unsigned record may select that shape.
+  record = authenticated_record(options)
+  puts record['config_fingerprints'].key?(PUBLIC_PEOPLE_LIST_POLICY)
 when 'verify'
   require_options(
     options,
@@ -177,20 +204,7 @@ when 'verify'
     :record,
     :env_output,
   )
-  record = read_json(options[:record], 'release provenance')
-  abort_with('release provenance must contain a JSON object') unless record.is_a?(Hash)
-  abort_with('unsupported release provenance schema') unless record['schema_version'] == SCHEMA_VERSION
-  abort_with('release provenance platform does not match the requested platform') unless record['platform'] == options[:platform]
-  abort_with('release provenance version does not match the requested release') unless record['release_version'] == options[:release_version]
-  abort_with('target release is not patchable because verified release configuration is unavailable') unless record['patchable'] == true
-
-  current_key_id = required_env('SHOREBIRD_PROVENANCE_HMAC_KEY_ID')
-  abort_with('release provenance uses a different configuration fingerprint key') unless record['config_fingerprint_key_id'] == current_key_id
-  expected_record_hmac = record['record_hmac']
-  calculated_record_hmac = record_hmac(record, fingerprint_key)
-  unless secure_compare(expected_record_hmac, calculated_record_hmac)
-    abort_with('release provenance authentication failed')
-  end
+  record = authenticated_record(options)
 
   required_shas = %w[build_source_commit source_tree_sha patch_baseline_commit shorebird_cli_revision]
   required_shas.each do |name|
@@ -211,7 +225,6 @@ when 'verify'
   end
 
   recorded_fingerprints = record['config_fingerprints']
-  abort_with('release provenance config_fingerprints is invalid') unless recorded_fingerprints.is_a?(Hash)
 
   defines = read_json(options[:defines], 'dart-defines file')
   abort_with('dart-defines file must contain a JSON object') unless defines.is_a?(Hash)
@@ -236,5 +249,5 @@ when 'verify'
 
   File.write(options[:env_output], "SHOREBIRD_PATCH_BASELINE_COMMIT=#{baseline}\n", mode: 'w', perm: 0o600)
 else
-  abort_with('usage: shorebird_provenance.rb emit|verify [options]')
+  abort_with('usage: shorebird_provenance.rb emit|policy-required|verify [options]')
 end

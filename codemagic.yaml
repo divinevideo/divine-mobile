@@ -250,6 +250,10 @@ definitions:
         )
         File.chmod(0o600, 'build/shorebird/dart_defines.json')
         RUBY
+    - &write_shorebird_people_list_defines
+      name: Write Shorebird public-list policy
+      script: |
+        set -euo pipefail
         python3 scripts/write_public_people_list_defines.py \
           --output build/shorebird/dart_defines.json --merge \
           --github-repository "$CM_REPO_SLUG"
@@ -312,6 +316,18 @@ definitions:
         SHOREBIRD_REVISION=$(git -C "$HOME/.shorebird" rev-parse HEAD)
         bash scripts/shorebird_provenance_store.sh fetch \
           "$SHOREBIRD_PLATFORM" "${{ inputs.RELEASE_VERSION }}" "$PROVENANCE_PATH"
+        PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=$(ruby scripts/shorebird_provenance.rb policy-required \
+          --platform "$SHOREBIRD_PLATFORM" \
+          --release-version "${{ inputs.RELEASE_VERSION }}" \
+          --record "$PROVENANCE_PATH")
+        if [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" = "true" ]; then
+          python3 scripts/write_public_people_list_defines.py \
+            --output build/shorebird/dart_defines.json --merge \
+            --github-repository "$CM_REPO_SLUG"
+        elif [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" != "false" ]; then
+          echo "ERROR: could not establish the release's public-list policy shape."
+          exit 1
+        fi
         ruby scripts/shorebird_provenance.rb verify \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "${{ inputs.RELEASE_VERSION }}" \
@@ -1056,6 +1072,7 @@ workflows:
       - *prepare_ios_spm_packages
       - *pod_install
       - *write_shorebird_dart_defines
+      - *write_shorebird_people_list_defines
       - *build_ios
       - *emit_shorebird_provenance
       - *upload_dsyms_to_crashlytics
@@ -1179,6 +1196,7 @@ workflows:
       - *write_shorebird_public_key
       - *preflight_shorebird_android_release
       - *write_shorebird_dart_defines
+      - *write_shorebird_people_list_defines
       - *build_apk
       - *precache_shorebird_android_artifacts
       - *build_aab
