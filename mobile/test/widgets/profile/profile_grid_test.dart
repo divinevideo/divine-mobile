@@ -242,6 +242,8 @@ void main() {
       CuratedListService? curatedListService,
       BookmarksRepository? bookmarksRepository,
       Locale? locale,
+      List<VideoEvent> videos = const [],
+      ScrollController? scrollController,
       List<Override> additionalOverrides = const [],
     }) {
       final grid = MultiBlocProvider(
@@ -253,8 +255,9 @@ void main() {
           key: const ValueKey('profile-grid'),
           userIdHex: userIdHex,
           isOwnProfile: isOwnProfile,
-          videos: const [],
+          videos: videos,
           isLoadingVideos: isLoadingVideos,
+          scrollController: scrollController,
         ),
       );
 
@@ -1191,6 +1194,171 @@ void main() {
       expect(find.byType(Tab), findsNWidgets(5));
       // The viewer's own list is not opened while looking at someone else.
       verifyNever(bookmarksRepository.watchGlobalBookmarks);
+    });
+
+    List<VideoEvent> videos(int count) => [
+      for (var i = 0; i < count; i++)
+        VideoEvent(
+          id: i.toRadixString(16).padLeft(64, '0'),
+          pubkey: userIdHex,
+          createdAt: 1704067200 - i,
+          content: '',
+          timestamp: DateTime.utc(2024),
+          videoUrl: 'https://example.com/$i.mp4',
+          thumbnailUrl: 'https://example.com/$i.jpg',
+        ),
+    ];
+
+    Future<void> scrollAllTheWayUp(WidgetTester tester) async {
+      for (var i = 0; i < 6; i++) {
+        await tester.drag(
+          find.byType(NestedScrollView),
+          const Offset(0, -800),
+        );
+        await tester.pumpAndSettle();
+      }
+    }
+
+    testWidgets("stops once a short tab's last row reaches the bottom", (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(3),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final lastRowBottom = tester
+          .getBottomLeft(find.bySemanticsIdentifier('video_thumbnail_2'))
+          .dy;
+      final screenBottom = tester
+          .getBottomLeft(find.byType(NestedScrollView))
+          .dy;
+      expect(lastRowBottom, moreOrLessEquals(screenBottom, epsilon: 1));
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
+    });
+
+    testWidgets("a fling stops at the short tab's last row too", (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(3),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -300),
+        4000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .getBottomLeft(find.bySemanticsIdentifier('video_thumbnail_2'))
+            .dy,
+        moreOrLessEquals(
+          tester.getBottomLeft(find.byType(NestedScrollView)).dy,
+          epsilon: 1,
+        ),
+      );
+    });
+
+    testWidgets('keeps an empty tab and its message on screen', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final screenBottom = tester
+          .getBottomLeft(find.byType(NestedScrollView))
+          .dy;
+      expect(
+        tester.getBottomLeft(find.text(l10n.profileNoVideosTitle)).dy,
+        lessThan(screenBottom),
+      );
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
+    });
+
+    testWidgets('leaves an empty tab one row and the safe area of room', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      const bottomSafeArea = 34.0;
+      tester.view.viewPadding = FakeViewPadding(
+        bottom: bottomSafeArea * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetViewPadding);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final screen = tester.getRect(find.byType(NestedScrollView));
+      final rowHeight = (screen.width - 2 * 4) / 3;
+      final tabsBottom = tester.getBottomLeft(find.byType(TabBar)).dy;
+      expect(
+        screen.bottom - tabsBottom,
+        greaterThanOrEqualTo(rowHeight + bottomSafeArea),
+      );
+    });
+
+    testWidgets('still scrolls the header fully away on a long tab', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      expect(
+        scrollController.offset,
+        equals(scrollController.position.maxScrollExtent),
+      );
     });
   });
 }

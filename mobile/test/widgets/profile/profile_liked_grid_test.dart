@@ -228,6 +228,42 @@ void main() {
         expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
       });
 
+      testWidgets('last row stops above the bottom safe area', (
+        tester,
+      ) async {
+        const bottomInset = 34.0;
+        tester.view.viewPadding = FakeViewPadding(
+          bottom: bottomInset * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewPadding);
+        when(() => mockBloc.state).thenReturn(
+          ProfileLikedVideosState(
+            status: ProfileLikedVideosStatus.success,
+            videos: _createTestVideos(count: 30),
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -5000),
+        );
+        await tester.pumpAndSettle();
+
+        final lastRowBottom = tester
+            .getBottomLeft(
+              find.bySemanticsIdentifier(SemanticIds.likedVideoThumbnail(29)),
+            )
+            .dy;
+        final viewportBottom = tester
+            .getBottomLeft(find.byType(CustomScrollView))
+            .dy;
+        expect(
+          lastRowBottom,
+          moreOrLessEquals(viewportBottom - bottomInset, epsilon: 1),
+        );
+      });
+
       testWidgets('keeps cached grid on screen while refreshing', (
         tester,
       ) async {

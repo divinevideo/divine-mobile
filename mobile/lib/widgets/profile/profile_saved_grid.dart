@@ -17,6 +17,7 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
@@ -153,7 +154,10 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
                 );
               }, childCount: savedVideos.length),
             ),
-            if (state.isLoadingMore) const ProfileTabLoadingMoreSliver(),
+            if (state.isLoadingMore)
+              const ProfileTabLoadingMoreSliver()
+            else
+              const ProfileTabBottomInsetSliver(),
           ],
         );
       },

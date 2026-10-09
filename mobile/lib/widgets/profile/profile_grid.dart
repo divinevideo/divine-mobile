@@ -2,6 +2,7 @@
 // ABOUTME: Reusable between own profile and others' profile screens
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/blocs/profile_liked_videos/profile_liked_videos_bloc.da
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -32,6 +34,7 @@ import 'package:openvine/widgets/profile/profile_comments_grid.dart';
 import 'package:openvine/widgets/profile/profile_header_widget.dart';
 import 'package:openvine/widgets/profile/profile_liked_grid.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
+import 'package:openvine/widgets/profile/profile_outer_scroll_physics.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
 import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bar.dart';
@@ -241,6 +244,17 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   /// and compute the tab bar top inset accordingly.
   final GlobalKey _headerKey = GlobalKey();
 
+  /// Measure the inputs of [_outerScrollLimit]: the whole scrolling header
+  /// (banner included), the tab bar at rest, and each tab's content.
+  final GlobalKey _headerSliverKey = GlobalKey();
+  final GlobalKey _tabBarKey = GlobalKey();
+  final GlobalKey<NestedScrollViewState> _nestedScrollKey = GlobalKey();
+  final Map<ProfileTabKind, GlobalKey> _tabContentKeys = {};
+
+  /// Cached in [build] so the scroll physics can read them mid-layout.
+  double _safeAreaTop = 0;
+  double _safeAreaBottom = 0;
+
   @override
   void initState() {
     super.initState();
@@ -276,6 +290,87 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     notifier.state = {...notifier.state, _tabIndexKey: tabController.index};
 
     _syncCurrentTabIfNeeded();
+
+    if (!tabController.indexIsChanging) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _settleOuterScrollToLimit(),
+      );
+    }
+  }
+
+  /// How far the header may scroll for the active tab, so a tab with only a
+  /// row or two cannot be pushed up into an empty screen.
+  double? _outerScrollLimit(double viewportExtent) {
+    final tabContext =
+        _tabContentKeys[_tabKinds[tabController.index]]?.currentContext;
+    final content = profileTabContentExtent(tabContext);
+    final tabBox = tabContext?.findRenderObject();
+    final header = _measuredHeight(_headerSliverKey);
+    final tabBar = _measuredHeight(_tabBarKey);
+    if (content == null ||
+        tabBox is! RenderBox ||
+        !tabBox.hasSize ||
+        header == null ||
+        tabBar == null) {
+      return null;
+    }
+    final minimumContent = profileTabMinimumContentExtent(
+      tabWidth: tabBox.size.width,
+      bottomSafeArea: _safeAreaBottom,
+    );
+    return profileOuterScrollExtentFor(
+      header: header,
+      tabBar: tabBar,
+      safeAreaTop: _safeAreaTop,
+      content: math.max(content, minimumContent),
+      viewport: viewportExtent,
+    );
+  }
+
+  double? _measuredHeight(GlobalKey key) {
+    final box = key.currentContext?.findRenderObject();
+    return box is RenderBox && box.hasSize ? box.size.height : null;
+  }
+
+  bool _onScrollEnd(ScrollEndNotification _) {
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _releaseInnerOverscroll(),
+    );
+    return false;
+  }
+
+  /// A tab's viewport is sized a frame behind the header, so a gesture that
+  /// meets [_outerScrollLimit] can hand the tab a few pixels it no longer has
+  /// once the header settles. Ease the tab back to its end.
+  void _releaseInnerOverscroll() {
+    final inner = _nestedScrollKey.currentState?.innerController;
+    if (!mounted || inner == null) return;
+    for (final position in inner.positions) {
+      if (position is ScrollActivityDelegate &&
+          position.pixels > position.maxScrollExtent &&
+          !position.isScrollingNotifier.value) {
+        (position as ScrollActivityDelegate).goBallistic(0);
+      }
+    }
+  }
+
+  /// Brings the header back down when the newly selected tab is shorter
+  /// than the offset the previous tab was scrolled to.
+  void _settleOuterScrollToLimit() {
+    final controller = widget.scrollController;
+    if (!mounted || controller == null || !controller.hasClients) return;
+    final position = controller.position;
+    final limit = _outerScrollLimit(position.viewportDimension);
+    if (limit == null || position.pixels <= limit) return;
+    final duration = kThemeAnimationDuration.autoReduceMotion(context);
+    if (duration == Duration.zero) {
+      controller.jumpTo(limit);
+    } else {
+      _runDetached(
+        controller.animateTo(limit, duration: duration, curve: Curves.easeOut),
+        'settle profile header to tab height',
+      );
+    }
   }
 
   /// Dispatch the lazy-load event for the currently selected tab, unless it
@@ -555,6 +650,8 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
   @override
   Widget build(BuildContext context) {
+    _safeAreaTop = MediaQuery.paddingOf(context).top;
+    _safeAreaBottom = MediaQuery.viewPaddingOf(context).bottom;
     final followRepository = ref.watch(followRepositoryProvider);
     final likesRepository = ref.watch(likesRepositoryProvider);
     final repostsRepository = ref.watch(repostsRepositoryProvider);
@@ -751,9 +848,18 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         color: context.vineColors.isLight
             ? context.vineColors.surface
             : context.vineColors.surfaceContainerHigh,
-        child: TabBarView(
-          controller: tabController,
-          children: [for (final kind in _tabKinds) _gridForKind(kind)],
+        child: NotificationListener<ScrollEndNotification>(
+          onNotification: _onScrollEnd,
+          child: TabBarView(
+            controller: tabController,
+            children: [
+              for (final kind in _tabKinds)
+                KeyedSubtree(
+                  key: _tabContentKeys.putIfAbsent(kind, GlobalKey.new),
+                  child: _gridForKind(kind),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -770,14 +876,19 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
           child: DefaultTabController(
             length: _tabKinds.length,
             child: NestedScrollView(
+              key: _nestedScrollKey,
               controller: widget.scrollController,
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: ClampingScrollPhysics(),
+              physics: ProfileOuterScrollPhysics(
+                scrollLimit: _outerScrollLimit,
+                parent: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
               ),
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 // Profile Header (GlobalKey for measuring height)
                 SliverToBoxAdapter(
                   child: Stack(
+                    key: _headerSliverKey,
                     children: [
                       ProfileBannerLayer(
                         userIdHex: widget.userIdHex,
@@ -815,6 +926,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
                     for (final kind in _tabKinds) _tabPresentationFor(kind),
                   ],
                   headerKey: _headerKey,
+                  barKey: _tabBarKey,
                   // Sticky cache-revalidation bar for the active cached tab.
                   isRefreshing: _activeTabRefreshing(videosRefreshing),
                 ),
