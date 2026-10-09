@@ -22,6 +22,7 @@ const _trainedAlgorithmicMedia =
 const _compositeCapture =
     'http://cv.iptc.org/newscodes/digitalsourcetype/compositeCapture';
 const _cachedPem = 'cached-pem';
+const _untrustedCode = 'signingCredential.untrusted';
 
 /// BIP-340 test-vector key, so bindings in these reports carry a real
 /// signature.
@@ -37,14 +38,28 @@ Map<String, dynamic> _capture({Map<String, dynamic>? binding}) => {
   ],
 };
 
+/// An ingredient as the reader reports it. One with a manifest carries the
+/// validation recorded when it was added: the app signs without trust
+/// anchors, so that is always `signingCredential.untrusted`, plus
+/// [recordedFailures].
 Map<String, dynamic> _ingredient(
   String? activeManifest, {
   String relationship = 'parentOf',
   String format = 'video/mp4',
+  List<String> recordedFailures = const [],
 }) => {
   'format': format,
   'relationship': relationship,
   'active_manifest': ?activeManifest,
+  if (activeManifest != null)
+    'validation_results': {
+      'activeManifest': {
+        'failure': [
+          for (final code in [_untrustedCode, ...recordedFailures])
+            {'code': code},
+        ],
+      },
+    },
 };
 
 Map<String, dynamic> _edit(
@@ -70,24 +85,61 @@ Map<String, dynamic> _composite(List<Map<String, dynamic>> ingredients) => {
   ],
 };
 
-Map<String, dynamic> _chain(Map<String, Map<String, dynamic>> manifests) => {
-  'active_manifest': manifests.keys.first,
-  'manifests': manifests,
-  'validation_state': 'Trusted',
-  'validation_results': {
-    'activeManifest': {
-      'success': [
-        {'code': 'claimSignature.validated'},
+/// A trusted report over [manifests], the first being the active one.
+///
+/// The reader reports an ingredient's trusted signer as a delta from the
+/// untrusted one recorded when it was added, and an [untrusted] ingredient,
+/// whose status did not change, not at all.
+Map<String, dynamic> _chain(
+  Map<String, Map<String, dynamic>> manifests, {
+  Set<String> untrusted = const {},
+}) {
+  final active = manifests.keys.first;
+  return {
+    'active_manifest': active,
+    'manifests': manifests,
+    'validation_state': 'Trusted',
+    'validation_results': {
+      'activeManifest': {
+        'success': [
+          {'code': 'claimSignature.validated'},
+          _trustedSigner(active),
+        ],
+        'failure': <Map<String, dynamic>>[],
+      },
+      'ingredientDeltas': [
+        for (final label in manifests.keys.skip(1))
+          if (!untrusted.contains(label))
+            {
+              'ingredientAssertionURI':
+                  'self#jumbf=/c2pa/$active/c2pa.assertions/c2pa.ingredient.v3',
+              'validationDeltas': {
+                'success': [_trustedSigner(label)],
+                'informational': <Map<String, dynamic>>[],
+                'failure': <Map<String, dynamic>>[],
+              },
+            },
       ],
-      'failure': <Map<String, dynamic>>[],
     },
-  },
+  };
+}
+
+Map<String, dynamic> _trustedSigner(String label) => {
+  'code': 'signingCredential.trusted',
+  'url': 'self#jumbf=/c2pa/$label/c2pa.signature',
 };
 
-/// A creator binding signed with [_bindingKey], as the reader returns it:
-/// keys sorted, which is not the order they were signed in.
-Map<String, dynamic> _binding({bool tampered = false}) {
-  final pubkey = schnorr.getPublicKey(_bindingKey);
+/// Another BIP-340 test-vector key, for a second person in a history.
+const _otherBindingKey =
+    'c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b14e5c9';
+
+/// A creator binding signed with [key], as the reader returns it: keys
+/// sorted, which is not the order they were signed in.
+Map<String, dynamic> _binding({
+  bool tampered = false,
+  String key = _bindingKey,
+}) {
+  final pubkey = schnorr.getPublicKey(key);
   final unsigned = <String, dynamic>{
     'version': 1,
     'pubkey': pubkey,
@@ -98,7 +150,7 @@ Map<String, dynamic> _binding({bool tampered = false}) {
     'hard_binding': {'alg': 'sha256', 'value': 'ab' * 32},
   };
   final digest = sha256.convert(utf8.encode(jsonEncode(unsigned))).toString();
-  final signature = schnorr.sign(_bindingKey, digest, 'cd' * 32);
+  final signature = schnorr.sign(key, digest, 'cd' * 32);
   final data = {
     ...unsigned,
     if (tampered) 'created_at': '2026-10-09T09:00:00.000Z',
@@ -322,6 +374,22 @@ void main() {
           expect(result.status, equals(ClipProvenanceStatus.verified));
         });
 
+        test('verifies a merge of a recording with an edit of the same '
+            'recording', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'merged': _composite([
+                _ingredient('rec', relationship: 'componentOf'),
+                _ingredient('edit', relationship: 'componentOf'),
+              ]),
+              'edit': _edit([_ingredient('rec')]),
+              'rec': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+        });
+
         test('rejects an edit of a video with no manifest', () {
           final result = ClipProvenanceVerifier.evaluate(
             _chain({
@@ -346,7 +414,7 @@ void main() {
           expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
         });
 
-        test('rejects an ingredient the reader does not validate', () {
+        test('rejects an ingredient that was only an input', () {
           final result = ClipProvenanceVerifier.evaluate(
             _chain({
               'edit': _edit([
@@ -384,10 +452,34 @@ void main() {
           expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
         });
 
-        test('collects everyone whose binding verifies along the chain', () {
+        test('credits the editor, then the recorder', () {
           final result = ClipProvenanceVerifier.evaluate(
             _chain({
-              'edit': _edit([_ingredient('rec')], binding: _binding()),
+              'edit': _edit(
+                [_ingredient('rec')],
+                binding: _binding(key: _otherBindingKey),
+              ),
+              'rec': _capture(binding: _binding()),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.verified));
+          expect(
+            result.contributors,
+            equals([
+              schnorr.getPublicKey(_otherBindingKey),
+              schnorr.getPublicKey(_bindingKey),
+            ]),
+          );
+        });
+
+        test('credits no one whose binding does not verify', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit(
+                [_ingredient('rec')],
+                binding: _binding(key: _otherBindingKey),
+              ),
               'rec': _capture(binding: _binding(tampered: true)),
             }),
           );
@@ -395,8 +487,38 @@ void main() {
           expect(result.status, equals(ClipProvenanceStatus.verified));
           expect(
             result.contributors,
-            equals([schnorr.getPublicKey(_bindingKey)]),
+            equals([schnorr.getPublicKey(_otherBindingKey)]),
           );
+        });
+
+        test('rejects an edit of a video signed outside the anchors', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain(
+              {
+                'edit': _edit([_ingredient('forged')]),
+                'forged': _capture(),
+              },
+              untrusted: {'forged'},
+            ),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.untrustedSigner));
+        });
+
+        test('rejects an edit of a video that had failed validation', () {
+          final result = ClipProvenanceVerifier.evaluate(
+            _chain({
+              'edit': _edit([
+                _ingredient(
+                  'rec',
+                  recordedFailures: ['assertion.bmffHash.mismatch'],
+                ),
+              ]),
+              'rec': _capture(),
+            }),
+          );
+
+          expect(result.status, equals(ClipProvenanceStatus.invalid));
         });
       });
 

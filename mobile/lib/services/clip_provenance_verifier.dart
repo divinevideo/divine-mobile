@@ -1,5 +1,5 @@
-// ABOUTME: Decides whether a video file is an untouched Divine camera capture.
-// ABOUTME: Reads its C2PA manifest with only the ProofSign signers trusted.
+// ABOUTME: Decides whether a video file is a Divine camera capture or a signed
+// ABOUTME: edit of captures, trusting only the ProofSign signers.
 
 import 'dart:convert';
 
@@ -22,11 +22,13 @@ enum ClipProvenanceStatus {
   /// The file carries no C2PA manifest.
   noCredentials,
 
-  /// The manifest is intact but its signer is not a trusted ProofSign signer.
+  /// The manifest is intact but its signer, or the signer of a video in its
+  /// history, is not a trusted ProofSign signer.
   untrustedSigner,
 
   /// The manifest fails validation, e.g. the video no longer matches the hash
-  /// it was signed over.
+  /// it was signed over, or a video in its history had failed validation when
+  /// it was edited.
   invalid,
 
   /// The history does not lead back to camera captures, or names a
@@ -89,15 +91,17 @@ typedef C2paManifestStoreReader = Future<String?> Function(
   String settingsJson,
 );
 
-/// Checks that a video was recorded with the Divine camera and has not been
-/// changed since.
+/// Checks that a video was recorded with the Divine camera, or made from such
+/// recordings through edits the app signed, and has not been changed since.
 ///
 /// Every Divine recording is signed on capture by ProofSign, the only signer
 /// the app uses, with a `c2pa.created` action of source type
-/// `digitalCapture`. The check therefore trusts exactly the ProofSign
-/// anchors from [C2paTrustAnchorService] and nothing else. A manifest from
-/// any other signer is rejected even if it claims a camera capture, because
-/// anyone can sign that claim with a self-made certificate.
+/// `digitalCapture`, and every edit the app keeps is signed by ProofSign with
+/// its sources as ingredients. The check therefore trusts exactly the
+/// ProofSign anchors from [C2paTrustAnchorService] and nothing else, for the
+/// file and for every video in its history. A manifest from any other signer
+/// is rejected even if it claims a camera capture, because anyone can sign
+/// that claim with a self-made certificate.
 ///
 /// It runs entirely on the device, so a private clip is never sent anywhere
 /// to be checked, and remote manifests and OCSP are never fetched.
@@ -117,6 +121,10 @@ class ClipProvenanceVerifier {
   static const String _createdAction = 'c2pa.created';
   static const String _openedAction = 'c2pa.opened';
   static const String _untrustedCode = 'signingCredential.untrusted';
+  static const String _trustedCode = 'signingCredential.trusted';
+
+  /// A status URL naming a manifest's signature, which captures its label.
+  static final RegExp _signatureUrl = RegExp(r'/c2pa/([^/]+)/c2pa\.signature');
   static const String _digitalCaptureSuffix =
       'newscodes/digitalsourcetype/digitalCapture';
   static const String _compositeCaptureSuffix =
@@ -233,10 +241,11 @@ class ClipProvenanceVerifier {
   /// Judges a C2PA reader report.
   ///
   /// Passes only a report whose active manifest validates as `Trusted` with
-  /// no failure codes, records a `c2pa.created` camera capture, and whose
-  /// manifests name no source type other than a camera capture in any
-  /// action — so an AI-generated or composited ingredient anywhere in the
-  /// history fails the clip.
+  /// no failure codes, whose history leads back to `c2pa.created` camera
+  /// captures through edits and composites signed by trusted signers (see
+  /// [_HistoryWalk]), and whose manifests name no source type other than a
+  /// camera capture or a composite of captures in any action, so an
+  /// AI-generated ingredient anywhere in the history fails the clip.
   @visibleForTesting
   static ClipProvenanceResult evaluate(Map<String, dynamic> report) {
     final activeId = report['active_manifest'];
@@ -270,17 +279,15 @@ class ClipProvenanceVerifier {
             _isCaptureSource(action['digitalSourceType']),
       ),
     );
-    final contributors = <String>[];
-    final leadsToCaptures = _leadsToCaptures(
-      manifests,
-      activeId,
-      depth: 0,
-      visiting: <String>{},
-      contributors: contributors,
-    );
-    if (!everySourceIsCapture || !leadsToCaptures) {
+    final walk = _HistoryWalk(manifests, _trustedManifestLabels(report));
+    if (!everySourceIsCapture || !walk.leadsToCaptures(activeId)) {
+      final problems = walk.problems;
       return ClipProvenanceResult(
-        ClipProvenanceStatus.notCameraCapture,
+        problems.contains(ClipProvenanceStatus.invalid)
+            ? ClipProvenanceStatus.invalid
+            : problems.contains(ClipProvenanceStatus.untrustedSigner)
+            ? ClipProvenanceStatus.untrustedSigner
+            : ClipProvenanceStatus.notCameraCapture,
         activeManifestId: activeId,
       );
     }
@@ -288,85 +295,46 @@ class ClipProvenanceVerifier {
     return ClipProvenanceResult(
       ClipProvenanceStatus.verified,
       activeManifestId: activeId,
-      contributors: List.unmodifiable(contributors),
+      contributors: List.unmodifiable(walk.contributors),
     );
   }
 
-  /// Whether the manifest [label] is a camera capture, or an edit or a
-  /// composite whose video sources all are, recursively.
+  /// Labels of the manifests in [report] whose signer the reader found among
+  /// the trusted anchors.
   ///
-  /// A capture is `c2pa.created` with the `digitalCapture` source type; its
-  /// ingredients are not followed. An edit starts with `c2pa.opened` and has
-  /// exactly one `parentOf` video. A composite is `c2pa.created` with the
-  /// `compositeCapture` source type and at least one video component. Any
-  /// other video ingredient must lead back to captures too; an image or a
-  /// sound without a manifest is a declared component and is accepted, while
-  /// one with a manifest is covered by the source-type check over every
-  /// manifest in the store. Creator bindings of every manifest on the way are
-  /// collected into [contributors].
-  static bool _leadsToCaptures(
-    Map<dynamic, dynamic> manifests,
-    String label, {
-    required int depth,
-    required Set<String> visiting,
-    required List<String> contributors,
-  }) {
-    if (depth > maxChainDepth || !visiting.add(label)) return false;
-    final manifest = manifests[label];
-    if (manifest is! Map) return false;
-    _collectContributors(manifest, contributors);
+  /// The reader checks the signer of every manifest in the store, but for an
+  /// ingredient it reports only what differs from the validation recorded
+  /// when that ingredient was added. The app signs without trust anchors, so
+  /// every ingredient is recorded as `signingCredential.untrusted`: a trusted
+  /// ingredient then shows up as a `signingCredential.trusted` delta, while an
+  /// untrusted one, such as a self-signed manifest, leaves no trace at all.
+  /// Requiring the trusted code is therefore the only way to tell them apart.
+  static Set<String> _trustedManifestLabels(Map<String, dynamic> report) {
+    final labels = <String>{};
 
-    final actions = _actionsOf(manifest).toList();
-    if (actions.isEmpty) return false;
-    final first = actions.first;
-    final sourceType = first['digitalSourceType'];
-    final ingredients = switch (manifest['ingredients']) {
-      final List<dynamic> list =>
-        list.whereType<Map<dynamic, dynamic>>().toList(),
-      _ => const <Map<dynamic, dynamic>>[],
-    };
-
-    bool ingredientLeadsToCaptures(Map<dynamic, dynamic> ingredient) {
-      if (ingredient['relationship'] == 'inputTo') return false;
-      final format = ingredient['format'];
-      final ingredientLabel = ingredient['active_manifest'];
-      final isVideo = format is String && format.startsWith('video/');
-      if (!isVideo) return true;
-      return ingredientLabel is String &&
-          _leadsToCaptures(
-            manifests,
-            ingredientLabel,
-            depth: depth + 1,
-            visiting: visiting,
-            contributors: contributors,
-          );
+    void collect(Object? entries) {
+      if (entries is! List) return;
+      for (final entry in entries.whereType<Map<dynamic, dynamic>>()) {
+        final url = entry['url'];
+        if (entry['code'] != _trustedCode || url is! String) continue;
+        final label = _signatureUrl.firstMatch(url)?.group(1);
+        if (label != null) labels.add(label);
+      }
     }
 
-    bool isVideo(Map<dynamic, dynamic> ingredient) {
-      final format = ingredient['format'];
-      return format is String && format.startsWith('video/');
+    final results = report['validation_results'];
+    if (results is Map) {
+      final active = results['activeManifest'];
+      if (active is Map) collect(active['success']);
+      final deltas = results['ingredientDeltas'];
+      if (deltas is List) {
+        for (final delta in deltas.whereType<Map<dynamic, dynamic>>()) {
+          final validation = delta['validationDeltas'];
+          if (validation is Map) collect(validation['success']);
+        }
+      }
     }
-
-    switch (first['action']) {
-      case _createdAction when _isCameraCapture(sourceType):
-        return true;
-      case _createdAction when _isCompositeCapture(sourceType):
-        return ingredients.any(isVideo) &&
-            ingredients.every(
-              (ingredient) =>
-                  ingredient['relationship'] != 'parentOf' &&
-                  ingredientLeadsToCaptures(ingredient),
-            );
-      case _openedAction:
-        final parents = ingredients
-            .where((ingredient) => ingredient['relationship'] == 'parentOf')
-            .toList();
-        return parents.length == 1 &&
-            isVideo(parents.single) &&
-            ingredients.every(ingredientLeadsToCaptures);
-      default:
-        return false;
-    }
+    return labels;
   }
 
   /// Adds the verified signer of every creator binding in [manifest].
@@ -420,7 +388,10 @@ class ClipProvenanceVerifier {
 
   /// Every failure code the report lists, from both the legacy
   /// `validation_status` array and the `validation_results` tree.
-  static List<String> _failureCodes(Map<String, dynamic> report) {
+  ///
+  /// An ingredient carries the same two fields, holding the validation
+  /// recorded when it was added, so this reads those too.
+  static List<String> _failureCodes(Map<dynamic, dynamic> report) {
     final codes = <String>[];
 
     void collect(Object? entries) {
@@ -476,5 +447,127 @@ class ClipProvenanceVerifier {
     } finally {
       settings.dispose();
     }
+  }
+}
+
+/// One walk over a manifest store's history, from the active manifest back to
+/// the recordings it was made from.
+///
+/// A capture is `c2pa.created` with the `digitalCapture` source type; its
+/// ingredients are not followed. An edit starts with `c2pa.opened` and has
+/// exactly one `parentOf` video. A composite is `c2pa.created` with the
+/// `compositeCapture` source type and at least one video component. Every
+/// video ingredient must lead back to captures the same way, and its manifest
+/// must be signed by a trusted signer and must have validated when it was
+/// added. An image or a sound without a manifest is a declared component and
+/// is accepted, while one with a manifest is covered by the source-type check
+/// over every manifest in the store.
+class _HistoryWalk {
+  _HistoryWalk(this._manifests, this._trustedLabels);
+
+  final Map<dynamic, dynamic> _manifests;
+
+  /// Manifests whose signer the reader found among the trusted anchors.
+  final Set<String> _trustedLabels;
+
+  /// Signers of the creator bindings that verify, from the latest edit back
+  /// to the recordings.
+  final List<String> contributors = [];
+
+  /// Why an ingredient was refused, when that is more than its history not
+  /// leading back to captures.
+  final Set<ClipProvenanceStatus> problems = {};
+
+  /// Manifests on the path being followed, so a history that refers back to
+  /// itself is rejected.
+  final Set<String> _visiting = {};
+
+  /// Manifests already shown to lead back to captures.
+  ///
+  /// The store holds each manifest once, so a recording used twice, such as
+  /// on its own and again through an edit of it in the same merge, is reached
+  /// along two paths and judged only once. A refusal is not remembered: it
+  /// can come from the depth limit on a longer path than the next one.
+  final Set<String> _proven = {};
+
+  /// Whether the manifest [label] is a camera capture, or an edit or a
+  /// composite whose video sources all are, recursively. Creator bindings of
+  /// every manifest on the way are collected into [contributors].
+  bool leadsToCaptures(String label, {int depth = 0}) {
+    if (_proven.contains(label)) return true;
+    if (depth > ClipProvenanceVerifier.maxChainDepth) return false;
+    if (!_visiting.add(label)) return false;
+    final leads = _manifestLeadsToCaptures(label, depth);
+    _visiting.remove(label);
+    if (leads) _proven.add(label);
+    return leads;
+  }
+
+  bool _manifestLeadsToCaptures(String label, int depth) {
+    final manifest = _manifests[label];
+    if (manifest is! Map) return false;
+    ClipProvenanceVerifier._collectContributors(manifest, contributors);
+
+    final actions = ClipProvenanceVerifier._actionsOf(manifest).toList();
+    if (actions.isEmpty) return false;
+    final first = actions.first;
+    final sourceType = first['digitalSourceType'];
+    final ingredients = switch (manifest['ingredients']) {
+      final List<dynamic> list =>
+        list.whereType<Map<dynamic, dynamic>>().toList(),
+      _ => const <Map<dynamic, dynamic>>[],
+    };
+
+    switch (first['action']) {
+      case ClipProvenanceVerifier._createdAction
+          when ClipProvenanceVerifier._isCameraCapture(sourceType):
+        return true;
+      case ClipProvenanceVerifier._createdAction
+          when ClipProvenanceVerifier._isCompositeCapture(sourceType):
+        return ingredients.any(_isVideo) &&
+            ingredients.every(
+              (ingredient) =>
+                  ingredient['relationship'] != 'parentOf' &&
+                  _ingredientLeadsToCaptures(ingredient, depth),
+            );
+      case ClipProvenanceVerifier._openedAction:
+        final parents = ingredients
+            .where((ingredient) => ingredient['relationship'] == 'parentOf')
+            .toList();
+        return parents.length == 1 &&
+            _isVideo(parents.single) &&
+            ingredients.every(
+              (ingredient) => _ingredientLeadsToCaptures(ingredient, depth),
+            );
+      default:
+        return false;
+    }
+  }
+
+  bool _ingredientLeadsToCaptures(
+    Map<dynamic, dynamic> ingredient,
+    int depth,
+  ) {
+    if (ingredient['relationship'] == 'inputTo') return false;
+    if (!_isVideo(ingredient)) return true;
+    final label = ingredient['active_manifest'];
+    if (label is! String) return false;
+    final recordedFailures = ClipProvenanceVerifier._failureCodes(
+      ingredient,
+    ).where((code) => code != ClipProvenanceVerifier._untrustedCode);
+    if (recordedFailures.isNotEmpty) {
+      problems.add(ClipProvenanceStatus.invalid);
+      return false;
+    }
+    if (!_trustedLabels.contains(label)) {
+      problems.add(ClipProvenanceStatus.untrustedSigner);
+      return false;
+    }
+    return leadsToCaptures(label, depth: depth + 1);
+  }
+
+  static bool _isVideo(Map<dynamic, dynamic> ingredient) {
+    final format = ingredient['format'];
+    return format is String && format.startsWith('video/');
   }
 }

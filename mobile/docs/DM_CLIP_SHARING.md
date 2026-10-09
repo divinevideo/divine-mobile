@@ -81,11 +81,17 @@ the decrypted file's manifest and requires all of:
    over.
 3. **A history that ends in camera captures.** The active manifest is a
    capture, an edit of exactly one video, or a composite of videos. Following
-   every video ingredient, each must carry its own manifest and lead the same
-   way to `c2pa.created` / `digitalCapture` recordings. A video ingredient
-   without a manifest, an `inputTo` ingredient, a cycle or a chain deeper than
-   16 steps fails the clip. Images and sounds may be declared without a
-   manifest.
+   every video ingredient, each must carry its own manifest, signed by a
+   trusted ProofSign signer and valid when it was edited, and lead the same
+   way to `c2pa.created` / `digitalCapture` recordings. The reader reports an
+   ingredient's signer only where it differs from what was recorded when the
+   ingredient was added, and the app records every ingredient as untrusted
+   because it signs without trust anchors, so a trusted ingredient is one the
+   reader reports as `signingCredential.trusted`. A video ingredient without a
+   manifest or that trusted signer, one recorded with a failure, an `inputTo`
+   ingredient, a cycle or a chain deeper than 16 steps fails the clip. A
+   recording used twice in one history, such as on its own and through an
+   edit of it, is fine. Images and sounds may be declared without a manifest.
 4. **No other source type anywhere.** Every action in every manifest of the
    store that names a `digitalSourceType` names `digitalCapture` or
    `compositeCapture`, so a generative (`trainedAlgorithmicMedia`,

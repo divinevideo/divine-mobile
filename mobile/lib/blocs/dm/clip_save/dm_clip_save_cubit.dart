@@ -66,9 +66,9 @@ class DmClipSaveState extends Equatable {
 
 /// Adds a clip received in a direct message to the clip library.
 ///
-/// A clip is only added when [ClipProvenanceVerifier] confirms it is an
-/// untouched Divine camera capture, so a clip library never holds footage
-/// whose origin is unknown or generated. The decrypted temp file is always
+/// A clip is only added when [ClipProvenanceVerifier] confirms it is a
+/// Divine camera capture or a signed edit of captures, so a clip library
+/// never holds footage whose origin is unknown or generated. The decrypted temp file is always
 /// removed before the save settles; the library keeps its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
     with CloseGuardedEmit<DmClipSaveState> {
