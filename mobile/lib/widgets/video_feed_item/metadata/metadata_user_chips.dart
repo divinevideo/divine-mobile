@@ -85,7 +85,11 @@ class MetadataCollaboratorsSection extends ConsumerWidget {
 
     if (repo == null || videoAddress == null || currentUserPubkey.isEmpty) {
       return MetadataCollaboratorsSectionBody(
-        visibility: CollaboratorVisibility.fallback(taggedPubkeys: pubkeys),
+        visibility: CollaboratorVisibility.fallback(
+          taggedPubkeys: pubkeys,
+          currentUserPubkey: currentUserPubkey,
+          creatorPubkey: video.pubkey,
+        ),
       );
     }
 

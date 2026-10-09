@@ -293,26 +293,6 @@ void main() {
         },
       );
 
-      testWidgets('keeps a 4 pt gap above a visible collaborator row', (
-        tester,
-      ) async {
-        // No confirmation repository in this scope, so the row falls back to
-        // showing every tagged collaborator.
-        testVideo = testVideo.copyWith(
-          collaboratorPubkeys: const [collaboratorPubkey],
-        );
-
-        await pumpOverlay(tester);
-
-        final rowTop = tester
-            .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
-            .top;
-        expect(
-          rowTop - descriptionBottom(tester),
-          closeTo(4, _layoutTolerance),
-        );
-      });
-
       // Pumps the overlay for a third-party viewer, with the collaborator's
       // acceptance resolved to [status].
       Future<void> pumpAsThirdPartyViewer(
@@ -443,12 +423,18 @@ void main() {
         final captionBottom = tester.getRect(find.text('Only a title')).bottom;
         await unmount(tester);
 
-        // No confirmation repository in this scope, so the row falls back to
-        // showing every tagged collaborator.
+        // No confirmation repository in this scope, so only the author sees
+        // their invitees (#10001).
         testVideo = captionless().copyWith(
           collaboratorPubkeys: const [collaboratorPubkey],
         );
-        await pumpOverlay(tester, isFullscreen: true);
+        await pumpOverlay(
+          tester,
+          isFullscreen: true,
+          authService: createMockAuthService(
+            currentPublicKeyHex: testVideo.pubkey,
+          ),
+        );
 
         expect(
           tester
@@ -551,6 +537,11 @@ void main() {
 
         await tester.pumpWidget(
           testProviderScope(
+            // No confirmation repository in this scope, so only the author
+            // sees their invitees (#10001).
+            mockAuthService: createMockAuthService(
+              currentPublicKeyHex: testVideo.pubkey,
+            ),
             additionalOverrides: [
               repostsRepositoryProvider.overrideWithValue(
                 mockRepostsRepository,

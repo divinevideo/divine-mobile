@@ -71,13 +71,17 @@ class CollaboratorVisibilityBuilder extends ConsumerWidget {
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
     final videoAddress = video.addressableId;
 
-    // Fallback: render the raw p-tag list (current behaviour) when the
-    // status pipeline is not available (repo gated on isNostrReady, or
-    // the video has no addressable id).
+    // No acceptance status to look up (repo null until the Nostr session is
+    // ready, no addressable id, or no current user): only the author sees
+    // invitees.
     if (repo == null || videoAddress == null || currentUserPubkey.isEmpty) {
       return builder(
         context,
-        CollaboratorVisibility.fallback(taggedPubkeys: pubkeys),
+        CollaboratorVisibility.fallback(
+          taggedPubkeys: pubkeys,
+          currentUserPubkey: currentUserPubkey,
+          creatorPubkey: video.pubkey,
+        ),
       );
     }
 
