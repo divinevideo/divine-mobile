@@ -704,8 +704,16 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         // Reorder layers so the editor array matches the row order.
         // TimelineOverlayRowLayout.assignRows derives rows from list
         // position, so moving a layer earlier/later in the list determines
-        // its row.
-        _reorderEditorList(layers, layerIdx, targetIdx);
+        // its row. Through the editor so the canvas redraws the new stacking
+        // order even when the time is unchanged; the drag recorded its
+        // history step on start.
+        if (layerIdx >= 0) {
+          editor.moveLayerListPosition(
+            oldIndex: layerIdx,
+            newIndex: targetIdx.clamp(0, layers.length - 1),
+            skipUpdateHistory: true,
+          );
+        }
 
       case .filter:
         final filters = editor.stateManager.activeFilters;
