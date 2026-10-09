@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for status-aware CollaboratorAvatarRow rendering.
-// ABOUTME: Tests CollaboratorAvatarRowBody directly via CollaboratorVisibility.
+// ABOUTME: Widget tests for status-aware collaborator row rendering.
+// ABOUTME: Tests CollaboratorVisibilityBuilder and CollaboratorAvatarRowBody.
 
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -60,12 +60,36 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
 AppLocalizations get _l10n => lookupAppLocalizations(const Locale('en'));
 
 void main() {
-  group(CollaboratorAvatarRow, () {
-    testWidgets('renders SizedBox.shrink when video has no collaborators', (
+  group(CollaboratorVisibilityBuilder, () {
+    Future<CollaboratorVisibility> resolve(
+      WidgetTester tester,
+      VideoEvent? video,
+    ) async {
+      late CollaboratorVisibility resolved;
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorVisibilityBuilder(
+            video: video,
+            builder: (context, visibility) {
+              resolved = visibility;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      return resolved;
+    }
+
+    testWidgets('resolves no one when the video tags no collaborators', (
       tester,
     ) async {
-      await tester.pumpWidget(_wrap(CollaboratorAvatarRow(video: _video())));
-      expect(_divineIcon(DivineIconName.users), findsNothing);
+      final visibility = await resolve(tester, _video());
+      expect(visibility.visiblePubkeys, isEmpty);
+    });
+
+    testWidgets('resolves no one when there is no video', (tester) async {
+      final visibility = await resolve(tester, null);
+      expect(visibility.visiblePubkeys, isEmpty);
     });
   });
 

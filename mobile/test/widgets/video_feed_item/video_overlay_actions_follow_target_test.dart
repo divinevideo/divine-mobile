@@ -61,6 +61,7 @@ void main() {
     required bool alreadyFollowing,
     TextScaler textScaler = TextScaler.noScaling,
     VideoEvent? video,
+    bool isFullscreen = false,
   }) async {
     final follow = createMockFollowRepository();
     when(() => follow.isFollowing(any())).thenReturn(alreadyFollowing);
@@ -99,6 +100,7 @@ void main() {
                     video: video ?? testVideo,
                     isVisible: true,
                     isActive: true,
+                    isFullscreen: isFullscreen,
                   ),
                 ),
               ),
@@ -272,6 +274,7 @@ void main() {
           tester,
           alreadyFollowing: false,
           video: captionless(title: 'Only a title'),
+          isFullscreen: true,
         );
         final captionBottom = tester.getRect(find.text('Only a title')).bottom;
 
@@ -279,6 +282,7 @@ void main() {
           tester,
           alreadyFollowing: false,
           video: captionless(),
+          isFullscreen: true,
         );
 
         expect(
@@ -295,6 +299,7 @@ void main() {
         tester,
         alreadyFollowing: false,
         video: captionless(),
+        isFullscreen: true,
       );
 
       final target = tester.getRect(find.byType(VideoFollowButton));
