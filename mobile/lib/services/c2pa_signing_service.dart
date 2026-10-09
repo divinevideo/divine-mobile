@@ -661,7 +661,7 @@ class C2paSigningService {
   }
 
   static String _mimeTypeFor(C2paEditSource source) {
-    final extension = source.path.split('.').last.toLowerCase();
+    final extension = _titleOf(source.path).split('.').last.toLowerCase();
     return switch (extension) {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',

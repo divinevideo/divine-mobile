@@ -895,7 +895,7 @@ void main() {
           sources: [
             C2paEditSource(path: video.path),
             const C2paEditSource(
-              path: 'https://media.example/sounds/song.m4a?v=2',
+              path: 'https://media.example/sounds/song.mp3?v=2',
               kind: C2paSourceKind.audio,
             ),
           ],
@@ -905,7 +905,7 @@ void main() {
         // Only a local file can carry a manifest; a URL is never read.
         verifyNever(
           () => mockC2pa.readManifestFromFile(
-            'https://media.example/sounds/song.m4a?v=2',
+            'https://media.example/sounds/song.mp3?v=2',
           ),
         );
         final manifest = jsonDecode(
@@ -917,8 +917,8 @@ void main() {
         expect(
           (manifest['ingredients'] as List<dynamic>).single,
           allOf(
-            containsPair('title', 'song.m4a'),
-            containsPair('format', 'audio/mp4'),
+            containsPair('title', 'song.mp3'),
+            containsPair('format', 'audio/mpeg'),
           ),
         );
       });
