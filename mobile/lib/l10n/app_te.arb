@@ -3461,10 +3461,10 @@
     "dmDeleteRefusedMessage": "అందరి కోసం తొలగించడం సాధ్యపడలేదు.",
     "dmDeleteRefusedDetails": "కొంతమంది ఇప్పటికీ ఈ సందేశాన్ని చూడగలిగే అవకాశం ఉంది.",
   "dmRetiredThreadClosedTitle": "ఈ సంభాషణ మూసివేయబడింది.",
-  "dmFormerModerationAccountName": "మునుపటి మోడరేషన్ ఖాతా",
   "@dmRetiredThreadClosedTitle": {
     "description": "Heading of the notice that replaces the message composer in a DM thread keyed on a retired Divine Moderation account (#6416)."
   },
+  "dmFormerModerationAccountName": "మునుపటి మోడరేషన్ ఖాతా",
   "messageRequestModerationNoticeCannotBeRemoved": "ఈ Divine మోడరేషన్ నోటీసు తీసివేయబడదు.",
   "@messageRequestModerationNoticeCannotBeRemoved": {
     "description": "SnackBar shown when a user tries to remove a conversation that resolves to a protected Divine Moderation notice. Used on the request-preview decline, the Message Requests bulk sweep, and the inbox long-press remove (#6971, #8347, #8391)."
