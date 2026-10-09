@@ -2,14 +2,18 @@ import AVFoundation
 import Foundation
 
 /// The copy of an overlay track's sound the preview plays when the track has
-/// an equalizer: the source through the export's chain, sample for sample in
-/// place, so a time in the copy is the same time in the source.
+/// an equalizer: the stretch of the source it plays through the export's
+/// chain, sample for sample in place.
 @main
 enum EqualizedAudioFileTests {
     static func main() async {
         await aLowShelfLiftsALowToneAndKeepsItsLength()
         await aBoostIsLimitedAtTheExportCeiling()
         await anUnreadableSourceRendersNothing()
+        await onlyTheStretchAskedForIsRendered()
+        await aStretchPastTheEndStopsWhereTheSourceDoes()
+        await aCancelledRenderRendersNothing()
+        copiesOfAnEarlierRunAreRemoved()
         print("Equalized audio file tests passed")
     }
 
@@ -20,11 +24,12 @@ enum EqualizedAudioFileTests {
         defer { try? FileManager.default.removeItem(at: source) }
         guard
             let copy = await EqualizedAudioFile.render(
-                source: source, equalizer: bassBoost(12))
+                source: source, equalizer: bassBoost(12), from: 0, to: 1)
         else { preconditionFailure("no copy rendered") }
-        defer { try? FileManager.default.removeItem(at: copy) }
-        precondition(copy.pathExtension == "caf")
-        let (samples, channels, frames) = read(copy)
+        defer { try? FileManager.default.removeItem(at: copy.url) }
+        precondition(copy.url.pathExtension == "caf")
+        precondition(copy.startSec == 0)
+        let (samples, channels, frames) = read(copy.url)
         precondition(channels == 2)
         precondition(frames == 48_000, "\(frames)")
         // Each channel through its own filters, both lifted alike.
@@ -42,10 +47,10 @@ enum EqualizedAudioFileTests {
         defer { try? FileManager.default.removeItem(at: source) }
         guard
             let copy = await EqualizedAudioFile.render(
-                source: source, equalizer: bassBoost(12))
+                source: source, equalizer: bassBoost(12), from: 0, to: 1)
         else { preconditionFailure("no copy rendered") }
-        defer { try? FileManager.default.removeItem(at: copy) }
-        let peak = read(copy).samples.map(abs).max() ?? 0
+        defer { try? FileManager.default.removeItem(at: copy.url) }
+        let peak = read(copy.url).samples.map(abs).max() ?? 0
         precondition(peak <= PeakLimiter.ceiling + 1e-4, "\(peak)")
     }
 
@@ -53,24 +58,97 @@ enum EqualizedAudioFileTests {
         let source = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("eq_missing_\(UUID().uuidString).wav")
         let copy = await EqualizedAudioFile.render(
-            source: source, equalizer: bassBoost(6))
+            source: source, equalizer: bassBoost(6), from: 0, to: 1)
         precondition(copy == nil)
+    }
+
+    /// A copy of 0.25–0.75 s holds that half second and no more, starting on
+    /// the source's sample at 0.25 s: the 60 Hz tone passes a peak far above
+    /// it unchanged, so the copy is the source shifted by 12 000 frames.
+    static func onlyTheStretchAskedForIsRendered() async {
+        let amplitude = 0.1
+        let source = writeTone(amplitude: amplitude, channels: 1)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let equalizer = AudioEqualizer(bands: [.init(type: .peak, frequencyHz: 8_000, gainDb: 1)])
+        guard
+            let copy = await EqualizedAudioFile.render(
+                source: source, equalizer: equalizer, from: 0.25, to: 0.75)
+        else { preconditionFailure("no copy rendered") }
+        defer { try? FileManager.default.removeItem(at: copy.url) }
+        precondition(copy.startSec == 0.25)
+        let (samples, _, frames) = read(copy.url)
+        precondition(frames == 24_000, "\(frames)")
+        for frame in stride(from: 0, to: frames, by: 997) {
+            let expected = amplitude * sin(2 * Double.pi * 60 * Double(12_000 + frame) / 48_000)
+            precondition(abs(Double(samples[frame]) - expected) < 1e-3, "\(frame): \(samples[frame])")
+        }
+    }
+
+    /// Asked for more than the source holds, the copy ends where it does.
+    static func aStretchPastTheEndStopsWhereTheSourceDoes() async {
+        let source = writeTone(amplitude: 0.1, channels: 1)
+        defer { try? FileManager.default.removeItem(at: source) }
+        guard
+            let copy = await EqualizedAudioFile.render(
+                source: source, equalizer: bassBoost(6), from: 0.5, to: 5)
+        else { preconditionFailure("no copy rendered") }
+        defer { try? FileManager.default.removeItem(at: copy.url) }
+        precondition(read(copy.url).frames == 24_000, "\(read(copy.url).frames)")
+    }
+
+    /// A render whose task is cancelled, as a superseded one is, gives no copy.
+    static func aCancelledRenderRendersNothing() async {
+        let source = writeTone(amplitude: 0.1, channels: 2, seconds: 20)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let render = Task {
+            await EqualizedAudioFile.render(source: source, equalizer: bassBoost(6), from: 0, to: 20)
+        }
+        render.cancel()
+        let copy = await render.value
+        copy.map { try? FileManager.default.removeItem(at: $0.url) }
+        precondition(copy == nil)
+    }
+
+    /// Copies last written before the cutoff are an earlier run's and go;
+    /// a newer one and other files stay.
+    static func copiesOfAnEarlierRunAreRemoved() {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        let old = directory.appendingPathComponent("divine_eq_test_\(UUID().uuidString).caf")
+        let new = directory.appendingPathComponent("divine_eq_test_\(UUID().uuidString).caf")
+        let other = directory.appendingPathComponent("eq_other_\(UUID().uuidString).caf")
+        for file in [old, new, other] {
+            FileManager.default.createFile(atPath: file.path, contents: Data([1]))
+        }
+        defer { [new, other].forEach { try? FileManager.default.removeItem(at: $0) } }
+        let hourAgo = Date().addingTimeInterval(-3_600)
+        try! FileManager.default.setAttributes([.modificationDate: hourAgo], ofItemAtPath: old.path)
+        try! FileManager.default.setAttributes([.modificationDate: hourAgo], ofItemAtPath: other.path)
+        EqualizedAudioFile.removeCopies(writtenBefore: Date().addingTimeInterval(-60))
+        precondition(!FileManager.default.fileExists(atPath: old.path))
+        precondition(FileManager.default.fileExists(atPath: new.path))
+        precondition(FileManager.default.fileExists(atPath: other.path))
     }
 
     static func bassBoost(_ gainDb: Double) -> AudioEqualizer {
         AudioEqualizer(bands: [.init(type: .lowShelf, frequencyHz: 200, gainDb: gainDb)])
     }
 
-    /// One second of a 60 Hz tone at 48 kHz, written as 16-bit WAV.
-    static func writeTone(amplitude: Double, channels: AVAudioChannelCount) -> URL {
+    /// [seconds] of a 60 Hz tone at 48 kHz, written as 16-bit WAV.
+    static func writeTone(
+        amplitude: Double, channels: AVAudioChannelCount, seconds: Int = 1
+    ) -> URL {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("eq_source_\(UUID().uuidString).wav")
         // AVAudioFile completes the file once released; see EqualizedAudioFile.
-        autoreleasepool { writeTone(amplitude: amplitude, channels: channels, to: url) }
+        autoreleasepool {
+            writeTone(amplitude: amplitude, channels: channels, seconds: seconds, to: url)
+        }
         return url
     }
 
-    static func writeTone(amplitude: Double, channels: AVAudioChannelCount, to url: URL) {
+    static func writeTone(
+        amplitude: Double, channels: AVAudioChannelCount, seconds: Int, to url: URL
+    ) {
         let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: channels)!
         let file = try! AVAudioFile(
             forWriting: url,
@@ -81,10 +159,11 @@ enum EqualizedAudioFileTests {
                 AVLinearPCMBitDepthKey: 16,
                 AVLinearPCMIsFloatKey: false,
             ])
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48_000)!
-        buffer.frameLength = 48_000
+        let frameCount = 48_000 * seconds
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount))!
+        buffer.frameLength = AVAudioFrameCount(frameCount)
         for channel in 0..<Int(channels) {
-            for frame in 0..<48_000 {
+            for frame in 0..<frameCount {
                 buffer.floatChannelData![channel][frame] = Float(
                     amplitude * sin(2 * Double.pi * 60 * Double(frame) / 48_000))
             }

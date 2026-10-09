@@ -36,21 +36,58 @@ enum EqualizedAudioFile {
         }
     }
 
-    /// Renders the local file [source] through [equalizer] into a new CAF in
-    /// the temporary directory, or nil when it cannot be read or written.
+    /// Renders [startSec] to [endSec] of the local file [source] through
+    /// [equalizer] into a new CAF in the temporary directory, or nil when it
+    /// cannot be read or written, or the task is cancelled.
     ///
-    /// Reads and writes a sample buffer at a time, so a long song never sits
-    /// in memory whole. The copy starts where the source does, silence
-    /// included, so a time in one is the same time in the other. Run it off
-    /// the main thread.
-    static func render(source: URL, equalizer: AudioEqualizer) async -> URL? {
+    /// Only that stretch is read: a sound declaring hours of audio costs no
+    /// more than the seconds a track plays of it. Reads and writes a sample
+    /// buffer at a time, so it never sits in memory whole. The copy's first
+    /// frame is the source at [EqualizedCopy.startSec], silence included, so
+    /// a time in one is that much later in the other. Run it off the main
+    /// thread.
+    static func render(
+        source: URL,
+        equalizer: AudioEqualizer,
+        from startSec: Double,
+        to endSec: Double
+    ) async -> EqualizedCopy? {
+        let start = max(startSec, 0)
+        guard endSec > start else { return nil }
         let target = temporaryURL(fileExtension: "caf")
-        let rendered = await write(source: source, equalizer: equalizer, to: target)
-        if !rendered { try? FileManager.default.removeItem(at: target) }
-        return rendered ? target : nil
+        let rendered = await write(
+            source: source, equalizer: equalizer, from: start, to: endSec, into: target)
+        guard rendered, !Task.isCancelled else {
+            try? FileManager.default.removeItem(at: target)
+            return nil
+        }
+        return EqualizedCopy(url: target, startSec: start)
     }
 
-    private static func write(source: URL, equalizer: AudioEqualizer, to target: URL) async -> Bool {
+    /// Deletes the copies and downloads in the temporary directory last
+    /// written before [cutoff]: those of an earlier run, which no player of
+    /// this one plays. Evicting needs a running player, so a run killed
+    /// while it played left them behind.
+    static func removeCopies(writtenBefore cutoff: Date) {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        for file in files where file.lastPathComponent.hasPrefix(filePrefix) {
+            let written = try? file.resourceValues(forKeys: [.contentModificationDateKey])
+                .contentModificationDate
+            if let written, written < cutoff {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+    }
+
+    private static func write(
+        source: URL,
+        equalizer: AudioEqualizer,
+        from startSec: Double,
+        to endSec: Double,
+        into target: URL
+    ) async -> Bool {
         let asset = AVURLAsset(url: source)
         guard let track = try? await asset.loadTracks(withMediaType: .audio).first else {
             return false
@@ -58,7 +95,9 @@ enum EqualizedAudioFile {
         // AVAudioFile completes the file only once it is released, which an
         // autoreleased reference would put off past the return.
         return autoreleasepool {
-            write(asset: asset, track: track, equalizer: equalizer, to: target)
+            write(
+                asset: asset, track: track, equalizer: equalizer,
+                from: startSec, to: endSec, into: target)
         }
     }
 
@@ -66,7 +105,9 @@ enum EqualizedAudioFile {
         asset: AVAsset,
         track: AVAssetTrack,
         equalizer: AudioEqualizer,
-        to target: URL
+        from startSec: Double,
+        to endSec: Double,
+        into target: URL
     ) -> Bool {
         guard let reader = try? AVAssetReader(asset: asset) else { return false }
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
@@ -79,89 +120,132 @@ enum EqualizedAudioFile {
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else { return false }
         reader.add(output)
+        reader.timeRange = CMTimeRange(
+            start: CMTime(seconds: startSec, preferredTimescale: 48_000),
+            end: CMTime(seconds: endSec, preferredTimescale: 48_000)
+        )
         guard reader.startReading() else { return false }
-        var file: AVAudioFile?
-        var chain: EqualizerPcm?
+        var copy: Copy?
         var failed = false
-        while !failed, let sampleBuffer = output.copyNextSampleBuffer() {
+        while !failed, !Task.isCancelled, let sampleBuffer = output.copyNextSampleBuffer() {
             autoreleasepool {
                 do {
-                    if file == nil {
-                        guard let opened = try open(target, for: sampleBuffer) else {
-                            failed = true
-                            return
-                        }
-                        file = opened
-                        let format = opened.processingFormat
-                        chain = EqualizerPcm(
-                            equalizer: equalizer,
-                            sampleRate: format.sampleRate,
-                            channelCount: Int(format.channelCount)
-                        )
+                    if copy == nil {
+                        copy = try Copy(target, for: sampleBuffer, equalizer: equalizer,
+                                        startSec: startSec, endSec: endSec)
+                        if copy == nil { failed = true }
                     }
-                    guard let file, let chain else { return }
-                    failed = try !append(sampleBuffer, to: file, through: chain)
+                    guard let copy else { return }
+                    failed = try !copy.append(sampleBuffer)
                 } catch {
                     failed = true
                 }
             }
+            // The reader keeps to its range; this keeps to it whatever the
+            // file claims.
+            if copy?.isFull == true { break }
         }
-        if failed { reader.cancelReading() }
-        return !failed && reader.status == .completed && file != nil
+        let finished = reader.status == .completed || copy?.isFull == true
+        if failed || !finished || Task.isCancelled { reader.cancelReading() }
+        return !failed && finished && !Task.isCancelled && copy != nil
     }
 
-    /// Opens [target] for the format of the first [sampleBuffer], with the
-    /// silence before it written; nil for audio the copy cannot hold.
-    private static func open(_ target: URL, for sampleBuffer: CMSampleBuffer) throws -> AVAudioFile? {
-        guard let description = CMSampleBufferGetFormatDescription(sampleBuffer),
-            let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee,
-            (1...2).contains(Int(basic.mChannelsPerFrame)), basic.mSampleRate > 0,
-            let format = AVAudioFormat(
+    /// The copy being written: the file, the equalizer chain, and how many of
+    /// the stretch's frames it holds.
+    private final class Copy {
+        let file: AVAudioFile
+        let chain: EqualizerPcm
+        let sampleRate: Double
+        let startSec: Double
+        let capacity: Int
+        private(set) var frames = 0
+
+        var isFull: Bool { frames >= capacity }
+
+        /// Opens [target] for the format of the first [sampleBuffer]; nil for
+        /// audio the copy cannot hold.
+        init?(
+            _ target: URL,
+            for sampleBuffer: CMSampleBuffer,
+            equalizer: AudioEqualizer,
+            startSec: Double,
+            endSec: Double
+        ) throws {
+            guard let description = CMSampleBufferGetFormatDescription(sampleBuffer),
+                let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee,
+                (1...2).contains(Int(basic.mChannelsPerFrame)), basic.mSampleRate > 0,
+                let format = AVAudioFormat(
+                    commonFormat: .pcmFormatFloat32,
+                    sampleRate: basic.mSampleRate,
+                    channels: basic.mChannelsPerFrame,
+                    interleaved: true
+                )
+            else { return nil }
+            file = try AVAudioFile(
+                forWriting: target,
+                settings: format.settings,
                 commonFormat: .pcmFormatFloat32,
-                sampleRate: basic.mSampleRate,
-                channels: basic.mChannelsPerFrame,
                 interleaved: true
             )
-        else { return nil }
-        let file = try AVAudioFile(
-            forWriting: target,
-            settings: format.settings,
-            commonFormat: .pcmFormatFloat32,
-            interleaved: true
-        )
-        let start = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        if start.isNumeric, start.seconds > 0 {
-            try writeSilence(frames: Int((start.seconds * basic.mSampleRate).rounded()), to: file)
+            chain = EqualizerPcm(
+                equalizer: equalizer,
+                sampleRate: format.sampleRate,
+                channelCount: Int(format.channelCount)
+            )
+            sampleRate = basic.mSampleRate
+            self.startSec = startSec
+            capacity = Int(((endSec - startSec) * basic.mSampleRate).rounded())
         }
-        return file
+
+        /// Equalizes [sampleBuffer] and writes the part of it inside the
+        /// stretch, after the silence before it; false when its samples
+        /// cannot be read.
+        func append(_ sampleBuffer: CMSampleBuffer) throws -> Bool {
+            guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { return true }
+            let format = file.processingFormat
+            let channels = Int(format.channelCount)
+            let bytesPerFrame = channels * MemoryLayout<Float>.size
+            let available = CMBlockBufferGetDataLength(block) / bytesPerFrame
+            guard available > 0 else { return true }
+            // Where the buffer starts in the copy: a gap before it is silence,
+            // and frames before the stretch, which a decoder can hand over
+            // ahead of a range, are dropped.
+            let presentation = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            if presentation.isNumeric {
+                let at = Int(((presentation.seconds - startSec) * sampleRate).rounded())
+                if at > frames {
+                    let silence = min(at - frames, capacity - frames)
+                    try EqualizedAudioFile.writeSilence(frames: silence, to: file)
+                    frames += silence
+                }
+            }
+            guard
+                let buffer = AVAudioPCMBuffer(
+                    pcmFormat: format, frameCapacity: AVAudioFrameCount(available)),
+                let samples = buffer.floatChannelData?[0],
+                CMBlockBufferCopyDataBytes(
+                    block, atOffset: 0, dataLength: available * bytesPerFrame,
+                    destination: samples) == kCMBlockBufferNoErr
+            else { return false }
+            var skip = 0
+            if presentation.isNumeric {
+                let at = Int(((presentation.seconds - startSec) * sampleRate).rounded())
+                if at < 0 { skip = min(-at, available) }
+            }
+            let kept = min(available - skip, capacity - frames)
+            guard kept > 0 else { return true }
+            if skip > 0 {
+                memmove(samples, samples + skip * channels, kept * bytesPerFrame)
+            }
+            buffer.frameLength = AVAudioFrameCount(kept)
+            chain.process(samples, frames: kept)
+            try file.write(from: buffer)
+            frames += kept
+            return true
+        }
     }
 
-    /// Equalizes [sampleBuffer] and writes it to [file]; false when its
-    /// samples cannot be read.
-    private static func append(
-        _ sampleBuffer: CMSampleBuffer,
-        to file: AVAudioFile,
-        through chain: EqualizerPcm
-    ) throws -> Bool {
-        guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { return true }
-        let format = file.processingFormat
-        let bytesPerFrame = Int(format.channelCount) * MemoryLayout<Float>.size
-        let frames = CMBlockBufferGetDataLength(block) / bytesPerFrame
-        guard frames > 0 else { return true }
-        guard
-            let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
-            let samples = buffer.floatChannelData?[0],
-            CMBlockBufferCopyDataBytes(
-                block, atOffset: 0, dataLength: frames * bytesPerFrame, destination: samples)
-                == kCMBlockBufferNoErr
-        else { return false }
-        buffer.frameLength = AVAudioFrameCount(frames)
-        chain.process(samples, frames: frames)
-        try file.write(from: buffer)
-        return true
-    }
-
-    private static func writeSilence(frames: Int, to file: AVAudioFile) throws {
+    fileprivate static func writeSilence(frames: Int, to file: AVAudioFile) throws {
         guard frames > 0,
             let buffer = AVAudioPCMBuffer(
                 pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(frames)),
@@ -172,9 +256,12 @@ enum EqualizedAudioFile {
         try file.write(from: buffer)
     }
 
+    /// What every copy's and download's name starts with.
+    private static let filePrefix = "divine_eq_"
+
     private static func temporaryURL(fileExtension: String) -> URL {
         URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("divine_eq_\(UUID().uuidString)")
+            .appendingPathComponent("\(filePrefix)\(UUID().uuidString)")
             .appendingPathExtension(fileExtension)
     }
 
@@ -189,4 +276,11 @@ enum EqualizedAudioFile {
         default: return "m4a"
         }
     }
+}
+
+/// An equalized copy of part of a sound: its file, and the time in the
+/// source its first frame is.
+struct EqualizedCopy: Hashable {
+    let url: URL
+    let startSec: Double
 }

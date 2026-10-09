@@ -18,10 +18,11 @@ final class AudioOverlayManager {
     private let driftThreshold: Double = 0.25
     private let logName = "AudioOverlayManager"
 
-    /// Equalized copies of the tracks' sounds, by source and equalizer. Kept
-    /// while a track plays one, so tracks set again — the editor sets them
-    /// anew on every confirmed change — play theirs at once.
-    private var equalizedFiles: [EqualizedFileKey: URL] = [:]
+    /// Equalized copies of the stretches the tracks play, by source,
+    /// stretch and equalizer. Kept while a track plays one, so tracks set
+    /// again — the editor sets them anew on every confirmed change — play
+    /// theirs at once.
+    private var equalizedFiles: [EqualizedFileKey: EqualizedCopy] = [:]
 
     /// Local copies of remote sources, for equalizing them again.
     private var downloads: [URL: URL] = [:]
@@ -30,7 +31,8 @@ final class AudioOverlayManager {
     /// its copy renders — the editor sets every track anew once an equalizer
     /// is confirmed, often within a second of the last change — waits for
     /// that render instead of starting its own.
-    private var renders: [EqualizedFileKey: Task<URL?, Never>] = [:]
+    /// A render no track waits for any more is cancelled.
+    private var renders: [EqualizedFileKey: (id: UUID, task: Task<EqualizedCopy?, Never>)] = [:]
 
     /// How long a changed equalizer has to stay put before it is rendered. A
     /// slider passes through several values a second, and every swap to a
@@ -38,9 +40,31 @@ final class AudioOverlayManager {
     /// audio over the same 500 ms.
     private let equalizerSettleSeconds = 0.5
 
+    /// How much of its sound before and after the stretch a track plays an
+    /// equalized copy holds: the filters settle into the first, and a seek
+    /// or a drift correction can land in either.
+    private let copyMarginSeconds = 0.25
+
+    /// The most of its sound a track bounded neither by its slot on the video
+    /// nor by its trim is equalized for. The editor bounds every track.
+    private let maxCopySeconds = 300.0
+
     /// Called when a track's sound was swapped while it should be playing,
     /// so the owner can sync it to the picture again at once.
     var onNeedsSync: (() -> Void)?
+
+    /// Copies left by an earlier run, which no player of this one plays, are
+    /// deleted when the first manager of this run is created.
+    private static let leftoverCopiesRemoved: Void = {
+        let cutoff = Date()
+        DispatchQueue.global(qos: .utility).async {
+            EqualizedAudioFile.removeCopies(writtenBefore: cutoff)
+        }
+    }()
+
+    init() {
+        _ = Self.leftoverCopiesRemoved
+    }
 
     /// Replaces all audio overlays with the given track definitions.
     func setTracks(from tracksRaw: [[String: Any]]) {
@@ -49,7 +73,10 @@ final class AudioOverlayManager {
             name: logName
         )
         disposePlayers()
-        defer { evictUnusedFiles() }
+        defer {
+            cancelUnwantedRenders()
+            evictUnusedFiles()
+        }
 
         for (index, map) in tracksRaw.enumerated() {
             guard let uri = map["uri"] as? String else {
@@ -79,13 +106,8 @@ final class AudioOverlayManager {
             }
 
             let equalizer = AudioEqualizer.from(map["equalizer"])
-            let equalizedFile = equalizer.flatMap {
-                equalizedFiles[EqualizedFileKey(source: url, equalizer: $0)]
-            }
-            let overlay = AVPlayer(playerItem: AVPlayerItem(url: equalizedFile ?? url))
-
             let entry = AudioOverlayEntry(
-                player: overlay,
+                player: AVPlayer(),
                 source: url,
                 videoStartSec: videoStartMs / 1000.0,
                 videoEndSec: videoEndMs.map { $0 / 1000.0 },
@@ -96,6 +118,9 @@ final class AudioOverlayManager {
                 fade: AudioOverlayFade(map: map),
                 equalizer: equalizer
             )
+            let equalizedFile = equalizer.flatMap { equalizedFiles[copyKey(for: entry, $0)] }
+            entry.player.replaceCurrentItem(with: AVPlayerItem(url: equalizedFile?.url ?? url))
+            entry.playingStartSec = equalizedFile?.startSec ?? 0
             overlays.append(entry)
             if equalizedFile != nil {
                 entry.playingEqualizer = equalizer
@@ -149,11 +174,14 @@ final class AudioOverlayManager {
         let generation = entry.equalizerGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak entry] in
             guard let self, let entry, generation == entry.equalizerGeneration else { return }
+            // Whatever an earlier change of this track set rendering is not
+            // wanted any more.
+            self.cancelUnwantedRenders()
             guard let equalizer = entry.equalizer else {
-                self.play(entry, file: entry.source, equalizer: nil)
+                self.play(entry, file: EqualizedCopy(url: entry.source, startSec: 0), equalizer: nil)
                 return
             }
-            let key = EqualizedFileKey(source: entry.source, equalizer: equalizer)
+            let key = self.copyKey(for: entry, equalizer)
             if let file = self.equalizedFiles[key] {
                 self.play(entry, file: file, equalizer: equalizer)
                 return
@@ -187,59 +215,106 @@ final class AudioOverlayManager {
     /// The render making the copy [key] names: the one still running, or a
     /// new one off the main thread, which downloads a remote sound first
     /// unless a download is kept. Its file is kept in [equalizedFiles].
-    private func render(_ key: EqualizedFileKey) -> Task<URL?, Never> {
+    private func render(_ key: EqualizedFileKey) -> Task<EqualizedCopy?, Never> {
         if let running = renders[key] {
             log.info(
                 "Audio overlay: waiting for the equalized copy of "
                     + "\(key.source.lastPathComponent) already rendering",
                 name: logName
             )
-            return running
+            return running.task
         }
         log.info(
-            "Audio overlay: rendering an equalized copy of \(key.source.lastPathComponent)",
+            "Audio overlay: rendering an equalized copy of \(key.source.lastPathComponent) "
+                + "from \(key.startSec)s to \(key.endSec)s",
             name: logName
         )
-        let source = key.source
-        let equalizer = key.equalizer
-        let download = downloads[source]
-        let render = Task { @MainActor [weak self] () -> URL? in
-            let rendered = await Task.detached(priority: .userInitiated) {
-                () -> (local: URL?, file: URL?) in
+        let id = UUID()
+        let download = downloads[key.source]
+        let task = Task { @MainActor [weak self] () -> EqualizedCopy? in
+            let work = Task.detached(priority: .userInitiated) {
+                () -> (local: URL?, copy: EqualizedCopy?) in
                 let local: URL?
                 if let download {
                     local = download
                 } else {
-                    local = await EqualizedAudioFile.localCopy(of: source)
+                    local = await EqualizedAudioFile.localCopy(of: key.source)
                 }
-                guard let local else { return (nil, nil) }
-                return (local, await EqualizedAudioFile.render(source: local, equalizer: equalizer))
-            }.value
-            guard let self else {
-                rendered.file.map { try? FileManager.default.removeItem(at: $0) }
-                if !source.isFileURL {
+                guard let local, !Task.isCancelled else { return (local, nil) }
+                let copy = await EqualizedAudioFile.render(
+                    source: local, equalizer: key.equalizer, from: key.startSec, to: key.endSec)
+                return (local, copy)
+            }
+            let rendered = await withTaskCancellationHandler {
+                await work.value
+            } onCancel: {
+                work.cancel()
+            }
+            let isDownload = !key.source.isFileURL && rendered.local != download
+            guard let self, !Task.isCancelled else {
+                rendered.copy.map { try? FileManager.default.removeItem(at: $0.url) }
+                // A cancelled render's download is kept for the next one,
+                // unless the manager is gone.
+                if self == nil, isDownload {
                     rendered.local.map { try? FileManager.default.removeItem(at: $0) }
+                } else if let self, isDownload, let local = rendered.local {
+                    self.keepDownload(local, of: key.source)
                 }
                 return nil
             }
-            self.renders[key] = nil
-            if !source.isFileURL, let local = rendered.local {
-                if let kept = self.downloads[source], kept != local {
-                    try? FileManager.default.removeItem(at: local)
-                } else {
-                    self.downloads[source] = local
-                }
-            }
-            if let file = rendered.file { self.equalizedFiles[key] = file }
-            return rendered.file
+            if self.renders[key]?.id == id { self.renders[key] = nil }
+            if isDownload, let local = rendered.local { self.keepDownload(local, of: key.source) }
+            if let copy = rendered.copy { self.equalizedFiles[key] = copy }
+            return rendered.copy
         }
-        renders[key] = render
-        return render
+        renders[key] = (id, task)
+        return task
+    }
+
+    /// Keeps [local] as the download of [source], unless one is kept already.
+    private func keepDownload(_ local: URL, of source: URL) {
+        if let kept = downloads[source], kept != local {
+            try? FileManager.default.removeItem(at: local)
+        } else {
+            downloads[source] = local
+        }
+    }
+
+    /// Cancels the renders no track waits for: those of an equalizer changed
+    /// again since, or of a track no longer set.
+    private func cancelUnwantedRenders() {
+        let wanted = Set(
+            overlays.compactMap { entry in entry.equalizer.map { copyKey(for: entry, $0) } })
+        for (key, render) in renders where !wanted.contains(key) {
+            render.task.cancel()
+            renders[key] = nil
+            log.info(
+                "Audio overlay: cancelled the equalized copy of "
+                    + "\(key.source.lastPathComponent) no track waits for",
+                name: logName
+            )
+        }
+    }
+
+    /// The copy of [entry]'s sound through [equalizer]: the stretch of its
+    /// sound it can play, from its trim start to where its slot or its trim
+    /// ends, whichever is first, with [copyMarginSeconds] on either side.
+    private func copyKey(for entry: AudioOverlayEntry, _ equalizer: AudioEqualizer) -> EqualizedFileKey {
+        var lengths: [Double] = []
+        if let videoEnd = entry.videoEndSec { lengths.append(videoEnd - entry.videoStartSec) }
+        if let trackEnd = entry.trackEndSec { lengths.append(trackEnd - entry.trackStartSec) }
+        let length = min(max(lengths.min() ?? maxCopySeconds, 0), maxCopySeconds)
+        return EqualizedFileKey(
+            source: entry.source,
+            equalizer: equalizer,
+            startSec: max(entry.trackStartSec - copyMarginSeconds, 0),
+            endSec: entry.trackStartSec + length + copyMarginSeconds
+        )
     }
 
     /// Swaps `entry`'s sound for [file], which plays [equalizer], and has a
     /// track that was playing synced to the picture again.
-    private func play(_ entry: AudioOverlayEntry, file: URL, equalizer: AudioEqualizer?) {
+    private func play(_ entry: AudioOverlayEntry, file: EqualizedCopy, equalizer: AudioEqualizer?) {
         entry.isAwaitingEqualizer = false
         guard entry.playingEqualizer != equalizer else {
             applyVolume(to: entry)
@@ -248,7 +323,8 @@ final class AudioOverlayManager {
         let wasActive = entry.isActive
         entry.player.pause()
         entry.isActive = false
-        entry.player.replaceCurrentItem(with: AVPlayerItem(url: file))
+        entry.player.replaceCurrentItem(with: AVPlayerItem(url: file.url))
+        entry.playingStartSec = file.startSec
         entry.playingEqualizer = equalizer
         entry.mixInputs = nil
         applyVolume(to: entry)
@@ -268,11 +344,11 @@ final class AudioOverlayManager {
         let used = Set(
             overlays.flatMap { entry in
                 [entry.playingEqualizer, entry.equalizer].compactMap { equalizer in
-                    equalizer.map { EqualizedFileKey(source: entry.source, equalizer: $0) }
+                    equalizer.map { copyKey(for: entry, $0) }
                 }
             })
         for (key, file) in equalizedFiles where !used.contains(key) {
-            try? FileManager.default.removeItem(at: file)
+            try? FileManager.default.removeItem(at: file.url)
             equalizedFiles[key] = nil
         }
         let sources = Set(overlays.map(\.source))
@@ -354,7 +430,8 @@ final class AudioOverlayManager {
                 }
 
                 if !entry.isActive {
-                    let audioTime = CMTime(seconds: expectedAudioSec, preferredTimescale: 600)
+                    let audioTime = CMTime(
+                        seconds: expectedAudioSec - entry.playingStartSec, preferredTimescale: 600)
                     log.info(
                         "Audio overlay track \(entry.trackIndex): starting playback " +
                             "at \(expectedAudioSec)s, speed \(speed)",
@@ -367,7 +444,8 @@ final class AudioOverlayManager {
                     reportStatusIfChanged(for: entry, context: "playback start")
                 } else {
                     // Correct drift.
-                    let actualSec = CMTimeGetSeconds(entry.player.currentTime())
+                    let actualSec =
+                        CMTimeGetSeconds(entry.player.currentTime()) + entry.playingStartSec
                     let drift = abs(expectedAudioSec - actualSec)
                     if drift > driftThreshold {
                         #if DEBUG
@@ -376,7 +454,9 @@ final class AudioOverlayManager {
                                 "drift correction \(drift)s"
                         )
                         #endif
-                        let audioTime = CMTime(seconds: expectedAudioSec, preferredTimescale: 600)
+                        let audioTime = CMTime(
+                            seconds: expectedAudioSec - entry.playingStartSec,
+                            preferredTimescale: 600)
                         seek(entry, to: audioTime, reason: "drift correction")
                     }
                 }
@@ -397,6 +477,7 @@ final class AudioOverlayManager {
     /// rendered or downloaded for them.
     func disposeAll() {
         disposePlayers()
+        cancelUnwantedRenders()
         evictUnusedFiles()
     }
 
@@ -477,7 +558,9 @@ final class AudioOverlayManager {
         // The level the track holds between ramps. Only set where no ramp
         // starts: AVFoundation rejects overlapping volume changes with an
         // Objective-C exception, which aborts the process.
-        if boost > 1, ramps.first.map({ entry.trackStartSec + $0.startSec > 0 }) ?? true {
+        // The ramps are in the source's time, and a copy starts later in it.
+        let start = entry.trackStartSec - entry.playingStartSec
+        if boost > 1, ramps.first.map({ start + $0.startSec > 0 }) ?? true {
             parameters.setVolume(boost, at: .zero)
         }
         for ramp in ramps {
@@ -485,8 +568,8 @@ final class AudioOverlayManager {
                 fromStartVolume: Float(ramp.fromGain),
                 toEndVolume: Float(ramp.toGain),
                 timeRange: CMTimeRange(
-                    start: itemTime(entry.trackStartSec + ramp.startSec),
-                    end: itemTime(entry.trackStartSec + ramp.endSec)
+                    start: itemTime(start + ramp.startSec),
+                    end: itemTime(start + ramp.endSec)
                 )
             )
         }
@@ -514,7 +597,7 @@ final class AudioOverlayManager {
         if let videoEnd = entry.videoEndSec { ends.append(videoEnd - entry.videoStartSec) }
         if let trackEnd = entry.trackEndSec { ends.append(trackEnd - entry.trackStartSec) }
         if let fileDuration, fileDuration.isNumeric, fileDuration.seconds.isFinite {
-            ends.append(fileDuration.seconds - entry.trackStartSec)
+            ends.append(entry.playingStartSec + fileDuration.seconds - entry.trackStartSec)
         }
         let level = Double(entry.boost)
         guard let audibleSec = ends.min() else {
@@ -595,6 +678,9 @@ final class AudioOverlayManager {
 struct EqualizedFileKey: Hashable {
     let source: URL
     let equalizer: AudioEqualizer
+    /// The stretch of [source] the copy holds, in its seconds.
+    let startSec: Double
+    let endSec: Double
 }
 
 /// Holds one audio overlay player and its scheduling metadata.
@@ -623,6 +709,10 @@ final class AudioOverlayEntry {
     /// The equalizer of the sound its player has now: nil for [source]
     /// itself, otherwise an equalized copy.
     var playingEqualizer: AudioEqualizer?
+    /// Where in [source] the file its player has now starts: 0 for [source]
+    /// itself, later for a copy of the stretch it plays. The player's time
+    /// is that much earlier than the source's.
+    var playingStartSec: Double = 0
     /// Whether the track waits, silent, for its first equalized copy.
     var isAwaitingEqualizer = false
     /// Bumped by every equalizer change, so a render still running belongs
