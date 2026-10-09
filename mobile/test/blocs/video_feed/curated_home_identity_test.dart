@@ -669,6 +669,58 @@ void main() {
     });
 
     test(
+      'startup still loads For You when its fallback write is refused',
+      () async {
+        final saved = _stored(_source(_list(_authorA)));
+        final backend = await gatePreferences(
+          savedValue: saved,
+          blockedValue: _stored(const VideoFeedSource.forYou()),
+          rejectBlockedWrite: true,
+        );
+        backend.release.complete();
+        lists.setSubscribedLists([_list(_authorB)]);
+        final feed = bloc();
+        await waitFor(
+          feed,
+          (s) => s.status == VideoFeedStatus.success,
+          () => feed.add(const VideoFeedStarted()),
+        );
+        expect(backend.started.isCompleted, isTrue);
+        expect(feed.state.source, const VideoFeedSource.forYou());
+        expect(preferences.getString(_key), saved);
+        await feed.close();
+      },
+    );
+
+    test('unfollowing the Home list still switches to For You when the write is refused', () async {
+      final followed = _list(_authorA);
+      final backend = await gatePreferences(
+        savedValue: _stored(_source(followed)),
+        blockedValue: _stored(const VideoFeedSource.forYou()),
+        rejectBlockedWrite: true,
+      );
+      backend.release.complete();
+      lists.setSubscribedLists([followed]);
+      final feed = bloc();
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success,
+        () => feed.add(const VideoFeedStarted()),
+      );
+      expect(feed.state.source, _source(followed));
+
+      await waitFor(
+        feed,
+        (s) =>
+            s.status == VideoFeedStatus.success &&
+            s.source == const VideoFeedSource.forYou(),
+        () => lists.setSubscribedLists(const []),
+      );
+      expect(backend.started.isCompleted, isTrue);
+      await feed.close();
+    });
+
+    test(
       'startup preserves legacy value until a complete snapshot proves unique',
       () async {
         lists.setSubscribedLists([_list(_authorA)], isComplete: false);
@@ -1479,26 +1531,12 @@ void main() {
             expect(guest.savedValue(), 'classic');
             await guest.persist(const VideoFeedSource.newVideos());
             backend.release.complete();
-            if (result != _RemovalResult.succeeds) {
-              final failure = await error.future.timeout(
-                const Duration(seconds: 5),
-              );
-              expect(failure, isA<StateError>());
-              expect(
-                failure.toString(),
-                contains(
-                  result == _RemovalResult.throwsError
-                      ? 'The native legacy clear failed.'
-                      : 'The Home selection could not be persisted.',
-                ),
-              );
-            }
             await closing;
             await preferences.reload();
             expect(guest.savedValue(), 'latest');
             expect(preferences.getString('selected_feed_mode'), 'latest');
             expect(preferences.getString(_key), _stored(_source(a)));
-            expect(error.isCompleted, result != _RemovalResult.succeeds);
+            expect(error.isCompleted, isFalse);
           },
         );
       }
@@ -1533,19 +1571,14 @@ void main() {
             );
             lists.setSubscribedLists([]);
             await backend.started.future.timeout(const Duration(seconds: 5));
-            backend.release.complete();
-            final error = await failure.future.timeout(
-              const Duration(seconds: 5),
+            await waitFor(
+              old,
+              (s) =>
+                  s.status == VideoFeedStatus.success &&
+                  s.source == const VideoFeedSource.forYou(),
+              backend.release.complete,
             );
-            expect(error, isA<StateError>());
-            expect(
-              error.toString(),
-              contains(
-                throwsWrite
-                    ? 'The platform write failed.'
-                    : 'The Home selection could not be persisted.',
-              ),
-            );
+            expect(failure.isCompleted, isFalse);
             await old.close();
             lists.setSubscribedLists([a]);
             final current = bloc(coordinator: coordinator);
