@@ -1151,6 +1151,40 @@ void main() {
       },
     );
 
+    testWidgetsWithSurfaceSize(
+      'shows the author their invitees as pending while status is unavailable',
+      (tester) async {
+        final video = _makeVideo(
+          collaboratorPubkeys: const [_collaborator1],
+          addressableDTag: 'collab-video',
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              authServiceProvider.overrideWithValue(
+                createMockAuthService(currentPublicKeyHex: _creatorPubkey),
+              ),
+              collaboratorConfirmationRepositoryProvider.overrideWithValue(
+                null,
+              ),
+              fetchUserProfileProvider(_collaborator1).overrideWith(
+                (ref) async => _makeProfile(_collaborator1, 'Josh Musick'),
+              ),
+            ],
+            child: MetadataCollaboratorsSection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(find.text('Josh Musick'), findsOneWidget);
+        expect(
+          find.text(l10n.videoCollaboratorPendingDecoration),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgetsWithSurfaceSize('hides when no collaborators', (tester) async {
       final video = _makeVideo();
       await tester.pumpWidget(

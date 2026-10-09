@@ -71,8 +71,9 @@ class CollaboratorVisibilityBuilder extends ConsumerWidget {
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
     final videoAddress = video.addressableId;
 
-    // No acceptance status to look up (repo gated on isNostrReady, no
-    // addressable id, or no current user): only the author sees invitees.
+    // No acceptance status to look up (repo null until the Nostr session is
+    // ready, no addressable id, or no current user): only the author sees
+    // invitees.
     if (repo == null || videoAddress == null || currentUserPubkey.isEmpty) {
       return builder(
         context,
