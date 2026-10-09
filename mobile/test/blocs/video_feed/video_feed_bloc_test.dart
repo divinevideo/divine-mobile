@@ -1331,7 +1331,10 @@ void main() {
             }
           };
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await followingSubscribed.future;
+          await followingSubscribed.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('bloc never subscribed to the follow stream'),
+          );
           expect(bloc.state.status, VideoFeedStatus.success);
           expect(bloc.state.videos.first.id, startsWith('popular'));
           final refreshed = bloc.stream.firstWhere(
@@ -1343,7 +1346,10 @@ void main() {
           // the real follow list. Because this first replay differs from the
           // list used for the initial fetch, it is NOT ignored.
           followingController.add(['author1', 'author2']);
-          await refreshed;
+          await refreshed.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('corrective refresh never ran'),
+          );
         },
         expect: () => [
           // 1. Loading state
@@ -1420,7 +1426,10 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await cachedFollowingSubscribed.future;
+          await cachedFollowingSubscribed.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('bloc never subscribed to the follow stream'),
+          );
           await pumpEventQueue();
         },
         expect: () => [
@@ -3317,7 +3326,10 @@ void main() {
             }
           };
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-          await followingSubscribed.future;
+          await followingSubscribed.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('bloc never subscribed to the follow stream'),
+          );
           expect(bloc.state.status, VideoFeedStatus.success);
           expect(bloc.state.videos, isEmpty);
           // First emission is skipped (BehaviorSubject replay)
@@ -3331,7 +3343,10 @@ void main() {
           );
           // Second emission triggers recovery
           followingController.add(['author', 'new-follow']);
-          await recovered;
+          await recovered.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('empty-feed recovery never ran'),
+          );
         },
         skip: 2, // Skip loading + success(empty) from VideoFeedStarted
         expect: () => [
@@ -3725,7 +3740,10 @@ void main() {
         await Future.wait([
           followingSubscribed.future,
           curatedListsSubscribed.future,
-        ]);
+        ]).timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('bloc never subscribed to both streams'),
+        );
         expect(bloc.state.status, VideoFeedStatus.success);
         expect(bloc.state.videos, videos);
 
