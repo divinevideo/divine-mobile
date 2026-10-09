@@ -194,6 +194,25 @@ void main() {
       expect(result.segments.last.equalizer, rendered.equalizer);
     });
 
+    test(
+      "plays each clip's own equalizer when no clip is re-encoded",
+      () async {
+        final result = await normalize([
+          clipFor('a', vertical).copyWith(
+            equalizer: model.EqualizerSettings.none.withGain(3, 4),
+          ),
+          clipFor('b', vertical),
+        ]);
+
+        expect(plugin.renders, isEmpty);
+        expect(
+          result.segments.first.equalizer?.bands.map((band) => band.gain),
+          [0, 0, 0, 4, 0, 0, 0, 0, 0, 0],
+        );
+        expect(result.segments.last.equalizer, isNull);
+      },
+    );
+
     test('stops at the next clip when the export is cancelled', () async {
       // Neither clip needs cropping, so this pass renders nothing and its own
       // per-clip check is the only thing that can see the cancel: a user
