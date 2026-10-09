@@ -1316,6 +1316,45 @@ void main() {
       expect(scrollController.offset, equals(0));
     });
 
+    testWidgets('flings toward the end under a status bar without errors', (
+      tester,
+    ) async {
+      const statusBar = 47.0;
+      final topInset = FakeViewPadding(
+        top: statusBar * tester.view.devicePixelRatio,
+      );
+      tester.view
+        ..padding = topInset
+        ..viewPadding = topInset;
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -300),
+        1000,
+      );
+      // The pinned tab bar's inset grows as the header leaves, so the scroll
+      // range changes frame by frame while the fling runs.
+      for (var frame = 0; frame < 120; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, greaterThan(0));
+    });
+
     testWidgets('keeps an empty tab and its message on screen', (
       tester,
     ) async {
