@@ -15,6 +15,12 @@ import 'package:unified_logger/unified_logger.dart';
 
 final _log = Logger('SecureKeyStorage');
 
+/// Serializes a generated owner's complete PRIMARY persistence operation.
+///
+/// The callback receives public identity only and must invoke [persist] once.
+typedef PrimaryKeyPersistenceGuard =
+    Future<void> Function(String ownerPubkey, Future<void> Function() persist);
+
 /// Exception thrown by secure key storage operations.
 ///
 /// REFACTORED: Removed ChangeNotifier - uses pure state management.
@@ -72,7 +78,10 @@ class SecureKeyStorage {
   ///
   /// If [securityConfig] is not provided, platform-appropriate defaults
   /// will be used.
-  SecureKeyStorage({SecurityConfig? securityConfig}) {
+  SecureKeyStorage({
+    SecurityConfig? securityConfig,
+    PlatformSecureStorage? platformStorage,
+  }) : _platformStorage = platformStorage ?? PlatformSecureStorage.instance {
     if (securityConfig != null) {
       _securityConfig = securityConfig;
     } else {
@@ -88,7 +97,7 @@ class SecureKeyStorage {
   static const String _lastAccessKey = 'last_key_access';
   static const String _savedKeysPrefix = 'saved_identity_';
 
-  final PlatformSecureStorage _platformStorage = PlatformSecureStorage.instance;
+  final PlatformSecureStorage _platformStorage;
   SecurityConfig _securityConfig = SecurityConfig.strict;
 
   // Bunker client for web platform
@@ -161,56 +170,175 @@ class SecureKeyStorage {
 
   /// Check if user has stored keys.
   ///
-  /// Throws [SecureKeyStorageException] on storage errors so callers can
-  /// distinguish "no keys" from "storage broken" and avoid silently
-  /// regenerating a new identity.
+  /// This compatibility probe may report `false` on platform read errors.
+  /// Use [hasKeysStrict] when proven absence is required before account cleanup
+  /// or generating a replacement identity.
   Future<bool> hasKeys() async {
     await _ensureInitialized();
     return _platformStorage.hasKey(_primaryKeyId);
   }
 
+  /// Checks raw PRIMARY presence and refuses uncertain storage results.
+  ///
+  /// This bypasses the in-memory key cache and preserves unreadable records.
+  /// A `false` result means every selected fallback and native store proved
+  /// that no PRIMARY record remains. Storage failures propagate so callers
+  /// cannot mistake unavailable keys for a proven empty account.
+  Future<bool> hasKeysStrict() async {
+    await _ensureInitialized();
+    return _platformStorage.hasKeyStrict(_primaryKeyId);
+  }
+
+  /// Removes proven login key copies for one complete owner public key.
+  ///
+  /// Both PRIMARY and that owner's saved identity are checked in current and
+  /// legacy storage before any deletion. Unknown ownership refuses removal;
+  /// other accounts' records and caches remain intact. [ensureCurrent] must
+  /// throw if the caller's account operation has been retired.
+  Future<void> deleteOwnedLoginStrict(
+    String ownerPubkey, {
+    void Function()? ensureCurrent,
+  }) async {
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(ownerPubkey)) {
+      throw const SecureKeyStorageException(
+        'A complete canonical owner public key is required',
+        code: 'invalid_owner_pubkey',
+      );
+    }
+    ensureCurrent?.call();
+    await _ensureInitialized();
+    ensureCurrent?.call();
+    final npub = Nip19.encodePubKey(ownerPubkey);
+    await _platformStorage.deleteOwnedLoginRecordsStrict(
+      primaryKeyId: _primaryKeyId,
+      identityKeyId: '$_savedKeysPrefix$npub',
+      ownerPubkey: ownerPubkey,
+      ensureCurrent: ensureCurrent,
+    );
+    ensureCurrent?.call();
+    final cached = _cachedKeyContainer;
+    if (cached != null &&
+        (cached.isDisposed || cached.publicKeyHex == ownerPubkey)) {
+      cached.dispose();
+      _clearCache();
+    }
+  }
+
   /// Generate and store a new secure key pair
-  Future<SecureKeyContainer> generateAndStoreKeys() async {
+  Future<SecureKeyContainer> generateAndStoreKeys({
+    PrimaryKeyPersistenceGuard? primaryWriteGuard,
+  }) async {
     await _ensureInitialized();
 
     _log.fine('Generating new secure Nostr key pair');
 
+    late SecureKeyContainer keyContainer;
     try {
-      // Generate new secure key container (runs in isolate to avoid ANR)
-      final keyContainer = await SecureKeyContainer.generate();
-
-      _log.fine('📱 Generated key for: ${pubkeyForLogs(keyContainer.npub)}');
-
-      // Store in platform-specific secure storage
-      final result = await _platformStorage.storeKey(
-        keyId: _primaryKeyId,
-        keyContainer: keyContainer,
-        requireHardwareBacked: _securityConfig.requireHardwareBacked,
-      );
-
-      if (!result.success) {
-        keyContainer.dispose();
-        throw SecureKeyStorageException('Failed to store key: ${result.error}');
-      }
-
-      // Update cache
-      _updateCache(keyContainer);
-
-      // Store metadata
-      await _storeMetadata();
-
-      _log.info('Generated and stored new secure key pair');
-      Log.debug(
-        '🔒 Security level: ${result.securityLevel?.name ?? "unknown"}',
-        name: 'SecureKeyStorage',
-        category: LogCategory.auth,
-      );
-
-      return keyContainer;
+      // Generation is in memory; the owner is known before the first write.
+      keyContainer = await SecureKeyContainer.generate();
     } catch (e) {
       _log.severe('Key generation error: $e');
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to generate keys: $e');
+    }
+
+    try {
+      _log.fine('📱 Generated key for: ${pubkeyForLogs(keyContainer.npub)}');
+      var attempted = false;
+      var persisted = false;
+      var closed = false;
+      Future<void>? launched;
+      Future<void> persistNative() async {
+        try {
+          final result = await _platformStorage.storeKey(
+            keyId: _primaryKeyId,
+            keyContainer: keyContainer,
+            requireHardwareBacked: _securityConfig.requireHardwareBacked,
+          );
+          if (!result.success) {
+            throw SecureKeyStorageException(
+              'Failed to store key: ${result.error}',
+            );
+          }
+          _updateCache(keyContainer);
+          await _storeMetadata();
+          persisted = true;
+          Log.debug(
+            '🔒 Security level: ${result.securityLevel?.name ?? "unknown"}',
+            name: 'SecureKeyStorage',
+            category: LogCategory.auth,
+          );
+        } catch (e) {
+          if (e is SecureKeyStorageException) rethrow;
+          throw SecureKeyStorageException('Failed to generate keys: $e');
+        }
+      }
+
+      Future<void> persist() {
+        if (closed || attempted) {
+          throw const SecureKeyStorageException(
+            'Generated PRIMARY persistence is no longer available',
+          );
+        }
+        attempted = true;
+        final future = persistNative();
+        launched = future;
+        // An incorrect guard may launch without awaiting. Own that error
+        // immediately, then drain the original future before any disposal.
+        unawaited(
+          future.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
+        );
+        return future;
+      }
+
+      Object? failure;
+      StackTrace? failureStack;
+      try {
+        if (primaryWriteGuard == null) {
+          await persist();
+        } else {
+          await primaryWriteGuard(keyContainer.publicKeyHex, persist);
+          if (launched != null && !persisted) {
+            throw const SecureKeyStorageException(
+              'Generated PRIMARY guard returned before persistence settled',
+            );
+          }
+        }
+      } on Object catch (error, stack) {
+        failure = error;
+        failureStack = stack;
+      } finally {
+        closed = true;
+      }
+      final pending = launched;
+      if (pending != null) {
+        try {
+          await pending;
+        } on Object catch (error, stack) {
+          failure ??= error;
+          failureStack ??= stack;
+        }
+      }
+      if (failure != null) {
+        Error.throwWithStackTrace(failure, failureStack!);
+      }
+      if (!persisted) {
+        throw const SecureKeyStorageException(
+          'Generated PRIMARY persistence was not completed',
+        );
+      }
+
+      _log.info('Generated and stored new secure key pair');
+      return keyContainer;
+    } on Object {
+      // This new object was never delivered to a caller. Preserve native bytes
+      // for recovery, while preventing a disposed object from remaining cached.
+      if (identical(_cachedKeyContainer, keyContainer)) {
+        _clearCache();
+      }
+      keyContainer.dispose();
+      // Guard failures retain their type so callers can preserve newer epochs.
+      rethrow;
     }
   }
 
