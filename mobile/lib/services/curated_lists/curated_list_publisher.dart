@@ -105,6 +105,10 @@ class CuratedListPublisher {
       final evidenceTicket = changesPermissions
           ? await _recovery.ticket(owner, current.id)
           : null;
+      // Ticket capture crosses the shared recovery barrier. A retired lease
+      // cannot dispatch, even when that capture produced a ticket before
+      // the barrier reported its operation cancelled.
+      if (!_owns(owner) || _recovery.needsRepair(owner)) return false;
       if (changesPermissions && evidenceTicket == null) return false;
       final priorPlaintextIds = <String>{
         ...current.pendingPlaintextEventIds,

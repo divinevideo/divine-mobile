@@ -19,6 +19,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -43,11 +44,21 @@ class _Preferences extends Fake implements SharedPreferences {
   bool rejectDefaultFlag = false;
   bool rejectDefaultRecovery = false;
   bool rejectRecoveryRemoval = false;
+  void Function()? onGenerationRead;
 
   @override
   Future<void> reload() => backing.reload();
   @override
-  Object? get(String key) => backing.get(key);
+  Object? get(String key) {
+    final value = backing.get(key);
+    if (key.startsWith(CuratedListRecoveryStorage.generationPrefix)) {
+      final callback = onGenerationRead;
+      onGenerationRead = null;
+      callback?.call();
+    }
+    return value;
+  }
+
   @override
   Set<String> getKeys() => backing.getKeys();
   @override
@@ -666,6 +677,66 @@ void main() {
         expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
       },
     );
+
+    for (final retire in [false, true]) {
+      test(
+        retire
+            ? 'retirement during recovery ticket capture prevents relay dispatch'
+            : 'a current lease can dispatch after recovery ticket capture',
+        () async {
+          await prefs.backing.setInt(
+            CuratedListRecoveryStorage.generationKey(_ownerA),
+            0,
+          );
+          final service = open(authA, clientA);
+          var ticketReads = 0;
+          prefs.onGenerationRead = () {
+            ticketReads++;
+            if (retire) service.dispose();
+          };
+
+          final result = await service.updateList(
+            listId: '$_ownerA:crew',
+            isPublic: true,
+          );
+
+          expect(ticketReads, 1);
+          expect(service.isCurrentSession, !retire);
+          expect(result, !retire);
+          final stored =
+              (jsonDecode(
+                    prefs.getString(CuratedListService.listsStorageKey)!,
+                  ) as List<dynamic>).single
+                  as Map<String, dynamic>;
+          expect(stored['pubkey'], _ownerA);
+          expect(stored['isPublic'], !retire);
+          if (retire) {
+            expect(stored['nostrEventId'], _row(_ownerA).nostrEventId);
+            expect(stored['pendingRepublish'], isTrue);
+            expect(stored['videoEventIds'], _row(_ownerA).videoEventIds);
+            verifyNever(() => clientA.publishEventAwaitOk(any()));
+            verifyNever(() => clientA.publishEvent(any()));
+            expect(
+              prefs.containsKey('curated_list_recovery_v1:$_ownerA'),
+              isFalse,
+            );
+          } else {
+            final sent =
+                verify(
+                      () => clientA.publishEventAwaitOk(captureAny()),
+                    ).captured.single
+                    as Event;
+            expect(sent.pubkey, _ownerA);
+            expect(sent.kind, 30005);
+            expect(
+              sent.tags.singleWhere((tag) => tag.first == 'd'),
+              ['d', 'crew'],
+            );
+            expect(stored['nostrEventId'], sent.id);
+          }
+        },
+      );
+    }
 
     test('retired signing result cannot be dispatched to a relay', () async {
       final entered = Completer<void>();
