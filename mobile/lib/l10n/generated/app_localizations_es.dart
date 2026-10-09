@@ -365,11 +365,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mantené los feeds en el formato cuadrado clásico';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
@@ -377,19 +373,12 @@ class AppLocalizationsEs extends AppLocalizations {
       many: 'bucles',
       one: 'bucle',
     );
-    return '$compactCount $_temp0 de $authorName';
+    return '$compactCount $_temp0 de todos los tiempos';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'bucles',
-      many: 'bucles',
-      one: 'bucle',
-    );
-    return '$compactCount $_temp0 de este video';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount de todos los tiempos';
   }
 
   @override

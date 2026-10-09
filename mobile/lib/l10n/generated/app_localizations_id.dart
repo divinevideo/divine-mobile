@@ -304,27 +304,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
-  String videoOverlayTotalLoops(
-    String compactCount,
-    int count,
-    String authorName,
-  ) {
+  String videoOverlayTotalLoops(String compactCount, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$compactCount putaran $authorName',
+      other: 'loop',
     );
-    return '$_temp0';
+    return '$compactCount $_temp0 sepanjang waktu';
   }
 
   @override
-  String videoOverlayVideoLoops(String compactCount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'putaran',
-    );
-    return '$compactCount $_temp0 video ini';
+  String videoOverlayTotalLoopsScope(String compactCount) {
+    return '$compactCount sepanjang waktu';
   }
 
   @override

@@ -489,7 +489,6 @@ class VideoOverlayActions extends ConsumerWidget {
                                             ),
                                             _VideoCardMetaLine(
                                               authorPubkey: authorPubkey,
-                                              authorName: displayName,
                                               video: video,
                                             ),
                                           ],
@@ -726,16 +725,11 @@ class _MetaLineField {
   final String after;
 }
 
-/// Viewer-selected creator total, video loops, and publish date under the name.
+/// Viewer-selected video loops, creator total, and publish date under the name.
 class _VideoCardMetaLine extends ConsumerWidget {
-  const _VideoCardMetaLine({
-    required this.authorPubkey,
-    required this.authorName,
-    required this.video,
-  });
+  const _VideoCardMetaLine({required this.authorPubkey, required this.video});
 
   final String authorPubkey;
-  final String authorName;
   final VideoEvent? video;
 
   @override
@@ -752,7 +746,6 @@ class _VideoCardMetaLine extends ConsumerWidget {
         }
         return _VideoMetaLineContent(
           authorPubkey: authorPubkey,
-          authorName: authorName,
           video: video,
           showTotalLoops: statsVisibility.showTotalLoops,
           showVideoLoops: statsVisibility.showVideoLoops,
@@ -766,7 +759,6 @@ class _VideoCardMetaLine extends ConsumerWidget {
 class _VideoMetaLineContent extends ConsumerWidget {
   const _VideoMetaLineContent({
     required this.authorPubkey,
-    required this.authorName,
     required this.video,
     required this.showTotalLoops,
     required this.showVideoLoops,
@@ -774,7 +766,6 @@ class _VideoMetaLineContent extends ConsumerWidget {
   });
 
   final String authorPubkey;
-  final String authorName;
   final VideoEvent? video;
   final bool showTotalLoops;
   final bool showVideoLoops;
@@ -813,20 +804,20 @@ class _VideoMetaLineContent extends ConsumerWidget {
         : null;
     final l10n = context.l10n;
     final parts = <_MetaLineField>[
+      if (showVideoCount)
+        _MetaLineField.counted(
+          compactVideo!,
+          (count) => l10n.videoFeedLoopCountLine(count, video.totalLoops),
+        ),
       if (totalLoops != null && totalLoops > 0 && showVideoCount)
         _MetaLineField.counted(
           compactTotal!,
-          (count) => l10n.videoOverlayTotalLoops(count, totalLoops, authorName),
+          l10n.videoOverlayTotalLoopsScope,
         ),
       if (totalLoops != null && totalLoops > 0 && !showVideoCount)
         _MetaLineField.counted(
           compactTotal!,
-          (count) => l10n.videoFeedLoopCountLine(count, totalLoops),
-        ),
-      if (showVideoCount)
-        _MetaLineField.counted(
-          compactVideo!,
-          (count) => l10n.videoOverlayVideoLoops(count, video.totalLoops),
+          (count) => l10n.videoOverlayTotalLoops(count, totalLoops),
         ),
       if (publishedAt != null)
         _MetaLineField.plain(
@@ -901,7 +892,7 @@ class _VideoMetaLineContent extends ConsumerWidget {
                 Text.rich(fieldSpans[index], style: fieldStyle)
               else
                 Flexible(
-                  flex: index == 0 && fieldSpans.length > 1 ? 1 : 2,
+                  flex: showVideoCount && index == 0 ? 2 : 1,
                   child: Text.rich(
                     fieldSpans[index],
                     style: fieldStyle,
