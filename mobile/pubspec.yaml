@@ -362,11 +362,7 @@ dependencies:
   firebase_crashlytics: ^5.3.0
   firebase_messaging: ^16.6.0
   firebase_performance: ^0.11.5
-  # 18.0.0 is the first go_router built on material_ui, and the floor is
-  # load-bearing: earlier versions pick a page builder with
-  # findAncestorWidgetOfExactType<MaterialApp>() against the framework class,
-  # which a material_ui MaterialApp is not. Every `builder:` route would fall
-  # through to NoTransitionPage and lose its transition (#8916).
+  # 18.0.0: older ones drop route transitions under material_ui (#8916).
   go_router: ^18.0.1
   # Runtime splash-screen control via FlutterNativeSplash.preserve/remove.
   # Used ONLY for the runtime API — do NOT add a flutter_native_splash:
@@ -393,90 +389,6 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  # 2.28.0 is the first release that fires an effect on given points in time
-  # through `VideoEffect.triggers`, which effects on the beat of the music
-  # export and preview with (#9710, hm21/pro_video_editor#234).
-  # Self-enforcing: `videoEffectsOnOutput` passes `triggers:`, which does not
-  # exist before it, so a relaxed floor is a compile error.
-  # 2.27.0 is the first release that renders the wiggle, bounce and loop
-  # layer animations and lets the steps of a typing text share one run of
-  # animations through `ImageLayer.animationStartTime` (#9849,
-  # hm21/pro_video_editor#233). Self-enforcing: the animation sheet switches
-  # over every `LayerAnimationType` and `AnimationPhase`, and the render
-  # service passes `animationStartTime:`, so a relaxed floor is a compile
-  # error.
-  # 2.26.0 is the first release that renders custom video effects, which the
-  # editor's echo trail is (#9708). Self-enforcing: the render service passes
-  # `customEffects:`, and the native effects extend `CustomVideoEffectRenderer`,
-  # neither of which exists before it, so a relaxed floor is a compile error.
-  # 2.25.0 is the first release with ImageLayer.censor, which the censor tool
-  # exports a hidden area as (#9562, hm21/pro_video_editor#231).
-  # Self-enforcing: censorImageLayer passes `censor:`, which does not exist
-  # before it, so a relaxed floor is a compile error rather than an export
-  # that shows what the creator hid.
-  # 2.24.0 is the first release that limits a volume above 1.0 instead of
-  # clipping it (hm21/pro_video_editor#230). The timeline goes up to 300 %
-  # (#4906), and on an older release a boosted sound that is already loud, a
-  # mastered song for one, exports distorted. Not self-enforcing: no API
-  # changed, so a relaxed floor is only caught by listening to an export.
-  # 2.21.0 is the first release with block glitch, film grain, signal
-  # interference, CRT (#9705), shake, zoom pulse, mirror, kaleidoscope, split
-  # screen, wave (#9706, #9707) and glow (#9709).
-  # Self-enforcing: the effect label switch names every `VideoEffectType`,
-  # and those values do not exist before them, so a relaxed floor is a compile
-  # error.
-  # 2.20.0 is the first release with video effects (`VideoRenderData.effects`,
-  # `VideoEffectPreview`), which the editor's Effects tool renders (#9650).
-  # Self-enforcing: the render service passes `effects:`, which does not exist
-  # before it, so a relaxed floor is a compile error.
-  # 2.19.1 is the first release whose Android export lays image layers out in
-  # the frame every segment is composited into, as iOS and macOS do; before it
-  # text on a square export of mixed clips moved and grew while a smaller clip
-  # played (#9700, hm21/pro_video_editor#219). `layerFrameSize` hands the
-  # layers over in that frame, so on an older release a smaller first clip
-  # misplaces every layer on Android. Android-only and not self-enforcing: no
-  # CI job renders on Android, so a relaxed floor is only caught on a device.
-  # 2.19.0 is the first release whose chroma key weighs brightness for a
-  # neutral key, so a white wall is masked without taking black and grey with
-  # it, and whose auto-detect accepts a bright neutral frame edge (#8544,
-  # hm21/pro_video_editor#218). Self-enforcing: the colour-mask preview shader
-  # reads `ChromaKeyDetector.lumaWeightOf`, which does not exist before it, so
-  # a relaxed floor is a compile error rather than a preview that disagrees
-  # with the export.
-  # 2.17.0 is the first release whose `VideoAudioTrack` carries a fade in and
-  # a fade out, which is what bakes a sound's fade into the export (#9557).
-  # Self-enforcing: `resolveRenderAudioTracks` passes `fadeInDuration`, which
-  # does not exist before it, so a relaxed floor is a compile error rather
-  # than an export that silently drops the fade the preview played.
-  # 2.16.0 is the first release whose failed Android render reports the format
-  # of every source it read. `VideoRenderFailedException.traceValue` reads
-  # `NativeFailureDetails.hasHdrSource`, which does not exist before it, so a
-  # relaxed floor is a compile error rather than a silently missing `:hdr`
-  # (#9492). It also keeps each cause to its first line, which is what lets a
-  # GL failure's details fit under Crashlytics' message limit.
-  # 2.14.0 is the first release whose `SegmentTransform` carries a rotation,
-  # which is what lets a detached clip be turned on the canvas and land turned
-  # in the file (hm21/pro_video_editor#203). Unlike every floor below it, this
-  # one is self-enforcing: the call site passes `rotation:`, which simply does
-  # not exist on 2.13.x, so a relaxed floor is a compile error rather than a
-  # clip that silently exports upright.
-  # 2.13.3 is the first release that runs the iOS/macOS HDR pre-transcode and
-  # overlap-transition pre-render under the plugin's export gate and stall
-  # watchdog; on 2.13.2 a stall in either setup stage never settles
-  # (hm21/pro_video_editor#201, our #9347), and 2.13.2 also ran every render's
-  # pre-transcode ungated next to every other's. VideoRenderWatchdog bounds
-  # that app-side, so a relaxed floor costs a preview two minutes and an export
-  # five rather than the session — but it is still only caught on a device,
-  # since no CI job renders on iOS or macOS.
-  # 2.13.2 is the first release where concurrent iOS/macOS renders stop
-  # sharing one compositor config; 2.13.1 crashes (#9338) or bakes one
-  # render's crop, filters and overlays into another, and no CI job renders
-  # on iOS or macOS, so only a device build would catch a relaxed floor.
-  # 2.13.1 is the first release that blends an overlap transition across a
-  # rotation flag; 2.13.0 silently hard-cuts that boundary (#9321). That floor
-  # is load-bearing and Android-only — no CI job builds Android, and a fallback
-  # hard cut is indistinguishable from a working transition in the UI, so
-  # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
   pro_video_editor: ^2.28.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
