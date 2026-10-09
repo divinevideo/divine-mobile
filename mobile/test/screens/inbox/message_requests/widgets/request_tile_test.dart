@@ -300,9 +300,6 @@ void main() {
       });
     });
 
-    // `DmRepository.classifyPotentialRequests` routes an unfollowed thread
-    // here "1:1 or group alike", so a group reaches this list and the row has
-    // to name the room rather than whichever member sorts first.
     // Official branding follows recorded custody (#9963). The closed-thread
     // line is a safety behavior and holds for every custody.
     group('a retired moderation key, by recorded custody (#9963)', () {
@@ -395,6 +392,9 @@ void main() {
       }
     });
 
+    // `DmRepository.classifyPotentialRequests` routes an unfollowed thread
+    // here "1:1 or group alike", so a group reaches this list and the row has
+    // to name the room rather than whichever member sorts first.
     group('group conversations', () {
       const third =
           'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
