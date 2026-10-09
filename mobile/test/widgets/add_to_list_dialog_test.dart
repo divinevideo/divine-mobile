@@ -47,7 +47,10 @@ class _FakeCuratedListsState extends CuratedListsState {
     return _fakeLists;
   }
 
-  void replaceLists(List<CuratedList> lists) => state = AsyncData(lists);
+  void replaceLists(List<CuratedList> lists) {
+    _fakeLists = lists;
+    state = AsyncData(lists);
+  }
 }
 
 void main() {

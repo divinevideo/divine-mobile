@@ -59,9 +59,6 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   Object? get(String key) => backing.get(key);
 
   @override
-  bool containsKey(String key) => backing.containsKey(key);
-
-  @override
   Set<String> getKeys() => backing.getKeys();
 
   @override
