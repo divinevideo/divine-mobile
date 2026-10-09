@@ -9347,6 +9347,50 @@ class DmRepository {
     }
   }
 
+  /// Removes queued sends addressed to their own sender.
+  ///
+  /// The recovery paths refuse such a row when asked to replay it (#8363),
+  /// but nothing asks for one that has used up its retry budget, so it would
+  /// stay in the queue for good. Runs with [_cleanupSelfConversations], which
+  /// removes the thread these rows belong to.
+  ///
+  /// Idempotent — safe to call on every init.
+  Future<void> _cleanupSelfAddressedQueueRows() async {
+    final dao = _outgoingDmsDao;
+    final owner = _ownerPubkey;
+    if (dao == null || owner == null) return;
+    try {
+      // Not `watchAllForOwner(owner).first`: `first` waits for the
+      // subscription's cancel future, which a Drift query stream completes
+      // through a root-zone microtask. A widget test's fake-async zone never
+      // runs one, so everything awaiting this pass would stall there until
+      // the test body ended.
+      final rows = await dao.getAllForOwner(owner);
+      final selfAddressed = rows.where(_isSelfAddressedRow).toList();
+      if (selfAddressed.isEmpty) return;
+
+      var deleted = 0;
+      await _conversationsDao.runInTransaction(() async {
+        for (final row in selfAddressed) {
+          deleted += await dao.deleteById(row.id);
+        }
+      });
+
+      Log.info(
+        'Cleaned up $deleted self-addressed queued DM(s): '
+        "${selfAddressed.map((row) => row.id).join(', ')}",
+        category: LogCategory.system,
+      );
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to clean up self-addressed queued DMs: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   /// Whether [participantPubkeys] is exactly [pubkey], repeated or not.
   ///
   /// Requires at least one entry: an empty list is a shape this cannot
@@ -9381,6 +9425,7 @@ class DmRepository {
   /// operates on the final state of the previous one.
   Future<void> _runPostAuthMaintenance() async {
     await _cleanupSelfConversations();
+    await _cleanupSelfAddressedQueueRows();
     await _backfillCurrentUserHasSent();
     await _backfillConversationPreviews();
     await _purgeReactionsStrandedByRemoval();

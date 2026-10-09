@@ -724,6 +724,81 @@ void main() {
       });
     });
 
+    group('getAllForOwner', () {
+      test(
+        'returns every row for the owner whatever its wrap state or retry '
+        'count, ordered oldest queuedAt first',
+        () async {
+          // Chronological order differs from insertion order, from id order
+          // and from either status column's order, so the assertion only
+          // holds if the query sorts by queuedAt.
+          await dao.enqueue(
+            makeDm(id: 'pending', queuedAt: DateTime.utc(2026, 5, 2)),
+          );
+          await dao.enqueue(
+            makeDm(
+              id: 'self-failed',
+              recipientStatus: OutgoingWrapStatus.sent,
+              selfStatus: OutgoingWrapStatus.failed,
+              queuedAt: DateTime.utc(2026, 5, 5),
+            ),
+          );
+          await dao.enqueue(
+            makeDm(
+              id: 'both-sent',
+              recipientStatus: OutgoingWrapStatus.sent,
+              selfStatus: OutgoingWrapStatus.sent,
+              queuedAt: DateTime.utc(2026, 5),
+            ),
+          );
+          await dao.enqueue(
+            makeDm(
+              id: 'exhausted',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+              retryCount: 5,
+              queuedAt: DateTime.utc(2026, 5, 4),
+            ),
+          );
+          await dao.enqueue(
+            makeDm(
+              id: 'blocked',
+              recipientStatus: OutgoingWrapStatus.blocked,
+              selfStatus: OutgoingWrapStatus.blocked,
+              queuedAt: DateTime.utc(2026, 5, 3),
+            ),
+          );
+
+          final rows = await dao.getAllForOwner(ownerA);
+
+          expect(
+            rows.map((e) => e.id),
+            equals([
+              'both-sent',
+              'pending',
+              'blocked',
+              'exhausted',
+              'self-failed',
+            ]),
+          );
+        },
+      );
+
+      test('excludes rows owned by another account', () async {
+        await dao.enqueue(makeDm(id: 'aaaa'));
+        await dao.enqueue(makeDm(id: 'bbbb', owner: ownerB));
+
+        expect(
+          (await dao.getAllForOwner(ownerA)).map((e) => e.id),
+          equals(['aaaa']),
+        );
+        expect(
+          (await dao.getAllForOwner(ownerB)).map((e) => e.id),
+          equals(['bbbb']),
+        );
+      });
+    });
+
     group('getRetryableForOwner', () {
       test(
         'returns rows where either wrap is failed and retry_count is '

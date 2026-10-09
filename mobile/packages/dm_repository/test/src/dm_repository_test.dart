@@ -13306,6 +13306,11 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => 1);
+          // The removal waits for post-auth maintenance, which reads the
+          // queue to drop self-addressed rows (#8363).
+          when(
+            () => outgoingDmsDao.getAllForOwner(any()),
+          ).thenAnswer((_) async => const <OutgoingDm>[]);
 
           final repository = createRepository(
             removedConversationsDao: removedConversationsDao,
@@ -13444,6 +13449,11 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => 2);
+          // The removal waits for post-auth maintenance, which reads the
+          // queue to drop self-addressed rows (#8363).
+          when(
+            () => outgoingDmsDao.getAllForOwner(any()),
+          ).thenAnswer((_) async => const <OutgoingDm>[]);
 
           final repository = createRepository(
             removedConversationsDao: removedConversationsDao,

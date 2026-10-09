@@ -142,6 +142,12 @@ void main() {
         (_) async => pendingSelfWrapRow(),
       );
       when(() => outgoingDao.deleteById(any())).thenAnswer((_) async => 1);
+      // Setting credentials starts post-auth maintenance, which reads the
+      // queue to drop self-addressed rows (#8363). Left unstubbed, that read
+      // throws inside the pass and is swallowed there.
+      when(
+        () => outgoingDao.getAllForOwner(any()),
+      ).thenAnswer((_) async => const <OutgoingDm>[]);
 
       when(
         () => messageService.publishSelfWrap(

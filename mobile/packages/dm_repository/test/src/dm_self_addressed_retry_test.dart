@@ -30,6 +30,8 @@ const _privateKey =
 const _baseCreatedAt = 1700000000;
 const _rumorId =
     '2222222222222222222222222222222222222222222222222222222222222222';
+const _otherRumorId =
+    '4444444444444444444444444444444444444444444444444444444444444444';
 const _wrapId =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _videoAddress = '34236:$_owner:beach-post';
@@ -47,15 +49,16 @@ const List<_WrapStates> _replayableStates = [
   (recipient: OutgoingWrapStatus.sent, self: OutgoingWrapStatus.sent),
 ];
 
-String _rumorJson(List<List<String>> tags) => jsonEncode({
-  'id': _rumorId,
-  'pubkey': _owner,
-  'created_at': _baseCreatedAt,
-  'kind': EventKind.privateDirectMessage,
-  'tags': tags,
-  'content': 'queued message',
-  'sig': '',
-});
+String _rumorJson(List<List<String>> tags, {String id = _rumorId}) =>
+    jsonEncode({
+      'id': id,
+      'pubkey': _owner,
+      'created_at': _baseCreatedAt,
+      'kind': EventKind.privateDirectMessage,
+      'tags': tags,
+      'content': 'queued message',
+      'sig': '',
+    });
 
 /// A one-to-one send as `sendMessage` queues it: keyed by the rumor id, in the
 /// conversation derived from [recipient] exactly as it was passed in.
@@ -64,8 +67,10 @@ OutgoingDm _queuedSend({
   OutgoingWrapStatus recipientWrap = OutgoingWrapStatus.failed,
   OutgoingWrapStatus selfWrap = OutgoingWrapStatus.failed,
   List<List<String>> additionalTags = const [],
+  String id = _rumorId,
+  int retryCount = 0,
 }) => OutgoingDm(
-  id: _rumorId,
+  id: id,
   conversationId: DmRepository.computeConversationId(
     [_owner, recipient]..sort(),
   ),
@@ -75,11 +80,12 @@ OutgoingDm _queuedSend({
   rumorEventJson: _rumorJson([
     ['p', recipient],
     ...additionalTags,
-  ]),
+  ], id: id),
   recipientWrapStatus: recipientWrap,
   selfWrapStatus: selfWrap,
   queuedAt: DateTime.utc(2026, 10),
   ownerPubkey: _owner,
+  retryCount: retryCount,
 );
 
 /// The sender's own row of a group send to the sender and [_peer]. A group
@@ -416,6 +422,82 @@ void main() {
         );
         verifyNever(fullSendPublish);
         expect(await outgoingDao.getById(_rumorId), isNull);
+      },
+    );
+  });
+
+  // The recovery paths only refuse a row they are asked to replay, and
+  // nothing asks for one whose retry budget is spent. `getConversations`
+  // waits for the maintenance pass that sign-in starts, which sweeps the
+  // queue for the rest.
+  group('post-auth maintenance', () {
+    setUp(openHarness);
+    tearDown(closeHarness);
+
+    Future<List<String>> queuedIds() async => [
+      for (final row in await db.select(db.outgoingDms).get()) row.id,
+    ];
+
+    test('deletes every queued send addressed to its own sender', () async {
+      await outgoingDao.enqueue(_queuedSend(recipient: _owner));
+      await outgoingDao.enqueue(
+        _queuedSend(
+          recipient: _owner,
+          recipientWrap: OutgoingWrapStatus.pending,
+          selfWrap: OutgoingWrapStatus.pending,
+          id: _otherRumorId,
+        ),
+      );
+      expect(await queuedIds(), unorderedEquals([_rumorId, _otherRumorId]));
+
+      await repository.getConversations();
+
+      expect(await queuedIds(), isEmpty);
+    });
+
+    // Five attempts is where the retry sweep stops re-driving a row, so the
+    // sweep would never hand this one to a recovery path.
+    test('deletes one whose retry budget is already spent', () async {
+      await outgoingDao.enqueue(_queuedSend(recipient: _owner, retryCount: 5));
+      expect(await queuedIds(), equals([_rumorId]));
+
+      await repository.getConversations();
+
+      expect(await queuedIds(), isEmpty);
+    });
+
+    test('deletes one stored with an upper-case recipient', () async {
+      await outgoingDao.enqueue(_queuedSend(recipient: _owner.toUpperCase()));
+      expect(await queuedIds(), equals([_rumorId]));
+
+      await repository.getConversations();
+
+      expect(await queuedIds(), isEmpty);
+    });
+
+    // In the two tests below the self-addressed row going is the proof that
+    // the cleanup ran over this queue; the other row is the one under test.
+    test('leaves a queued send to another pubkey in the queue', () async {
+      await outgoingDao.enqueue(_queuedSend(recipient: _owner));
+      await outgoingDao.enqueue(
+        _queuedSend(recipient: _peer, id: _otherRumorId),
+      );
+
+      await repository.getConversations();
+
+      expect(await queuedIds(), equals([_otherRumorId]));
+    });
+
+    test(
+      'leaves a group sibling row that names the sender in the queue',
+      () async {
+        final sibling = _groupSiblingForSender();
+        await outgoingDao.enqueue(_queuedSend(recipient: _owner));
+        await outgoingDao.enqueue(sibling);
+
+        await repository.getConversations();
+
+        expect(await queuedIds(), equals([sibling.id]));
       },
     );
   });
