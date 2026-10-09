@@ -2021,14 +2021,6 @@
     "conversationRestorePausedTitle": "لم تكتمل استعادة هذه المحادثة",
     "inboxRestoreRetryAction": "إعادة المحاولة",
     "inboxRestoringMessages": "جارٍ استعادة رسائلك…",
-    "inboxReportedUser": "تم الإبلاغ عن {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "تم إلغاء حظر {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3135,7 +3127,6 @@
     "inboxActionReportVanishedAccount": "الإبلاغ عن هذا الحساب",
     "inboxActionBlockVanishedAccount": "حظر هذا الحساب",
     "inboxActionUnblockVanishedAccount": "إلغاء حظر هذا الحساب",
-    "inboxReportedVanishedAccount": "تم الإبلاغ عن هذا الحساب",
     "inboxBlockedVanishedAccount": "تم حظر هذا الحساب",
     "inboxUnblockedVanishedAccount": "تم إلغاء حظر هذا الحساب",
     "inboxRemoveConfirmBodyVanishedAccount": "يؤدي هذا إلى إزالة المحادثة من صندوق الوارد. إذا راسلك مرة أخرى، تبدأ محادثة جديدة.",

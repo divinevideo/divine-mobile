@@ -952,9 +952,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Bỏ chặn tài khoản này';
 
   @override
-  String get inboxReportedVanishedAccount => 'Đã báo cáo tài khoản này';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Đã chặn tài khoản này';
 
   @override
@@ -5712,11 +5709,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Đã tải lên — chạm Lưu để áp dụng';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Đã báo cáo $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

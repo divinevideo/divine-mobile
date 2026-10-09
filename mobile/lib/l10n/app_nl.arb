@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Deze chat is nog niet hersteld",
     "inboxRestoreRetryAction": "Opnieuw proberen",
     "inboxRestoringMessages": "Je berichten worden hersteld…",
-    "inboxReportedUser": "{displayName} gerapporteerd",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} gedeblokkeerd",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Dit account rapporteren",
     "inboxActionBlockVanishedAccount": "Dit account blokkeren",
     "inboxActionUnblockVanishedAccount": "Dit account deblokkeren",
-    "inboxReportedVanishedAccount": "Dit account is gerapporteerd",
     "inboxBlockedVanishedAccount": "Dit account is geblokkeerd",
     "inboxUnblockedVanishedAccount": "Dit account is gedeblokkeerd",
     "inboxRemoveConfirmBodyVanishedAccount": "Hiermee verwijder je het gesprek uit je inbox. Als deze persoon je weer een bericht stuurt, begint er een nieuw gesprek.",

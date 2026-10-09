@@ -968,9 +968,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Avblockera det här kontot';
 
   @override
-  String get inboxReportedVanishedAccount => 'Det här kontot har rapporterats';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Det här kontot har blockerats';
 
   @override
@@ -5737,11 +5734,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Uppladdad — tryck på Spara för att tillämpa';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName rapporterad';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

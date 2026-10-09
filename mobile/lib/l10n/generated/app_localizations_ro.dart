@@ -1027,9 +1027,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Deblochează acest cont';
 
   @override
-  String get inboxReportedVanishedAccount => 'Acest cont a fost raportat';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Acest cont a fost blocat';
 
   @override
@@ -5904,11 +5901,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Încărcată — apasă pe Salvează pentru a aplica';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName a fost raportat(ă)';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

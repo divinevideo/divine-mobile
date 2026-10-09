@@ -649,10 +649,6 @@
   "@inboxActionUnblockVanishedAccount": {
     "description": "Unblock action for a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
   },
-  "inboxReportedVanishedAccount": "Reported this account",
-  "@inboxReportedVanishedAccount": {
-    "description": "Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
-  },
   "inboxBlockedVanishedAccount": "Blocked this account",
   "@inboxBlockedVanishedAccount": {
     "description": "Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
@@ -3557,14 +3553,6 @@
   "profileSetupUploadStaged": "Uploaded — tap Save to apply",
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
-  },
-  "inboxReportedUser": "Reported {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
   },
   "inboxBlockedUser": "Blocked {displayName}",
   "@inboxBlockedUser": {

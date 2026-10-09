@@ -1567,14 +1567,6 @@
     "conversationRestorePausedTitle": "이 대화를 아직 다 복구하지 못했어요",
     "inboxRestoreRetryAction": "다시 시도",
     "inboxRestoringMessages": "메시지를 복구하는 중…",
-    "inboxReportedUser": "{displayName}을(를) 신고했어요",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName}의 차단을 해제했어요",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2681,7 +2673,6 @@
     "inboxActionReportVanishedAccount": "이 계정 신고",
     "inboxActionBlockVanishedAccount": "이 계정 차단",
     "inboxActionUnblockVanishedAccount": "이 계정 차단 해제",
-    "inboxReportedVanishedAccount": "이 계정을 신고했어요",
     "inboxBlockedVanishedAccount": "이 계정을 차단했어요",
     "inboxUnblockedVanishedAccount": "이 계정의 차단을 해제했어요",
     "inboxRemoveConfirmBodyVanishedAccount": "이 대화가 받은 편지함에서 삭제돼요. 상대방이 다시 메시지를 보내면 새 대화가 시작돼요.",

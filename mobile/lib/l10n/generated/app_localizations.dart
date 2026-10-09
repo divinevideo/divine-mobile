@@ -1651,12 +1651,6 @@ abstract class AppLocalizations {
   /// **'Unblock this account'**
   String get inboxActionUnblockVanishedAccount;
 
-  /// Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported this account'**
-  String get inboxReportedVanishedAccount;
-
   /// Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
   ///
   /// In en, this message translates to:
@@ -9834,12 +9828,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uploaded — tap Save to apply'**
   String get profileSetupUploadStaged;
-
-  /// No description provided for @inboxReportedUser.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported {displayName}'**
-  String inboxReportedUser(String displayName);
 
   /// No description provided for @inboxBlockedUser.
   ///

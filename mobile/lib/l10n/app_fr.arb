@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Cette conversation n'est pas encore restaurée",
     "inboxRestoreRetryAction": "Réessayer",
     "inboxRestoringMessages": "Restauration de vos messages…",
-    "inboxReportedUser": "{displayName} signalé(e)",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} débloqué(e)",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Signaler ce compte",
     "inboxActionBlockVanishedAccount": "Bloquer ce compte",
     "inboxActionUnblockVanishedAccount": "Débloquer ce compte",
-    "inboxReportedVanishedAccount": "Ce compte a été signalé",
     "inboxBlockedVanishedAccount": "Ce compte a été bloqué",
     "inboxUnblockedVanishedAccount": "Ce compte a été débloqué",
     "inboxRemoveConfirmBodyVanishedAccount": "Cela retire la conversation de votre boîte de réception. Si cette personne vous réécrit, une nouvelle conversation commence.",

@@ -1010,9 +1010,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'ఈ ఖాతాను అన్‌బ్లాక్ చేయండి';
 
   @override
-  String get inboxReportedVanishedAccount => 'ఈ ఖాతాను నివేదించారు';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ఈ ఖాతాను బ్లాక్ చేసారు';
 
   @override
@@ -5930,11 +5927,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'అప్‌లోడ్ చేయబడింది — దరఖాస్తు చేయడానికి సేవ్ చేయి నొక్కండి';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'నివేదించబడింది $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

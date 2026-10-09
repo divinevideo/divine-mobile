@@ -963,9 +963,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'እገዳን አንሳ ይህን መለያ';
 
   @override
-  String get inboxReportedVanishedAccount => 'ሪፖርት ተደርጓል ይህን መለያ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ታግዷል ይህን መለያ';
 
   @override
@@ -5616,11 +5613,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'ሪፖርት ተደርጓል $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

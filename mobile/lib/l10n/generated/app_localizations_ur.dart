@@ -989,9 +989,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'اس اکاؤنٹ کو ان بلاک کریں';
 
   @override
-  String get inboxReportedVanishedAccount => 'اس اکاؤنٹ کی رپورٹ کی';
-
-  @override
   String get inboxBlockedVanishedAccount => 'اس اکاؤنٹ کو بلاک کیا';
 
   @override
@@ -5754,11 +5751,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'اپلوڈ ہو گئی — لاگو کرنے کے لیے محفوظ کریں پر ٹیپ کریں';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName کی رپورٹ کی';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

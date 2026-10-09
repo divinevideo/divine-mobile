@@ -977,9 +977,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'إلغاء حظر هذا الحساب';
 
   @override
-  String get inboxReportedVanishedAccount => 'تم الإبلاغ عن هذا الحساب';
-
-  @override
   String get inboxBlockedVanishedAccount => 'تم حظر هذا الحساب';
 
   @override
@@ -5720,11 +5717,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'تم الرفع — اضغط على حفظ للتطبيق';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'تم الإبلاغ عن $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

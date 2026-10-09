@@ -926,9 +926,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Buka blokir akun ini';
 
   @override
-  String get inboxReportedVanishedAccount => 'Akun ini dilaporkan';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Akun ini diblokir';
 
   @override
@@ -5672,11 +5669,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Diunggah — ketuk Simpan untuk menerapkan';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName dilaporkan';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

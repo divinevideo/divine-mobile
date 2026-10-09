@@ -1000,9 +1000,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Sblocca questo account';
 
   @override
-  String get inboxReportedVanishedAccount => 'Questo account è stato segnalato';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Questo account è stato bloccato';
 
   @override
@@ -5808,11 +5805,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Caricata — tocca Salva per applicare';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName segnalato/a';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

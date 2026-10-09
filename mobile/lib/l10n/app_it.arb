@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Questa chat non è stata ripristinata del tutto",
     "inboxRestoreRetryAction": "Riprova",
     "inboxRestoringMessages": "Ripristino dei messaggi…",
-    "inboxReportedUser": "{displayName} segnalato/a",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} sbloccato/a",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Segnala questo account",
     "inboxActionBlockVanishedAccount": "Blocca questo account",
     "inboxActionUnblockVanishedAccount": "Sblocca questo account",
-    "inboxReportedVanishedAccount": "Questo account è stato segnalato",
     "inboxBlockedVanishedAccount": "Questo account è stato bloccato",
     "inboxUnblockedVanishedAccount": "Questo account è stato sbloccato",
     "inboxRemoveConfirmBodyVanishedAccount": "Questo rimuove la conversazione dalla tua posta in arrivo. Se ti scrive di nuovo, inizia una nuova conversazione.",

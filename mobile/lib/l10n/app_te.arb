@@ -571,10 +571,6 @@
   "@inboxActionUnblockVanishedAccount": {
     "description": "Unblock action for a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
   },
-  "inboxReportedVanishedAccount": "ఈ ఖాతాను నివేదించారు",
-  "@inboxReportedVanishedAccount": {
-    "description": "Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
-  },
   "inboxBlockedVanishedAccount": "ఈ ఖాతాను బ్లాక్ చేసారు",
   "@inboxBlockedVanishedAccount": {
     "description": "Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
@@ -3201,14 +3197,6 @@
   "profileSetupUploadStaged": "అప్‌లోడ్ చేయబడింది — దరఖాస్తు చేయడానికి సేవ్ చేయి నొక్కండి",
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
-  },
-  "inboxReportedUser": "నివేదించబడింది {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
   },
   "inboxBlockedUser": "నిరోధించబడింది {displayName}",
   "@inboxBlockedUser": {

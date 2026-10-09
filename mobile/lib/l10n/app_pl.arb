@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Ten czat nie został jeszcze w pełni odzyskany",
     "inboxRestoreRetryAction": "Spróbuj ponownie",
     "inboxRestoringMessages": "Odzyskiwanie wiadomości…",
-    "inboxReportedUser": "Zgłoszono {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "Odblokowano {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Zgłoś to konto",
     "inboxActionBlockVanishedAccount": "Zablokuj to konto",
     "inboxActionUnblockVanishedAccount": "Odblokuj to konto",
-    "inboxReportedVanishedAccount": "Zgłoszono to konto",
     "inboxBlockedVanishedAccount": "Zablokowano to konto",
     "inboxUnblockedVanishedAccount": "Odblokowano to konto",
     "inboxRemoveConfirmBodyVanishedAccount": "To usuwa rozmowę z Twojej skrzynki odbiorczej. Jeśli ta osoba znów do Ciebie napisze, rozpocznie się nowa rozmowa.",

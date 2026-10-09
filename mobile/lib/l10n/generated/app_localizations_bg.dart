@@ -997,9 +997,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Отблокирай този акаунт';
 
   @override
-  String get inboxReportedVanishedAccount => 'Този акаунт е докладван';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Този акаунт е блокиран';
 
   @override
@@ -5801,11 +5798,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Качено — натисни Запази, за да приложиш';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Докладвано $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

@@ -994,9 +994,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Desbloquear esta cuenta';
 
   @override
-  String get inboxReportedVanishedAccount => 'Reportaste esta cuenta';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Bloqueaste esta cuenta';
 
   @override
@@ -5797,11 +5794,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Subida — toca Guardar para aplicar';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Reportaste a $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

@@ -377,7 +377,6 @@
     "inboxActionReportVanishedAccount": "Докладвай този акаунт",
     "inboxActionBlockVanishedAccount": "Блокирай този акаунт",
     "inboxActionUnblockVanishedAccount": "Отблокирай този акаунт",
-    "inboxReportedVanishedAccount": "Този акаунт е докладван",
     "inboxBlockedVanishedAccount": "Този акаунт е блокиран",
     "inboxUnblockedVanishedAccount": "Този акаунт е отблокиран",
     "inboxRemoveConfirmBodyVanishedAccount": "Това премахва разговора от входящата ти кутия. Ако ти пише отново, започва нов разговор.",
@@ -2111,14 +2110,6 @@
     "categoryVlogging": "Влогове",
     "categoryWrestling": "Борба",
     "profileSetupUploadStaged": "Качено — натисни Запази, за да приложиш",
-    "inboxReportedUser": "Докладвано {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxBlockedUser": "Блокиран {displayName}",
     "@inboxBlockedUser": {
         "placeholders": {

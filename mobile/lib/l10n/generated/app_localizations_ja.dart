@@ -876,9 +876,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'このアカウントのブロックを解除';
 
   @override
-  String get inboxReportedVanishedAccount => 'このアカウントを報告したよ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'このアカウントをブロックしたよ';
 
   @override
@@ -5429,11 +5426,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'アップロードしたよ — 適用するには「保存」をタップしてね';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayNameを報告したよ';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

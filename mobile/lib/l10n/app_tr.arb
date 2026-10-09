@@ -2028,14 +2028,6 @@
     "conversationRestorePausedTitle": "Bu sohbet tam geri yüklenmedi",
     "inboxRestoreRetryAction": "Yeniden dene",
     "inboxRestoringMessages": "Mesajların geri yükleniyor…",
-    "inboxReportedUser": "{displayName} bildirildi",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} engeli kaldırıldı",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Bu hesabı bildir",
     "inboxActionBlockVanishedAccount": "Bu hesabı engelle",
     "inboxActionUnblockVanishedAccount": "Bu hesabın engelini kaldır",
-    "inboxReportedVanishedAccount": "Bu hesap bildirildi",
     "inboxBlockedVanishedAccount": "Bu hesap engellendi",
     "inboxUnblockedVanishedAccount": "Bu hesabın engeli kaldırıldı",
     "inboxRemoveConfirmBodyVanishedAccount": "Bu, sohbeti gelen kutundan kaldırır. Sana tekrar yazarsa yeni bir sohbet başlar.",

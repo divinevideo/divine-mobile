@@ -2035,14 +2035,6 @@
     "conversationRestorePausedTitle": "Este chat no terminó de restaurarse",
     "inboxRestoreRetryAction": "Reintentar",
     "inboxRestoringMessages": "Restaurando tus mensajes…",
-    "inboxReportedUser": "Reportaste a {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "Desbloqueaste a {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3150,7 +3142,6 @@
     "inboxActionReportVanishedAccount": "Reportar esta cuenta",
     "inboxActionBlockVanishedAccount": "Bloquear esta cuenta",
     "inboxActionUnblockVanishedAccount": "Desbloquear esta cuenta",
-    "inboxReportedVanishedAccount": "Reportaste esta cuenta",
     "inboxBlockedVanishedAccount": "Bloqueaste esta cuenta",
     "inboxUnblockedVanishedAccount": "Desbloqueaste esta cuenta",
     "inboxRemoveConfirmBodyVanishedAccount": "Esto quita la conversación de tu bandeja de entrada. Si te vuelve a escribir, se inicia una conversación nueva.",

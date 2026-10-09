@@ -1017,9 +1017,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Odblokuj to konto';
 
   @override
-  String get inboxReportedVanishedAccount => 'Zgłoszono to konto';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Zablokowano to konto';
 
   @override
@@ -5895,11 +5892,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Przesłano — dotknij Zapisz, aby zastosować';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Zgłoszono $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

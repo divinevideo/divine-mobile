@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Dieser Chat ist noch nicht vollständig wiederhergestellt",
     "inboxRestoreRetryAction": "Erneut versuchen",
     "inboxRestoringMessages": "Deine Nachrichten werden wiederhergestellt…",
-    "inboxReportedUser": "{displayName} gemeldet",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} entblockt",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Dieses Konto melden",
     "inboxActionBlockVanishedAccount": "Dieses Konto blockieren",
     "inboxActionUnblockVanishedAccount": "Dieses Konto entblocken",
-    "inboxReportedVanishedAccount": "Dieses Konto wurde gemeldet",
     "inboxBlockedVanishedAccount": "Dieses Konto wurde blockiert",
     "inboxUnblockedVanishedAccount": "Dieses Konto wurde entblockt",
     "inboxRemoveConfirmBodyVanishedAccount": "Dadurch wird die Unterhaltung aus deinem Posteingang entfernt. Wenn dir diese Person wieder schreibt, beginnt eine neue Unterhaltung.",

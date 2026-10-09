@@ -879,9 +879,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '이 계정 차단 해제';
 
   @override
-  String get inboxReportedVanishedAccount => '이 계정을 신고했어요';
-
-  @override
   String get inboxBlockedVanishedAccount => '이 계정을 차단했어요';
 
   @override
@@ -5449,11 +5446,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => '업로드됐어요 — 적용하려면 저장을 탭하세요';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName을(를) 신고했어요';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

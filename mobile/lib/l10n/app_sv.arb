@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Den här chatten har inte återställts klart",
     "inboxRestoreRetryAction": "Försök igen",
     "inboxRestoringMessages": "Återställer dina meddelanden…",
-    "inboxReportedUser": "{displayName} rapporterad",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} avblockerad",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Rapportera det här kontot",
     "inboxActionBlockVanishedAccount": "Blockera det här kontot",
     "inboxActionUnblockVanishedAccount": "Avblockera det här kontot",
-    "inboxReportedVanishedAccount": "Det här kontot har rapporterats",
     "inboxBlockedVanishedAccount": "Det här kontot har blockerats",
     "inboxUnblockedVanishedAccount": "Det här kontot har avblockerats",
     "inboxRemoveConfirmBodyVanishedAccount": "Det här tar bort konversationen från din inkorg. Om personen skriver till dig igen startar en ny konversation.",

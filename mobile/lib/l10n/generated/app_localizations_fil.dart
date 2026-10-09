@@ -963,9 +963,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-unblock ang account na ito';
 
   @override
-  String get inboxReportedVanishedAccount => 'Na-report ang account na ito';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Na-block ang account na ito';
 
   @override
@@ -5783,11 +5780,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Na-upload na — i-tap ang I-save para ilapat';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Na-report si $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Această conversație nu s-a restaurat complet",
     "inboxRestoreRetryAction": "Reîncearcă",
     "inboxRestoringMessages": "Se restaurează mesajele tale…",
-    "inboxReportedUser": "{displayName} a fost raportat(ă)",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} a fost deblocat(ă)",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Raportează acest cont",
     "inboxActionBlockVanishedAccount": "Blochează acest cont",
     "inboxActionUnblockVanishedAccount": "Deblochează acest cont",
-    "inboxReportedVanishedAccount": "Acest cont a fost raportat",
     "inboxBlockedVanishedAccount": "Acest cont a fost blocat",
     "inboxUnblockedVanishedAccount": "Acest cont a fost deblocat",
     "inboxRemoveConfirmBodyVanishedAccount": "Astfel, conversația este eliminată din inbox. Dacă îți scrie din nou, începe o conversație nouă.",

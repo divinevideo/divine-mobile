@@ -954,9 +954,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Nyahsekat akaun ini';
 
   @override
-  String get inboxReportedVanishedAccount => 'Akaun ini dilaporkan';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Akaun ini disekat';
 
   @override
@@ -5747,11 +5744,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Dimuat naik — ketik Simpan untuk menggunakan';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName dilaporkan';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

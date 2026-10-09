@@ -924,9 +924,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Bu hesabın engelini kaldır';
 
   @override
-  String get inboxReportedVanishedAccount => 'Bu hesap bildirildi';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Bu hesap engellendi';
 
   @override
@@ -5684,11 +5681,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Yüklendi — uygulamak için Kaydet\'e dokunun';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName bildirildi';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

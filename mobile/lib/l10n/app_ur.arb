@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "اس اکاؤنٹ کی رپورٹ کریں",
   "inboxActionBlockVanishedAccount": "اس اکاؤنٹ کو بلاک کریں",
   "inboxActionUnblockVanishedAccount": "اس اکاؤنٹ کو ان بلاک کریں",
-  "inboxReportedVanishedAccount": "اس اکاؤنٹ کی رپورٹ کی",
   "inboxBlockedVanishedAccount": "اس اکاؤنٹ کو بلاک کیا",
   "inboxUnblockedVanishedAccount": "اس اکاؤنٹ کو ان بلاک کیا",
   "inboxRemoveConfirmBodyVanishedAccount": "اس سے گفتگو آپ کے ان باکس سے ہٹ جائے گی۔ اگر وہ آپ کو دوبارہ پیغام بھیجیں تو نئی گفتگو شروع ہو جائے گی۔",
@@ -2710,14 +2709,6 @@
   "profileSetupUploadStaged": "اپلوڈ ہو گئی — لاگو کرنے کے لیے محفوظ کریں پر ٹیپ کریں",
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
-  },
-  "inboxReportedUser": "{displayName} کی رپورٹ کی",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
   },
   "inboxBlockedUser": "{displayName} کو بلاک کیا",
   "@inboxBlockedUser": {

@@ -899,9 +899,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '取消屏蔽此账号';
 
   @override
-  String get inboxReportedVanishedAccount => '已举报此账号';
-
-  @override
   String get inboxBlockedVanishedAccount => '已屏蔽此账号';
 
   @override
@@ -5399,11 +5396,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => '已上传——点保存生效';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '已举报 $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {

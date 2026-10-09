@@ -988,9 +988,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Dit account deblokkeren';
 
   @override
-  String get inboxReportedVanishedAccount => 'Dit account is gerapporteerd';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Dit account is geblokkeerd';
 
   @override
@@ -5766,11 +5763,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Geüpload — tik op Opslaan om toe te passen';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName gerapporteerd';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
