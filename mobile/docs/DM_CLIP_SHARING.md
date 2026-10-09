@@ -47,8 +47,10 @@ sign without one.
   posting a video all sign the output as what it is: an edit of the media it
   was made from, never a fresh capture. One video makes it an edit
   (`c2pa.opened` with the source as `parentOf`, plus `c2pa.edited`); several
-  make it a composite (`c2pa.created` with `compositeCapture`, every video a
-  `componentOf`). Each source's own manifest is embedded with it.
+  make it a composite (`c2pa.created`, every video a `componentOf`). Its source
+  type is `compositeCapture` when every history it embeds, images and sounds
+  included, names nothing but captures, and plain `composite` otherwise. Each
+  source's own manifest is embedded with it.
 - **Editor intermediates.** Reversing, transforming, keying, freezing a frame
   and filling a placeholder render new files without a manifest. The clip
   remembers what they were made from (`DivineVideoClip.derivedFrom`) and keeps
@@ -73,10 +75,12 @@ sign without one.
   the case yet. The hash is set when the capture proof comes back, which can be
   after the take was saved to the clip library, and the library entry is not
   updated then. An edit made before the proof came back copies its sources
-  without the hash, and a recording used as a chroma-key backdrop, or kept as
-  the footage under a key, is named without one. A clip loaded from the
-  library, or edited from such a source, therefore cannot have its recording
-  signed late, and cannot be sent as a clip. Fixing this is tracked in #9982.
+  without the hash, and a recording used as a chroma-key backdrop is named
+  without one, as is the footage under a key when the clip had no recorded
+  sources before it was keyed. When the recording is still unsigned, a clip
+  loaded from such a library entry, or edited from such a source, therefore
+  cannot have it signed late, and cannot be sent as a clip. Fixing this is
+  tracked in #9982.
 
 ## The C2PA check
 
