@@ -181,6 +181,7 @@ const _pooledRelayUrl = 'wss://pool.example';
 
 /// A client whose one pooled relay holds every query slot with a read it never
 /// answers, plus a [_ScriptedRelay] for each temp relay a read dials.
+/// `disallowed` relays fail the environment lock.
 ///
 /// The occupying reads end on their own deadline, [holdFor], so a test must
 /// await `occupants` before it ends.
@@ -193,7 +194,10 @@ Future<
     Future<void> occupants,
   })
 >
-_saturatedPool({required Duration holdFor}) async {
+_saturatedPool({
+  required Duration holdFor,
+  Set<String> disallowed = const {},
+}) async {
   final tempRelays = <String, _ScriptedRelay>{};
   final nostr = Nostr(
     LocalNostrSigner(_secretKey),
@@ -205,7 +209,9 @@ _saturatedPool({required Duration holdFor}) async {
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenReturn([_pooledRelayUrl]);
   when(() => relayManager.configuredRelays).thenReturn([_pooledRelayUrl]);
-  when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+  when(
+    () => relayManager.isRelayAllowed(any()),
+  ).thenAnswer((call) => !disallowed.contains(call.positionalArguments.single));
   when(() => relayManager.diagnosticsSink).thenReturn(null);
   when(relayManager.dispose).thenAnswer((_) async {});
   final client = NostrClient.forTesting(
@@ -1460,6 +1466,64 @@ void main() {
           setup.pooled.reqSubIds,
           hasLength(NostrClient.maxConcurrentQueries),
         );
+        await setup.occupants;
+      },
+    );
+
+    test(
+      'an outsider the environment lock drops does not free a read of the '
+      'pool members left',
+      () async {
+        const lockedOut = 'wss://locked-out.example';
+        final setup = await _saturatedPool(
+          holdFor: holdFor,
+          disallowed: {lockedOut},
+        );
+
+        final result = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [lockedOut, _pooledRelayUrl],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        expect(result.timedOut, isTrue);
+        expect(_tempRelayFor(setup.tempRelays, lockedOut), isNull);
+        expect(
+          setup.pooled.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+          reason: 'only the pool member is asked, so the read keeps the pool',
+        );
+        await setup.occupants;
+      },
+    );
+
+    test(
+      'a read whose every outsider the environment lock drops still waits',
+      () async {
+        const lockedOut = 'wss://locked-out.example';
+        final setup = await _saturatedPool(
+          holdFor: holdFor,
+          disallowed: {lockedOut},
+        );
+
+        final result = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [lockedOut],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        // Nothing it may dial is left, so it reads like any other pooled read
+        // the slot never reached, not like a fan-out that ran and found no
+        // relay.
+        expect(result.timedOut, isTrue);
+        expect(result.noRelays, isFalse);
+        expect(_tempRelayFor(setup.tempRelays, lockedOut), isNull);
         await setup.occupants;
       },
     );
