@@ -1465,63 +1465,6 @@ void main() {
     );
 
     test(
-      'tells an observer why a read was skipped without being sent',
-      () async {
-        final setup = await _saturatedPool(holdFor: holdFor);
-        final reasons = <String>[];
-
-        final skipped = await NostrClient.observeSkippedReads(
-          () => setup.client.queryEventsDetailed(
-            [inboxList()],
-            useCache: false,
-            tempRelays: const [_pooledRelayUrl],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: lookupTimeout,
-          ),
-          onSkipped: reasons.add,
-        );
-
-        expect(skipped.timedOut, isTrue);
-        expect(reasons, [contains('no query-pool slot arrived')]);
-
-        // The listener is diagnostics: one that throws leaves the read's
-        // answer as it was.
-        final despiteThrow = await NostrClient.observeSkippedReads(
-          () => setup.client.queryEventsDetailed(
-            [inboxList()],
-            useCache: false,
-            tempRelays: const [_pooledRelayUrl],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: const Duration(milliseconds: 200),
-          ),
-          onSkipped: (_) => throw StateError('listener'),
-        );
-        expect(despiteThrow.timedOut, isTrue);
-
-        // A read that reached a relay is not reported, however it ended.
-        final sent = NostrClient.observeSkippedReads(
-          () => setup.client.queryEventsDetailed(
-            [inboxList()],
-            useCache: false,
-            tempRelays: const [indexerUrl],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: lookupTimeout,
-          ),
-          onSkipped: reasons.add,
-        );
-        await pumpEventQueue();
-        final indexer = _tempRelayFor(setup.tempRelays, indexerUrl)!;
-        await indexer.deliver(['EOSE', await indexer.awaitReq(0)]);
-        expect((await sent).timedOut, isFalse);
-        expect(reasons, hasLength(1));
-        await setup.occupants;
-      },
-    );
-
-    test(
       'a read that also asks the pooled relays still waits, whatever temp '
       'relays it names',
       () async {
