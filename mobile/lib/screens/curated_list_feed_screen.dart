@@ -690,7 +690,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       return;
     }
 
-    ref.invalidate(curatedListsProvider);
     final message = context.l10n.curatedListDeletedSnack;
     announceDetached(
       context,
@@ -758,9 +757,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         '${widget.listName}',
         category: LogCategory.ui,
       );
-
-      // Invalidate providers so the Lists tab updates
-      ref.invalidate(curatedListsProvider);
     } catch (e) {
       Log.error('Failed to toggle subscription: $e', category: LogCategory.ui);
       if (isSessionCurrent()) _showSubscriptionFailure();

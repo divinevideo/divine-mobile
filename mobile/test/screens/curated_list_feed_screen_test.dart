@@ -672,7 +672,7 @@ void main() {
       for (final following in [false, true]) {
         testWidgets(
           'a rejected ${following ? 'unfollow' : 'follow'} reports failure '
-          'without refreshing the lists',
+          'and preserves the subscription state',
           (tester) async {
             isSubscribed = following;
             final list = CuratedList(
@@ -690,28 +690,8 @@ void main() {
               when(() => mockService.subscribeToList('external-list', list))
                   .thenAnswer((_) async => false);
             }
-            var listReads = 0;
-            await tester.pumpWidget(
-              buildSubject(
-                discoveredList: list,
-                extraOverrides: [
-                  curatedListsProvider.overrideWith((ref) async {
-                    listReads++;
-                    return const [];
-                  }),
-                ],
-              ),
-            );
-            final container = ProviderScope.containerOf(
-              tester.element(find.byType(CuratedListFeedScreen)),
-            );
-            final subscription = container.listen(
-              curatedListsProvider,
-              (_, _) {},
-            );
-            addTearDown(subscription.close);
+            await tester.pumpWidget(buildSubject(discoveredList: list));
             await tester.pumpAndSettle();
-            expect(listReads, 1);
             final pill = following
                 ? l10n.listFollowingButton
                 : l10n.listFollowButton;
@@ -724,7 +704,19 @@ void main() {
               find.text(l10n.discoverListsFailedToUpdateSubscription),
               findsOneWidget,
             );
-            expect(listReads, 1);
+            if (following) {
+              verify(() => mockService.unsubscribeFromList('external-list'))
+                  .called(1);
+              verifyNever(
+                () => mockService.subscribeToList('external-list', list),
+              );
+            } else {
+              verify(() => mockService.subscribeToList('external-list', list))
+                  .called(1);
+              verifyNever(
+                () => mockService.unsubscribeFromList('external-list'),
+              );
+            }
             expect(tester.takeException(), isNull);
           },
         );
@@ -739,23 +731,11 @@ void main() {
         final result = Completer<bool>();
         when(() => mockService.unsubscribeFromList('external-list'))
             .thenAnswer((_) => result.future);
-        var listReads = 0;
         await tester.pumpWidget(
           buildSubject(
-            extraOverrides: [
-              authServiceProvider.overrideWithValue(auth),
-              curatedListsProvider.overrideWith((ref) async {
-                listReads++;
-                return const [];
-              }),
-            ],
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
           ),
         );
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(CuratedListFeedScreen)),
-        );
-        final subscription = container.listen(curatedListsProvider, (_, _) {});
-        addTearDown(subscription.close);
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.listFollowingButton));
         await tester.pump();
@@ -765,37 +745,22 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SnackBar), findsNothing);
-        expect(listReads, 1);
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
+        verify(() => mockService.unsubscribeFromList('external-list'))
+            .called(1);
         expect(tester.takeException(), isNull);
       });
 
       testWidgets(
-        'a subscription result cannot refresh a replacement service',
+        'a rejected subscription result cannot report failure to a replacement service',
         (
           tester,
         ) async {
+          final openingService = mockService;
           final result = Completer<bool>();
-          when(() => mockService.unsubscribeFromList('external-list'))
+          when(() => openingService.unsubscribeFromList('external-list'))
               .thenAnswer((_) => result.future);
-          var listReads = 0;
-          await tester.pumpWidget(
-            buildSubject(
-              extraOverrides: [
-                curatedListsProvider.overrideWith((ref) async {
-                  listReads++;
-                  return const [];
-                }),
-              ],
-            ),
-          );
-          final container = ProviderScope.containerOf(
-            tester.element(find.byType(CuratedListFeedScreen)),
-          );
-          final subscription = container.listen(
-            curatedListsProvider,
-            (_, _) {},
-          );
-          addTearDown(subscription.close);
+          await tester.pumpWidget(buildSubject());
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.listFollowingButton));
           await tester.pump();
@@ -806,11 +771,13 @@ void main() {
           when(() => mockService.isOwnedList('external-list'))
               .thenReturn(false);
           await tester.pump();
-          result.complete(true);
+          result.complete(false);
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.listFollowingButton), findsOneWidget);
-          expect(listReads, 1);
+          verify(() => openingService.unsubscribeFromList('external-list'))
+              .called(1);
+          verifyNever(() => mockService.unsubscribeFromList('external-list'));
           expect(find.byType(SnackBar), findsNothing);
           expect(tester.takeException(), isNull);
         },
