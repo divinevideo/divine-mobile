@@ -590,6 +590,10 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// without reaching through a deactivated [BuildContext].
   FeedImmersiveCubit? _immersiveCubit;
 
+  /// Tracks safety transitions, not rebuilds: once a warning has been shown,
+  /// the viewer can deliberately hide the controls again on that video.
+  (String, bool)? _activeSafetySurface;
+
   /// Whether *this* item raised the immersive flag. Guards enter/exit so an
   /// unrelated pointer can't clear a hold we never started.
   bool _isHoldingForImmersive = false;
@@ -1049,6 +1053,26 @@ class __OverlayState extends ConsumerState<_Overlay> {
       showContentWarningOverlay: showContentWarningOverlay,
       isReady: isReady,
     );
+
+    // A pin carried from another video must not hide its warning badge or
+    // leave Report hidden after revealing a warning. Off-screen prefetched
+    // items must not change the current video's chrome preference.
+    final safetySurface =
+        widget.isActive &&
+            (video.hasContentWarning ||
+                effectiveWarnLabels.isNotEmpty ||
+                mode is! _OverlayInteractiveMode)
+        ? (video.id, mode is! _OverlayInteractiveMode)
+        : null;
+    if (_activeSafetySurface != safetySurface) {
+      _activeSafetySurface = safetySurface;
+      if (safetySurface != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _activeSafetySurface != safetySurface) return;
+          _clearPinnedImmersive();
+        });
+      }
+    }
 
     switch (mode) {
       case _OverlayForbiddenMode():

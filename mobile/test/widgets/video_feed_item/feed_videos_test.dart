@@ -53,6 +53,7 @@ import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/video_feed_item/actions/help_classify_action_button.dart';
+import 'package:openvine/widgets/video_feed_item/actions/report_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -179,6 +180,7 @@ VideoEvent _makeVideo({
   String? videoUrl,
   String? sha256,
   List<String> warnLabels = const [],
+  List<String> contentWarningLabels = const [],
 }) {
   return VideoEvent(
     id: id ?? _testVideoId,
@@ -189,6 +191,7 @@ VideoEvent _makeVideo({
     videoUrl: videoUrl ?? 'https://example.com/video.mp4',
     sha256: sha256,
     warnLabels: warnLabels,
+    contentWarningLabels: contentWarningLabels,
   );
 }
 
@@ -2061,6 +2064,126 @@ void main() {
       }
     }
 
+    for (final automatic in [false, true]) {
+      for (final blurred in [false, true]) {
+        testWidgets(
+          '${automatic ? 'auto-advance' : 'swiping'} restores controls on '
+          '${blurred ? 'a blurred warning' : 'a warning badge'}',
+          (tester) async {
+            final immersiveCubit = FeedImmersiveCubit();
+            final videos = [
+              _makeVideo(),
+              _makeVideo(
+                id: 'b' * 64,
+                contentWarningLabels: ['nudity'],
+                warnLabels: blurred ? ['nudity'] : [],
+              ),
+            ];
+            var activeIndex = 0;
+            await _pumpFeedVideos(
+              tester,
+              videos: videos,
+              feedImmersiveCubit: immersiveCubit,
+              feedAutoAdvanceCubit: _MockFeedAutoAdvanceCubit()
+                ..stub(FeedAutoAdvanceState(enabled: automatic)),
+              authService: _viewerAuthService(),
+              onActiveVideoChanged: (_, index) => activeIndex = index,
+            );
+            await tester.pump();
+            final feed = find.byType(InfiniteVideoFeed);
+            await pinch(tester, tester.getCenter(feed));
+            await pumpFade(tester);
+            // Prefetching the next warned item must not clear this item's pin.
+            expect(immersiveCubit.state.isPinned, isTrue);
+
+            if (automatic) {
+              tester.widget<InfiniteVideoFeed>(feed).onVideoLoopCompleted!(0);
+            } else {
+              await tester.fling(feed, const Offset(0, -500), 2000);
+            }
+            await tester.pump();
+            await tester.pump(const Duration(seconds: 1));
+            await pumpFade(tester);
+            expect(activeIndex, 1);
+            expect(immersiveCubit.state.isPinned, isFalse);
+            if (blurred) {
+              expect(find.byType(ContentWarningBlurOverlay), findsOneWidget);
+              await tester.tap(find.text('View Anyway'));
+              await tester.pump();
+              await pumpFade(tester);
+              expect(find.byType(ContentWarningBlurOverlay), findsNothing);
+            } else {
+              expect(find.text('Nudity').hitTestable(), findsOneWidget);
+            }
+            expect(chromeOpacity(tester, of: VideoOverlayActions), 1);
+            expect(
+              find.byType(ReportActionButton).hitTestable(),
+              findsOneWidget,
+            );
+          },
+        );
+      }
+    }
+
+    testWidgets('a deliberate pin after seeing a badge survives rebuilds', (
+      tester,
+    ) async {
+      final video = _makeVideo(contentWarningLabels: ['nudity']);
+      final videos = ValueNotifier<List<VideoEvent>>([video]);
+      addTearDown(videos.dispose);
+      final immersiveCubit = FeedImmersiveCubit();
+      await _pumpFeedVideos(
+        tester,
+        videos: videos.value,
+        videosListenable: videos,
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+      expect(find.text('Nudity').hitTestable(), findsOneWidget);
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+      videos.value = [video];
+      await tester.pump();
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+      expect(chromeOpacity(tester, of: VideoOverlayActions), 0);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    for (final status in [
+      PlaybackStatus.forbidden,
+      PlaybackStatus.ageRestricted,
+      PlaybackStatus.unavailable,
+    ]) {
+      testWidgets('landing on $status restores controls', (tester) async {
+        final second = _makeVideo(id: 'b' * 64);
+        final immersiveCubit = FeedImmersiveCubit();
+        var activeIndex = 0;
+        await _pumpFeedVideos(
+          tester,
+          videos: [_makeVideo(), second],
+          feedImmersiveCubit: immersiveCubit,
+          videoPlaybackStatusCubit: _MockVideoPlaybackStatusCubit()
+            ..stub(status, second.id),
+          onActiveVideoChanged: (_, index) => activeIndex = index,
+        );
+        await tester.pump();
+        final feed = find.byType(InfiniteVideoFeed);
+        await pinch(tester, tester.getCenter(feed));
+        await pumpFade(tester);
+        expect(immersiveCubit.state.isPinned, isTrue);
+        await tester.fling(feed, const Offset(0, -500), 2000);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await pumpFade(tester);
+        expect(activeIndex, 1);
+        expect(find.byType(ModeratedContentOverlay), findsOneWidget);
+        expect(immersiveCubit.state.isPinned, isFalse);
+      });
+    }
+
     testWidgets('removing feed items preserves the feed-owned pin', (
       tester,
     ) async {
@@ -2118,11 +2241,9 @@ void main() {
       );
     });
 
-    testWidgets('a content warning stays visible without clearing the pin', (
+    testWidgets('an arriving community warning restores controls', (
       tester,
     ) async {
-      // Safety overlays remain visible independently of the chrome preference.
-      // Showing one must not reset that preference for subsequent videos.
       final video = _makeVideo();
       final labels = Completer<Set<String>>();
       final repository = _MockCommunityContentLabelRepository();
@@ -2166,8 +2287,8 @@ void main() {
 
       expect(
         immersiveCubit.state.isPinned,
-        isTrue,
-        reason: 'a warning must not change the viewing preference',
+        isFalse,
+        reason: 'a newly arriving warning must restore safety controls',
       );
     });
 
