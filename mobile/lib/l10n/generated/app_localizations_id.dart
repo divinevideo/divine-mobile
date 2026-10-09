@@ -366,6 +366,20 @@ class AppLocalizationsId extends AppLocalizations {
       'Pakai bahasa perangkat (bawaan)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Jadikan audioku bisa dipakai ulang';
 
@@ -13035,4 +13049,7 @@ class AppLocalizationsId extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Terjemahan mesin';
 }

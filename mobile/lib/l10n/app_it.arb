@@ -4957,5 +4957,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Ricollega {platforms} nelle impostazioni di crosspost per continuare a pubblicare.} many{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.} other{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Ricollega {platforms} nelle impostazioni di crosspost per continuare a pubblicare.} many{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.} other{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.}}",
+  "subtitleMachineTranslated": "Traduzione automatica"
 }

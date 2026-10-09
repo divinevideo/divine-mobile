@@ -4503,5 +4503,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}",
+  "subtitleMachineTranslated": "기계 번역"
 }

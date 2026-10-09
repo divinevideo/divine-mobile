@@ -23,6 +23,7 @@ import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -99,6 +100,8 @@ class UserDataCleanupService {
     // Content labels this account applies to its own uploads
     AccountLabelService.accountLabelStorageKey,
     LanguagePreferenceService.prefsKey,
+    SubtitleLanguagePreferenceService.targetLanguageStorageKey,
+    SubtitleLanguagePreferenceService.keepOriginalLanguagesStorageKey,
     AudioSharingPreferenceService.prefsKey,
     // Per-category filter choices. The migration flag travels with the
     // preferences it guards: clearing one without the other leaves the next

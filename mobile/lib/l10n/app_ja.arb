@@ -4957,5 +4957,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}",
+  "subtitleMachineTranslated": "機械翻訳"
 }

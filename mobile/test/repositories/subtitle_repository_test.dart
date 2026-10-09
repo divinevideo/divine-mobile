@@ -198,6 +198,56 @@ void main() {
       ).called(1);
     });
 
+    test('keeps the language the edited subtitles are tagged with', () async {
+      when(
+        () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
+      ).thenAnswer(
+        (_) async => const BlossomUploadResult(
+          success: true,
+          url: 'https://media.divine.video/hash',
+          videoId: 'hash',
+        ),
+      );
+      when(
+        () => publisher.publishSubtitleEvent(
+          video: any(named: 'video'),
+          vttContent: any(named: 'vttContent'),
+          blossomUrl: any(named: 'blossomUrl'),
+          lang: any(named: 'lang'),
+        ),
+      ).thenAnswer((_) async => '39307:pk1:subtitles:my-vine-id');
+      when(
+        () => publisher.republishWithSubtitles(
+          existingEvent: any(named: 'existingEvent'),
+          textTrackRef: any(named: 'textTrackRef'),
+          extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+          textTrackLang: any(named: 'textTrackLang'),
+        ),
+      ).thenAnswer((_) async => _updatedVideo);
+
+      await repo.publishEditedSubtitles(
+        video: _video.copyWith(textTrackLang: 'ja'),
+        cues: _cues,
+      );
+
+      verify(
+        () => publisher.publishSubtitleEvent(
+          video: any(named: 'video'),
+          vttContent: any(named: 'vttContent'),
+          blossomUrl: any(named: 'blossomUrl'),
+          lang: 'ja',
+        ),
+      ).called(1);
+      verify(
+        () => publisher.republishWithSubtitles(
+          existingEvent: any(named: 'existingEvent'),
+          textTrackRef: any(named: 'textTrackRef'),
+          extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+          textTrackLang: 'ja',
+        ),
+      ).called(1);
+    });
+
     test('throws SubtitleEditException when vineId is null', () async {
       final noId = VideoEvent(
         id: 'v',

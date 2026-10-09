@@ -574,6 +574,11 @@ const _knownUntranslatedDebt = <String>{
   // Reporting a list (#9896).
   'listReportAction',
 
+  // Subtitle translation settings (new; awaiting a human translation pass).
+  'contentPreferencesSubtitleLanguage',
+  'contentPreferencesSubtitleLanguageFollowApp',
+  'contentPreferencesSubtitleKeepOriginal',
+  'contentPreferencesSubtitleKeepOriginalNone',
   // A people list whose members are all hidden from the viewer (#9895).
   'peopleListsAllMembersHiddenTitle',
   'peopleListsAllMembersHiddenSubtitle',

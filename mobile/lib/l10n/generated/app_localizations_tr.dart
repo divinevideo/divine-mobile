@@ -366,6 +366,20 @@ class AppLocalizationsTr extends AppLocalizations {
       'Cihaz dilini kullan (varsayılan)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => 'Sesimi yeniden kullanıma aç';
 
   @override
@@ -13054,4 +13068,7 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Makine çevirisi';
 }

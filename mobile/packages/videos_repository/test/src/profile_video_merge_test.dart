@@ -19,6 +19,7 @@ VideoEvent _video({
   List<String> collaboratorPubkeys = const [],
   List<List<String>> nostrEventTags = const [],
   String? textTrackRef,
+  String? textTrackLang,
   List<String> textTrackRefs = const [],
   String? textTrackContent,
   List<String> contentWarningLabels = const [],
@@ -47,6 +48,7 @@ VideoEvent _video({
     collaboratorPubkeys: collaboratorPubkeys,
     nostrEventTags: nostrEventTags,
     textTrackRef: textTrackRef,
+    textTrackLang: textTrackLang,
     textTrackRefs: textTrackRefs,
     textTrackContent: textTrackContent,
     contentWarningLabels: contentWarningLabels,
@@ -186,6 +188,7 @@ void main() {
           createdAt: 1000,
           vineId: 'video-subtitles',
           textTrackRef: 'https://media.divine.video/subtitle-vtt',
+          textTrackLang: 'ja',
           textTrackRefs: const [
             'https://media.divine.video/subtitle-vtt',
             '39307:pubkey:subtitles:video-subtitles',
@@ -197,6 +200,7 @@ void main() {
         merged.textTrackRef,
         equals('https://media.divine.video/subtitle-vtt'),
       );
+      expect(merged.textTrackLang, 'ja');
       expect(merged.textTrackRefs, [
         'https://media.divine.video/subtitle-vtt',
         '39307:pubkey:subtitles:video-subtitles',
@@ -211,6 +215,7 @@ void main() {
           createdAt: 2000,
           vineId: 'video-subtitles',
           textTrackRef: 'https://media.divine.video/current-vtt',
+          textTrackLang: 'en',
           textTrackRefs: const [
             'https://media.divine.video/current-vtt',
             '39307:pubkey:subtitles:current-video-subtitles',
@@ -222,10 +227,12 @@ void main() {
           createdAt: 1000,
           vineId: 'video-subtitles',
           textTrackRef: 'https://media.divine.video/old-vtt',
+          textTrackLang: 'ja',
           textTrackRefs: const ['https://media.divine.video/old-vtt'],
         ),
       );
 
+      expect(merged.textTrackLang, 'en');
       expect(
         merged.textTrackRef,
         equals('https://media.divine.video/current-vtt'),

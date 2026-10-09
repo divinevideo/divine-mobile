@@ -348,6 +348,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contentPreferencesUseDeviceLanguage => 'デバイスの言語を使う (既定)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => '自分の音声を再利用可能にする';
 
   @override
@@ -12483,4 +12497,7 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => '機械翻訳';
 }

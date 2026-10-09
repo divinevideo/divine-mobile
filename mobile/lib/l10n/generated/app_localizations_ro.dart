@@ -448,6 +448,20 @@ class AppLocalizationsRo extends AppLocalizations {
       'Folosește limba dispozitivului (implicit)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Fă audio-ul meu disponibil pentru refolosire';
 
@@ -13398,4 +13412,7 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Traducere automată';
 }

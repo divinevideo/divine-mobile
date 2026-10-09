@@ -306,6 +306,10 @@
   },
   "contentPreferencesTagYourVideos": "Tag your videos with a language so viewers can filter content.",
   "contentPreferencesUseDeviceLanguage": "Use device language (default)",
+  "contentPreferencesSubtitleLanguage": "Subtitle language",
+  "contentPreferencesSubtitleLanguageFollowApp": "Same as app language",
+  "contentPreferencesSubtitleKeepOriginal": "Keep these in the original",
+  "contentPreferencesSubtitleKeepOriginalNone": "None",
   "contentPreferencesAudioSharing": "Make my audio available for reuse",
   "contentPreferencesAudioSharingSubtitle": "When enabled, others can use audio from your videos",
   "contentPreferencesMusicMode": "Music mode",
@@ -9393,5 +9397,9 @@
         "type": "String"
       }
     }
+  },
+  "subtitleMachineTranslated": "Machine-translated",
+  "@subtitleMachineTranslated": {
+    "description": "Short attribution above captions verified as a machine translation; not creator-written words."
   }
 }

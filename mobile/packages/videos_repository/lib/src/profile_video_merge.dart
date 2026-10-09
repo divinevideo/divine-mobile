@@ -96,6 +96,7 @@ VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
         : secondary.collaboratorPubkeys,
     inspiredByVideo: primary.inspiredByVideo ?? secondary.inspiredByVideo,
     textTrackRef: primary.textTrackRef ?? secondary.textTrackRef,
+    textTrackLang: primary.textTrackLang ?? secondary.textTrackLang,
     textTrackRefs: primary.textTrackRefs.isNotEmpty
         ? primary.textTrackRefs
         : secondary.textTrackRefs,

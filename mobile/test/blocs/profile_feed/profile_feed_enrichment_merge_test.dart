@@ -12,6 +12,7 @@ VideoEvent _video({
   String? vineId,
   String? addressableDTag,
   String? textTrackRef,
+  String? textTrackLang,
   List<String> textTrackRefs = const [],
   String? textTrackContent,
   int? eventCreatedAt,
@@ -34,6 +35,7 @@ VideoEvent _video({
     vineId: vineId,
     addressableDTag: addressableDTag,
     textTrackRef: textTrackRef,
+    textTrackLang: textTrackLang,
     textTrackRefs: textTrackRefs,
     textTrackContent: textTrackContent,
     eventCreatedAt: eventCreatedAt,
@@ -76,6 +78,7 @@ void main() {
         id: 'nostr',
         vineId: 'video-subtitles',
         textTrackRef: 'https://media.divine.video/subtitle-vtt',
+        textTrackLang: 'ja',
         textTrackRefs: const [
           'https://media.divine.video/subtitle-vtt',
           '39307:pubkey:subtitles:video-subtitles',
@@ -94,6 +97,7 @@ void main() {
         merged.single.textTrackRef,
         equals('https://media.divine.video/subtitle-vtt'),
       );
+      expect(merged.single.textTrackLang, 'ja');
       expect(merged.single.textTrackRefs, [
         'https://media.divine.video/subtitle-vtt',
         '39307:pubkey:subtitles:video-subtitles',

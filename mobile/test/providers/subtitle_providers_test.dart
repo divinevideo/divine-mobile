@@ -2,6 +2,7 @@
 // ABOUTME: Verifies parsing embedded content (REST API), Blossom VTT fetch,
 // ABOUTME: and relay query fallback.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -10,11 +11,31 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _TrackingSubtitlePreferences extends SubtitleLanguagePreferenceService {
+  int registrations = 0;
+  int removals = 0;
+
+  @override
+  void addListener(VoidCallback listener) {
+    registrations++;
+    super.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    removals++;
+    super.removeListener(listener);
+  }
+}
 
 void main() {
   const testPubkey =
@@ -23,11 +44,14 @@ void main() {
   late _MockNostrClient mockNostrClient;
   late _MockHttpClient mockHttpClient;
   late List<Duration> requestedDelays;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     mockNostrClient = _MockNostrClient();
     mockHttpClient = _MockHttpClient();
     requestedDelays = [];
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
   });
 
   setUpAll(() {
@@ -35,9 +59,13 @@ void main() {
     registerFallbackValue(Uri.parse('https://media.divine.video/fallback/vtt'));
   });
 
-  ProviderContainer createContainer() {
+  ProviderContainer createContainer({
+    SubtitleLanguagePreferenceService? service,
+  }) {
     return ProviderContainer(
       overrides: [
+        if (service != null)
+          subtitleLanguagePreferenceServiceProvider.overrideWithValue(service),
         nostrServiceProvider.overrideWith(
           () => _FakeNostrService(mockNostrClient),
         ),
@@ -45,6 +73,7 @@ void main() {
         subtitlePollDelayProvider.overrideWithValue((duration) async {
           requestedDelays.add(duration);
         }),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
   }
@@ -59,6 +88,94 @@ void main() {
       );
 
       expect(cues, isEmpty);
+    });
+
+    test('requests the target language when the source differs', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      Uri? requested;
+      when(() => mockHttpClient.get(any())).thenAnswer((invocation) async {
+        requested = invocation.positionalArguments.first as Uri;
+        return http.Response(
+          'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nTranslated\n',
+          200,
+          headers: {
+            'content-language': 'en',
+            'x-divine-machine-translated': 'true',
+          },
+        );
+      });
+
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: 'test-id',
+          sha256: 'a' * 64,
+          sourceLang: 'ja',
+          textTrackRefs: ['https://media.divine.video/${'a' * 64}/vtt'],
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Translated'));
+      expect(requested, isNotNull);
+      expect(requested!.queryParameters['lang'], equals('en'));
+    });
+
+    test(
+      'refreshes an active track when target and keep-original change',
+      () async {
+        final service = _TrackingSubtitlePreferences();
+        final container = createContainer(service: service);
+        addTearDown(() {
+          container.dispose();
+          expect(service.removals, 1);
+        });
+        when(() => mockHttpClient.get(any())).thenAnswer((invocation) async {
+          final url = invocation.positionalArguments.first as Uri;
+          final lang = url.queryParameters['lang']!;
+          return http.Response(
+            'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n$lang\n',
+            200,
+            headers: {
+              'content-language': lang,
+              'x-divine-machine-translated': 'true',
+            },
+          );
+        });
+        final provider = subtitleCuesProvider(
+          videoId: 'test-id',
+          sha256: 'a' * 64,
+          sourceLang: 'ja',
+          textTrackContent:
+              'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nOriginal\n',
+        );
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+        expect((await container.read(provider.future)).single.text, 'en');
+        await service.setTargetLanguage('es');
+        expect((await container.read(provider.future)).single.text, 'es');
+        await service.setKeepOriginalLanguages({'ja'});
+        expect((await container.read(provider.future)).single.text, 'Original');
+        expect(service.registrations, 1);
+        expect(service.removals, 0);
+      },
+    );
+
+    test('does not translate when the source matches the app locale', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      const vttContent =
+          'WEBVTT\n\n1\n00:00:00.500 --> 00:00:03.200\nOriginal\n';
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: 'test-id',
+          textTrackContent: vttContent,
+          sourceLang: 'en',
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Original'));
     });
 
     test('parses embedded textTrackContent directly (REST API path)', () async {

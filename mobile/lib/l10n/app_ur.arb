@@ -6724,5 +6724,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں {platforms} دوبارہ منسلک کریں۔} other{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: {platforms}۔}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں {platforms} دوبارہ منسلک کریں۔} other{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: {platforms}۔}}",
+  "subtitleMachineTranslated": "مشینی ترجمہ"
 }

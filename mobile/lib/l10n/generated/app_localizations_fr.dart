@@ -440,6 +440,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'Utiliser la langue de l\'appareil (par défaut)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => 'Rendre mon audio réutilisable';
 
   @override
@@ -13331,4 +13345,7 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Traduction automatique';
 }

@@ -415,6 +415,20 @@ class AppLocalizationsSv extends AppLocalizations {
       'Använd enhetens språk (standard)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Gör mitt ljud tillgängligt för återanvändning';
 
@@ -13134,4 +13148,7 @@ class AppLocalizationsSv extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Maskinöversatt';
 }

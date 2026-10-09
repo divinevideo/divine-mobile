@@ -349,6 +349,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get contentPreferencesUseDeviceLanguage => '기기 언어 사용 (기본값)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => '내 오디오 재사용 허용';
 
   @override
@@ -12496,4 +12510,7 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => '기계 번역';
 }
