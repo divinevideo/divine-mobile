@@ -39,10 +39,13 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -246,6 +249,7 @@ void main() {
       DmRestoreStatusState? restoreStatus,
       String counterparty = otherPubkey,
       List<String>? counterparties,
+      String? subject,
       ConversationState? previousState,
       Future<UserProfile?>? otherProfileFuture,
       Future<bool>? otherProfileVanishedFuture,
@@ -332,6 +336,7 @@ void main() {
                 value: mockRestoreStatusCubit,
                 child: ConversationView(
                   participantPubkeys: counterparties ?? [counterparty],
+                  subject: subject,
                 ),
               ),
             ),
@@ -400,6 +405,407 @@ void main() {
           find.textContaining(l10n.profileReportDisplayName('')),
           findsOneWidget,
         );
+      });
+    });
+
+    // A group thread is titled for the room, so nothing beside the title may
+    // describe whichever counterparty sorted first: no identity line under
+    // it, no profile behind a tap on it, and no member card while the thread
+    // is empty.
+    group('group thread header and empty state', () {
+      const secondPeer =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const groupThread = [otherPubkey, secondPeer];
+      const firstMemberNip05 = 'patrolb@example.com';
+      final roomTitle = l10n.inboxGroupConversationTitle('Patrol B', 1);
+      final firstMemberProfilePath = OtherProfileScreen.pathForNpub(
+        NostrKeyUtils.encodePubKey(otherPubkey),
+      );
+      final groupAvatar = find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.users,
+        description: 'group avatar',
+      );
+
+      UserProfile firstMember({
+        String pubkey = otherPubkey,
+        String? nip05,
+        String? picture,
+      }) => UserProfile(
+        pubkey: pubkey,
+        displayName: 'Patrol B',
+        nip05: nip05,
+        picture: picture,
+        rawData: const {},
+        createdAt: now,
+        eventId:
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+      );
+
+      Finder inAppBar(Finder matching) => find.descendant(
+        of: find.byType(ConversationAppBar),
+        matching: matching,
+      );
+
+      Finder inEmptyState(Finder matching) => find.descendant(
+        of: find.byType(EmptyConversation),
+        matching: matching,
+      );
+
+      MockGoRouter stubbedGoRouter() {
+        final goRouter = MockGoRouter();
+        when(() => goRouter.push(any())).thenAnswer((_) async => null);
+        return goRouter;
+      }
+
+      testWidgets('titles the app bar for the room, with no member identity '
+          'line under it', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfile: firstMember(),
+            otherStats: const ProfileStats(
+              pubkey: otherPubkey,
+              followers: 2100,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(inAppBar(find.text(roomTitle)), findsOneWidget);
+        // The line a 1:1 header puts under the name for this same member —
+        // see 'uses social proof instead of kind-0 name as handle'.
+        expect(
+          find.text(
+            '${l10n.socialProofMutual} · '
+            '${l10n.socialProofFollowerCount(2100, '2.1K')}',
+          ),
+          findsNothing,
+        );
+        // Nor anything else: the room title is the bar's only text.
+        expect(inAppBar(find.byType(Text)), findsOneWidget);
+      });
+
+      testWidgets('shows no deleted-account line when the first member '
+          'vanished', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfileVanished: true,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          inAppBar(
+            find.text(
+              l10n.inboxGroupConversationTitle(
+                l10n.profileDeletedAccountName,
+                1,
+              ),
+            ),
+          ),
+          findsOneWidget,
+        );
+        // What a 1:1 header puts under the name of a vanished account — see
+        // 'a 1:1 thread still shows the deleted-account line' below.
+        expect(
+          find.text(l10n.inboxConversationDeletedAccountSubtitle),
+          findsNothing,
+        );
+        expect(inAppBar(find.byType(Text)), findsOneWidget);
+      });
+
+      // An untitled room's title still carries its first member's name. A
+      // room with a subject does not, so nothing of that member is left.
+      testWidgets('a titled room shows its subject and nothing of its first '
+          'member', (tester) async {
+        const subject = 'Weekend trip';
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            subject: subject,
+            otherProfile: firstMember(nip05: firstMemberNip05),
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(inAppBar(find.text(subject)), findsOneWidget);
+        expect(inAppBar(find.byType(Text)), findsOneWidget);
+        expect(inEmptyState(find.text(subject)), findsOneWidget);
+        expect(inEmptyState(groupAvatar), findsOneWidget);
+        expect(find.textContaining('Patrol B'), findsNothing);
+        expect(find.text(firstMemberNip05), findsNothing);
+        expect(
+          find.text(l10n.inboxConversationViewProfileButton),
+          findsNothing,
+        );
+      });
+
+      testWidgets('tapping the room title opens no profile', (tester) async {
+        final goRouter = stubbedGoRouter();
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfile: firstMember(),
+            goRouter: goRouter,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(inAppBar(find.text(roomTitle)));
+        await tester.pump();
+
+        verifyNever(() => goRouter.push(any()));
+      });
+
+      testWidgets('exposes the room title to assistive tech as plain text', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfile: firstMember(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester.getSemantics(inAppBar(find.text(roomTitle))),
+          isSemantics(label: roomTitle, hasTapAction: false, isButton: false),
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('names the room under the group avatar when there are no '
+          'messages', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfile: firstMember(
+              nip05: firstMemberNip05,
+              picture: 'https://example.com/patrol-b.jpg',
+            ),
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(inEmptyState(find.text(roomTitle)), findsOneWidget);
+        expect(inEmptyState(groupAvatar), findsOneWidget);
+      });
+
+      testWidgets('shows none of the card for its first member when there '
+          'are no messages', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: groupThread,
+            otherProfile: firstMember(
+              nip05: firstMemberNip05,
+              picture: 'https://example.com/patrol-b.jpg',
+            ),
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(EmptyConversation), findsOneWidget);
+        expect(
+          find.text(l10n.inboxConversationViewProfileButton),
+          findsNothing,
+        );
+        // Neither under the room title in the app bar nor on the card.
+        expect(find.text(firstMemberNip05), findsNothing);
+        // Their photo would load through this.
+        expect(inEmptyState(find.byType(VineCachedImage)), findsNothing);
+      });
+
+      group('first-member lookups', () {
+        // Not the suite's `otherPubkey`: `buildSubject` already overrides
+        // that pubkey's stats provider, and Riverpod rejects a second
+        // override of one provider. These tests record the lookups, so they
+        // need the first member's providers to themselves.
+        const watchedMember =
+            '7777777777777777777777777777777777777777777777777777777777777777';
+
+        // Which of the lookups behind a 1:1 header's identity line the view
+        // starts for the thread's first counterparty.
+        Future<({bool nip05, bool followerCount, bool followRelationship})>
+        pumpRecordingLookups(
+          WidgetTester tester, {
+          required List<String> counterparties,
+        }) async {
+          var nip05 = false;
+          var followerCount = false;
+          var followRelationship = false;
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: counterparties,
+              extraOverrides: [
+                // A claimed NIP-05 is what makes a 1:1 header verify one.
+                fetchUserProfileProvider(watchedMember).overrideWith(
+                  (ref) => Future.value(
+                    firstMember(
+                      pubkey: watchedMember,
+                      nip05: firstMemberNip05,
+                    ),
+                  ),
+                ),
+                nip05VerificationProvider(watchedMember).overrideWith((ref) {
+                  nip05 = true;
+                  return Nip05VerificationStatus.none;
+                }),
+                userProfileStatsReactiveProvider(watchedMember).overrideWith((
+                  ref,
+                ) {
+                  followerCount = true;
+                  return const Stream<ProfileStats?>.empty();
+                }),
+                followRelationshipProvider(watchedMember).overrideWith((ref) {
+                  followRelationship = true;
+                  return Stream.value(FollowRelationship.none);
+                }),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          return (
+            nip05: nip05,
+            followerCount: followerCount,
+            followRelationship: followRelationship,
+          );
+        }
+
+        testWidgets('a group thread starts none of them', (tester) async {
+          final started = await pumpRecordingLookups(
+            tester,
+            counterparties: const [watchedMember, secondPeer],
+          );
+
+          // The profile itself is still read: an untitled room is named for
+          // its first member.
+          expect(inAppBar(find.text(roomTitle)), findsOneWidget);
+          expect(
+            started,
+            equals((
+              nip05: false,
+              followerCount: false,
+              followRelationship: false,
+            )),
+          );
+        });
+
+        // Positive control for the test above: the same overrides do record
+        // a lookup the view starts.
+        testWidgets('a 1:1 thread still starts all of them', (tester) async {
+          final started = await pumpRecordingLookups(
+            tester,
+            counterparties: const [watchedMember],
+          );
+
+          expect(
+            started,
+            equals((
+              nip05: true,
+              followerCount: true,
+              followRelationship: true,
+            )),
+          );
+        });
+      });
+
+      // The social-proof form of a 1:1 identity line is pinned by 'uses
+      // social proof instead of kind-0 name as handle'; these two pin its
+      // other forms, which the group tests above assert are absent.
+      testWidgets('a 1:1 thread still shows a claimed NIP-05 under the name', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(otherProfile: firstMember(nip05: firstMemberNip05)),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(inAppBar(find.text('Patrol B')), findsOneWidget);
+        expect(inAppBar(find.text(firstMemberNip05)), findsOneWidget);
+      });
+
+      testWidgets('a 1:1 thread still shows the deleted-account line', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(otherProfileVanished: true));
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          inAppBar(find.text(l10n.profileDeletedAccountName)),
+          findsOneWidget,
+        );
+        expect(
+          inAppBar(find.text(l10n.inboxConversationDeletedAccountSubtitle)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a 1:1 thread still opens the profile from its title', (
+        tester,
+      ) async {
+        final goRouter = stubbedGoRouter();
+        await tester.pumpWidget(
+          buildSubject(otherProfile: firstMember(), goRouter: goRouter),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(inAppBar(find.text('Patrol B')));
+        await tester.pump();
+
+        verify(() => goRouter.push(firstMemberProfilePath)).called(1);
+      });
+
+      testWidgets('a 1:1 thread still shows the card for the other person '
+          'when there are no messages', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            otherProfile: firstMember(nip05: firstMemberNip05),
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(inEmptyState(find.text('Patrol B')), findsOneWidget);
+        expect(inEmptyState(find.text(firstMemberNip05)), findsOneWidget);
+        expect(
+          inEmptyState(find.text(l10n.inboxConversationViewProfileButton)),
+          findsOneWidget,
+        );
+        expect(inEmptyState(groupAvatar), findsNothing);
+      });
+
+      testWidgets('a 1:1 thread still opens the profile from its empty '
+          'state', (tester) async {
+        final goRouter = stubbedGoRouter();
+        await tester.pumpWidget(
+          buildSubject(
+            otherProfile: firstMember(),
+            state: const ConversationState(status: ConversationStatus.loaded),
+            goRouter: goRouter,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.inboxConversationViewProfileButton));
+        await tester.pump();
+
+        verify(() => goRouter.push(firstMemberProfilePath)).called(1);
       });
     });
 
