@@ -47,6 +47,9 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   bool? getBool(String key) => backing.getBool(key);
 
   @override
+  bool containsKey(String key) => backing.containsKey(key);
+
+  @override
   Future<bool> setString(String key, String value) {
     if ((throwLists && key == CuratedListService.listsStorageKey) ||
         (throwSubscriptions &&
