@@ -652,6 +652,7 @@ void main() {
               checkedAt: 900,
               cached: false,
               error: 'Rate limit exceeded for this pubkey',
+              code: 'temporarily_unavailable',
             ),
           ],
         );
@@ -691,6 +692,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this pubkey',
+            code: 'temporarily_unavailable',
           ),
           VerificationResult(
             platform: 'twitter',
@@ -699,6 +701,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this platform',
+            code: 'temporarily_unavailable',
           ),
         ],
       );
@@ -747,6 +750,7 @@ void main() {
               checkedAt: 900,
               cached: false,
               error: 'Rate limit exceeded for this pubkey',
+              code: 'temporarily_unavailable',
             ),
           ],
         );
@@ -791,6 +795,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this pubkey',
+            code: 'temporarily_unavailable',
           ),
         ],
       );
@@ -832,6 +837,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this pubkey',
+            code: 'temporarily_unavailable',
           ),
         ],
       );
@@ -865,6 +871,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this pubkey',
+            code: 'temporarily_unavailable',
           ),
         ],
       );
@@ -882,7 +889,7 @@ void main() {
     });
 
     test('clears rendered claims when the verifier returns a confirmed '
-        'negative (non-rate-limited)', () async {
+        'negative (conclusive)', () async {
       const renderedClaim = IdentityClaim(
         pubkey: _pubkey,
         platform: 'github',
@@ -932,6 +939,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this pubkey',
+            code: 'temporarily_unavailable',
           ),
         ],
       );
@@ -975,6 +983,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this platform',
+            code: 'temporarily_unavailable',
           ),
           VerificationResult(
             platform: 'twitter',
@@ -1022,6 +1031,7 @@ void main() {
             checkedAt: 900,
             cached: false,
             error: 'Rate limit exceeded for this platform',
+            code: 'temporarily_unavailable',
           ),
           VerificationResult(
             platform: 'twitter',
@@ -1151,6 +1161,115 @@ void main() {
         });
       },
     );
+
+    group('when the verifier could not check a claim', () {
+      // The verifier answers `temporarily_unavailable` when it could not check
+      // a claim, here because the platform did not answer. That is no verdict
+      // on the proof, so it is inconclusive in the same way a rate-limit answer
+      // is.
+      const couldNotCheck = VerificationResult(
+        platform: 'github',
+        identity: 'octocat',
+        verified: false,
+        checkedAt: 900,
+        cached: false,
+        error:
+            "GitHub couldn't be checked right now. Try again in a few "
+            'minutes.',
+        code: 'temporarily_unavailable',
+      );
+
+      test('leaves the snapshot untouched', () async {
+        when(
+          () => client.verifyBatch(any()),
+        ).thenAnswer((_) async => const [couldNotCheck]);
+
+        await repo.resolveClaims(
+          pubkey: _pubkey,
+          freshTags: [
+            ['i', 'github:octocat', 'a'],
+          ],
+          cached: null,
+        );
+
+        verifyNever(() => dao.deleteVerification(any()));
+        verifyNever(
+          () => dao.upsertVerification(
+            pubkey: any(named: 'pubkey'),
+            verifiedClaimsJson: any(named: 'verifiedClaimsJson'),
+            checkedAtFloor: any(named: 'checkedAtFloor'),
+          ),
+        );
+      });
+
+      test('keeps showing a cached verified claim', () async {
+        const cachedClaim = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'github',
+          identity: 'octocat',
+          proof: 'a',
+        );
+        when(
+          () => client.verifyBatch(any()),
+        ).thenAnswer((_) async => const [couldNotCheck]);
+
+        final result = await repo.resolveClaims(
+          pubkey: _pubkey,
+          freshTags: [
+            ['i', 'github:octocat', 'a'],
+          ],
+          cached: const CachedVerifiedClaims(
+            claims: [cachedClaim],
+            isFresh: false,
+          ),
+        );
+
+        expect(result, equals([cachedClaim]));
+      });
+
+      test('still prunes a confirmed negative in the same batch', () async {
+        when(() => client.verifyBatch(any())).thenAnswer(
+          (_) async => const [
+            couldNotCheck,
+            VerificationResult(
+              platform: 'twitter',
+              identity: 'octo',
+              verified: false,
+              checkedAt: 900,
+              cached: false,
+              error: 'Tweet not found',
+            ),
+          ],
+        );
+        when(() => dao.getVerification(_pubkey)).thenAnswer(
+          (_) async => _row(
+            claimsJson:
+                '[{"platform":"github","identity":"octocat","proof":"a"},'
+                '{"platform":"twitter","identity":"octo","proof":"b"}]',
+            checkedAtFloor: 500,
+          ),
+        );
+
+        await repo.resolveClaims(
+          pubkey: _pubkey,
+          freshTags: [
+            ['i', 'github:octocat', 'a'],
+            ['i', 'twitter:octo', 'b'],
+          ],
+          cached: null,
+        );
+
+        verify(
+          () => dao.upsertVerification(
+            pubkey: _pubkey,
+            verifiedClaimsJson:
+                '[{"platform":"github","identity":"octocat","proof":"a"}]',
+            checkedAtFloor: 500,
+          ),
+        ).called(1);
+        verifyNever(() => dao.deleteVerification(any()));
+      });
+    });
   });
 
   group('IdentityClaimsRepository write path', () {
@@ -1328,6 +1447,72 @@ void main() {
         expect(status.claims, hasLength(2));
         expect(status.verifiedKeys, isEmpty);
         expect(status.verifierReachable, isFalse);
+      });
+
+      test('flags the claims as unchecked when the verifier could not check '
+          'one of them', () async {
+        when(() => client.verifyBatch(any())).thenAnswer(
+          (_) async => const [
+            VerificationResult(
+              platform: 'github',
+              identity: 'octocat',
+              verified: false,
+              checkedAt: 100,
+              cached: false,
+              error: "GitHub couldn't be checked right now.",
+              code: 'temporarily_unavailable',
+            ),
+            VerificationResult(
+              platform: 'twitter',
+              identity: 'jack',
+              verified: true,
+              checkedAt: 100,
+              cached: false,
+            ),
+          ],
+        );
+
+        final status = await repo.claimsWithVerdicts(_pubkey);
+
+        expect(status.verifierReachable, isFalse);
+        expect(status.isVerified(status.claims.first), isFalse);
+        expect(status.isVerified(status.claims.last), isTrue);
+      });
+
+      test('does not flag the claims as unchecked when the one it could not '
+          'check still shows as verified', () async {
+        when(() => verificationsDao.getVerification(_pubkey)).thenAnswer(
+          (_) async => _row(
+            claimsJson:
+                '[{"platform":"github","identity":"octocat","proof":"abc"}]',
+            checkedAtFloor: 1,
+          ),
+        );
+        when(() => client.verifyBatch(any())).thenAnswer(
+          (_) async => const [
+            VerificationResult(
+              platform: 'github',
+              identity: 'octocat',
+              verified: false,
+              checkedAt: 100,
+              cached: false,
+              error: "GitHub couldn't be checked right now.",
+              code: 'temporarily_unavailable',
+            ),
+            VerificationResult(
+              platform: 'twitter',
+              identity: 'jack',
+              verified: true,
+              checkedAt: 100,
+              cached: false,
+            ),
+          ],
+        );
+
+        final status = await repo.claimsWithVerdicts(_pubkey);
+
+        expect(status.isVerified(status.claims.first), isTrue);
+        expect(status.verifierReachable, isTrue);
       });
     });
 

@@ -156,6 +156,7 @@ void main() {
       expect(find.text('jack'), findsOneWidget);
       expect(find.text(l10n.verifyStatusVerified), findsOneWidget);
       expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
+      expect(find.text(l10n.verifyVerifierUnreachable), findsNothing);
     });
 
     testWidgets('says the verdicts are unknown when the verifier is down', (
@@ -167,6 +168,21 @@ void main() {
       );
 
       expect(find.text(l10n.verifyVerifierUnreachable), findsOneWidget);
+    });
+
+    testWidgets('drops the unknown-verdicts note once every link reads '
+        'verified', (tester) async {
+      // A link re-made after a "couldn't check" answer is shown as verified
+      // straight away, so no row is left for the note to explain.
+      await pump(
+        tester,
+        ready(
+          verifiedKeys: const {'github:octocat', 'twitter:jack'},
+          verifierReachable: false,
+        ),
+      );
+
+      expect(find.text(l10n.verifyVerifierUnreachable), findsNothing);
     });
 
     testWidgets('lists only platforms without a link', (tester) async {

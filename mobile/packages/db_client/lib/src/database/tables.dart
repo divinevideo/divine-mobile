@@ -1882,8 +1882,9 @@ class IdentityEvents extends Table {
 /// One row per profile holding the set of claims the verifier confirmed,
 /// as a JSON list of `{platform, identity, proof}` tuples. Only
 /// `verified: true` results are ever persisted — negative results are not
-/// cached because the verifier returns rate-limit rejections as HTTP-200
-/// `verified: false` bodies that must never be frozen locally (#3936).
+/// cached because the verifier returns rate-limit and "couldn't check right
+/// now" answers as HTTP-200 `verified: false` bodies that must never be frozen
+/// locally (#3936).
 ///
 /// Freshness is anchored on the verifier's own `checked_at`:
 /// [checkedAtFloor] is the minimum `checked_at` across the batch, and the
