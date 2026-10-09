@@ -835,7 +835,7 @@ void main() {
 
     for (final kind in ReportedListKind.values) {
       testWidgets(
-        "files the ${kind.name} list report against its event, author and coordinate",
+        'files the ${kind.name} list report against its event, author and coordinate',
         (tester) async {
           await setLargeSurface(tester);
           await openListReport(tester, kind: kind);
