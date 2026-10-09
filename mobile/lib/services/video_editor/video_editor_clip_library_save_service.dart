@@ -1,6 +1,7 @@
 // ABOUTME: Flattens one timeline clip into a standalone file for the clip library
 // ABOUTME: Bakes trim/speed/volume plus the overlays over it into a fresh documents-dir clip
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -65,6 +66,11 @@ class VideoEditorClipLibrarySaveService {
       category: LogCategory.video,
     );
 
+    // A library clip keeps no record of the effects baked into it, so a video
+    // reusing it could neither require the Flashing Lights warning nor keep a
+    // second flashing effect off it.
+    final parameters = _renderParameters(overlays?.withoutFlashingEffects());
+
     // usePersistentStorage writes into the documents dir, which the library
     // requires: it persists only a basename and resolves it back against
     // getDocumentsPath(), so a temp-dir file would save and then dangle.
@@ -75,13 +81,18 @@ class VideoEditorClipLibrarySaveService {
       usePersistentStorage: true,
       taskId: renderId,
       maxOutputDuration: null,
-      // A library clip keeps no record of the effects baked into it, so a
-      // video reusing it could neither require the Flashing Lights warning
-      // nor keep a second flashing effect off it.
-      parameters: _renderParameters(overlays?.withoutFlashingEffects()),
+      parameters: parameters,
     );
 
     if (outputPath == null) return null;
+
+    // Signed as an edit of the clip, so it can be shared and edited further
+    // with its camera proof intact (#9893).
+    final proof = await VideoEditorRenderService.proofRenderedVideo(
+      File(outputPath),
+      clips: [clip],
+      parameters: parameters,
+    );
 
     final thumbnail = await _extractThumbnail(outputPath);
 
@@ -102,6 +113,18 @@ class VideoEditorClipLibrarySaveService {
       // the library clip is reusable in later videos and a dropped credit here
       // would be permanent.
       sourceCredits: clip.sourceCredits,
+      proofManifestJson: proof == null ? null : jsonEncode(proof),
+      // Left unsigned, for example offline, it stays an editor intermediate,
+      // like a merge: an edit of it is signed against the media it came from,
+      // including video layers baked over the clip. When some of that media
+      // has no name, null leaves the unsigned file as its own source, so an
+      // edit of it is never signed.
+      derivedFrom: proof?.c2paManifestId == null
+          ? await VideoEditorRenderService.renderedVideoSources(
+              clips: [clip],
+              parameters: parameters,
+            )
+          : null,
     );
   }
 

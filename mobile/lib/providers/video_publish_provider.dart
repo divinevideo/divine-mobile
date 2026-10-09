@@ -890,9 +890,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     );
 
     try {
-      final creatorBindingAssertion = await _createCreatorBindingAssertion(
-        filePath: filePath,
-      );
+      final creatorBindingAssertion = await ref
+          .read(c2paCreatorBindingFactoryProvider)
+          .create(filePath);
       if (creatorBindingAssertion == null) {
         return existingProofManifestJson;
       }
@@ -913,6 +913,11 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         creatorBindingAssertion: creatorBindingAssertion,
         cawgIdentityAssertion: verifierBundle?.identityAssertionPayload,
         verifiedIdentityBundle: verifierBundle?.toJson(),
+        // A rendered video is an edit. The render signed it against its
+        // clips; when that did not happen, signing it here as a fresh capture
+        // would vouch for footage nobody recorded (#9893), so it stays
+        // unsigned and only gains the identity metadata.
+        derivedFrom: const [],
       );
 
       final proofManifestJson = proofData != null
@@ -942,58 +947,6 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       );
       return existingProofManifestJson;
     }
-  }
-
-  Future<NostrCreatorBindingAssertion?> _createCreatorBindingAssertion({
-    required String filePath,
-  }) async {
-    try {
-      final hardBindingValue =
-          await NativeProofModeService.generateSha256FileHash(filePath);
-      final assertion = await ref
-          .read(nostrCreatorBindingServiceProvider)
-          .createAssertion(
-            claims: _buildCreatorBindingClaims(
-              nip05: ref.read(authServiceProvider).currentProfile?.nip05,
-            ),
-            hardBinding: CreatorBindingHardBinding(
-              alg: 'sha256',
-              value: hardBindingValue,
-            ),
-            referencedAssertions: const <String>[
-              'c2pa.actions.v2',
-              'cawg.training-mining',
-            ],
-          );
-
-      if (assertion == null) {
-        // Expected for OAuth-only identities while the Keycast backend
-        // does not yet expose `sign_canonical`, and for NIP-46 / NIP-55
-        // remote signers whose protocols don't include canonical signing.
-        // Logged at debug because it isn't an error condition.
-        Log.debug(
-          'Canonical signing not supported by current identity; '
-          'skipping creator-binding assertion.',
-          name: 'VideoPublishNotifier',
-          category: LogCategory.video,
-        );
-      }
-      return assertion;
-    } catch (error, stackTrace) {
-      Log.warning(
-        'Failed to create creator-binding assertion: $error\n$stackTrace',
-        name: 'VideoPublishNotifier',
-        category: LogCategory.video,
-      );
-      return null;
-    }
-  }
-
-  CreatorBindingClaims _buildCreatorBindingClaims({
-    String? nip05,
-    String? website,
-  }) {
-    return CreatorBindingClaims(nip05: nip05, website: website);
   }
 
   VerifierClaimRequest _buildVerifierClaimRequest({

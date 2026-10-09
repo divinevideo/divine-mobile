@@ -253,8 +253,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "847d0c0183c9c09946ce321c107decd3fd9f56b2"
-      resolved-ref: "847d0c0183c9c09946ce321c107decd3fd9f56b2"
+      ref: "96f2b08873d21babe06e61d54f3e7b05f8a4fedd"
+      resolved-ref: "96f2b08873d21babe06e61d54f3e7b05f8a4fedd"
       url: "https://github.com/guardianproject/c2pa-flutter.git"
     source: git
     version: "0.0.3"

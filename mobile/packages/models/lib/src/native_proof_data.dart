@@ -19,6 +19,7 @@ class NativeProofData {
     this.cawgIdentityAssertionLabel,
     this.creatorBindingPayloadJson,
     this.verifiedIdentityBundleJson,
+    this.unattestedSources = false,
   });
 
   /// Create from JSON
@@ -37,18 +38,22 @@ class NativeProofData {
     cawgIdentityAssertionLabel: json['cawgIdentityAssertionLabel'] as String?,
     creatorBindingPayloadJson: json['creatorBindingPayloadJson'] as String?,
     verifiedIdentityBundleJson: json['verifiedIdentityBundleJson'] as String?,
+    unattestedSources: json['unattestedSources'] as bool? ?? false,
   );
 
   /// Create from raw proof metadata map (from NativeProofModeService)
-  factory NativeProofData.fromMetadata(Map<String, String> metadata) =>
-      NativeProofData(
-        videoHash: metadata[metadataHashKey]!,
-        sensorDataCsv: metadata[metadataSensorDataCsvKey],
-        pgpSignature: metadata[metadataPgpSignatureKey],
-        publicKey: metadata[metadataPublicKeyKey],
-        c2paManifestId: metadata[metadataC2paManifestIdKey],
-        deviceAttestation: metadata[metadataDeviceAttestationKey],
-      );
+  factory NativeProofData.fromMetadata(
+    Map<String, String> metadata, {
+    bool unattestedSources = false,
+  }) => NativeProofData(
+    videoHash: metadata[metadataHashKey]!,
+    sensorDataCsv: metadata[metadataSensorDataCsvKey],
+    pgpSignature: metadata[metadataPgpSignatureKey],
+    publicKey: metadata[metadataPublicKeyKey],
+    c2paManifestId: metadata[metadataC2paManifestIdKey],
+    deviceAttestation: metadata[metadataDeviceAttestationKey],
+    unattestedSources: unattestedSources,
+  );
 
   static const metadataHashKey = 'hash';
   static const metadataSensorDataCsvKey = 'csv';
@@ -90,6 +95,14 @@ class NativeProofData {
   /// Verifier response JSON for portable identity claims
   final String? verifiedIdentityBundleJson;
 
+  /// Whether the video was deliberately left without a C2PA manifest because
+  /// media it was edited from carries no camera proof.
+  ///
+  /// Signing such an edit would vouch for footage nobody can show was
+  /// recorded, so its missing [c2paManifestId] is expected, not a failure to
+  /// retry.
+  final bool unattestedSources;
+
   /// Convert to JSON for storage
   Map<String, dynamic> toJson() => {
     'videoHash': videoHash,
@@ -107,6 +120,7 @@ class NativeProofData {
       'creatorBindingPayloadJson': creatorBindingPayloadJson,
     if (verifiedIdentityBundleJson != null)
       'verifiedIdentityBundleJson': verifiedIdentityBundleJson,
+    if (unattestedSources) 'unattestedSources': true,
   };
 
   /// Copy carrying exactly [attestation] as its device attestation.
@@ -126,7 +140,25 @@ class NativeProofData {
     cawgIdentityAssertionLabel: cawgIdentityAssertionLabel,
     creatorBindingPayloadJson: creatorBindingPayloadJson,
     verifiedIdentityBundleJson: verifiedIdentityBundleJson,
+    unattestedSources: unattestedSources,
   );
+
+  /// Copy reporting [unattested] as [unattestedSources].
+  NativeProofData withUnattestedSources({required bool unattested}) =>
+      NativeProofData(
+        videoHash: videoHash,
+        sensorDataCsv: sensorDataCsv,
+        pgpSignature: pgpSignature,
+        publicKey: publicKey,
+        deviceAttestation: deviceAttestation,
+        timestamp: timestamp,
+        c2paManifestId: c2paManifestId,
+        creatorBindingAssertionLabel: creatorBindingAssertionLabel,
+        cawgIdentityAssertionLabel: cawgIdentityAssertionLabel,
+        creatorBindingPayloadJson: creatorBindingPayloadJson,
+        verifiedIdentityBundleJson: verifiedIdentityBundleJson,
+        unattestedSources: unattested,
+      );
 
   /// Check if creator identity metadata was attached to the proof payload
   bool get hasCreatorIdentityMetadata =>

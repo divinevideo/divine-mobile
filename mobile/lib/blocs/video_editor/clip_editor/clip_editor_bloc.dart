@@ -1888,6 +1888,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // The reversed render is a new file; re-keying from the un-reversed
         // chroma source would undo the reverse.
         clearChromaKey: true,
+        // The render carries no manifest; an edit of it is signed against
+        // the media it was reversed from.
+        derivedFrom: clip.signingSources,
       );
       final newClips = List<DivineVideoClip>.of(currentClips)
         ..[currentIndex] = updatedClip;
@@ -1964,8 +1967,11 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       return;
     }
 
+    final unkeyed = state.clips[index].unkeyedSources;
     final restored = state.clips[index].copyWith(
       video: EditorVideo.file(source),
+      derivedFrom: unkeyed,
+      clearDerivedFrom: unkeyed == null,
       thumbnailPath: poster?.path,
       thumbnailTimestamp: poster?.timestamp,
       clearChromaKey: true,
@@ -2527,6 +2533,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       video: rendered.video,
       thumbnailPath: rendered.thumbnailPath,
       placeholderFill: event.fill,
+      // The new backdrop is what the still is made from now; keeping the old
+      // one would declare the wrong photo and keep its file alive.
+      derivedFrom: rendered.derivedFrom,
+      clearDerivedFrom: rendered.derivedFrom == null,
     );
     final newClips = List<DivineVideoClip>.of(currentClips)
       ..[currentIndex] = refilled;
@@ -2610,6 +2620,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // place, removing this key would put the clip back in line for an
       // automatic bake of the recorded one.
       final currentClip = currentClips[currentIndex];
+      final sources = clip.sourcesWithChromaKey(event.chromaKey);
       final updatedClip = currentClip.copyWith(
         video: baked.video,
         chromaKey: event.chromaKey,
@@ -2617,6 +2628,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         clearCaptureChromaKey: true,
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
+        derivedFrom: sources,
+        clearDerivedFrom: sources == null,
       );
       final newClips = List<DivineVideoClip>.of(currentClips)
         ..[currentIndex] = updatedClip;
@@ -3008,6 +3021,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // would silently drop the crop. The key stays baked into the video;
         // only the ability to re-tune it is lost.
         clearChromaKey: true,
+        derivedFrom: clip.signingSources,
       );
       final newClips = List<DivineVideoClip>.of(currentClips)
         ..[currentIndex] = updatedClip;
@@ -3119,6 +3133,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
               clearForwardVideoPath: true,
               clearReversedVideoPath: true,
               clearChromaKey: true,
+              derivedFrom: clip.signingSources,
             ),
           ),
         ),

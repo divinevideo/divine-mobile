@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -38,6 +39,39 @@ void main() {
         // The single-track segment path cannot put a video behind the subject,
         // so this background must be pre-rendered.
         expect(key.needsComposition, isTrue);
+      });
+    });
+
+    group('backdropSources', () {
+      test('names a video backdrop as a video source', () {
+        const key = ClipChromaKey(
+          key: ChromaKey.greenScreen(),
+          backgroundVideoPath: '/a/backdrop.mp4',
+        );
+
+        expect(key.backdropSources, const [
+          C2paEditSource(path: '/a/backdrop.mp4'),
+        ]);
+      });
+
+      test('names an image backdrop as an image source', () {
+        final key = ClipChromaKey(
+          key: ChromaKey(backgroundImage: EditorLayerImage.file('/a/bg.png')),
+        );
+
+        expect(key.backdropSources, const [
+          C2paEditSource(path: '/a/bg.png', kind: C2paSourceKind.image),
+        ]);
+      });
+
+      test('names no source for a colour fill or no backdrop', () {
+        const color = ClipChromaKey(
+          key: ChromaKey.greenScreen(backgroundColor: Color(0xFF102030)),
+        );
+        const transparent = ClipChromaKey(key: ChromaKey.greenScreen());
+
+        expect(color.backdropSources, isEmpty);
+        expect(transparent.backdropSources, isEmpty);
       });
     });
 

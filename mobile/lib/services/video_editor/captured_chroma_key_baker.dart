@@ -142,10 +142,13 @@ class CapturedChromaKeyBaker {
     final chromaKey = clip.captureChromaKey!;
     final baked = await _renderAroundHolds(clip);
     final poster = await _posterOf(baked.video, at: clip.thumbnailTimestamp);
+    final sources = clip.sourcesWithChromaKey(chromaKey);
     return clip.copyWith(
       video: baked.video,
       chromaKey: chromaKey,
       chromaKeySourcePath: baked.source,
+      derivedFrom: sources,
+      clearDerivedFrom: sources == null,
       clearCaptureChromaKey: true,
       clearForwardVideoPath: true,
       clearReversedVideoPath: true,

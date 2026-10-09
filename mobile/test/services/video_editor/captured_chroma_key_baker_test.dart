@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
@@ -93,6 +94,10 @@ void main() {
         expect(keyed.video?.file?.path, '/documents/a_keyed.mp4');
         expect(keyed.chromaKey, _recordedKey);
         expect(keyed.chromaKeySourcePath, '/documents/a.mp4');
+        // Signed against the raw take, which carries the camera proof.
+        expect(keyed.derivedFrom, const [
+          C2paEditSource(path: '/documents/a.mp4'),
+        ]);
         expect(keyed.captureChromaKey, isNull);
         // The raw poster shows the wall the key removed.
         expect(keyed.thumbnailPath, '/documents/a_keyed.jpg');

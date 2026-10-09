@@ -4,9 +4,13 @@ import 'package:c2pa_flutter/c2pa.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' as model;
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
 void main() {
@@ -289,6 +293,299 @@ void main() {
     });
   });
 
+  group('proofFile and proofEdit as edits', () {
+    const generatedProofHash =
+        'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+    late Directory directory;
+    late File output;
+    late _EditC2paSigningService c2paService;
+
+    DivineVideoClip clipAt(String path, {String? recordingSha256}) =>
+        DivineVideoClip(
+          id: path,
+          video: EditorVideo.file(path),
+          duration: const Duration(seconds: 1),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+          recordingSha256: recordingSha256,
+        );
+
+    setUp(() async {
+      directory = await Directory.systemTemp.createTemp(
+        'native-proofmode-edit-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      output = File('${directory.path}/render.mp4');
+      await output.writeAsBytes(const [9, 9, 9]);
+      final proofDir = Directory('${directory.path}/$generatedProofHash');
+      await proofDir.create();
+      await File(
+        '${proofDir.path}/$generatedProofHash.asc',
+      ).writeAsString('signature');
+
+      c2paService = _EditC2paSigningService();
+      NativeProofModeService.c2paSigningServiceFactoryOverride = () =>
+          c2paService;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(proofModeChannel, (call) async {
+            switch (call.method) {
+              case 'isAvailable':
+                return true;
+              case 'getProofDir':
+                final args = call.arguments as Map<Object?, Object?>;
+                return args['proofHash'] == generatedProofHash
+                    ? proofDir.path
+                    : null;
+              case 'generateProof':
+                return generatedProofHash;
+              default:
+                fail('Unexpected proof mode method call: ${call.method}');
+            }
+          });
+    });
+
+    test('signs a derived file as an edit, never as a capture', () async {
+      const sources = [C2paEditSource(path: '/clips/a.mp4')];
+
+      final proofData = await NativeProofModeService.proofFile(
+        output,
+        derivedFrom: sources,
+      );
+
+      expect(c2paService.signVideoInPlaceCallCount, 0);
+      expect(c2paService.editSources, equals([sources]));
+      expect(proofData?.c2paManifestId, equals('urn:c2pa:edit'));
+      expect(proofData?.unattestedSources, isFalse);
+    });
+
+    test('marks a proof whose sources carry no camera proof', () async {
+      c2paService.editFailure = C2paSigningFailureReason.sourceUnattested;
+
+      final proofData = await NativeProofModeService.proofFile(
+        output,
+        derivedFrom: const [C2paEditSource(path: '/clips/gallery.mp4')],
+      );
+
+      expect(proofData, isNotNull);
+      expect(proofData!.c2paManifestId, isNull);
+      expect(proofData.unattestedSources, isTrue);
+    });
+
+    test('names every clip, layer clip and other source once', () async {
+      const backdrop = C2paEditSource(
+        path: '/clips/beach.jpg',
+        kind: C2paSourceKind.image,
+      );
+
+      await NativeProofModeService.proofEdit(
+        output,
+        clips: [clipAt('/clips/a.mp4'), clipAt('/clips/a.mp4')],
+        layerClips: [clipAt('/clips/b.mp4')],
+        otherSources: const [backdrop],
+      );
+
+      expect(
+        c2paService.editSources.single,
+        equals(const [
+          C2paEditSource(path: '/clips/a.mp4'),
+          C2paEditSource(path: '/clips/b.mp4'),
+          backdrop,
+        ]),
+      );
+    });
+
+    test('names no sources when a clip has no media to name', () async {
+      final stills = DivineVideoClip(
+        id: 'stills',
+        stopMotionFrames: const [
+          StopMotionClipFrame(
+            path: '/stills/a.jpg',
+            duration: Duration(milliseconds: 83),
+          ),
+        ],
+        duration: const Duration(milliseconds: 83),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      await NativeProofModeService.proofEdit(
+        output,
+        clips: [clipAt('/clips/a.mp4'), stills],
+      );
+
+      // Signing the attested clip alone would claim the stills came from it.
+      expect(c2paService.editSources.single, isEmpty);
+    });
+
+    group('signOwnRecordings', () {
+      late File recording;
+      late String recordingHash;
+
+      setUp(() async {
+        recording = File('${directory.path}/recording.mp4');
+        await recording.writeAsBytes(const [1, 2, 3]);
+        recordingHash = await NativeProofModeService.generateSha256FileHash(
+          recording.path,
+        );
+      });
+
+      test('signs an unsigned recording as a capture', () async {
+        await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path, recordingSha256: recordingHash),
+        ]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+      });
+
+      test('signs a recording that a merged clip was made from', () async {
+        final merged = clipAt('${directory.path}/merged.mp4').copyWith(
+          derivedFrom: [
+            C2paEditSource(
+              path: recording.path,
+              recordingSha256: recordingHash,
+            ),
+          ],
+        );
+
+        await NativeProofModeService.signOwnRecordings([merged]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+      });
+
+      test('keeps an edit retryable while its recording is unsigned', () async {
+        c2paService.editFailure = C2paSigningFailureReason.sourceUnattested;
+
+        final proofData = await NativeProofModeService.proofEdit(
+          output,
+          clips: [clipAt(recording.path, recordingSha256: recordingHash)],
+        );
+
+        // Signing the recording failed, as it does offline, so the edit is
+        // unsigned for now but not footage without a camera proof.
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+        expect(proofData?.c2paManifestId, isNull);
+        expect(proofData?.unattestedSources, isFalse);
+      });
+
+      test('leaves a recording that changed since alone', () async {
+        await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path, recordingSha256: 'f' * 64),
+        ]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 0);
+      });
+
+      test('never signs a clip that is not a recording', () async {
+        await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path),
+        ]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 0);
+      });
+
+      test('leaves a recording that is already signed alone', () async {
+        c2paService.sourcesWithManifest.add(recording.path);
+
+        await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path, recordingSha256: recordingHash),
+        ]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 0);
+      });
+    });
+  });
+
+  group('proofFile creator binding', () {
+    const accountBinding = NostrCreatorBindingAssertion(
+      assertionLabel: NostrCreatorBindingService.assertionLabel,
+      payloadJson: '{"pubkey":"account"}',
+      signature: 'account-signature',
+      pubkey: 'account',
+    );
+    const publishBinding = NostrCreatorBindingAssertion(
+      assertionLabel: NostrCreatorBindingService.assertionLabel,
+      payloadJson: '{"pubkey":"publish"}',
+      signature: 'publish-signature',
+      pubkey: 'publish',
+    );
+    const generatedProofHash =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+    late File video;
+    late _SuccessfulC2paSigningService c2paService;
+    late List<String> boundPaths;
+
+    setUp(() async {
+      final directory = await Directory.systemTemp.createTemp(
+        'native-proofmode-binding-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      video = File('${directory.path}/video.mp4');
+      await video.writeAsBytes(const [1, 2, 3, 4]);
+      final proofDir = Directory('${directory.path}/$generatedProofHash');
+      await proofDir.create();
+      await File(
+        '${proofDir.path}/$generatedProofHash.asc',
+      ).writeAsString('signature');
+
+      c2paService = _SuccessfulC2paSigningService(video.path);
+      NativeProofModeService.c2paSigningServiceFactoryOverride = () =>
+          c2paService;
+      boundPaths = [];
+      NativeProofModeService.creatorBindingFactory = (path) async {
+        boundPaths.add(path);
+        return accountBinding;
+      };
+      addTearDown(() => NativeProofModeService.creatorBindingFactory = null);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(proofModeChannel, (call) async {
+            switch (call.method) {
+              case 'isAvailable':
+                return true;
+              case 'getProofDir':
+                final args = call.arguments as Map<Object?, Object?>;
+                return args['proofHash'] == generatedProofHash
+                    ? proofDir.path
+                    : null;
+              case 'generateProof':
+                return generatedProofHash;
+              default:
+                fail('Unexpected proof mode method call: ${call.method}');
+            }
+          });
+    });
+
+    test('embeds the signed-in account in the manifest it signs', () async {
+      final proofData = await NativeProofModeService.proofFile(video);
+
+      expect(boundPaths, equals([video.path]));
+      expect(c2paService.signedCreatorBinding, same(accountBinding));
+      // Only the publish flow reports a binding in the proof metadata, so a
+      // recording's proof reads exactly as it did before bindings existed.
+      expect(proofData, isNotNull);
+      expect(proofData!.hasCreatorIdentityMetadata, isFalse);
+    });
+
+    test('signs with the binding the caller passes instead', () async {
+      final proofData = await NativeProofModeService.proofFile(
+        video,
+        creatorBindingAssertion: publishBinding,
+      );
+
+      expect(boundPaths, isEmpty);
+      expect(c2paService.signedCreatorBinding, same(publishBinding));
+      expect(
+        proofData?.creatorBindingPayloadJson,
+        equals(publishBinding.payloadJson),
+      );
+    });
+  });
+
   group('proofFile iOS device attestation', () {
     // Pins the split introduced with per-account App Attest keys: generation
     // runs before the publishing account is fixed, so it cannot mint a payload
@@ -434,6 +731,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
   final String videoPath;
   int readManifestCallCount = 0;
   int signVideoInPlaceCallCount = 0;
+  NostrCreatorBindingAssertion? signedCreatorBinding;
 
   @override
   Future<C2paSigningResult> signVideoInPlace({
@@ -443,6 +741,7 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
     bool enableAdvancedCawgEmbedding = false,
   }) async {
     signVideoInPlaceCallCount += 1;
+    signedCreatorBinding = creatorBindingAssertion;
     return C2paSigningResult(
       signedFilePath: this.videoPath,
       success: true,
@@ -455,4 +754,50 @@ class _SuccessfulC2paSigningService extends C2paSigningService {
     readManifestCallCount += 1;
     return const ManifestStoreInfo(activeManifest: 'urn:c2pa:generated');
   }
+}
+
+class _EditC2paSigningService extends C2paSigningService {
+  final editSources = <List<C2paEditSource>>[];
+  final sourcesWithManifest = <String>{};
+  C2paSigningFailureReason? editFailure;
+  int signVideoInPlaceCallCount = 0;
+
+  @override
+  Future<C2paSigningResult> signEditInPlace({
+    required String outputPath,
+    required List<C2paEditSource> sources,
+    List<String> actions = const [C2paEditActions.edited],
+    NostrCreatorBindingAssertion? creatorBindingAssertion,
+  }) async {
+    editSources.add(sources);
+    final failure = editFailure;
+    return failure == null
+        ? C2paSigningResult(
+            signedFilePath: outputPath,
+            success: true,
+            manifest: const ManifestStoreInfo(activeManifest: 'urn:c2pa:edit'),
+          )
+        : C2paSigningResult(
+            signedFilePath: outputPath,
+            success: false,
+            failureReason: failure,
+          );
+  }
+
+  @override
+  Future<C2paSigningResult> signVideoInPlace({
+    required String videoPath,
+    NostrCreatorBindingAssertion? creatorBindingAssertion,
+    Map<String, dynamic>? cawgIdentityAssertion,
+    bool enableAdvancedCawgEmbedding = false,
+  }) async {
+    signVideoInPlaceCallCount += 1;
+    return C2paSigningResult(signedFilePath: videoPath, success: false);
+  }
+
+  @override
+  Future<ManifestStoreInfo?> readManifest(String filePath) async =>
+      sourcesWithManifest.contains(filePath)
+      ? const ManifestStoreInfo(activeManifest: 'urn:c2pa:existing')
+      : null;
 }

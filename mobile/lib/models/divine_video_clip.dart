@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:divine_camera/divine_camera.dart'
     show CameraLensMetadata, DivineCameraLens;
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
@@ -51,6 +52,8 @@ class DivineVideoClip {
     this.chromaKey,
     this.chromaKeySourcePath,
     this.captureChromaKey,
+    this.derivedFrom,
+    this.recordingSha256,
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -238,6 +241,64 @@ class DivineVideoClip {
   /// this clip.
   final ClipChromaKey? captureChromaKey;
 
+  /// The files this clip's [video] was edited from, when it is an editor
+  /// intermediate rather than media in its own right.
+  ///
+  /// Reversing, transforming, keying, freezing a frame and filling a
+  /// placeholder render new files without a C2PA manifest of their own. An
+  /// edit of the clip is signed against these sources instead, so the camera
+  /// proof of the footage they came from carries through (#9893). `null`
+  /// means [video] itself is the source; an empty list means the editor drew
+  /// the clip from nothing, like a solid colour.
+  final List<C2paEditSource>? derivedFrom;
+
+  /// SHA-256 of [video] as this app recorded it, set only on the app's own
+  /// recordings.
+  ///
+  /// Marks a recording whose capture signing may be retried later, for
+  /// example after it failed offline. A file that no longer matches has been
+  /// changed since and is never signed as a capture. It is carried in
+  /// [signingSources], so clips edited from this one keep it.
+  final String? recordingSha256;
+
+  /// The files to name as this clip's sources when an edit of it is signed:
+  /// [derivedFrom], or else the clip's own video file.
+  ///
+  /// `null` when the clip has no file to name yet, such as a stop-motion clip
+  /// before its stills are rendered; an edit containing it cannot be signed.
+  List<C2paEditSource>? get signingSources {
+    if (derivedFrom case final sources?) return sources;
+    final path = video?.file?.path;
+    return path == null
+        ? null
+        : [C2paEditSource(path: path, recordingSha256: recordingSha256)];
+  }
+
+  /// The sources of the footage this clip's chroma key was applied to, or of
+  /// the clip itself when it carries no key.
+  ///
+  /// This is what the clip is made from once its key is removed, and what a
+  /// new key is applied to: re-keying renders from the pre-key footage again,
+  /// so the old backdrop is no longer part of the clip.
+  List<C2paEditSource>? get unkeyedSources {
+    final key = chromaKey;
+    final source = chromaKeySourcePath;
+    if (key == null || source == null) return signingSources;
+    final sources = derivedFrom;
+    if (sources == null) return [C2paEditSource(path: source)];
+    final backdrop = key.backdropSources;
+    return sources.where((source) => !backdrop.contains(source)).toList();
+  }
+
+  /// What this clip is made from once [key] is baked into it: the unkeyed
+  /// footage plus [key]'s backdrop, or `null` when that footage cannot be
+  /// named.
+  List<C2paEditSource>? sourcesWithChromaKey(ClipChromaKey key) {
+    final footage = unkeyedSources;
+    if (footage == null) return null;
+    return [...footage, ...key.backdropSources];
+  }
+
   /// Whether this clip was recorded in chroma key mode and still waits for
   /// its key to be baked.
   bool get hasPendingCaptureChromaKey =>
@@ -253,6 +314,7 @@ class DivineVideoClip {
     clearCaptureChromaKey: true,
     clearForwardVideoPath: true,
     clearReversedVideoPath: true,
+    derivedFrom: keyed.derivedFrom,
     thumbnailPath: keyed.thumbnailPath,
     thumbnailTimestamp: keyed.thumbnailTimestamp,
   );
@@ -427,6 +489,10 @@ class DivineVideoClip {
     yield chromaKeySourcePath;
     yield chromaKey?.backgroundImagePath;
     yield captureChromaKey?.backgroundImagePath;
+    // An edit is signed against these, so they live as long as the clip.
+    yield* (derivedFrom ?? const <C2paEditSource>[]).map(
+      (source) => source.path,
+    );
   }
 
   /// Whether this clip was recorded with a front-facing camera.
@@ -514,6 +580,10 @@ class DivineVideoClip {
     bool clearChromaKey = false,
     ClipChromaKey? captureChromaKey,
     bool clearCaptureChromaKey = false,
+    List<C2paEditSource>? derivedFrom,
+    bool clearDerivedFrom = false,
+    String? recordingSha256,
+    bool clearRecordingSha256 = false,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
     // "replace the whole list with a single credit" — which silently drops the
@@ -586,6 +656,10 @@ class DivineVideoClip {
       captureChromaKey: clearCaptureChromaKey
           ? null
           : (captureChromaKey ?? this.captureChromaKey),
+      derivedFrom: clearDerivedFrom ? null : (derivedFrom ?? this.derivedFrom),
+      recordingSha256: clearRecordingSha256
+          ? null
+          : (recordingSha256 ?? this.recordingSha256),
       sourceCredits: nextSourceCredits,
     );
   }
@@ -638,6 +712,9 @@ class DivineVideoClip {
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
       if (captureChromaKey != null)
         'captureChromaKey': captureChromaKey!.toJson(),
+      if (derivedFrom case final sources?)
+        'derivedFrom': [for (final source in sources) source.toJson()],
+      if (recordingSha256 != null) 'recordingSha256': recordingSha256,
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -784,6 +861,12 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      derivedFrom: _derivedFromFromJson(
+        json['derivedFrom'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
+      recordingSha256: json['recordingSha256'] as String?,
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,
@@ -867,6 +950,40 @@ class DivineVideoClip {
       Log.error(
         'Dropping unparseable placeholder fill; the rendered still is '
         'unaffected',
+        name: 'DivineVideoClip',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Parses the persisted [derivedFrom] sources, degrading to `null` when any
+  /// entry can't be read. Same rationale as [_transitionFromJson]: one
+  /// unreadable field must not abort a whole draft load.
+  ///
+  /// The whole list is dropped, never just the bad entry: a partial list would
+  /// sign an edit against part of its history. `null` makes the clip's own
+  /// file the source, and an editor render has no manifest, so an edit of it
+  /// stays unsigned.
+  static List<C2paEditSource>? _derivedFromFromJson(
+    Object? raw,
+    String documentsPath, {
+    required bool useOriginalPath,
+  }) {
+    if (raw is! List) return null;
+    try {
+      return [
+        for (final source in raw.cast<Map<String, dynamic>>())
+          C2paEditSource.fromJson(
+            source,
+            documentsPath,
+            useOriginalPath: useOriginalPath,
+          ),
+      ];
+    } catch (error, stackTrace) {
+      Log.error(
+        'Dropping unparseable derivedFrom sources; the clip is its own source',
         name: 'DivineVideoClip',
         error: error,
         stackTrace: stackTrace,

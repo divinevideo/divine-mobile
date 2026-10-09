@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -33,6 +34,17 @@ EditorAudio? _resolveRenderAudioSource(AudioEvent event) {
   }
   return null;
 }
+
+/// The sounds in [tracks], as sources the rendered video declares in its
+/// C2PA manifest: a local file by its path, a library sound by its URL.
+List<C2paEditSource> renderAudioSources(List<AudioTrack> tracks) => [
+  for (final track in tracks)
+    if (track.audio.file?.path ??
+            track.audio.networkUrl ??
+            track.audio.assetPath
+        case final path?)
+      C2paEditSource(path: path, kind: C2paSourceKind.audio),
+];
 
 /// Builds the render [AudioTrack] for the legacy single selected sound.
 ///

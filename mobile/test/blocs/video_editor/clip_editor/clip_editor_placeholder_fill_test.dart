@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -226,6 +227,47 @@ void main() {
         // The file the slot now plays must survive the sweep.
         expect(deferred, isNot(contains('/documents/placeholder-2.mp4')));
       });
+
+      test(
+        'names the new photo as its source and queues the old one',
+        () async {
+          const oldPhoto = C2paEditSource(
+            path: '/documents/old.jpg',
+            kind: C2paSourceKind.image,
+          );
+          const newPhoto = C2paEditSource(
+            path: '/documents/new.jpg',
+            kind: C2paSourceKind.image,
+          );
+          final deferred = <String>[];
+          final bloc = seeded(
+            withClips: [
+              _clip('a'),
+              _placeholder().copyWith(derivedFrom: const [oldPhoto]),
+            ],
+            deferFileCleanup: (paths) => deferred.addAll(paths.nonNulls),
+            renderClipPlaceholder: ({
+              required fill,
+              required source,
+              taskId,
+            }) async => _rendered().copyWith(derivedFrom: const [newPhoto]),
+          );
+          await bloc.stream.first;
+
+          bloc.add(
+            const ClipEditorPlaceholderFillRequested(
+              clipId: 'placeholder-1',
+              fill: _red,
+            ),
+          );
+          await bloc.stream.firstWhere(
+            (s) => s.lastPlaceholderFillResult != null,
+          );
+
+          expect(bloc.state.clips[1].derivedFrom, equals(const [newPhoto]));
+          expect(deferred, contains(oldPhoto.path));
+        },
+      );
 
       test('marks the clip busy while the still renders', () async {
         final gate = Completer<DivineVideoClip?>();

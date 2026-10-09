@@ -1306,6 +1306,22 @@ void main() {
           );
         },
       );
+
+      test('is false for footage without a camera proof (#9893)', () {
+        // Left unsigned on purpose; a retry would refuse to sign it again.
+        expect(
+          VideoEditorNotifier.c2paSigningFailedFor(
+            signingConfigured: true,
+            proofManifestJson: jsonEncode(
+              const NativeProofData(
+                videoHash: 'hash',
+                unattestedSources: true,
+              ).toJson(),
+            ),
+          ),
+          isFalse,
+        );
+      });
     });
 
     group('c2paSigningTokenMissingProvider', () {
@@ -1429,6 +1445,7 @@ void main() {
               verifiedIdentityBundle,
               clips,
               editorStateHistory,
+              derivedFrom,
             }) async => const NativeProofData(
               videoHash: 'h',
               c2paManifestId: 'urn:c2pa:new',
@@ -1492,6 +1509,7 @@ void main() {
                 verifiedIdentityBundle,
                 clips,
                 editorStateHistory,
+                derivedFrom,
               }) async {
                 proofedPath = file.path;
                 return const NativeProofData(
@@ -1537,6 +1555,7 @@ void main() {
             verifiedIdentityBundle,
             clips,
             editorStateHistory,
+            derivedFrom,
           }) async => throw Exception('still offline');
 
           await notifier.retryC2paSigning();
@@ -4143,6 +4162,7 @@ void main() {
         verifiedIdentityBundle,
         clips,
         editorStateHistory,
+        derivedFrom,
       }) async => null;
       when(
         () => mockDraftStorage.draftExists(any()),
@@ -4706,6 +4726,7 @@ void main() {
               verifiedIdentityBundle,
               clips,
               editorStateHistory,
+              derivedFrom,
             }) async {
               proofStarted.complete();
               await allowProofRead.future;

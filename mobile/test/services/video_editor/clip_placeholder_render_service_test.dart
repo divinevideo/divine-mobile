@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
@@ -141,6 +142,10 @@ void main() {
           placeholder!.placeholderFill,
           ClipPlaceholderImageFill(imageFile.path),
         );
+        // The photo goes into the video as a declared still.
+        expect(placeholder.derivedFrom, [
+          C2paEditSource(path: imageFile.path, kind: C2paSourceKind.image),
+        ]);
       });
 
       test('gives the placeholder its own id, not the detached clip', () async {

@@ -7,11 +7,13 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
+import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
@@ -31,6 +34,7 @@ import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -231,7 +235,8 @@ class VideoEditorRenderService {
       emit: (progress) =>
           _emitCompositeProgress(taskId: effectiveTaskId, progress: progress),
       proofBudget: proofModeProgressBudgetForClipCount(clips.length),
-      proofSteps: clips.length + 1,
+      // Signing recordings left unsigned, then proving the output.
+      proofSteps: 2,
       hasAssemblyPhase: assemblyStepCount > 0,
     )..start();
 
@@ -314,24 +319,16 @@ class VideoEditorRenderService {
         category: LogCategory.video,
       );
 
-      // Ensure all clips have proof attestations before generating the
-      // final combined proof. Clips recorded before the feature was added
-      // or where proof generation failed will be attested now.
-      var completedProofSteps = 0;
-      final attestedClips = await _ensureClipProofs(
-        renderClips,
-        onClipProcessed: () {
-          completedProofSteps++;
-          progressTracker.markProofStepComplete(completedProofSteps);
-        },
-      );
-
-      final proofData = await NativeProofModeService.proofFile(
+      // Signed as an edit of the media its clips came from, never as a fresh
+      // capture: footage without a camera proof leaves the video unsigned.
+      final proofData = await proofRenderedVideo(
         File(outputPath),
-        clips: attestedClips,
+        clips: renderClips,
+        parameters: parameters,
         editorStateHistory: editorStateHistory,
+        onRecordingsSigned: () => progressTracker.markProofStepComplete(1),
       );
-      progressTracker.markProofStepComplete(completedProofSteps + 1);
+      progressTracker.markProofStepComplete(2);
       final String? proofManifestJson = proofData != null
           ? jsonEncode(proofData)
           : null;
@@ -391,71 +388,79 @@ class VideoEditorRenderService {
     required DivineVideoClip clip,
     required List<DivineVideoClip> clips,
     required Map<String, dynamic> editorStateHistory,
+    CompleteParameters? parameters,
   }) async {
     final path = clip.video?.file?.path;
     if (path == null) return null;
 
-    final attestedClips = await _ensureClipProofs(clips);
-    final proofData = await NativeProofModeService.proofFile(
+    final proofData = await proofRenderedVideo(
       File(path),
-      clips: attestedClips,
+      clips: clips,
+      parameters: parameters,
       editorStateHistory: editorStateHistory,
     );
     return proofData != null ? jsonEncode(proofData) : null;
   }
 
-  /// Ensures every clip has a [DivineVideoClip.proofManifestJson].
+  /// Proves [output], rendered from [clips] with [parameters], as an edit of
+  /// the media that went into it: the clips, the clips detached onto the
+  /// canvas, their chroma-key backdrops, and the sound tracks (#9893).
   ///
-  /// Clips that already have proof data are returned as-is. For clips without
-  /// proof, [NativeProofModeService.proofFile] is called on the clip's video
-  /// file and the clip is updated with the result.
-  static Future<List<DivineVideoClip>> _ensureClipProofs(
-    List<DivineVideoClip> clips, {
-    VoidCallback? onClipProcessed,
+  /// It is never signed as a fresh capture. When some footage carries no
+  /// camera proof, the output is left without a C2PA manifest.
+  static Future<NativeProofData?> proofRenderedVideo(
+    File output, {
+    required List<DivineVideoClip> clips,
+    CompleteParameters? parameters,
+    Map<String, dynamic> editorStateHistory = const {},
+    VoidCallback? onRecordingsSigned,
   }) async {
-    final result = <DivineVideoClip>[];
-    for (final clip in clips) {
-      if (clip.proofManifestJson != null) {
-        result.add(clip);
-        onClipProcessed?.call();
-        continue;
-      }
+    final (:layerClips, :otherSources) = await _renderInputs(parameters);
+    return NativeProofModeService.proofEdit(
+      output,
+      clips: clips,
+      layerClips: layerClips,
+      otherSources: otherSources,
+      editorStateHistory: editorStateHistory,
+      onRecordingsSigned: onRecordingsSigned,
+    );
+  }
 
-      final videoFile = clip.video?.file;
-      if (videoFile == null) {
-        result.add(clip);
-        onClipProcessed?.call();
-        continue;
-      }
+  /// The sources [proofRenderedVideo] signs a video rendered from [clips]
+  /// with [parameters] against: the same set, so a render left unsigned can
+  /// remember everything that went into it, layers included.
+  static Future<List<C2paEditSource>?> renderedVideoSources({
+    required List<DivineVideoClip> clips,
+    CompleteParameters? parameters,
+  }) async {
+    final (:layerClips, :otherSources) = await _renderInputs(parameters);
+    return NativeProofModeService.editSources(
+      clips: clips,
+      layerClips: layerClips,
+      otherSources: otherSources,
+    );
+  }
 
-      Log.debug(
-        '🔐 Generating missing proof for clip ${clip.id}',
-        name: _logName,
-        category: LogCategory.video,
-      );
-
-      final proofData = await NativeProofModeService.proofFile(
-        File(videoFile.path),
-      );
-
-      if (proofData != null) {
-        result.add(clip.copyWith(proofManifestJson: jsonEncode(proofData)));
-        Log.info(
-          '✅ Backfilled proof for clip ${clip.id}',
-          name: _logName,
-          category: LogCategory.video,
-        );
-      } else {
-        Log.warning(
-          '⚠️ Could not generate proof for clip ${clip.id}',
-          name: _logName,
-          category: LogCategory.video,
-        );
-        result.add(clip);
-      }
-      onClipProcessed?.call();
-    }
-    return result;
+  /// The clips detached onto the canvas by [parameters], and the images and
+  /// sounds that go in besides: their chroma-key backdrops and sound tracks.
+  static Future<
+    ({List<DivineVideoClip> layerClips, List<C2paEditSource> otherSources})
+  >
+  _renderInputs(CompleteParameters? parameters) async {
+    final layers = parameters?.capturedLayers ?? const [];
+    final detached = layers.isEmpty
+        ? const <DetachedClipExportLayer>[]
+        : partitionDetachedClipLayers(
+            layers,
+            await getDocumentsPath(),
+          ).detached;
+    return (
+      layerClips: [for (final layer in detached) layer.clip],
+      otherSources: [
+        for (final layer in detached) ...?layer.chromaKey?.backdropSources,
+        ...renderAudioSources(parameters?.audioTracks ?? const []),
+      ],
+    );
   }
 
   /// Renders multiple clips into a single video file with aspect ratio cropping.

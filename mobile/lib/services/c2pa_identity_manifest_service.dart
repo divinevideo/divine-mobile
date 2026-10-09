@@ -88,19 +88,23 @@ class C2paIdentityManifestService {
     );
   }
 
-  /// Builds the C2PA manifest for a *derived* video — one produced by
-  /// re-encoding an already-signed source (an aspect-ratio crop or a
-  /// watermark burn-in) that has therefore lost its embedded manifest.
+  /// Builds the C2PA manifest for a *derived* video — one produced from one
+  /// or more already-signed sources (an edit, a merge, an aspect-ratio crop
+  /// or a watermark burn-in) that has therefore lost its embedded manifest.
   ///
-  /// The already-signed source is carried forward as a `parentOf` ingredient
-  /// by the caller via [ManifestBuilder.addIngredient], and the transform is
-  /// recorded as a `c2pa.*` edit action via [ManifestBuilder.addAction], so
-  /// this definition intentionally declares neither: it only supplies the
-  /// title, claim generator, and the always-on `cawg.training-mining` opt-out
-  /// (Divine policy — see `mobile/docs/AI_TRAINING_POLICY.md`).
+  /// The signed sources are carried forward as ingredients by the caller via
+  /// [ManifestBuilder.addIngredientFromFile], and the edit is recorded as
+  /// `c2pa.*` actions via [ManifestBuilder.addAction], so this definition
+  /// does not declare them. It supplies the title, claim generator, the
+  /// always-on `cawg.training-mining` opt-out (Divine policy — see
+  /// `mobile/docs/AI_TRAINING_POLICY.md`), the creator binding of whoever
+  /// made the derived video, and [declaredIngredients]: media that went into
+  /// it without a manifest of its own, recorded so the history stays honest.
   C2paIdentityManifestBuildResult buildDerivedVideoManifest({
     required String claimGenerator,
     required String title,
+    NostrCreatorBindingAssertion? creatorBindingAssertion,
+    List<Ingredient> declaredIngredients = const [],
   }) {
     final manifest = ManifestDefinition(
       title: title,
@@ -108,7 +112,17 @@ class C2paIdentityManifestService {
         _parseClaimGenerator(claimGenerator),
       ],
       format: 'video/mp4',
-      assertions: <AssertionDefinition>[_buildTrainingMiningAssertion()],
+      ingredients: declaredIngredients,
+      assertions: <AssertionDefinition>[
+        _buildTrainingMiningAssertion(),
+        if (creatorBindingAssertion != null)
+          CustomAssertion(
+            label: creatorBindingAssertion.assertionLabel,
+            data: jsonDecode(
+              creatorBindingAssertion.payloadJson,
+            ) as Map<String, dynamic>,
+          ),
+      ],
     );
 
     return C2paIdentityManifestBuildResult(

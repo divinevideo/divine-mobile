@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -694,6 +695,7 @@ void main() {
             ),
           ),
         ),
+        derivedFrom: const [C2paEditSource(path: '/videos/recording.mp4')],
       );
 
       expect(populated.ownedFilePaths.nonNulls, <String>[
@@ -705,6 +707,7 @@ void main() {
         '/ghosts/clip.png',
         '/videos/pre-key.mp4',
         '/backdrops/beach.jpg',
+        '/videos/recording.mp4',
       ]);
     });
 
@@ -716,6 +719,119 @@ void main() {
         ]).ownedFilePaths.nonNulls,
         <String>['/stills/a.jpg', '/stills/b.jpg'],
       );
+    });
+  });
+
+  group('DivineVideoClip edit provenance', () {
+    const recording = C2paEditSource(path: '/videos/recording.mp4');
+    const backdrop = C2paEditSource(
+      path: '/backdrops/beach.jpg',
+      kind: C2paSourceKind.image,
+    );
+    final beachKey = ClipChromaKey(
+      key: editor.ChromaKey(
+        backgroundImage: editor.EditorLayerImage.file('/backdrops/beach.jpg'),
+      ),
+    );
+
+    test('round-trips its sources and recording hash through JSON', () {
+      const unsignedRecording = C2paEditSource(
+        path: '/videos/recording.mp4',
+        recordingSha256: 'def456',
+      );
+      final edited = clip('/videos/clip.mp4').copyWith(
+        derivedFrom: const [unsignedRecording, backdrop],
+        recordingSha256: 'abc123',
+      );
+
+      final json = edited.toJson();
+      // Stored like every clip path, under the key the library counts as a
+      // reference, so the files are not reclaimed while the edit needs them.
+      expect(json['derivedFrom'], [
+        {'path': 'recording.mp4', 'kind': 'video', 'recordingSha256': 'def456'},
+        {'path': 'beach.jpg', 'kind': 'image'},
+      ]);
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+      expect(restored.derivedFrom, const [
+        unsignedRecording,
+        C2paEditSource(path: '/videos/beach.jpg', kind: C2paSourceKind.image),
+      ]);
+      expect(restored.recordingSha256, 'abc123');
+    });
+
+    test('signs an unedited clip against its own file', () {
+      expect(clip('/videos/clip.mp4').signingSources, const [
+        C2paEditSource(path: '/videos/clip.mp4'),
+      ]);
+    });
+
+    test('passes its recording hash on to clips edited from it', () {
+      final unsigned = clip(
+        '/videos/recording.mp4',
+      ).copyWith(recordingSha256: 'abc123');
+
+      expect(unsigned.signingSources, const [
+        C2paEditSource(
+          path: '/videos/recording.mp4',
+          recordingSha256: 'abc123',
+        ),
+      ]);
+    });
+
+    test('signs an editor intermediate against what it was made from', () {
+      final reversed = clip(
+        '/videos/reversed.mp4',
+      ).copyWith(derivedFrom: const [recording]);
+
+      expect(reversed.signingSources, const [recording]);
+    });
+
+    test('names no sources for stills that were never rendered', () {
+      expect(stopMotionClip(['/stills/a.jpg']).signingSources, isNull);
+    });
+
+    test('adds the backdrop when a key is baked in', () {
+      expect(clip('/videos/recording.mp4').sourcesWithChromaKey(beachKey), [
+        recording,
+        backdrop,
+      ]);
+    });
+
+    test('replaces the backdrop of the key it re-keys', () {
+      final keyed = clip('/videos/keyed.mp4').copyWith(
+        chromaKey: beachKey,
+        chromaKeySourcePath: '/videos/recording.mp4',
+        derivedFrom: const [recording, backdrop],
+      );
+      const transparent = ClipChromaKey(key: editor.ChromaKey.greenScreen());
+
+      expect(keyed.unkeyedSources, const [recording]);
+      expect(keyed.sourcesWithChromaKey(transparent), const [recording]);
+    });
+
+    test('falls back to the pre-key file for a key baked before sources', () {
+      final legacy = clip('/videos/keyed.mp4').copyWith(
+        chromaKey: beachKey,
+        chromaKeySourcePath: '/videos/recording.mp4',
+      );
+
+      expect(legacy.unkeyedSources, const [recording]);
+    });
+
+    test('can be cleared', () {
+      final edited = clip('/videos/clip.mp4').copyWith(
+        derivedFrom: const [recording],
+        recordingSha256: 'abc123',
+      );
+
+      final cleared = edited.copyWith(
+        clearDerivedFrom: true,
+        clearRecordingSha256: true,
+      );
+
+      expect(cleared.derivedFrom, isNull);
+      expect(cleared.recordingSha256, isNull);
     });
   });
 

@@ -32,11 +32,21 @@ class NativeProofModeService {
     Map<String, dynamic>? verifiedIdentityBundle,
     List<DivineVideoClip>? clips,
     Map<String, dynamic>? editorStateHistory,
+    List<C2paEditSource>? derivedFrom,
   })?
   proofFileOverride;
 
   @visibleForTesting
   static C2paSigningService Function()? c2paSigningServiceFactoryOverride;
+
+  /// Builds the signed-in account's creator binding for a file about to be
+  /// signed, so every recording, edit and post names who made it (#9893).
+  ///
+  /// A static utility has no constructor to inject through, so startup
+  /// assigns this once a provider container exists. Unset, files are signed
+  /// without a binding.
+  static Future<NostrCreatorBindingAssertion?> Function(String filePath)?
+  creatorBindingFactory;
 
   /// Generate native ProofMode proof for a video file.
   ///
@@ -47,6 +57,12 @@ class NativeProofModeService {
   /// When C2PA signing succeeds, the downstream manifest carries the CAWG
   /// `training-mining` opt-out assertion. See
   /// `mobile/docs/AI_TRAINING_POLICY.md`.
+  ///
+  /// Without [derivedFrom] the file is signed as a camera capture, which is
+  /// only true of a recording. With it, the file is signed as an edit of
+  /// those sources (see [C2paSigningService.signEditInPlace]) and is left
+  /// without a C2PA manifest when they cannot vouch for it; its ProofMode
+  /// proof is generated either way.
   static Future<NativeProofData?> proofFile(
     File videoFile, {
     NostrCreatorBindingAssertion? creatorBindingAssertion,
@@ -55,6 +71,7 @@ class NativeProofModeService {
     bool enableAdvancedCawgEmbedding = false,
     List<DivineVideoClip>? clips,
     Map<String, dynamic>? editorStateHistory,
+    List<C2paEditSource>? derivedFrom,
   }) async {
     final override = proofFileOverride;
     if (override != null) {
@@ -66,6 +83,7 @@ class NativeProofModeService {
         enableAdvancedCawgEmbedding: enableAdvancedCawgEmbedding,
         clips: clips,
         editorStateHistory: editorStateHistory,
+        derivedFrom: derivedFrom,
       );
     }
 
@@ -168,14 +186,32 @@ class NativeProofModeService {
         name: 'VideoRecorderProofService',
         category: LogCategory.video,
       );
+      // An explicit binding is the publish flow's, which also records it in
+      // the proof metadata below. Otherwise the signed-in account's binding is
+      // embedded in the manifest only, so a recording or edit names its maker
+      // without changing what that metadata reports.
+      // Not built for an edit with no sources: it is never signed, and the
+      // binding costs a hash of the file and possibly a remote signer call.
+      final embeddedBinding =
+          creatorBindingAssertion ??
+          (derivedFrom?.isEmpty ?? false
+              ? null
+              : await creatorBindingFactory?.call(videoFile.path));
+
       // Replaces videoFile's bytes in place — deliberately, so the ProofMode
       // hash below covers the credentialed media.
-      final c2paResult = await c2paSigningService.signVideoInPlace(
-        videoPath: videoFile.path,
-        creatorBindingAssertion: creatorBindingAssertion,
-        cawgIdentityAssertion: cawgIdentityAssertion,
-        enableAdvancedCawgEmbedding: enableAdvancedCawgEmbedding,
-      );
+      final c2paResult = derivedFrom == null
+          ? await c2paSigningService.signVideoInPlace(
+              videoPath: videoFile.path,
+              creatorBindingAssertion: embeddedBinding,
+              cawgIdentityAssertion: cawgIdentityAssertion,
+              enableAdvancedCawgEmbedding: enableAdvancedCawgEmbedding,
+            )
+          : await c2paSigningService.signEditInPlace(
+              outputPath: videoFile.path,
+              sources: derivedFrom,
+              creatorBindingAssertion: embeddedBinding,
+            );
 
       if (c2paResult.success) {
         Log.info(
@@ -256,7 +292,12 @@ class NativeProofModeService {
       }
 
       // Create NativeProofData from metadata
-      final proofData = NativeProofData.fromMetadata(metadata);
+      final proofData = NativeProofData.fromMetadata(
+        metadata,
+        unattestedSources:
+            c2paResult.failureReason ==
+            C2paSigningFailureReason.sourceUnattested,
+      );
 
       Log.info(
         '🔐 Native proof data created: ${proofData.verificationLevel}',
@@ -278,6 +319,126 @@ class NativeProofModeService {
       );
       return null;
     }
+  }
+
+  /// Proves [output], a video the editor rendered from [clips], as an edit
+  /// of the media those clips came from (#9893).
+  ///
+  /// [layerClips] are clips composited over the track, and [otherSources]
+  /// any images or sounds that went in besides. The app's own recordings
+  /// among the sources whose capture signing failed earlier are signed first
+  /// (see [signOwnRecordings]). When a clip's media cannot be named, such as
+  /// stop-motion stills, the output is not C2PA-signed at all rather than
+  /// signed with part of its history.
+  ///
+  /// An own recording that still could not be signed, for example offline,
+  /// leaves the output unsigned too, but not as footage without a camera
+  /// proof: signing again later can succeed, so the proof does not report
+  /// [NativeProofData.unattestedSources] and the editor keeps offering it.
+  static Future<NativeProofData?> proofEdit(
+    File output, {
+    required List<DivineVideoClip> clips,
+    List<DivineVideoClip> layerClips = const [],
+    List<C2paEditSource> otherSources = const [],
+    Map<String, dynamic>? editorStateHistory,
+    VoidCallback? onRecordingsSigned,
+  }) async {
+    final recordingsLeftUnsigned = await signOwnRecordings([
+      ...clips,
+      ...layerClips,
+    ]);
+    onRecordingsSigned?.call();
+    final proof = await proofFile(
+      output,
+      clips: clips,
+      editorStateHistory: editorStateHistory,
+      // An empty list leaves the output unsigned: some media has no name.
+      derivedFrom:
+          editSources(
+            clips: clips,
+            layerClips: layerClips,
+            otherSources: otherSources,
+          ) ??
+          const [],
+    );
+    if (recordingsLeftUnsigned && (proof?.unattestedSources ?? false)) {
+      return proof!.withUnattestedSources(unattested: false);
+    }
+    return proof;
+  }
+
+  /// The sources an edit made from [clips], [layerClips] and [otherSources]
+  /// is signed against, as [proofEdit] signs it.
+  ///
+  /// `null` when a clip's media cannot be named, so such an edit is never
+  /// signed rather than signed with part of its history. Not an empty list:
+  /// on a clip that means it was drawn from nothing, so a later edit of it
+  /// would drop it rather than refuse to sign.
+  static List<C2paEditSource>? editSources({
+    required List<DivineVideoClip> clips,
+    List<DivineVideoClip> layerClips = const [],
+    List<C2paEditSource> otherSources = const [],
+  }) {
+    final clipSources = [
+      for (final clip in [...clips, ...layerClips]) clip.signingSources,
+    ];
+    if (clipSources.contains(null)) return null;
+    return {
+      for (final sources in clipSources) ...sources!,
+      ...otherSources,
+    }.toList();
+  }
+
+  /// Signs the app's own recordings among [clips]' sources as camera
+  /// captures when their signing at record time did not happen, for example
+  /// because the device was offline.
+  ///
+  /// Only a source that still hashes to its
+  /// [C2paEditSource.recordingSha256] qualifies: anything edited, imported or
+  /// received since is never signed as a capture. Returns whether such a
+  /// recording is still unsigned afterwards. A failure on one recording is
+  /// logged and does not stop the others or the edit they are part of.
+  static Future<bool> signOwnRecordings(Iterable<DivineVideoClip> clips) async {
+    C2paSigningService? signingService;
+    final checked = <String>{};
+    var leftUnsigned = false;
+    for (final clip in clips) {
+      for (final source in clip.signingSources ?? const <C2paEditSource>[]) {
+        final recordingHash = source.recordingSha256;
+        if (recordingHash == null || source.kind != C2paSourceKind.video) {
+          continue;
+        }
+        // Split halves and edits of one recording name the same file.
+        if (!checked.add(source.path)) continue;
+        try {
+          final file = File(source.path);
+          if (!file.existsSync()) continue;
+          signingService ??=
+              c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
+          final manifest = await signingService.readManifest(source.path);
+          if (manifest?.activeManifest != null) continue;
+          final hash = await generateSha256FileHash(source.path);
+          if (hash.toLowerCase() != recordingHash.toLowerCase()) continue;
+          Log.info(
+            '🔐 Signing recording ${clip.id} that was left unsigned',
+            name: 'NativeProofModeService',
+            category: LogCategory.video,
+          );
+          final proof = await proofFile(file);
+          if (proof?.c2paManifestId == null) leftUnsigned = true;
+        } on Exception catch (error, stackTrace) {
+          Log.warning(
+            'Could not sign recording "${source.path}" late: $error',
+            name: 'NativeProofModeService',
+            category: LogCategory.video,
+            error: error,
+            stackTrace: stackTrace,
+          );
+          leftUnsigned = true;
+        }
+      }
+    }
+    return leftUnsigned;
   }
 
   /// Generate proof for a media file using native ProofMode library
@@ -546,10 +707,9 @@ class NativeProofModeService {
   /// Streams [filePath] through SHA-256 and returns the hex digest. Runs on a
   /// background isolate (see [generateSha256FileHash]).
   static Future<String> _sha256OfFile(String filePath) async {
-    final digest = await File(filePath)
-        .openRead()
-        .transform(crypto.sha256)
-        .first;
+    final digest = await File(
+      filePath,
+    ).openRead().transform(crypto.sha256).first;
     return digest.toString();
   }
 
@@ -585,6 +745,7 @@ class NativeProofModeService {
       verifiedIdentityBundleJson: verifiedIdentityBundle != null
           ? jsonEncode(verifiedIdentityBundle)
           : proofData.verifiedIdentityBundleJson,
+      unattestedSources: proofData.unattestedSources,
     );
   }
 }

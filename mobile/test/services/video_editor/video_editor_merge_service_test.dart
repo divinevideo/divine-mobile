@@ -3,7 +3,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -28,6 +32,135 @@ void main() {
   group(VideoEditorMergeService, () {
     tearDown(() {
       VideoEditorRenderService.renderVideoOverride = null;
+    });
+
+    test('signs the merged clip as a composite of its clips', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
+      List<C2paEditSource>? signedFrom;
+      NativeProofModeService.proofFileOverride =
+          (
+            videoFile, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async {
+            signedFrom = derivedFrom;
+            return const NativeProofData(
+              videoHash: 'merged',
+              c2paManifestId: 'urn:c2pa:merged',
+            );
+          };
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result = await VideoEditorMergeService.mergeClips(
+        clips: [
+          _createClip(id: 'a'),
+          _createClip(id: 'b'),
+        ],
+        renderId: 'merge-1',
+      );
+
+      expect(signedFrom, const [
+        C2paEditSource(path: '/path/a.mp4'),
+        C2paEditSource(path: '/path/b.mp4'),
+      ]);
+      expect(result?.proofManifestJson, contains('urn:c2pa:merged'));
+      // Signed, the merged file vouches for itself.
+      expect(result?.derivedFrom, isNull);
+    });
+
+    test('keeps the merged sources when it could not be signed', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => null;
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result = await VideoEditorMergeService.mergeClips(
+        clips: [
+          _createClip(id: 'a'),
+          _createClip(id: 'b'),
+        ],
+        renderId: 'merge-1',
+      );
+
+      // Merged offline, a later edit is still signed against the originals.
+      expect(result?.derivedFrom, const [
+        C2paEditSource(path: '/path/a.mp4'),
+        C2paEditSource(path: '/path/b.mp4'),
+      ]);
+    });
+
+    test('keeps no sources when a clip has no file to name', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/merged.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => null;
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result = await VideoEditorMergeService.mergeClips(
+        clips: [
+          _createClip(id: 'a'),
+          DivineVideoClip(
+            id: 'b',
+            stopMotionFrames: const [
+              StopMotionClipFrame(
+                path: '/path/b_frame.jpg',
+                duration: Duration(seconds: 2),
+              ),
+            ],
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2025),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        ],
+        renderId: 'merge-1',
+      );
+
+      expect(result, isNotNull);
+      // Naming only the first clip would sign a later edit against part of its
+      // history, so the merged file stands as its own unsigned source.
+      expect(result?.derivedFrom, isNull);
     });
 
     test('returns null when fewer than two clips are supplied', () async {

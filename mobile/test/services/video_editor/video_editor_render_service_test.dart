@@ -15,20 +15,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationPhase,
+        ChromaKey,
         ClipTransition,
         ClipTransitionType,
+        EditorLayerImage,
         EditorVideo,
         ImageLayer,
         KeyframeClockPoint,
@@ -957,6 +964,141 @@ void main() {
 
       expect(filters.single.startTime, isNull);
       expect(filters.single.endTime, isNull);
+    });
+  });
+
+  group('proofRenderedVideo', () {
+    List<C2paEditSource>? signedFrom;
+
+    setUp(() {
+      signedFrom = null;
+      NativeProofModeService.proofFileOverride =
+          (
+            videoFile, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async {
+            signedFrom = derivedFrom;
+            return const model.NativeProofData(videoHash: 'rendered');
+          };
+    });
+
+    tearDown(() => NativeProofModeService.proofFileOverride = null);
+
+    final output = File('${Directory.systemTemp.path}/rendered.mp4');
+    final clipSources = [
+      C2paEditSource(path: '${Directory.systemTemp.path}/a.mp4'),
+      C2paEditSource(path: '${Directory.systemTemp.path}/b.mp4'),
+    ];
+
+    pie.CompleteParameters parameters({
+      List<pie.AudioTrack> audioTracks = const [],
+      List<pie.ExportedLayer> capturedLayers = const [],
+    }) => pie.CompleteParameters(
+      blur: 0,
+      matrixFilterList: const [],
+      matrixTuneAdjustmentsList: const [],
+      startTime: null,
+      endTime: null,
+      cropWidth: null,
+      cropHeight: null,
+      rotateTurns: 0,
+      cropX: null,
+      cropY: null,
+      flipX: false,
+      flipY: false,
+      image: Uint8List(0),
+      isTransformed: false,
+      layers: const [],
+      capturedLayers: capturedLayers,
+      audioTracks: audioTracks,
+      originalImageSize: const Size(100, 200),
+      temporaryDecodedImageSize: const Size(100, 200),
+      bodySize: const Size(100, 200),
+      editorSize: const Size(100, 200),
+    );
+
+    test('signs the render as an edit of its clips', () async {
+      await VideoEditorRenderService.proofRenderedVideo(
+        output,
+        clips: noTransitionClips,
+      );
+
+      expect(signedFrom, clipSources);
+    });
+
+    test('names the sound tracks that went into the render', () async {
+      await VideoEditorRenderService.proofRenderedVideo(
+        output,
+        clips: noTransitionClips,
+        parameters: parameters(
+          audioTracks: [
+            pie.AudioTrack(
+              id: 'voice',
+              title: 'voice',
+              subtitle: 'test',
+              duration: const Duration(seconds: 3),
+              audio: pie.EditorAudio.file(File('/documents/voice.m4a')),
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+            ),
+          ],
+        ),
+      );
+
+      expect(signedFrom, [
+        ...clipSources,
+        const C2paEditSource(
+          path: '/documents/voice.m4a',
+          kind: C2paSourceKind.audio,
+        ),
+      ]);
+    });
+
+    test('names a detached clip and the backdrop keyed behind it', () async {
+      final layerMeta = DetachedClipLayerData(
+        clip: clip('layer', const Duration(seconds: 2)),
+        layerId: 'layer-1',
+        chromaKey: ClipChromaKey(
+          key: ChromaKey(backgroundImage: EditorLayerImage.file('/x/bg.png')),
+        ),
+      ).toMeta();
+
+      await VideoEditorRenderService.proofRenderedVideo(
+        output,
+        clips: noTransitionClips,
+        parameters: parameters(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.WidgetLayer(
+                widget: const SizedBox.shrink(),
+                meta: layerMeta,
+                exportConfigs: pie.WidgetLayerExportConfigs(
+                  id: 'layer-1',
+                  meta: layerMeta,
+                ),
+              ),
+              bytes: Uint8List(0),
+              logicalSize: const Size(10, 10),
+            ),
+          ],
+        ),
+      );
+
+      final documents = await getDocumentsPath();
+      expect(signedFrom, [
+        ...clipSources,
+        C2paEditSource(path: p.join(documents, 'layer.mp4')),
+        C2paEditSource(
+          path: p.join(documents, 'bg.png'),
+          kind: C2paSourceKind.image,
+        ),
+      ]);
     });
   });
 

@@ -217,10 +217,10 @@ class VideoClipImportService {
 
   /// Imports a clip received in a direct message into the library.
   ///
-  /// [source] must already have passed the C2PA camera-capture check: the
-  /// clip is stored with a proof record naming [c2paManifestId], so the
-  /// editor's render step treats it as attested and does not re-sign the
-  /// file as the recipient's own capture.
+  /// [source] must already have passed the C2PA camera-capture check; the
+  /// clip is stored with a proof record naming [c2paManifestId]. Its file
+  /// keeps the sender's manifest, so an edit of it is signed with that
+  /// history as an ingredient.
   ///
   /// The clip credits [senderPubkey] unless the file turns out to be a post
   /// already published on Divine: a published video is signed as a fresh
@@ -228,6 +228,10 @@ class VideoClipImportService {
   /// Then whoever published it is credited, linked to the post. When that
   /// cannot be determined, the import fails with
   /// [VideoClipImportFailureReason.sourceLookupFailed] rather than guess.
+  ///
+  /// [contributorPubkeys] are the accounts the clip's signed history names as
+  /// having recorded or edited it before. Each is credited too, so a clip
+  /// passed along a chain of friends credits all of them (#9893).
   ///
   /// [targetAspectRatio] is the crop the sender recorded for. When absent it
   /// is derived from the file: near-square and wider maps to square,
@@ -244,6 +248,7 @@ class VideoClipImportService {
     required String senderPubkey,
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
+    List<String> contributorPubkeys = const [],
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -309,6 +314,10 @@ class VideoClipImportService {
         c2paManifestId: c2paManifestId,
       );
       final post = published?.video;
+      // A forwarded post credits whoever published it, linked to the post the
+      // way a clip imported from a published video is. Only footage that was
+      // never published credits the person who sent it.
+      final author = post?.pubkey ?? published?.ownerPubkey ?? senderPubkey;
 
       final clip = DivineVideoClip(
         id: clipId,
@@ -322,14 +331,16 @@ class VideoClipImportService {
             targetAspectRatio ?? _targetAspectRatioForRatio(actualRatio),
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
-        // A forwarded post credits whoever published it, linked to the post
-        // the way a clip imported from a published video is. Only footage
-        // that was never published credits the person who sent it.
-        sourceAuthorPubkey:
-            post?.pubkey ?? published?.ownerPubkey ?? senderPubkey,
-        sourceEventId: post?.id,
-        sourceAddressableId: post?.addressableId,
-        sourceRelayHint: post?.sourceRelay,
+        sourceCredits: [
+          models.ClipSourceCredit(
+            authorPubkey: author,
+            eventId: post?.id,
+            addressableId: post?.addressableId,
+            relayUrl: post?.sourceRelay,
+          ),
+          for (final pubkey in contributorPubkeys)
+            if (pubkey != author) models.ClipSourceCredit(authorPubkey: pubkey),
+        ],
       );
 
       await _clipLibraryService.saveClip(clip);

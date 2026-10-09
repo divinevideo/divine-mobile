@@ -9,6 +9,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -251,6 +252,7 @@ void main() {
         const taskId = 'composite-sequence-test';
         final progressValues = <double>[];
         final proofCallClipCounts = <int?>[];
+        final proofCallSources = <List<C2paEditSource>?>[];
         final editorStateHistory = <String, dynamic>{
           'clips': ['clip-0', 'clip-1', 'clip-2'],
         };
@@ -292,8 +294,10 @@ void main() {
               verifiedIdentityBundle,
               clips,
               editorStateHistory,
+              derivedFrom,
             }) async {
               proofCallClipCounts.add(clips?.length);
+              proofCallSources.add(derivedFrom);
 
               if (proofCallClipCounts.length == 1) {
                 proVideoEditor.emitProgress(taskId, 0.10);
@@ -320,11 +324,15 @@ void main() {
           result.$1.thumbnailPath,
           equals('${Directory.systemTemp.path}/clip-0-thumb.jpg'),
         );
+        // Clips without a recording hash are never signed as captures, so
+        // the only proof is the output's, signed as an edit of the clips.
+        expect(proofCallClipCounts, equals([3]));
         expect(
-          proofCallClipCounts,
-          equals([null, null, null, 3]),
-          reason:
-              'three clip-proof steps plus the final combined proofFile step',
+          proofCallSources.single,
+          equals([
+            for (var i = 0; i < 3; i++)
+              C2paEditSource(path: '${Directory.systemTemp.path}/clip-$i.mp4'),
+          ]),
         );
 
         const renderBudget = 0.95;
@@ -334,9 +342,7 @@ void main() {
           0.25 * renderBudget,
           0.75 * renderBudget,
           renderBudget,
-          renderBudget + proofBudget / 4,
-          renderBudget + proofBudget * 2 / 4,
-          renderBudget + proofBudget * 3 / 4,
+          renderBudget + proofBudget / 2,
           1.0,
         ];
 
@@ -405,6 +411,7 @@ void main() {
           verifiedIdentityBundle,
           clips,
           editorStateHistory,
+          derivedFrom,
         }) async => const model.NativeProofData(videoHash: 'proof');
 
         final stopMotionClip = DivineVideoClip(

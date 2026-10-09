@@ -184,8 +184,10 @@ class FreezeFrameRenderService {
       // The rendered still carries no sound; a zero volume says so to every
       // control that offers to turn it up.
       volume: 0,
-      // Still footage of the source, so it still credits the source's author.
+      // Still footage of the source, so it still credits the source's author
+      // and is signed against the media the frame came from.
       sourceCredits: source.sourceCredits,
+      derivedFrom: source.signingSources,
     );
   }
 

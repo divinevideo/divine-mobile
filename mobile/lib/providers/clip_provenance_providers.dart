@@ -16,7 +16,8 @@ final c2paTrustAnchorServiceProvider = Provider<C2paTrustAnchorService>((ref) {
   return C2paTrustAnchorService(httpClient: client);
 });
 
-/// Decides whether a clip is an untouched Divine camera capture.
+/// Decides whether a clip is a Divine camera capture or a signed edit of
+/// captures.
 final clipProvenanceVerifierProvider = Provider<ClipProvenanceVerifier>(
   (ref) => ClipProvenanceVerifier(
     trustAnchors: ref.watch(c2paTrustAnchorServiceProvider),
