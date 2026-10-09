@@ -205,6 +205,132 @@ class VideoOverlayActions extends ConsumerWidget {
         ? 20.0 + MediaQuery.viewPaddingOf(context).bottom
         : 14.0 + MediaQuery.viewPaddingOf(context).bottom;
 
+    // Everything the overlay renders below the author row, each entry
+    // present only when it shows something.
+    final belowAuthorRowBeforeCollaborators = <Widget>[
+      // List attribution chip (shown when video is from subscribed curated list)
+      if (video != null &&
+          showListAttribution &&
+          listSources != null &&
+          listSources!.isNotEmpty) ...[
+        Consumer(
+          builder: (context, ref, _) {
+            final curatedListState = ref.watch(
+              curatedListsStateProvider,
+            );
+            final curatedListService = curatedListState.whenOrNull(
+              data: (_) => ref.read(curatedListsStateProvider.notifier).service,
+            );
+
+            return ListAttributionChip(
+              listIds: listSources!,
+              listLookup: (listId) => curatedListService?.getListById(listId),
+              onListTap: (listId, listName) {
+                final list = curatedListService?.getListById(listId);
+                runDetached(
+                  context.push(
+                    CuratedListFeedScreen.pathForId(listId),
+                    extra: CuratedListRouteExtra(
+                      listName: listName,
+                      videoIds: list?.videoEventIds,
+                      authorPubkey: list?.pubkey,
+                    ),
+                  ),
+                  'open curated list',
+                  logName: 'VideoOverlayActions',
+                  category: LogCategory.ui,
+                );
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 2),
+      ],
+      // Video title and description (caption block).
+      // Title and description render independently when present.
+      if (hasTextContent) ...[
+        // No spacer: the author row's bottom padding is the gap to
+        // the caption, sized so the follow target ends where the
+        // caption starts.
+        // Title (when present)
+        if (titleText != null)
+          Semantics(
+            identifier: SemanticIds.videoTitle,
+            container: true,
+            explicitChildNodes: true,
+            button: true,
+            label: context.l10n.videoOverlayOpenMetadataFromTitle,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: openMetadata,
+              child: DivineHeartText(
+                titleText,
+                style: VineTheme.labelMediumFont(
+                  color: VineTheme.whiteText,
+                ).copyWith(shadows: VineTheme.buttonShadows),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        // 4 px gap between title and description when both
+        // are present (matches the Figma caption spacing).
+        if (titleText != null && descriptionText.isNotEmpty)
+          const SizedBox(height: 4),
+        // Description (only when actual content exists — the
+        // title has its own row above, so no fallback here).
+        if (descriptionText.isNotEmpty)
+          Semantics(
+            identifier: 'video_description',
+            container: true,
+            explicitChildNodes: true,
+            button: true,
+            label: context.l10n.videoOverlayOpenMetadataFromDescription,
+            // The action belongs on the node that carries the label.
+            // On the detector below it landed on an anonymous child:
+            // `LinkifiedText` splits into several spans once the text
+            // holds a hashtag, mention or URL, and then nothing merges
+            // up to name the tappable node. Plain text merges and
+            // passes, so this was data-dependent, not layout-dependent.
+            onTap: openMetadata,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              // Excluded so it cannot re-create the anonymous node
+              // the annotation above exists to name.
+              excludeFromSemantics: true,
+              onTap: openMetadata,
+              child: LinkifiedText(
+                text: descriptionText,
+                style: VineTheme.bodySmallFont(
+                  color: VineTheme.whiteText,
+                ).copyWith(shadows: VineTheme.buttonShadows),
+                linkStyle: VineTheme.bodySmallFont(
+                  color: VineTheme.whiteText,
+                ).copyWith(shadows: VineTheme.buttonShadows),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+      ],
+    ];
+    final belowAuthorRowAfterCollaborators = <Widget>[
+      if (video != null && video.isVideoReply) ...[
+        const SizedBox(height: 4),
+        VideoReplyParentLink(
+          video: video,
+          variant: VideoReplyParentLinkVariant.overlay,
+          onInteracted: onInteracted,
+        ),
+      ],
+      // The row renders nothing without an audio reference, so the
+      // gap above it is gated on the same check.
+      if (video != null && video.hasAudioReference) ...[
+        const SizedBox(height: 4),
+        AudioAttributionRow(video: video),
+      ],
+    ];
+
     return Stack(
       children: [
         // Top gradient overlay — sits behind the (transparent) app
@@ -290,7 +416,7 @@ class VideoOverlayActions extends ConsumerWidget {
           ),
         // Author info and video description overlay at bottom left.
         Positioned(
-          bottom: bottomOffset,
+          bottom: bottomOffset - _authorRowBottomGap,
           left: 16,
           right: 68, // Leave space for action buttons
           child: AnimatedOpacity(
@@ -306,7 +432,9 @@ class VideoOverlayActions extends ConsumerWidget {
                 if (video != null &&
                     video.isRepost &&
                     video.reposterPubkey != null) ...[
-                  VideoRepostHeader(reposterPubkey: video.reposterPubkey!),
+                  VideoRepostHeader(
+                    reposterPubkey: video.reposterPubkey!,
+                  ),
                   const SizedBox(height: 8),
                 ],
                 // Author avatar and info row
@@ -339,7 +467,9 @@ class VideoOverlayActions extends ConsumerWidget {
                         !showCheckmark &&
                         (ref
                                 .watch(
-                                  ogDivinerEligibilityProvider(authorPubkey),
+                                  ogDivinerEligibilityProvider(
+                                    authorPubkey,
+                                  ),
                                 )
                                 .value ??
                             false);
@@ -354,7 +484,9 @@ class VideoOverlayActions extends ConsumerWidget {
                       final npub = normalizeToNpub(authorPubkey);
                       if (npub != null) {
                         runDetached(
-                          context.push(OtherProfileScreen.pathForNpub(npub)),
+                          context.push(
+                            OtherProfileScreen.pathForNpub(npub),
+                          ),
                           'open author profile',
                           logName: 'VideoOverlayActions',
                           category: LogCategory.ui,
@@ -474,7 +606,9 @@ class VideoOverlayActions extends ConsumerWidget {
                                                     padding: 3,
                                                   ),
                                                 if (isOgViner)
-                                                  const OgVinerBadge(size: 20),
+                                                  const OgVinerBadge(
+                                                    size: 20,
+                                                  ),
                                                 if (isOgBetaTester)
                                                   OgBetaBadge(
                                                     size: 20,
@@ -511,143 +645,52 @@ class VideoOverlayActions extends ConsumerWidget {
                           PositionedDirectional(
                             start: _followTargetOffset,
                             top: _followTargetOffset,
-                            child: VideoFollowButton(pubkey: authorPubkey),
+                            child: VideoFollowButton(
+                              pubkey: authorPubkey,
+                            ),
                           ),
                       ],
                     );
                   },
                 ),
-                // List attribution chip (shown when video is from subscribed curated list)
-                if (video != null &&
-                    showListAttribution &&
-                    listSources != null &&
-                    listSources!.isNotEmpty) ...[
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final curatedListState = ref.watch(
-                        curatedListsStateProvider,
-                      );
-                      final curatedListService = curatedListState.whenOrNull(
-                        data: (_) => ref
-                            .read(curatedListsStateProvider.notifier)
-                            .service,
-                      );
-
-                      return ListAttributionChip(
-                        listIds: listSources!,
-                        listLookup: (listId) =>
-                            curatedListService?.getListById(listId),
-                        onListTap: (listId, listName) {
-                          final list = curatedListService?.getListById(listId);
-                          runDetached(
-                            context.push(
-                              CuratedListFeedScreen.pathForId(listId),
-                              extra: CuratedListRouteExtra(
-                                listName: listName,
-                                videoIds: list?.videoEventIds,
-                                authorPubkey: list?.pubkey,
-                              ),
-                            ),
-                            'open curated list',
-                            logName: 'VideoOverlayActions',
-                            category: LogCategory.ui,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                ],
-                // Video title and description (caption block).
-                // Title and description render independently when present.
-                if (hasTextContent) ...[
-                  // No spacer: the author row's bottom padding is the gap to
-                  // the caption, sized so the follow target ends where the
-                  // caption starts.
-                  // Title (when present)
-                  if (titleText != null)
-                    Semantics(
-                      identifier: SemanticIds.videoTitle,
-                      container: true,
-                      explicitChildNodes: true,
-                      button: true,
-                      label: context.l10n.videoOverlayOpenMetadataFromTitle,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: openMetadata,
-                        child: DivineHeartText(
-                          titleText,
-                          style: VineTheme.labelMediumFont(
-                            color: VineTheme.whiteText,
-                          ).copyWith(shadows: VineTheme.buttonShadows),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                // Rebuilt alone when collaborator status arrives, so
+                // the author row and its follow state stay mounted.
+                CollaboratorVisibilityBuilder(
+                  video: video,
+                  builder: (context, collaborators) {
+                    final belowAuthorRow = [
+                      ...belowAuthorRowBeforeCollaborators,
+                      // These are video relationships, not caption
+                      // content. Keep them visible when stripping
+                      // wire-format attribution leaves an otherwise
+                      // captionless video.
+                      if (collaborators.visiblePubkeys.isNotEmpty)
+                        CollaboratorAvatarRowBody(
+                          visibility: collaborators,
+                          padding: const EdgeInsets.only(top: 4),
                         ),
+                      ...belowAuthorRowAfterCollaborators,
+                    ];
+                    // The author row's bottom gap keeps the follow
+                    // target's overhang hit-testable. With nothing
+                    // below the row it would read as empty space, so
+                    // the block sits that gap lower and adds it back
+                    // only when the row has company.
+                    if (belowAuthorRow.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: _authorRowBottomGap,
                       ),
-                    ),
-                  // 4 px gap between title and description when both
-                  // are present (matches the Figma caption spacing).
-                  if (titleText != null && descriptionText.isNotEmpty)
-                    const SizedBox(height: 4),
-                  // Description (only when actual content exists — the
-                  // title has its own row above, so no fallback here).
-                  if (descriptionText.isNotEmpty)
-                    Semantics(
-                      identifier: 'video_description',
-                      container: true,
-                      explicitChildNodes: true,
-                      button: true,
-                      label:
-                          context.l10n.videoOverlayOpenMetadataFromDescription,
-                      // The action belongs on the node that carries the label.
-                      // On the detector below it landed on an anonymous child:
-                      // `LinkifiedText` splits into several spans once the text
-                      // holds a hashtag, mention or URL, and then nothing merges
-                      // up to name the tappable node. Plain text merges and
-                      // passes, so this was data-dependent, not layout-dependent.
-                      onTap: openMetadata,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        // Excluded so it cannot re-create the anonymous node
-                        // the annotation above exists to name.
-                        excludeFromSemantics: true,
-                        onTap: openMetadata,
-                        child: LinkifiedText(
-                          text: descriptionText,
-                          style: VineTheme.bodySmallFont(
-                            color: VineTheme.whiteText,
-                          ).copyWith(shadows: VineTheme.buttonShadows),
-                          linkStyle: VineTheme.bodySmallFont(
-                            color: VineTheme.whiteText,
-                          ).copyWith(shadows: VineTheme.buttonShadows),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: belowAuthorRow,
                       ),
-                    ),
-                ],
-                // These are video relationships, not caption content. Keep
-                // them visible when stripping wire-format attribution leaves
-                // an otherwise captionless video.
-                if (video != null && video.hasCollaborators)
-                  CollaboratorAvatarRow(
-                    video: video,
-                    padding: const EdgeInsets.only(top: 4),
-                  ),
-                if (video != null && video.isVideoReply) ...[
-                  const SizedBox(height: 4),
-                  VideoReplyParentLink(
-                    video: video,
-                    variant: VideoReplyParentLinkVariant.overlay,
-                    onInteracted: onInteracted,
-                  ),
-                ],
-                // The row renders nothing without an audio reference, so the
-                // gap above it is gated on the same check.
-                if (video != null && video.hasAudioReference) ...[
-                  const SizedBox(height: 4),
-                  AudioAttributionRow(video: video),
-                ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
