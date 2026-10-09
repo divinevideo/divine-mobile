@@ -3495,6 +3495,17 @@ class DmRepository {
           // recreated above, while the tombstone is deliberately kept so
           // replayed history stamped at or before the removal stays
           // suppressed. #7804.
+
+          // An early reaction is filed under the 1:1 of its reactor and the
+          // target's author. For a one-to-one message that is this
+          // conversation, so there is nothing to move and no UPDATE to pay.
+          if (isGroup) {
+            await _reactionsRepository?.adoptReceivedForStoredMessage(
+              messageId: rumor.id,
+              conversationId: conversationId,
+              ownerPubkey: ownerPubkey,
+            );
+          }
         });
 
         if (skippedByTransactionalGiftWrapDedup) {

@@ -1,6 +1,7 @@
 // ABOUTME: Regression coverage for #8271 — a NIP-17 rumor the signed-in user
 // ABOUTME: authored is stored in the room its pubkey + p tags name, even on an
-// ABOUTME: install that holds no conversation row for that room yet.
+// ABOUTME: install that holds no conversation row for that room yet, and a
+// ABOUTME: reaction that arrived before it follows it there.
 
 import 'dart:async';
 import 'dart:convert';
@@ -58,6 +59,7 @@ void main() {
     late ProcessedGiftWrapsDao processedDao;
     late _MockNostrClient nostrClient;
     late StreamController<Event> relay;
+    late DmReactionsRepository reactions;
     late DmRepository repository;
 
     setUp(() async {
@@ -101,11 +103,18 @@ void main() {
         ),
       ).thenAnswer((_) => relay.stream);
 
+      reactions = DmReactionsRepository(
+        reactionsDao: DmReactionsDao(db),
+        conversationsDao: conversationsDao,
+        directMessagesDao: messagesDao,
+        userPubkey: _owner,
+      );
       repository = DmRepository(
         nostrClient: nostrClient,
         directMessagesDao: messagesDao,
         conversationsDao: conversationsDao,
         processedGiftWrapsDao: processedDao,
+        reactionsRepository: reactions,
         userPubkey: _owner,
         signer: LocalNostrSigner(_ownerSecret),
       );
@@ -280,6 +289,89 @@ void main() {
 
         expect(await conversations(), isEmpty);
         expect(await processedDao.hasGiftWrap(wrap.id), isTrue);
+      });
+    });
+
+    group('authored by the signed-in user, after a reaction to it', () {
+      /// The reactions shown on the thread [conversationId].
+      Future<List<String>> reactionIdsIn(String conversationId) async {
+        final shown = await reactions
+            .watchForConversation(conversationId)
+            .first;
+        return [for (final reaction in shown) reaction.id];
+      }
+
+      /// Alice's reaction to [message], as DmReactionsRepository.publish builds
+      /// it: it names the message and its author, never the room.
+      Event reactionFromAliceTo(Event message) =>
+          NIP17MessageService(
+            signer: LocalNostrSigner(_aliceSecret),
+            senderPublicKey: _alice,
+            nostrService: nostrClient,
+          ).buildRumor(
+            recipientPubkey: message.pubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+            additionalTags: [
+              ['e', message.id],
+              ['p', message.pubkey],
+              ['k', '${EventKind.privateDirectMessage}'],
+            ],
+            createdAt: _sentAt + 1,
+          );
+
+      test('shows the reaction in the room', () async {
+        final own = ownGroupSend();
+        final reaction = reactionFromAliceTo(own);
+        final oneToOne = DmRepository.computeConversationId([_owner, _alice]);
+
+        await deliver(reaction, authorSecret: _aliceSecret);
+        expect(
+          await reactionIdsIn(oneToOne),
+          equals([reaction.id]),
+          reason:
+              'with no message to say which room it belongs to, the reaction '
+              'is filed under the 1:1 with the reactor',
+        );
+
+        await deliver(own, authorSecret: _ownerSecret);
+
+        expect(await reactionIdsIn(_roomId), equals([reaction.id]));
+        expect(await reactionIdsIn(oneToOne), isEmpty);
+      });
+
+      test('shows the reaction in a one-to-one conversation', () async {
+        // Divine's own one-to-one send: a p tag for the recipient, plus the
+        // batch token.
+        final own =
+            NIP17MessageService(
+              signer: LocalNostrSigner(_ownerSecret),
+              senderPublicKey: _owner,
+              nostrService: nostrClient,
+            ).buildRumor(
+              recipientPubkey: _alice,
+              content: 'hello alice',
+              additionalTags: [
+                ['batch', 'e' * 64],
+              ],
+              createdAt: _sentAt,
+            );
+        final reaction = reactionFromAliceTo(own);
+        final oneToOne = DmRepository.computeConversationId([_owner, _alice]);
+
+        await deliver(reaction, authorSecret: _aliceSecret);
+        expect(
+          await reactionIdsIn(oneToOne),
+          equals([reaction.id]),
+          reason:
+              'the 1:1 of the reactor and the author is the conversation the '
+              'message belongs to, so nothing has to move',
+        );
+
+        await deliver(own, authorSecret: _ownerSecret);
+
+        expect(await messageIdsIn(oneToOne), equals([own.id]));
+        expect(await reactionIdsIn(oneToOne), equals([reaction.id]));
       });
     });
 

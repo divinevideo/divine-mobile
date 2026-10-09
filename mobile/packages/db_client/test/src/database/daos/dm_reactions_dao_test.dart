@@ -1032,6 +1032,93 @@ void main() {
       });
     });
 
+    group('adoptReceivedForTargetMessage', () {
+      /// A reaction by another account, as the receive path stores it.
+      Future<void> receive({
+        String id = _sentId,
+        String conversationId = _conversationId,
+        String targetMessageId = _targetMessageId,
+        String ownerPubkey = _ownerA,
+      }) => dao.upsertIncoming(
+        id: id,
+        conversationId: conversationId,
+        targetMessageId: targetMessageId,
+        targetMessageAuthor: _targetAuthor,
+        reactorPubkey: _reactorB,
+        emoji: '🔥',
+        createdAt: 1_700_000_000,
+        giftWrapId: _giftWrapId,
+        ownerPubkey: ownerPubkey,
+      );
+
+      Future<int> adopt() => dao.adoptReceivedForTargetMessage(
+        targetMessageId: _targetMessageId,
+        toConversationId: _otherConversationId,
+        ownerPubkey: _ownerA,
+      );
+
+      test('moves a received reaction out of another conversation', () async {
+        await receive();
+
+        expect(await adopt(), equals(1));
+        final row = await dao.getById(id: _sentId, ownerPubkey: _ownerA);
+        expect(row!.conversationId, equals(_otherConversationId));
+      });
+
+      test('leaves a received reaction already in that conversation', () async {
+        await receive(conversationId: _otherConversationId);
+
+        expect(await adopt(), equals(0));
+      });
+
+      test('leaves a received reaction to another message alone', () async {
+        await receive();
+        await receive(
+          id: _otherConversationReactionId,
+          targetMessageId: _otherTargetMessageId,
+        );
+
+        expect(
+          await adopt(),
+          equals(1),
+          reason: 'only the reaction to the named message moves',
+        );
+        final other = await dao.getById(
+          id: _otherConversationReactionId,
+          ownerPubkey: _ownerA,
+        );
+        expect(other!.conversationId, equals(_conversationId));
+      });
+
+      test(
+        'leaves an own queued reaction and its stored recipients alone',
+        () async {
+          await receive();
+          await insertPending(recipientPubkeys: _recipients);
+
+          expect(
+            await adopt(),
+            equals(1),
+            reason: 'only the received reaction moves',
+          );
+          final queued = await dao.getById(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+          );
+          expect(queued!.conversationId, equals(_conversationId));
+          expect(queued.recipientPubkeys, equals(_recipients));
+        },
+      );
+
+      test("will not move another owner's reaction", () async {
+        await receive(ownerPubkey: _ownerB);
+
+        expect(await adopt(), equals(0));
+        final row = await dao.getById(id: _sentId, ownerPubkey: _ownerB);
+        expect(row!.conversationId, equals(_conversationId));
+      });
+    });
+
     group('removed-conversation tombstone suppression', () {
       /// The `createdAt` [insertPending] uses by default.
       const reactionAt = 1_700_000_000;
