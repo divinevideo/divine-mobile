@@ -414,11 +414,12 @@ class VideoOverlayActions extends ConsumerWidget {
               child: _ContentWarningBadge(labels: video.contentWarningLabels),
             ),
           ),
-        // Author info and video description overlay at bottom left.
-        Positioned(
+        // Author info and video description overlay at the bottom start.
+        // Directional so it mirrors with the action column below.
+        PositionedDirectional(
           bottom: bottomOffset - _authorRowBottomGap,
-          left: 16,
-          right: 68, // Leave space for action buttons
+          start: 16,
+          end: 68, // Leave space for action buttons
           child: AnimatedOpacity(
             opacity: isActive ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -695,8 +696,8 @@ class VideoOverlayActions extends ConsumerWidget {
             ),
           ),
         ),
-        // Action buttons at bottom right.
-        // In fullscreen mode the right inset tightens to 12 px to match
+        // Action buttons at the bottom end.
+        // In fullscreen mode the end inset tightens to 12 px to match
         // the trailing inset on the fullscreen app bar's More popover.
         // Other consumers (video metadata preview, video editor preview)
         // keep the legacy 16 px so their layouts are unaffected.
