@@ -6,7 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 
 /// Encapsulates the inputs needed by collaborator-rendering surfaces
-/// (avatar row, metadata section, edit dialog) so the filter / decoration /
+/// (avatar row, metadata section) so the filter / decoration /
 /// pending-count logic lives in one place rather than being recomputed
 /// surface-by-surface.
 ///
@@ -44,7 +44,7 @@ class CollaboratorVisibility extends Equatable {
   /// Hex pubkey of the currently signed-in user. Empty when unknown.
   final String currentUserPubkey;
 
-  /// Hex pubkey of the video's author.
+  /// Hex pubkey of the video's author. Empty when unknown.
   final String creatorPubkey;
 
   /// Whether the acceptance query has finished. Non-author viewers render

@@ -162,7 +162,11 @@ void main() {
       );
 
       testWidgets('hides them from a viewer with no pubkey', (tester) async {
-        await pumpRow(tester, viewerPubkey: null);
+        await pumpRow(
+          tester,
+          viewerPubkey: null,
+          repository: _MockCollaboratorConfirmationRepository(),
+        );
 
         expect(_divineIcon(DivineIconName.users), findsNothing);
       });
@@ -186,6 +190,16 @@ void main() {
         await pumpRow(tester, viewerPubkey: _creatorPubkey);
 
         expect(_divineIcon(DivineIconName.users), findsOneWidget);
+        // Unconfirmed until status loads, so the invitee renders as pending.
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.label ==
+                    _l10n.videoCollaboratorPendingSemanticLabel,
+          ),
+          findsOneWidget,
+        );
       });
     });
   });

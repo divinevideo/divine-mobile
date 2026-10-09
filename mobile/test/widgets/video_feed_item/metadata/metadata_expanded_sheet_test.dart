@@ -1142,6 +1142,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        expect(
+          find.text(_l10n(tester).metadataCollaboratorsLabel),
+          findsNothing,
+        );
         expect(find.text('Josh Musick'), findsNothing);
         expect(find.text('Dan Spurgin'), findsNothing);
       },
