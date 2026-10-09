@@ -2557,6 +2557,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   uri: path,
                   end: clip.duration,
                   volume: clip.volume,
+                  equalizer: clip.equalizer.toPlayerEqualizer(),
                   playbackSpeed: clip.playbackSpeed ?? 1.0,
                 ),
               ]),
