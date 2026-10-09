@@ -12,7 +12,7 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// A section displaying trending hashtags in a horizontal scrollable list.
 ///
-/// Shows a title "Trending Hashtags" followed by tappable hashtag chips.
+/// Shows the localized trending title followed by tappable hashtag chips.
 /// Tapping a hashtag navigates to the hashtag feed.
 class TrendingHashtagsSection extends StatelessWidget {
   const TrendingHashtagsSection({
