@@ -5649,6 +5649,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => '이 대화는 종료되었습니다.';
 
   @override
+  String get dmFormerModerationAccountName => '이전 검수 계정';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       '이 Divine Moderation 알림은 삭제할 수 없습니다.';
 

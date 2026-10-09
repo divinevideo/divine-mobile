@@ -9,6 +9,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -20,7 +21,7 @@ import 'package:profile_repository/profile_repository.dart';
 /// Shows the user's followed contacts initially. Typing in the search
 /// field queries for users by name or npub. Selecting a user returns
 /// their [UserProfile] and dismisses the sheet.
-class NewMessageSheet extends StatelessWidget {
+class NewMessageSheet extends ConsumerWidget {
   const NewMessageSheet({
     required this.profileRepository,
     required this.followRepository,
@@ -57,12 +58,15 @@ class NewMessageSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocProvider(
       create: (_) => NewMessageSearchBloc(
         profileRepository: profileRepository,
         followRepository: followRepository,
         currentUserPubkey: currentUserPubkey,
+        moderationPresentation: ref.read(
+          moderationPresentationResolverProvider,
+        ),
       )..add(const NewMessageSearchStarted()),
       child: const _PeerLabelSync(child: _NewMessageSheetView()),
     );
@@ -336,19 +340,28 @@ class _UserTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isVanished = ref.watch(profileVanishedProvider(profile.pubkey));
+    final moderation = ref.watch(
+      moderationPresentationProvider(profile.pubkey),
+    );
     final displayName = dmPeerDisplayName(
       context,
       pubkeyHex: profile.pubkey,
       isVanished: isVanished,
+      moderation: moderation,
       profile: profile,
     );
     final avatar = dmPeerAvatar(
-      pubkeyHex: profile.pubkey,
       isVanished: isVanished,
+      moderation: moderation,
       pictureUrl: profile.picture,
     );
-    // A vanished account's NIP-05 identifies it as surely as its name does.
-    final handle = isVanished ? '' : profile.handle;
+    final handle =
+        dmPeerHandle(
+          isVanished: isVanished,
+          moderation: moderation,
+          handle: profile.handle,
+        ) ??
+        '';
 
     return InkWell(
       onTap: onTap,

@@ -2162,6 +2162,7 @@
     "dmDeleteRefusedMessage": "Non è stato possibile eliminare per tutti.",
     "dmDeleteRefusedDetails": "Alcune persone potrebbero ancora vedere questo messaggio.",
     "dmRetiredThreadClosedTitle": "Questa conversazione è chiusa.",
+    "dmFormerModerationAccountName": "Account di moderazione precedente",
     "messageRequestModerationNoticeCannotBeRemoved": "Questo avviso di Divine Moderation non può essere rimosso.",
     "dmRetiredThreadClosedBody": "Abbiamo spostato Divine Moderation su un nuovo account. Questo non lo legge più nessuno.",
     "dmRetiredThreadOpenSupport": "Scrivi a Divine Moderation",

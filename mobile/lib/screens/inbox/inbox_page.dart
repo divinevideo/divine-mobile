@@ -103,7 +103,9 @@ class InboxPage extends ConsumerWidget {
             // gate resolves against — so the row can never point somewhere
             // the gate would not approve.
             supportRowPubkey: kModerationPubkeyHex,
-            moderationAccount: isModerationAccount,
+            moderationPresentation: ref.read(
+              moderationPresentationResolverProvider,
+            ),
             retiredModerationAccount: isRetiredModerationAccount,
           )..add(const ConversationListStarted()),
         ),

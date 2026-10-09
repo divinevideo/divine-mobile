@@ -5,7 +5,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Brand artwork for the Divine moderation account's avatar.
@@ -40,10 +39,11 @@ class ModerationAvatar extends StatelessWidget {
 /// The status line a retired moderation thread shows in place of its message
 /// preview, in every list a closed thread can land in.
 ///
-/// The row it sits in is otherwise indistinguishable from the live pinned
-/// support row: [isModerationAccount] answers for retired keys too, so both
-/// carry the name "Divine Moderation" and the same [ModerationAvatar]
-/// wordmark, and both stamp the same relative timestamp. #6416 already put
+/// The row it sits in can be otherwise indistinguishable from the live pinned
+/// support row: a retired key nobody can sign as keeps the name "Divine
+/// Moderation" and the same [ModerationAvatar] wordmark (a key someone could
+/// still sign as does not — see `moderationPresentationOf`), and both stamp the
+/// same relative timestamp. #6416 already put
 /// `dmRetiredThreadClosedTitle` in the preview slot, but in the preview's own
 /// font and colour — a sentence sitting where the eye reads "the last thing
 /// they said", which is why a closed thread still had to be opened to be

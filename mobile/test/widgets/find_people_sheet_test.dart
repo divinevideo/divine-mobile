@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../helpers/retired_key_custody.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -621,6 +623,7 @@ void main() {
         WidgetTester tester, {
         required ShareableUser contact,
         bool isVanished = false,
+        List<Override> extraOverrides = const [],
       }) async {
         await tester.pumpWidget(
           createTestWidget(
@@ -630,6 +633,7 @@ void main() {
               profileVanishedProvider(
                 contact.pubkey,
               ).overrideWith((ref) => isVanished),
+              ...extraOverrides,
             ],
           ),
         );
@@ -682,6 +686,85 @@ void main() {
         expect(find.text('Divine Moderation'), findsOneWidget);
         expect(find.text('moderation-bot-v2'), findsNothing);
       });
+
+      // Official branding follows recorded custody (#9963). The share picker
+      // resolves a peer through the same helpers as the inbox row.
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: Divine's name and wordmark", (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.byType(ModerationAvatar), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark', (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              picture: 'https://example.invalid/looks-official.png',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(find.byType(ModerationAvatar), findsNothing);
+        });
+      }
+
+      for (final custody in keptCustodies) {
+        testWidgets('${custody.name}: shows the handle the key published', (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              handle: '@looks.official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks.official'), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: hides the handle its holder chose', (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              handle: '@looks.official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks.official'), findsNothing);
+        });
+      }
 
       testWidgets('hands the resolved identity on, so the share sheet cannot '
           'name the peer differently', (tester) async {

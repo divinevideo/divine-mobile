@@ -2159,6 +2159,7 @@
     "dmDeleteRefusedMessage": "Herkesten silinemedi.",
     "dmDeleteRefusedDetails": "Bazı kişiler bu mesajı hâlâ görebilir.",
     "dmRetiredThreadClosedTitle": "Bu sohbet kapatıldı.",
+    "dmFormerModerationAccountName": "Eski moderasyon hesabı",
     "messageRequestModerationNoticeCannotBeRemoved": "Bu Divine Moderation bildirimi kaldırılamaz.",
     "dmRetiredThreadClosedBody": "Divine Moderation'ı yeni bir hesaba taşıdık. Bu hesabı artık kimse okumuyor.",
     "dmRetiredThreadOpenSupport": "Divine Moderation'a mesaj gönder",

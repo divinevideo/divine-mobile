@@ -198,23 +198,27 @@ class _ContactItem extends ConsumerWidget {
     // `UserProfile.bestDisplayName`), and it is NOT a `displayNameOverride` —
     // that step outranks moderation, which would let the moderation account's
     // own kind-0 name win over the shared label.
+    final moderation = ref.watch(moderationPresentationProvider(user.pubkey));
     final displayName = dmPeerName(
       pubkeyHex: user.pubkey,
       isVanished: isVanished,
-      isModeration: isModerationAccount(user.pubkey),
+      moderation: moderation,
       labels: dmPeerLabels(context),
       profileName: user.displayName,
     );
     final avatar = dmPeerAvatar(
-      pubkeyHex: user.pubkey,
       isVanished: isVanished,
+      moderation: moderation,
       pictureUrl: user.picture,
     );
     final resolved = ShareableUser(
       pubkey: user.pubkey,
       displayName: displayName,
-      // A vanished account's NIP-05 identifies it as surely as its name does.
-      handle: isVanished ? null : user.handle,
+      handle: dmPeerHandle(
+        isVanished: isVanished,
+        moderation: moderation,
+        handle: user.handle,
+      ),
       picture: avatar.imageUrl,
     );
 

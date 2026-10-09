@@ -34,6 +34,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -139,11 +140,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       }
       if (!mounted) return;
 
+      final moderation = ref.read(moderationPresentationProvider(otherPubkey));
       final String displayName;
       final knownName = dmPeerNameWithoutProfile(
         context,
-        pubkeyHex: otherPubkey,
         isVanished: isVanished,
+        moderation: moderation,
       );
       if (knownName != null) {
         displayName = knownName;
@@ -168,6 +170,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           context,
           pubkeyHex: otherPubkey,
           isVanished: isVanished,
+          moderation: moderation,
           profile: profile,
         );
       }
@@ -275,9 +278,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final UserProfile? profile;
     final bool isResolving;
     final bool isDeleted;
+    final ModerationPresentation moderation;
     final String conversationDisplayName;
     final bool isIdentityResolving;
     final String visualDisplayName;
+    final String? claimedNip05;
     final String handle;
 
     if (isUnresolved) {
@@ -288,9 +293,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       profile = null;
       isResolving = false;
       isDeleted = false;
+      moderation = ModerationPresentation.ordinary;
       conversationDisplayName = '';
       isIdentityResolving = false;
       visualDisplayName = '';
+      claimedNip05 = null;
       handle = '';
     } else {
       final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
@@ -300,10 +307,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       // viewer's own copy of messages a NIP-62 vanish cannot retract. Only
       // the header identity changes.
       isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
+      moderation = ref.watch(moderationPresentationProvider(otherPubkey));
       final displayName = dmPeerDisplayName(
         context,
         pubkeyHex: otherPubkey,
         isVanished: isDeleted,
+        moderation: moderation,
         profile: profile,
         isResolving: isResolving,
       );
@@ -323,7 +332,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       visualDisplayName = conversationDisplayName.isEmpty
           ? UserProfile.defaultDisplayNameFor(otherPubkey)
           : conversationDisplayName;
-      final claimedNip05 = profile?.shortDisplayNip05;
+      claimedNip05 = dmPeerHandle(
+        isVanished: isDeleted,
+        moderation: moderation,
+        handle: profile?.shortDisplayNip05,
+      );
       final verificationStatus = claimedNip05 != null && claimedNip05.isNotEmpty
           ? ref
                 .watch(nip05VerificationProvider(otherPubkey))
@@ -347,8 +360,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       // Prefer the profile's NIP-05 / divine handle when set, otherwise the
       // follow relationship — which tells the viewer which of several
       // same-named people they are messaging, as a truncated npub never did.
+      // A former moderation key gets neither: social proof would vouch for a
+      // key someone outside the team may hold (#9963).
       handle = isDeleted
           ? context.l10n.inboxConversationDeletedAccountSubtitle
+          : moderation == ModerationPresentation.former
+          ? ''
           : resolveUserIdentifierLine(
                   l10n: context.l10n,
                   locale: Localizations.localeOf(context).toLanguageTag(),
@@ -528,6 +545,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   participantPubkeys: widget.participantPubkeys,
                                   blockedPubkeys: blockedReactors,
                                   displayName: conversationDisplayName,
+                                  moderation: moderation,
                                   isResolving: isIdentityResolving,
                                   isUnresolved: isUnresolved,
                                   reactionsEnabled:
@@ -540,9 +558,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                       threadWritability ==
                                       DmThreadWritability.writable,
                                   imageUrl: isDeleted ? null : profile?.picture,
-                                  nip05: isDeleted
-                                      ? null
-                                      : profile?.shortDisplayNip05,
+                                  nip05: claimedNip05,
                                   onViewProfile: otherPubkey.isNotEmpty
                                       ? () {
                                           final npub =
@@ -1260,6 +1276,7 @@ class _ConversationContent extends StatelessWidget {
     required this.participantPubkeys,
     required this.blockedPubkeys,
     required this.displayName,
+    required this.moderation,
     required this.isResolving,
     required this.isUnresolved,
     required this.reactionsEnabled,
@@ -1277,6 +1294,10 @@ class _ConversationContent extends StatelessWidget {
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
   final String displayName;
+
+  /// How the counterparty is presented; the empty state's artwork follows it
+  /// so it cannot present a key more officially than [displayName] does.
+  final ModerationPresentation moderation;
   final bool isResolving;
 
   /// Whether the thread's participants could not be resolved (#8664, #8677).
@@ -1329,6 +1350,7 @@ class _ConversationContent extends StatelessWidget {
                               ? UserProfile.defaultDisplayNameFor(otherPubkey)
                               : displayName,
                           pubkey: otherPubkey,
+                          moderation: moderation,
                           imageUrl: imageUrl,
                           nip05: nip05,
                           onViewProfile: onViewProfile,

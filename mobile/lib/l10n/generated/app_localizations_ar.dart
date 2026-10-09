@@ -5932,6 +5932,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'هذه المحادثة مغلقة.';
 
   @override
+  String get dmFormerModerationAccountName => 'حساب إشراف سابق';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'لا يمكن إزالة إشعار Divine Moderation هذا.';
 

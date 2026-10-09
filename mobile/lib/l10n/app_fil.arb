@@ -1453,6 +1453,7 @@
     "dmDeleteRefusedMessage": "Hindi na-delete para sa lahat.",
     "dmDeleteRefusedDetails": "Maaaring nakikita pa rin ng ilang tao ang mensaheng ito.",
     "dmRetiredThreadClosedTitle": "Sarado na ang usapang ito.",
+    "dmFormerModerationAccountName": "Dating account ng moderasyon",
     "messageRequestModerationNoticeCannotBeRemoved": "Hindi maaalis ang abisong ito mula sa Divine Moderation.",
     "dmRetiredThreadClosedBody": "Inilipat namin ang Divine Moderation sa bagong account. Wala nang nagbabasa nito.",
     "dmRetiredThreadOpenSupport": "I-message ang Divine Moderation",

@@ -5979,6 +5979,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Dit gesprek is gesloten.';
 
   @override
+  String get dmFormerModerationAccountName => 'Voormalig moderatieaccount';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Deze melding van Divine Moderation kan niet worden verwijderd.';
 

@@ -42,6 +42,7 @@ import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -50,6 +51,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../builders/video_event_builder.dart';
 import '../../../helpers/go_router.dart';
+import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockConversationBloc
@@ -595,6 +597,118 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+      });
+
+      // Official branding follows recorded custody (#9963). The closed notice
+      // and the missing composer are safety behaviors and hold for every
+      // custody.
+      group('by recorded custody (#9963)', () {
+        final retired = shippedRetiredKey;
+        const claimedNip05 = 'moderation@looks-official.example';
+
+        Finder wordmarkFinder() => find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIcon && widget.icon == DivineIconName.logo,
+          description: 'bundled Divine wordmark',
+        );
+
+        Future<void> pumpThreadFor(
+          WidgetTester tester,
+          RetiredKeyCustody custody,
+        ) async {
+          await tester.pumpWidget(
+            buildSubject(
+              counterparty: retired,
+              state: const ConversationState(status: ConversationStatus.loaded),
+              extraOverrides: [retiredKeyCustody(custody)],
+              // The key's holder controls its kind-0, so the test gives it one
+              // that tries to look official.
+              otherProfile: UserProfile(
+                pubkey: retired,
+                displayName: 'Looks Official',
+                picture: 'https://example.invalid/looks-official.png',
+                nip05: claimedNip05,
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: 'c' * 64,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        for (final custody in keptCustodies) {
+          testWidgets('${custody.name}: titled as Divine, with the wordmark', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(l10n.inboxSupportRowTitle), findsWidgets);
+            expect(wordmarkFinder(), findsOneWidget);
+            expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
+          });
+        }
+
+        for (final custody in withdrawnCustodies) {
+          testWidgets('${custody.name}: neutral title, no wordmark, no '
+              'picture', (tester) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(
+              find.text(l10n.dmFormerModerationAccountName),
+              findsWidgets,
+            );
+            expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+            expect(find.text('Looks Official'), findsNothing);
+            expect(wordmarkFinder(), findsNothing);
+            expect(
+              tester.widget<UserAvatar>(find.byType(UserAvatar).first).imageUrl,
+              isNull,
+            );
+          });
+        }
+
+        // The header and the empty-conversation card both carry the line.
+        for (final custody in keptCustodies) {
+          testWidgets('${custody.name}: shows the NIP-05 the key published', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsNWidgets(2));
+          });
+        }
+
+        for (final custody in withdrawnCustodies) {
+          testWidgets('${custody.name}: hides the NIP-05 its holder chose', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsNothing);
+          });
+
+          // Without the handle the header would fall back to social proof,
+          // which vouches for a key someone else may hold.
+          testWidgets('${custody.name}: leaves the header subtitle empty', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(l10n.socialProofMutual), findsNothing);
+          });
+        }
+
+        for (final custody in RetiredKeyCustody.values) {
+          testWidgets('${custody.name}: still closed, composer still gone', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.byType(MessageInputBar), findsNothing);
+            expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+          });
+        }
       });
     });
 

@@ -6034,6 +6034,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Unterhaltung ist geschlossen.';
 
   @override
+  String get dmFormerModerationAccountName => 'Ehemaliges Moderationskonto';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Dieser Hinweis von Divine Moderation kann nicht entfernt werden.';
 

@@ -9,6 +9,7 @@ import 'package:openvine/config/official_accounts.dart';
 const _labels = DmPeerLabels(
   deletedAccount: 'Deleted account',
   moderation: 'Divine Moderation',
+  formerModeration: 'Former moderation account',
   retiredConversationClosed: 'This conversation is closed.',
 );
 
@@ -50,7 +51,7 @@ void main() {
           dmPeerName(
             pubkeyHex: kModerationPubkeyHex,
             isVanished: true,
-            isModeration: true,
+            moderation: ModerationPresentation.official,
             labels: _labels,
             profileName: 'Kind Zero Name',
             displayNameOverride: 'Override',
@@ -64,7 +65,7 @@ void main() {
           dmPeerName(
             pubkeyHex: kModerationPubkeyHex,
             isVanished: false,
-            isModeration: true,
+            moderation: ModerationPresentation.official,
             labels: _labels,
             profileName: 'Kind Zero Name',
             displayNameOverride: 'Override',
@@ -78,11 +79,52 @@ void main() {
           dmPeerName(
             pubkeyHex: kModerationPubkeyHex,
             isVanished: false,
-            isModeration: true,
+            moderation: ModerationPresentation.official,
             labels: _labels,
             profileName: 'Kind Zero Name',
           ),
           equals(_labels.moderation),
+        );
+      });
+
+      // Official branding follows recorded custody (#9963): a retired key
+      // someone could still sign as is named neutrally, never as Divine, and
+      // never by whatever its holder published in a kind-0.
+      test('a former moderation key gets the neutral label, not Divine', () {
+        final name = dmPeerName(
+          pubkeyHex: _ordinaryPubkey,
+          isVanished: false,
+          moderation: ModerationPresentation.former,
+          labels: _labels,
+          profileName: 'Divine Moderation',
+        );
+        expect(name, equals(_labels.formerModeration));
+        expect(name, isNot(equals(_labels.moderation)));
+      });
+
+      test('a vanished former moderation key is still a deleted account', () {
+        expect(
+          dmPeerName(
+            pubkeyHex: _ordinaryPubkey,
+            isVanished: true,
+            moderation: ModerationPresentation.former,
+            labels: _labels,
+          ),
+          equals(_labels.deletedAccount),
+        );
+      });
+
+      test('a former moderation key ignores its own profile name', () {
+        expect(
+          dmPeerName(
+            pubkeyHex: _ordinaryPubkey,
+            isVanished: false,
+            moderation: ModerationPresentation.former,
+            labels: _labels,
+            profileName: 'Looks Official',
+            isResolving: true,
+          ),
+          equals(_labels.formerModeration),
         );
       });
 
@@ -91,7 +133,7 @@ void main() {
           dmPeerName(
             pubkeyHex: _ordinaryPubkey,
             isVanished: false,
-            isModeration: false,
+            moderation: ModerationPresentation.ordinary,
             labels: _labels,
             profileName: 'Kind Zero Name',
           ),
@@ -106,7 +148,7 @@ void main() {
             dmPeerName(
               pubkeyHex: _ordinaryPubkey,
               isVanished: false,
-              isModeration: false,
+              moderation: ModerationPresentation.ordinary,
               labels: _labels,
               profileName: 'Kind Zero Name',
               isResolving: true,
@@ -121,7 +163,7 @@ void main() {
           dmPeerName(
             pubkeyHex: _ordinaryPubkey,
             isVanished: false,
-            isModeration: false,
+            moderation: ModerationPresentation.ordinary,
             labels: _labels,
           ),
           equals(UserProfile.defaultDisplayNameFor(_ordinaryPubkey)),
@@ -140,7 +182,7 @@ void main() {
           dmPeerName(
             pubkeyHex: retired,
             isVanished: false,
-            isModeration: true,
+            moderation: ModerationPresentation.official,
             labels: _labels,
           ),
           equals(_labels.moderation),
@@ -152,7 +194,7 @@ void main() {
           dmPeerName(
             pubkeyHex: _ordinaryPubkey,
             isVanished: false,
-            isModeration: false,
+            moderation: ModerationPresentation.ordinary,
             labels: _labels,
           ),
           isNot(equals(_labels.moderation)),
@@ -335,12 +377,14 @@ void main() {
         const DmPeerLabels(
           deletedAccount: 'a',
           moderation: 'b',
+          formerModeration: 'f',
           retiredConversationClosed: 'c',
         ),
         equals(
           const DmPeerLabels(
             deletedAccount: 'a',
             moderation: 'b',
+            formerModeration: 'f',
             retiredConversationClosed: 'c',
           ),
         ),
@@ -352,6 +396,7 @@ void main() {
         const DmPeerLabels(
           deletedAccount: 'a',
           moderation: 'b',
+          formerModeration: 'f',
           retiredConversationClosed: 'c',
         ),
         isNot(
@@ -359,6 +404,28 @@ void main() {
             const DmPeerLabels(
               deletedAccount: 'z',
               moderation: 'b',
+              formerModeration: 'f',
+              retiredConversationClosed: 'c',
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('differs when the former moderation copy changes', () {
+      expect(
+        const DmPeerLabels(
+          deletedAccount: 'a',
+          moderation: 'b',
+          formerModeration: 'f',
+          retiredConversationClosed: 'c',
+        ),
+        isNot(
+          equals(
+            const DmPeerLabels(
+              deletedAccount: 'a',
+              moderation: 'b',
+              formerModeration: 'g',
               retiredConversationClosed: 'c',
             ),
           ),

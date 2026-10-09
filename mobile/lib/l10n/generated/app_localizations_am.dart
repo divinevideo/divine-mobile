@@ -5819,6 +5819,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'ይህ ውይይት ተዘግቷል።';
 
   @override
+  String get dmFormerModerationAccountName => 'የቀድሞ የቁጥጥር መለያ';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'ይህ የDivine Moderation ማሳወቂያ ሊወገድ አይችልም።';
 

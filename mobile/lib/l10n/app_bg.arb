@@ -2216,6 +2216,7 @@
     "dmDeleteRefusedMessage": "Изтриването за всички не се получи.",
     "dmDeleteRefusedDetails": "Някои хора все още може да виждат това съобщение.",
     "dmRetiredThreadClosedTitle": "Този разговор е затворен.",
+    "dmFormerModerationAccountName": "Бивш акаунт за модерация",
     "messageRequestModerationNoticeCannotBeRemoved": "Това известие от Divine Moderation не може да бъде премахнато.",
     "dmRetiredThreadClosedBody": "Преместихме Divine Moderation в нов профил. Този вече не се чете от никого.",
     "dmRetiredThreadOpenSupport": "Пишете на Divine Moderation",

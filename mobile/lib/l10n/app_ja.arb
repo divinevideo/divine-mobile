@@ -2152,6 +2152,7 @@
     "dmDeleteRefusedMessage": "全員から削除できませんでした。",
     "dmDeleteRefusedDetails": "一部の人には、このメッセージがまだ表示されている可能性があります。",
     "dmRetiredThreadClosedTitle": "このスレッドは終了しました。",
+    "dmFormerModerationAccountName": "以前のモデレーションアカウント",
     "messageRequestModerationNoticeCannotBeRemoved": "このDivine Moderationのお知らせは削除できません。",
     "dmRetiredThreadClosedBody": "Divine Moderation は新しいアカウントに移りました。こちらはもう誰も読んでいません。",
     "dmRetiredThreadOpenSupport": "Divine Moderation にメッセージを送る",

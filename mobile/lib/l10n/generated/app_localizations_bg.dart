@@ -6011,6 +6011,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Този разговор е затворен.';
 
   @override
+  String get dmFormerModerationAccountName => 'Бивш акаунт за модерация';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Това известие от Divine Moderation не може да бъде премахнато.';
 
