@@ -14,6 +14,7 @@ enum EqualizedAudioFileTests {
         await aStretchPastTheEndStopsWhereTheSourceDoes()
         await aCancelledRenderRendersNothing()
         await aRenderCancelledPartWayStopsReading()
+        await aHighRateSourceIsCopiedAt48kHz()
         copiesListsTheCopiesAndNothingElse()
         print("Equalized audio file tests passed")
     }
@@ -137,6 +138,26 @@ enum EqualizedAudioFileTests {
         precondition(afterCancel < full / 3, "\(afterCancel) after cancel; full render \(full)")
     }
 
+    /// A source's own sample rate sizes its copy, so one declaring a far
+    /// higher rate than it needs, which a published sound can, would multiply
+    /// what a stretch costs; above 192 kHz the copy was also labelled
+    /// 192 kHz and played slower and lower. A rate above 48 kHz is read at
+    /// 48 kHz, so a second of copy is a second of sound at a known size.
+    static func aHighRateSourceIsCopiedAt48kHz() async {
+        let source = writeTone(amplitude: 0.1, channels: 2, sampleRate: 384_000)
+        defer { try? FileManager.default.removeItem(at: source) }
+        guard
+            let copy = await EqualizedAudioFile.render(
+                source: source, equalizer: bassBoost(6), from: 0, to: 1)
+        else { preconditionFailure("no copy rendered") }
+        defer { try? FileManager.default.removeItem(at: copy.url) }
+        let rate = try! AVAudioFile(forReading: copy.url).fileFormat.sampleRate
+        precondition(rate == 48_000, "\(rate)")
+        // The resampler can end a few frames short of the second.
+        let frames = read(copy.url).frames
+        precondition(abs(frames - 48_000) <= 16, "\(frames)")
+    }
+
     /// The copies and downloads are listed by their name; other files in the
     /// temporary directory are not.
     static func copiesListsTheCopiesAndNothingElse() {
@@ -156,39 +177,44 @@ enum EqualizedAudioFileTests {
         AudioEqualizer(bands: [.init(type: .lowShelf, frequencyHz: 200, gainDb: gainDb)])
     }
 
-    /// [seconds] of a 60 Hz tone at 48 kHz, written as 16-bit WAV.
+    /// [seconds] of a 60 Hz tone at [sampleRate], written as 16-bit WAV.
     static func writeTone(
-        amplitude: Double, channels: AVAudioChannelCount, seconds: Int = 1
+        amplitude: Double, channels: AVAudioChannelCount, seconds: Int = 1,
+        sampleRate: Int = 48_000
     ) -> URL {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("eq_source_\(UUID().uuidString).wav")
         // AVAudioFile completes the file once released; see EqualizedAudioFile.
         autoreleasepool {
-            writeTone(amplitude: amplitude, channels: channels, seconds: seconds, to: url)
+            writeTone(
+                amplitude: amplitude, channels: channels, seconds: seconds,
+                sampleRate: sampleRate, to: url)
         }
         return url
     }
 
     static func writeTone(
-        amplitude: Double, channels: AVAudioChannelCount, seconds: Int, to url: URL
+        amplitude: Double, channels: AVAudioChannelCount, seconds: Int,
+        sampleRate: Int = 48_000, to url: URL
     ) {
-        let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: channels)!
+        let format = AVAudioFormat(
+            standardFormatWithSampleRate: Double(sampleRate), channels: channels)!
         let file = try! AVAudioFile(
             forWriting: url,
             settings: [
                 AVFormatIDKey: kAudioFormatLinearPCM,
-                AVSampleRateKey: 48_000,
+                AVSampleRateKey: sampleRate,
                 AVNumberOfChannelsKey: channels,
                 AVLinearPCMBitDepthKey: 16,
                 AVLinearPCMIsFloatKey: false,
             ])
-        let frameCount = 48_000 * seconds
+        let frameCount = sampleRate * seconds
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount))!
         buffer.frameLength = AVAudioFrameCount(frameCount)
         for channel in 0..<Int(channels) {
             for frame in 0..<frameCount {
                 buffer.floatChannelData![channel][frame] = Float(
-                    amplitude * sin(2 * Double.pi * 60 * Double(frame) / 48_000))
+                    amplitude * sin(2 * Double.pi * 60 * Double(frame) / Double(sampleRate)))
             }
         }
         try! file.write(from: buffer)

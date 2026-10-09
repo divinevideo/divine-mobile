@@ -85,31 +85,47 @@ enum EqualizedAudioFile {
         guard let track = try? await asset.loadTracks(withMediaType: .audio).first else {
             return false
         }
+        let formats = ((try? await track.load(.formatDescriptions)) ?? [])
+            .compactMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
         // AVAudioFile completes the file only once it is released, which an
         // autoreleased reference would put off past the return.
         return autoreleasepool {
             write(
-                asset: asset, track: track, equalizer: equalizer,
+                asset: asset, track: track, sourceFormats: formats, equalizer: equalizer,
                 from: startSec, to: endSec, into: target)
         }
     }
 
+    /// The highest rate a copy is written at. The copy's size scales with
+    /// its rate, and a published sound picks its own, so a source declaring
+    /// more is read at this rate instead.
+    private static let maxSampleRate = 48_000.0
+
     private static func write(
         asset: AVAsset,
         track: AVAssetTrack,
+        sourceFormats: [AudioStreamBasicDescription],
         equalizer: AudioEqualizer,
         from startSec: Double,
         to endSec: Double,
         into target: URL
     ) -> Bool {
         guard let reader = try? AVAssetReader(asset: asset) else { return false }
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+        var settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVLinearPCMBitDepthKey: 32,
             AVLinearPCMIsFloatKey: true,
             AVLinearPCMIsNonInterleaved: false,
             AVLinearPCMIsBigEndianKey: false,
-        ])
+        ]
+        // Anything at or below the ceiling is read at its own rate, untouched.
+        if let first = sourceFormats.first,
+            sourceFormats.contains(where: { $0.mSampleRate > maxSampleRate })
+        {
+            settings[AVSampleRateKey] = maxSampleRate
+            settings[AVNumberOfChannelsKey] = first.mChannelsPerFrame
+        }
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else { return false }
         reader.add(output)
