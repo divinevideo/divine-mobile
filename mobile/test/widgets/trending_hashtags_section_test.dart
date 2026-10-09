@@ -2,9 +2,15 @@
 // ABOUTME: Verifies hashtag display, loading state, and tap navigation
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/widgets/trending_hashtags_section.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+import '../helpers/go_router.dart';
 
 void main() {
   group('TrendingHashtagsSection', () {
@@ -119,6 +125,85 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tappedHashtag, equals('funny'));
+    });
+
+    testWidgets('tapping hashtag opens its route without a callback', (
+      tester,
+    ) async {
+      final path = HashtagScreenRouter.pathForTag('funny');
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(
+              body: TrendingHashtagsSection(hashtags: ['funny']),
+            ),
+          ),
+          GoRoute(
+            path: path,
+            builder: (context, state) => const Scaffold(
+              body: Text('opened hashtag feed'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('#funny'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('opened hashtag feed'), findsOneWidget);
+    });
+
+    testWidgets('logs a rejected hashtag route push instead of leaking it', (
+      tester,
+    ) async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final router = MockGoRouter();
+      when(
+        () => router.push<void>(any()),
+      ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+
+      await tester.pumpWidget(
+        MockGoRouterProvider(
+          goRouter: router,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: TrendingHashtagsSection(hashtags: ['funny']),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('#funny'));
+      await tester.pump();
+
+      verify(
+        () => router.push<void>(HashtagScreenRouter.pathForTag('funny')),
+      ).called(1);
+      expect(tester.takeException(), isNull);
+      final failures = logCapture
+          .getRecentLogs()
+          .where((entry) => entry.name == 'TrendingHashtagsSection')
+          .toList();
+      expect(failures, hasLength(1));
+      expect(failures.single.level, LogLevel.error);
+      expect(failures.single.category, LogCategory.ui);
+      expect(
+        failures.single.message,
+        'Failed to open hashtag feed: Exception: route failed',
+      );
     });
 
     testWidgets('hashtag chips have correct styling', (tester) async {
