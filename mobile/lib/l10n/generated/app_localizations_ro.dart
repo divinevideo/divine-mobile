@@ -4664,6 +4664,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Miniatura videoclipului pe care tocmai l-ai publicat';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Trimiți bucla asta și pe $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Postează o dată, apari și pe $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Pleacă automat pe $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Niciun utilizator găsit';
 
   @override
@@ -13376,6 +13391,21 @@ class AppLocalizationsRo extends AppLocalizations {
         'private': '$name, Privată, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconectează aceste conturi în setările de crosspost ca să continui să postezi: $platforms.',
+      few:
+          'Reconectează aceste conturi în setările de crosspost ca să continui să postezi: $platforms.',
+      one:
+          'Reconectează $platforms în setările de crosspost ca să continui să postezi.',
     );
     return '$_temp0';
   }

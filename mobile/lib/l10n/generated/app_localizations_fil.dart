@@ -4554,6 +4554,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Thumbnail ng video na kaka-publish mo lang';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Ipadala rin ang loop na ito sa $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Mag-post nang isang beses, lumabas din sa $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Papunta sa $platforms nang awtomatiko.';
+  }
+
+  @override
   String get userSearchNoResults => 'Walang nahanap na user';
 
   @override
@@ -13223,6 +13238,19 @@ class AppLocalizationsFil extends AppLocalizations {
         'private': '$name, Pribado, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: $platforms.',
+      one:
+          'I-reconnect ang $platforms sa crossposting settings para makapag-post pa rin.',
     );
     return '$_temp0';
   }

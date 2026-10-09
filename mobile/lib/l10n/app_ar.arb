@@ -1506,6 +1506,12 @@
     "postPublishConfirmationView": "عرض",
     "postPublishConfirmationShare": "مشاركة",
     "postPublishConfirmationThumbnailLabel": "صورة مصغرة للفيديو الذي نشرته للتو",
+    "postPublishCrosspostSuggest": "إرسال هذا التكرار إلى {platforms} أيضًا؟",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "النشر مرة واحدة يعني الظهور على {platform} أيضًا.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "في الطريق إلى {platforms} تلقائيًا.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{تم نشر الفيديو في ملفك الشخصي} other{تم نشر {count} مقاطع فيديو في ملفك الشخصي}}",
     "userSearchNoResults": "لم يُعثر على مستخدمين",
     "userPickerFilterByNameHint": "التصفية بالاسم...",
@@ -4950,5 +4956,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{إعادة ربط {platforms} في إعدادات النشر المتقاطع لمواصلة النشر.} zero{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} two{إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} few{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} many{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} other{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.}}"
 }

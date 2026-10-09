@@ -1513,6 +1513,12 @@
     "postPublishConfirmationView": "Görüntüle",
     "postPublishConfirmationShare": "Paylaş",
     "postPublishConfirmationThumbnailLabel": "Az önce yayınladığın videonun küçük resmi",
+    "postPublishCrosspostSuggest": "Bu loop'u {platforms} hesabına da gönderelim mi?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Bir kez paylaş, {platform} hesabında da görün.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Otomatik olarak {platforms} hesabına gidiyor.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Video profiline yayınlandı} other{{count} video profiline yayınlandı}}",
     "userSearchNoResults": "Kullanıcı bulunamadı",
     "userPickerFilterByNameHint": "Ada göre filtrele...",
@@ -4950,5 +4956,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından {platforms} hesabını yeniden bağla.} other{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: {platforms}.}}"
 }

@@ -654,7 +654,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       await _presentAfterDismiss<void>((hostContext) {
         return showCrosspostSheet(
           context: hostContext,
-          ref: ref,
           video: widget.video,
           connections: connections,
         );

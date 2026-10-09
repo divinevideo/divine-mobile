@@ -7643,6 +7643,24 @@ abstract class AppLocalizations {
   /// **'Thumbnail of the video you just published'**
   String get postPublishConfirmationThumbnailLabel;
 
+  /// Shown on the post-publish confirmation when the creator has a platform connected in manual crossposting mode. {platforms} is a comma-separated list of platform brand names, such as Instagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Send this loop to {platforms} too?'**
+  String postPublishCrosspostSuggest(String platforms);
+
+  /// Shown on the post-publish confirmation when crossposting is not set up yet. {platform} is a platform brand name, such as Instagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Post once, show up on {platform} too.'**
+  String postPublishCrosspostSetUp(String platform);
+
+  /// Shown on the post-publish confirmation when every connected platform crossposts automatically. {platforms} is a comma-separated list of platform brand names.
+  ///
+  /// In en, this message translates to:
+  /// **'Heading to {platforms} automatically.'**
+  String postPublishCrosspostAutomatic(String platforms);
+
   /// No description provided for @userSearchNoResults.
   ///
   /// In en, this message translates to:
@@ -21948,6 +21966,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
   String listCardSemanticLabel(String name, String visibility, String count);
+
+  /// Post-publish reconnect prompt. Count is the number of lapsed accounts; platforms is their comma-separated display-name list. Use singular grammar only for one account.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Reconnect {platforms} in crossposting settings to keep posting.} other{Reconnect these accounts in crossposting settings to keep posting: {platforms}.}}'**
+  String postPublishCrosspostReconnect(int count, String platforms);
 }
 
 class _AppLocalizationsDelegate

@@ -1506,6 +1506,12 @@
     "postPublishConfirmationView": "表示",
     "postPublishConfirmationShare": "共有",
     "postPublishConfirmationThumbnailLabel": "公開したばかりの動画のサムネイル",
+    "postPublishCrosspostSuggest": "このループを{platforms}にも送りますか？",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "一度の投稿で{platform}にも届けましょう。",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "{platforms}に自動で投稿されます。",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{動画をプロフィールに公開したよ} other{{count}本の動画をプロフィールに公開したよ}}",
     "userSearchNoResults": "ユーザーが見つからない",
     "userPickerFilterByNameHint": "名前で絞り込み...",
@@ -4950,5 +4956,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}"
 }

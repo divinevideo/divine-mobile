@@ -4265,6 +4265,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '방금 게시한 영상의 썸네일';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '이 루프를 $platforms에도 보낼까요?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '한 번 올리고 $platform에도 나타나요.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platforms에 자동으로 올라가요.';
+  }
+
+  @override
   String get userSearchNoResults => '사용자를 찾을 수 없어요';
 
   @override
@@ -12476,6 +12491,17 @@ class AppLocalizationsKo extends AppLocalizations {
         'private': '$name, 비공개, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: $platforms.',
+      one: '계속 게시하려면 크로스 포스팅 설정에서 $platforms 계정을 다시 연결해주세요.',
     );
     return '$_temp0';
   }

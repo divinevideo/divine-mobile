@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Visa",
     "postPublishConfirmationShare": "Dela",
     "postPublishConfirmationThumbnailLabel": "Miniatyr av videon du precis publicerade",
+    "postPublishCrosspostSuggest": "Skicka den här loopen till {platforms} också?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Posta en gång, syns på {platform} också.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Skickas automatiskt till {platforms}.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Videon publicerad till din profil} other{{count} videor publicerade till din profil}}",
     "userSearchNoResults": "Inga användare hittades",
     "userPickerFilterByNameHint": "Filtrera efter namn...",
@@ -4950,5 +4956,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Återanslut {platforms} i korspostningsinställningarna för att fortsätta publicera.} other{Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: {platforms}.}}"
 }

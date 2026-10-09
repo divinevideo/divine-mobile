@@ -4599,6 +4599,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Miniature de la vidéo que tu viens de publier';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Envoyer aussi ce loop sur $platforms ?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Publie une fois, apparais aussi sur $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Part automatiquement sur $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Aucun utilisateur trouvé';
 
   @override
@@ -13309,6 +13324,21 @@ class AppLocalizationsFr extends AppLocalizations {
         'private': '$name, Privée, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      many:
+          'Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : $platforms.',
+      one:
+          'Reconnecte $platforms dans les réglages de crosspost pour continuer à publier.',
     );
     return '$_temp0';
   }

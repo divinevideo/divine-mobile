@@ -2244,6 +2244,12 @@
   "postPublishConfirmationView": "دیکھیں",
   "postPublishConfirmationShare": "شیئر",
   "postPublishConfirmationThumbnailLabel": "اس ویڈیو کا تھمب نیل جو آپ نے ابھی شائع کی",
+  "postPublishCrosspostSuggest": "کیا یہ لوپ {platforms} پر بھی بھیجیں؟",
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+  "postPublishCrosspostSetUp": "ایک بار پوسٹ کریں، {platform} پر بھی نظر آئیں۔",
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+  "postPublishCrosspostAutomatic": "خودکار طور پر {platforms} پر جا رہا ہے۔",
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "کوئی صارف نہیں ملا",
   "userPickerFilterByNameHint": "نام سے فلٹر کریں...",
   "userPickerSearchByNameHint": "نام سے تلاش کریں...",
@@ -6717,5 +6723,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں {platforms} دوبارہ منسلک کریں۔} other{پوسٹنگ جاری رکھنے کے لیے کراس پوسٹنگ ترتیبات میں ان اکاؤنٹس کو دوبارہ منسلک کریں: {platforms}۔}}"
 }

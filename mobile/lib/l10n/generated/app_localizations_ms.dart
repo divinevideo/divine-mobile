@@ -4518,6 +4518,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Lakaran kecil video yang baru anda terbitkan';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Hantar loop ini ke $platforms juga?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Siar sekali, muncul juga di $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Sedang ke $platforms secara automatik.';
+  }
+
+  @override
   String get userSearchNoResults => 'Tiada pengguna ditemui';
 
   @override
@@ -13109,6 +13124,19 @@ class AppLocalizationsMs extends AppLocalizations {
         'private': '$name, Peribadi, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: $platforms.',
+      one:
+          'Sambung semula $platforms dalam tetapan siaran silang untuk terus menyiarkan.',
     );
     return '$_temp0';
   }

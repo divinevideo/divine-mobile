@@ -4450,6 +4450,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Thumbnail video yang baru saja kamu publikasikan';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Kirim loop ini ke $platforms juga?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Posting sekali, muncul juga di $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Otomatis menuju $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Tidak ada pengguna ditemukan';
 
   @override
@@ -13013,6 +13028,19 @@ class AppLocalizationsId extends AppLocalizations {
         'private': '$name, Privat, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hubungkan ulang akun-akun ini di pengaturan crossposting untuk tetap bisa memposting: $platforms.',
+      one:
+          'Hubungkan ulang $platforms di pengaturan crossposting untuk tetap bisa memposting.',
     );
     return '$_temp0';
   }

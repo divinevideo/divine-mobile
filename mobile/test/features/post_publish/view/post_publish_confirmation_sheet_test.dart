@@ -21,6 +21,7 @@ Future<void> _pumpSheetHost(
   required VoidCallback onView,
   required VoidCallback onShare,
   Uint8List? thumbnailBytes,
+  Widget? crosspostSection,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -37,6 +38,7 @@ Future<void> _pumpSheetHost(
                 onView: onView,
                 onShare: onShare,
                 thumbnailBytes: thumbnailBytes,
+                crosspostSection: crosspostSection,
               ),
             ),
           ),
@@ -61,6 +63,52 @@ void main() {
       expect(find.text(_l10n.postPublishConfirmationShare), findsOneWidget);
       // The offer this replaces. Its return would be the regression.
       expect(find.text(_l10n.libraryRecordVideo), findsNothing);
+    });
+
+    testWidgets('places a crosspost section above view and share', (
+      tester,
+    ) async {
+      var shared = 0;
+      await _pumpSheetHost(
+        tester,
+        onView: () {},
+        onShare: () => shared++,
+        crosspostSection: const Text('crosspost-slot'),
+      );
+
+      expect(
+        tester.getTopLeft(find.text('crosspost-slot')).dy,
+        lessThan(
+          tester
+              .getBottomLeft(find.text(_l10n.postPublishConfirmationShare))
+              .dy,
+        ),
+      );
+
+      // The section is additive: Share keeps the experiment's behavior.
+      await tester.tap(find.text(_l10n.postPublishConfirmationShare));
+      await tester.pumpAndSettle();
+      expect(shared, equals(1));
+    });
+
+    testWidgets('a hidden crosspost section leaves no gap below the actions', (
+      tester,
+    ) async {
+      await _pumpSheetHost(tester, onView: () {}, onShare: () {});
+      final share = find.text(_l10n.postPublishConfirmationShare);
+      final withoutSection = tester.getCenter(share);
+      await tester.tap(share);
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      await _pumpSheetHost(
+        tester,
+        onView: () {},
+        onShare: () {},
+        crosspostSection: const SizedBox.shrink(),
+      );
+
+      expect(tester.getCenter(share), withoutSection);
     });
 
     testWidgets('reads its copy from l10n rather than hardcoded English', (

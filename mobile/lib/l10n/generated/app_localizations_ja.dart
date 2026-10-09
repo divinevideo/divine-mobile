@@ -4249,6 +4249,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '公開したばかりの動画のサムネイル';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'このループを$platformsにも送りますか？';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '一度の投稿で$platformにも届けましょう。';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '$platformsに自動で投稿されます。';
+  }
+
+  @override
   String get userSearchNoResults => 'ユーザーが見つからない';
 
   @override
@@ -12463,6 +12478,17 @@ class AppLocalizationsJa extends AppLocalizations {
         'private': '$name、非公開、$count',
         'other': '$name、$count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：$platforms。',
+      one: '投稿を続けるには、クロス投稿設定で $platforms を再接続してください。',
     );
     return '$_temp0';
   }

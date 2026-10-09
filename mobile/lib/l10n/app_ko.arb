@@ -1052,6 +1052,12 @@
     "postPublishConfirmationView": "보기",
     "postPublishConfirmationShare": "공유",
     "postPublishConfirmationThumbnailLabel": "방금 게시한 영상의 썸네일",
+    "postPublishCrosspostSuggest": "이 루프를 {platforms}에도 보낼까요?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "한 번 올리고 {platform}에도 나타나요.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "{platforms}에 자동으로 올라가요.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{프로필에 영상을 게시했어요} other{프로필에 영상 {count}개를 게시했어요}}",
     "userSearchNoResults": "사용자를 찾을 수 없어요",
     "userPickerFilterByNameHint": "이름으로 필터링...",
@@ -4496,5 +4502,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}"
 }

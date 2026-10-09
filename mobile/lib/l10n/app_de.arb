@@ -1516,6 +1516,12 @@
     "postPublishConfirmationView": "Anzeigen",
     "postPublishConfirmationShare": "Teilen",
     "postPublishConfirmationThumbnailLabel": "Vorschaubild des Videos, das du gerade veröffentlicht hast",
+    "postPublishCrosspostSuggest": "Diesen Loop auch auf {platforms} posten?",
+    "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+    "postPublishCrosspostSetUp": "Einmal posten, auch auf {platform} auftauchen.",
+    "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+    "postPublishCrosspostAutomatic": "Geht automatisch an {platforms}.",
+    "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "uploadPublishedCountMessage": "{count, plural, =1{Video in deinem Profil veröffentlicht} other{{count} Videos in deinem Profil veröffentlicht}}",
     "userSearchNoResults": "Keine Nutzer gefunden",
     "userPickerFilterByNameHint": "Nach Namen filtern...",
@@ -4950,5 +4956,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Verbinde {platforms} in den Crossposting-Einstellungen neu, um weiter zu posten.} other{Verbinde diese Konten in den Crossposting-Einstellungen neu, um weiter zu posten: {platforms}.}}"
 }

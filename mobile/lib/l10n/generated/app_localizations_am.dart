@@ -4425,6 +4425,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => 'አሁን ያሳተሙት ቪዲዮ ድንክዬ';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'ምንም ተጠቃሚዎች አልተገኙም።';
 
   @override
@@ -12775,6 +12790,17 @@ class AppLocalizationsAm extends AppLocalizations {
         'private': '$name፣ የግል፣ $count',
         'other': '$name፣ $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ $platforms።',
+      one: 'መለጠፍን ለመቀጠል $platformsን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።',
     );
     return '$_temp0';
   }

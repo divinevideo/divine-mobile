@@ -2244,6 +2244,12 @@
   "postPublishConfirmationView": "Lihat",
   "postPublishConfirmationShare": "Kongsi",
   "postPublishConfirmationThumbnailLabel": "Lakaran kecil video yang baru anda terbitkan",
+  "postPublishCrosspostSuggest": "Hantar loop ini ke {platforms} juga?",
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
+  "postPublishCrosspostSetUp": "Siar sekali, muncul juga di {platform}.",
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
+  "postPublishCrosspostAutomatic": "Sedang ke {platforms} secara automatik.",
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "Tiada pengguna ditemui",
   "userPickerFilterByNameHint": "Tapis mengikut nama...",
   "userPickerSearchByNameHint": "Cari mengikut nama...",
@@ -6717,5 +6723,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{Sambung semula {platforms} dalam tetapan siaran silang untuk terus menyiarkan.} other{Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: {platforms}.}}"
 }

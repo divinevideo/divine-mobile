@@ -4492,6 +4492,21 @@ class AppLocalizationsVi extends AppLocalizations {
       'Ảnh thu nhỏ của video bạn vừa đăng';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Gửi loop này lên $platforms luôn nhé?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Đăng một lần, xuất hiện cả trên $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Đang tự động lên $platforms.';
+  }
+
+  @override
   String get userSearchNoResults => 'Không tìm thấy người dùng nào';
 
   @override
@@ -13054,6 +13069,18 @@ class AppLocalizationsVi extends AppLocalizations {
         'private': '$name, Riêng tư, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: $platforms.',
+      one: 'Kết nối lại $platforms trong cài đặt đăng chéo để tiếp tục đăng.',
     );
     return '$_temp0';
   }

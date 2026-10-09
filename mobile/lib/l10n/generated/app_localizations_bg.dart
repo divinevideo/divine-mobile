@@ -4574,6 +4574,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Миниатюра на видеото, което току-що публикува';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Да пратим ли този луп и в $platforms?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Публикувай веднъж, появи се и в $platform.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Отива в $platforms автоматично.';
+  }
+
+  @override
   String get userSearchNoResults => 'Няма намерени потребители';
 
   @override
@@ -13235,6 +13250,19 @@ class AppLocalizationsBg extends AppLocalizations {
         'private': '$name, Частен, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Свържи отново тези акаунти в настройките за кръстосано публикуване, за да продължиш да публикуваш: $platforms.',
+      one:
+          'Свържи отново $platforms в настройките за кръстосано публикуване, за да продължиш да публикуваш.',
     );
     return '$_temp0';
   }

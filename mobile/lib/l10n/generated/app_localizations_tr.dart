@@ -4466,6 +4466,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Az önce yayınladığın videonun küçük resmi';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Bu loop\'u $platforms hesabına da gönderelim mi?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Bir kez paylaş, $platform hesabında da görün.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Otomatik olarak $platforms hesabına gidiyor.';
+  }
+
+  @override
   String get userSearchNoResults => 'Kullanıcı bulunamadı';
 
   @override
@@ -13033,6 +13048,19 @@ class AppLocalizationsTr extends AppLocalizations {
         'private': '$name, Özel, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: $platforms.',
+      one:
+          'Paylaşmaya devam etmek için çapraz paylaşım ayarlarından $platforms hesabını yeniden bağla.',
     );
     return '$_temp0';
   }

@@ -4687,6 +4687,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీరు ఇప్పుడే ప్రచురించిన వీడియో యొక్క సూక్ష్మచిత్రం';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return 'Send this loop to $platforms too?';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return 'Post once, show up on $platform too.';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return 'Heading to $platforms automatically.';
+  }
+
+  @override
   String get userSearchNoResults => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override
@@ -13450,6 +13465,19 @@ class AppLocalizationsTe extends AppLocalizations {
         'private': '$name, ప్రైవేట్, $count',
         'other': '$name, $count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: $platforms.',
+      one:
+          'పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో $platformsను మళ్లీ కనెక్ట్ చేయండి.',
     );
     return '$_temp0';
   }

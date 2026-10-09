@@ -156,6 +156,7 @@ class BackgroundPublishBloc
             PublishedVideo(
               draftId: event.draft.id,
               stableId: result.stableId,
+              eventId: result.eventId,
               thumbnailBytes: thumbnailBytes,
             ),
           ],

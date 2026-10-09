@@ -210,15 +210,22 @@ void main() {
             BackgroundPublishRequested(
               draft: thumbedDraft,
               publishmentProcess: Future.value(
-                const PublishSuccess(stableId: 'published-d-tag'),
+                PublishSuccess(
+                  stableId: 'published-d-tag',
+                  eventId: _publishedEventId,
+                ),
               ),
             ),
           ),
           skip: 1,
           expect: () => [
-            const BackgroundPublishState(
+            BackgroundPublishState(
               recentlyPublished: [
-                PublishedVideo(draftId: draftId, stableId: 'published-d-tag'),
+                PublishedVideo(
+                  draftId: draftId,
+                  stableId: 'published-d-tag',
+                  eventId: _publishedEventId,
+                ),
               ],
             ),
           ],
@@ -1558,3 +1565,5 @@ void main() {
     });
   });
 }
+
+final String _publishedEventId = 'e' * 64;

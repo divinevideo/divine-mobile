@@ -4230,6 +4230,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get postPublishConfirmationThumbnailLabel => '你刚发布的视频缩略图';
 
   @override
+  String postPublishCrosspostSuggest(String platforms) {
+    return '也把这个循环发到 $platforms 吗？';
+  }
+
+  @override
+  String postPublishCrosspostSetUp(String platform) {
+    return '发布一次，也出现在 $platform 上。';
+  }
+
+  @override
+  String postPublishCrosspostAutomatic(String platforms) {
+    return '正在自动发布到 $platforms。';
+  }
+
+  @override
   String get userSearchNoResults => '没有找到用户';
 
   @override
@@ -12313,6 +12328,17 @@ class AppLocalizationsZh extends AppLocalizations {
         'private': '$name，私密，$count',
         'other': '$name，$count',
       },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String postPublishCrosspostReconnect(int count, String platforms) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '在跨平台发布设置中重新连接这些账号，才能继续发布：$platforms。',
+      one: '在跨平台发布设置中重新连接 $platforms，才能继续发布。',
     );
     return '$_temp0';
   }

@@ -5056,5 +5056,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "postPublishCrosspostReconnect": "{count, plural, =1{መለጠፍን ለመቀጠል {platforms}ን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።} other{መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ {platforms}።}}"
 }
