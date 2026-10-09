@@ -23,6 +23,7 @@ import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/test_provider_overrides.dart';
 
@@ -139,6 +140,7 @@ void main() {
           onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((_) => const Stream.empty());
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       service = CuratedListService(
         nostrService: client,
         authService: auth,
@@ -562,6 +564,11 @@ void main() {
         // widget's fake-async zone, including the later UI save.
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
+        await stubCommittedListAccount(
+          auth: auth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
         await withClock(Clock.fixed(instant), () async {
           service = CuratedListService(
             nostrService: client,
@@ -570,16 +577,13 @@ void main() {
           );
           addTearDown(service.dispose);
           original = (await service.createList(name: 'A title'))!;
-          SharedPreferences.setMockInitialValues({});
-          final otherPrefs = await SharedPreferences.getInstance();
-          activeOwner = _other;
-          replacement = CuratedListService(
-            nostrService: client,
-            authService: auth,
-            prefs: otherPrefs,
+          // Both coordinates live on the same physical preference store.
+          // Seeding B's cached row does not activate B before the real switch.
+          other = original.copyWith(pubkey: _other, name: 'B title');
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([original.toJson(), other.toJson()]),
           );
-          addTearDown(replacement.dispose);
-          other = (await replacement.createList(name: 'B title'))!;
         });
         expect(original.id, other.id);
         expect(original.pubkey, _owner);
@@ -612,6 +616,19 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('A title'), findsOneWidget);
         activeOwner = _other;
+        await stubCommittedListAccount(
+          auth: auth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
+        replacement = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(replacement.dispose);
+        expect(service.isCurrentSession, isFalse);
+        expect(replacement.isCurrentSession, isTrue);
         _visibleService = replacement;
         clearInteractions(client);
         final l10n = lookupAppLocalizations(const Locale('en'));
@@ -636,6 +653,11 @@ void main() {
         // widget's fake-async zone, including the later UI save.
         SharedPreferences.setMockInitialValues({});
         prefs = await SharedPreferences.getInstance();
+        await stubCommittedListAccount(
+          auth: auth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
         await withClock(Clock.fixed(instant), () async {
           service = CuratedListService(
             nostrService: client,
@@ -644,16 +666,13 @@ void main() {
           );
           addTearDown(service.dispose);
           original = (await service.createList(name: 'A title'))!;
-          SharedPreferences.setMockInitialValues({});
-          final otherPrefs = await SharedPreferences.getInstance();
-          activeOwner = _other;
-          replacement = CuratedListService(
-            nostrService: client,
-            authService: auth,
-            prefs: otherPrefs,
+          // Both coordinates live on the same physical preference store.
+          // Seeding B's cached row does not activate B before the real switch.
+          other = original.copyWith(pubkey: _other, name: 'B title');
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([original.toJson(), other.toJson()]),
           );
-          addTearDown(replacement.dispose);
-          other = (await replacement.createList(name: 'B title'))!;
         });
         expect(original.id, other.id);
         activeOwner = _owner;
@@ -706,6 +725,19 @@ void main() {
         expect(find.bySemanticsLabel(l10n.listSave), findsNothing);
         expect(outcomes, isEmpty);
         activeOwner = _other;
+        await stubCommittedListAccount(
+          auth: auth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
+        replacement = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(replacement.dispose);
+        expect(service.isCurrentSession, isFalse);
+        expect(replacement.isCurrentSession, isTrue);
         _visibleService = replacement;
         gate.complete(
           accepts ? acceptedOutcome(pending!) : rejectedOutcome(pending!),

@@ -15,6 +15,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -60,6 +61,9 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      // The restoration control re-proves this exact durable account later.
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       sent.clear();
       when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
         final event = i.positionalArguments.single as Event;
@@ -87,6 +91,10 @@ void main() {
       // rather than keep the optimistic value from a rejected setString.
       SharedPreferences.resetStatic();
       prefs = await SharedPreferences.getInstance();
+      // A new preference/coordinator instance cannot inherit the old receipt.
+      // Explicit account settlement precedes the rebuilt list consumer.
+      when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
     }
 
     test(

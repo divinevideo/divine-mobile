@@ -16,6 +16,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class Client extends Mock implements NostrClient {}
@@ -56,6 +57,7 @@ void main() {
         when(() => auth.isAuthenticated).thenReturn(true);
         when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
         stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         final service = CuratedListService(
           nostrService: client,
           authService: auth,
@@ -89,6 +91,12 @@ void main() {
         final authB = Auth();
         when(() => authB.isAuthenticated).thenReturn(true);
         when(() => authB.currentPublicKeyHex).thenReturn(ownerB);
+        await prefs.setString('current_user_pubkey_hex', ownerB);
+        await stubCommittedListAccount(
+          auth: authB,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
         final currentB = CuratedListService(
           nostrService: client,
           authService: authB,
@@ -112,6 +120,7 @@ void main() {
         when(() => auth.isAuthenticated).thenReturn(true);
         when(() => auth.currentPublicKeyHex).thenReturn(ownerA);
         stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         final service = CuratedListService(
           nostrService: client,
           authService: auth,
@@ -143,6 +152,7 @@ void main() {
         when(() => auth.isAuthenticated).thenReturn(true);
         when(() => auth.currentPublicKeyHex).thenReturn(ownerA);
         stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         final sent = <Event>[];
         Event? remote;
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
@@ -214,6 +224,7 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(ownerA);
       stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       final delivered = <Event>[];
       Event? remote;
       when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
@@ -289,6 +300,7 @@ void main() {
         when(() => auth.isAuthenticated).thenReturn(true);
         when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
         stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         final started = Completer<Event>();
         final decision = Completer<PublishOutcome>();
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) {

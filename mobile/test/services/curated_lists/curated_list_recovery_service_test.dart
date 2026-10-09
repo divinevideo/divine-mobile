@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:shared_preferences_platform_interface/types.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -101,6 +102,7 @@ void main() {
     when(() => auth.currentPublicKeyHex).thenReturn(owner);
     when(() => client.subscribe(any(), closeOnEose: true))
         .thenAnswer((_) => const Stream<Event>.empty());
+    await stubCommittedListAccount(auth: auth, preferences: prefs);
     service = CuratedListService(
       nostrService: client,
       authService: auth,

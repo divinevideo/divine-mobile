@@ -19,6 +19,7 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_journal.da
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -68,7 +69,7 @@ void main() {
       registerFallbackValue(<String>[]);
     });
 
-    setUp(() {
+    setUp(() async {
       client = _MockNostrClient();
       auth = _MockAuthService();
       stored = {};
@@ -98,6 +99,9 @@ void main() {
         );
         return true;
       });
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+      // Receipt setup is outside the list-persistence milestones under test.
+      writes = 0;
     });
 
     void open({bool existing = true}) {
@@ -297,6 +301,8 @@ void main() {
             CuratedListService.listsStorageKey: jsonEncode([source.toJson()]),
           });
           final actualPrefs = await SharedPreferences.getInstance();
+          when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+          await stubCommittedListAccount(auth: auth, preferences: actualPrefs);
           final coordinator = CuratedListCacheWriteCoordinator();
           final older = CuratedListService(
             nostrService: client,

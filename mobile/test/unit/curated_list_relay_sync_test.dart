@@ -13,6 +13,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -51,6 +52,20 @@ void main() {
       );
     });
 
+    Future<void> activateOwner() async {
+      curatedListService.dispose();
+      when(() => mockAuthService.isAuthenticated).thenReturn(true);
+      when(() => mockAuthService.currentPublicKeyHex).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
+      await stubCommittedListAccount(auth: mockAuthService, preferences: prefs);
+      curatedListService = CuratedListService(
+        nostrService: mockNostrService,
+        authService: mockAuthService,
+        prefs: prefs,
+      );
+    }
+
     tearDown(() {
       // Retire the service before resetting its captured dependencies.
       curatedListService.dispose();
@@ -76,7 +91,8 @@ void main() {
       },
     );
 
-    test('cancels relay subscription when user-list sync times out', () {
+    test('cancels relay subscription when user-list sync times out', () async {
+      await activateOwner();
       fakeAsync((async) {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.currentPublicKeyHex).thenReturn(
@@ -122,6 +138,8 @@ void main() {
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         );
 
+        await activateOwner();
+
         // Mock subscription stream
         final streamController = StreamController<Event>();
         when(
@@ -159,6 +177,8 @@ void main() {
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );
+
+      await activateOwner();
 
       // Create mock event
       final mockEvent = Event(
@@ -220,6 +240,8 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );
 
+      await activateOwner();
+
       // Create two events with same 'd' tag but different timestamps
       final olderEvent = Event(
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -279,6 +301,7 @@ void main() {
     });
 
     test('should not sync more than once per session', () async {
+      await activateOwner();
       // Setup: User is authenticated
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(
@@ -330,6 +353,10 @@ void main() {
           client: freshMockNostrService,
           auth: freshMockAuthService,
           pubkey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        );
+        await stubCommittedListAccount(
+          auth: freshMockAuthService,
+          preferences: freshPrefs,
         );
 
         final freshService = CuratedListService(

@@ -14,6 +14,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -93,13 +94,18 @@ void main() {
 
       mockNostr = _MockNostrClient();
 
-      stubListSigner(mockNostr, 'test_pubkey');
+      stubListSigner(
+        mockNostr,
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
       eventController = StreamController<Event>.broadcast();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
-      when(() => mockAuth.currentPublicKeyHex).thenReturn('test_pubkey');
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Mock subscribe to return our controlled stream
       when(
@@ -110,6 +116,10 @@ void main() {
         ),
       ).thenAnswer((_) => eventController.stream);
 
+      await stubCommittedListAccount(
+        auth: mockAuth,
+        preferences: prefs,
+      );
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,

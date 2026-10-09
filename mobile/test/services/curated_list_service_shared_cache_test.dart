@@ -13,6 +13,8 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
+
 class _Auth extends Mock implements AuthService {}
 
 class _Client extends Mock implements NostrClient {}
@@ -91,6 +93,7 @@ void main() {
           final oldAuth = _Auth();
           final oldClient = _Client();
           stubActor(oldAuth, oldClient, owner, now);
+          await stubCommittedListAccount(auth: oldAuth, preferences: prefs);
           final oldService = CuratedListService(
             nostrService: oldClient,
             authService: oldAuth,
@@ -119,6 +122,18 @@ void main() {
           final newAuth = _Auth();
           final newClient = _Client();
           stubActor(newAuth, newClient, sameOwner ? owner : other, now + 5);
+          // A replacement container gets a new epoch even for the same owner.
+          await prefs.setString(
+            'current_user_pubkey_hex',
+            sameOwner ? owner : other,
+          );
+          await stubCommittedListAccount(
+            auth: newAuth,
+            preferences: prefs,
+            replaceLiveAccount: true,
+          );
+          expect(oldAuth.committedAccountActivationReceipt!.isCurrent, isFalse);
+          expect(oldService.isCurrentSession, isFalse);
           final newService = CuratedListService(
             nostrService: newClient,
             authService: newAuth,

@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -61,6 +62,8 @@ class PrefsCuratedListStore {
   var _pendingSubscriptions = 0;
   String? _ownerEvidenceJson;
   _RawListOwnerEvidence? _ownerEvidence;
+  Object? _displayRaw;
+  CuratedListLegacyRead? _displayRead;
 
   /// Sets [lists], as just loaded from storage, as the baseline the next
   /// [saveLists] diffs against.
@@ -77,6 +80,40 @@ class PrefsCuratedListStore {
     return null;
   }
 
+  /// Adopts durable external rows only while local rows equal our saved copy.
+  ///
+  /// A failed relay send may overlap another writer. Reading that winner must
+  /// neither write a new failure marker nor erase a newer unsaved local edit.
+  /// Refused optimistic snapshots remain excluded without retiring evidence.
+  void refreshUnchangedLists(List<CuratedList> lists) {
+    if (_pendingLists != 0 || !(_isCurrentSession?.call() ?? true)) return;
+    final raw = _prefs.getString(_listsKey);
+    if (raw == null || !_ownerEvidenceFromJson(raw).readable) return;
+    var readable = true;
+    final decoded = _decodeStoredLists(
+      raw,
+      fallback: const [],
+      onUnreadable: () => readable = false,
+    );
+    if (!readable) return;
+    final observed = _writes.inspectAcknowledgedLists(
+      cacheKey: _listsKey,
+      observed: decoded,
+    );
+    final baseline = {for (final row in _savedLists) row.authorScopedId: row};
+    final actual = {for (final row in observed) row.authorScopedId: row};
+    for (var i = lists.length - 1; i >= 0; --i) {
+      final row = lists[i];
+      if (baseline[row.authorScopedId] != row) continue;
+      final saved = actual[row.authorScopedId];
+      if (saved == null) {
+        lists.removeAt(i);
+      } else {
+        lists[i] = saved;
+      }
+    }
+  }
+
   /// Sets [ids], as just loaded from storage, as the baseline the next
   /// [saveSubscriptions] diffs against.
   void subscriptionsLoaded(Set<String> ids) {
@@ -90,6 +127,27 @@ class PrefsCuratedListStore {
     preserveDecoded: true,
   );
 
+  /// Complete raw evidence gates writes; intact decoded rows remain displayable.
+  /// No normalization or rejected-overlay retirement occurs in these reads.
+  bool get hasUnreadableListSnapshot => _displaySnapshot().corrupt;
+
+  List<CuratedList> loadListsForDisplay() =>
+      List<CuratedList>.unmodifiable(_displaySnapshot().rows);
+
+  CuratedListLegacyRead _displaySnapshot() {
+    try {
+      final raw = _prefs.get(_listsKey);
+      if (_displayRead != null && raw == _displayRaw) return _displayRead!;
+      _displayRaw = raw;
+      return _displayRead = CuratedListRecoveryStorage.legacyRead(
+        _prefs,
+        storageKey: _listsKey,
+      );
+    } on Object {
+      return const CuratedListLegacyRead([], corrupt: true);
+    }
+  }
+
   /// Loads IDs and their readability together from one storage read.
   ///
   /// An absent record is a known empty snapshot. Malformed metadata remains
@@ -97,8 +155,14 @@ class PrefsCuratedListStore {
   /// IDs are immutable and the same decoded snapshot captures the write baseline.
   ({Set<String> ids, bool isReadable}) loadSubscriptionSnapshot() {
     final snapshot = _readStoredSubscriptions(fallback: const {});
-    subscriptionsLoaded(snapshot.ids);
-    return snapshot;
+    final ids = snapshot.isReadable
+        ? _writes.inspectAcknowledgedSubscriptions(
+            cacheKey: _subscriptionsKey,
+            observed: snapshot.ids,
+          )
+        : snapshot.ids;
+    subscriptionsLoaded(ids);
+    return (ids: ids, isReadable: snapshot.isReadable);
   }
 
   /// Loads the existing subscription cache and captures its write baseline.
@@ -209,6 +273,112 @@ class PrefsCuratedListStore {
     if (!result.succeeded) throw CuratedCacheWriteException(result.status);
   }
 
+  /// Projects proven owned rows without changing write acknowledgement state.
+  ///
+  /// Intact explicit owners remain readable under an unrelated recovery hold.
+  /// A legacy draft additionally needs one exact acknowledged source, no owned
+  /// destination, and readable follow metadata excluding both legacy aliases.
+  /// Every mutation still repeats its stricter preflight inside the writer.
+  List<CuratedList> readablePickerLists(
+    List<CuratedList> lists,
+    String owner, {
+    required bool subscriptionsLoaded,
+    required Set<String> subscribedListIds,
+  }) {
+    final List<dynamic> rawRows;
+    final _RawListOwnerEvidence evidence;
+    try {
+      final raw = _prefs.getString(_listsKey);
+      evidence = _RawListOwnerEvidence.fromJson(raw);
+      rawRows = raw == null ? const [] : jsonDecode(raw) as List<dynamic>;
+    } on Object {
+      return const [];
+    }
+    var fullyReadable = evidence.readable;
+    final stored = <CuratedList>[];
+    for (final row in rawRows) {
+      try {
+        stored.add(CuratedList.fromJson(row as Map<String, dynamic>));
+      } on Object {
+        fullyReadable = false;
+      }
+    }
+    final acknowledged = fullyReadable
+        ? _writes.inspectAcknowledgedLists(
+            cacheKey: _listsKey,
+            observed: stored,
+          )
+        : <CuratedList>[
+            for (final row in stored)
+              ?_writes.inspectAcknowledgedListRow(
+                cacheKey: _listsKey,
+                observed: row,
+              ),
+          ];
+    // No missing-record callback: projecting a row cannot retire an overlay.
+    final follows = readCuratedListSubscriptionSnapshot(
+      preferences: _prefs,
+      storageKey: _subscriptionsKey,
+      onUnreadable: (_, _) {},
+    );
+    final acknowledgedFollows = follows.isReadable
+        ? _writes.inspectAcknowledgedSubscriptions(
+            cacheKey: _subscriptionsKey,
+            observed: follows.ids,
+          )
+        : const <String>{};
+    return List<CuratedList>.unmodifiable(
+      lists.where((list) {
+        final rawMatches = rawRows
+            .where(
+              (row) =>
+                  row is Map<String, dynamic> &&
+                  row['id'] == list.id &&
+                  row['pubkey'] == list.pubkey,
+            )
+            .toList();
+        if (rawMatches.length != 1 ||
+            _RawListOwnerEvidence.fromJson(
+              jsonEncode(rawMatches),
+            ).isUncertain(list.authorScopedId)) {
+          return false;
+        }
+        final accepted = acknowledged.where(
+          (row) => row.authorScopedId == list.authorScopedId,
+        );
+        if (list.pubkey != null) {
+          return list.pubkey == owner &&
+              accepted.length == 1 &&
+              accepted.single.pubkey == owner;
+        }
+        if (!fullyReadable ||
+            !subscriptionsLoaded ||
+            !follows.isReadable ||
+            list.nostrEventId != null ||
+            subscribedListIds.contains(list.id) ||
+            subscribedListIds.contains(list.authorScopedId) ||
+            acknowledgedFollows.contains(list.id) ||
+            acknowledgedFollows.contains(list.authorScopedId)) {
+          return false;
+        }
+        final candidates = lists.where(
+          (candidate) =>
+              candidate.id == list.id &&
+              (candidate.pubkey == null || candidate.pubkey == owner),
+        );
+        final sources = acknowledged.where(
+          (candidate) => candidate.authorScopedId == list.authorScopedId,
+        );
+        return candidates.length == 1 &&
+            sources.length == 1 &&
+            sources.single == list &&
+            !acknowledged.any(
+              (candidate) => candidate.authorScopedId == '$owner:${list.id}',
+            );
+      }),
+    );
+  }
+
   /// A read-only early check also prevents misleading duplicate success.
   /// The coordinated save repeats this condition after all queued writers.
   bool canClaimLocalList(CuratedList source, String destination) {
@@ -264,16 +434,18 @@ class PrefsCuratedListStore {
     List<CuratedList> acknowledged, {
     _RawListOwnerEvidence? ownerEvidence,
   }) {
-    var followsReadable = true;
+    final snapshot = _readStoredSubscriptions(fallback: _savedSubscriptions);
+    if (!snapshot.isReadable) {
+      return {
+        for (final claim in claims.entries) ...[
+          claim.key,
+          claim.value.authorScopedId,
+        ],
+      };
+    }
     final follows = _writes.readAcknowledgedSubscriptions(
       cacheKey: _subscriptionsKey,
-      read: () => readCuratedListSubscriptionSnapshot(
-        preferences: _prefs,
-        storageKey: _subscriptionsKey,
-        fallback: _savedSubscriptions,
-        onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
-        onUnreadable: (_, _) => followsReadable = false,
-      ).ids,
+      read: () => snapshot.ids,
     );
     final conflicts = <String>{};
     for (final claim in claims.entries) {
@@ -282,8 +454,7 @@ class PrefsCuratedListStore {
         (list) => list.authorScopedId == source.authorScopedId,
       );
       final evidence = ownerEvidence ?? _rawOwnerEvidence();
-      if (!followsReadable ||
-          !evidence.readable ||
+      if (!evidence.readable ||
           evidence.isUncertain(source.authorScopedId) ||
           source.pubkey != null ||
           source.nostrEventId != null ||
@@ -324,13 +495,19 @@ class PrefsCuratedListStore {
               preceding,
               snapshot,
             );
+      var readable = true;
       final result = await _writes.saveSubscriptionsWithResult(
         baseline: baseline,
         current: requested,
         cacheKey: _subscriptionsKey,
         isCurrent: () =>
             (_isCurrentSession?.call() ?? true) && (isCurrent?.call() ?? true),
-        read: () => _storedSubscriptions(fallback: baseline),
+        read: () {
+          final snapshot = _readStoredSubscriptions(fallback: baseline);
+          readable = snapshot.isReadable;
+          return snapshot.ids;
+        },
+        isReadValid: () => readable,
         write: (merged) => _writeString(
           _subscriptionsKey,
           jsonEncode(merged.toList(growable: false)),
@@ -545,10 +722,6 @@ class PrefsCuratedListStore {
       return preserveDecoded ? decoded : fallback;
     }
   }
-
-  /// The stored ids, or [fallback] when they cannot be decoded.
-  Set<String> _storedSubscriptions({required Set<String> fallback}) =>
-      _readStoredSubscriptions(fallback: fallback).ids;
 
   ({Set<String> ids, bool isReadable}) _readStoredSubscriptions({
     required Set<String> fallback,

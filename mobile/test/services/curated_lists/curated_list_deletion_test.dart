@@ -3,11 +3,15 @@
 
 import 'dart:convert';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
@@ -15,6 +19,7 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_storage.da
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -45,12 +50,11 @@ class _Storage extends InMemorySharedPreferencesStore {
 
 void main() {
   group('CuratedListDeletion', () {
+    // Public identity derived from the well-known synthetic private test key1.
     const owner =
-        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
     const oldPublicId =
         'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-    const acceptedId =
-        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
     const siblingPublicId =
         'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
     const collaborator =
@@ -60,6 +64,9 @@ void main() {
     late _Storage storage;
     late _Client client;
     late _Auth auth;
+    late LocalNostrSigner signer;
+
+    setUpAll(() => registerFallbackValue(<Filter>[]));
 
     setUp(() async {
       previous = SharedPreferencesStorePlatform.instance;
@@ -72,6 +79,28 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(owner);
       stubListPublishing(client: client, auth: auth, pubkey: owner);
+      signer = LocalNostrSigner('1'.padLeft(64, '0'));
+      when(() => client.signer).thenReturn(signer);
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((invocation) async {
+        final event = Event(
+          owner,
+          invocation.namedArguments[#kind] as int,
+          invocation.namedArguments[#tags] as List<List<String>>,
+          invocation.namedArguments[#content] as String,
+          createdAt: invocation.namedArguments[#createdAt] as int?,
+        );
+        await signer.signEvent(event);
+        return event;
+      });
+      await prefs.setString('current_user_pubkey_hex', owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       when(
         () => client.subscribe(
           any(),
@@ -106,22 +135,29 @@ void main() {
         'default deletion ${throwing ? 'throw' : 'refusal'} retries without losing a sibling ACK',
         () async {
           final now = DateTime.utc(2026, 10, 5);
-          final original = CuratedList(
-            id: CuratedListService.defaultListId,
-            name: 'Default private list',
-            pubkey: owner,
-            videoEventIds: const [],
-            createdAt: now,
-            updatedAt: now,
-            nostrEventId: oldPublicId,
-            isPublic: false,
+          // The current published revision is genuine and fully decoded;
+          // a cached event ID or a mock authentication flag grants no rights.
+          final baseline = Event(
+            owner,
+            30005,
+            [
+              ['d', CuratedListService.defaultListId],
+              ['title', 'Default published list'],
+              ['collaborative', 'true'],
+              ['collaborator', collaborator],
+            ],
+            'Current published default',
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
           );
+          await signer.signEvent(baseline);
+          expect(baseline.isValid && baseline.isSigned, isTrue);
+          final original = CuratedListConverter.fromEvent(baseline)!;
           final sibling = original.copyWith(id: 'sibling', name: 'Sibling');
           await prefs.setString(
             CuratedListService.listsStorageKey,
             jsonEncode([original.toJson(), sibling.toJson()]),
           );
-          CuratedList? atRedaction;
+          bool? defaultAbsentAtRedaction;
           List<String>? advisoryAtRedaction;
           when(() => client.publishEventAwaitOk(any())).thenAnswer((
             invocation,
@@ -136,11 +172,9 @@ void main() {
               final stored = jsonDecode(
                 prefs.getString(CuratedListService.listsStorageKey)!,
               ) as List;
-              atRedaction = CuratedList.fromJson(
-                stored.cast<Map<String, dynamic>>().singleWhere(
-                  (row) => row['id'] == original.id,
-                ),
-              );
+              defaultAbsentAtRedaction = !stored
+                  .cast<Map<String, dynamic>>()
+                  .any((row) => row['id'] == original.id);
               advisoryAtRedaction = CuratedListRecoveryStorage.read(
                 prefs,
                 CuratedListRecoveryJournal.storageKey(owner),
@@ -158,13 +192,17 @@ void main() {
                 allowedCollaborators: [collaborator],
                 relayAccepted: true,
               ),
-              eventId: acceptedId,
+              eventId: baseline.id,
               acceptedAt: now,
               plaintextEventIds: [oldPublicId],
             ),
             isTrue,
           );
+          when(() => client.subscribe(any(), closeOnEose: true))
+              .thenAnswer((_) => Stream.value(baseline));
           final current = open();
+          await current.fetchUserListsFromRelays(force: true);
+          expect(current.getDefaultList()!.nostrEventId, baseline.id);
           storage.rejectRetirement = true;
           storage.throwing = throwing;
           expect(await current.deleteOwnedList(original.id), isFalse);
@@ -207,8 +245,11 @@ void main() {
             isTrue,
           );
 
+          current.dispose();
           SharedPreferences.resetStatic();
           prefs = await SharedPreferences.getInstance();
+          when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+          await stubCommittedListAccount(auth: auth, preferences: prefs);
           final retired = journal().record(owner, original.id)!;
           expect(retired.visibility, isNull);
           expect(retired.permissionsRetired, isTrue);
@@ -220,56 +261,50 @@ void main() {
             CuratedListService.defaultListDeletedStorageKey,
             false,
           );
+          // The shared flag cannot erase the owned coordinate tombstone.
+          // Even the genuine older signed relay event cannot resurrect it.
           final restored = open();
           await restored.initialize();
-          final recreated = restored.getDefaultList()!;
-          expect(recreated.isPublic, isFalse);
-          expect(recreated.isCollaborative, isFalse);
-          expect(recreated.allowedCollaborators, isEmpty);
-          expect(recreated.hasPendingPermissionRecovery, isFalse);
-          final sent = verify(
+          await restored.fetchUserListsFromRelays(force: true);
+          expect(restored.isInitialized, isTrue);
+          expect(restored.getDefaultList(), isNull);
+          expect(restored.getListById(sibling.authorScopedId), isNotNull);
+          expect(journal().record(owner, original.id)!.plaintextEventIds, [
+            oldPublicId,
+          ]);
+          final beforeSync = verify(
             () => client.publishEventAwaitOk(captureAny()),
           ).captured.cast<Event>();
-          final replacements = sent
-              .where(
-                (event) =>
-                    event.kind == 30005 &&
-                    event.tags.any(
-                      (tag) =>
-                          tag.length > 1 &&
-                          tag[0] == 'd' &&
-                          tag[1] == original.id,
-                    ),
-              )
-              .toList();
-          expect(replacements, isNotEmpty);
-          expect(recreated.nostrEventId, replacements.last.id);
-          expect(unsealForTest(replacements.last.content), isNotNull);
-          expect(atRedaction, isNotNull);
-          final boundary = atRedaction!;
-          expect(boundary.nostrEventId, replacements.last.id);
-          expect(boundary.isPublic, isFalse);
-          expect(boundary.isCollaborative, isFalse);
-          expect(boundary.allowedCollaborators, isEmpty);
+          bool isDefaultReplacement(Event event) =>
+              event.kind == 30005 &&
+              event.tags.any(
+                (tag) =>
+                    tag.length > 1 && tag[0] == 'd' && tag[1] == original.id,
+              );
+          expect(beforeSync.where(isDefaultReplacement), isEmpty);
+          expect(defaultAbsentAtRedaction, isNull);
+          // Explicit advisory erasure may drain owned journal evidence without
+          // publishing an empty replacement or recreating a cache row.
+          expect(await restored.retryListSync(original.authorScopedId), isTrue);
+          final afterSync = verify(
+            () => client.publishEventAwaitOk(captureAny()),
+          ).captured.cast<Event>();
+          expect(afterSync.where(isDefaultReplacement), isEmpty);
+          expect(defaultAbsentAtRedaction, isTrue);
           expect(advisoryAtRedaction, contains(oldPublicId));
-          final redactionIndex = sent.indexWhere(
-            (event) =>
-                event.kind == 5 &&
-                event.tags.any(
-                  (tag) =>
-                      tag.length > 1 && tag[0] == 'e' && tag[1] == oldPublicId,
-                ),
-          );
-          expect(redactionIndex, greaterThan(sent.indexOf(replacements.first)));
-          expect(restored.getListById(sibling.authorScopedId), isNotNull);
+          expect(restored.getDefaultList(), isNull);
+          expect(journal().record(owner, sibling.id)!.plaintextEventIds, [
+            siblingPublicId,
+          ]);
+          restored.dispose();
           SharedPreferences.resetStatic();
           prefs = await SharedPreferences.getInstance();
-          final durable = open().getDefaultList()!;
-          expect(durable.nostrEventId, replacements.last.id);
-          expect(durable.isPublic, isFalse);
-          expect(durable.isCollaborative, isFalse);
-          expect(durable.allowedCollaborators, isEmpty);
-          expect(durable.hasPendingPermissionRecovery, isFalse);
+          when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+          await stubCommittedListAccount(auth: auth, preferences: prefs);
+          final durable = open();
+          expect(durable.getDefaultList(), isNull);
+          expect(durable.getListById(sibling.authorScopedId), isNotNull);
+          expect(journal().record(owner, original.id)?.visibility, isNull);
         },
       );
     }

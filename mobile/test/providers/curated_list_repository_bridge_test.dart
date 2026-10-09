@@ -21,6 +21,8 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/committed_list_account.dart';
+
 class _MockCuratedListService extends Mock implements CuratedListService {}
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -418,10 +420,13 @@ void main() {
         }
         await pumpEventQueue();
       });
+      // Hydrating an unresolved row reopens the list cache in the same account;
+      // it does not replace that account's activation with a second identity.
+      final auth = _MockAuthService();
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(() => auth.currentPublicKeyHex).thenReturn(_viewer);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       Future<CuratedListService> open() async {
-        final auth = _MockAuthService();
-        when(() => auth.isAuthenticated).thenReturn(true);
-        when(() => auth.currentPublicKeyHex).thenReturn(_viewer);
         final nostr = _MockNostrClient();
         final stream = StreamController<Event>.broadcast();
         streams.add(stream);

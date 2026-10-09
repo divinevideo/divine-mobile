@@ -3,13 +3,21 @@
 
 import 'dart:convert';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/committed_list_account.dart';
+import '../helpers/curated_list_publish_stubs.dart';
+import '../helpers/signed_curated_list.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -17,7 +25,7 @@ class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
   group('discovered list identity', () {
-    final viewer = 'a' * 64;
+    const viewer = signedListFixtureOwner;
     final author = 'b' * 64;
     final otherAuthor = 'c' * 64;
     const id = 'my_vine_list';
@@ -28,13 +36,59 @@ void main() {
     CuratedList list(String pubkey) => CuratedList(
       id: id,
       name: 'List',
+      description: 'List',
       pubkey: pubkey,
-      videoEventIds: ['$pubkey-video'],
+      videoEventIds: [pubkey],
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );
 
-    Future<CuratedListService> loadService() async {
+    Event? ownedRevision;
+    setUpAll(() => registerFallbackValue(<Filter>[]));
+
+    Future<CuratedListService> loadService({bool authenticated = false}) async {
+      if (authenticated) {
+        when(() => auth.isAuthenticated).thenReturn(true);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
+        stubListPublishing(client: nostr, auth: auth, pubkey: viewer);
+        final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+        when(() => nostr.signer).thenReturn(signer);
+        when(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = Event(
+            viewer,
+            invocation.namedArguments[#kind] as int,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            invocation.namedArguments[#content] as String,
+            createdAt: invocation.namedArguments[#createdAt] as int?,
+          );
+          await signer.signEvent(event);
+          return event;
+        });
+        ownedRevision = await signedCuratedListFixture(list(viewer), signer);
+        final decodedBaseline = CuratedListConverter.fromEvent(ownedRevision!)!;
+        final storedRows = jsonDecode(
+          prefs.getString(CuratedListService.listsStorageKey)!,
+        ) as List<dynamic>;
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([
+            for (final row in storedRows)
+              if ((row as Map<String, dynamic>)['pubkey'] == viewer)
+                decodedBaseline.toJson()
+              else
+                row,
+          ]),
+        );
+        when(() => nostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => Stream.value(ownedRevision!));
+      }
       final service = CuratedListService(
         nostrService: nostr,
         authService: auth,
@@ -42,6 +96,7 @@ void main() {
       );
       addTearDown(service.dispose);
       await service.initialize();
+      if (authenticated) await service.fetchUserListsFromRelays(force: true);
       return service;
     }
 
@@ -101,7 +156,7 @@ void main() {
       'owned reads and edits remain scoped when a foreign list is first',
       () async {
         final foreign = list(author);
-        final owned = list(viewer);
+        var owned = list(viewer);
         await prefs.setString(
           CuratedListService.listsStorageKey,
           jsonEncode([
@@ -109,13 +164,14 @@ void main() {
             owned.toJson(),
           ]),
         );
-        final service = await loadService();
+        final service = await loadService(authenticated: true);
+        owned = CuratedListConverter.fromEvent(ownedRevision!)!;
         expect(service.getDefaultList(), owned);
         expect(service.getListById(id), owned);
-        expect(await service.addVideoToList(id, 'owned-second-video'), isTrue);
+        expect(await service.addVideoToList(id, 'd' * 64), isTrue);
         expect(
           service.getListById('$viewer:$id')?.videoEventIds,
-          contains('owned-second-video'),
+          contains('d' * 64),
         );
         expect(service.getListById('$author:$id'), foreign);
       },
@@ -133,8 +189,7 @@ void main() {
           CuratedListService.subscribedListsStorageKey,
           jsonEncode([foreign.authorScopedId]),
         );
-        final service = await loadService();
-        when(() => auth.isAuthenticated).thenReturn(true);
+        final service = await loadService(authenticated: true);
         expect(await service.deleteOwnedList(id), isTrue);
         expect(service.getListById('$viewer:$id'), isNull);
         expect(service.getListById(foreign.authorScopedId), foreign);

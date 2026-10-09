@@ -108,7 +108,7 @@ void main() {
       service = _MockCuratedListService();
       when(() => service.isCurrentSession).thenReturn(true);
       _fakeService = service;
-      when(() => service.myLists).thenReturn(const []);
+      when(() => service.pickerListsForOwner(any())).thenReturn(const []);
       video = VideoEvent(
         id: _videoEventId,
         pubkey: _authorPubkey,
@@ -214,7 +214,7 @@ void main() {
     group('renders', () {
       testWidgets('the title, one row per list, and a check on each list '
           'that holds the video', (tester) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
           list('Watch later', isPublic: false),
         ]);
@@ -240,7 +240,9 @@ void main() {
 
       testWidgets('over the lower part of the screen, at the height the '
           'people-list picker opens at', (tester) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
 
         await openSheet(tester);
 
@@ -262,8 +264,9 @@ void main() {
 
       testWidgets("each row carries the list's card media, with its resolved "
           'thumbnails in the fan and a flat fan until then', (tester) async {
-        when(() => service.myLists)
-            .thenReturn([list('Pictured'), list('Bare')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Pictured'), list('Bare')]);
 
         await openSheet(
           tester,
@@ -290,7 +293,7 @@ void main() {
           "since the row's own line carries the count", (tester) async {
         // Three videos: the card's badge would read "3" on its own, apart
         // from the "3 videos" the row's line says.
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list(
             'Three',
             videoEventIds: [
@@ -311,7 +314,9 @@ void main() {
       testWidgets('fans shimmer while the thumbnails are still resolving', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([list('Pending')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Pending')]);
 
         await openSheet(tester, thumbnails: null);
 
@@ -326,7 +331,7 @@ void main() {
       ) async {
         final own = list('Own', videoEventIds: const [_videoEventId]);
         final foreign = own.copyWith(pubkey: 'b' * 64);
-        when(() => service.myLists).thenReturn([own]);
+        when(() => service.pickerListsForOwner(any())).thenReturn([own]);
         await openSheet(
           tester,
           thumbnails: [
@@ -355,7 +360,7 @@ void main() {
           videoEventIds: const [_videoEventId],
           thumbnailUrls: ['https://example.com/durable.jpg'],
         );
-        when(() => service.myLists).thenReturn([own]);
+        when(() => service.pickerListsForOwner(any())).thenReturn([own]);
         var pass = 0;
         final reload = Completer<List<CuratedList>>();
         await openSheet(
@@ -422,7 +427,7 @@ void main() {
           videoEventIds: const [_videoEventId],
           thumbnailUrls: ['https://example.com/durable.jpg'],
         );
-        when(() => service.myLists).thenReturn([own]);
+        when(() => service.pickerListsForOwner(any())).thenReturn([own]);
         var pass = 0;
         await openSheet(
           tester,
@@ -476,7 +481,7 @@ void main() {
       testWidgets("a list waiting to sync says so in the rows' font", (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list(
             'Pending',
             videoEventIds: const [_videoEventId],
@@ -525,7 +530,9 @@ void main() {
             'Holds',
             videoEventIds: const [_videoEventId],
           ).copyWith(pendingRepublish: true);
-          when(() => service.myLists).thenReturn([pending, list('Empty')]);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([pending, list('Empty')]);
           service.recoveryNeedsRepair = true;
           await openSheet(tester);
 
@@ -576,7 +583,7 @@ void main() {
       testWidgets('a hold after unconfirmed picks restores stored membership', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds', videoEventIds: const [_videoEventId]),
           list('Empty'),
         ]);
@@ -610,7 +617,9 @@ void main() {
       testWidgets('callbacks captured before a hold cannot toggle or create', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         await openSheet(tester);
         final toggle = tester
             .widget<ListPickerRow>(find.byType(ListPickerRow))
@@ -630,11 +639,13 @@ void main() {
       testWidgets(
         'a service replaced before the first frame is bound immediately',
         (tester) async {
-          when(() => service.myLists).thenReturn([list('Old')]);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Old')]);
           final replacement = _MockCuratedListService()
             ..recoveryNeedsRepair = true;
           when(() => replacement.isCurrentSession).thenReturn(true);
-          when(() => replacement.myLists).thenReturn([
+          when(() => replacement.pickerListsForOwner(any())).thenReturn([
             list('Replacement', videoEventIds: const [_videoEventId]),
           ]);
           _replacementBeforeMount = replacement;
@@ -663,14 +674,16 @@ void main() {
       testWidgets('replacement service resets picks and renders its hold', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([list('Old')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Old')]);
         await openSheet(tester);
         await tester.tap(find.text('Old'));
         await tester.pump();
         final replacement = _MockCuratedListService()
           ..recoveryNeedsRepair = true;
         when(() => replacement.isCurrentSession).thenReturn(true);
-        when(() => replacement.myLists).thenReturn([
+        when(() => replacement.pickerListsForOwner(any())).thenReturn([
           list('Replacement', videoEventIds: const [_videoEventId]),
         ]);
         _fakeService = replacement;
@@ -689,7 +702,9 @@ void main() {
       testWidgets('missing service preserves its known hold and safe rows', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([list('Stored')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Stored')]);
         service.recoveryNeedsRepair = true;
         await openSheet(tester);
         _fakeService = null;
@@ -713,7 +728,9 @@ void main() {
       testWidgets('verified repair restores the video picker controls', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         service.recoveryNeedsRepair = true;
         await openSheet(tester);
         service.recoveryNeedsRepair = false;
@@ -736,7 +753,9 @@ void main() {
       testWidgets(
         'initialization failure offers a local retry that opens after recovery',
         (tester) async {
-          when(() => service.myLists).thenReturn([list('Restored')]);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Restored')]);
           await openSheet(
             tester,
             listsState: _RetryableCuratedListsState.new,
@@ -763,7 +782,9 @@ void main() {
       testWidgets(
         'an open picker exposes Retry after its service refresh fails',
         (tester) async {
-          when(() => service.myLists).thenReturn([list('Stored')]);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Stored')]);
           await openSheet(tester);
           notifier(tester).failRefresh();
           await tester.pumpAndSettle();
@@ -795,7 +816,7 @@ void main() {
       testWidgets('tapping rows picks and unpicks them without writing', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
           list('Empty'),
         ]);
@@ -815,15 +836,17 @@ void main() {
 
       testWidgets('the check writes every pick, so one visit can add the '
           'video to several lists, then closes', (tester) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
           list('First'),
           list('Second'),
         ]);
-        when(() => service.addVideoToList(any(), any()))
-            .thenAnswer((_) async => true);
-        when(() => service.removeVideoFromList(any(), any()))
-            .thenAnswer((_) async => true);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text('First'));
@@ -833,19 +856,32 @@ void main() {
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
 
-        verify(() => service.addVideoToList('list_first', _videoEventId))
-            .called(1);
-        verify(() => service.addVideoToList('list_second', _videoEventId))
-            .called(1);
         verify(
-          () => service.removeVideoFromList('list_holds_it', _videoEventId),
+          () => service.addVideoToList(
+            '$_authorPubkey:list_first',
+            _videoEventId,
+          ),
+        ).called(1);
+        verify(
+          () => service.addVideoToList(
+            '$_authorPubkey:list_second',
+            _videoEventId,
+          ),
+        ).called(1);
+        verify(
+          () => service.removeVideoFromList(
+            '$_authorPubkey:list_holds_it',
+            _videoEventId,
+          ),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
       });
 
       testWidgets('with the video in no list, the check is disabled until a '
           'list is picked, and again once it is unpicked', (tester) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         await openSheet(tester);
 
         expect(
@@ -870,11 +906,12 @@ void main() {
 
       testWidgets('unpicking the only list that holds the video leaves the '
           'check enabled, and the check takes the video out', (tester) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
         ]);
-        when(() => service.removeVideoFromList(any(), any()))
-            .thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text('Holds it'));
@@ -889,7 +926,10 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => service.removeVideoFromList('list_holds_it', _videoEventId),
+          () => service.removeVideoFromList(
+            '$_authorPubkey:list_holds_it',
+            _videoEventId,
+          ),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
       });
@@ -897,7 +937,7 @@ void main() {
       testWidgets('the check closes at once when nothing was changed', (
         tester,
       ) async {
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
         ]);
         await openSheet(tester);
@@ -912,9 +952,12 @@ void main() {
 
       testWidgets('a refused change keeps the sheet open, says so, and keeps '
           'the pick for a retry', (tester) async {
-        when(() => service.myLists).thenReturn([list('Refuses')]);
-        when(() => service.addVideoToList(any(), any()))
-            .thenAnswer((_) async => false);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Refuses')]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text('Refuses'));
@@ -932,9 +975,12 @@ void main() {
         'a refusal after closing a pending save is reported underneath',
         (tester) async {
           final answer = Completer<bool>();
-          when(() => service.myLists).thenReturn([list('Refuses')]);
-          when(() => service.addVideoToList(any(), any()))
-              .thenAnswer((_) => answer.future);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Refuses')]);
+          when(
+            () => service.addVideoToList(any(), any()),
+          ).thenAnswer((_) => answer.future);
           await openSheet(tester);
           await tester.tap(find.text('Refuses'));
           await tester.pump();
@@ -956,7 +1002,7 @@ void main() {
           'a retry', (tester) async {
         // Before #7331 a failed toggle rendered nothing at all, so a private
         // list at the NIP-44 size ceiling swallowed every add silently.
-        when(() => service.myLists).thenReturn([
+        when(() => service.pickerListsForOwner(any())).thenReturn([
           list(
             'Full',
             isPublic: false,
@@ -967,8 +1013,9 @@ void main() {
             ],
           ),
         ]);
-        when(() => service.addVideoToList(any(), any()))
-            .thenAnswer((_) async => false);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text('Full'));
@@ -987,16 +1034,17 @@ void main() {
             'Pending',
             videoEventIds: const [_videoEventId],
           ).copyWith(pendingRepublish: true);
-          when(() => service.myLists).thenReturn([pending]);
-          when(() => service.retryListSync(pending.id))
-              .thenAnswer((_) async => true);
+          when(() => service.pickerListsForOwner(any())).thenReturn([pending]);
+          when(
+            () => service.retryListSync(pending.authorScopedId),
+          ).thenAnswer((_) async => true);
           await openSheet(tester);
           expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
           expect(rowChecks(), findsOneWidget);
           await tester.tap(find.text(l10n.listRetrySync));
           await tester.pumpAndSettle();
           expect(rowChecks(), findsOneWidget);
-          verify(() => service.retryListSync(pending.id)).called(1);
+          verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(() => service.addVideoToList(any(), any()));
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
@@ -1018,9 +1066,10 @@ void main() {
                   relayAccepted: true,
                 ),
               );
-          when(() => service.myLists).thenReturn([pending]);
-          when(() => service.retryListSync(pending.id))
-              .thenAnswer((_) async => false);
+          when(() => service.pickerListsForOwner(any())).thenReturn([pending]);
+          when(
+            () => service.retryListSync(pending.authorScopedId),
+          ).thenAnswer((_) async => false);
           await openSheet(tester);
 
           expect(
@@ -1042,7 +1091,7 @@ void main() {
           expect(find.text(l10n.listUpdateFailed), findsNothing);
           expect(find.text(l10n.listRetrySync), findsOneWidget);
           expect(rowChecks(), findsOneWidget);
-          verify(() => service.retryListSync(pending.id)).called(1);
+          verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(() => service.addVideoToList(any(), any()));
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
@@ -1059,11 +1108,15 @@ void main() {
               relayAccepted: true,
             ),
           );
-          final ordinary = list('Ordinary change')
-              .copyWith(pendingRepublish: true);
-          when(() => service.myLists).thenReturn([accepted, ordinary]);
-          when(() => service.retryListSync(any()))
-              .thenAnswer((_) async => false);
+          final ordinary = list(
+            'Ordinary change',
+          ).copyWith(pendingRepublish: true);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([accepted, ordinary]);
+          when(
+            () => service.retryListSync(any()),
+          ).thenAnswer((_) async => false);
           await openSheet(tester);
           await tester.tap(find.text(l10n.listRetrySync).first);
           await tester.pumpAndSettle();
@@ -1080,8 +1133,12 @@ void main() {
             findsOneWidget,
           );
           expect(find.text(l10n.listRetrySync), findsNWidgets(2));
-          verify(() => service.retryListSync(accepted.id)).called(1);
-          verify(() => service.retryListSync(ordinary.id)).called(1);
+          verify(
+            () => service.retryListSync(accepted.authorScopedId),
+          ).called(1);
+          verify(
+            () => service.retryListSync(ordinary.authorScopedId),
+          ).called(1);
           verifyNever(() => service.addVideoToList(any(), any()));
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
@@ -1090,11 +1147,13 @@ void main() {
       testWidgets(
         'deletion-only Sync now uses recovery copy and keeps the row unpicked',
         (tester) async {
-          final pending = list('Redaction')
-              .copyWith(pendingPlaintextEventIds: ['c' * 64]);
-          when(() => service.myLists).thenReturn([pending]);
-          when(() => service.retryListSync(pending.id))
-              .thenAnswer((_) async => false);
+          final pending = list(
+            'Redaction',
+          ).copyWith(pendingPlaintextEventIds: ['c' * 64]);
+          when(() => service.pickerListsForOwner(any())).thenReturn([pending]);
+          when(
+            () => service.retryListSync(pending.authorScopedId),
+          ).thenAnswer((_) async => false);
           await openSheet(tester);
           expect(find.text(l10n.listRecoveryPending), findsOneWidget);
           expect(find.text(l10n.listVideoPendingSync), findsNothing);
@@ -1104,7 +1163,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(rowChecks(), findsNothing);
           expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-          verify(() => service.retryListSync(pending.id)).called(1);
+          verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(() => service.addVideoToList(any(), any()));
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
@@ -1118,9 +1177,10 @@ void main() {
             updatedAt: DateTime(2026, 1, 2),
             pendingPlaintextEventIds: ['c' * 64],
           );
-          when(() => service.myLists).thenReturn([winner]);
-          when(() => service.retryListSync(winner.id))
-              .thenAnswer((_) async => false);
+          when(() => service.pickerListsForOwner(any())).thenReturn([winner]);
+          when(
+            () => service.retryListSync(winner.authorScopedId),
+          ).thenAnswer((_) async => false);
           await openSheet(tester);
           final publicMeta =
               '${l10n.listVideoCount(0)} • ${l10n.listVisibilityPublic}';
@@ -1143,12 +1203,21 @@ void main() {
           expect(find.text(l10n.listUpdateFailed), findsOneWidget);
           expect(find.text(l10n.listRecoveryPending), findsOneWidget);
           expect(rowChecks(), findsOneWidget);
-          expect(service.myLists.single.pendingVisibility, isNull);
-          expect(service.myLists.single.pendingPlaintextEventIds, ['c' * 64]);
+          expect(
+            service.pickerListsForOwner(_authorPubkey).single.pendingVisibility,
+            isNull,
+          );
+          expect(
+            service
+                .pickerListsForOwner(_authorPubkey)
+                .single
+                .pendingPlaintextEventIds,
+            ['c' * 64],
+          );
           await tester.tap(find.text('Public winner'));
           await tester.pump();
           expect(rowChecks(), findsNothing);
-          verify(() => service.retryListSync(winner.id)).called(1);
+          verify(() => service.retryListSync(winner.authorScopedId)).called(1);
           verifyNever(() => service.addVideoToList(any(), any()));
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
@@ -1181,17 +1250,20 @@ void main() {
               final acceptedMeta =
                   '${strings.listVideoCount(0)} • $acceptedLabel';
               final oldMeta = '${strings.listVideoCount(0)} • $oldLabel';
-              when(() => service.myLists).thenReturn([pending]);
-              when(() => service.retryListSync(pending.id))
-                  .thenAnswer((_) async {
-                    when(() => service.myLists).thenReturn([
-                      pending.copyWith(
-                        isPublic: acknowledgedPublic,
-                        clearPendingVisibility: true,
-                      ),
-                    ]);
-                    return true;
-                  });
+              when(
+                () => service.pickerListsForOwner(any()),
+              ).thenReturn([pending]);
+              when(
+                () => service.retryListSync(pending.authorScopedId),
+              ).thenAnswer((_) async {
+                when(() => service.pickerListsForOwner(any())).thenReturn([
+                  pending.copyWith(
+                    isPublic: acknowledgedPublic,
+                    clearPendingVisibility: true,
+                  ),
+                ]);
+                return true;
+              });
               await openSheet(tester, locale: locale);
               expect(find.text(acceptedMeta), findsOneWidget);
               expect(find.text(oldMeta), findsNothing);
@@ -1222,7 +1294,9 @@ void main() {
               await tester.tap(find.text('Recovery'));
               await tester.pump();
               expect(rowChecks(), findsOneWidget);
-              verify(() => service.retryListSync(pending.id)).called(1);
+              verify(
+                () => service.retryListSync(pending.authorScopedId),
+              ).called(1);
               verifyNever(() => service.addVideoToList(any(), any()));
               verifyNever(() => service.removeVideoFromList(any(), any()));
             },
@@ -1248,7 +1322,9 @@ void main() {
             final proposalLabel = currentPublic
                 ? l10n.listVisibilityPrivate
                 : l10n.listVisibilityPublic;
-            when(() => service.myLists).thenReturn([unconfirmed]);
+            when(
+              () => service.pickerListsForOwner(any()),
+            ).thenReturn([unconfirmed]);
             await openSheet(tester);
             expect(
               find.text('${l10n.listVideoCount(0)} • $currentLabel'),
@@ -1274,9 +1350,12 @@ void main() {
         'an account change suppresses a dismissed pending save refusal',
         (tester) async {
           final answer = Completer<bool>();
-          when(() => service.myLists).thenReturn([list('Empty')]);
-          when(() => service.addVideoToList(any(), any()))
-              .thenAnswer((_) => answer.future);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Empty')]);
+          when(
+            () => service.addVideoToList(any(), any()),
+          ).thenAnswer((_) => answer.future);
           await openSheet(tester);
           await tester.tap(find.text('Empty'));
           await tester.pump();
@@ -1298,13 +1377,14 @@ void main() {
             'Pending',
             videoEventIds: [_videoEventId],
           ).copyWith(pendingRepublish: true);
-          when(() => service.myLists).thenReturn([pending]);
+          when(() => service.pickerListsForOwner(any())).thenReturn([pending]);
           final answer = Completer<bool>();
           addTearDown(() {
             if (!answer.isCompleted) answer.complete(false);
           });
-          when(() => service.retryListSync(pending.id))
-              .thenAnswer((_) => answer.future);
+          when(
+            () => service.retryListSync(pending.authorScopedId),
+          ).thenAnswer((_) => answer.future);
           await openSheet(tester);
           final listener =
               verify(() => service.addListener(captureAny())).captured.single
@@ -1322,9 +1402,12 @@ void main() {
           expect(find.text(l10n.listUpdateFailed), findsOneWidget);
           expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
           expect(find.text(l10n.listRetrySync), findsOneWidget);
-          when(() => service.retryListSync(pending.id)).thenAnswer((_) async {
-            when(() => service.myLists)
-                .thenReturn([pending.copyWith(pendingRepublish: false)]);
+          when(() => service.retryListSync(pending.authorScopedId)).thenAnswer((
+            _,
+          ) async {
+            when(
+              () => service.pickerListsForOwner(any()),
+            ).thenReturn([pending.copyWith(pendingRepublish: false)]);
             listener();
             return true;
           });
@@ -1363,13 +1446,16 @@ void main() {
               myListsWithThumbnailsProvider.overrideWith((ref) async => []),
             ],
           );
-          when(() => service.myLists).thenReturn([list('Empty')]);
+          when(
+            () => service.pickerListsForOwner(any()),
+          ).thenReturn([list('Empty')]);
           final answer = Completer<bool>();
           addTearDown(() {
             if (!answer.isCompleted) answer.complete(false);
           });
-          when(() => service.addVideoToList(any(), any()))
-              .thenAnswer((_) => answer.future);
+          when(
+            () => service.addVideoToList(any(), any()),
+          ).thenAnswer((_) => answer.future);
           await tester.binding.setSurfaceSize(const Size(800, 1200));
           addTearDown(() => tester.binding.setSurfaceSize(null));
           await tester.pumpWidget(
@@ -1419,7 +1505,9 @@ void main() {
       );
 
       testWidgets('the X closes without writing the picks', (tester) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         await openSheet(tester);
 
         await tester.tap(find.text('Empty'));
@@ -1433,7 +1521,9 @@ void main() {
 
       testWidgets('a created list that refused the video says so inside the '
           'picker, where a line underneath would be covered', (tester) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         final fresh = list('Fresh');
         when(
           () => service.createList(
@@ -1444,8 +1534,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
           ),
         ).thenAnswer((_) async => fresh);
-        when(() => service.addVideoToList(any(), any()))
-            .thenAnswer((_) async => false);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text(l10n.listCreateNewList));
@@ -1470,7 +1561,9 @@ void main() {
                     'reports the failure inside the remaining picker',
           (tester) async {
             final answer = Completer<bool>();
-            when(() => service.myLists).thenReturn([list('Empty')]);
+            when(
+              () => service.pickerListsForOwner(any()),
+            ).thenReturn([list('Empty')]);
             when(
               () => service.createList(
                 name: any(named: 'name'),
@@ -1480,8 +1573,9 @@ void main() {
                 allowedCollaborators: any(named: 'allowedCollaborators'),
               ),
             ).thenAnswer((_) async => list('Fresh'));
-            when(() => service.addVideoToList(any(), any()))
-                .thenAnswer((_) => answer.future);
+            when(
+              () => service.addVideoToList(any(), any()),
+            ).thenAnswer((_) => answer.future);
             await openSheet(tester);
             await tester.tap(find.text(l10n.listCreateNewList));
             await tester.pumpAndSettle();
@@ -1536,7 +1630,7 @@ void main() {
             pendingRepublish: true,
           );
           late VoidCallback listener;
-          when(() => service.myLists).thenReturn([empty]);
+          when(() => service.pickerListsForOwner(any())).thenReturn([empty]);
           when(
             () => service.createList(
               name: any(named: 'name'),
@@ -1546,20 +1640,24 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
             ),
           ).thenAnswer((_) async => fresh);
-          when(() => service.getListById(fresh.authorScopedId))
-              .thenReturn(pending);
+          when(
+            () => service.getListById(fresh.authorScopedId),
+          ).thenReturn(pending);
           when(
             () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
           ).thenAnswer((_) async {
-            when(() => service.myLists).thenReturn([empty, pending]);
+            when(
+              () => service.pickerListsForOwner(any()),
+            ).thenReturn([empty, pending]);
             listener();
             return false;
           });
-          when(() => service.retryListSync(fresh.id)).thenAnswer((
+          when(() => service.retryListSync(fresh.authorScopedId)).thenAnswer((
             _,
           ) async {
-            when(() => service.myLists)
-                .thenReturn([empty, pending.copyWith(pendingRepublish: false)]);
+            when(
+              () => service.pickerListsForOwner(any()),
+            ).thenReturn([empty, pending.copyWith(pendingRepublish: false)]);
             listener();
             return true;
           });
@@ -1582,7 +1680,7 @@ void main() {
           expect(rowChecks(), findsOneWidget);
           expect(find.text(l10n.listRetrySync), findsNothing);
           expect(find.text(l10n.listVideoPendingSync), findsNothing);
-          verify(() => service.retryListSync(fresh.id)).called(1);
+          verify(() => service.retryListSync(fresh.authorScopedId)).called(1);
           verify(
             () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
           ).called(1);
@@ -1592,7 +1690,9 @@ void main() {
 
       testWidgets('Create new list opens the create sheet, and the list it '
           'creates shows up picked', (tester) async {
-        when(() => service.myLists).thenReturn([list('Empty')]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty')]);
         final fresh = list('Fresh', videoEventIds: const [_videoEventId]);
         when(
           () => service.createList(
@@ -1603,8 +1703,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
           ),
         ).thenAnswer((_) async => fresh);
-        when(() => service.addVideoToList(any(), any()))
-            .thenAnswer((_) async => true);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text(l10n.listCreateNewList));
@@ -1624,7 +1725,9 @@ void main() {
         final listener =
             verify(() => service.addListener(captureAny())).captured.single
                 as VoidCallback;
-        when(() => service.myLists).thenReturn([list('Empty'), fresh]);
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Empty'), fresh]);
         listener();
         // One frame delivers the cubit's state, the next rebuilds the rows.
         await tester.pump();

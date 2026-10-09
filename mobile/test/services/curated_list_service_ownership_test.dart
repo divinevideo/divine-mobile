@@ -9,6 +9,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -24,11 +25,13 @@ void main() {
 
     late CuratedListService service;
     late _MockAuthService mockAuth;
+    late SharedPreferences prefs;
+    late _MockNostrClient mockNostr;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final mockNostr = _MockNostrClient();
+      prefs = await SharedPreferences.getInstance();
+      mockNostr = _MockNostrClient();
       mockAuth = _MockAuthService();
 
       when(() => mockAuth.isAuthenticated).thenReturn(false);
@@ -45,6 +48,18 @@ void main() {
         prefs: prefs,
       );
     });
+
+    Future<void> activate() async {
+      when(() => mockAuth.isAuthenticated).thenReturn(true);
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
+      // The guest consumer cannot acquire account authority after a flag flip.
+      service.dispose();
+      service = CuratedListService(
+        nostrService: mockNostr,
+        authService: mockAuth,
+        prefs: prefs,
+      );
+    }
 
     test('returns false for local list when not authenticated', () async {
       final list = await service.createList(name: 'Local List');
@@ -63,7 +78,7 @@ void main() {
     test(
       'returns true for authenticated local list created by current user',
       () async {
-        when(() => mockAuth.isAuthenticated).thenReturn(true);
+        await activate();
 
         final list = await service.createList(
           name: 'Local List',
@@ -79,7 +94,7 @@ void main() {
     test(
       'returns false for legacy local list without stored owner pubkey',
       () async {
-        when(() => mockAuth.isAuthenticated).thenReturn(true);
+        await activate();
         final now = DateTime(2026);
 
         await service.subscribeToList(
@@ -99,7 +114,7 @@ void main() {
     );
 
     test('returns true for authenticated current-user remote list', () async {
-      when(() => mockAuth.isAuthenticated).thenReturn(true);
+      await activate();
       final now = DateTime(2026);
 
       await service.subscribeToList(
@@ -118,7 +133,7 @@ void main() {
     });
 
     test('returns false for authenticated other-user remote list', () async {
-      when(() => mockAuth.isAuthenticated).thenReturn(true);
+      await activate();
       final now = DateTime(2026);
 
       await service.subscribeToList(
@@ -139,7 +154,7 @@ void main() {
     test(
       'returns false for authenticated subscribed list without owner',
       () async {
-        when(() => mockAuth.isAuthenticated).thenReturn(true);
+        await activate();
         final now = DateTime(2026);
 
         await service.subscribeToList(
@@ -181,6 +196,7 @@ void main() {
         pubkey: currentPubkey,
       );
 
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,

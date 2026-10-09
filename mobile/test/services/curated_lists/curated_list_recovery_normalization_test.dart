@@ -16,6 +16,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Store extends InMemorySharedPreferencesStore {
@@ -314,6 +315,7 @@ void main() {
       stubListSigner(client, _owner);
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       final service = CuratedListService(
         nostrService: client,
         authService: auth,

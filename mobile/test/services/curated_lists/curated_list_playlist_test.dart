@@ -12,6 +12,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -99,6 +100,7 @@ void main() {
               published.add(event);
               return acceptedOutcome(event);
             });
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         final service = CuratedListService(
           nostrService: client,
           authService: auth,

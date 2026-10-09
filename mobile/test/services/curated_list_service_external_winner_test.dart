@@ -17,6 +17,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -62,6 +63,8 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       addTearDown(() {
         SharedPreferences.resetStatic();
         SharedPreferencesStorePlatform.instance = previous;
@@ -128,9 +131,16 @@ void main() {
         expect(current.getListById(original.id), recoveredWinner);
         verify(() => client.publishEventAwaitOk(any())).called(1);
         verifyNever(() => client.publishEvent(any()));
+        // Reconstruct the account proof as well as the native preference cache.
+        // The old process consumer must not acquire the new session's receipt.
+        current.dispose();
         SharedPreferences.resetStatic();
         prefs = await SharedPreferences.getInstance();
-        expect(open().getListById(original.id), recoveredWinner);
+        when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
+        final reconstructed = open();
+        expect(reconstructed.isCurrentSession, isTrue);
+        expect(reconstructed.getListById(original.id), recoveredWinner);
         backing.reject = false;
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
           return acceptedOutcome(i.positionalArguments.single as Event);
@@ -138,6 +148,7 @@ void main() {
         // Retain the old event evidence without letting it overwrite the
         // newer public revision or authorize premature private redaction.
         expect(await current.retryListSync(original.id), isFalse);
+        expect(await reconstructed.retryListSync(original.id), isFalse);
         verifyNever(() => client.publishEventAwaitOk(any()));
         expect(current.getListById(original.id)!.name, winner.name);
         expect(current.getListById(original.id)!.isPublic, isTrue);
@@ -165,6 +176,14 @@ void main() {
                 .toJson(),
           ]),
         );
+        // The returning account has committed its identity before list reload.
+        await prefs.setString('current_user_pubkey_hex', _owner);
+        await stubCommittedListAccount(
+          auth: auth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
+        expect(reconstructed.isCurrentSession, isFalse);
         current = open();
         expect(current.getListById(original.id)!.pendingVisibility, isNull);
         expect(current.getListById(original.id)!.isPublic, isTrue);
@@ -175,8 +194,11 @@ void main() {
           isTrue,
         );
         await prefs.reload();
+        current.dispose();
         SharedPreferences.resetStatic();
         prefs = await SharedPreferences.getInstance();
+        when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
         expect(open().getListById(original.id)!.name, 'New edit');
         expect(open().getListById(original.id)!.isPublic, isTrue);
         expect(open().getListById(original.id)!.pendingVisibility, isNull);
