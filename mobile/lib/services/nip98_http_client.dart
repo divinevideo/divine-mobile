@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// HTTP transport for an explicitly configured NIP-98 service origin.
 ///
@@ -17,20 +18,36 @@ class Nip98HttpClient extends http.BaseClient {
     required Nip98AuthService authService,
     required Uri trustedOrigin,
     Duration retryBudget = const Duration(seconds: 15),
+    Duration Function()? elapsed,
   }) : _inner = inner,
        _authService = authService,
        _trustedOrigin = trustedOrigin.origin,
-       _retryBudget = retryBudget;
+       _retryBudget = retryBudget {
+    final stopwatch = Stopwatch()..start();
+    _elapsed = elapsed ?? () => stopwatch.elapsed;
+  }
 
   final http.Client _inner;
   final Nip98AuthService _authService;
   final String _trustedOrigin;
   final Duration _retryBudget;
+  late final Duration Function() _elapsed;
   bool _closed = false;
+  // Avoid starting a mutation retry just before the caller's timeout. This
+  // reserves room for transport work, without claiming to cancel sent requests.
+  static const _minimumRetryTime = Duration(seconds: 2);
+
+  void _logRecovery(String message) {
+    Log.info(
+      'NIP-98 recovery for $_trustedOrigin: $message',
+      name: 'Nip98HttpClient',
+      category: LogCategory.system,
+    );
+  }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final elapsed = Stopwatch()..start();
+    final started = _elapsed();
     final authorization = request.headers['Authorization'];
     if (request is! http.Request ||
         request.url.scheme != 'https' ||
@@ -47,7 +64,11 @@ class Nip98HttpClient extends http.BaseClient {
     request.followRedirects = false;
     final response = await _inner.send(request);
     final learnedTime = _learnTime(request.url, response);
-    if (response.statusCode != 401 || !learnedTime) return response;
+    if (response.statusCode != 401) return response;
+    if (!learnedTime) {
+      _logRecovery('retry skipped: no usable server Date');
+      return response;
+    }
 
     final bytes = await response.stream.toBytes();
     final originalResponse = http.StreamedResponse(
@@ -61,40 +82,45 @@ class Nip98HttpClient extends http.BaseClient {
       reasonPhrase: response.reasonPhrase,
     );
     if (!_isTimestampRejection(utf8.decode(bytes, allowMalformed: true))) {
+      _logRecovery('retry skipped: unrecognized authentication rejection');
       return originalResponse;
     }
 
     final owner = _signedOwner(authorization);
-    final method = HttpMethod.values
-        .where((method) => method.value == request.method)
-        .firstOrNull;
-    if (_closed ||
-        owner == null ||
-        method == null ||
-        !_authService.isCurrentOwner(owner) ||
-        elapsed.elapsed >= _retryBudget) {
+    final method = HttpMethod.parse(request.method);
+    final blocked = _retryBlockedReason(owner, method, _elapsed() - started);
+    if (blocked != null) {
+      _logRecovery('retry skipped: $blocked');
       return originalResponse;
     }
     final String payload;
     try {
       payload = utf8.decode(body);
     } on FormatException {
+      _logRecovery('retry skipped: request body is not UTF-8');
       return originalResponse;
     }
     final token = await _authService.createAuthToken(
       url: request.url.toString(),
-      method: method,
+      method: method!,
       payload: payload,
       reuseCached: false,
     );
-    if (_closed ||
+    final blockedAfterSigning = _retryBlockedReason(
+      owner,
+      method,
+      _elapsed() - started,
+    );
+    if (blockedAfterSigning != null ||
         token == null ||
-        token.signedEvent.pubkey != owner ||
-        !_authService.isCurrentOwner(owner) ||
-        elapsed.elapsed >= _retryBudget) {
+        token.signedEvent.pubkey != owner) {
+      _logRecovery(
+        'retry skipped after signing: ${blockedAfterSigning ?? 'signature unavailable or owner mismatch'}',
+      );
       return originalResponse;
     }
 
+    _logRecovery('retrying timestamp rejection with corrected server time');
     final retry = http.Request(request.method, request.url)
       ..headers.addAll(headers)
       ..headers['Authorization'] = token.authorizationHeader
@@ -104,6 +130,23 @@ class Nip98HttpClient extends http.BaseClient {
     final retriedResponse = await _inner.send(retry);
     _learnTime(request.url, retriedResponse);
     return retriedResponse;
+  }
+
+  String? _retryBlockedReason(
+    String? owner,
+    HttpMethod? method,
+    Duration elapsed,
+  ) {
+    if (_closed) return 'transport closed';
+    if (owner == null) return 'signed owner unavailable';
+    if (method == null) return 'unsupported HTTP method';
+    if (!_authService.isCurrentOwner(owner)) {
+      return 'account changed or signed out';
+    }
+    if (_retryBudget - elapsed < _minimumRetryTime) {
+      return 'insufficient remaining retry budget';
+    }
+    return null;
   }
 
   bool _learnTime(Uri uri, http.StreamedResponse response) {
@@ -135,11 +178,14 @@ class Nip98HttpClient extends http.BaseClient {
             error['message'] ==
                 'nostr auth event is expired or from the future';
       }
-      final message = error ?? decoded['message'];
-      if (message is! String) return false;
-      return message == 'Auth failed: event timestamp is in the future' ||
-          RegExp(r'^Auth failed: event expired \(older than \d+s\)$')
-              .hasMatch(message);
+      // Preserve the known timestamp contract even when an envelope also
+      // carries a generic error code. An arbitrary 401 still cannot retry.
+      return [error, decoded['message']].whereType<String>().any(
+        (message) =>
+            message == 'Auth failed: event timestamp is in the future' ||
+            RegExp(r'^Auth failed: event expired \(older than \d+s\)$')
+                .hasMatch(message),
+      );
     } on FormatException {
       return false;
     }

@@ -58,13 +58,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     // Engine-backed blocked-author filter.
     blockFilter: createBlockedAuthorFilter(ref),
     authHeadersProvider: (url, method, {body}) async {
-      final httpMethod = switch (method.toUpperCase()) {
-        'POST' => HttpMethod.post,
-        'PUT' => HttpMethod.put,
-        'DELETE' => HttpMethod.delete,
-        'PATCH' => HttpMethod.patch,
-        _ => HttpMethod.get,
-      };
+      final httpMethod = HttpMethod.parse(method) ?? HttpMethod.get;
       // Forward the request body so the NIP-98 `payload` tag hashes the
       // bytes the request actually sends — without this the server 401s
       // with `payload hash mismatch` and mark-read silently rolls back.

@@ -31,6 +31,9 @@ enum HttpMethod {
 
   const HttpMethod(this.value);
   final String value;
+
+  static HttpMethod? parse(String value) =>
+      values.where((method) => method.value == value.toUpperCase()).firstOrNull;
 }
 
 /// NIP-98 authentication token containing the signed event
@@ -60,8 +63,14 @@ class Nip98Token {
 /// Service for creating NIP-98 HTTP authentication tokens
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class Nip98AuthService {
-  Nip98AuthService({required AuthService authService})
-    : _authService = authService {
+  Nip98AuthService({
+    required AuthService authService,
+    Duration Function()? elapsed,
+  }) : _authService = authService {
+    // Wall time can change during remote signing. Keep elapsed time monotonic;
+    // an injected supplier lets tests advance signing time without real waits.
+    final stopwatch = Stopwatch()..start();
+    _elapsed = elapsed ?? () => stopwatch.elapsed;
     // Start periodic cache cleanup
     _cleanupTimer = Timer.periodic(
       _cacheCleanupInterval,
@@ -79,12 +88,41 @@ class Nip98AuthService {
   Timer? _cleanupTimer;
   final Map<String, Duration> _serverOffsets = {};
   String? _cacheOwner;
+  // Disposal releases resources. Legacy holders (including support identity
+  // refresh) may still sign, but cannot resurrect the cache or cleanup timer.
   bool _disposed = false;
+  late final Duration Function() _elapsed;
+  int _clockRevision = 0;
+  DateTime? _clockObservedAt;
+  Duration _clockObservedElapsed = Duration.zero;
+
+  void _invalidateOffsetsAfterClockJump() {
+    final now = clock.now();
+    final elapsed = _elapsed();
+    final previous = _clockObservedAt;
+    if (previous != null &&
+        (now.difference(previous) - (elapsed - _clockObservedElapsed))
+                .inMilliseconds
+                .abs() >
+            2000) {
+      _clockRevision++;
+      _serverOffsets.clear();
+      clearTokenCache();
+      Log.info(
+        'Discarded learned server times after device clock change',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
+    }
+    _clockObservedAt = now;
+    _clockObservedElapsed = elapsed;
+  }
 
   /// Records a fresh server time supplied by the trusted HTTP transport.
   /// Offsets are isolated by origin; a correction invalidates signed tokens.
   void updateServerTime(Uri uri, DateTime serverTime) {
-    if (_disposed || uri.scheme != 'https') return;
+    if (uri.scheme != 'https') return;
+    _invalidateOffsetsAfterClockJump();
     final offset = serverTime.toUtc().difference(clock.now().toUtc());
     final previous = _serverOffsets[uri.origin];
     // HTTP dates have second precision. Avoid churning the cache for rounding
@@ -93,7 +131,17 @@ class Nip98AuthService {
       return;
     }
     _serverOffsets[uri.origin] = offset;
-    clearTokenCache();
+    _tokenCache.removeWhere((_, token) {
+      final url = token.signedEvent.tags.firstWhere(
+        (tag) => tag.length >= 2 && tag[0] == 'u',
+      )[1];
+      return Uri.parse(url).origin == uri.origin;
+    });
+    Log.info(
+      'Learned NIP-98 server time for ${uri.origin}: offset ${offset.inSeconds}s',
+      name: 'Nip98AuthService',
+      category: LogCategory.system,
+    );
   }
 
   int _timestamp(String url) {
@@ -113,7 +161,7 @@ class Nip98AuthService {
     String? payload,
     bool reuseCached = true,
   }) async {
-    if (_disposed || !_authService.isAuthenticated) {
+    if (!_authService.isAuthenticated) {
       Log.error(
         'Cannot create NIP-98 token - user not authenticated',
         name: 'Nip98AuthService',
@@ -123,18 +171,28 @@ class Nip98AuthService {
     }
 
     try {
+      _invalidateOffsetsAfterClockJump();
       final owner = _authService.currentPublicKeyHex;
       if (_cacheOwner != owner) {
         clearTokenCache();
         _cacheOwner = owner;
       }
       final signingStarted = clock.now();
-      final clockOffset = _serverOffsets[Uri.parse(url).origin];
+      final signingStartedElapsed = _elapsed();
+      final uri = Uri.parse(url);
+      if (uri.scheme != 'http' && uri.scheme != 'https') {
+        throw const Nip98AuthException(
+          'HTTP authentication requires an HTTP URL',
+        );
+      }
+      final origin = uri.origin;
       // Create cache key for this request
       final cacheKey = _createCacheKey(url, method, payload);
 
       // Check cache first
-      final cachedToken = reuseCached ? _tokenCache[cacheKey] : null;
+      final cachedToken = reuseCached && !_disposed
+          ? _tokenCache[cacheKey]
+          : null;
       if (cachedToken != null && !cachedToken.isExpired) {
         Log.debug(
           'Using cached NIP-98 token',
@@ -156,29 +214,43 @@ class Nip98AuthService {
           ? url.substring(0, url.indexOf('#'))
           : url;
 
-      // Create the authentication event
-      final authEvent = await _createAuthEvent(
-        url: normalizedUrl,
-        method: method,
-        payload: payload,
+      Event? authEvent;
+      // Another response may teach this origin's time while a remote signer
+      // is working. Discard that signature and re-sign once within the same
+      // budget; repeated corrections must not create an unbounded loop.
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final clockOffset = _serverOffsets[origin];
+        final clockRevision = _clockRevision;
+        authEvent = await _createAuthEvent(
+          url: normalizedUrl,
+          method: method,
+          payload: payload,
+        );
+        _invalidateOffsetsAfterClockJump();
+        if (!_authService.isAuthenticated ||
+            owner != _authService.currentPublicKeyHex ||
+            _elapsed() - signingStartedElapsed >= _tokenValidityDuration) {
+          return null;
+        }
+        if (clockOffset != _serverOffsets[origin] ||
+            clockRevision != _clockRevision) {
+          if (attempt == 1) return null;
+          continue;
+        }
+        if (authEvent == null ||
+            !_validateAuthEvent(authEvent, normalizedUrl, method)) {
+          throw const Nip98AuthException(
+            'Failed to create authentication event',
+          );
+        }
+        break;
+      }
+
+      final expiresAt = clock.now().add(
+        _tokenValidityDuration - (_elapsed() - signingStartedElapsed),
       );
-
-      if (authEvent == null) {
-        throw const Nip98AuthException('Failed to create authentication event');
-      }
-
-      // Encode the event as base64 for the token
-      final eventJson = jsonEncode(authEvent.toJson());
+      final eventJson = jsonEncode(authEvent!.toJson());
       final token = base64Encode(utf8.encode(eventJson));
-
-      final expiresAt = signingStarted.add(_tokenValidityDuration);
-      if (_disposed ||
-          clockOffset != _serverOffsets[Uri.parse(url).origin] ||
-          !_authService.isAuthenticated ||
-          owner != _authService.currentPublicKeyHex ||
-          !clock.now().isBefore(expiresAt)) {
-        return null;
-      }
       final nip98Token = Nip98Token(
         token: token,
         signedEvent: authEvent,
@@ -187,7 +259,7 @@ class Nip98AuthService {
       );
 
       // Cache the token
-      _tokenCache[cacheKey] = nip98Token;
+      if (!_disposed) _tokenCache[cacheKey] = nip98Token;
 
       Log.info(
         'Created NIP-98 token (expires: ${nip98Token.expiresAt})',
@@ -248,16 +320,6 @@ class Nip98AuthService {
       if (authEvent == null) {
         Log.error(
           'Failed to sign authentication event',
-          name: 'Nip98AuthService',
-          category: LogCategory.system,
-        );
-        return null;
-      }
-
-      // Validate the event
-      if (!_validateAuthEvent(authEvent, url, method)) {
-        Log.error(
-          'Authentication event validation failed',
           name: 'Nip98AuthService',
           category: LogCategory.system,
         );
@@ -426,7 +488,6 @@ class Nip98AuthService {
 
   /// Whether a retry still belongs to the active authenticated account.
   bool isCurrentOwner(String pubkey) =>
-      !_disposed &&
       _authService.isAuthenticated &&
       _authService.currentPublicKeyHex == pubkey;
 

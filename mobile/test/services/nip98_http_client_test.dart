@@ -1,6 +1,7 @@
 // ABOUTME: Exercises clock-skew recovery against a simulated NIP-98 server.
 // ABOUTME: Keeps request binding, retry limits and account ownership observable.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
@@ -12,12 +13,14 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nip98_http_client.dart';
 import 'package:openvine/services/schedule_api_client.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -62,7 +65,10 @@ void main() {
               clock.now().millisecondsSinceEpoch ~/ 1000,
         );
       });
-      service = Nip98AuthService(authService: auth);
+      service = Nip98AuthService(
+        authService: auth,
+        elapsed: () => Duration.zero,
+      );
     });
 
     tearDown(() => service.dispose());
@@ -414,6 +420,11 @@ void main() {
       () async {
         var localTime = serverTime;
         await withClock(Clock(() => localTime), () async {
+          service.dispose();
+          service = Nip98AuthService(
+            authService: auth,
+            elapsed: () => localTime.difference(serverTime),
+          );
           when(
             () => auth.createAndSignEvent(
               kind: any(named: 'kind'),
@@ -463,6 +474,11 @@ void main() {
       () async {
         var localTime = serverTime;
         await withClock(Clock(() => localTime), () async {
+          service.dispose();
+          service = Nip98AuthService(
+            authService: auth,
+            elapsed: () => localTime.difference(serverTime),
+          );
           when(
             () => auth.createAndSignEvent(
               kind: any(named: 'kind'),
@@ -783,12 +799,247 @@ void main() {
       expect(second.token, isNot(first!.token));
     });
 
+    for (final skewSeconds in [30, 90]) {
+      test(
+        'a ${skewSeconds}s correction during signing re-signs once and caches corrected time',
+        () async {
+          await withClock(
+            Clock.fixed(serverTime.add(Duration(seconds: skewSeconds))),
+            () async {
+              when(
+                () => auth.createAndSignEvent(
+                  kind: any(named: 'kind'),
+                  content: any(named: 'content'),
+                  tags: any(named: 'tags'),
+                  createdAt: any(named: 'createdAt'),
+                ),
+              ).thenAnswer((invocation) async {
+                service.updateServerTime(uri, serverTime);
+                return Event(
+                  _owner,
+                  27235,
+                  invocation.namedArguments[#tags] as List<List<String>>,
+                  '',
+                  createdAt: invocation.namedArguments[#createdAt] as int,
+                );
+              });
+              final stale = await service.createAuthToken(
+                url: uri.toString(),
+                method: HttpMethod.get,
+              );
+              expect(stale, isNotNull);
+              expect(
+                stale!.signedEvent.createdAt,
+                serverTime.millisecondsSinceEpoch ~/ 1000,
+              );
+              expect(service.cacheStats['total_cached'], 1);
+              final corrected = await service.createAuthToken(
+                url: uri.toString(),
+                method: HttpMethod.get,
+              );
+              expect(
+                corrected!.signedEvent.createdAt,
+                serverTime.millisecondsSinceEpoch ~/ 1000,
+              );
+            },
+          );
+        },
+      );
+    }
+
     test(
-      'a correction during signing cannot repopulate the cache with stale time',
+      'overlapping requests survive the first learned server time',
       () async {
-        await withClock(
-          Clock.fixed(serverTime.add(const Duration(seconds: 30))),
-          () async {
+        await withClock(Clock.fixed(serverTime), () async {
+          final pending = Completer<Event>();
+          final signing = Completer<void>();
+          var signatures = 0;
+          when(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) {
+            signatures++;
+            final event = Event(
+              _owner,
+              27235,
+              invocation.namedArguments[#tags] as List<List<String>>,
+              '',
+              createdAt: invocation.namedArguments[#createdAt] as int,
+            );
+            if (signatures == 2) {
+              signing.complete();
+              return pending.future;
+            }
+            return Future.value(event);
+          });
+          final first = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          final secondUri = uri.replace(query: 'limit=10');
+          final second = service.createAuthToken(
+            url: secondUri.toString(),
+            method: HttpMethod.get,
+          );
+          await signing.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => throw StateError('Remote signing did not start'),
+          );
+          final client = Nip98HttpClient(
+            authService: service,
+            trustedOrigin: uri,
+            inner: MockClient(
+              (_) async => http.Response(
+                '{}',
+                200,
+                headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+              ),
+            ),
+          );
+          addTearDown(client.close);
+          expect(
+            (await client.get(
+              uri,
+              headers: {'Authorization': first!.authorizationHeader},
+            )).statusCode,
+            200,
+          );
+          pending.complete(
+            Event(
+              _owner,
+              27235,
+              [
+                ['u', secondUri.toString()],
+                ['method', 'GET'],
+                [
+                  'created_at',
+                  (serverTime.millisecondsSinceEpoch ~/ 1000).toString(),
+                ],
+              ],
+              '',
+              createdAt: serverTime.millisecondsSinceEpoch ~/ 1000,
+            ),
+          );
+          final result = await second.timeout(const Duration(seconds: 5));
+          expect(result, isNotNull);
+          expect(
+            result!.signedEvent.createdAt,
+            serverTime.millisecondsSinceEpoch ~/ 1000,
+          );
+          expect(signatures, 3);
+          expect(
+            await service.createAuthToken(
+              url: secondUri.toString(),
+              method: HttpMethod.get,
+            ),
+            same(result),
+          );
+        });
+      },
+    );
+
+    test(
+      'repeated corrections stop after two signatures without caching',
+      () async {
+        await withClock(Clock.fixed(serverTime), () async {
+          var signatures = 0;
+          when(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            signatures++;
+            service.updateServerTime(
+              uri,
+              serverTime.add(Duration(seconds: signatures * 10)),
+            );
+            return Event(
+              _owner,
+              27235,
+              invocation.namedArguments[#tags] as List<List<String>>,
+              '',
+              createdAt: invocation.namedArguments[#createdAt] as int,
+            );
+          });
+          expect(
+            await service.createAuthToken(
+              url: uri.toString(),
+              method: HttpMethod.get,
+            ),
+            isNull,
+          );
+          expect(signatures, 2);
+          expect(service.cacheStats['total_cached'], 0);
+        });
+      },
+    );
+
+    test(
+      'a retained disposed service still signs without restarting its cache',
+      () async {
+        service.dispose();
+        final token = await service.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.get,
+        );
+        expect(token, isNotNull);
+        expect(service.isCurrentOwner(_owner), isTrue);
+        expect(service.cacheStats['total_cached'], 0);
+        expect(
+          await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          ),
+          isNot(same(token)),
+        );
+      },
+    );
+
+    test(
+      'a device clock correction clears learned time for unwrapped callers',
+      () async {
+        var localTime = serverTime.add(const Duration(seconds: 30));
+        await withClock(Clock(() => localTime), () async {
+          service.updateServerTime(uri, serverTime);
+          final first = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          expect(
+            first!.signedEvent.createdAt,
+            serverTime.millisecondsSinceEpoch ~/ 1000,
+          );
+          localTime = serverTime;
+          final corrected = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          expect(
+            corrected!.signedEvent.createdAt,
+            serverTime.millisecondsSinceEpoch ~/ 1000,
+          );
+          expect(corrected, isNot(same(first)));
+        });
+      },
+    );
+
+    for (final learned in [false, true]) {
+      test(
+        'device correction during signing re-signs with learned=$learned',
+        () async {
+          var localTime = serverTime.add(const Duration(seconds: 30));
+          await withClock(Clock(() => localTime), () async {
+            if (learned) service.updateServerTime(uri, serverTime);
+            final signing = Completer<void>();
+            final release = Completer<void>();
+            var signatures = 0;
             when(
               () => auth.createAndSignEvent(
                 kind: any(named: 'kind'),
@@ -797,7 +1048,15 @@ void main() {
                 createdAt: any(named: 'createdAt'),
               ),
             ).thenAnswer((invocation) async {
-              service.updateServerTime(uri, serverTime);
+              signatures++;
+              if (signatures == 1) {
+                signing.complete();
+                await release.future.timeout(
+                  const Duration(seconds: 5),
+                  onTimeout: () =>
+                      throw StateError('Signature was not released'),
+                );
+              }
               return Event(
                 _owner,
                 27235,
@@ -806,22 +1065,316 @@ void main() {
                 createdAt: invocation.namedArguments[#createdAt] as int,
               );
             });
-            final stale = await service.createAuthToken(
+            final operation = service.createAuthToken(
               url: uri.toString(),
               method: HttpMethod.get,
             );
-            expect(stale, isNull);
-            expect(service.cacheStats['total_cached'], 0);
-            final corrected = await service.createAuthToken(
-              url: uri.toString(),
-              method: HttpMethod.get,
+            await signing.future.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => throw StateError('Remote signing did not start'),
             );
+            localTime = serverTime;
+            release.complete();
+            final token = await operation.timeout(const Duration(seconds: 5));
+            expect(token, isNotNull);
             expect(
-              corrected!.signedEvent.createdAt,
+              token!.signedEvent.createdAt,
               serverTime.millisecondsSinceEpoch ~/ 1000,
             );
-          },
+            expect(signatures, 2);
+            expect(
+              token.expiresAt.difference(localTime),
+              lessThanOrEqualTo(const Duration(seconds: 45)),
+            );
+          });
+        },
+      );
+    }
+
+    test(
+      'a provider-retained service signs after automatic disposal',
+      () async {
+        final container = ProviderContainer(
+          overrides: [authServiceProvider.overrideWithValue(auth)],
         );
+        addTearDown(container.dispose);
+        final retained = container.read(nip98AuthServiceProvider);
+        final first = await retained.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.get,
+        );
+        expect(first, isNotNull);
+        await container.pump();
+        expect(retained.cacheStats['total_cached'], 0);
+        final next = await retained.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.get,
+        );
+        expect(next, isNotNull);
+        expect(retained.cacheStats['total_cached'], 0);
+        expect(next, isNot(same(first)));
+      },
+    );
+
+    test(
+      'a backward clock jump invalidates a token without learned offsets',
+      () async {
+        var localTime = serverTime.add(const Duration(seconds: 30));
+        await withClock(Clock(() => localTime), () async {
+          final first = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          localTime = serverTime;
+          final next = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          expect(next, isNot(same(first)));
+          expect(
+            next!.signedEvent.createdAt,
+            serverTime.millisecondsSinceEpoch ~/ 1000,
+          );
+        });
+      },
+    );
+
+    for (final afterSigning in [false, true]) {
+      test(
+        'a nearly exhausted budget skips retry afterSigning=$afterSigning',
+        () async {
+          var elapsed = Duration.zero;
+          var attempts = 0;
+          final initial = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          if (afterSigning) {
+            when(
+              () => auth.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            ).thenAnswer((invocation) async {
+              elapsed = const Duration(seconds: 14);
+              return Event(
+                _owner,
+                27235,
+                invocation.namedArguments[#tags] as List<List<String>>,
+                '',
+                createdAt: invocation.namedArguments[#createdAt] as int,
+              );
+            });
+          }
+          final client = Nip98HttpClient(
+            authService: service,
+            trustedOrigin: uri,
+            elapsed: () => elapsed,
+            inner: MockClient((_) async {
+              attempts++;
+              if (!afterSigning) elapsed = const Duration(seconds: 14);
+              return http.Response(
+                '{"error":"Auth failed: event timestamp is in the future"}',
+                401,
+                headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+              );
+            }),
+          );
+          addTearDown(client.close);
+          await LogCaptureService().clearAllLogs();
+          final response = await client.get(
+            uri,
+            headers: {'Authorization': initial!.authorizationHeader},
+          );
+          expect(response.statusCode, 401);
+          expect(attempts, 1);
+          final logs = LogCaptureService().getRecentLogs().where(
+            (entry) => entry.name == 'Nip98HttpClient',
+          );
+          expect(logs, hasLength(1));
+          expect(logs.single.category, LogCategory.system);
+          expect(
+            logs.single.message,
+            contains('insufficient remaining retry budget'),
+          );
+          expect(logs.single.message, isNot(contains(initial.token)));
+        },
+      );
+    }
+
+    for (final messageField in [false, true]) {
+      test(
+        'known timestamp message is recognized in either envelope field messageField=$messageField',
+        () async {
+          var attempts = 0;
+          final client = Nip98HttpClient(
+            authService: service,
+            trustedOrigin: uri,
+            inner: MockClient((_) async {
+              attempts++;
+              return http.Response(
+                attempts == 1
+                    ? jsonEncode({
+                        'error': messageField
+                            ? 'unauthorized'
+                            : 'Auth failed: event timestamp is in the future',
+                        'message': messageField
+                            ? 'Auth failed: event timestamp is in the future'
+                            : 'Unauthorized',
+                      })
+                    : '{}',
+                attempts == 1 ? 401 : 200,
+                headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+              );
+            }),
+          );
+          addTearDown(client.close);
+          final initial = await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          );
+          expect(
+            (await client.get(
+              uri,
+              headers: {'Authorization': initial!.authorizationHeader},
+            )).statusCode,
+            200,
+          );
+          expect(attempts, 2);
+        },
+      );
+    }
+
+    test('re-signing shares its original monotonic signing budget', () async {
+      var localTime = serverTime;
+      await withClock(Clock(() => localTime), () async {
+        var elapsed = Duration.zero;
+        var signatures = 0;
+        service.dispose();
+        service = Nip98AuthService(authService: auth, elapsed: () => elapsed);
+        when(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((invocation) async {
+          signatures++;
+          elapsed += const Duration(seconds: 20);
+          localTime = localTime.add(const Duration(seconds: 20));
+          if (signatures == 1) {
+            service.updateServerTime(uri, localTime);
+          }
+          return Event(
+            _owner,
+            27235,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            '',
+            createdAt: invocation.namedArguments[#createdAt] as int,
+          );
+        });
+        final token = await service.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.get,
+        );
+        expect(token, isNotNull);
+        expect(signatures, 2);
+        expect(token!.expiresAt, serverTime.add(const Duration(seconds: 45)));
+      });
+    });
+
+    test(
+      'an account change during re-signing cannot cache the old owner',
+      () async {
+        var signatures = 0;
+        when(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((invocation) async {
+          signatures++;
+          if (signatures == 1) service.updateServerTime(uri, serverTime);
+          if (signatures == 2) {
+            when(() => auth.currentPublicKeyHex).thenReturn('b' * 64);
+          }
+          return Event(
+            _owner,
+            27235,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            '',
+            createdAt: invocation.namedArguments[#createdAt] as int,
+          );
+        });
+        expect(
+          await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          ),
+          isNull,
+        );
+        expect(signatures, 2);
+        expect(service.cacheStats['total_cached'], 0);
+      },
+    );
+
+    test(
+      'learning an origin preserves tokens cached for another origin',
+      () async {
+        const otherUrl = 'https://other.example.com/api';
+        final other = await service.createAuthToken(
+          url: otherUrl,
+          method: HttpMethod.get,
+        );
+        await service.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.get,
+        );
+        service.updateServerTime(uri, serverTime);
+        expect(service.cacheStats['total_cached'], 1);
+        expect(
+          await service.createAuthToken(url: otherUrl, method: HttpMethod.get),
+          same(other),
+        );
+      },
+    );
+
+    test(
+      'learning time skips empty extra tags on cached signed events',
+      () async {
+        when(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => Event(
+            _owner,
+            27235,
+            [[], ...invocation.namedArguments[#tags] as List<List<String>>],
+            '',
+            createdAt: invocation.namedArguments[#createdAt] as int,
+          ),
+        );
+        expect(
+          await service.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.get,
+          ),
+          isNotNull,
+        );
+        expect(
+          () => service.updateServerTime(uri, serverTime),
+          returnsNormally,
+        );
+        expect(service.cacheStats['total_cached'], 0);
       },
     );
 
