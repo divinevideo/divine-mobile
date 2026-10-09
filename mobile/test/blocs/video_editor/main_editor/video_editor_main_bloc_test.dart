@@ -709,6 +709,51 @@ void main() {
       );
 
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'sends playback back again when the player dropped the seek',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: audition,
+          currentPosition: Duration(milliseconds: 5800),
+        ),
+        act: (bloc) async {
+          // The stretch ends where the video does: the seek goes out as the
+          // player's loop starts its next lap, and playback comes round from
+          // the start of the video instead.
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 6)));
+          await pumpEventQueue();
+          bloc.add(
+            const VideoEditorPositionChanged(Duration(milliseconds: 965)),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoEditorPositionChanged(Duration(milliseconds: 1009)),
+          );
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 3)));
+        },
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 2)
+              .having((s) => s.isAuditionSeekPending, 'pending', isTrue),
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.currentPosition,
+                'position',
+                const Duration(milliseconds: 1009),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 2),
+          isA<VideoEditorMainState>()
+              .having((s) => s.isAuditionSeekPending, 'pending', isFalse)
+              .having((s) => s.seekCounter, 'seekCounter', 2),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'leaves a paused playhead where it is',
         build: buildBloc,
         seed: () => const VideoEditorMainState(audition: audition),

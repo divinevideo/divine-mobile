@@ -199,6 +199,11 @@ class VideoEditorMainBloc
   /// Takes the player's position and, during an audition, sends playback
   /// that has left the auditioned stretch back to its start — once per
   /// departure, as the player reports the old position until the seek lands.
+  ///
+  /// A seek can also be dropped: on iOS one sent as the player's loop moves
+  /// on to its next lap, which an audition ending where the video ends always
+  /// is. Playback then comes round from the start of the video, before the
+  /// stretch, and is sent back again.
   void _onPositionChanged(
     VideoEditorPositionChanged event,
     Emitter<VideoEditorMainState> emit,
@@ -210,7 +215,13 @@ class VideoEditorMainBloc
       return;
     }
     final isInside = position >= audition.start && position < audition.end;
-    if (isInside || state.isAuditionSeekPending || !state.isPlaying) {
+    final isSeekLost =
+        state.isAuditionSeekPending &&
+        position < audition.start &&
+        position < state.currentPosition;
+    if (isInside ||
+        (state.isAuditionSeekPending && !isSeekLost) ||
+        !state.isPlaying) {
       emit(
         state.copyWith(
           currentPosition: position,
