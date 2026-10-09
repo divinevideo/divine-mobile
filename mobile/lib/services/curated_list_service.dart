@@ -17,6 +17,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_merger.dart';
@@ -31,6 +32,15 @@ import 'package:unified_logger/unified_logger.dart';
 export 'package:openvine/models/curated_list_callbacks.dart';
 
 part 'curated_lists/curated_list_playlist.dart';
+
+/// A fresh list session cannot prove cache absence across unfinished cleanup.
+class CuratedListAccountBoundaryException implements Exception {
+  const CuratedListAccountBoundaryException();
+
+  @override
+  String toString() =>
+      'Account cleanup must finish before lists can initialize';
+}
 
 /// A metadata update's bounded rejection reason.
 enum CuratedListUpdateRejection { failed, privateListFull }
@@ -77,6 +87,12 @@ class CuratedListService extends ChangeNotifier {
        _onListUnsubscribed = onListUnsubscribed,
        _relaySyncTimeout = relaySyncTimeout {
     _sessionLease = _sessions.acquire();
+    // A lease created across unfinished cleanup has no trusted local baseline.
+    // Existing continuing leases keep their already-accepted live deferral.
+    _accountCleanupPendingAtCreation = _hasPendingAccountCleanup;
+    if (_accountCleanupPendingAtCreation) {
+      _initializationError = const CuratedListAccountBoundaryException();
+    }
     _relayGateway = CuratedListRelayGateway(
       nostrService: nostrService,
       authService: authService,
@@ -101,6 +117,13 @@ class CuratedListService extends ChangeNotifier {
   late final PrefsCuratedListStore _cacheStore;
   final CuratedListSessionCoordinator _sessions;
   late final CuratedListSessionLease _sessionLease;
+  late final bool _accountCleanupPendingAtCreation;
+
+  // The shared boundary is unresolved even when its owner cannot be read.
+  // Do not parse or clear evidence to turn an unknown intent into absence.
+  bool get _hasPendingAccountCleanup =>
+      PendingAccountCleanup.readbackUnknown(_prefs) ||
+      _prefs.containsKey(PendingAccountCleanup.storageKey);
   final Duration _relaySyncTimeout;
   late final CuratedListRelayGateway _relayGateway;
 
@@ -238,6 +261,10 @@ class CuratedListService extends ChangeNotifier {
           category: LogCategory.system,
         );
         return;
+      }
+
+      if (_accountCleanupPendingAtCreation && _hasPendingAccountCleanup) {
+        throw const CuratedListAccountBoundaryException();
       }
 
       await _recoverDeletedSubscriptions();

@@ -16,6 +16,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
@@ -293,9 +294,25 @@ void main() {
       'failed cache removal retires outgoing work and reports failure',
       () async {
         final old = open(authA, clientA);
+        final originalRows = prefs.getString(
+          CuratedListService.listsStorageKey,
+        );
+        final cleanup = UserDataCleanupService(prefs);
+        var completedDatabaseSweeps = 0;
+        cleanup.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+            }) async {
+              expect(userPubkey, _ownerA);
+              expect(deleteUserData, isFalse);
+              expect(preserveActiveSession, isFalse);
+              completedDatabaseSweeps++;
+            };
         prefs.rejectRemoval = true;
         await expectLater(
-          UserDataCleanupService(prefs).clearUserSpecificData(
+          cleanup.clearUserSpecificData(
             userPubkey: _ownerA,
             isIdentityChange: true,
           ),
@@ -303,12 +320,100 @@ void main() {
         );
         expect(old.isCurrentSession, isFalse);
         expect(await old.updateList(listId: 'crew', name: 'Stale'), isFalse);
-        final retry = open(authA, clientA);
-        prefs.rejectRemoval = false;
+        expect(completedDatabaseSweeps, 0);
+        final pendingRaw = prefs.getString(PendingAccountCleanup.storageKey);
+        expect(pendingRaw, isNotNull);
+        final pending = PendingAccountCleanup.read(prefs)!;
+        expect(pending.userPubkey, _ownerA);
+        expect(pending.isIdentityChange, isTrue);
+        expect(pending.deleteUserData, isFalse);
         expect(
-          await retry.updateList(listId: 'crew', name: 'Restored account'),
+          prefs.getString(CuratedListService.listsStorageKey),
+          originalRows,
+        );
+
+        final retry = open(authA, clientA);
+        clearInteractions(clientA);
+        await retry.initialize();
+        expect(retry.isCurrentSession, isTrue);
+        expect(retry.isInitialized, isFalse);
+        expect(retry.isReadyForMutations, isFalse);
+        expect(
+          retry.initializationError,
+          isA<CuratedListAccountBoundaryException>(),
+        );
+        expect(
+          await retry.updateList(listId: 'crew', name: 'Premature recovery'),
+          isFalse,
+        );
+        expect(await retry.createList(name: 'Blocked by cleanup'), isNull);
+        await retry.fetchUserListsFromRelays(force: true);
+        verifyNever(() => clientA.publishEventAwaitOk(any()));
+        verifyNever(() => clientA.subscribe(any()));
+        verifyNever(
+          () => clientA.queryEvents(any(), timeout: any(named: 'timeout')),
+        );
+        expect(prefs.getString(PendingAccountCleanup.storageKey), pendingRaw);
+        expect(
+          prefs.getString(CuratedListService.listsStorageKey),
+          originalRows,
+        );
+
+        prefs.rejectRemoval = false;
+        await cleanup.clearUserSpecificData(
+          userPubkey: _ownerA,
+          isIdentityChange: true,
+        );
+        expect(completedDatabaseSweeps, 1);
+        expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
+        expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+        expect(old.isCurrentSession, isFalse);
+        expect(retry.isCurrentSession, isFalse);
+        await retry.initialize();
+        expect(retry.isReadyForMutations, isFalse);
+        expect(
+          await retry.updateList(listId: 'crew', name: 'Retired retry'),
+          isFalse,
+        );
+
+        final recovered = open(authA, clientA);
+        await recovered.initialize();
+        expect(recovered.isInitialized, isTrue);
+        expect(recovered.isReadyForMutations, isTrue);
+        expect(recovered.initializationError, isNull);
+        final defaultRow = recovered.getDefaultList()!;
+        expect(defaultRow.pubkey, _ownerA);
+        expect(
+          await recovered.updateList(
+            listId: defaultRow.authorScopedId,
+            name: 'Restored account',
+          ),
           isTrue,
         );
+        final created = await recovered.createList(
+          name: 'After verified cleanup',
+        );
+        expect(created, isNotNull);
+        expect(created!.pubkey, _ownerA);
+        expect(
+          recovered.lists.any(
+            (row) => row.authorScopedId == created.authorScopedId,
+          ),
+          isTrue,
+        );
+        final recoveredRows = prefs.getString(
+          CuratedListService.listsStorageKey,
+        );
+        expect(
+          await old.updateList(listId: 'crew', name: 'Still stale'),
+          isFalse,
+        );
+        expect(await retry.createList(name: 'Retired lease'), isNull);
+        expect(
+          prefs.getString(CuratedListService.listsStorageKey),
+          recoveredRows,
+        );
+        expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
       },
     );
 
