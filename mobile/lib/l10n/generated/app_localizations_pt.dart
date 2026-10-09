@@ -4882,6 +4882,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get reportDetailsRequired => 'Descreva o problema';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Apenas texto — não é possível anexar fotos ou GIFs aqui.';
 

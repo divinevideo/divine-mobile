@@ -4910,6 +4910,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get reportDetailsRequired => 'Bitte beschreib das Problem';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Nur Text – Fotos und GIFs können hier nicht angehängt werden.';
 

@@ -4841,6 +4841,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportDetailsRequired => 'Beskriv problemet';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Endast text – foton och GIF-bilder kan inte bifogas här.';
 

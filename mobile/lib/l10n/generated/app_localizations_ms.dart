@@ -4844,6 +4844,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportDetailsRequired => 'Sila terangkan isu itu';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Teks sahaja — foto dan GIF tidak boleh dilampirkan di sini.';
 

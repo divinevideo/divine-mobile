@@ -4864,6 +4864,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportDetailsRequired => 'Beschrijf het probleem';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Alleen tekst — je kunt hier geen foto\'s of GIF\'s toevoegen.';
 

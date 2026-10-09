@@ -8233,6 +8233,12 @@ abstract class AppLocalizations {
   /// **'Please describe the issue'**
   String get reportDetailsRequired;
 
+  /// Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description.
+  ///
+  /// In en, this message translates to:
+  /// **'Add details (optional)'**
+  String get reportDetailsOptional;
+
   /// Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached.
   ///
   /// In en, this message translates to:

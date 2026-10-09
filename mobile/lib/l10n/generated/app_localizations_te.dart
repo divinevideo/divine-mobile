@@ -5014,6 +5014,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportDetailsRequired => 'దయచేసి సమస్యను వివరించండి';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'వచనం మాత్రమే — ఫోటోలు మరియు GIFలు ఇక్కడ జోడించబడవు.';
 

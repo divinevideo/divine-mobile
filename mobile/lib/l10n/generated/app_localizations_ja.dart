@@ -4560,6 +4560,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportDetailsRequired => '問題の内容を記入してください';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly => 'テキストのみです。ここには写真やGIFを添付できません。';
 
   @override

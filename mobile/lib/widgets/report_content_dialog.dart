@@ -115,8 +115,8 @@ class ReportContentDialog extends ConsumerWidget {
   final bool isFromShareMenu;
 
   /// Optional controller used to programmatically expand the bottom sheet
-  /// to full height when the "Other" reason is selected (so the details
-  /// field is reachable above the keyboard).
+  /// to full height when the details field takes focus (so it is reachable
+  /// above the keyboard).
   final DraggableScrollableController? draggableController;
 
   /// Scroll controller handed down by the enclosing [VineBottomSheet].
@@ -306,6 +306,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
   final FocusNode _detailsFocusNode = FocusNode();
   final GlobalKey _detailsFieldKey = GlobalKey();
   final GlobalKey _otherCardKey = GlobalKey();
+  final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
   /// The inline error under the form. Widget-local: it is already-localized
@@ -313,10 +314,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
   String? _errorMessage;
 
   /// Whether the reporter just tried to insert an image the report cannot
-  /// carry. Held here, not in the details field, because reselecting the
-  /// reason unmounts and rebuilds that field from scratch, which would drop
-  /// this one-shot notice if it lived there. The notice renders above the
-  /// field (see [_ReportFormBody]) so the keyboard cannot cover it.
+  /// carry. Held here, beside the other form state, so the one-shot notice
+  /// does not depend on the field's own State surviving. The notice renders
+  /// above the field (see [_ReportFormBody]) so the keyboard cannot cover it.
   bool _imageInsertionRejected = false;
 
   bool _scrollWhenKeyboardOpens = false;
@@ -331,6 +331,33 @@ class _ReportContentViewState extends State<_ReportContentView> {
       _selectedReason != null && !isSubmitting;
 
   @override
+  void initState() {
+    super.initState();
+    _detailsFocusNode.addListener(_onDetailsFocusChanged);
+  }
+
+  /// The details field shows for every reason, so whichever way it takes
+  /// focus (tapped, or focused for the reporter on picking Other) the sheet
+  /// grows and the field is scrolled clear of the keyboard once it opens.
+  void _onDetailsFocusChanged() {
+    if (!_detailsFocusNode.hasFocus) return;
+    final controller = widget.draggableController;
+    if (controller != null && controller.isAttached) {
+      runDetached(
+        controller.animateTo(
+          0.95,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        ),
+        'expand report sheet for details',
+        logName: 'ReportContentDialog',
+        category: LogCategory.ui,
+      );
+    }
+    _scrollWhenKeyboardOpens = true;
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final currentBottom = MediaQuery.viewInsetsOf(context).bottom;
@@ -340,7 +367,13 @@ class _ReportContentViewState extends State<_ReportContentView> {
       _scrollWhenKeyboardOpens = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final ctx = _otherCardKey.currentContext;
+        // Under Other, anchor its card so the chosen reason stays in view
+        // directly above the field it requires. Any other reason may be far
+        // up the list, so the field's own box is anchored instead.
+        final anchor = _selectedReason == ContentFilterReason.other
+            ? _otherCardKey
+            : _detailsBoxKey;
+        final ctx = anchor.currentContext;
         if (ctx == null) return;
         runDetached(
           Scrollable.ensureVisible(
@@ -364,21 +397,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
       _errorMessage = null;
     });
 
+    // Other is the one reason whose note is required, so it takes the
+    // reporter straight to the field. The focus listener does the rest.
     if (reason == ContentFilterReason.other && !wasOther) {
-      final controller = widget.draggableController;
-      if (controller != null && controller.isAttached) {
-        runDetached(
-          controller.animateTo(
-            0.95,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          ),
-          'expand report sheet for details',
-          logName: 'ReportContentDialog',
-          category: LogCategory.ui,
-        );
-      }
-      _scrollWhenKeyboardOpens = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _detailsFocusNode.requestFocus();
@@ -434,6 +455,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
                     detailsFocusNode: _detailsFocusNode,
                     detailsFieldKey: _detailsFieldKey,
                     otherCardKey: _otherCardKey,
+                    detailsBoxKey: _detailsBoxKey,
                     onDetailsChanged: _onDetailsChanged,
                     imageInsertionRejected: _imageInsertionRejected,
                     onImageInserted: _onImageInsertionRejected,
@@ -510,8 +532,11 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() => _errorMessage = null);
     final l10n = context.l10n;
     final selectedReasonTitle = l10n.reportReasonTitle(reason);
-    final detailsText = _detailsController.text.trim();
-    final details = detailsText.isEmpty ? selectedReasonTitle : detailsText;
+    // Sent as typed, and empty when nothing was: the reason already travels
+    // in its own field and tags, and a filled-in label would read to a
+    // moderator as words the reporter wrote (#10003). The field shows for
+    // every reason, so what is sent is always what the reporter can see.
+    final details = _detailsController.text.trim();
 
     await cubit.submit(
       reason: reason,
@@ -548,7 +573,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
   @override
   void dispose() {
     _detailsController.dispose();
-    _detailsFocusNode.dispose();
+    _detailsFocusNode
+      ..removeListener(_onDetailsFocusChanged)
+      ..dispose();
     _fallbackScrollController.dispose();
     super.dispose();
   }
@@ -567,6 +594,7 @@ class _ReportFormBody extends StatelessWidget {
     required this.detailsFocusNode,
     required this.detailsFieldKey,
     required this.otherCardKey,
+    required this.detailsBoxKey,
     required this.onDetailsChanged,
     required this.imageInsertionRejected,
     required this.onImageInserted,
@@ -582,6 +610,10 @@ class _ReportFormBody extends StatelessWidget {
   /// Anchors the "Other" card so it can be scrolled back into view once the
   /// keyboard pushes the details field up.
   final GlobalKey otherCardKey;
+
+  /// Anchors the details box, scrolled into view in place of the "Other"
+  /// card when another reason is selected.
+  final GlobalKey detailsBoxKey;
 
   /// Clears a pending validation error (and the image-rejection notice) as
   /// soon as the user edits the details.
@@ -627,44 +659,49 @@ class _ReportFormBody extends StatelessWidget {
             ),
           ),
         ),
-        if (selectedReason == ContentFilterReason.other) ...[
-          const SizedBox(height: 4),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.vineColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 4,
-                children: [
-                  Text(
-                    l10n.reportDetailsRequired,
-                    style: VineTheme.labelSmallFont(
-                      color: context.vineColors.accentPositive,
-                    ),
+        // Shown for every reason, so every reporter can say why. The note is
+        // optional except under Other, which has no meaning without one.
+        // Always mounted, too, so text typed under one reason is still on
+        // screen, and is what gets sent, after switching to another.
+        const SizedBox(height: 4),
+        DecoratedBox(
+          key: detailsBoxKey,
+          decoration: BoxDecoration(
+            color: context.vineColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 4,
+              children: [
+                Text(
+                  selectedReason == ContentFilterReason.other
+                      ? l10n.reportDetailsRequired
+                      : l10n.reportDetailsOptional,
+                  style: VineTheme.labelSmallFont(
+                    color: context.vineColors.accentPositive,
                   ),
-                  Text(
-                    l10n.reportDetailsTextOnly,
-                    style: VineTheme.labelSmallFont(
-                      color: context.vineColors.onSurfaceVariant,
-                    ),
+                ),
+                Text(
+                  l10n.reportDetailsTextOnly,
+                  style: VineTheme.labelSmallFont(
+                    color: context.vineColors.onSurfaceVariant,
                   ),
-                  if (imageInsertionRejected) const _ImageNotAttachedNotice(),
-                  _CappedDetailsField(
-                    fieldKey: detailsFieldKey,
-                    controller: detailsController,
-                    focusNode: detailsFocusNode,
-                    onChanged: onDetailsChanged,
-                    onImageInserted: onImageInserted,
-                  ),
-                ],
-              ),
+                ),
+                if (imageInsertionRejected) const _ImageNotAttachedNotice(),
+                _CappedDetailsField(
+                  fieldKey: detailsFieldKey,
+                  controller: detailsController,
+                  focusNode: detailsFocusNode,
+                  onChanged: onDetailsChanged,
+                  onImageInserted: onImageInserted,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ],
     );
   }

@@ -4975,6 +4975,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reportDetailsRequired => 'Opisz problem';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Tylko tekst — nie można tu dołączać zdjęć ani plików GIF.';
 

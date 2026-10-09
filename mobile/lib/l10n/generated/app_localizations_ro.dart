@@ -4988,6 +4988,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportDetailsRequired => 'Descrie problema';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'Doar text — fotografiile și GIF-urile nu pot fi atașate aici.';
 

@@ -4826,6 +4826,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportDetailsRequired => 'يرجى وصف المشكلة';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'نص فقط — لا يمكن إرفاق الصور أو ملفات GIF هنا.';
 

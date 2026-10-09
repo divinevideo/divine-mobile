@@ -3127,6 +3127,10 @@
   "reportSelectReason": "Please select a reason for reporting this content",
   "reportOtherRequiresDetails": "Please describe the issue when selecting Other",
   "reportDetailsRequired": "Please describe the issue",
+  "reportDetailsOptional": "Add details (optional)",
+  "@reportDetailsOptional": {
+    "description": "Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description."
+  },
   "reportDetailsTextOnly": "Text only — photos and GIFs can’t be attached here.",
   "@reportDetailsTextOnly": {
     "description": "Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached."

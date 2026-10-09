@@ -4738,6 +4738,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportDetailsRequired => 'እባክህ ችግሩን ግለጽ';
 
   @override
+  String get reportDetailsOptional => 'Add details (optional)';
+
+  @override
   String get reportDetailsTextOnly =>
       'ጽሑፍ ብቻ — ፎቶዎችን እና GIF-ዎችን እዚህ ማያያዝ አይቻልም።';
 
