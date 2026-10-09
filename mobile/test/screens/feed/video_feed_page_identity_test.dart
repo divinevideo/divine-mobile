@@ -255,6 +255,43 @@ void main() {
         );
       }
 
+      testWidgets(
+        'verification start-up notice retains Home and playback',
+        (tester) async {
+          final home = await _mountSafetyPolicyHome(tester);
+          // Start-up retires legacy keys and notifies without changing the
+          // verified state, which happens on every cold start.
+          await tester.runAsync(home.ageVerification.initialize);
+          expect(
+            home.container.read(adultContentVerificationVersionProvider),
+            1,
+          );
+          expect(home.ageVerification.isAdultContentVerified, isTrue);
+          await tester.pumpAndSettle();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          final view = tester.element(find.byType(VideoFeedView));
+          expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
+          expect(
+            view.read<VideoPlaybackStatusCubit>(),
+            same(home.originalPlayback),
+          );
+          expect(home.originalFeed.isClosed, isFalse);
+          verifyNever(
+            () => home.videos.getRecommendedVideos(
+              userPubkey: _policyViewer,
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        },
+      );
+
       testWidgets('unrelated blocklist sync retains Home and playback', (
         tester,
       ) async {

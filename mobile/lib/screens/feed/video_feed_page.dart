@@ -77,9 +77,12 @@ class VideoFeedPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(divineHostFilterVersionProvider);
     final contentFilterVersion = ref.watch(contentFilterVersionProvider);
-    final adultVerificationVersion = ref.watch(
-      adultContentVerificationVersionProvider,
-    );
+    // The version is a rebuild signal; the key holds the fact it signals,
+    // because start-up retires legacy keys and notifies without a change.
+    ref.watch(adultContentVerificationVersionProvider);
+    final adultContentVerified = ref
+        .watch(ageVerificationServiceProvider)
+        .isAdultContentVerified;
     final provenanceFilterVersion = ref.watch(
       videoProvenanceFilterVersionProvider,
     );
@@ -109,7 +112,7 @@ class VideoFeedPage extends ConsumerWidget {
         key: ValueKey((
           showDivineHostedOnly,
           contentFilterVersion,
-          adultVerificationVersion,
+          adultContentVerified,
           provenanceFilterVersion,
           curatedListRepository,
           viewerPubkey,
