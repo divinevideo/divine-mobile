@@ -197,8 +197,11 @@ void main() {
 
       setUp(() async {
         TestWidgetsFlutterBinding.ensureInitialized();
+        // Gal.putVideo asks for access first on the same channel. Let that
+        // succeed so only the save itself is rejected, as Photos does.
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(galChannel, (call) async {
+              if (call.method != 'putVideo') return true;
               throw PlatformException(
                 code: 'UNEXPECTED',
                 message: nativeMessage,
