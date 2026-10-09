@@ -1088,6 +1088,28 @@ class NostrClient {
     return read.result;
   }
 
+  /// Zone key [observeSkippedReads] puts its listener under.
+  static final Object _skippedReadListenerKey = Object();
+
+  /// Runs [body], telling [onSkipped] why each read started inside it was
+  /// skipped on this device without reaching any relay.
+  ///
+  /// That covers a read that found the query pool closing, and one no
+  /// query-pool slot reached before its network window. Both report like a
+  /// read the relays left unfinished — `timedOut` for a full-settlement
+  /// caller, [QueryEnd.deadline] from [readEvents] — so a caller that logs why
+  /// a read was inconclusive cannot otherwise tell a local queue from a relay
+  /// that did not answer, and blames the relay (#10004). This rides the zone
+  /// rather than a new field on every result type and every caller and test
+  /// that builds one.
+  ///
+  /// Only reads started inside [body]'s own call chain report here; the
+  /// innermost observer wins when they nest.
+  static Future<T> observeSkippedReads<T>(
+    Future<T> Function() body, {
+    required void Function(String reason) onSkipped,
+  }) => runZoned(body, zoneValues: {_skippedReadListenerKey: onSkipped});
+
   /// Runs the one read behind [readEvents], [queryEventsDetailed] and
   /// [queryEvents].
   ///
@@ -1357,6 +1379,21 @@ class NostrClient {
         events: events.length,
         startedAt: startedAt,
       );
+      final onSkipped = Zone.current[_skippedReadListenerKey];
+      if (onSkipped is void Function(String)) {
+        try {
+          onSkipped(skippedReason);
+        } on Object catch (e, st) {
+          // Diagnostics only: the read already ended, and a listener that
+          // throws must not turn its answer into an error.
+          log(
+            'A skipped-read listener threw',
+            name: 'NostrClient',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }
     }
 
     return (
