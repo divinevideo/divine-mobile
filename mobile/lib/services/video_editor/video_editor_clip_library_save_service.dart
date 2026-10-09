@@ -114,6 +114,9 @@ class VideoEditorClipLibrarySaveService {
       // would be permanent.
       sourceCredits: clip.sourceCredits,
       proofManifestJson: proof == null ? null : jsonEncode(proof),
+      // Left unsigned, for example offline, it stays an editor intermediate,
+      // like a merge: an edit of it is signed against the media it came from.
+      derivedFrom: proof?.c2paManifestId == null ? clip.signingSources : null,
     );
   }
 

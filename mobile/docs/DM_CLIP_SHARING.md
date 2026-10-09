@@ -192,8 +192,8 @@ recipient is asked to try again rather than credit the wrong person.
 ## Limits
 
 - **Edits need to reach ProofSign.** A library save or merge made offline is
-  stored without a manifest and cannot be sent as a clip; only the app's own
-  recordings are signed later.
+  stored without a manifest and cannot be sent as a clip. It remembers what it
+  was made from, so a later edit of it is signed against those sources.
 - **Builds without a signing token sign nothing.** Every clip recorded or
   edited in a build without the ProofSign token, such as a local debug build,
   has no manifest and fails the sender's check.

@@ -89,6 +89,38 @@ void main() {
 
       expect(signedFrom, const [C2paEditSource(path: '/path/a.mp4')]);
       expect(result?.proofManifestJson, contains('urn:c2pa:flattened'));
+      expect(result?.derivedFrom, isNull);
+    });
+
+    test("keeps the clip's sources when it could not be signed", () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/flattened.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => const NativeProofData(videoHash: 'flattened');
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      final result =
+          await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+            clip: _createClip(),
+            renderId: 'save-1',
+          );
+
+      // Saved offline, a later edit is still signed against the original.
+      expect(result?.derivedFrom, const [C2paEditSource(path: '/path/a.mp4')]);
     });
 
     test(
