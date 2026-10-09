@@ -9987,6 +9987,63 @@ class AppLocalizationsTe extends AppLocalizations {
       'వాయిస్‌ను మార్చడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'ఎంచుకున్న క్లిప్ బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'ఎంచుకున్న ధ్వని బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'ఈక్వలైజర్';
+
+  @override
+  String get videoEditorEqualizerVoice => 'స్పష్టమైన స్వరం';
+
+  @override
+  String get videoEditorEqualizerBassy => 'ఎక్కువ బాస్';
+
+  @override
+  String get videoEditorEqualizerBright => 'ప్రకాశవంతం';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'ఒక బిందువును పైకి లేదా కిందికి లాగండి';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency తగ్గించండి';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency పెంచండి';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';
 
   @override

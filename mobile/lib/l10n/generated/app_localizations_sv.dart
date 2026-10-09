@@ -9710,6 +9710,62 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att ändra rösten. Försök igen.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Ändra bas, mellanregister och diskant för det valda klippet';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Ändra bas, mellanregister och diskant för det valda ljudet';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Tydlig röst';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mer bas';
+
+  @override
+  String get videoEditorEqualizerBright => 'Ljusare';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'Dra en punkt uppåt eller nedåt';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Sänk $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Höj $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Övergång';
 
   @override

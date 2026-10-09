@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_sna
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
@@ -640,7 +642,7 @@ class _SoundOverlayControls extends StatelessWidget {
   Widget build(BuildContext context) {
     // Every sound with audio to process can change voice: voice-overs,
     // music, bundled, published and imported sounds and extracted clip audio.
-    final (canChangeVoice, hasVoiceEffect) = context.select(
+    final (canChangeVoice, hasVoiceEffect, hasEqualizer) = context.select(
       (TimelineOverlayBloc bloc) {
         final track = bloc.state.audioTracks
             .where((track) => track.id == item.id)
@@ -648,6 +650,7 @@ class _SoundOverlayControls extends StatelessWidget {
         return (
           track?.originalSource != null,
           track?.hasVoiceProcessing ?? false,
+          !(track?.equalizer.isNone ?? true),
         );
       },
     );
@@ -660,6 +663,8 @@ class _SoundOverlayControls extends StatelessWidget {
           ? () => _changeVoice(context: context)
           : null,
       hasVoiceEffect: hasVoiceEffect,
+      onEqualizer: () => _equalizeSound(context: context),
+      hasEqualizer: hasEqualizer,
       onDuplicated: () => _duplicateSound(context: context),
       onSplit: () => _splitSound(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),
@@ -745,6 +750,59 @@ class _SoundOverlayControls extends StatelessWidget {
             .toList(),
       },
     );
+  }
+
+  /// Opens the equalizer of the sound. The preview loops the sound's stretch
+  /// of the video and plays every change while the sheet is open; a confirmed
+  /// one becomes one undo step, and a dismissed one puts the committed
+  /// equalizer back on the preview.
+  Future<void> _equalizeSound({required BuildContext context}) async {
+    final scope = VideoEditorScope.of(context);
+    final editor = scope.editor;
+    if (editor == null) return;
+
+    final sound = editor.stateManager.audioTracks
+        .where((t) => t.id == item.id)
+        .firstOrNull;
+    if (sound == null) return;
+    final live = scope.liveEqualizerNotifier;
+    final mainBloc = context.read<VideoEditorMainBloc>();
+
+    mainBloc.add(
+      VideoEditorAuditionStarted(start: item.startTime, end: item.endTime),
+    );
+    final result = await VideoEditorEqualizerSheet.show(
+      context: context,
+      initial: sound.equalizer,
+      onChanged: (settings) =>
+          live?.value = LiveEqualizer.track(sound.id, settings),
+    );
+    mainBloc.add(const VideoEditorAuditionEnded());
+
+    // Re-read the tracks after the async gap: another edit (an undo, a
+    // finished extraction) may have changed them while the sheet was open.
+    final tracks = editor.stateManager.audioTracks;
+    final current = tracks.where((t) => t.id == item.id).firstOrNull;
+    if (result == null ||
+        current == null ||
+        !context.mounted ||
+        result == current.equalizer) {
+      if (current != null) {
+        live?.value = LiveEqualizer.track(current.id, current.equalizer);
+      }
+      live?.value = null;
+      return;
+    }
+    editor.addHistory(
+      meta: {
+        ...editor.stateManager.activeMeta,
+        VideoEditorConstants.audioStateHistoryKey: tracks
+            .map((t) => t.id == item.id ? t.copyWith(equalizer: result) : t)
+            .map((e) => e.toJson())
+            .toList(),
+      },
+    );
+    live?.value = null;
   }
 
   Future<void> _changeVoice({required BuildContext context}) async {

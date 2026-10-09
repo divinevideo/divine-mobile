@@ -9923,6 +9923,63 @@ class AppLocalizationsRo extends AppLocalizations {
       'Vocea nu a putut fi schimbată. Încearcă din nou.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Schimbă bașii, mediile și înaltele clipului selectat';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Schimbă bașii, mediile și înaltele sunetului selectat';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Egalizator';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Voce clară';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mai mult bas';
+
+  @override
+  String get videoEditorEqualizerBright => 'Mai luminos';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Trage un punct în sus sau în jos';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Coboară $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Ridică $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Tranziție';
 
   @override

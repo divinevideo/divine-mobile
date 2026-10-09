@@ -1,3 +1,4 @@
+export 'src/audio_equalizer.dart';
 export 'src/audio_track.dart';
 export 'src/divine_video_player_controller.dart';
 export 'src/divine_video_player_widget.dart';

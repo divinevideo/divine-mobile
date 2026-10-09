@@ -9673,6 +9673,62 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تغيير الصوت. يُرجى المحاولة مرة أخرى.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'غيّر الجهير والترددات المتوسطة والحدة للمقطع المحدد';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'غيّر الجهير والترددات المتوسطة والحدة للصوت المحدد';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'معادل الصوت';
+
+  @override
+  String get videoEditorEqualizerVoice => 'صوت أوضح';
+
+  @override
+  String get videoEditorEqualizerBassy => 'جهير أكثر';
+
+  @override
+  String get videoEditorEqualizerBright => 'أكثر إشراقًا';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'اسحب نقطة لأعلى أو لأسفل';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'خفّض $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'ارفع $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'انتقال';
 
   @override

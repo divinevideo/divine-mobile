@@ -22,6 +22,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -34,6 +35,7 @@ import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -182,6 +184,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.duration != b.duration ||
           a.minTrimStart != b.minTrimStart ||
           a.volume != b.volume ||
+          a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
@@ -418,6 +421,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.trimStart != b.trimStart ||
           a.trimEnd != b.trimEnd ||
           a.volume != b.volume ||
+          a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.transition != b.transition ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
@@ -731,6 +735,66 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       _liveVolumeNotifier?.removeListener(_onLiveVolumeChanged);
       _liveVolumeNotifier = liveVolume?..addListener(_onLiveVolumeChanged);
     }
+    final liveEqualizer = scope.liveEqualizerNotifier;
+    if (!identical(liveEqualizer, _liveEqualizerNotifier)) {
+      _liveEqualizerNotifier?.removeListener(_onLiveEqualizerChanged);
+      _liveEqualizerNotifier = liveEqualizer
+        ?..addListener(_onLiveEqualizerChanged);
+    }
+  }
+
+  /// The equalizer being changed in the equalizer sheet; see
+  /// [_onLiveEqualizerChanged].
+  ValueNotifier<LiveEqualizer?>? _liveEqualizerNotifier;
+
+  /// The newest changed equalizer not yet handed to the player.
+  LiveEqualizer? _queuedLiveEqualizer;
+
+  bool _isApplyingLiveEqualizer = false;
+
+  /// Plays an equalizer while it is still being changed, without reloading
+  /// the clips or tracks: the editor only takes it on confirm, which reloads
+  /// them as usual.
+  ///
+  /// A slider moves faster than the player answers, so a call waits for the
+  /// one before it and only the newest equalizer is sent.
+  void _onLiveEqualizerChanged() {
+    final live = _liveEqualizerNotifier?.value;
+    if (live == null) return;
+    _queuedLiveEqualizer = live;
+    if (_isApplyingLiveEqualizer) return;
+    _runDetached(_drainLiveEqualizer(), 'apply live equalizer');
+  }
+
+  Future<void> _drainLiveEqualizer() async {
+    _isApplyingLiveEqualizer = true;
+    try {
+      for (
+        var live = _queuedLiveEqualizer;
+        live != null;
+        live = _queuedLiveEqualizer
+      ) {
+        _queuedLiveEqualizer = null;
+        await _applyLiveEqualizer(live);
+      }
+    } finally {
+      _isApplyingLiveEqualizer = false;
+    }
+  }
+
+  Future<void> _applyLiveEqualizer(LiveEqualizer live) async {
+    final player = _videoPlayer;
+    if (player == null || !_isPlayerInitialized || _isStopMotionComposition) {
+      return;
+    }
+    final equalizer = live.settings.toPlayerEqualizer();
+    if (live.clipId case final clipId?) {
+      final equalizers = _composition.clipEqualizersWith(clipId, equalizer);
+      if (equalizers != null) await player.setClipEqualizers(equalizers);
+      return;
+    }
+    final index = _loadedAudioTrackIds.indexOf(live.trackId!);
+    if (index >= 0) await player.setAudioTrackEqualizer(index, equalizer);
   }
 
   /// The volume being dragged in the timeline; see [_onLiveVolumeChanged].
@@ -874,6 +938,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // or writing to the disposed notifier below.
     _videoPlayer = null;
     _liveVolumeNotifier?.removeListener(_onLiveVolumeChanged);
+    _liveEqualizerNotifier?.removeListener(_onLiveEqualizerChanged);
     _isPlayerReadyNotifier.dispose();
     _composition.dispose();
     super.dispose();
@@ -1846,6 +1911,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             trackStart: sound.startOffset,
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
+            equalizer: sound.equalizer.toPlayerEqualizer(),
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -1859,6 +1925,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             trackStart: sound.startOffset,
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
+            equalizer: sound.equalizer.toPlayerEqualizer(),
           );
         } else {
           track = AudioTrack.network(
@@ -1872,6 +1939,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             trackStart: sound.startOffset,
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
+            equalizer: sound.equalizer.toPlayerEqualizer(),
           );
         }
         tracks.add(track);

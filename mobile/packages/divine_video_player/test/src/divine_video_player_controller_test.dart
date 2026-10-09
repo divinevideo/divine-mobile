@@ -517,6 +517,39 @@ void main() {
         );
       });
 
+      test(
+        'setClipEqualizers sends every equalizer, flat ones as null',
+        () async {
+          const bass = AudioEqualizer(
+            bands: [
+              AudioEqualizerBand(
+                type: AudioEqualizerBandType.lowShelf,
+                frequency: 200,
+                gain: 6,
+              ),
+            ],
+          );
+          await controller.setClipEqualizers([
+            bass,
+            null,
+            const AudioEqualizer(
+              bands: [
+                AudioEqualizerBand(
+                  type: AudioEqualizerBandType.peak,
+                  frequency: 1000,
+                ),
+              ],
+            ),
+          ]);
+
+          expect(playerCalls.last.method, equals('setClipEqualizers'));
+          expect(
+            playerCalls.last.arguments,
+            containsPair('equalizers', [bass.toMap(), null, null]),
+          );
+        },
+      );
+
       test('setVolume clamps and sends value', () async {
         await controller.setVolume(0.5);
 
@@ -825,6 +858,35 @@ void main() {
         expect(
           playerCalls.last.arguments,
           containsPair('volume', 0.7),
+        );
+      });
+
+      test('setAudioTrackEqualizer sends index and equalizer', () async {
+        const treble = AudioEqualizer(
+          bands: [
+            AudioEqualizerBand(
+              type: AudioEqualizerBandType.highShelf,
+              frequency: 3000,
+              gain: -4,
+            ),
+          ],
+        );
+        await controller.setAudioTrackEqualizer(2, treble);
+
+        expect(playerCalls.last.method, equals('setAudioTrackEqualizer'));
+        expect(playerCalls.last.arguments, containsPair('index', 2));
+        expect(
+          playerCalls.last.arguments,
+          containsPair('equalizer', treble.toMap()),
+        );
+      });
+
+      test('setAudioTrackEqualizer leaves out a flat equalizer', () async {
+        await controller.setAudioTrackEqualizer(0, const AudioEqualizer());
+
+        expect(
+          (playerCalls.last.arguments as Map).containsKey('equalizer'),
+          isFalse,
         );
       });
 

@@ -584,6 +584,40 @@ void main() {
       },
     );
 
+    testWidgets('offers the equalizer, highlighted once the clip has one', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [
+            clip(
+              'clip-1',
+            ).copyWith(
+              equalizer: const model.EqualizerSettings([
+                0,
+                0,
+                0,
+                4,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+              ]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(build());
+
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onEqualizer, isNotNull);
+      expect(controls.hasEqualizer, isTrue);
+    });
+
     testWidgets('Split stays mounted and is disabled while splitting the '
         'current clip', (tester) async {
       when(() => bloc.state).thenReturn(

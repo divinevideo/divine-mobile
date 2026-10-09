@@ -9484,6 +9484,62 @@ class AppLocalizationsAm extends AppLocalizations {
       'ድምፁን መቀየር አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'ለተመረጠው ቅንጥብ ባስ፣ መካከለኛና ትሬብል ይቀይሩ';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'ለተመረጠው ድምጽ ባስ፣ መካከለኛና ትሬብል ይቀይሩ';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'ኢኳላይዘር';
+
+  @override
+  String get videoEditorEqualizerVoice => 'ግልጽ ድምጽ';
+
+  @override
+  String get videoEditorEqualizerBassy => 'ብዙ ባስ';
+
+  @override
+  String get videoEditorEqualizerBright => 'ደማቅ';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'ነጥብ ወደ ላይ ወይም ወደ ታች ይጎትቱ';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency ዝቅ አድርግ';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency ከፍ አድርግ';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ሽግግር';
 
   @override

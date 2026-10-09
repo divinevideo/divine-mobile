@@ -376,6 +376,9 @@ internal class ClipAudioLoopTrack private constructor(
          * with the extractor's own HTTP stack otherwise. Local sources are
          * opened directly either way; there is nothing to cache for them.
          *
+         * [equalizer] is applied to the decoded PCM, since the track plays it
+         * outside the player's audio sink, where the clip's equalizer runs.
+         *
          * Returns null when there is nothing to play or anything goes wrong;
          * the caller then leaves the audio with ExoPlayer. Blocks on I/O and on
          * the decoder, so it must not run on the platform thread.
@@ -387,6 +390,7 @@ internal class ClipAudioLoopTrack private constructor(
             loopUs: Long,
             clipStartUs: Long = 0L,
             remoteSourceFactory: DataSource.Factory? = null,
+            equalizer: AudioEqualizer? = null,
         ): ClipAudioLoopTrack? {
             val extractor = MediaExtractor()
             var codec: MediaCodec? = null
@@ -510,6 +514,9 @@ internal class ClipAudioLoopTrack private constructor(
                 val samples = ShortArray(raw.size / 2)
                 ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
                     .asShortBuffer().get(samples)
+                // The whole decode in one pass, so the filters carry their
+                // history into the material the loop blends past its end.
+                EqualizerPcm.apply(samples, channels, sampleRate, equalizer)
 
                 val startUs = (firstPresentationUs ?: 0L) - clipStartUs
                 val prepared = LoopPcm.prepare(

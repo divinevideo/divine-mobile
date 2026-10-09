@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:divine_video_player/src/audio_equalizer.dart';
 import 'package:divine_video_player/src/audio_track.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/video_buffer_profile.dart';
@@ -574,6 +575,24 @@ class DivineVideoPlayerController {
     });
   }
 
+  /// Replaces the equalizers of the loaded clips without reloading them, one
+  /// entry per clip passed to [setClips]; `null` plays a clip unchanged.
+  ///
+  /// Cheap enough to follow an equalizer control while it is dragged; ignored
+  /// when [equalizers] does not have one entry per loaded clip. Native only,
+  /// and only on players created with [VideoBufferProfile.full].
+  Future<void> setClipEqualizers(List<AudioEqualizer?> equalizers) async {
+    _ensureInitialized();
+    if (_isWebBackend || _isLinuxBackend) return;
+    await _methodChannel.invokeMethod<void>('setClipEqualizers', {
+      // One entry per clip, so a clip without an equalizer is a null.
+      'equalizers': equalizers.map(_equalizerMap).toList(),
+    });
+  }
+
+  static Map<String, dynamic>? _equalizerMap(AudioEqualizer? equalizer) =>
+      equalizer == null || equalizer.isFlat ? null : equalizer.toMap();
+
   /// Sets the volume (0.0 silent, 1.0 full).
   Future<void> setVolume(double volume) async {
     _ensureInitialized();
@@ -668,6 +687,23 @@ class DivineVideoPlayerController {
     await _methodChannel.invokeMethod<void>('setAudioTrackVolume', {
       'index': index,
       'volume': volume < 0 ? 0.0 : volume,
+    });
+  }
+
+  /// Sets the equalizer of the overlay audio track at [index]; `null` plays it
+  /// unchanged. Heard without reloading the track.
+  ///
+  /// Has no effect if [index] is out of range. Native only.
+  Future<void> setAudioTrackEqualizer(
+    int index,
+    AudioEqualizer? equalizer,
+  ) async {
+    _ensureInitialized();
+    if (_isWebBackend || _isLinuxBackend) return;
+    await _methodChannel.invokeMethod<void>('setAudioTrackEqualizer', {
+      'index': index,
+      if (equalizer != null && !equalizer.isFlat)
+        'equalizer': equalizer.toMap(),
     });
   }
 

@@ -9720,6 +9720,63 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat menukar suara. Cuba lagi.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Tukar bes, pertengahan dan trebel klip yang dipilih';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Tukar bes, pertengahan dan trebel bunyi yang dipilih';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Suara jelas';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Lebih bes';
+
+  @override
+  String get videoEditorEqualizerBright => 'Lebih cerah';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Seret titik ke atas atau ke bawah';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Turunkan $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Naikkan $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Peralihan';
 
   @override

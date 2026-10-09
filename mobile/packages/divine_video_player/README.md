@@ -10,6 +10,7 @@ Seamless multi-clip video player using native platform APIs.
 - Preloading and buffering handled natively
 - Looping, clip jumping, and playback speed control
 - Multi-track audio overlays synced to the video timeline
+- An equalizer per clip and per overlay track (`AudioEqualizer`): shelf and peak bands, the same filters `pro_video_editor` exports with
 - Optional texture rendering for Flutter widget compositing (e.g. `ColorFiltered`)
 - Placeholder widget support to hide black frames before first frame renders
 - Native video caching
@@ -82,6 +83,36 @@ await controller.setAudioTracks([
 // Independent volume control
 await controller.setVolume(0.5);              // video audio
 await controller.setAudioTrackVolume(0, 0.8); // overlay track at index
+
+// Equalizer bands, applied in order and changeable while playing (players
+// created with VideoBufferProfile.full; Android, iOS and macOS). On iOS and
+// macOS an overlay track plays an equalized copy of its file, rendered once a
+// change has rested for 500 ms; a remote track is downloaded for it first.
+const warmer = AudioEqualizer(
+  bands: [
+    AudioEqualizerBand(
+      type: AudioEqualizerBandType.lowShelf,
+      frequency: 200,
+      gain: 4,
+    ),
+    AudioEqualizerBand(
+      type: AudioEqualizerBandType.peak,
+      frequency: 2500,
+      gain: -3,
+      q: 1.4,
+    ),
+    AudioEqualizerBand(
+      type: AudioEqualizerBandType.highShelf,
+      frequency: 8000,
+      gain: -2,
+    ),
+  ],
+);
+await controller.setClipEqualizers([
+  warmer, // first clip
+  null, // second clip unchanged
+]);
+await controller.setAudioTrackEqualizer(0, warmer);
 
 // Remove all overlay audio
 await controller.removeAllAudioTracks();

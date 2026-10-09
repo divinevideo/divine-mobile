@@ -9671,6 +9671,62 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không thể đổi giọng. Hãy thử lại.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Thay đổi âm trầm, âm trung và âm cao của clip đã chọn';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Thay đổi âm trầm, âm trung và âm cao của âm thanh đã chọn';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Bộ chỉnh âm';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Giọng rõ';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Trầm hơn';
+
+  @override
+  String get videoEditorEqualizerBright => 'Sáng hơn';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'Kéo một điểm lên hoặc xuống';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Giảm $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Tăng $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Chuyển cảnh';
 
   @override

@@ -9137,6 +9137,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorVoiceEffectFailed => '无法更改声音，请重试。';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel => '调整选中片段的低音、中音和高音';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel => '调整选中声音的低音、中音和高音';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => '均衡器';
+
+  @override
+  String get videoEditorEqualizerVoice => '人声清晰';
+
+  @override
+  String get videoEditorEqualizerBassy => '低音增强';
+
+  @override
+  String get videoEditorEqualizerBright => '明亮';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => '上下拖动一个点';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '降低 $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '提高 $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => '转场';
 
   @override

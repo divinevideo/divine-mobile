@@ -1,7 +1,8 @@
 // ABOUTME: Owns the preview player's composition: background seam and speed
 // ABOUTME: renders spliced into the clip list plus the matching position map.
 
-import 'package:divine_video_player/divine_video_player.dart' show VideoClip;
+import 'package:divine_video_player/divine_video_player.dart'
+    show AudioEqualizer, VideoClip;
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -278,6 +279,9 @@ class PreviewComposition {
       for (var i = 0; i < playerClips.length; i++)
         (clipId: owners[i], volume: playerClips[i].volume),
     ];
+    _builtClipEqualizers = [
+      for (final clip in playerClips) clip.equalizer,
+    ];
     _refreshSeamTimeline(clips);
     return playerClips;
   }
@@ -285,6 +289,9 @@ class PreviewComposition {
   /// Per clip of the last [buildPlayerClips]: the editor clip it plays, null
   /// for a seam, and its volume.
   List<({String? clipId, double volume})> _builtClipVolumes = const [];
+
+  /// Per clip of the last [buildPlayerClips], its equalizer; null for none.
+  List<AudioEqualizer?> _builtClipEqualizers = const [];
 
   /// The per-clip volumes of the last composition [buildPlayerClips] built,
   /// with every part of [clipId] at [volume] — what
@@ -299,6 +306,28 @@ class PreviewComposition {
     return [
       for (final c in _builtClipVolumes)
         if (c.clipId == clipId) volume else c.volume,
+    ];
+  }
+
+  /// The per-clip equalizers of the last composition [buildPlayerClips]
+  /// built, with every part of [clipId] at [equalizer] — what
+  /// `DivineVideoPlayerController.setClipEqualizers` takes to play an
+  /// equalizer that is still being changed. Null when that composition does
+  /// not play [clipId].
+  ///
+  /// A seam keeps the equalizer it was rendered with until the committed one
+  /// renders it again.
+  List<AudioEqualizer?>? clipEqualizersWith(
+    String clipId,
+    AudioEqualizer? equalizer,
+  ) {
+    if (!_builtClipVolumes.any((c) => c.clipId == clipId)) return null;
+    return [
+      for (var i = 0; i < _builtClipVolumes.length; i++)
+        if (_builtClipVolumes[i].clipId == clipId)
+          equalizer
+        else
+          _builtClipEqualizers[i],
     ];
   }
 

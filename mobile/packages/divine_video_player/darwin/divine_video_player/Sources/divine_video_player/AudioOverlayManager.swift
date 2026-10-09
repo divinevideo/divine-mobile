@@ -8,7 +8,9 @@ import AVFoundation
 ///
 /// A track's ``AudioOverlayFade`` is played by an `AVAudioMix` on its player
 /// item, whose volume ramps run in the item's own time: sample-exact, and
-/// untouched by seeks, rate changes and the 0.2 s position sync.
+/// untouched by seeks, rate changes and the 0.2 s position sync. Its
+/// ``AudioEqualizer`` is rendered into a copy of its sound that the player
+/// plays instead; see ``EqualizedAudioFile``.
 final class AudioOverlayManager {
 
     private let log = DivineVideoPlayerLog.shared
@@ -16,13 +18,32 @@ final class AudioOverlayManager {
     private let driftThreshold: Double = 0.25
     private let logName = "AudioOverlayManager"
 
+    /// Equalized copies of the tracks' sounds, by source and equalizer. Kept
+    /// while a track plays one, so tracks set again — the editor sets them
+    /// anew on every confirmed change — play theirs at once.
+    private var equalizedFiles: [EqualizedFileKey: URL] = [:]
+
+    /// Local copies of remote sources, for equalizing them again.
+    private var downloads: [URL: URL] = [:]
+
+    /// How long a changed equalizer has to stay put before it is rendered. A
+    /// slider passes through several values a second, and every swap to a
+    /// new copy is heard as a short gap; Android settles its looped clip
+    /// audio over the same 500 ms.
+    private let equalizerSettleSeconds = 0.5
+
+    /// Called when a track's sound was swapped while it should be playing,
+    /// so the owner can sync it to the picture again at once.
+    var onNeedsSync: (() -> Void)?
+
     /// Replaces all audio overlays with the given track definitions.
     func setTracks(from tracksRaw: [[String: Any]]) {
         log.info(
             "Replacing audio overlays with \(tracksRaw.count) track(s)",
             name: logName
         )
-        disposeAll()
+        disposePlayers()
+        defer { evictUnusedFiles() }
 
         for (index, map) in tracksRaw.enumerated() {
             guard let uri = map["uri"] as? String else {
@@ -51,19 +72,32 @@ final class AudioOverlayManager {
                 continue
             }
 
-            let overlay = AVPlayer(playerItem: AVPlayerItem(url: url))
+            let equalizer = AudioEqualizer.from(map["equalizer"])
+            let equalizedFile = equalizer.flatMap {
+                equalizedFiles[EqualizedFileKey(source: url, equalizer: $0)]
+            }
+            let overlay = AVPlayer(playerItem: AVPlayerItem(url: equalizedFile ?? url))
 
             let entry = AudioOverlayEntry(
                 player: overlay,
+                source: url,
                 videoStartSec: videoStartMs / 1000.0,
                 videoEndSec: videoEndMs.map { $0 / 1000.0 },
                 trackStartSec: trackStartMs / 1000.0,
                 trackEndSec: trackEndMs.map { $0 / 1000.0 },
                 trackIndex: index,
                 baseVolume: vol,
-                fade: AudioOverlayFade(map: map)
+                fade: AudioOverlayFade(map: map),
+                equalizer: equalizer
             )
             overlays.append(entry)
+            if equalizedFile != nil {
+                entry.playingEqualizer = equalizer
+            } else if equalizer != nil {
+                // Silent until its copy is ready, rather than heard unequalized.
+                entry.isAwaitingEqualizer = true
+                renderEqualizer(for: entry, after: 0)
+            }
             applyVolume(to: entry)
             attachMix(to: entry)
         }
@@ -87,6 +121,124 @@ final class AudioOverlayManager {
         entry.baseVolume = volume
         applyVolume(to: entry)
         if entry.boost != previousBoost { attachMix(to: entry) }
+    }
+
+    /// Sets the equalizer of the overlay at `index`; nil plays it unchanged.
+    ///
+    /// The track keeps playing what it played until the equalizer has stayed
+    /// put for ``equalizerSettleSeconds`` and its copy is rendered.
+    func setTrackEqualizer(at index: Int, equalizer: AudioEqualizer?) {
+        guard index >= 0, index < overlays.count else { return }
+        let entry = overlays[index]
+        guard entry.equalizer != equalizer else { return }
+        entry.equalizer = equalizer
+        renderEqualizer(for: entry, after: equalizerSettleSeconds)
+    }
+
+    /// Gives `entry` the sound its equalizer asks for, [delay] seconds from
+    /// now unless the equalizer changes again first: its own file, or an
+    /// equalized copy, rendered off the main thread when none is kept.
+    private func renderEqualizer(for entry: AudioOverlayEntry, after delay: Double) {
+        entry.equalizerGeneration += 1
+        let generation = entry.equalizerGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak entry] in
+            guard let self, let entry, generation == entry.equalizerGeneration else { return }
+            guard let equalizer = entry.equalizer else {
+                self.play(entry, file: entry.source, equalizer: nil)
+                return
+            }
+            let key = EqualizedFileKey(source: entry.source, equalizer: equalizer)
+            if let file = self.equalizedFiles[key] {
+                self.play(entry, file: file, equalizer: equalizer)
+                return
+            }
+            let source = entry.source
+            let download = self.downloads[source]
+            Task { @MainActor [weak self, weak entry] in
+                let rendered = await Task.detached(priority: .userInitiated) {
+                    () -> (local: URL?, file: URL?) in
+                    let local: URL?
+                    if let download {
+                        local = download
+                    } else {
+                        local = await EqualizedAudioFile.localCopy(of: source)
+                    }
+                    guard let local else { return (nil, nil) }
+                    return (local, await EqualizedAudioFile.render(source: local, equalizer: equalizer))
+                }.value
+                guard let self else {
+                    rendered.file.map { try? FileManager.default.removeItem(at: $0) }
+                    return
+                }
+                if !source.isFileURL, let local = rendered.local {
+                    if let kept = self.downloads[source], kept != local {
+                        try? FileManager.default.removeItem(at: local)
+                    } else {
+                        self.downloads[source] = local
+                    }
+                }
+                if let file = rendered.file { self.equalizedFiles[key] = file }
+                guard let entry, generation == entry.equalizerGeneration,
+                    self.overlays.contains(where: { $0 === entry })
+                else {
+                    self.evictUnusedFiles()
+                    return
+                }
+                guard let file = rendered.file else {
+                    self.log.warning(
+                        "Audio overlay track \(entry.trackIndex): could not equalize its sound, "
+                            + "playing it unchanged",
+                        name: self.logName
+                    )
+                    entry.isAwaitingEqualizer = false
+                    self.applyVolume(to: entry)
+                    return
+                }
+                self.play(entry, file: file, equalizer: equalizer)
+            }
+        }
+    }
+
+    /// Swaps `entry`'s sound for [file], which plays [equalizer], and has a
+    /// track that was playing synced to the picture again.
+    private func play(_ entry: AudioOverlayEntry, file: URL, equalizer: AudioEqualizer?) {
+        entry.isAwaitingEqualizer = false
+        guard entry.playingEqualizer != equalizer else {
+            applyVolume(to: entry)
+            return
+        }
+        let wasActive = entry.isActive
+        entry.player.pause()
+        entry.isActive = false
+        entry.player.replaceCurrentItem(with: AVPlayerItem(url: file))
+        entry.playingEqualizer = equalizer
+        entry.mixInputs = nil
+        applyVolume(to: entry)
+        attachMix(to: entry)
+        evictUnusedFiles()
+        log.info(
+            "Audio overlay track \(entry.trackIndex): plays "
+                + (equalizer == nil ? "its own sound" : "an equalized copy"),
+            name: logName
+        )
+        if wasActive { onNeedsSync?() }
+    }
+
+    /// Deletes the equalized copies and downloads no track plays any more.
+    private func evictUnusedFiles() {
+        let playing = Set(
+            overlays.compactMap { entry in
+                entry.playingEqualizer.map { EqualizedFileKey(source: entry.source, equalizer: $0) }
+            })
+        for (key, file) in equalizedFiles where !playing.contains(key) {
+            try? FileManager.default.removeItem(at: file)
+            equalizedFiles[key] = nil
+        }
+        let sources = Set(overlays.map(\.source))
+        for (source, file) in downloads where !sources.contains(source) {
+            try? FileManager.default.removeItem(at: file)
+            downloads[source] = nil
+        }
     }
 
     /// Resumes playback of currently active overlays at the given speed.
@@ -200,8 +352,14 @@ final class AudioOverlayManager {
         }
     }
 
-    /// Releases all overlay players and clears the list.
+    /// Releases all overlay players, clears the list and deletes the files
+    /// rendered or downloaded for them.
     func disposeAll() {
+        disposePlayers()
+        evictUnusedFiles()
+    }
+
+    private func disposePlayers() {
         guard !overlays.isEmpty else { return }
         log.debug("Disposing \(overlays.count) audio overlay(s)", name: logName)
         for entry in overlays {
@@ -213,10 +371,12 @@ final class AudioOverlayManager {
 
     /// Sets the player's own volume: the track's level up to 100 %, or
     /// silence while a fade in waits for its mix, so a start inside the fade
-    /// does not play its first moments at full level. The level above 100 %
-    /// is the mix's; see [attachMix].
+    /// does not play its first moments at full level, and while its first
+    /// equalized copy renders. The level above 100 % is the mix's; see
+    /// [attachMix].
     private func applyVolume(to entry: AudioOverlayEntry) {
-        let holdsSilent = entry.isAwaitingMix && entry.fade.fadeInSec > 0
+        let holdsSilent =
+            (entry.isAwaitingMix && entry.fade.fadeInSec > 0) || entry.isAwaitingEqualizer
         entry.player.volume = holdsSilent ? 0 : min(entry.baseVolume, 1)
     }
 
@@ -390,9 +550,17 @@ final class AudioOverlayManager {
     }
 }
 
+/// An equalized copy of a sound; see ``EqualizedAudioFile``.
+struct EqualizedFileKey: Hashable {
+    let source: URL
+    let equalizer: AudioEqualizer
+}
+
 /// Holds one audio overlay player and its scheduling metadata.
 final class AudioOverlayEntry {
     let player: AVPlayer
+    /// The track's own sound, which its player plays unless equalized.
+    let source: URL
     let videoStartSec: Double
     let videoEndSec: Double?
     let trackStartSec: Double
@@ -409,21 +577,34 @@ final class AudioOverlayEntry {
 
     /// The part of [baseVolume] above 100 %, as a gain; 1 when there is none.
     var boost: Float { max(baseVolume, 1) }
+    /// The equalizer the track is to play with.
+    var equalizer: AudioEqualizer?
+    /// The equalizer of the sound its player has now: nil for [source]
+    /// itself, otherwise an equalized copy.
+    var playingEqualizer: AudioEqualizer?
+    /// Whether the track waits, silent, for its first equalized copy.
+    var isAwaitingEqualizer = false
+    /// Bumped by every equalizer change, so a render still running belongs
+    /// to the latest.
+    var equalizerGeneration = 0
     var lastPlayerStatus: AVPlayer.Status?
     var lastItemStatus: AVPlayerItem.Status?
     var lastItemErrorDescription: String?
 
     init(
         player: AVPlayer,
+        source: URL,
         videoStartSec: Double,
         videoEndSec: Double?,
         trackStartSec: Double,
         trackEndSec: Double?,
         trackIndex: Int,
         baseVolume: Float = 1.0,
-        fade: AudioOverlayFade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0)
+        fade: AudioOverlayFade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0),
+        equalizer: AudioEqualizer? = nil
     ) {
         self.player = player
+        self.source = source
         self.videoStartSec = videoStartSec
         self.videoEndSec = videoEndSec
         self.trackStartSec = trackStartSec
@@ -431,5 +612,6 @@ final class AudioOverlayEntry {
         self.trackIndex = trackIndex
         self.baseVolume = baseVolume
         self.fade = fade
+        self.equalizer = equalizer
     }
 }

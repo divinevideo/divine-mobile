@@ -4,6 +4,7 @@
 
 import 'package:meta/meta.dart';
 import 'package:models/src/audio_reuse_policy.dart';
+import 'package:models/src/equalizer_settings.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 import 'package:models/src/sound_search_terms.dart';
 import 'package:models/src/video_event.dart';
@@ -88,6 +89,7 @@ class AudioEvent {
     this.fadeOutDuration = Duration.zero,
     this.voiceEffect = VoiceEffect.none,
     this.noiseReduction = false,
+    this.equalizer = EqualizerSettings.none,
     this.originalUrl,
     this.originalMimeType,
     this.allowsReuse = true,
@@ -351,6 +353,12 @@ class AudioEvent {
         _ => VoiceEffect.none,
       },
       noiseReduction: json['noiseReduction'] as bool? ?? false,
+      equalizer: switch (json['equalizer']) {
+        final Map<dynamic, dynamic> equalizer => EqualizerSettings.fromJson(
+          Map<String, dynamic>.from(equalizer),
+        ),
+        _ => EqualizerSettings.none,
+      },
       originalUrl: json['originalUrl'] as String?,
       originalMimeType: json['originalMimeType'] as String?,
       // Persisted events without a terms field predate the reuse policy.
@@ -721,6 +729,14 @@ class AudioEvent {
   /// Local-only editor state, never published to Nostr.
   final bool noiseReduction;
 
+  /// How the track is raised or lowered in each frequency band while it
+  /// plays.
+  ///
+  /// Applied live by the preview and the export rather than baked into [url],
+  /// so it combines with a [voiceEffect] without a new file. Local-only editor
+  /// state, never published to Nostr.
+  final EqualizerSettings equalizer;
+
   /// The sound as recorded, bundled or published, when [url] names a
   /// processed copy of it — one with [voiceEffect] or [noiseReduction]
   /// applied. `null` while the track plays that sound itself.
@@ -916,6 +932,7 @@ class AudioEvent {
     Duration? fadeOutDuration,
     VoiceEffect? voiceEffect,
     bool? noiseReduction,
+    EqualizerSettings? equalizer,
     String? originalUrl,
     bool clearOriginalUrl = false,
     String? originalMimeType,
@@ -957,6 +974,7 @@ class AudioEvent {
       fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
       voiceEffect: voiceEffect ?? this.voiceEffect,
       noiseReduction: noiseReduction ?? this.noiseReduction,
+      equalizer: equalizer ?? this.equalizer,
       originalUrl: clearOriginalUrl ? null : (originalUrl ?? this.originalUrl),
       originalMimeType: clearOriginalMimeType
           ? null
@@ -980,7 +998,8 @@ class AudioEvent {
         other.endTime == endTime &&
         other.anchorClipId == anchorClipId &&
         other.fadeInDuration == fadeInDuration &&
-        other.fadeOutDuration == fadeOutDuration;
+        other.fadeOutDuration == fadeOutDuration &&
+        other.equalizer == equalizer;
   }
 
   @override
@@ -992,6 +1011,7 @@ class AudioEvent {
     anchorClipId,
     fadeInDuration,
     fadeOutDuration,
+    equalizer,
   );
 
   @override
@@ -1042,6 +1062,7 @@ class AudioEvent {
       'fadeOutMs': fadeOutDuration.inMilliseconds,
     if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
     if (noiseReduction) 'noiseReduction': true,
+    if (!equalizer.isNone) 'equalizer': equalizer.toJson(),
     'originalUrl': ?originalUrl,
     'originalMimeType': ?originalMimeType,
   };

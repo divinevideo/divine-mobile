@@ -9826,6 +9826,63 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile cambiare la voce. Riprova.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Cambia bassi, medi e alti della clip selezionata';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Cambia bassi, medi e alti del suono selezionato';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizzatore';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Voce chiara';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Più bassi';
+
+  @override
+  String get videoEditorEqualizerBright => 'Più brillante';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Trascina un punto in alto o in basso';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Abbassa $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Alza $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transizione';
 
   @override

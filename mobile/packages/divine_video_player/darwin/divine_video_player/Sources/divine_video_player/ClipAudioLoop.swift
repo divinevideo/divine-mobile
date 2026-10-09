@@ -16,18 +16,56 @@ import Foundation
 /// The decode needs a local file — `AVAssetReader` refuses a remote asset —
 /// so a streamed clip keeps the player's own sound until
 /// [CachingAssetLoader] has written its download out.
+///
+/// The loop is also how an equalized clip timeline sounds in the preview: an
+/// audio mix can only equalize through a processing tap, and a tap per
+/// `AVPlayerLooper` item held the picture ~360 ms at every other join. A
+/// composition [Source] decodes the timeline's whole sound, and the
+/// [ClipAudioShaping] it carries applies each clip's volume and equalizer to
+/// it the way the export does. [reshape] applies new ones while it plays.
 final class ClipAudioLoop {
 
-    /// The stretch of a file one lap plays, and where it sits on the player
-    /// item's timeline.
+    /// The stretch of a file, or of a composition, one lap plays, and where
+    /// it sits on the player item's timeline.
     struct Source {
-        let url: URL
+        let url: URL?
+        /// A composition to decode instead of [url]: every audio track of
+        /// it, mixed, at the time pitch the player item plays it with.
+        let composition: AVAsset?
         /// Where the lap starts in the file.
         let fileStart: CMTime
         let duration: CMTime
         /// Where the lap starts on the item: [fileStart] for an item played
         /// straight from the file, zero for a composition cut from it.
         let itemStart: CMTime
+
+        init(url: URL, fileStart: CMTime, duration: CMTime, itemStart: CMTime) {
+            self.url = url
+            composition = nil
+            self.fileStart = fileStart
+            self.duration = duration
+            self.itemStart = itemStart
+        }
+
+        /// The whole of [composition], which is the item's own asset.
+        init(composition: AVAsset, duration: CMTime) {
+            url = nil
+            self.composition = composition
+            fileStart = .zero
+            self.duration = duration
+            itemStart = .zero
+        }
+    }
+
+    /// The decoded sound before any shaping, kept for [reshape].
+    private struct Raw {
+        let samples: [Float]
+        let channels: Int
+        let sampleRate: Double
+        let loopFrames: Int
+        let startFrame: Int
+        /// Where the first decoded sample sits on the item's timeline.
+        let itemSeconds: Double
     }
 
     private let engine = AVAudioEngine()
@@ -36,8 +74,14 @@ final class ClipAudioLoop {
     /// newly placed one fades in while the other fades out.
     private let nodes = [AVAudioPlayerNode(), AVAudioPlayerNode()]
     private var active = 0
-    private let buffer: AVAudioPCMBuffer
+    /// The newest prepared loop, which the next placement schedules.
+    private var buffer: AVAudioPCMBuffer
+    /// The loop each node was last started with, for its first lap's head.
+    private var nodeBuffers: [AVAudioPCMBuffer]
     private let loopFrames: AVAudioFrameCount
+    private let raw: Raw
+    private(set) var shaping: ClipAudioShaping
+    private var reshapeGeneration = 0
     private let sampleRate: Double
 
     /// Where each lap starts on the player item's timeline, in seconds.
@@ -75,11 +119,16 @@ final class ClipAudioLoop {
 
     private init(
         buffer: AVAudioPCMBuffer,
+        raw: Raw,
+        shaping: ClipAudioShaping,
         sampleRate: Double,
         itemStart: Double,
         seamDescription: String
     ) {
         self.buffer = buffer
+        nodeBuffers = [buffer, buffer]
+        self.raw = raw
+        self.shaping = shaping
         self.loopFrames = buffer.frameLength
         self.sampleRate = sampleRate
         self.itemStart = itemStart
@@ -116,30 +165,88 @@ final class ClipAudioLoop {
         }
     }
 
-    /// Decodes [source]'s audio and prepares it as a loop, or nil when there
-    /// is nothing to loop or anything fails — the caller then leaves the sound
-    /// with the player. Reads the whole file, so it must not run on the main
-    /// thread.
-    static func make(source: Source) async -> ClipAudioLoop? {
-        guard source.url.isFileURL, source.duration.isNumeric, source.duration.seconds > 0,
+    /// Decodes [source]'s audio and prepares it as a loop played with
+    /// [shaping], or nil when there is nothing to loop or anything fails — the
+    /// caller then leaves the sound with the player. Reads the whole file, so
+    /// it must not run on the main thread.
+    static func make(
+        source: Source,
+        shaping: ClipAudioShaping = ClipAudioShaping(segments: [])
+    ) async -> ClipAudioLoop? {
+        guard source.duration.isNumeric, source.duration.seconds > 0,
             source.fileStart.isNumeric, source.itemStart.isNumeric
         else { return nil }
-        guard let decoded = await decode(url: source.url) else { return nil }
+        let decoded: Decoded?
+        if let composition = source.composition {
+            decoded = await decode(composition: composition)
+        } else if let url = source.url, url.isFileURL {
+            decoded = await decode(url: url)
+        } else {
+            decoded = nil
+        }
+        guard let decoded else { return nil }
         let channels = decoded.channels
         let loopFrames = Int((source.duration.seconds * decoded.sampleRate).rounded())
         let startFrame = Int(
             ((decoded.firstTime.seconds - source.fileStart.seconds) * decoded.sampleRate).rounded()
         )
-        guard let prepared = LoopPcm.prepare(
+        let raw = Raw(
             samples: decoded.samples,
             channels: channels,
             sampleRate: decoded.sampleRate,
             loopFrames: loopFrames,
-            startFrame: startFrame
+            startFrame: startFrame,
+            itemSeconds: source.itemStart.seconds + Double(startFrame) / decoded.sampleRate
+        )
+        guard let (buffer, prepared) = prepareBuffer(raw: raw, shaping: shaping) else {
+            return nil
+        }
+        let lagMs = Int(Double(prepared.lapLagFrames) * 1000 / decoded.sampleRate)
+        let seam: String
+        if prepared.blendedFromPastTheLoop {
+            seam = "\(prepared.fadeFrames) frame crossfade with what follows the loop point"
+        } else if prepared.lapLagFrames > 0 {
+            seam = "\(prepared.fadeFrames) frame crossfade with the lap from \(lagMs) ms back"
+        } else {
+            seam = "\(prepared.fadeFrames) frame ramp"
+        }
+        let origin = source.composition != nil ? "the composition" : "the file"
+        return ClipAudioLoop(
+            buffer: buffer,
+            raw: raw,
+            shaping: shaping,
+            sampleRate: decoded.sampleRate,
+            itemStart: source.itemStart.seconds,
+            seamDescription: "\(prepared.loopFrames) frames at \(Int(decoded.sampleRate))Hz "
+                + "from \(Int(source.fileStart.seconds * 1_000_000)) us into \(origin), "
+                + "decoded from \(Int(decoded.firstTime.seconds * 1_000_000)) us, \(seam)"
+                + (shaping.shapes ? ", shaped per clip" : "")
+        )
+    }
+
+    /// [raw] with [shaping] applied, prepared as a loop buffer.
+    private static func prepareBuffer(
+        raw: Raw,
+        shaping: ClipAudioShaping
+    ) -> (AVAudioPCMBuffer, LoopPcm.Prepared)? {
+        var samples = raw.samples
+        shaping.apply(
+            to: &samples,
+            channels: raw.channels,
+            sampleRate: raw.sampleRate,
+            startSeconds: raw.itemSeconds
+        )
+        let channels = raw.channels
+        guard let prepared = LoopPcm.prepare(
+            samples: samples,
+            channels: channels,
+            sampleRate: raw.sampleRate,
+            loopFrames: raw.loopFrames,
+            startFrame: raw.startFrame
         ) else { return nil }
         guard
             let format = AVAudioFormat(
-                standardFormatWithSampleRate: decoded.sampleRate,
+                standardFormatWithSampleRate: raw.sampleRate,
                 channels: AVAudioChannelCount(channels)
             ),
             let buffer = AVAudioPCMBuffer(
@@ -154,23 +261,29 @@ final class ClipAudioLoop {
                 channelData[channel][frame] = prepared.samples[frame * channels + channel]
             }
         }
-        let lagMs = Int(Double(prepared.lapLagFrames) * 1000 / decoded.sampleRate)
-        let seam: String
-        if prepared.blendedFromPastTheLoop {
-            seam = "\(prepared.fadeFrames) frame crossfade with what follows the loop point"
-        } else if prepared.lapLagFrames > 0 {
-            seam = "\(prepared.fadeFrames) frame crossfade with the lap from \(lagMs) ms back"
-        } else {
-            seam = "\(prepared.fadeFrames) frame ramp"
+        return (buffer, prepared)
+    }
+
+    /// Plays the loop with [shaping] from now on: prepared off the main
+    /// thread, then placed on the other node against [item] so the two cross
+    /// over like any placement. A newer call supersedes one still preparing.
+    func reshape(_ shaping: ClipAudioShaping, alignedTo item: @escaping () -> AVPlayerItem?) {
+        guard shaping != self.shaping else { return }
+        self.shaping = shaping
+        reshapeGeneration += 1
+        let generation = reshapeGeneration
+        let raw = raw
+        let expectedFrames = loopFrames
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let (buffer, _) = Self.prepareBuffer(raw: raw, shaping: shaping),
+                buffer.frameLength == expectedFrames
+            else { return }
+            await MainActor.run { [weak self] in
+                guard let self, generation == self.reshapeGeneration else { return }
+                self.buffer = buffer
+                if self.isRunning, let item = item() { self.start(alignedTo: item) }
+            }
         }
-        return ClipAudioLoop(
-            buffer: buffer,
-            sampleRate: decoded.sampleRate,
-            itemStart: source.itemStart.seconds,
-            seamDescription: "\(prepared.loopFrames) frames at \(Int(decoded.sampleRate))Hz "
-                + "from \(Int(source.fileStart.seconds * 1_000_000)) us into the file, "
-                + "decoded from \(Int(decoded.firstTime.seconds * 1_000_000)) us, \(seam)"
-        )
     }
 
     /// Starts the loop in step with [item]'s picture.
@@ -219,6 +332,7 @@ final class ClipAudioLoop {
         startFrames[active] =
             ((frame % AVAudioFramePosition(loopFrames)) + AVAudioFramePosition(loopFrames))
             % AVAudioFramePosition(loopFrames)
+        nodeBuffers[active] = buffer
         if let head = tail(from: startFrame) {
             node.scheduleBuffer(head, at: nil, options: [])
         }
@@ -312,6 +426,7 @@ final class ClipAudioLoop {
     /// The loop from [frame] to its end, played once ahead of the repeating
     /// buffer so the first lap starts mid-loop.
     private func tail(from frame: AVAudioFramePosition) -> AVAudioPCMBuffer? {
+        let buffer = nodeBuffers[active]
         let remaining = AVAudioFrameCount(AVAudioFramePosition(loopFrames) - frame)
         guard frame > 0, remaining > 0,
             let head = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: remaining),
@@ -346,6 +461,65 @@ final class ClipAudioLoop {
         let channels: Int
         let sampleRate: Double
         let firstTime: CMTime
+    }
+
+    /// Every audio track of [composition], mixed as the player item plays
+    /// them, as interleaved floats from its start.
+    ///
+    /// Read at the rate and up to two of the channels of its first audio
+    /// track, and at the time pitch the item plays its retimed clips with.
+    private static func decode(composition: AVAsset) async -> Decoded? {
+        do {
+            let tracks = try await composition.loadTracks(withMediaType: .audio)
+            guard let first = tracks.first else { return nil }
+            var sampleRate = 44_100.0
+            var channels = 2
+            if let description = try await first.load(.formatDescriptions).first,
+                let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)
+            {
+                if basic.pointee.mSampleRate > 0 { sampleRate = basic.pointee.mSampleRate }
+                channels = min(max(Int(basic.pointee.mChannelsPerFrame), 1), 2)
+            }
+            let reader = try AVAssetReader(asset: composition)
+            let output = AVAssetReaderAudioMixOutput(audioTracks: tracks, audioSettings: [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: channels,
+                AVLinearPCMBitDepthKey: 32,
+                AVLinearPCMIsFloatKey: true,
+                AVLinearPCMIsNonInterleaved: false,
+                AVLinearPCMIsBigEndianKey: false,
+            ])
+            output.audioTimePitchAlgorithm = .timeDomain
+            output.alwaysCopiesSampleData = false
+            guard reader.canAdd(output) else { return nil }
+            reader.add(output)
+            guard reader.startReading() else { return nil }
+            var samples: [Float] = []
+            while let sampleBuffer = output.copyNextSampleBuffer() {
+                guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { continue }
+                let length = CMBlockBufferGetDataLength(block)
+                var chunk = [Float](repeating: 0, count: length / MemoryLayout<Float>.size)
+                chunk.withUnsafeMutableBytes { bytes in
+                    _ = CMBlockBufferCopyDataBytes(
+                        block,
+                        atOffset: 0,
+                        dataLength: length,
+                        destination: bytes.baseAddress!
+                    )
+                }
+                samples.append(contentsOf: chunk)
+            }
+            guard reader.status == .completed, !samples.isEmpty else { return nil }
+            return Decoded(
+                samples: samples,
+                channels: channels,
+                sampleRate: sampleRate,
+                firstTime: .zero
+            )
+        } catch {
+            return nil
+        }
     }
 
     /// The audio track of [url] as interleaved floats, with where its first
