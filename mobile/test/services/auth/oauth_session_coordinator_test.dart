@@ -49,7 +49,10 @@ void main() {
           currentPubkeyFallback: () => pubkeyFallback,
           hasExpiredSession: () => hasExpired,
           currentRpcSigner: () => currentSigner,
-          onRefreshRejected: () => rejections++,
+          onRefreshRejected: () {
+            rejections++;
+            hasExpired = true;
+          },
         );
 
     group('refreshSession', () {
@@ -414,6 +417,9 @@ void main() {
     });
 
     group('refreshAccessToken', () {
+      // A live session: the rejection below is what expires it.
+      setUp(() => hasExpired = false);
+
       void stubRefresh(Future<KeycastSession?> Function() answer) => when(
         () => oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
       ).thenAnswer((_) => answer());
@@ -492,7 +498,7 @@ void main() {
         expect(rejections, isZero);
       });
 
-      test('reports a rejection to each caller that joined the in-flight '
+      test('marks the session once for callers that joined the in-flight '
           'refresh', () async {
         final gate = Completer<KeycastSession?>();
         stubRefresh(() => gate.future);
@@ -507,7 +513,15 @@ void main() {
           () =>
               oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
         ).called(1);
-        expect(rejections, equals(2));
+        expect(rejections, equals(1));
+      });
+
+      test('does not mark a session that is already expired', () async {
+        hasExpired = true;
+        stubRefresh(() async => null);
+
+        expect(await build().refreshAccessToken(), isNull);
+        expect(rejections, isZero);
       });
 
       group('rejection log', () {
@@ -534,18 +548,40 @@ void main() {
           gate.complete(null);
           await Future.wait(callers);
 
-          expect(rejections, equals(3));
+          expect(rejections, equals(1));
           expect(linesContaining(markedLine), equals(1));
           expect(linesContaining(staleLine), isZero);
         });
 
-        test('logs a later rejected refresh again', () async {
+        test('logs one line for serial refused refreshes while the session '
+            'stays expired', () async {
+          // Once the refresh token is gone each 401 starts its own refresh,
+          // which fails at once: #9943's device log had dozens a minute.
+          stubRefresh(() async => null);
+          final coordinator = build();
+
+          for (var i = 0; i < 3; i++) {
+            expect(await coordinator.refreshAccessToken(), isNull);
+          }
+
+          verify(
+            () => oauthClient.refreshSession(
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).called(3);
+          expect(rejections, equals(1));
+          expect(linesContaining(markedLine), equals(1));
+        });
+
+        test('warns again once a sign-in has cleared the flag', () async {
           stubRefresh(() async => null);
           final coordinator = build();
 
           await coordinator.refreshAccessToken();
+          hasExpired = false;
           await coordinator.refreshAccessToken();
 
+          expect(rejections, equals(2));
           expect(linesContaining(markedLine), equals(2));
         });
 

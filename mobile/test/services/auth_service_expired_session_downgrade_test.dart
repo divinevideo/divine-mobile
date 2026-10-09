@@ -20,6 +20,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/shared_channel_override.dart';
 
@@ -1780,6 +1781,44 @@ void main() {
           expect(notified, equals([true]));
         },
       );
+
+      test('a sign-in clears the flag, and a later refusal raises it and '
+          'warns again', () async {
+        final (authService, session) = await arrangeKeycastOnlyAccount();
+        final expired = authService.expiredOAuthSessionListenable;
+        final notified = <bool>[];
+        void record() => notified.add(expired.value);
+        expired.addListener(record);
+        addTearDown(() => expired.removeListener(record));
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        int warnings() => logs
+            .getRecentLogs()
+            .where((e) => e.message.contains('marking the OAuth session'))
+            .length;
+
+        expect(await signNote(authService), isNull);
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+        expect(warnings(), equals(1));
+
+        // Keycast revokes the new session too, so its signer also gets 401s.
+        await http.runWithClient(
+          () => runIgnoringMockedHttpErrors(
+            () => authService.signInWithDivineOAuth(
+              session.copyWith(accessToken: 'second_token'),
+            ),
+          ),
+          revokedTokenKeycast,
+        );
+        expect(authService.hasExpiredOAuthSession, isFalse);
+
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+
+        expect(notified, equals([true, false, true]));
+        expect(warnings(), equals(2));
+      });
 
       test('an unreachable Keycast leaves the session alone', () async {
         final (authService, _) = await arrangeKeycastOnlyAccount();

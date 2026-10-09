@@ -58,11 +58,10 @@ class OAuthSessionCoordinator {
   Future<bool>? _pendingRefresh;
   Future<_RefreshOutcome>? _pendingOAuthRefresh;
 
-  /// The last shared refresh whose rejection [refreshAccessToken] logged, and
-  /// whether it marked the session. Every 401 that joined that refresh gets the
-  /// same outcome, so this keeps the log to one line per decision, not one per
-  /// caller.
-  ({Future<_RefreshOutcome> refresh, bool marked})? _loggedRejection;
+  /// The last shared refresh whose stale rejection [refreshAccessToken]
+  /// logged. Every 401 that joined it gets the same outcome, so this keeps the
+  /// log to one line per refresh rather than one per caller.
+  Future<_RefreshOutcome>? _loggedStaleRefresh;
 
   /// Runs [attempt] under an outer single-flight, bounded by
   /// [expiredSessionRefreshTimeout], to silently refresh an expired OAuth
@@ -350,6 +349,11 @@ class OAuthSessionCoordinator {
   /// signer and every sign-in builds a new one, so a stale result never marks
   /// the next session, even for the same account. An unreachable Keycast never
   /// counts: the refresh token survives that for a later retry.
+  ///
+  /// Only the rejection that flips the session from live to expired runs
+  /// `onRefreshRejected` and logs a warning. Once the refresh token is gone,
+  /// every later 401 starts a new refresh that fails within a millisecond, so
+  /// anything per refresh would log once per failed RPC.
   Future<String?> refreshAccessToken() async {
     final signerAtStart = _currentRpcSigner();
     final refresh = _pendingOAuthRefresh ?? _startRefresh();
@@ -359,35 +363,30 @@ class OAuthSessionCoordinator {
     } on OAuthNetworkException {
       return null;
     }
-    if (outcome.rejected) {
-      final marked =
-          signerAtStart != null &&
-          identical(signerAtStart, _currentRpcSigner());
-      _logRejection(refresh, marked: marked);
-      if (marked) _onRefreshRejected();
-    }
-    return outcome.session?.accessToken;
-  }
+    if (!outcome.rejected) return outcome.session?.accessToken;
 
-  void _logRejection(Future<_RefreshOutcome> refresh, {required bool marked}) {
-    final decision = (refresh: refresh, marked: marked);
-    if (_loggedRejection == decision) return;
-    _loggedRejection = decision;
-    if (marked) {
+    final signerStillLive =
+        signerAtStart != null && identical(signerAtStart, _currentRpcSigner());
+    if (!signerStillLive) {
+      if (!identical(_loggedStaleRefresh, refresh)) {
+        _loggedStaleRefresh = refresh;
+        Log.info(
+          'refreshAccessToken: refresh rejected for a signer that is no '
+          'longer live — ignoring (stale, e.g. signed out mid-refresh)',
+          name: 'OAuthSessionCoordinator',
+          category: LogCategory.auth,
+        );
+      }
+    } else if (!_hasExpiredSession()) {
       Log.warning(
         'refreshAccessToken: refresh rejected — marking the OAuth session '
         'expired so the user is asked to sign in again',
         name: 'OAuthSessionCoordinator',
         category: LogCategory.auth,
       );
-    } else {
-      Log.info(
-        'refreshAccessToken: refresh rejected for a signer that is no longer '
-        'live — ignoring (stale, e.g. signed out mid-refresh)',
-        name: 'OAuthSessionCoordinator',
-        category: LogCategory.auth,
-      );
+      _onRefreshRejected();
     }
+    return null;
   }
 
   /// Returns an access token only when the stored OAuth session belongs to
