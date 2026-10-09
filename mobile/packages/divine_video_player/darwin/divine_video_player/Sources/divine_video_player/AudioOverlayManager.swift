@@ -26,6 +26,12 @@ final class AudioOverlayManager {
     /// Local copies of remote sources, for equalizing them again.
     private var downloads: [URL: URL] = [:]
 
+    /// Renders still running, by the copy they make. A track set again while
+    /// its copy renders — the editor sets every track anew once an equalizer
+    /// is confirmed, often within a second of the last change — waits for
+    /// that render instead of starting its own.
+    private var renders: [EqualizedFileKey: Task<URL?, Never>] = [:]
+
     /// How long a changed equalizer has to stay put before it is rendered. A
     /// slider passes through several values a second, and every swap to a
     /// new copy is heard as a short gap; Android settles its looped clip
@@ -152,42 +158,21 @@ final class AudioOverlayManager {
                 self.play(entry, file: file, equalizer: equalizer)
                 return
             }
-            let source = entry.source
-            let download = self.downloads[source]
+            let render = self.render(key)
             Task { @MainActor [weak self, weak entry] in
-                let rendered = await Task.detached(priority: .userInitiated) {
-                    () -> (local: URL?, file: URL?) in
-                    let local: URL?
-                    if let download {
-                        local = download
-                    } else {
-                        local = await EqualizedAudioFile.localCopy(of: source)
-                    }
-                    guard let local else { return (nil, nil) }
-                    return (local, await EqualizedAudioFile.render(source: local, equalizer: equalizer))
-                }.value
-                guard let self else {
-                    rendered.file.map { try? FileManager.default.removeItem(at: $0) }
-                    return
-                }
-                if !source.isFileURL, let local = rendered.local {
-                    if let kept = self.downloads[source], kept != local {
-                        try? FileManager.default.removeItem(at: local)
-                    } else {
-                        self.downloads[source] = local
-                    }
-                }
-                if let file = rendered.file { self.equalizedFiles[key] = file }
+                let file = await render.value
+                guard let self else { return }
                 guard let entry, generation == entry.equalizerGeneration,
                     self.overlays.contains(where: { $0 === entry })
                 else {
                     self.evictUnusedFiles()
                     return
                 }
-                guard let file = rendered.file else {
+                guard let file else {
                     self.log.warning(
                         "Audio overlay track \(entry.trackIndex): could not equalize its sound, "
-                            + "playing it unchanged",
+                            + (entry.isAwaitingEqualizer
+                                ? "playing it unchanged" : "keeping the sound it plays"),
                         name: self.logName
                     )
                     entry.isAwaitingEqualizer = false
@@ -197,6 +182,59 @@ final class AudioOverlayManager {
                 self.play(entry, file: file, equalizer: equalizer)
             }
         }
+    }
+
+    /// The render making the copy [key] names: the one still running, or a
+    /// new one off the main thread, which downloads a remote sound first
+    /// unless a download is kept. Its file is kept in [equalizedFiles].
+    private func render(_ key: EqualizedFileKey) -> Task<URL?, Never> {
+        if let running = renders[key] {
+            log.info(
+                "Audio overlay: waiting for the equalized copy of "
+                    + "\(key.source.lastPathComponent) already rendering",
+                name: logName
+            )
+            return running
+        }
+        log.info(
+            "Audio overlay: rendering an equalized copy of \(key.source.lastPathComponent)",
+            name: logName
+        )
+        let source = key.source
+        let equalizer = key.equalizer
+        let download = downloads[source]
+        let render = Task { @MainActor [weak self] () -> URL? in
+            let rendered = await Task.detached(priority: .userInitiated) {
+                () -> (local: URL?, file: URL?) in
+                let local: URL?
+                if let download {
+                    local = download
+                } else {
+                    local = await EqualizedAudioFile.localCopy(of: source)
+                }
+                guard let local else { return (nil, nil) }
+                return (local, await EqualizedAudioFile.render(source: local, equalizer: equalizer))
+            }.value
+            guard let self else {
+                rendered.file.map { try? FileManager.default.removeItem(at: $0) }
+                if !source.isFileURL {
+                    rendered.local.map { try? FileManager.default.removeItem(at: $0) }
+                }
+                return nil
+            }
+            self.renders[key] = nil
+            if !source.isFileURL, let local = rendered.local {
+                if let kept = self.downloads[source], kept != local {
+                    try? FileManager.default.removeItem(at: local)
+                } else {
+                    self.downloads[source] = local
+                }
+            }
+            if let file = rendered.file { self.equalizedFiles[key] = file }
+            return rendered.file
+        }
+        renders[key] = render
+        return render
     }
 
     /// Swaps `entry`'s sound for [file], which plays [equalizer], and has a
@@ -224,13 +262,16 @@ final class AudioOverlayManager {
         if wasActive { onNeedsSync?() }
     }
 
-    /// Deletes the equalized copies and downloads no track plays any more.
+    /// Deletes the equalized copies and downloads no track plays or waits
+    /// for any more.
     private func evictUnusedFiles() {
-        let playing = Set(
-            overlays.compactMap { entry in
-                entry.playingEqualizer.map { EqualizedFileKey(source: entry.source, equalizer: $0) }
+        let used = Set(
+            overlays.flatMap { entry in
+                [entry.playingEqualizer, entry.equalizer].compactMap { equalizer in
+                    equalizer.map { EqualizedFileKey(source: entry.source, equalizer: $0) }
+                }
             })
-        for (key, file) in equalizedFiles where !playing.contains(key) {
+        for (key, file) in equalizedFiles where !used.contains(key) {
             try? FileManager.default.removeItem(at: file)
             equalizedFiles[key] = nil
         }
