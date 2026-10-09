@@ -523,27 +523,6 @@ class ContentReportingService implements ReportChannelDriver {
     );
   }
 
-  /// Quick report for common violations.
-  ///
-  /// Same contract as [reportContent]: failures come back as a returned
-  /// value, so the result must be read.
-  @useResult
-  Future<ReportResult> quickReport({
-    required String eventId,
-    required String authorPubkey,
-    required ContentFilterReason reason,
-  }) async {
-    final details = _getQuickReportDetails(reason);
-
-    return reportContent(
-      eventId: eventId,
-      authorPubkey: authorPubkey,
-      reason: reason,
-      details: details,
-      hashtags: ['quick-report'],
-    );
-  }
-
   /// Check if content has been reported before
   bool hasBeenReported(String eventId) =>
       _reportHistory.any((report) => report.eventId == eventId);
@@ -1019,34 +998,6 @@ class ContentReportingService implements ReportChannelDriver {
         );
       case ReportChannel.moderation:
         return await deliverModerationDm?.call(report) ?? false;
-    }
-  }
-
-  /// Get quick report details for common violations
-  String _getQuickReportDetails(ContentFilterReason reason) {
-    switch (reason) {
-      case ContentFilterReason.spam:
-        return 'This content appears to be spam or unwanted promotional material.';
-      case ContentFilterReason.harassment:
-        return 'This content contains harassment, profanity, or abusive behavior.';
-      case ContentFilterReason.violence:
-        return 'This content contains violent or extremist material.';
-      case ContentFilterReason.sexualContent:
-        return 'This content contains nudity, pornography, or sexual material.';
-      case ContentFilterReason.copyright:
-        return 'This content appears to violate copyright.';
-      case ContentFilterReason.falseInformation:
-        return 'This content contains misinformation or false claims.';
-      case ContentFilterReason.childSafety:
-        return 'This content raises child safety concerns.';
-      case ContentFilterReason.csam:
-        return 'This content depicts child sexual abuse.';
-      case ContentFilterReason.underageUser:
-        return 'This account holder appears to be under 16 years old.';
-      case ContentFilterReason.aiGenerated:
-        return 'This content appears to be deceptive AI-generated media.';
-      case ContentFilterReason.other:
-        return 'This content violates community guidelines.';
     }
   }
 
