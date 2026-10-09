@@ -90,12 +90,12 @@ role uses the shared support identity.
 
 | Behaviour | Where |
 |---|---|
-| Recognised as moderation — official display name and inbox search name | `dm_peer_identity.dart`, `moderation_identity.dart`, and `dm_peer_name.dart`, via `isModerationAccount` |
-| Recognised as moderation — bundled wordmark avatar | `conversation_tile.dart`, `request_tile.dart`, `request_preview_view.dart`, `empty_conversation.dart` |
+| Official name ("Divine Moderation"), inbox search name and bundled wordmark avatar — kept for a retired key nobody can sign as (`unrecovered`, `destroyed`) | `dm_peer_identity.dart` (`dmPeerDisplayName`, `dmPeerAvatar`) and `dm_peer_name.dart`, reached from the inbox row, request row and preview, thread header, empty-conversation state, following strip, reactions sheet and the recipient pickers; resolved by `moderationPresentationOf` |
+| Neutral "Former moderation account" name and the default placeholder avatar — withdrawn official name and wordmark, and the key's own kind-0 name and picture are ignored too — for a retired key someone could still sign as (`archived`, `compromised`) | the same helpers, through `ModerationPresentation.former` |
 | Conversation and request rows labelled closed | `conversation_tile.dart` and `request_tile.dart`, via `isRetiredModerationAccount` |
 | Composer closed; banner routes replies to the current support key | `conversation_view.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
 | Pinned support row, unread partition, and retired predicates wired into list state | `inbox_page.dart`, `message_requests_page.dart`, `app_shell_badge_scope.dart`, and `ConversationListBloc` |
-| Destructive request action withheld for moderation threads | `request_preview_view.dart`, via `isModerationAccount` |
+| Destructive request action withheld for moderation threads, whatever the custody | `request_preview_view.dart`, via `isModerationAccount` |
 | Outbound sends refused and retained as non-retryable evidence | `dmSendPolicyProvider` → `DmSendPolicyDecision.terminallyBlockedRetain` |
 | Pre-rotation threads excluded from pinned-support adoption | `DmRepository.extractPinnedSupport` |
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
@@ -104,22 +104,26 @@ role uses the shared support identity.
 | Report recipient read at filing time from the label service, not captured once when the reporting provider was built — covers a stale cached key NIP-05 corrects moments later | `ContentReportingService.currentModerationPubkey` → `ModerationLabelService.divineModerationPubkeyHex`, wired in `social_providers.dart` |
 | A report queued before an update, whose stored recipient this build lists as retired, sends its moderation DM to the pinned key instead, logged once per report | `_moderationDmRecipient` in `social_providers.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
 
-`isModerationAccount` answers *"is this the moderation team"* and is true for
-retired keys on purpose, so old threads still read correctly.
+`isModerationAccount` answers *"is this the moderation team's thread"* and is
+true for every retired key whatever its custody: it is the **safety**
+predicate (the request-removal policy and the withheld decline action), so
+those protections never depend on who might hold a key.
 `isRetiredModerationAccount` answers *"is this a key we can still talk to"*.
-Anything picking a **send target** must use `kModerationPubkeyHex` and neither
-predicate.
+Neither chooses a name or an avatar. **Presentation** follows recorded custody
+through `moderationPresentationOf`, which the UI reads from
+`moderationPresentationProvider`; tests supply every custody state by
+overriding `retiredModerationKeysProvider`. Anything picking a **send target**
+must use `kModerationPubkeyHex` and none of these.
 
-Recognition is keyed on the pubkey alone: it does not consider when a message
-arrived relative to the rotation. The repository layer is nevertheless
-retired-key-aware at the two delivery seams that matter: the injected
-`DmSendPolicy` blocks every outbound publisher at the lowest send primitive,
-and pinned-support extraction avoids adopting a pre-rotation thread whose
-participants would route replies to the retired key. Whether a *newly
-discovered* event from a retired key should keep Divine's official name and
-wordmark is a separate recognition decision, tracked in
-`divinevideo/support-trust-safety#211`. The retirement and custody protocol it
-depends on was open at `divinevideo/support-trust-safety#199`, closed by
+Presentation is keyed on the pubkey and its recorded custody: it does not
+consider when a message arrived relative to the rotation. Custody is compiled
+into the app, so a change reaches a user only with the build that lists it.
+The repository layer is also retired-key-aware at the two delivery seams that
+matter: the injected `DmSendPolicy` blocks every outbound publisher at the
+lowest send primitive, and pinned-support extraction avoids adopting a
+pre-rotation thread whose participants would route replies to the retired
+key. The retirement and custody protocol this depends on was open at
+`divinevideo/support-trust-safety#199`, closed by
 `divinevideo/support-trust-safety#253`, which wrote the procedure down.
 
 ## Rotating the moderation key
@@ -169,7 +173,10 @@ The client half is small and belongs in one PR:
    what was already sent to it, so standing up a reader against that backlog
    is possible and whether to do so is a real decision; the composer stays
    closed either way, because outbound sends are refused for every retired
-   key regardless of custody.
+   key regardless of custody. Custody also decides branding: for `archived`
+   and `compromised` the app withdraws Divine's name and wordmark from the old
+   key's threads, which read as a "Former moderation account"; for
+   `unrecovered` and `destroyed` they keep it (#9963).
 6. Note that a rotation forks `conversation_id` on the service side, so the
    outgoing key's rows become a disjoint set that the admin UI's pubkey lookup
    can no longer reach. `divinevideo/divine-mobile#7850` is closed, but the
@@ -259,21 +266,21 @@ remaining private material lives, how a retired identity is proved
 unreactivatable, and how a replacement is announced. That protocol is now
 written down, and what the fix for `divinevideo/divine-mobile#7851`
 delivers against it is listed in [Open items](#open-items).
-This custody result does not settle whether newly discovered events from this
-retired key should retain official Divine branding;
-`divinevideo/support-trust-safety#211` owns that decision.
+Custody also decides how the app presents a retired key; see
+[What the client does with a retired key](#what-the-client-does-with-a-retired-key).
 
 ## Open items
 
-- `divinevideo/support-trust-safety#211` — decide whether newly discovered
-  events signed by a retired moderation key should retain Divine's official
-  name and wordmark. Custody is settled for the current register entry, but
-  that inbound recognition decision remains open.
 - `divinevideo/divine-mobile#8253` — resolve the moderation identity through
   NIP-05 rather than a shipped pubkey, and reconcile Funnelcake's trusted
   labeler with the user-facing support identity.
 
 Settled, kept here because the register used to cite these as open:
+
+- `divinevideo/support-trust-safety#211` — whether a retired key keeps
+  Divine's official name and wordmark. Decided: branding follows recorded
+  custody. Kept for `unrecovered` and `destroyed`, withdrawn for `archived`
+  and `compromised`. Implemented by `divinevideo/divine-mobile#9963`.
 
 - `divinevideo/support-trust-safety#199` — the retirement protocol: what makes
   a key retired, how access is revoked, where remaining private material is
