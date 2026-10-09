@@ -982,6 +982,11 @@ class NostrClient {
   /// ended rather than only whether it ran out of time, or [readAllEvents] to
   /// walk every event a filter matches across many pages instead of one
   /// capped read.
+  ///
+  /// A read that asks only temp relays ([relayTypes] of just
+  /// [RelayType.temp]), none of them a pool member, skips the query pool: it
+  /// neither waits for a slot nor holds one, so a caller fanning such reads
+  /// out bounds its own concurrency.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsDetailed(
     List<Filter> filters, {
@@ -1999,10 +2004,12 @@ class NostrClient {
   /// the pooled socket (see [_hasRelayOutsidePool]), so naming one keeps the
   /// whole read in the pool.
   ///
-  /// The only reads this frees today are DmRepository's per-recipient inbox
-  /// legs, each a single REQ to at most a handful of relays. A caller that
-  /// fans many temp-only reads out to the same outside relay gets no throttle
-  /// from here and must bound its own concurrency.
+  /// The only reads this frees today are DmRepository's kind-10050 legs, one
+  /// REQ per relay per recipient. A group send resolves every member at
+  /// once, so the indexer now takes one REQ per member together where the
+  /// pool used to admit six at a time. Any caller that fans temp-only reads
+  /// out to one outside relay gets no throttle from here and must bound its
+  /// own concurrency.
   bool _asksOnlyRelaysOutsidePool(
     List<String>? tempRelays,
     List<int> relayTypes,
