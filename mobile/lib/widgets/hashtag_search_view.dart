@@ -14,6 +14,8 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/search_results/widgets/search_tag_chip.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Displays hashtag search results from HashtagSearchBloc.
 ///
@@ -169,8 +171,12 @@ class _HashtagSearchResultsListState extends State<_HashtagSearchResultsList>
               for (final tag in widget.results)
                 SearchTagChip(
                   tag: tag,
-                  onTap: () =>
-                      context.push(HashtagScreenRouter.pathForTag(tag)),
+                  onTap: () => runDetached(
+                    context.push<void>(HashtagScreenRouter.pathForTag(tag)),
+                    'open hashtag feed',
+                    logName: 'HashtagSearchView',
+                    category: LogCategory.ui,
+                  ),
                 ),
             ],
           ),

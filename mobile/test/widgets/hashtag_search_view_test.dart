@@ -1,6 +1,6 @@
 // ABOUTME: Tests for HashtagSearchView widget
 // ABOUTME: Validates UI states for initial, loading, success, failure, and
-// ABOUTME: empty results
+// ABOUTME: empty results, plus tapping a tag to open its hashtag feed
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,9 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/search_results/widgets/search_tag_chip.dart';
 import 'package:openvine/widgets/hashtag_search_view.dart';
+import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockHashtagSearchBloc
@@ -216,6 +219,74 @@ void main() {
 
         // Verify success UI rendered (listener did not interfere)
         expect(find.byType(SearchTagChip), findsNWidgets(2));
+      });
+    });
+
+    group('navigation', () {
+      void stubSuccessWithMusicTag() {
+        when(() => mockBloc.state).thenReturn(
+          const HashtagSearchState(
+            status: HashtagSearchStatus.success,
+            query: 'music',
+            results: ['music'],
+          ),
+        );
+      }
+
+      testWidgets('tapping a tag pushes its hashtag feed route', (
+        tester,
+      ) async {
+        stubSuccessWithMusicTag();
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.value());
+
+        await tester.pumpWidget(
+          MockGoRouterProvider(goRouter: router, child: createTestWidget()),
+        );
+        await tester.pump();
+        await tester.tap(find.text('music'));
+        await tester.pump();
+
+        verify(
+          () => router.push<void>(HashtagScreenRouter.pathForTag('music')),
+        ).called(1);
+      });
+
+      testWidgets('logs a rejected hashtag route push instead of leaking it', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        stubSuccessWithMusicTag();
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+
+        await tester.pumpWidget(
+          MockGoRouterProvider(goRouter: router, child: createTestWidget()),
+        );
+        await tester.pump();
+        await tester.tap(find.text('music'));
+        await tester.pump();
+
+        final failures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'HashtagSearchView' &&
+                  entry.level == LogLevel.error,
+            )
+            .toList();
+        expect(failures, hasLength(1));
+        expect(failures.single.category, equals(LogCategory.ui));
+        expect(
+          failures.single.message,
+          equals('Failed to open hashtag feed: Exception: route failed'),
+        );
       });
     });
   });
