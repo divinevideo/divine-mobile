@@ -1,6 +1,6 @@
 // ABOUTME: Feed-scoped state for immersive video viewing. Chrome hides either
 // ABOUTME: transiently (hold-to-peek, restored on release) or persistently
-// ABOUTME: (a pinch pins it hidden until the viewer taps or swipes away).
+// ABOUTME: (a pinch pins it hidden until the viewer taps or pinches again).
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,9 +18,9 @@ class FeedImmersiveState extends Equatable {
   final bool isHolding;
 
   /// Whether the viewer pinned the chrome hidden with a pinch. Unlike a hold,
-  /// a pin survives the fingers lifting and is only cleared by a second pinch,
-  /// a tap, or the item it was made on going away: a swipe to another video,
-  /// the video being replaced, or the feed being torn down.
+  /// a pin survives the fingers lifting, swipes, auto-advance, and replacement
+  /// of feed items. A tap or another pinch restores the chrome. The pin lasts
+  /// for this feed's lifetime and is discarded when its cubit is closed.
   final bool isPinned;
 
   /// Whether the chrome over the video is currently hidden. True for either

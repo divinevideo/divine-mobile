@@ -617,11 +617,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// squeeze toggles the pin, not the incidental placement of two fingers.
   double? _pinchBaselineDistance;
 
-  /// Whether *this* item pinned the chrome. Mirrors
-  /// [_isHoldingForImmersive] so a pin can be cleared without un-pinning a
-  /// state another item owns.
-  bool _isPinnedForImmersive = false;
-
   /// Whether the touch in progress, or the one that just ended, ever had two
   /// fingers down. A tap recognizer follows its first finger through a second
   /// one landing, so a pinch whose first finger stayed inside touch slop still
@@ -644,16 +639,10 @@ class __OverlayState extends ConsumerState<_Overlay> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.video.id != widget.video.id) {
       _prefetchCommunityLabels();
-      // A pin belongs to the video it was made on, not to the item's index.
-      // So does a hold's pause.
-      _clearPinnedImmersive();
+      // A hold's pause belongs to this video; the pin belongs to the feed.
       _pausedForHold.value = null;
     }
-    // Swiping away from this item must not leave the next video's chrome
-    // pinned hidden — the cubit is shared across the feed page, so the pin is
-    // released by the item that owns it as that item deactivates.
     if (oldWidget.isActive && !widget.isActive) {
-      _clearPinnedImmersive();
       // The feed pauses an inactive item on its own; releasing the hold must
       // not start it again off-screen.
       _pausedForHold.value = null;
@@ -685,11 +674,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   @override
   void dispose() {
     // An item can be torn down mid-hold (feed rebuild, route replacement).
-    // The cubit outlives this overlay, so the flag has to come down here or
-    // the surface would be left with permanently hidden chrome. The pin has
-    // the same failure mode — a pinned item disposed without clearing would
-    // pin every later video too.
-    _clearPinnedImmersive();
+    // Release its hold while preserving the feed-owned pin.
     _pausedForHold.value = null;
     _exitImmersive();
     // [didUpdateWidget] re-points this State at a different video, so the
@@ -798,8 +783,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
     if (!_immersivePointers.containsKey(event.pointer)) return;
     _immersivePointers[event.pointer] = event.localPosition;
     final baseline = _pinchBaselineDistance;
-    // A page swipe can deactivate this item while its fingers are still down;
-    // a pin set from it would belong to no visible item.
+    // Ignore leftover fingers on an item the viewer has already swiped away.
     if (baseline == null || !widget.isActive) return;
     if ((_pinchDistance() - baseline).abs() < _pinchToggleDistance) return;
     _pinchBaselineDistance = null;
@@ -815,23 +799,19 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// Toggles the persistent pin. A second pinch restores the chrome, as does
   /// tapping the video.
   void _togglePinnedImmersive() {
-    if (_isPinnedForImmersive) {
-      _clearPinnedImmersive();
-      return;
-    }
     final cubit = _immersiveCubit;
     if (cubit == null || cubit.isClosed) return;
-    _isPinnedForImmersive = true;
+    if (cubit.state.isPinned) {
+      cubit.unpin();
+      return;
+    }
     // Confirms the pinch registered — the gesture has no other affordance.
     unawaited(HapticService.immersiveModeFeedback());
     cubit.pin();
   }
 
-  /// Clears a pin this item owns. Idempotent, so [dispose], the swipe-away
-  /// path, and tap-to-restore can all call it unconditionally.
+  /// Restores the feed's chrome when the viewer explicitly undoes the pin.
   void _clearPinnedImmersive() {
-    if (!_isPinnedForImmersive) return;
-    _isPinnedForImmersive = false;
     final cubit = _immersiveCubit;
     if (cubit == null || cubit.isClosed) return;
     cubit.unpin();
@@ -915,7 +895,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
     // Otherwise the first tap after a pinch both un-hid the controls and
     // paused the video, so the viewer could not bring the UI back without
     // also changing playback — the exit gesture has to be the tap alone.
-    if (_isPinnedForImmersive) {
+    if (_immersiveCubit?.state.isPinned ?? false) {
       _clearPinnedImmersive();
       return;
     }
@@ -1069,14 +1049,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
       showContentWarningOverlay: showContentWarningOverlay,
       isReady: isReady,
     );
-
-    // Only the interactive subtree holds a surface that can restore a pin, and
-    // the cubit cannot change mid-build, so the pin comes down after the frame.
-    if (mode is! _OverlayInteractiveMode && _isPinnedForImmersive) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _clearPinnedImmersive();
-      });
-    }
 
     switch (mode) {
       case _OverlayForbiddenMode():
