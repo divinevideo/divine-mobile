@@ -6,10 +6,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/tags_section.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+import '../../../helpers/go_router.dart';
 
 class _MockHashtagSearchBloc
     extends MockBloc<HashtagSearchEvent, HashtagSearchState>
@@ -194,6 +198,71 @@ void main() {
         await tester.pumpWidget(buildSubject());
 
         expect(find.byType(CircularProgressIndicator), findsNothing);
+      });
+    });
+
+    group('navigation', () {
+      void stubSuccessWithFlutterTag() {
+        when(() => mockBloc.state).thenReturn(
+          const HashtagSearchState(
+            status: HashtagSearchStatus.success,
+            query: 'test',
+            results: ['flutter'],
+          ),
+        );
+      }
+
+      testWidgets('tapping a tag pushes its hashtag feed route', (
+        tester,
+      ) async {
+        stubSuccessWithFlutterTag();
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.value());
+
+        await tester.pumpWidget(
+          MockGoRouterProvider(goRouter: router, child: buildSubject()),
+        );
+        await tester.tap(find.text('flutter'));
+        await tester.pump();
+
+        verify(
+          () => router.push<void>(HashtagScreenRouter.pathForTag('flutter')),
+        ).called(1);
+      });
+
+      testWidgets('logs a rejected hashtag route push instead of leaking it', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        stubSuccessWithFlutterTag();
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+
+        await tester.pumpWidget(
+          MockGoRouterProvider(goRouter: router, child: buildSubject()),
+        );
+        await tester.tap(find.text('flutter'));
+        await tester.pump();
+
+        final failures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'TagsSection' && entry.level == LogLevel.error,
+            )
+            .toList();
+        expect(failures, hasLength(1));
+        expect(failures.single.category, equals(LogCategory.ui));
+        expect(
+          failures.single.message,
+          equals('Failed to open hashtag feed: Exception: route failed'),
+        );
       });
     });
   });
