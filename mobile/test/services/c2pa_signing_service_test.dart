@@ -780,6 +780,60 @@ void main() {
         ).called(1);
       });
 
+      test('signs a merge embedding a generated image as a plain composite, '
+          'not as captures', () async {
+        final output = writeFile('merged.mp4', const [1]);
+        final first = writeFile('a.mp4', const [2]);
+        final second = writeFile('b.mp4', const [3]);
+        final backdrop = writeFile('backdrop.png', const [4]);
+        when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.single == backdrop.path
+              ? ManifestStoreInfo(
+                  activeManifest: 'urn:c2pa:generated',
+                  manifests: {
+                    'urn:c2pa:generated': ManifestInfo(
+                      label: 'urn:c2pa:generated',
+                      assertions: [
+                        AssertionInfo(
+                          label: 'c2pa.actions.v2',
+                          data: {
+                            'actions': [
+                              {
+                                'action': 'c2pa.created',
+                                'digitalSourceType': DigitalSourceType
+                                    .trainedAlgorithmicMedia
+                                    .url,
+                              },
+                            ],
+                          },
+                        ),
+                      ],
+                    ),
+                  },
+                )
+              : const ManifestStoreInfo(activeManifest: 'urn:c2pa:x'),
+        );
+        final builder = stubBuilder(signedBytes: const [7, 7, 7]);
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [
+            C2paEditSource(path: first.path),
+            C2paEditSource(path: second.path),
+            C2paEditSource(path: backdrop.path, kind: C2paSourceKind.image),
+          ],
+        );
+
+        expect(result.success, isTrue);
+        verify(
+          () => builder.setIntent(
+            ManifestIntent.create,
+            DigitalSourceType.composite,
+          ),
+        ).called(1);
+      });
+
       test('signs nothing when a source video failed validation', () async {
         final output = writeFile('edited.mp4', const [1, 2]);
         final source = writeFile('altered.mp4', const [3]);

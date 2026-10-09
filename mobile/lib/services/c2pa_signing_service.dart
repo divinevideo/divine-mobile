@@ -479,6 +479,7 @@ class C2paSigningService {
           onlyCaptures = onlyCaptures && _namesOnlyCaptures(manifest!);
         } else if (hasManifest) {
           attested.add(source);
+          onlyCaptures = onlyCaptures && _namesOnlyCaptures(manifest!);
         } else {
           declared.add(
             Ingredient(
