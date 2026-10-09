@@ -148,8 +148,12 @@ class GallerySaveService {
       );
       return const GallerySaveFailure('Gallery save timed out');
     } on GalException catch (e) {
+      // gal maps only a few Photos error codes; the rest arrive as
+      // `unexpected`, and the native message is the only place the real
+      // domain and code survive.
       Log.warning(
-        'Failed to save video to gallery: ${e.type.name}',
+        'Failed to save video to gallery: ${e.type.name} '
+        '(native: ${e.platformException.message})',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
