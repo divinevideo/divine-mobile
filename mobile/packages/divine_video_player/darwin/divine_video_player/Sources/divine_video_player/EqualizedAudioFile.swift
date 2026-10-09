@@ -64,21 +64,14 @@ enum EqualizedAudioFile {
         return EqualizedCopy(url: target, startSec: start)
     }
 
-    /// Deletes the copies and downloads in the temporary directory last
-    /// written before [cutoff]: those of an earlier run, which no player of
-    /// this one plays. Evicting needs a running player, so a run killed
-    /// while it played left them behind.
-    static func removeCopies(writtenBefore cutoff: Date) {
+    /// The copies and downloads in the temporary directory. Listed before a
+    /// run renders any, they are an earlier run's, which no player of this
+    /// one plays: evicting needs a running player, so a run killed while it
+    /// played left them behind.
+    static func copies() -> [URL] {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-        let files = (try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-        for file in files where file.lastPathComponent.hasPrefix(filePrefix) {
-            let written = try? file.resourceValues(forKeys: [.contentModificationDateKey])
-                .contentModificationDate
-            if let written, written < cutoff {
-                try? FileManager.default.removeItem(at: file)
-            }
-        }
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.filter { $0.hasPrefix(filePrefix) }.map { directory.appendingPathComponent($0) }
     }
 
     private static func write(

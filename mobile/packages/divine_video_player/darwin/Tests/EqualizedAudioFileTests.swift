@@ -13,7 +13,7 @@ enum EqualizedAudioFileTests {
         await onlyTheStretchAskedForIsRendered()
         await aStretchPastTheEndStopsWhereTheSourceDoes()
         await aCancelledRenderRendersNothing()
-        copiesOfAnEarlierRunAreRemoved()
+        copiesListsTheCopiesAndNothingElse()
         print("Equalized audio file tests passed")
     }
 
@@ -109,24 +109,19 @@ enum EqualizedAudioFileTests {
         precondition(copy == nil)
     }
 
-    /// Copies last written before the cutoff are an earlier run's and go;
-    /// a newer one and other files stay.
-    static func copiesOfAnEarlierRunAreRemoved() {
+    /// The copies and downloads are listed by their name; other files in the
+    /// temporary directory are not.
+    static func copiesListsTheCopiesAndNothingElse() {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-        let old = directory.appendingPathComponent("divine_eq_test_\(UUID().uuidString).caf")
-        let new = directory.appendingPathComponent("divine_eq_test_\(UUID().uuidString).caf")
+        let copy = directory.appendingPathComponent("divine_eq_test_\(UUID().uuidString).caf")
         let other = directory.appendingPathComponent("eq_other_\(UUID().uuidString).caf")
-        for file in [old, new, other] {
+        for file in [copy, other] {
             FileManager.default.createFile(atPath: file.path, contents: Data([1]))
         }
-        defer { [new, other].forEach { try? FileManager.default.removeItem(at: $0) } }
-        let hourAgo = Date().addingTimeInterval(-3_600)
-        try! FileManager.default.setAttributes([.modificationDate: hourAgo], ofItemAtPath: old.path)
-        try! FileManager.default.setAttributes([.modificationDate: hourAgo], ofItemAtPath: other.path)
-        EqualizedAudioFile.removeCopies(writtenBefore: Date().addingTimeInterval(-60))
-        precondition(!FileManager.default.fileExists(atPath: old.path))
-        precondition(FileManager.default.fileExists(atPath: new.path))
-        precondition(FileManager.default.fileExists(atPath: other.path))
+        defer { [copy, other].forEach { try? FileManager.default.removeItem(at: $0) } }
+        let names = Set(EqualizedAudioFile.copies().map(\.lastPathComponent))
+        precondition(names.contains(copy.lastPathComponent))
+        precondition(!names.contains(other.lastPathComponent))
     }
 
     static func bassBoost(_ gainDb: Double) -> AudioEqualizer {

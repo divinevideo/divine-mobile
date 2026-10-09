@@ -54,11 +54,12 @@ final class AudioOverlayManager {
     var onNeedsSync: (() -> Void)?
 
     /// Copies left by an earlier run, which no player of this one plays, are
-    /// deleted when the first manager of this run is created.
+    /// deleted when the first manager of this run is created. They are listed
+    /// at once, before this run renders any, and only that list is deleted.
     private static let leftoverCopiesRemoved: Void = {
-        let cutoff = Date()
+        let leftovers = EqualizedAudioFile.copies()
         DispatchQueue.global(qos: .utility).async {
-            EqualizedAudioFile.removeCopies(writtenBefore: cutoff)
+            for file in leftovers { try? FileManager.default.removeItem(at: file) }
         }
     }()
 
