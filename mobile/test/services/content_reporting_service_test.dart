@@ -1559,7 +1559,7 @@ void main() {
       final _ = await service.reportUser(
         userPubkey: reportedPubkey,
         reason: ContentFilterReason.harassment,
-        details: 'Reported from DM conversation',
+        details: 'keeps sending unwanted messages',
       );
 
       expect(capturedTags, isNotNull);
@@ -2151,7 +2151,7 @@ void main() {
         final result = await crs.reportUser(
           userPubkey: _validEventId('c'),
           reason: ContentFilterReason.other,
-          details: 'Reported from DM conversation',
+          details: 'keeps sending unwanted messages',
         );
         final row = (await dao.getById(result.reportId!))!;
         final dm = jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
@@ -2162,7 +2162,7 @@ void main() {
             'Reason: other\n'
             'User Pubkey: '
             'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n'
-            'Details: Reported from DM conversation',
+            'Details: keeps sending unwanted messages',
           ),
         );
       },
