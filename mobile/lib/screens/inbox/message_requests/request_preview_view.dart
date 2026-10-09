@@ -357,7 +357,11 @@ class _ProfileContent extends StatelessWidget {
       moderation: moderation,
       pictureUrl: profile?.picture,
     );
-    final nip05 = profile?.shortDisplayNip05;
+    final nip05 = dmPeerHandle(
+      isVanished: isVanished,
+      moderation: moderation,
+      handle: profile?.shortDisplayNip05,
+    );
     // A zero is not data on any of the three. Funnelcake collapses a stats
     // failure into zeros behind an HTTP 200 — `get_social_stats` never
     // surfaces an error, and `get_user_stats` maps both a miss and a failure

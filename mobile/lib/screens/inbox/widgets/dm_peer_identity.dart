@@ -147,3 +147,16 @@ String dmPeerDisplayName(
       ? const ModerationAvatar()
       : null,
 );
+
+/// The handle or NIP-05 line a DM peer surface shows under the name, resolved
+/// the same way [dmPeerDisplayName] resolves the name above it.
+///
+/// A vanished account's handle identifies it as surely as its name does. A
+/// [ModerationPresentation.former] key's holder chooses its kind-0 `nip05` and
+/// `name` the same way it chooses the picture, so the neutral label never sits
+/// above a handle they picked (#9963).
+String? dmPeerHandle({
+  required bool isVanished,
+  required ModerationPresentation moderation,
+  String? handle,
+}) => isVanished || moderation == ModerationPresentation.former ? null : handle;

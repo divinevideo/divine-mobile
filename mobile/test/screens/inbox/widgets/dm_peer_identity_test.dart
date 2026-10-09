@@ -346,6 +346,57 @@ void main() {
       expect(avatar.imageUrl, isNull);
     });
   });
+
+  group('dmPeerHandle', () {
+    const handle = '@looks.official';
+
+    test("keeps an ordinary peer's handle", () {
+      expect(
+        dmPeerHandle(
+          isVanished: false,
+          moderation: ModerationPresentation.ordinary,
+          handle: handle,
+        ),
+        equals(handle),
+      );
+    });
+
+    test("keeps an official moderation key's handle", () {
+      expect(
+        dmPeerHandle(
+          isVanished: false,
+          moderation: ModerationPresentation.official,
+          handle: handle,
+        ),
+        equals(handle),
+      );
+    });
+
+    test("drops a vanished peer's handle", () {
+      expect(
+        dmPeerHandle(
+          isVanished: true,
+          moderation: ModerationPresentation.ordinary,
+          handle: handle,
+        ),
+        isNull,
+      );
+    });
+
+    // The key's holder chooses its kind-0 `nip05` and `name` the same way it
+    // chooses the picture, so the neutral label cannot sit above a handle they
+    // picked (#9963).
+    test("drops a former moderation key's handle", () {
+      expect(
+        dmPeerHandle(
+          isVanished: false,
+          moderation: ModerationPresentation.former,
+          handle: handle,
+        ),
+        isNull,
+      );
+    });
+  });
 }
 
 UserProfile _profile(String pubkey, String displayName) => UserProfile(

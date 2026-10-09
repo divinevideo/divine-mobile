@@ -730,6 +730,42 @@ void main() {
         });
       }
 
+      for (final custody in keptCustodies) {
+        testWidgets('${custody.name}: shows the handle the key published', (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              handle: '@looks.official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks.official'), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: hides the handle its holder chose', (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              handle: '@looks.official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks.official'), findsNothing);
+        });
+      }
+
       testWidgets('hands the resolved identity on, so the share sheet cannot '
           'name the peer differently', (tester) async {
         const contact = ShareableUser(

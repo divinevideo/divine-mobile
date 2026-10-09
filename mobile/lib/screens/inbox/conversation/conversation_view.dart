@@ -281,6 +281,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final String conversationDisplayName;
     final bool isIdentityResolving;
     final String visualDisplayName;
+    final String? claimedNip05;
     final String handle;
 
     if (isUnresolved) {
@@ -295,6 +296,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       conversationDisplayName = '';
       isIdentityResolving = false;
       visualDisplayName = '';
+      claimedNip05 = null;
       handle = '';
     } else {
       final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
@@ -329,7 +331,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       visualDisplayName = conversationDisplayName.isEmpty
           ? UserProfile.defaultDisplayNameFor(otherPubkey)
           : conversationDisplayName;
-      final claimedNip05 = profile?.shortDisplayNip05;
+      claimedNip05 = dmPeerHandle(
+        isVanished: isDeleted,
+        moderation: moderation,
+        handle: profile?.shortDisplayNip05,
+      );
       final verificationStatus = claimedNip05 != null && claimedNip05.isNotEmpty
           ? ref
                 .watch(nip05VerificationProvider(otherPubkey))
@@ -353,8 +359,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       // Prefer the profile's NIP-05 / divine handle when set, otherwise the
       // follow relationship — which tells the viewer which of several
       // same-named people they are messaging, as a truncated npub never did.
+      // A former moderation key gets neither: social proof would vouch for a
+      // key someone outside the team may hold (#9963).
       handle = isDeleted
           ? context.l10n.inboxConversationDeletedAccountSubtitle
+          : moderation == ModerationPresentation.former
+          ? ''
           : resolveUserIdentifierLine(
                   l10n: context.l10n,
                   locale: Localizations.localeOf(context).toLanguageTag(),
@@ -547,9 +557,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                       threadWritability ==
                                       DmThreadWritability.writable,
                                   imageUrl: isDeleted ? null : profile?.picture,
-                                  nip05: isDeleted
-                                      ? null
-                                      : profile?.shortDisplayNip05,
+                                  nip05: claimedNip05,
                                   onViewProfile: otherPubkey.isNotEmpty
                                       ? () {
                                           final npub =

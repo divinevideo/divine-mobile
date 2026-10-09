@@ -43,9 +43,14 @@ void main() {
       ).thenAnswer((_) => const Stream<Set<String>>.empty());
     });
 
-    UserProfile profileFor(String pubkey, String displayName) => UserProfile(
+    UserProfile profileFor(
+      String pubkey,
+      String displayName, {
+      String? name,
+    }) => UserProfile(
       pubkey: pubkey,
       displayName: displayName,
+      name: name,
       picture: 'https://example.invalid/$pubkey.png',
       rawData: const {},
       createdAt: DateTime(2026),
@@ -180,6 +185,43 @@ void main() {
           expect(find.text('Looks Official'), findsNothing);
           expect(find.byType(ModerationAvatar), findsNothing);
           expect(find.byType(VineCachedImage), findsNothing);
+        });
+      }
+
+      // With no NIP-05 the handle line falls back to the kind-0 `name`.
+      for (final custody in keptCustodies) {
+        testWidgets('${custody.name}: shows the handle the key published', (
+          tester,
+        ) async {
+          await pumpPickerWith(
+            tester,
+            contact: profileFor(
+              shippedRetiredKey,
+              'Looks Official',
+              name: 'looks_official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks_official'), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: hides the handle its holder chose', (
+          tester,
+        ) async {
+          await pumpPickerWith(
+            tester,
+            contact: profileFor(
+              shippedRetiredKey,
+              'Looks Official',
+              name: 'looks_official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('@looks_official'), findsNothing);
         });
       }
 

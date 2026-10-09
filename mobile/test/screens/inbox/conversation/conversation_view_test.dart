@@ -604,6 +604,7 @@ void main() {
       // custody.
       group('by recorded custody (#9963)', () {
         final retired = shippedRetiredKey;
+        const claimedNip05 = 'moderation@looks-official.example';
 
         Finder wordmarkFinder() => find.byWidgetPredicate(
           (widget) =>
@@ -626,6 +627,7 @@ void main() {
                 pubkey: retired,
                 displayName: 'Looks Official',
                 picture: 'https://example.invalid/looks-official.png',
+                nip05: claimedNip05,
                 rawData: const {},
                 createdAt: DateTime(2026),
                 eventId: 'c' * 64,
@@ -663,6 +665,37 @@ void main() {
               tester.widget<UserAvatar>(find.byType(UserAvatar).first).imageUrl,
               isNull,
             );
+          });
+        }
+
+        // The header and the empty-conversation card both carry the line.
+        for (final custody in keptCustodies) {
+          testWidgets('${custody.name}: shows the NIP-05 the key published', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsNWidgets(2));
+          });
+        }
+
+        for (final custody in withdrawnCustodies) {
+          testWidgets('${custody.name}: hides the NIP-05 its holder chose', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsNothing);
+          });
+
+          // Without the handle the header would fall back to social proof,
+          // which vouches for a key someone else may hold.
+          testWidgets('${custody.name}: leaves the header subtitle empty', (
+            tester,
+          ) async {
+            await pumpThreadFor(tester, custody);
+
+            expect(find.text(l10n.socialProofMutual), findsNothing);
           });
         }
 

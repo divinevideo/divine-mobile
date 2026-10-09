@@ -368,8 +368,11 @@ class _UserResultTile extends ConsumerWidget {
       moderation: moderation,
       pictureUrl: user.picture,
     );
-    // A vanished account's NIP-05 identifies it as surely as its name does.
-    final handle = isVanished ? null : user.handle;
+    final handle = dmPeerHandle(
+      isVanished: isVanished,
+      moderation: moderation,
+      handle: user.handle,
+    );
     // Hand the resolved identity on, so the share sheet's selection chip and
     // its success snackbar name the peer the way this row did.
     final resolved = ShareableUser(

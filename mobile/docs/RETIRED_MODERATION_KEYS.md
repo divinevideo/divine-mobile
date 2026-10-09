@@ -91,7 +91,7 @@ role uses the shared support identity.
 | Behaviour | Where |
 |---|---|
 | Official name ("Divine Moderation"), inbox search name and bundled wordmark avatar — kept for a retired key nobody can sign as (`unrecovered`, `destroyed`) | `dm_peer_identity.dart` (`dmPeerDisplayName`, `dmPeerAvatar`) and `dm_peer_name.dart`, reached from the inbox row, request row and preview, thread header, empty-conversation state, following strip, reactions sheet and the recipient pickers; resolved by `moderationPresentationOf` |
-| Neutral "Former moderation account" name and the default placeholder avatar — withdrawn official name and wordmark, and the key's own kind-0 name and picture are ignored too — for a retired key someone could still sign as (`archived`, `compromised`) | the same helpers, through `ModerationPresentation.former` |
+| Neutral "Former moderation account" name and the default placeholder avatar, with no handle line — withdrawn official name and wordmark, and the key's own kind-0 name, picture and NIP-05 are ignored too; the thread header shows no subtitle, not a social-proof line — for a retired key someone could still sign as (`archived`, `compromised`) | the same helpers plus `dmPeerHandle`, through `ModerationPresentation.former` |
 | Conversation and request rows labelled closed | `conversation_tile.dart` and `request_tile.dart`, via `isRetiredModerationAccount` |
 | Composer closed; banner routes replies to the current support key | `conversation_view.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
 | Pinned support row, unread partition, and retired predicates wired into list state | `inbox_page.dart`, `message_requests_page.dart`, `app_shell_badge_scope.dart`, and `ConversationListBloc` |

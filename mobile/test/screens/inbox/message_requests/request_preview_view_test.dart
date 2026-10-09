@@ -585,6 +585,7 @@ void main() {
       // closed notice are safety behaviors and hold for every custody.
       group('by recorded custody (#9963)', () {
         final retired = shippedRetiredKey;
+        const claimedNip05 = 'moderation@looks-official.example';
 
         Finder wordmarkFinder() => find.byWidgetPredicate(
           (widget) =>
@@ -606,6 +607,7 @@ void main() {
                 pubkey: retired,
                 displayName: 'Looks Official',
                 picture: 'https://example.invalid/looks-official.png',
+                nip05: claimedNip05,
                 rawData: const {},
                 createdAt: DateTime(2026),
                 eventId: 'c' * 64,
@@ -643,6 +645,26 @@ void main() {
               tester.widget<UserAvatar>(find.byType(UserAvatar).first).imageUrl,
               isNull,
             );
+          });
+        }
+
+        for (final custody in keptCustodies) {
+          testWidgets('${custody.name}: shows the NIP-05 the key published', (
+            tester,
+          ) async {
+            await pumpPreviewFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsOneWidget);
+          });
+        }
+
+        for (final custody in withdrawnCustodies) {
+          testWidgets('${custody.name}: hides the NIP-05 its holder chose', (
+            tester,
+          ) async {
+            await pumpPreviewFor(tester, custody);
+
+            expect(find.text(claimedNip05), findsNothing);
           });
         }
 

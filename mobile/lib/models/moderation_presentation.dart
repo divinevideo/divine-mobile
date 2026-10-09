@@ -16,9 +16,9 @@ enum ModerationPresentation {
   official,
 
   /// A retired key someone could still sign as. Official branding is
-  /// withdrawn: a neutral "former moderation account" name and the default
-  /// avatar, because presenting it as Divine would say the team is on the
-  /// other end of a key that someone outside the team may hold.
+  /// withdrawn: a neutral "former moderation account" name, the default avatar
+  /// and no handle line, because presenting it as Divine would say the team is
+  /// on the other end of a key that someone outside the team may hold.
   former,
 }
 

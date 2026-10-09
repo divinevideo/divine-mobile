@@ -355,8 +355,13 @@ class _UserTile extends ConsumerWidget {
       moderation: moderation,
       pictureUrl: profile.picture,
     );
-    // A vanished account's NIP-05 identifies it as surely as its name does.
-    final handle = isVanished ? '' : profile.handle;
+    final handle =
+        dmPeerHandle(
+          isVanished: isVanished,
+          moderation: moderation,
+          handle: profile.handle,
+        ) ??
+        '';
 
     return InkWell(
       onTap: onTap,

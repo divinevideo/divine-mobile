@@ -214,8 +214,11 @@ class _ContactItem extends ConsumerWidget {
     final resolved = ShareableUser(
       pubkey: user.pubkey,
       displayName: displayName,
-      // A vanished account's NIP-05 identifies it as surely as its name does.
-      handle: isVanished ? null : user.handle,
+      handle: dmPeerHandle(
+        isVanished: isVanished,
+        moderation: moderation,
+        handle: user.handle,
+      ),
       picture: avatar.imageUrl,
     );
 
