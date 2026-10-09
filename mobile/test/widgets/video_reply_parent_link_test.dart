@@ -127,11 +127,11 @@ void main() {
             .where((entry) => entry.name == 'VideoReplyParentLink')
             .toList();
         expect(failures, hasLength(1));
-        expect(failures.single.level, LogLevel.error);
-        expect(failures.single.category, LogCategory.video);
+        expect(failures.single.level, equals(LogLevel.error));
+        expect(failures.single.category, equals(LogCategory.video));
         expect(
           failures.single.message,
-          'Failed to open reply parent video: Exception: route failed',
+          equals('Failed to open reply parent video: Exception: route failed'),
         );
       });
     });
