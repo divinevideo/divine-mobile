@@ -255,6 +255,41 @@ void main() {
       expect(detailsField.textCapitalization, TextCapitalization.sentences);
     });
 
+    for (final (reason, label) in [
+      (ContentFilterReason.other, l10n.reportDetailsRequired),
+      (ContentFilterReason.spam, l10n.reportDetailsOptional),
+    ]) {
+      testWidgets('under $reason the note field is announced as "$label"', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await setLargeSurface(tester);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonTitle(reason)));
+        await tester.pumpAndSettle();
+
+        final field = tester.getSemantics(find.byType(TextField));
+        expect(field.getSemanticsData().flagsCollection.isTextField, isTrue);
+        expect(
+          field.label,
+          label,
+          reason:
+              'the visible label above the field must reach a screen reader '
+              'as the field name, not as a stray line before an unnamed field',
+        );
+        // The visible copy is excluded so it is not read a second time.
+        expect(
+          find.bySemanticsLabel(label),
+          findsOneWidget,
+          reason: 'the label is announced once, on the field',
+        );
+
+        handle.dispose();
+      });
+    }
+
     testWidgets(
       'Submit button is visible before selecting a reason (Apple requirement) '
       'but stays disabled until one is picked',

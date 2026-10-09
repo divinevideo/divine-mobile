@@ -682,6 +682,9 @@ class _ReportFormBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final detailsLabel = selectedReason == ContentFilterReason.other
+        ? l10n.reportDetailsRequired
+        : l10n.reportDetailsOptional;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -732,12 +735,15 @@ class _ReportFormBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 4,
               children: [
-                Text(
-                  selectedReason == ContentFilterReason.other
-                      ? l10n.reportDetailsRequired
-                      : l10n.reportDetailsOptional,
-                  style: VineTheme.labelSmallFont(
-                    color: context.vineColors.accentPositive,
+                // The field announces this label itself (see
+                // [_CappedDetailsField]), so the visible copy is kept out of
+                // the tree rather than read twice.
+                ExcludeSemantics(
+                  child: Text(
+                    detailsLabel,
+                    style: VineTheme.labelSmallFont(
+                      color: context.vineColors.accentPositive,
+                    ),
                   ),
                 ),
                 Text(
@@ -748,6 +754,7 @@ class _ReportFormBody extends StatelessWidget {
                 ),
                 if (imageInsertionRejected) const _ImageNotAttachedNotice(),
                 _CappedDetailsField(
+                  label: detailsLabel,
                   fieldKey: detailsFieldKey,
                   controller: detailsController,
                   focusNode: detailsFocusNode,
@@ -921,12 +928,18 @@ class _RadioIndicator extends StatelessWidget {
 /// truncated, which cannot be derived by comparing `String.length` to the cap.
 class _CappedDetailsField extends StatefulWidget {
   const _CappedDetailsField({
+    required this.label,
     required this.fieldKey,
     required this.controller,
     required this.focusNode,
     required this.onChanged,
     required this.onImageInserted,
   });
+
+  /// The box's visible label (required or optional), announced as the
+  /// field's own label. The field has no decoration label of its own, so
+  /// without this a screen reader reaches an unnamed text field.
+  final String label;
 
   final GlobalKey fieldKey;
   final TextEditingController controller;
@@ -969,36 +982,46 @@ class _CappedDetailsFieldState extends State<_CappedDetailsField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,
       children: [
-        TextField(
-          key: widget.fieldKey,
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          enableInteractiveSelection: true,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: _onChanged,
-          // Without a configuration Flutter advertises an empty mime-type
-          // list, so Android refuses the insert itself and shows a system
-          // toast that vanishes and never mentions the report. Declaring the
-          // default image types moves that moment into the app, where the
-          // handler can answer it in our own words. #8223 chose not to hide
-          // the keyboard's image button, so it stays live.
-          contentInsertionConfiguration: ContentInsertionConfiguration(
-            onContentInserted: (_) => widget.onImageInserted(),
-          ),
-          style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
-          minLines: 3,
-          maxLines: 5,
-          inputFormatters: [
-            ReportingLengthLimiter(
-              BugReportConfig.maxFreeTextFieldLength,
-              _onTruncated,
+        // Merged so the label lands on the text field's own node: a parent
+        // label alone becomes a separate node a screen reader reads apart
+        // from the field.
+        MergeSemantics(
+          child: Semantics(
+            label: widget.label,
+            child: TextField(
+              key: widget.fieldKey,
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              enableInteractiveSelection: true,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: _onChanged,
+              // Without a configuration Flutter advertises an empty mime-type
+              // list, so Android refuses the insert itself and shows a system
+              // toast that vanishes and never mentions the report. Declaring the
+              // default image types moves that moment into the app, where the
+              // handler can answer it in our own words. #8223 chose not to hide
+              // the keyboard's image button, so it stays live.
+              contentInsertionConfiguration: ContentInsertionConfiguration(
+                onContentInserted: (_) => widget.onImageInserted(),
+              ),
+              style: VineTheme.bodyLargeFont(
+                color: context.vineColors.primaryText,
+              ),
+              minLines: 3,
+              maxLines: 5,
+              inputFormatters: [
+                ReportingLengthLimiter(
+                  BugReportConfig.maxFreeTextFieldLength,
+                  _onTruncated,
+                ),
+              ],
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isCollapsed: true,
+              ),
             ),
-          ],
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            isCollapsed: true,
           ),
         ),
         if (_truncated)
