@@ -5,6 +5,7 @@ import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -13,6 +14,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -330,6 +333,57 @@ void main() {
       verify(
         () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
       ).called(1);
+    });
+
+    testWidgets('tapping a video opens its fullscreen route', (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const Scaffold(body: CategoryGalleryScreen(category: category)),
+          ),
+          GoRoute(
+            path: PooledFullscreenVideoFeedScreen.path,
+            builder: (context, state) {
+              final args = state.extra! as PooledFullscreenVideoFeedArgs;
+              final videoId =
+                  state.uri.queryParameters[PooledFullscreenVideoFeedScreen
+                      .videoQueryParameter];
+              return Scaffold(
+                body: Text(
+                  'opened video $videoId at ${args.initialIndex} '
+                  'in ${args.contextTitle}',
+                ),
+              );
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final grid = tester.widget<ComposableVideoGrid>(
+        find.byType(ComposableVideoGrid),
+      );
+      grid.onVideoTap([blockedVideo, allowedVideo], 1);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('opened video allowed-id at 1 in Animals'),
+        findsOneWidget,
+      );
     });
   });
 }
