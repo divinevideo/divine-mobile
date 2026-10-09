@@ -2292,6 +2292,52 @@ void main() {
       );
     });
 
+    testWidgets('a warning that blurs a badge video clears a pin made after '
+        'the badge', (tester) async {
+      // The badge has already been shown, so pinning on it is deliberate and
+      // kept. A warning that later blurs the video is a new safety surface:
+      // the pin must not outlive it, or Report stays hidden after the reveal.
+      final video = _makeVideo(contentWarningLabels: ['nudity']);
+      final labels = Completer<Set<String>>();
+      final repository = _MockCommunityContentLabelRepository();
+      when(
+        () => repository.communityLabelsForVideo(video),
+      ).thenAnswer((_) => labels.future);
+      final filter = _MockContentFilterService();
+      when(
+        () => filter.getPreference(ContentLabel.gambling),
+      ).thenReturn(ContentFilterPreference.warn);
+      final service = CommunityContentLabelService(
+        repository: repository,
+        contentFilterService: filter,
+      );
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+        additionalOverrides: [
+          communityContentLabelServiceProvider.overrideWith((ref) => service),
+          featureFlagServiceProvider.overrideWithValue(_communityFlagsOn()),
+        ],
+      );
+      await tester.pump();
+      expect(find.text('Nudity').hitTestable(), findsOneWidget);
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      labels.complete({'gambling'});
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(ContentWarningBlurOverlay), findsOneWidget);
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+    });
+
     testWidgets('a spread after the feed paged away does not pin', (
       tester,
     ) async {
