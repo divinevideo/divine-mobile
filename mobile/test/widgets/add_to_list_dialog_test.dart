@@ -66,6 +66,7 @@ void main() {
       _fakeLists = [];
       mockListService = _MockCuratedListService();
       _fakeService = mockListService;
+      when(() => mockListService.editableLists).thenAnswer((_) => _fakeLists);
     });
 
     Widget buildSubject() => testProviderScope(
@@ -213,7 +214,10 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockListService.addVideoToList(listId, testVideo.id),
+        () => mockListService.addVideoToList(
+          _fakeLists.single.authorScopedId,
+          testVideo.id,
+        ),
       ).called(1);
       expect(find.text('Added to My List'), findsOneWidget);
     });
@@ -245,7 +249,10 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockListService.removeVideoFromList(listId, testVideo.id),
+        () => mockListService.removeVideoFromList(
+          _fakeLists.single.authorScopedId,
+          testVideo.id,
+        ),
       ).called(1);
       expect(find.text('Removed from My List'), findsOneWidget);
     });
@@ -353,6 +360,37 @@ void main() {
 
       expect(find.text('Favorites'), findsOneWidget);
       expect(find.text('Watch Later'), findsOneWidget);
+    });
+
+    testWidgets('offers only lists the viewer owns', (tester) async {
+      // A followed list cached under its author coordinate can share the
+      // viewer's d-tag, and a bare-id add would land on the viewer's own row.
+      final own = CuratedList(
+        id: 'my_vine_list',
+        pubkey: 'c' * 64,
+        name: 'Own list',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      _fakeLists = [
+        own,
+        CuratedList(
+          id: 'my_vine_list',
+          pubkey: 'b' * 64,
+          name: 'Followed list',
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ];
+      when(() => mockListService.editableLists).thenReturn([own]);
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Own list'), findsOneWidget);
+      expect(find.text('Followed list'), findsNothing);
     });
   });
 

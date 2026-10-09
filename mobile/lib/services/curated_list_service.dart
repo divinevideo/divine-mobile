@@ -439,6 +439,10 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
+  /// Lists whose current owner evidence permits editing in this session.
+  List<CuratedList> get editableLists =>
+      List.unmodifiable(_lists.where(_canMutateCachedList));
+
   /// Only an explicitly owned row or an unpublished local draft can change.
   /// Remembered owners may edit offline; relay signing still requires auth.
   bool _canMutateCachedList(CuratedList list) {
