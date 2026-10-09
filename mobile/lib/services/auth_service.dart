@@ -179,6 +179,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         expiredSessionRefreshTimeout: _expiredSessionRefreshTimeout,
         currentPubkeyFallback: () => _currentProfile?.publicKeyHex,
         hasExpiredSession: () => _hasExpiredOAuthSession,
+        currentRpcSigner: () => isAuthenticated ? _keycastSigner : null,
+        onRefreshRejected: () => _hasExpiredOAuthSession = true,
       );
   // Owns the client-initiated nostrconnect:// session + wait future + callback
   // handoff timers; the facade keeps _bunkerSigner and applies a successful
@@ -981,39 +983,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Delegates to [OAuthSessionCoordinator.refreshAccessToken] which
   /// deduplicates concurrent callers — multiple in-flight RPC 401s and
   /// app-resume refresh all share a single refresh token exchange.
-  Future<String?> _refreshAccessToken() {
-    final ownerAtStart = currentPublicKeyHex;
-    return _oauthCoordinator.refreshAccessToken(
-      onRejected: () => _markRejectedRuntimeSessionExpired(ownerAtStart),
-    );
-  }
-
-  /// Keycast refused a mid-session refresh, so every signing call will keep
-  /// failing until the user signs in again. Raise the same expired-session
-  /// flag restore uses, so the profile sheet and Settings row ask them to
-  /// (#9943).
-  ///
-  /// Skipped when the session the refresh was for is no longer current:
-  /// sign-out deliberately leaves the flag alone, and a late rejection must
-  /// not mark a different or signed-out account expired.
-  void _markRejectedRuntimeSessionExpired(String? ownerAtStart) {
-    if (_hasExpiredOAuthSession ||
-        _authState != AuthState.authenticated ||
-        _authSource != AuthenticationSource.divineOAuth ||
-        ownerAtStart == null ||
-        currentPublicKeyHex != ownerAtStart) {
-      return;
-    }
-    _hasExpiredOAuthSession = true;
-    Log.warning(
-      'Keycast rejected a mid-session refresh — marking the OAuth session '
-      'expired so the user is asked to sign in again',
-      name: 'AuthService',
-      category: LogCategory.auth,
-    );
-    // Nudge listeners that read hasExpiredOAuthSession, as restore does.
-    _authStateController.add(_authState);
-  }
+  Future<String?> _refreshAccessToken() =>
+      _oauthCoordinator.refreshAccessToken();
 
   KeycastRpc _newKeycastSigner(KeycastSession session) =>
       KeycastRpc.fromSession(
@@ -4283,12 +4254,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   @visibleForTesting
   void debugSetKeycastSigner(KeycastRpc? signer, {bool closePrevious = true}) =>
       _setKeycastSigner(signer, closePrevious: closePrevious);
-
-  /// Test seam exposing the token-refresh callback production passes to every
-  /// [KeycastRpc] it builds, so tests can drive a mid-session 401 through a
-  /// signer with a mocked transport.
-  @visibleForTesting
-  TokenRefreshCallback get debugKeycastTokenRefresh => _refreshAccessToken;
 
   /// Test seam that lets unit tests install a [SecureKeyContainer] so
   /// `signOut`'s account-scoped invalidation (and any other code path
