@@ -159,6 +159,53 @@ void main() {
     verifyNever(() => client.publishEventAwaitOk(any()));
   }
 
+  group('editable list projection', () {
+    for (final foreignFirst in [false, true]) {
+      for (final confirmed in [false, true]) {
+        test(
+          'excludes ${confirmed ? 'confirmed' : 'unconfirmed'} foreign namesake with ${foreignFirst ? 'foreign' : 'owned'} row first',
+          () async {
+            final own = row(pubkey: owner);
+            final foreign = row(
+              pubkey: stranger,
+              eventId: confirmed ? first : null,
+            );
+            await load(foreignFirst ? [foreign, own] : [own, foreign]);
+            expect(service.editableLists, [own]);
+            expect(
+              await service.addVideoToList(own.authorScopedId, added),
+              isTrue,
+            );
+            expect(service.getListById(foreign.authorScopedId), foreign);
+            expect(service.getListById(own.authorScopedId)?.videoEventIds, [
+              first,
+              second,
+              added,
+            ]);
+          },
+        );
+      }
+    }
+
+    test('keeps a proven local draft and uses its own coordinate', () async {
+      final draft = row();
+      await load([draft]);
+      expect(service.editableLists, [draft]);
+      expect(await service.addVideoToList(draft.authorScopedId, added), isTrue);
+      expect(service.lists, hasLength(1));
+      expect(service.lists.single.pubkey, owner);
+      expect(service.lists.single.videoEventIds, [first, second, added]);
+    });
+
+    test('does not offer a draft with unreadable follow evidence', () async {
+      await load([row()], follows: 'unreadable');
+      final raw = prefs.getString(CuratedListService.listsStorageKey);
+      expect(service.editableLists, isEmpty);
+      expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+      expectNoPublication();
+    });
+  });
+
   group('mutation authorization', () {
     for (final entry in writes.entries) {
       for (final collision in [false, true]) {
