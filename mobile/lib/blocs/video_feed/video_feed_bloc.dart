@@ -924,20 +924,36 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// Automatic writes stay provisional until their exact snapshot and owner
   /// are still current. Discard repairs the latest shared choice even after
   /// this bloc closes or a replacement bloc claims the account's storage.
+  ///
+  /// A refused native write applies [source] for this session only, as
+  /// [FeedModePreferenceStore.persist] does for explicit choices.
   Future<bool> _persistCuratedSource(
     VideoFeedCuratedListsChanged event,
     VideoFeedSource source,
     int selectionSequence,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    final write = await _modePreferences._prepare(source);
-    if (!emit.isDone &&
+    bool isCurrent() =>
+        !emit.isDone &&
         !_isClosing &&
         selectionSequence == _sourceSelectionSequence &&
-        _isCurrentCuratedSnapshot(event) &&
-        write.accept()) {
-      return true;
+        _isCurrentCuratedSnapshot(event);
+    final ProvisionalFeedModeWrite write;
+    try {
+      write = await _modePreferences._prepare(source);
+      // The coordinator reports a refused native write as a StateError.
+      // ignore: avoid_catching_errors
+    } on StateError catch (error, stackTrace) {
+      Log.warning(
+        'Home could not save the restored feed source',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return isCurrent();
     }
+    if (isCurrent() && write.accept()) return true;
     await write.discard();
     return false;
   }
