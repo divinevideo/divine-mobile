@@ -54,9 +54,62 @@ class _MockVideoRepostersCubit extends Mock implements VideoRepostersCubit {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
+class _MockCollaboratorConfirmationRepository extends Mock
+    implements CollaboratorConfirmationRepository {}
+
+/// Signs in a viewer who is neither the creator nor a collaborator.
+List<Override> _thirdPartyViewerOverrides({
+  required CollaboratorConfirmationRepository? repository,
+}) => [
+  authServiceProvider.overrideWithValue(
+    createMockAuthService(currentPublicKeyHex: _thirdPartyViewer),
+  ),
+  collaboratorConfirmationRepositoryProvider.overrideWithValue(repository),
+];
+
+/// A repository reporting that every collaborator on [video] has accepted.
+CollaboratorConfirmationRepository _confirmingRepository(VideoEvent video) {
+  final repository = _MockCollaboratorConfirmationRepository();
+  when(() => repository.release(any())).thenReturn(null);
+  when(
+    () => repository.watch(
+      any(),
+      creatorPubkey: any(named: 'creatorPubkey'),
+      taggedPubkeys: any(named: 'taggedPubkeys'),
+    ),
+  ).thenAnswer(
+    (_) => Stream.value(
+      VideoCollaboratorStatus(
+        videoAddress: video.addressableId!,
+        statusByPubkey: {
+          for (final pubkey in video.collaboratorPubkeys)
+            pubkey: CollaboratorStatus.confirmed,
+        },
+        isResolved: true,
+      ),
+    ),
+  );
+  return repository;
+}
+
+/// A third-party viewer whose collaborators have all accepted, so every
+/// tagged pubkey renders without the pending decoration.
+CollaboratorVisibility _allConfirmed(List<String> pubkeys) =>
+    CollaboratorVisibility(
+      taggedPubkeys: pubkeys,
+      statusByPubkey: {
+        for (final pubkey in pubkeys) pubkey: CollaboratorStatus.confirmed,
+      },
+      currentUserPubkey: _thirdPartyViewer,
+      creatorPubkey: _creatorPubkey,
+      isResolved: true,
+    );
+
 // Stable 64-char hex pubkeys for deterministic tests.
 const _creatorPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _thirdPartyViewer =
+    '9999999999999999999999999999999999999999999999999999999999999999';
 const _collaborator1 =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const _collaborator2 =
@@ -116,6 +169,7 @@ VideoEvent _makeVideo({
   int createdAt = 1700000000,
   String? publishedAt,
   List<List<String>> nostrEventTags = const [],
+  String? addressableDTag,
 }) => VideoEvent(
   id: id,
   pubkey: _creatorPubkey,
@@ -138,6 +192,7 @@ VideoEvent _makeVideo({
   rawTags: rawTags,
   publishedAt: publishedAt,
   nostrEventTags: nostrEventTags,
+  addressableDTag: addressableDTag,
 );
 
 final _testAudio = AudioEvent(
@@ -1037,22 +1092,30 @@ void main() {
   // Collaborators section
   // ---------------------------------------------------------------------------
   group(MetadataCollaboratorsSection, () {
-    testWidgetsWithSurfaceSize('renders collaborator chips when present', (
+    List<Override> collaboratorOverrides({
+      required CollaboratorConfirmationRepository? repository,
+    }) => [
+      ..._thirdPartyViewerOverrides(repository: repository),
+      fetchUserProfileProvider(_collaborator1).overrideWith(
+        (ref) async => _makeProfile(_collaborator1, 'Josh Musick'),
+      ),
+      fetchUserProfileProvider(_collaborator2).overrideWith(
+        (ref) async => _makeProfile(_collaborator2, 'Dan Spurgin'),
+      ),
+    ];
+
+    testWidgetsWithSurfaceSize('renders confirmed collaborator chips', (
       tester,
     ) async {
       final video = _makeVideo(
         collaboratorPubkeys: const [_collaborator1, _collaborator2],
+        addressableDTag: 'collab-video',
       );
       await tester.pumpWidget(
         buildSubject(
-          providerOverrides: [
-            fetchUserProfileProvider(_collaborator1).overrideWith(
-              (ref) async => _makeProfile(_collaborator1, 'Josh Musick'),
-            ),
-            fetchUserProfileProvider(_collaborator2).overrideWith(
-              (ref) async => _makeProfile(_collaborator2, 'Dan Spurgin'),
-            ),
-          ],
+          providerOverrides: collaboratorOverrides(
+            repository: _confirmingRepository(video),
+          ),
           child: MetadataCollaboratorsSection(video: video),
         ),
       );
@@ -1063,6 +1126,26 @@ void main() {
       expect(find.text('Josh Musick'), findsOneWidget);
       expect(find.text('Dan Spurgin'), findsOneWidget);
     });
+
+    testWidgetsWithSurfaceSize(
+      'hides unaccepted collaborators while acceptance status is unavailable',
+      (tester) async {
+        final video = _makeVideo(
+          collaboratorPubkeys: const [_collaborator1, _collaborator2],
+          addressableDTag: 'collab-video',
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: collaboratorOverrides(repository: null),
+            child: MetadataCollaboratorsSection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Josh Musick'), findsNothing);
+        expect(find.text('Dan Spurgin'), findsNothing);
+      },
+    );
 
     testWidgetsWithSurfaceSize('hides when no collaborators', (tester) async {
       final video = _makeVideo();
@@ -1079,40 +1162,6 @@ void main() {
   // Collaborators section body (status-aware rendering)
   // ---------------------------------------------------------------------------
   group(MetadataCollaboratorsSectionBody, () {
-    testWidgetsWithSurfaceSize(
-      'fallback mode: renders all chips without Pending decoration',
-      (tester) async {
-        await tester.pumpWidget(
-          buildSubject(
-            providerOverrides: [
-              fetchUserProfileProvider(_collaborator1).overrideWith(
-                (ref) async => _makeProfile(_collaborator1, 'Alice'),
-              ),
-              fetchUserProfileProvider(_collaborator2).overrideWith(
-                (ref) async => _makeProfile(_collaborator2, 'Bob'),
-              ),
-            ],
-            child: const MetadataCollaboratorsSectionBody(
-              visibility: CollaboratorVisibility.fallback(
-                taggedPubkeys: [_collaborator1, _collaborator2],
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        final l10n = _l10n(tester);
-        expect(find.text(l10n.metadataCollaboratorsLabel), findsOneWidget);
-        expect(find.text('Alice'), findsOneWidget);
-        expect(find.text('Bob'), findsOneWidget);
-        expect(
-          find.text(l10n.videoCollaboratorPendingDecoration),
-          findsNothing,
-        );
-        expect(_dimmed(), findsNothing);
-      },
-    );
-
     testWidgetsWithSurfaceSize(
       'inviter view: pending chip shows Pending label and is dimmed',
       (tester) async {
@@ -1284,10 +1333,8 @@ void main() {
                 _collaborator1,
               ).overrideWith((ref) => profile.future),
             ],
-            child: const MetadataCollaboratorsSectionBody(
-              visibility: CollaboratorVisibility.fallback(
-                taggedPubkeys: [_collaborator1],
-              ),
+            child: MetadataCollaboratorsSectionBody(
+              visibility: _allConfirmed(const [_collaborator1]),
             ),
           ),
         );
@@ -1321,10 +1368,8 @@ void main() {
                   pubkey,
                 ).overrideWith((ref) => Completer<UserProfile?>().future),
             ],
-            child: const MetadataCollaboratorsSectionBody(
-              visibility: CollaboratorVisibility.fallback(
-                taggedPubkeys: [_collaborator1, _collaborator2],
-              ),
+            child: MetadataCollaboratorsSectionBody(
+              visibility: _allConfirmed(const [_collaborator1, _collaborator2]),
             ),
           ),
         );
@@ -2366,6 +2411,7 @@ void main() {
           ),
           audioEventId: _audioEventId,
           rawTags: {'verification': 'verified_mobile'},
+          addressableDTag: 'who-knew',
         );
 
         await tester.pumpWidget(
@@ -2375,6 +2421,9 @@ void main() {
               isLoading: false,
             ),
             providerOverrides: [
+              ..._thirdPartyViewerOverrides(
+                repository: _confirmingRepository(video),
+              ),
               fetchUserProfileProvider(_creatorPubkey).overrideWith(
                 (ref) async => _makeProfile(_creatorPubkey, 'Sebastian Heit'),
               ),

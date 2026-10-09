@@ -12,9 +12,7 @@ import 'package:models/models.dart';
 ///
 /// Construct with the default constructor when the status pipeline is
 /// available; use [CollaboratorVisibility.fallback] when the repository is
-/// gated off (Nostr not ready, no addressable id, no current user) and the
-/// surface should render the raw tagged list unchanged from pre-pipeline
-/// behaviour.
+/// gated off (Nostr not ready, no addressable id, no current user).
 @immutable
 class CollaboratorVisibility extends Equatable {
   const CollaboratorVisibility({
@@ -23,14 +21,17 @@ class CollaboratorVisibility extends Equatable {
     required this.currentUserPubkey,
     required this.creatorPubkey,
     this.isResolved = false,
-  }) : _hasStatusPipeline = true;
+  });
 
-  const CollaboratorVisibility.fallback({required this.taggedPubkeys})
-    : statusByPubkey = const {},
-      currentUserPubkey = '',
-      creatorPubkey = '',
-      isResolved = false,
-      _hasStatusPipeline = false;
+  /// Acceptance status that cannot be looked up, treated as not yet loaded:
+  /// the author sees every invitee as pending and everyone else sees nothing,
+  /// so an unconfirmed collaborator is never credited publicly (#6907).
+  const CollaboratorVisibility.fallback({
+    required this.taggedPubkeys,
+    this.currentUserPubkey = '',
+    this.creatorPubkey = '',
+  }) : statusByPubkey = const {},
+       isResolved = false;
 
   /// Pubkeys tagged with the `'collaborator'` role on the latest
   /// creator-authored video event.
@@ -40,25 +41,24 @@ class CollaboratorVisibility extends Equatable {
   /// fallback mode.
   final Map<String, CollaboratorStatus> statusByPubkey;
 
-  /// Hex pubkey of the currently signed-in user. Empty in fallback mode.
+  /// Hex pubkey of the currently signed-in user. Empty when unknown.
   final String currentUserPubkey;
 
-  /// Hex pubkey of the video's author. Empty in fallback mode.
+  /// Hex pubkey of the video's author.
   final String creatorPubkey;
 
   /// Whether the acceptance query has finished. Non-author viewers render
   /// nothing until this is true — see [visiblePubkeys].
   final bool isResolved;
 
-  final bool _hasStatusPipeline;
-
-  /// True when the current user authored the video. Always false in
-  /// fallback mode.
+  /// True when the current user authored the video. Always false when the
+  /// current user is unknown.
   bool get isInviterView =>
-      _hasStatusPipeline && _samePubkey(currentUserPubkey, creatorPubkey);
+      currentUserPubkey.isNotEmpty &&
+      _samePubkey(currentUserPubkey, creatorPubkey);
 
-  /// Status for [pubkey]. Returns [CollaboratorStatus.pending] when the
-  /// status pipeline is unavailable or no entry exists.
+  /// Status for [pubkey]. Returns [CollaboratorStatus.pending] when no entry
+  /// exists, including in fallback mode.
   CollaboratorStatus statusFor(String pubkey) {
     final directStatus = statusByPubkey[pubkey];
     if (directStatus != null) return directStatus;
@@ -72,7 +72,6 @@ class CollaboratorVisibility extends Equatable {
 
   /// Pubkeys to render.
   ///
-  /// - Fallback mode: the raw [taggedPubkeys] list, unchanged.
   /// - Author's own video: every tagged pubkey, minus one the current user
   ///   has locally ignored. Unconfirmed entries stay visible and are greyed
   ///   via [isPendingForInviter] — the author needs to see who they invited.
@@ -82,7 +81,6 @@ class CollaboratorVisibility extends Equatable {
   ///   explicitly ignored (#6907). Before the query resolves nothing renders
   ///   at all, so an unconfirmed name is never shown even briefly.
   List<String> get visiblePubkeys {
-    if (!_hasStatusPipeline) return taggedPubkeys;
     if (isInviterView) {
       return [
         for (final pubkey in taggedPubkeys)
@@ -104,7 +102,7 @@ class CollaboratorVisibility extends Equatable {
   }
 
   /// Count of pending collaborators visible on the inviter's view. Zero
-  /// for any other viewer or in fallback mode.
+  /// for any other viewer.
   int get pendingCount {
     if (!isInviterView) return 0;
     return visiblePubkeys.where(isPendingForInviter).length;
@@ -124,6 +122,5 @@ class CollaboratorVisibility extends Equatable {
     currentUserPubkey,
     creatorPubkey,
     isResolved,
-    _hasStatusPipeline,
   ];
 }

@@ -20,28 +20,32 @@ const _viewer =
 void main() {
   group(CollaboratorVisibility, () {
     group('fallback', () {
-      test('exposes raw tagged list unfiltered', () {
+      test('shows nothing to a viewer who is not the author', () {
         const vis = CollaboratorVisibility.fallback(
           taggedPubkeys: [_collab1, _collab2],
+          currentUserPubkey: _viewer,
+          creatorPubkey: _creator,
+        );
+        expect(vis.visiblePubkeys, isEmpty);
+      });
+
+      test('shows nothing when the viewer is unknown', () {
+        const vis = CollaboratorVisibility.fallback(
+          taggedPubkeys: [_collab1, _collab2],
+        );
+        expect(vis.isInviterView, isFalse);
+        expect(vis.visiblePubkeys, isEmpty);
+      });
+
+      test('shows the author every invitee as pending', () {
+        const vis = CollaboratorVisibility.fallback(
+          taggedPubkeys: [_collab1, _collab2],
+          currentUserPubkey: _creator,
+          creatorPubkey: _creator,
         );
         expect(vis.visiblePubkeys, equals([_collab1, _collab2]));
-      });
-
-      test('isInviterView is always false', () {
-        const vis = CollaboratorVisibility.fallback(taggedPubkeys: [_collab1]);
-        expect(vis.isInviterView, isFalse);
-      });
-
-      test('pendingCount is always zero', () {
-        const vis = CollaboratorVisibility.fallback(
-          taggedPubkeys: [_collab1, _collab2],
-        );
-        expect(vis.pendingCount, equals(0));
-      });
-
-      test('isPendingForInviter is always false', () {
-        const vis = CollaboratorVisibility.fallback(taggedPubkeys: [_collab1]);
-        expect(vis.isPendingForInviter(_collab1), isFalse);
+        expect(vis.isPendingForInviter(_collab1), isTrue);
+        expect(vis.pendingCount, equals(2));
       });
 
       test('statusFor returns pending for any pubkey', () {
@@ -217,17 +221,30 @@ void main() {
         expect(a, equals(b));
       });
 
-      test('fallback and status-aware instances are unequal', () {
-        const fallback = CollaboratorVisibility.fallback(
+      test('instances for different viewers are unequal', () {
+        const author = CollaboratorVisibility.fallback(
           taggedPubkeys: [_collab1],
+          currentUserPubkey: _creator,
+          creatorPubkey: _creator,
         );
-        const statusAware = CollaboratorVisibility(
+        const thirdParty = CollaboratorVisibility.fallback(
+          taggedPubkeys: [_collab1],
+          currentUserPubkey: _viewer,
+          creatorPubkey: _creator,
+        );
+        expect(author, isNot(equals(thirdParty)));
+      });
+
+      test('an empty viewer and creator never make an inviter view', () {
+        const vis = CollaboratorVisibility(
           taggedPubkeys: [_collab1],
           statusByPubkey: {},
           currentUserPubkey: '',
           creatorPubkey: '',
+          isResolved: true,
         );
-        expect(fallback, isNot(equals(statusAware)));
+        expect(vis.isInviterView, isFalse);
+        expect(vis.visiblePubkeys, isEmpty);
       });
     });
 
