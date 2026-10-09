@@ -3093,6 +3093,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   name: 'VideoEditorCanvas',
                   category: LogCategory.video,
                 );
+                // Draw, filter and tune cannot zoom by design and their route
+                // covers only the canvas body, so a zoomed canvas would stay
+                // visible around them (#9955).
+                if (editorMode case .paint || .filter || .tune) {
+                  scope.editor?.resetZoom();
+                }
                 final SubEditorType? subEditorType = switch (editorMode) {
                   .paint => .draw,
                   .text => .text,
