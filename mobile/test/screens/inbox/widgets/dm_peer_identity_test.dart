@@ -82,6 +82,7 @@ void main() {
     testWidgets('a former moderation key gets the neutral label', (
       tester,
     ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       await tester.pumpWidget(
         buildSubject(
           (context) => dmPeerDisplayName(
@@ -89,13 +90,13 @@ void main() {
             pubkeyHex: pubkey,
             isVanished: false,
             moderation: ModerationPresentation.former,
-            profile: _profile(pubkey, 'Divine Moderation'),
+            profile: _profile(pubkey, l10n.inboxSupportRowTitle),
           ),
         ),
       );
 
-      expect(find.text('Former moderation account'), findsOneWidget);
-      expect(find.text('Divine Moderation'), findsNothing);
+      expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+      expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
     });
 
     testWidgets('profile wins over generated fallback', (tester) async {
@@ -270,6 +271,7 @@ void main() {
     testWidgets('names a former moderation key without a profile lookup', (
       tester,
     ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       await tester.pumpWidget(
         buildSubject(
           (context) =>
@@ -282,7 +284,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Former moderation account'), findsOneWidget);
+      expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
     });
   });
 

@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
@@ -692,6 +693,7 @@ void main() {
         testWidgets("${custody.name}: Divine's name and wordmark", (
           tester,
         ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
           await openWith(
             tester,
             contact: ShareableUser(
@@ -702,7 +704,7 @@ void main() {
           );
 
           expect(find.byType(ModerationAvatar), findsOneWidget);
-          expect(find.text('Divine Moderation'), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
         });
       }
 
@@ -710,6 +712,7 @@ void main() {
         testWidgets('${custody.name}: neutral label, no wordmark', (
           tester,
         ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
           await openWith(
             tester,
             contact: ShareableUser(
@@ -720,8 +723,8 @@ void main() {
             extraOverrides: [retiredKeyCustody(custody)],
           );
 
-          expect(find.text('Former moderation account'), findsOneWidget);
-          expect(find.text('Divine Moderation'), findsNothing);
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
           expect(find.text('Looks Official'), findsNothing);
           expect(find.byType(ModerationAvatar), findsNothing);
         });
