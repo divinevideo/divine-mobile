@@ -1490,16 +1490,22 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Thin instance wrapper over [VideoEditorCanvas.guardClipLoad] so callers
   /// don't repeat the null-player guard; see that method for the failure
   /// contract.
+  ///
+  /// The frame effects are handed over again after every successful load:
+  /// their windows are mapped from the editor timeline onto the player's,
+  /// which a rendered seam or speed body moves.
   Future<bool> _setClipsSafely(
     DivineVideoPlayerController? player,
     List<VideoClip> clips, {
     Duration? startPosition,
-  }) {
-    return VideoEditorCanvas.guardClipLoad(
+  }) async {
+    final loaded = await VideoEditorCanvas.guardClipLoad(
       () =>
           player?.setClips(clips, startPosition: startPosition) ??
           Future<void>.value(),
     );
+    if (loaded) _syncFrameEffects();
+    return loaded;
   }
 
   Future<bool> _setClipsForGeneration(
@@ -1705,6 +1711,40 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       '🎵 Stop-motion audio synced: ${tracks.length} track(s)',
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
+    );
+  }
+
+  /// Hands the effects Divine renders itself to the native player, which
+  /// draws them on the preview (#9708), with their windows moved onto the
+  /// player's timeline.
+  void _syncFrameEffects() {
+    final player = _videoPlayer;
+    if (player == null || !mounted) return;
+    final effects = context
+        .read<VideoEditorEffectsCubit>()
+        .state
+        .previewCustomEffects;
+    int? onPlayer(Duration? time) => time == null
+        ? null
+        : _composition.timelineToPlayer(time).inMicroseconds;
+    unawaited(
+      player
+          .setFrameEffects([
+            for (final effect in effects)
+              {
+                'id': effect.id,
+                'params': effect.params,
+                'startUs': onPlayer(effect.startTime),
+                'endUs': onPlayer(effect.endTime),
+              },
+          ])
+          .catchError(
+            (Object e, StackTrace s) => Log.warning(
+              'Failed to set preview frame effects: $e',
+              name: 'VideoEditorCanvas',
+              category: LogCategory.video,
+            ),
+          ),
     );
   }
 
@@ -2334,6 +2374,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Listen for playback control requests from BLoC
     return MultiBlocListener(
       listeners: [
+        BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+          listenWhen: (previous, current) => !listEquals(
+            previous.previewCustomEffects,
+            current.previewCustomEffects,
+          ),
+          listener: (context, state) => _syncFrameEffects(),
+        ),
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
           listenWhen: (previous, current) {
             _isTrimmingLayer = previous.trimmingItemId != null;

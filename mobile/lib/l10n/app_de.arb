@@ -2527,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Splitscreen",
   "videoEditorEffectWave": "Welle",
   "videoEditorEffectGlow": "Leuchten",
+  "videoEditorEffectEcho": "Echo",
   "videoEditorEffectsFlashingReplaced": "Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.",
   "videoEditorEffectsFlashingNotDuplicated": "Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.",
   "videoEditorEffectsOnBeat": "Im Takt",

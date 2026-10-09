@@ -8535,6 +8535,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectGlow => 'ፍካት';
 
   @override
+  String get videoEditorEffectEcho => 'ማሚቶ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
 

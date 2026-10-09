@@ -2527,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Ecran împărțit",
   "videoEditorEffectWave": "Val",
   "videoEditorEffectGlow": "Strălucire",
+  "videoEditorEffectEcho": "Ecou",
   "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
   "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
   "videoEditorEffectsOnBeat": "Pe ritm",

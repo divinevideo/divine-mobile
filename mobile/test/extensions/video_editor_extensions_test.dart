@@ -1,3 +1,5 @@
+import 'dart:ui' show Size;
+
 import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,8 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dart'
+    show SizesManager;
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -20,6 +24,8 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
 }
 
 class _MockStateManager extends Mock implements StateManager {}
+
+class _MockSizesManager extends Mock implements SizesManager {}
 
 DivineVideoClip _clip(
   String id, {
@@ -536,7 +542,7 @@ void main() {
 
       verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       expect(
-        stateManager.videoEffectEntries.single.effect.endTime,
+        stateManager.videoEffectEntries.single.endTime,
         const Duration(seconds: 4),
       );
     });
@@ -570,7 +576,7 @@ void main() {
       verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       expect(
         stateManager.videoEffectEntries.map(
-          (e) => (e.id, e.effect.startTime, e.effect.endTime),
+          (e) => (e.id, e.startTime, e.endTime),
         ),
         [
           ('strobe', Duration.zero, const Duration(seconds: 3)),
@@ -585,14 +591,67 @@ void main() {
       when(() => stateManager.activeMeta).thenReturn({
         VideoEditorConstants.effectsStateHistoryKey: [
           {'type': 'sparkle', 'intensity': 1},
-          vhs.effect.toMap(),
+          vhs.effect!.toMap(),
           'not-a-map',
         ],
       });
 
       expect(stateManager.videoEffectEntries, [
-        EditorVideoEffect(id: 'effect_1', effect: vhs.effect),
+        EditorVideoEffect(id: 'effect_1', effect: vhs.effect!),
       ]);
+    });
+
+    group('captureOverlaySnapshot', () {
+      const echo = EditorVideoEffect.custom(
+        id: 'echo-1',
+        custom: CustomVideoEffect(
+          id: echoVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.6},
+          startTime: Duration(seconds: 1),
+        ),
+      );
+
+      setUp(() {
+        final sizesManager = _MockSizesManager();
+        when(
+          () => editor.captureAllLayersWithMeta(
+            basePixelRatio: any(named: 'basePixelRatio'),
+          ),
+        ).thenAnswer((_) async => <ExportedLayer>[]);
+        when(() => editor.configs).thenReturn(const ProImageEditorConfigs());
+        when(() => editor.sizesManager).thenReturn(sizesManager);
+        when(() => sizesManager.bodySize).thenReturn(const Size(400, 600));
+        when(() => stateManager.activeFilters).thenReturn(const []);
+        when(() => stateManager.activeTuneAdjustments).thenReturn(const []);
+        when(() => stateManager.activeBlur).thenReturn(0);
+      });
+
+      test('carries the echo beside the built-in effects, so a clip saved '
+          'to the library keeps it', () async {
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.effectsStateHistoryKey: [
+            vhs.toMap(),
+            echo.toMap(),
+          ],
+        });
+
+        final snapshot = await editor.captureOverlaySnapshot();
+
+        expect(snapshot.effects, [vhs.effect]);
+        expect(snapshot.customEffects, [echo.custom]);
+      });
+
+      test('is not empty when the echo is the only effect', () async {
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.effectsStateHistoryKey: [echo.toMap()],
+        });
+
+        final snapshot = await editor.captureOverlaySnapshot();
+
+        expect(snapshot.effects, isEmpty);
+        expect(snapshot.customEffects, [echo.custom]);
+        expect(snapshot.isEmpty, isFalse);
+      });
     });
   });
 

@@ -8707,6 +8707,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectGlow => 'توهج';
 
   @override
+  String get videoEditorEffectEcho => 'صدى';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
 

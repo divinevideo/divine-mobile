@@ -222,10 +222,10 @@ class TimelineOverlayBloc
         TimelineOverlayItem(
           id: entry.id,
           type: .effect,
-          startTime: entry.effect.startTime ?? .zero,
-          endTime: _clampEnd(entry.effect.endTime ?? total, total),
-          label: entry.effect.type.name,
-          effectType: entry.effect.type,
+          startTime: entry.startTime ?? .zero,
+          endTime: _clampEnd(entry.endTime ?? total, total),
+          label: entry.type.name,
+          effectType: entry.type,
           effectOnBeat: entry.onBeat,
         ),
     ];

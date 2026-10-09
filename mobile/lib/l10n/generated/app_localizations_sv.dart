@@ -8727,6 +8727,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectGlow => 'Glöd';
 
   @override
+  String get videoEditorEffectEcho => 'Eko';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.';
 

@@ -568,7 +568,7 @@ void main() {
         type: TimelineOverlayType.effect,
         startTime: Duration.zero,
         endTime: Duration(seconds: 5),
-        effectType: pve.VideoEffectType.glitch,
+        effectType: EditorEffectType.builtIn(pve.VideoEffectType.glitch),
       );
 
       await tester.pumpWidget(build(item));
@@ -1995,7 +1995,7 @@ void main() {
           type: TimelineOverlayType.effect,
           startTime: Duration(seconds: 1),
           endTime: Duration(seconds: 5),
-          effectType: pve.VideoEffectType.glitch,
+          effectType: EditorEffectType.builtIn(pve.VideoEffectType.glitch),
         );
 
         setUp(() {
@@ -2045,7 +2045,10 @@ void main() {
             ),
           ).called(1);
           expect(effectsCubit.state.editingId, 'effect-1');
-          expect(effectsCubit.state.selectedType, pve.VideoEffectType.glitch);
+          expect(
+            effectsCubit.state.selectedType?.builtIn,
+            pve.VideoEffectType.glitch,
+          );
         });
 
         testWidgets('split cuts the effect at the playhead', (tester) async {
@@ -2063,13 +2066,13 @@ void main() {
 
           final effects = committedEffects();
           expect(
-            effects.map((e) => (e.effect.startTime, e.effect.endTime)),
+            effects.map((e) => (e.startTime, e.endTime)),
             [
               (const Duration(seconds: 1), const Duration(seconds: 3)),
               (const Duration(seconds: 3), const Duration(seconds: 5)),
             ],
           );
-          expect(effects.map((e) => e.effect.intensity), [0.5, 0.5]);
+          expect(effects.map((e) => e.intensity), [0.5, 0.5]);
           expect(effects.last.id, isNot('effect-1'));
         });
 
@@ -2077,7 +2080,7 @@ void main() {
             'beat', (tester) async {
           final onBeat = EditorVideoEffect(
             id: 'effect-1',
-            effect: glitch.effect,
+            effect: glitch.effect!,
             onBeat: true,
           );
           when(() => mockStateManager.activeMeta).thenReturn({
@@ -2126,7 +2129,9 @@ void main() {
             buildWithEditor(
               item.copyWith(
                 id: 'strobe-1',
-                effectType: pve.VideoEffectType.strobe,
+                effectType: const EditorEffectType.builtIn(
+                  pve.VideoEffectType.strobe,
+                ),
               ),
               mockEditor,
               mainBloc,
@@ -2152,7 +2157,7 @@ void main() {
             (tester) async {
               final continuous = EditorVideoEffect(
                 id: glitch.id,
-                effect: glitch.effect,
+                effect: glitch.effect!,
               );
               when(() => mockStateManager.activeMeta).thenReturn({
                 VideoEditorConstants.effectsStateHistoryKey: [

@@ -5890,6 +5890,10 @@
   "@videoEditorEffectGlow": {
     "description": "Name of a video effect: the bright areas of the picture bloom softly into their surroundings, like stage lights or a sunset. Must read differently from the Brightness adjustment (videoEditorTuneBrightness)."
   },
+  "videoEditorEffectEcho": "Echo",
+  "@videoEditorEffectEcho": {
+    "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."

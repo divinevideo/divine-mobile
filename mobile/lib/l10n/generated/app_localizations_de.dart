@@ -8845,6 +8845,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectGlow => 'Leuchten';
 
   @override
+  String get videoEditorEffectEcho => 'Echo';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.';
 

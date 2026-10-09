@@ -2527,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Schermo diviso",
   "videoEditorEffectWave": "Onda",
   "videoEditorEffectGlow": "Bagliore",
+  "videoEditorEffectEcho": "Eco",
   "videoEditorEffectsFlashingReplaced": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l'altro.",
   "videoEditorEffectsFlashingNotDuplicated": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.",
   "videoEditorEffectsOnBeat": "A tempo",

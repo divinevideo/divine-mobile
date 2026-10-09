@@ -2527,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Tela dividida",
   "videoEditorEffectWave": "Onda",
   "videoEditorEffectGlow": "Fulgor",
+  "videoEditorEffectEcho": "Eco",
   "videoEditorEffectsFlashingReplaced": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.",
   "videoEditorEffectsFlashingNotDuplicated": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.",
   "videoEditorEffectsOnBeat": "No ritmo",

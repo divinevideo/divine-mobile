@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCES="$SCRIPT_DIR/divine_video_player/Sources/divine_video_player"
 DIAGNOSTICS_DIR="$(mktemp -d)"
-trap 'rm -f "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
+trap 'rm -f "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests" "$DIAGNOSTICS_DIR/video_frame_effects_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
 
 xcrun swiftc "$SOURCES/PlaybackDiagnostics.swift" \
   "$SCRIPT_DIR/Tests/PlaybackDiagnosticsTests.swift" \
@@ -22,6 +22,12 @@ xcrun swiftc "$SOURCES/AudioOverlayFade.swift" \
   "$SCRIPT_DIR/Tests/AudioOverlayFadeTests.swift" \
   -o "$DIAGNOSTICS_DIR/audio_overlay_fade_tests"
 "$DIAGNOSTICS_DIR/audio_overlay_fade_tests"
+
+xcrun swiftc "$SOURCES/VideoFrameEffects.swift" \
+  "$SOURCES/DivineVideoPlayerLog.swift" \
+  "$SCRIPT_DIR/Tests/VideoFrameEffectsTests.swift" \
+  -o "$DIAGNOSTICS_DIR/video_frame_effects_tests"
+"$DIAGNOSTICS_DIR/video_frame_effects_tests"
 
 ENGINE="${FLUTTER_ROOT:?Set FLUTTER_ROOT to the precached Flutter SDK}/bin/cache/artifacts/engine"
 xcrun swiftc -typecheck -target arm64-apple-macos13.0 \

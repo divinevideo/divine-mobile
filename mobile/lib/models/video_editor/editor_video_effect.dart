@@ -2,35 +2,154 @@
 // ABOUTME: the timeline can move, trim, edit and delete it.
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show VideoEffect, VideoEffectType;
+    show CustomVideoEffect, VideoEffect, VideoEffectType;
 
-/// A [VideoEffect] on the editor timeline.
+/// The id Divine's echo trail is registered under with pro_video_editor, by
+/// the native `EchoVideoEffect` on Android, iOS and macOS (#9708).
+const echoVideoEffectId = 'divine.echo';
+
+/// What an editor effect looks like: one of pro_video_editor's built-in
+/// effects, or one Divine implements natively and registers with it.
+@immutable
+class EditorEffectType {
+  /// A built-in pro_video_editor effect.
+  const EditorEffectType.builtIn(VideoEffectType this.builtIn)
+    : customId = null;
+
+  /// An effect Divine registered with pro_video_editor under [customId].
+  const EditorEffectType.custom(String this.customId) : builtIn = null;
+
+  /// Reads a type written by [name], or `null` for one this build does not
+  /// know.
+  static EditorEffectType? byName(String name) {
+    for (final type in values) {
+      if (type.name == name) return type;
+    }
+    return null;
+  }
+
+  /// The echo trail: moving subjects leave fading copies (#9708).
+  static const echo = EditorEffectType.custom(echoVideoEffectId);
+
+  /// Every type the effects editor offers, in picker order.
+  static final List<EditorEffectType> values = List.unmodifiable([
+    for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
+    echo,
+  ]);
+
+  /// The built-in effect, or `null` for a custom one.
+  final VideoEffectType? builtIn;
+
+  /// The custom effect's registered id, or `null` for a built-in one.
+  final String? customId;
+
+  /// A stable name: the built-in effect's name, or the custom effect's id.
+  String get name => builtIn?.name ?? customId!;
+
+  /// Whether this type flashes; see [isFlashingVideoEffect].
+  bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
+
+  /// Whether this type can fire on the beat; see [canFireOnBeat]. A custom
+  /// effect plays all through its window.
+  bool get supportsOnBeat => builtIn != null && canFireOnBeat(builtIn!);
+
+  @override
+  bool operator ==(Object other) =>
+      other is EditorEffectType &&
+      other.builtIn == builtIn &&
+      other.customId == customId;
+
+  @override
+  int get hashCode => Object.hash(builtIn, customId);
+
+  @override
+  String toString() => 'EditorEffectType($name)';
+}
+
+/// An effect on the editor timeline: a built-in [VideoEffect], or a
+/// [CustomVideoEffect] Divine renders natively (see [EditorEffectType]).
 ///
-/// Its window, [VideoEffect.startTime] to [VideoEffect.endTime], is on the
-/// editor axis the timeline draws; a `null` end reaches the end of the video.
-/// Effects that overlap in time are combined, in list order.
+/// Its window, [startTime] to [endTime], is on the editor axis the timeline
+/// draws; a `null` end reaches the end of the video. Effects that overlap in
+/// time are combined, in list order.
 class EditorVideoEffect extends Equatable {
+  /// A built-in effect.
   const EditorVideoEffect({
     required this.id,
-    required this.effect,
+    required VideoEffect this.effect,
     this.onBeat = false,
-  });
+  }) : custom = null;
+
+  /// An effect Divine renders natively; its `intensity` param drives it.
+  const EditorVideoEffect.custom({
+    required this.id,
+    required CustomVideoEffect this.custom,
+  }) : effect = null,
+       onBeat = false;
+
+  /// A new effect of [type] at [intensity], placed from [startTime] until
+  /// [endTime]. [onBeat] only applies to a type that
+  /// [EditorEffectType.supportsOnBeat].
+  factory EditorVideoEffect.of({
+    required String id,
+    required EditorEffectType type,
+    required double intensity,
+    Duration? startTime,
+    Duration? endTime,
+    bool onBeat = false,
+  }) {
+    final builtIn = type.builtIn;
+    if (builtIn != null) {
+      return EditorVideoEffect(
+        id: id,
+        effect: VideoEffect(
+          type: builtIn,
+          intensity: intensity,
+          startTime: startTime,
+          endTime: endTime,
+        ),
+        onBeat: onBeat,
+      );
+    }
+    return EditorVideoEffect.custom(
+      id: id,
+      custom: CustomVideoEffect(
+        id: type.customId!,
+        params: {intensityParam: intensity},
+        startTime: startTime,
+        endTime: endTime,
+      ),
+    );
+  }
 
   /// Reads an entry written by [toMap].
   ///
   /// An entry without an id, as a saved library clip carries, gets
-  /// [fallbackId]. Throws when the effect itself cannot be read.
+  /// [fallbackId]. Throws when the effect itself cannot be read, which
+  /// includes a custom effect this build does not know.
   factory EditorVideoEffect.fromMap(
     Map<String, dynamic> map, {
     required String fallbackId,
   }) {
-    final id = map[idKey];
+    final rawId = map[idKey];
+    final id = rawId is String && rawId.isNotEmpty ? rawId : fallbackId;
+    final custom = map[customKey];
+    if (custom is Map) {
+      final effect = CustomVideoEffect.fromMap(
+        Map<String, dynamic>.from(custom),
+      );
+      if (EditorEffectType.byName(effect.id) == null) {
+        throw ArgumentError.value(effect.id, 'id', 'Unknown custom effect');
+      }
+      return EditorVideoEffect.custom(id: id, custom: effect);
+    }
     return EditorVideoEffect(
-      id: id is String && id.isNotEmpty ? id : fallbackId,
+      id: id,
       effect: VideoEffect.fromMap(map),
       onBeat: map[onBeatKey] == true,
     );
@@ -42,43 +161,85 @@ class EditorVideoEffect extends Equatable {
   /// The map key [onBeat] is stored under; left out when it is `false`.
   static const onBeatKey = 'onBeat';
 
+  /// The map key a custom effect is stored under. Older builds find no
+  /// `type` next to it and skip the entry.
+  static const customKey = 'custom';
+
+  /// The param a custom effect reads its intensity from.
+  static const intensityParam = 'intensity';
+
   /// Identifies the effect on the timeline and across undo steps.
   final String id;
 
-  /// The effect and its window.
-  final VideoEffect effect;
+  /// The built-in effect and its window, or `null` for a custom one.
+  final VideoEffect? effect;
+
+  /// The custom effect and its window, or `null` for a built-in one.
+  final CustomVideoEffect? custom;
 
   /// Whether the effect fires on the beats of the video's music instead of
   /// playing all through its window; see [videoEffectsOnOutput]. Only for a
-  /// type that [canFireOnBeat].
+  /// type that [EditorEffectType.supportsOnBeat].
   final bool onBeat;
+
+  /// What the effect looks like.
+  EditorEffectType get type => effect != null
+      ? EditorEffectType.builtIn(effect!.type)
+      : EditorEffectType.custom(custom!.id);
+
+  /// How strong the effect is, from 0 to 1.
+  double get intensity =>
+      effect?.intensity ??
+      ((custom!.params[intensityParam] as num?)?.toDouble() ?? 1).clamp(
+        0.0,
+        1.0,
+      );
+
+  /// Where the effect starts on the editor timeline; `null` from the start.
+  Duration? get startTime => effect?.startTime ?? custom?.startTime;
+
+  /// Where the effect ends on the editor timeline; `null` at the end.
+  Duration? get endTime => effect != null ? effect!.endTime : custom!.endTime;
 
   /// Returns a copy placed at [startTime] until [endTime].
   EditorVideoEffect retimed({
     required Duration startTime,
     required Duration endTime,
   }) {
-    return EditorVideoEffect(
+    final custom = this.custom;
+    if (custom == null) {
+      return EditorVideoEffect.of(
+        id: id,
+        type: type,
+        intensity: intensity,
+        startTime: startTime,
+        endTime: endTime,
+        onBeat: onBeat,
+      );
+    }
+    return EditorVideoEffect.custom(
       id: id,
-      effect: VideoEffect(
-        type: effect.type,
-        intensity: effect.intensity,
+      custom: CustomVideoEffect(
+        id: custom.id,
+        params: custom.params,
         startTime: startTime,
         endTime: endTime,
       ),
-      onBeat: onBeat,
     );
   }
 
+  /// Returns a copy under [id], in the same place.
+  EditorVideoEffect withId(String id) => effect != null
+      ? EditorVideoEffect(id: id, effect: effect!, onBeat: onBeat)
+      : EditorVideoEffect.custom(id: id, custom: custom!);
+
   /// Converts the entry into a map for the editor history.
-  Map<String, dynamic> toMap() => {
-    ...effect.toMap(),
-    idKey: id,
-    if (onBeat) onBeatKey: true,
-  };
+  Map<String, dynamic> toMap() => effect != null
+      ? {...effect!.toMap(), idKey: id, if (onBeat) onBeatKey: true}
+      : {customKey: custom!.toMap(), idKey: id};
 
   @override
-  List<Object?> get props => [id, effect, onBeat];
+  List<Object?> get props => [id, effect, custom, onBeat];
 }
 
 /// Whether an effect of [type] can fire on the beat: the effects with a clear
@@ -94,6 +255,21 @@ bool canFireOnBeat(VideoEffectType type) => switch (type) {
   VideoEffectType.negativeFlash => true,
   _ => false,
 };
+
+/// [effects] with their windows moved from the editor timeline onto the
+/// exported video, like [videoEffectsOnOutput] for built-in effects.
+List<CustomVideoEffect> customVideoEffectsOnOutput(
+  List<CustomVideoEffect> effects,
+  TransitionTimelineMap timelineMap,
+) => [
+  for (final effect in effects)
+    CustomVideoEffect(
+      id: effect.id,
+      params: effect.params,
+      startTime: timelineMap.editorToOutputOrNull(effect.startTime),
+      endTime: timelineMap.editorToOutputOrNull(effect.endTime),
+    ),
+];
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, which an overlap transition makes shorter.
@@ -120,7 +296,9 @@ List<VideoEffect> videoEffectsOnOutput(
 }) {
   final result = <VideoEffect>[];
   for (final entry in effects) {
+    // Custom effects go through [customVideoEffectsOnOutput].
     final effect = entry.effect;
+    if (effect == null) continue;
     var start = timelineMap.editorToOutputOrNull(effect.startTime);
     final end = timelineMap.editorToOutputOrNull(effect.endTime);
     if (entry.onBeat) {
@@ -394,19 +572,18 @@ List<EditorVideoEffect>? withoutFlashingOverlaps(
   required String Function() createId,
 }) {
   final kept = effects.where((e) => e.id == keepId).firstOrNull;
-  if (kept == null || !isFlashingVideoEffect(kept.effect.type)) return null;
-  final keptStart = kept.effect.startTime ?? Duration.zero;
-  final keptEnd = kept.effect.endTime;
+  if (kept == null || !kept.type.isFlashing) return null;
+  final keptStart = kept.startTime ?? Duration.zero;
+  final keptEnd = kept.endTime;
 
   var changed = false;
   final result = <EditorVideoEffect>[];
   for (final entry in effects) {
-    final effect = entry.effect;
-    final start = effect.startTime ?? Duration.zero;
-    final end = effect.endTime;
+    final start = entry.startTime ?? Duration.zero;
+    final end = entry.endTime;
     final overlaps =
         entry.id != keepId &&
-        isFlashingVideoEffect(effect.type) &&
+        entry.type.isFlashing &&
         (keptEnd == null || start < keptEnd) &&
         (end == null || keptStart < end);
     if (!overlaps) {
@@ -420,14 +597,12 @@ List<EditorVideoEffect>? withoutFlashingOverlaps(
     if (keptEnd != null &&
         (end == null || end - keptEnd >= minimumVideoEffectPiece)) {
       result.add(
-        EditorVideoEffect(
+        EditorVideoEffect.of(
           id: createId(),
-          effect: VideoEffect(
-            type: effect.type,
-            intensity: effect.intensity,
-            startTime: keptEnd,
-            endTime: end,
-          ),
+          type: entry.type,
+          intensity: entry.intensity,
+          startTime: keptEnd,
+          endTime: end,
           onBeat: entry.onBeat,
         ),
       );

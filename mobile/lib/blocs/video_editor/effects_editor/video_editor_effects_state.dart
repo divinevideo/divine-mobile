@@ -64,13 +64,13 @@ class VideoEditorEffectsState extends Equatable {
   final String? editingId;
 
   /// The effect picked in the open editor, or `null` for none.
-  final VideoEffectType? selectedType;
+  final EditorEffectType? selectedType;
 
   /// The intensity of [selectedType], from 0 to 1.
   final double intensity;
 
   /// Whether the picked effect fires on the beat; only applies when
-  /// [selectedType] [canFireOnBeat].
+  /// [selectedType] [EditorEffectType.supportsOnBeat].
   final bool onBeat;
 
   /// Whether opening the editor started the video, which closing it should
@@ -88,13 +88,18 @@ class VideoEditorEffectsState extends Equatable {
 
   /// Whether the picked effect fires on the beat.
   bool get selectionOnBeat =>
-      onBeat && selectedType != null && canFireOnBeat(selectedType!);
+      onBeat && selectedType != null && selectedType!.supportsOnBeat;
 
   /// The effect the open editor would commit, over the whole video, or `null`
   /// for none.
-  VideoEffect? get selection => selectedType == null
+  EditorVideoEffect? get selection => selectedType == null
       ? null
-      : VideoEffect(type: selectedType!, intensity: intensity);
+      : EditorVideoEffect.of(
+          id: editingId ?? _pickedId,
+          type: selectedType!,
+          intensity: intensity,
+          onBeat: selectionOnBeat,
+        );
 
   /// Whether any effect, committed or picked, fires on the beat, so the beats
   /// are needed.
@@ -108,25 +113,40 @@ class VideoEditorEffectsState extends Equatable {
   /// visible wherever the playhead is. A flashing pick hides the other
   /// flashing effects, which would otherwise flash along with it while the
   /// video plays; confirming replaces them where they overlap anyway.
+  ///
+  /// Only built-in effects: `VideoEffectPreview` cannot show a custom one,
+  /// which [previewCustomEffects] hands to the native player instead.
   List<EditorVideoEffect> get previewEffects {
     final selection = isEditing ? this.selection : null;
-    final picked = selection == null
-        ? null
-        : EditorVideoEffect(
-            id: editingId ?? _pickedId,
-            effect: selection,
-            onBeat: selectionOnBeat,
-          );
-    final hidesFlashing =
-        picked != null && isFlashingVideoEffect(picked.effect.type);
+    final picked = selection?.effect == null ? null : selection;
+    final hidesFlashing = picked != null && picked.type.isFlashing;
     final effects = <EditorVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
       if (isEditing && entry.id == editingId) {
         edited = true;
         if (picked != null) effects.add(picked);
-      } else if (!hidesFlashing || !isFlashingVideoEffect(entry.effect.type)) {
+      } else if (entry.effect != null &&
+          (!hidesFlashing || !entry.type.isFlashing)) {
         effects.add(entry);
+      }
+    }
+    if (!edited && picked != null) effects.add(picked);
+    return effects;
+  }
+
+  /// The effects Divine renders itself that the preview shows, placed like
+  /// [previewEffects]: the native player draws these.
+  List<CustomVideoEffect> get previewCustomEffects {
+    final picked = isEditing ? selection?.custom : null;
+    final effects = <CustomVideoEffect>[];
+    var edited = false;
+    for (final entry in applied) {
+      if (isEditing && entry.id == editingId) {
+        edited = true;
+        if (picked != null) effects.add(picked);
+      } else if (entry.custom case final custom?) {
+        effects.add(custom);
       }
     }
     if (!edited && picked != null) effects.add(picked);
@@ -141,7 +161,7 @@ class VideoEditorEffectsState extends Equatable {
     bool? isEditing,
     String? editingId,
     bool clearEditingId = false,
-    VideoEffectType? selectedType,
+    EditorEffectType? selectedType,
     bool clearSelectedType = false,
     double? intensity,
     bool? onBeat,

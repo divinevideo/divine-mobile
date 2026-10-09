@@ -111,7 +111,7 @@ void main() {
 
       testWidgets('shows the intensity of the picked effect', (tester) async {
         cubit
-          ..selectType(VideoEffectType.vhs)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.vhs))
           ..setIntensity(0.35);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
@@ -126,12 +126,14 @@ void main() {
     group('on the beat switch', () {
       testWidgets('shows for an effect that can fire on the beat, and turns '
           'it on', (tester) async {
-        cubit.selectType(VideoEffectType.vhs);
+        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
         expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
 
-        cubit.selectType(VideoEffectType.zoomPulse);
+        cubit.selectType(
+          const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
         await tester.pumpAndSettle();
@@ -144,7 +146,7 @@ void main() {
       ) async {
         cubit
           ..syncBeatSource(sounds: const [], clips: const [])
-          ..selectType(VideoEffectType.strobe)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe))
           ..setOnBeat(onBeat: true);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
@@ -157,7 +159,7 @@ void main() {
       testWidgets('done commits the picked effect as one history entry and '
           'closes the editor', (tester) async {
         cubit
-          ..selectType(VideoEffectType.glitch)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.glitch))
           ..setIntensity(0.5);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
@@ -195,7 +197,7 @@ void main() {
               effect: VideoEffect.negativeFlash(),
             ),
           ])
-          ..selectType(VideoEffectType.strobe);
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe));
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
@@ -211,7 +213,9 @@ void main() {
       testWidgets('close discards the pick without touching the history', (
         tester,
       ) async {
-        cubit.selectType(VideoEffectType.pixelate);
+        cubit.selectType(
+          const EditorEffectType.builtIn(VideoEffectType.pixelate),
+        );
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 

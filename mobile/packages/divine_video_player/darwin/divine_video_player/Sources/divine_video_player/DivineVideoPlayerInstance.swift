@@ -357,6 +357,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.safePreroll(at: actualTime)
             }
         }
+        output.setClipOffsets(clipOffsets)
         textureOutput = output
         return output.textureId
     }
@@ -405,6 +406,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             handleRemoveAllAudioTracks(result: result)
         case "setAudioTrackVolume":
             handleSetAudioTrackVolume(call, result: result)
+        case "setFrameEffects":
+            let args = call.arguments as? [String: Any]
+            textureOutput?.setFrameEffects(args?["effects"] as? [[String: Any]] ?? [])
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -528,6 +533,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 }
                 self.remoteClipLoader = built.streamedLoop?.loader
                 self.clipOffsets = offsets
+                self.textureOutput?.setClipOffsets(offsets)
                 self.clipDurations = durations
                 self.clipCount = offsets.count
                 self.totalDuration = offsets.last.map { $0 + (durations.last ?? 0) } ?? 0

@@ -8981,6 +8981,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectGlow => 'మెరుపు';
 
   @override
+  String get videoEditorEffectEcho => 'ప్రతిధ్వని';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
 

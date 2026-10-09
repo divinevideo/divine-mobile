@@ -8922,6 +8922,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectGlow => 'Poświata';
 
   @override
+  String get videoEditorEffectEcho => 'Echo';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.';
 

@@ -8645,6 +8645,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectGlow => 'Pendar';
 
   @override
+  String get videoEditorEffectEcho => 'Gema';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.';
 

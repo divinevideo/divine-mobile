@@ -8932,6 +8932,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectGlow => 'Strălucire';
 
   @override
+  String get videoEditorEffectEcho => 'Ecou';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
 

@@ -8770,6 +8770,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectGlow => 'Gloed';
 
   @override
+  String get videoEditorEffectEcho => 'Echo';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
 

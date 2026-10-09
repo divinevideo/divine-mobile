@@ -2482,6 +2482,7 @@
   "videoEditorEffectSplitScreen": "分割画面",
   "videoEditorEffectWave": "ウェーブ",
   "videoEditorEffectGlow": "グロー",
+  "videoEditorEffectEcho": "エコー",
   "videoEditorEffectsFlashingReplaced": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。",
   "videoEditorEffectsFlashingNotDuplicated": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。",
   "videoEditorEffectsOnBeat": "ビートに合わせる",

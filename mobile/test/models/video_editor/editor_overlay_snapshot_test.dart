@@ -7,7 +7,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, VideoEffect;
 
 ExportedLayer _layer({String id = 'l', Duration? start, Duration? end}) {
   return ExportedLayer(
@@ -383,6 +384,25 @@ void main() {
         ).windowedTo(start: _s3, end: _s6);
 
         expect(result.effects, isEmpty);
+      });
+
+      test('windows an echo trail like a built-in effect', () {
+        final result = const EditorOverlaySnapshot(
+          customEffects: [
+            CustomVideoEffect(id: 'divine.echo', params: {'intensity': 0.5}),
+            CustomVideoEffect(id: 'divine.echo', startTime: _s6),
+          ],
+        ).windowedTo(start: _s3, end: _s6);
+
+        expect(result.isEmpty, isFalse);
+        expect(result.customEffects, const [
+          CustomVideoEffect(
+            id: 'divine.echo',
+            params: {'intensity': 0.5},
+            startTime: Duration.zero,
+            endTime: _s3,
+          ),
+        ]);
       });
     });
 

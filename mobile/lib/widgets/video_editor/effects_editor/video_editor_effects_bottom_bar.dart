@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectPreview, VideoEffectType;
@@ -32,7 +33,7 @@ class VideoEditorEffectsBottomBar extends ConsumerWidget {
     final textScaler = MediaQuery.textScalerOf(
       context,
     ).clamp(maxScaleFactor: 1.25);
-    const types = <VideoEffectType?>[null, ...VideoEffectType.values];
+    final types = <EditorEffectType?>[null, ...EditorEffectType.values];
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: textScaler),
@@ -77,7 +78,7 @@ class _EffectItem extends StatelessWidget {
   /// A playhead that never moves, so each tile shows a still.
   static final ValueListenable<Duration> _still = ValueNotifier(Duration.zero);
 
-  final VideoEffectType? type;
+  final EditorEffectType? type;
   final bool isSelected;
   final String? thumbnailPath;
 
@@ -115,18 +116,15 @@ class _EffectItem extends StatelessWidget {
                   borderRadius: .circular(18),
                   child: path == null || path.isEmpty
                       ? const SizedBox.expand()
+                      : type == EditorEffectType.echo
+                      ? _EchoThumbnail(path: path)
                       : VideoEffectPreview(
                           effects: [
-                            if (type != null) VideoEffect(type: type),
+                            if (type?.builtIn case final builtIn?)
+                              VideoEffect(type: builtIn),
                           ],
                           position: _still,
-                          child: Image.file(
-                            File(path),
-                            width: 52,
-                            height: 52,
-                            fit: .cover,
-                            excludeFromSemantics: true,
-                          ),
+                          child: _Thumbnail(path: path),
                         ),
                 ),
               ),
@@ -150,12 +148,66 @@ class _EffectItem extends StatelessWidget {
   }
 }
 
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.file(
+      File(path),
+      width: 52,
+      height: 52,
+      fit: .cover,
+      excludeFromSemantics: true,
+    );
+  }
+}
+
+/// The echo tile: a still has no motion to trail, so the thumbnail is shown
+/// with fading copies of itself shifted to the left instead.
+class _EchoThumbnail extends StatelessWidget {
+  const _EchoThumbnail({required this.path});
+
+  final String path;
+
+  /// Shift and opacity of each copy, oldest first.
+  static const _copies = [(-12.0, 0.22), (-8.0, 0.35), (-4.0, 0.5)];
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: .expand,
+      children: [
+        _Thumbnail(path: path),
+        for (final (dx, opacity) in _copies)
+          Transform.translate(
+            offset: Offset(dx, 0),
+            child: Opacity(
+              opacity: opacity,
+              child: _Thumbnail(path: path),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// The localized name of [type], or of "no effect" for `null`.
-String videoEffectLabel(
+String videoEffectLabel(BuildContext context, EditorEffectType? type) {
+  if (type == null) return context.l10n.videoEditorEffectNone;
+  final builtIn = type.builtIn;
+  // The echo trail is the only effect Divine renders itself so far.
+  if (builtIn == null) return context.l10n.videoEditorEffectEcho;
+  return builtInVideoEffectLabel(context, builtIn);
+}
+
+/// The localized name of the built-in effect [type].
+String builtInVideoEffectLabel(
   BuildContext context,
-  VideoEffectType? type,
+  VideoEffectType type,
 ) => switch (type) {
-  null => context.l10n.videoEditorEffectNone,
   VideoEffectType.glitch => context.l10n.videoEditorEffectGlitch,
   VideoEffectType.rgbSplit => context.l10n.videoEditorEffectRgbSplit,
   VideoEffectType.vhs => context.l10n.videoEditorEffectVhs,

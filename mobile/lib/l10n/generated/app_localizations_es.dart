@@ -8816,6 +8816,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectGlow => 'Resplandor';
 
   @override
+  String get videoEditorEffectEcho => 'Eco';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
 

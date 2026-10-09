@@ -3123,6 +3123,7 @@
   "videoEditorEffectSplitScreen": "የተከፈለ ስክሪን",
   "videoEditorEffectWave": "ሞገድ",
   "videoEditorEffectGlow": "ፍካት",
+  "videoEditorEffectEcho": "ማሚቶ",
   "videoEditorEffectsFlashingReplaced": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።",
   "videoEditorEffectsFlashingNotDuplicated": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።",
   "videoEditorEffectsOnBeat": "ከምቱ ጋር",

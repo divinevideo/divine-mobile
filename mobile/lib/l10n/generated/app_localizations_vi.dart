@@ -8695,6 +8695,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectGlow => 'Phát sáng';
 
   @override
+  String get videoEditorEffectEcho => 'Tiếng vọng';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
 

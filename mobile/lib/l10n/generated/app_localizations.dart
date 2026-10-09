@@ -14787,6 +14787,12 @@ abstract class AppLocalizations {
   /// **'Glow'**
   String get videoEditorEffectGlow;
 
+  /// Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo'**
+  String get videoEditorEffectEcho;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:
