@@ -434,6 +434,26 @@ void main() {
         expect(tapped, isTrue);
       });
 
+      testWidgets('a tap on a link in the description opens the list', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(description: 'https://example.org/shop'),
+            onTap: () => tapped = true,
+          ),
+        );
+
+        // The first characters are the URL itself, not blank line space.
+        await tester.tapAt(
+          tester.getTopLeft(find.byType(LinkifiedText)) + const Offset(6, 6),
+        );
+        await tester.pump();
+
+        expect(tapped, isTrue);
+      });
+
       testWidgets('speaks the name and video count as one label', (
         tester,
       ) async {
