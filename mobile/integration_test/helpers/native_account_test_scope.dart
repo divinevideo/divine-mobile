@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:cache_sync/cache_sync.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
@@ -24,7 +25,12 @@ import 'fake_relay.dart';
 
 /// Real native keys and an in-memory native DB; preferences remain simulated.
 class NativeAccountTestScope {
-  NativeAccountTestScope._(this.relay, this.database, this.prefs) {
+  NativeAccountTestScope._(
+    this.relay,
+    this.database,
+    this.prefs,
+    this._cacheStore,
+  ) {
     final crashReporter = CrashReportingService();
     deviceScope = DeviceScope(
       database: database,
@@ -73,18 +79,23 @@ class NativeAccountTestScope {
   static Future<NativeAccountTestScope> create() async {
     final relay = await FakeRelay.start();
     AppDatabase? database;
+    SqliteCacheStore? cacheStore;
     try {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       database = AppDatabase(NativeDatabase.memory());
+      cacheStore = SqliteCacheStore(NativeDatabase.memory());
+      await CacheSync.init(dao: cacheStore.dao);
       return NativeAccountTestScope._(
         relay,
         database,
         await SharedPreferences.getInstance(),
+        cacheStore,
       );
     } on Object catch (error, stack) {
       final failures = <(Object, StackTrace)>[(error, stack)];
       await _finishCleanup(relay.stop, failures);
       if (database != null) await _finishCleanup(database.close, failures);
+      if (cacheStore != null) await _finishCleanup(cacheStore.close, failures);
       _throwCleanupFailures(failures);
       rethrow;
     }
@@ -93,6 +104,7 @@ class NativeAccountTestScope {
   final FakeRelay relay;
   final AppDatabase database;
   final SharedPreferences prefs;
+  final SqliteCacheStore _cacheStore;
   final controller = AccountSwitchController();
   late final DeviceScope deviceScope;
   final _containers = <ProviderContainer>[];
@@ -141,6 +153,7 @@ class NativeAccountTestScope {
     await Future.wait(_authDisposals);
     await _finishCleanup(relay.stop, _cleanupFailures);
     await _finishCleanup(database.close, _cleanupFailures);
+    await _finishCleanup(_cacheStore.close, _cleanupFailures);
     await _finishCleanup(
       () => expect(tester.takeException(), isNull),
       _cleanupFailures,
