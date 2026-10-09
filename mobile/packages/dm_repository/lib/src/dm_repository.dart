@@ -3243,6 +3243,12 @@ class DmRepository {
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
           );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: its p tags name nobody but '
+            'the sender, so it has no counterparty',
+            category: LogCategory.system,
+          );
           return;
         }
 
@@ -3258,6 +3264,12 @@ class DmRepository {
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
+          );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: every participant it '
+            'resolves to is the same key, so it has no counterparty',
+            category: LogCategory.system,
           );
           return;
         }
