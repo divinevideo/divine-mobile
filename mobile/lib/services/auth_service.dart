@@ -233,7 +233,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   UserProfile? _currentProfile;
   String? _lastError;
   bool _storageErrorOccurred = false;
-  bool _hasExpiredOAuthSession = false;
+  // Every write notifies [expiredOAuthSessionListenable] (#9943). Never
+  // disposed: [dispose] must stay repeatable and late async writers may land
+  // after it; listeners are removed by their own owners.
+  final ValueNotifier<bool> _expiredOAuthSession = ValueNotifier(false);
+  bool get _hasExpiredOAuthSession => _expiredOAuthSession.value;
+  set _hasExpiredOAuthSession(bool value) => _expiredOAuthSession.value = value;
   bool _isRpcUpgradeInProgress = false;
   bool _registeredWithBackgroundActivity = false;
   KeycastRpc? _keycastSigner;
@@ -431,6 +436,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// The user's identity is intact but remote signing is unavailable.
   /// UI should prompt re-login instead of "Secure Your Account".
   bool get hasExpiredOAuthSession => _hasExpiredOAuthSession;
+
+  /// Notifies on every change of [hasExpiredOAuthSession]. A refused
+  /// mid-session refresh flips it while [authState] stays authenticated, which
+  /// no auth-state watcher sees (#9943).
+  ValueListenable<bool> get expiredOAuthSessionListenable =>
+      _expiredOAuthSession;
 
   /// True while a background OAuth RPC upgrade is in progress during startup.
   /// The session-expired sheet should be suppressed until this resolves so the

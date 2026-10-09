@@ -287,14 +287,16 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     final profileColor = effectiveProfile?.profileBackgroundColor;
     final authService = ref.watch(authServiceProvider);
 
-    // Watch auth state to rebuild when auth state changes
-    // (e.g., after email verification completes, or after background RPC
-    // upgrade resolves — the auth stream emits a nudge in both cases)
+    // Watch auth state to rebuild when auth state changes (e.g., after email
+    // verification completes). Re-emitting an unchanged state does not rebuild
+    // this, so the expired-session flag, which can flip mid-session while auth
+    // stays authenticated, is watched through its own provider (#9943).
     ref.watch(currentAuthStateProvider);
     final isAnonymous = authService.isAnonymous;
     final isAccountEnforced =
         widget.isOwnProfile && ref.watch(isAccountEnforcedProvider);
-    final hasExpiredSession = authService.hasExpiredOAuthSession;
+    final hasExpiredSession =
+        widget.isOwnProfile && ref.watch(hasExpiredOAuthSessionProvider);
     final isRpcUpgradeInProgress = authService.isRpcUpgradeInProgress;
     final prefs = ref.watch(sharedPreferencesProvider);
     final isDivineLoginBannerHidden = DivineLoginBannerDismissalStore(

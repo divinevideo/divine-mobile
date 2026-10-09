@@ -1738,15 +1738,21 @@ void main() {
       Future<Event?> signNote(AuthService authService) =>
           authService.createAndSignEvent(kind: 1, content: 'hello');
 
-      test('a refused refresh flags the session expired while the user stays '
-          'signed in', () async {
+      test('a refused refresh flags the session expired and notifies '
+          'expired-session listeners while the user stays signed in', () async {
         final (authService, _) = await arrangeKeycastOnlyAccount();
+        final expired = authService.expiredOAuthSessionListenable;
+        final notified = <bool>[];
+        void record() => notified.add(expired.value);
+        expired.addListener(record);
+        addTearDown(() => expired.removeListener(record));
 
         expect(await signNote(authService), isNull);
         await pumpEventQueue();
 
         verifyRefreshRanOnce();
         expect(authService.hasExpiredOAuthSession, isTrue);
+        expect(notified, equals([true]));
         expect(
           authService.authState,
           equals(AuthState.authenticated),

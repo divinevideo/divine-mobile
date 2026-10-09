@@ -345,6 +345,32 @@ void main() {
     });
   });
 
+  group('hasExpiredOAuthSessionProvider', () {
+    test('notifies listeners when the flag flips with no auth-state '
+        'change', () {
+      // #9943: a refused mid-session refresh flips the flag while auth state
+      // stays authenticated, so this provider is the only signal.
+      final expired = ValueNotifier(false);
+      addTearDown(expired.dispose);
+      final authService = _MockAuthService();
+      when(() => authService.expiredOAuthSessionListenable).thenReturn(expired);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(authService)],
+      );
+      addTearDown(container.dispose);
+      final seen = <bool>[];
+      container.listen(
+        hasExpiredOAuthSessionProvider,
+        (_, next) => seen.add(next),
+        fireImmediately: true,
+      );
+
+      expired.value = true;
+
+      expect(seen, equals([false, true]));
+    });
+  });
+
   group('analyticsIdentitySyncProvider', () {
     const pubkey =
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';

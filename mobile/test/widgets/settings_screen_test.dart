@@ -182,6 +182,9 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           supporterRepositoryProvider.overrideWithValue(supporterRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
+          hasExpiredOAuthSessionProvider.overrideWithValue(
+            mockAuthService.hasExpiredOAuthSession,
+          ),
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
@@ -271,6 +274,9 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             supporterRepositoryProvider.overrideWithValue(supporterRepository),
             authServiceProvider.overrideWithValue(mockAuthService),
+            hasExpiredOAuthSessionProvider.overrideWithValue(
+              mockAuthService.hasExpiredOAuthSession,
+            ),
             draftStorageServiceProvider.overrideWithValue(
               mockDraftStorageService,
             ),
@@ -391,6 +397,9 @@ void main() {
                 supporterRepository,
               ),
               authServiceProvider.overrideWithValue(mockAuthService),
+              hasExpiredOAuthSessionProvider.overrideWithValue(
+                mockAuthService.hasExpiredOAuthSession,
+              ),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
@@ -665,6 +674,9 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           supporterRepositoryProvider.overrideWithValue(supporterRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
+          hasExpiredOAuthSessionProvider.overrideWithValue(
+            mockAuthService.hasExpiredOAuthSession,
+          ),
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
           ),
@@ -787,6 +799,9 @@ void main() {
                 supporterRepository,
               ),
               authServiceProvider.overrideWithValue(mockAuthService),
+              hasExpiredOAuthSessionProvider.overrideWithValue(
+                mockAuthService.hasExpiredOAuthSession,
+              ),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
@@ -869,6 +884,9 @@ void main() {
                 supporterRepository,
               ),
               authServiceProvider.overrideWithValue(mockAuthService),
+              hasExpiredOAuthSessionProvider.overrideWithValue(
+                mockAuthService.hasExpiredOAuthSession,
+              ),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
@@ -1151,6 +1169,9 @@ void main() {
                 supporterRepository,
               ),
               authServiceProvider.overrideWithValue(mockAuthService),
+              hasExpiredOAuthSessionProvider.overrideWithValue(
+                mockAuthService.hasExpiredOAuthSession,
+              ),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
               ),
