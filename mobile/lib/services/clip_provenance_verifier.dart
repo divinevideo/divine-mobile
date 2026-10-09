@@ -306,9 +306,10 @@ class ClipProvenanceVerifier {
   /// ingredient it reports only what differs from the validation recorded
   /// when that ingredient was added. The app signs without trust anchors, so
   /// every ingredient is recorded as `signingCredential.untrusted`: a trusted
-  /// ingredient then shows up as a `signingCredential.trusted` delta, while an
-  /// untrusted one, such as a self-signed manifest, leaves no trace at all.
-  /// Requiring the trusted code is therefore the only way to tell them apart.
+  /// ingredient then shows up as a `signingCredential.trusted` delta. An
+  /// untrusted one, such as a self-signed manifest, shows up as
+  /// `signingCredential.untrusted` or leaves no trace, depending on the reader
+  /// version, so requiring the trusted code is what tells them apart.
   static Set<String> _trustedManifestLabels(Map<String, dynamic> report) {
     final labels = <String>{};
 
