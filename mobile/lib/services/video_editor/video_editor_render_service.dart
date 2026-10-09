@@ -428,7 +428,7 @@ class VideoEditorRenderService {
   /// The sources [proofRenderedVideo] signs a video rendered from [clips]
   /// with [parameters] against: the same set, so a render left unsigned can
   /// remember everything that went into it, layers included.
-  static Future<List<C2paEditSource>> renderedVideoSources({
+  static Future<List<C2paEditSource>?> renderedVideoSources({
     required List<DivineVideoClip> clips,
     CompleteParameters? parameters,
   }) async {

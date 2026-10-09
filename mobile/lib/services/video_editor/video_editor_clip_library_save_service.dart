@@ -116,7 +116,9 @@ class VideoEditorClipLibrarySaveService {
       proofManifestJson: proof == null ? null : jsonEncode(proof),
       // Left unsigned, for example offline, it stays an editor intermediate,
       // like a merge: an edit of it is signed against the media it came from,
-      // including video layers baked over the clip.
+      // including video layers baked over the clip. When some of that media
+      // has no name, null leaves the unsigned file as its own source, so an
+      // edit of it is never signed.
       derivedFrom: proof?.c2paManifestId == null
           ? await VideoEditorRenderService.renderedVideoSources(
               clips: [clip],

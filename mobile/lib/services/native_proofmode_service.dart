@@ -352,11 +352,14 @@ class NativeProofModeService {
       output,
       clips: clips,
       editorStateHistory: editorStateHistory,
-      derivedFrom: editSources(
-        clips: clips,
-        layerClips: layerClips,
-        otherSources: otherSources,
-      ),
+      // An empty list leaves the output unsigned: some media has no name.
+      derivedFrom:
+          editSources(
+            clips: clips,
+            layerClips: layerClips,
+            otherSources: otherSources,
+          ) ??
+          const [],
     );
     if (recordingsLeftUnsigned && (proof?.unattestedSources ?? false)) {
       return proof!.withUnattestedSources(unattested: false);
@@ -367,9 +370,11 @@ class NativeProofModeService {
   /// The sources an edit made from [clips], [layerClips] and [otherSources]
   /// is signed against, as [proofEdit] signs it.
   ///
-  /// Empty when a clip's media cannot be named, so such an edit is never
-  /// signed rather than signed with part of its history.
-  static List<C2paEditSource> editSources({
+  /// `null` when a clip's media cannot be named, so such an edit is never
+  /// signed rather than signed with part of its history. Not an empty list:
+  /// on a clip that means it was drawn from nothing, so a later edit of it
+  /// would drop it rather than refuse to sign.
+  static List<C2paEditSource>? editSources({
     required List<DivineVideoClip> clips,
     List<DivineVideoClip> layerClips = const [],
     List<C2paEditSource> otherSources = const [],
@@ -377,7 +382,7 @@ class NativeProofModeService {
     final clipSources = [
       for (final clip in [...clips, ...layerClips]) clip.signingSources,
     ];
-    if (clipSources.contains(null)) return const [];
+    if (clipSources.contains(null)) return null;
     return {
       for (final sources in clipSources) ...sources!,
       ...otherSources,

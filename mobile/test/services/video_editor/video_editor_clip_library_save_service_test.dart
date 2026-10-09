@@ -133,6 +133,45 @@ void main() {
       expect(result?.derivedFrom, const [C2paEditSource(path: '/path/a.mp4')]);
     });
 
+    test('names the unsigned file itself when its media has no name', () async {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => '/documents/flattened.mp4';
+      NativeProofModeService.proofFileOverride = (
+        videoFile, {
+        required enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => const NativeProofData(videoHash: 'flattened');
+      addTearDown(() => NativeProofModeService.proofFileOverride = null);
+      final streamed = _createClip().copyWith(
+        video: EditorVideo.network('https://example.com/a.mp4'),
+      );
+      expect(streamed.signingSources, isNull);
+
+      final result =
+          await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+            clip: streamed,
+            renderId: 'save-1',
+          );
+
+      // An empty list would read as "made from nothing" and be dropped from a
+      // later edit; the unsigned file has no manifest, so it blocks signing.
+      expect(result?.derivedFrom, isNull);
+      expect(result?.signingSources, const [
+        C2paEditSource(path: '/documents/flattened.mp4'),
+      ]);
+    });
+
     test(
       'keeps the sources of video layers baked over an unsigned clip',
       () async {
