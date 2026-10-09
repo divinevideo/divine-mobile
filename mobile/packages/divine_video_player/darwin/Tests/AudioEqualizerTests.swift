@@ -21,11 +21,24 @@ enum AudioEqualizerTests {
         shapingLimitsABoostAtTheExportCeiling()
         shapingAppliesAVolumeAfterTheEqualizer()
         equalizingInPiecesMatchesEqualizingWhole()
+        aCornerNearHalfTheSampleRateIsLowered()
         print("Audio equalizer tests passed")
     }
 
     static func close(_ a: Double, _ b: Double, _ tolerance: Double = 1e-12) -> Bool {
         abs(a - b) <= tolerance
+    }
+
+    /// A corner too close to half the sample rate is lowered to 45 % of it,
+    /// as the export's is, which keeps the 16 kHz shelf stable at 32 and
+    /// 22.05 kHz: both poles inside the unit circle.
+    static func aCornerNearHalfTheSampleRateIsLowered() {
+        for rate in [32_000.0, 22_050.0] {
+            let shelf = Biquad.highShelf(frequencyHz: 16_000, gainDb: 6, sampleRate: rate)
+            let lowered = Biquad.highShelf(frequencyHz: rate * 0.45, gainDb: 6, sampleRate: rate)
+            precondition(shelf == lowered, "\(rate): \(shelf)")
+            precondition(abs(shelf.a2) < 1 && abs(shelf.a1) < 1 + shelf.a2, "\(rate): \(shelf)")
+        }
     }
 
     static func lowShelfCoefficientsMatchTheExport() {

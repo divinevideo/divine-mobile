@@ -62,6 +62,22 @@ class AudioEqualizerTest {
     }
 
     @Test
+    fun `a corner near half the sample rate is lowered as the export's is`() {
+        // Lowered to 45 % of the rate, the 16 kHz shelf stays stable at 32
+        // and 22.05 kHz: both poles inside the unit circle.
+        for (rate in intArrayOf(32000, 22050)) {
+            val shelf = Biquad.highShelf(16000.0, 6.0, rate)
+            val lowered = Biquad.highShelf(rate * 0.45, 6.0, rate)
+            assertEquals(lowered.b0, shelf.b0, 0.0)
+            assertEquals(lowered.b1, shelf.b1, 0.0)
+            assertEquals(lowered.b2, shelf.b2, 0.0)
+            assertEquals(lowered.a1, shelf.a1, 0.0)
+            assertEquals(lowered.a2, shelf.a2, 0.0)
+            assertTrue(abs(shelf.a2) < 1 && abs(shelf.a1) < 1 + shelf.a2)
+        }
+    }
+
+    @Test
     fun `a band without gain passes the signal through`() {
         assertSame(Biquad.IDENTITY, Biquad.lowShelf(200.0, 0.0, 48000))
         assertSame(Biquad.IDENTITY, Biquad.peak(1000.0, 0.0, 1.0, 48000))
