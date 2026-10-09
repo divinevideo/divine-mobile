@@ -164,7 +164,8 @@ void main() {
       _service = _MockCuratedListService();
       _lists = [_list(1), _list(2), _list(3)];
       when(() => _service.isCurrentSession).thenReturn(true);
-      when(() => _service.myLists).thenAnswer((_) => _lists);
+      when(() => _service.pickerListsForOwner(_owner))
+          .thenAnswer((_) => _lists);
     });
 
     // These retain the original three externally demonstrated scale cases.
@@ -239,7 +240,7 @@ void main() {
                   pendingRepublish: true,
                 );
           _lists = [_list(1), _list(2), pending];
-          when(() => _service.retryListSync(pending.id))
+          when(() => _service.retryListSync(pending.authorScopedId))
               .thenAnswer((_) async => false);
           await _open(
             tester,
@@ -281,7 +282,8 @@ void main() {
           );
           await tester.tap(sync);
           await tester.pumpAndSettle();
-          verify(() => _service.retryListSync(pending.id)).called(1);
+          verify(() => _service.retryListSync(pending.authorScopedId))
+              .called(1);
           expect(find.text(notice), findsOneWidget);
           expect(
             cubit.state.selectedListIds,

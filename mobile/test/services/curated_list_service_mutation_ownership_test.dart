@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -16,6 +15,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -160,6 +160,9 @@ void main() {
     when(() => auth.isAuthenticated).thenReturn(signedIn);
     when(() => auth.currentPublicKeyHex).thenReturn(owner);
     stubListPublishing(client: client, auth: auth, pubkey: owner);
+    if (signedIn) {
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+    }
     service = CuratedListService(
       nostrService: client,
       authService: auth,
@@ -209,7 +212,7 @@ void main() {
     verifyNever(() => client.publishEventAwaitOk(any()));
   }
 
-  group('editable list projection', () {
+  group('picker ownership projection', () {
     for (final foreignFirst in [false, true]) {
       for (final confirmed in [false, true]) {
         test(
@@ -221,7 +224,7 @@ void main() {
               eventId: confirmed ? first : null,
             );
             await load(foreignFirst ? [foreign, own] : [own, foreign]);
-            expect(service.editableLists, [own]);
+            expect(service.pickerListsForOwner(owner), [own]);
             expect(
               await service.addVideoToList(own.authorScopedId, added),
               isTrue,
@@ -240,7 +243,7 @@ void main() {
     test('keeps a proven local draft and uses its own coordinate', () async {
       final draft = row();
       await load([draft]);
-      expect(service.editableLists, [draft]);
+      expect(service.pickerListsForOwner(owner), [draft]);
       expect(await service.addVideoToList(draft.authorScopedId, added), isTrue);
       expect(service.lists, hasLength(1));
       expect(service.lists.single.pubkey, owner);
@@ -250,7 +253,7 @@ void main() {
     test('does not offer a draft with unreadable follow evidence', () async {
       await load([row()], follows: 'unreadable');
       final raw = prefs.getString(CuratedListService.listsStorageKey);
-      expect(service.editableLists, isEmpty);
+      expect(service.pickerListsForOwner(owner), isEmpty);
       expect(prefs.getString(CuratedListService.listsStorageKey), raw);
       expectNoPublication();
     });
@@ -811,33 +814,39 @@ void main() {
       expectNoPublication();
     });
 
-    test('true guest may keep its unique null draft beside an explicitly authored row', () async {
-      final owned = row(pubkey: owner, eventId: first);
-      await load([owned, row()], signedIn: false);
-      when(() => auth.currentPublicKeyHex).thenReturn(null);
-      expect(await service.addVideoToList(':$id', added), isTrue);
-      expect(service.getListById('$owner:$id'), owned);
-      expect(service.getListById(':$id')?.videoEventIds, [
-        first,
-        second,
-        added,
-      ]);
-      expect(service.getListById(':$id')?.pubkey, isNull);
-      expectNoPublication();
-    });
-    test('signed-out remembered account may edit its distinct null draft without adopting it', () async {
-      final owned = row(pubkey: owner, eventId: first);
-      await load([owned, row()], signedIn: false);
-      expect(await service.addVideoToList(':$id', added), isTrue);
-      expect(service.getListById('$owner:$id'), owned);
-      expect(service.getListById(':$id')?.videoEventIds, [
-        first,
-        second,
-        added,
-      ]);
-      expect(service.getListById(':$id')?.pubkey, isNull);
-      expectNoPublication();
-    });
+    test(
+      'true guest may keep its unique null draft beside an explicitly authored row',
+      () async {
+        final owned = row(pubkey: owner, eventId: first);
+        await load([owned, row()], signedIn: false);
+        when(() => auth.currentPublicKeyHex).thenReturn(null);
+        expect(await service.addVideoToList(':$id', added), isTrue);
+        expect(service.getListById('$owner:$id'), owned);
+        expect(service.getListById(':$id')?.videoEventIds, [
+          first,
+          second,
+          added,
+        ]);
+        expect(service.getListById(':$id')?.pubkey, isNull);
+        expectNoPublication();
+      },
+    );
+    test(
+      'signed-out remembered account may edit its distinct null draft without adopting it',
+      () async {
+        final owned = row(pubkey: owner, eventId: first);
+        await load([owned, row()], signedIn: false);
+        expect(await service.addVideoToList(':$id', added), isTrue);
+        expect(service.getListById('$owner:$id'), owned);
+        expect(service.getListById(':$id')?.videoEventIds, [
+          first,
+          second,
+          added,
+        ]);
+        expect(service.getListById(':$id')?.pubkey, isNull);
+        expectNoPublication();
+      },
+    );
     for (final legacyFirst in [false, true]) {
       test(
         'backfill targets the pending authored row despite a same-id null draft (${legacyFirst ? 'legacy' : 'owned'} first)',
@@ -856,9 +865,9 @@ void main() {
           expect(service.getListById(':$id'), legacy);
           expect(service.getListById('$owner:$id')?.pendingRepublish, isFalse);
           final event =
-              verify(() => client.publishEventAwaitOk(captureAny()))
-                      .captured
-                      .single
+              verify(
+                    () => client.publishEventAwaitOk(captureAny()),
+                  ).captured.single
                   as Event;
           expect(event.pubkey, owner);
           expect(event.tags, contains(equals(['d', id])));
@@ -1065,8 +1074,9 @@ void main() {
           final coordinator = CuratedListCacheWriteCoordinator();
           await load([local], coordinator: coordinator, gateWrites: true);
           final controlled = prefs as _TestPreferences;
-          final otherWrite = anotherStore(coordinator)
-              .saveLists([local, owned]);
+          final otherWrite = anotherStore(
+            coordinator,
+          ).saveLists([local, owned]);
           await controlled.writeStarted.future;
           final firstReached = Completer<void>();
           final secondReached = Completer<void>();
@@ -1134,38 +1144,45 @@ void main() {
         expectNoPublication();
       },
     );
-    test('a missing follow key retires refused empty overlays before a genuine local claim', () async {
-      final local = row();
-      final coordinator = CuratedListCacheWriteCoordinator();
-      await load([local], follows: jsonEncode([id]), coordinator: coordinator);
-      final rejected = await coordinator.saveSubscriptionsWithResult(
-        baseline: {id},
-        current: const {},
-        cacheKey: CuratedListService.subscribedListsStorageKey,
-        read: () => {id},
-        write: (ids) async {
-          await prefs.setString(
-            CuratedListService.subscribedListsStorageKey,
-            jsonEncode(ids.toList()),
-          );
-          return false;
-        },
-      );
-      expect(rejected.status, CuratedCacheWriteStatus.storageRejected);
-      await prefs.remove(CuratedListService.subscribedListsStorageKey);
-      final next = CuratedListService(
-        nostrService: client,
-        authService: auth,
-        prefs: prefs,
-        cacheWriteCoordinator: coordinator,
-      );
-      addTearDown(next.dispose);
-      expect(await next.addVideoToList(':$id', added), isTrue);
-      expect(next.getListById('$owner:$id')?.videoEventIds, [
-        first,
-        second,
-        added,
-      ]);
-    });
+    test(
+      'a missing follow key retires refused empty overlays before a genuine local claim',
+      () async {
+        final local = row();
+        final coordinator = CuratedListCacheWriteCoordinator();
+        await load(
+          [local],
+          follows: jsonEncode([id]),
+          coordinator: coordinator,
+        );
+        final rejected = await coordinator.saveSubscriptionsWithResult(
+          baseline: {id},
+          current: const {},
+          cacheKey: CuratedListService.subscribedListsStorageKey,
+          read: () => {id},
+          write: (ids) async {
+            await prefs.setString(
+              CuratedListService.subscribedListsStorageKey,
+              jsonEncode(ids.toList()),
+            );
+            return false;
+          },
+        );
+        expect(rejected.status, CuratedCacheWriteStatus.storageRejected);
+        await prefs.remove(CuratedListService.subscribedListsStorageKey);
+        final next = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+          cacheWriteCoordinator: coordinator,
+        );
+        addTearDown(next.dispose);
+        expect(await next.addVideoToList(':$id', added), isTrue);
+        expect(next.getListById('$owner:$id')?.videoEventIds, [
+          first,
+          second,
+          added,
+        ]);
+      },
+    );
   });
 }

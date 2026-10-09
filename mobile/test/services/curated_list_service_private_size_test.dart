@@ -15,6 +15,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -61,6 +62,7 @@ fixture(CuratedList source) async {
   when(() => auth.isAuthenticated).thenReturn(true);
   when(() => auth.currentPublicKeyHex).thenReturn(_owner);
   stubListPublishing(client: client, auth: auth, pubkey: _owner);
+  await stubCommittedListAccount(auth: auth, preferences: prefs);
   final service = CuratedListService(
     nostrService: client,
     authService: auth,
@@ -116,14 +118,15 @@ void main() {
                 }),
             });
             final prefs = await SharedPreferences.getInstance();
-            final before = {
-              for (final key in prefs.getKeys()) key: prefs.get(key),
-            };
             final client = _Client();
             final auth = _Auth();
             when(() => auth.isAuthenticated).thenReturn(true);
             when(() => auth.currentPublicKeyHex).thenReturn(_owner);
             stubListPublishing(client: client, auth: auth, pubkey: _owner);
+            await stubCommittedListAccount(auth: auth, preferences: prefs);
+            final before = {
+              for (final key in prefs.getKeys()) key: prefs.get(key),
+            };
             final signer = client.signer;
             final service = CuratedListService(
               nostrService: client,

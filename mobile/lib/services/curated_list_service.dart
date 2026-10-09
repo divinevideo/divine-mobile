@@ -11,9 +11,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
-import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
+import 'package:openvine/services/curated_lists/curated_list_default_publication_authority.dart';
 import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
@@ -27,19 +28,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/models/curated_list_callbacks.dart';
+export 'package:openvine/services/curated_lists/curated_list_account_authority.dart'
+    show CuratedListAccountBoundaryException;
 
 part 'curated_lists/curated_list_deletion.dart';
 part 'curated_lists/curated_list_playlist.dart';
+part 'curated_lists/curated_list_publication.dart';
 part 'curated_lists/curated_list_recovery_service.dart';
-
-/// A fresh list session cannot prove cache absence across unfinished cleanup.
-class CuratedListAccountBoundaryException implements Exception {
-  const CuratedListAccountBoundaryException();
-
-  @override
-  String toString() =>
-      'Account cleanup must finish before lists can initialize';
-}
 
 /// A metadata update's bounded rejection reason.
 enum CuratedListUpdateRejection { failed, privateListFull }
@@ -89,6 +84,10 @@ class CuratedListService extends ChangeNotifier {
        _publishClock = CuratedListPublishClock(
          maxFutureDrift: maxPublishClockDrift,
        ) {
+    _accountAuthority = CuratedListAccountAuthority(
+      authService: authService,
+      preferences: prefs,
+    );
     _sessionLease = _sessions.acquire(
       onRecoveryReadinessChanged: () {
         if (!_isDisposed && isCurrentSession) notifyListeners();
@@ -97,7 +96,8 @@ class CuratedListService extends ChangeNotifier {
     // A lease created across unfinished cleanup has no trusted local baseline.
     // Existing continuing leases keep their already-accepted live deferral.
     _accountCleanupPendingAtCreation = _hasPendingAccountCleanup;
-    if (_accountCleanupPendingAtCreation) {
+    if (_accountCleanupPendingAtCreation ||
+        _accountAuthority.unresolvedAtCreation) {
       _initializationError = const CuratedListAccountBoundaryException();
     }
     _relayGateway = CuratedListRelayGateway(
@@ -122,12 +122,21 @@ class CuratedListService extends ChangeNotifier {
         cancelled: false,
       ),
     );
+    _defaultAuthority = CuratedDefaultPublicationAuthority(
+      currentOwner: _relayGateway.currentAuthenticatedPubkey,
+      isCurrentSession: () => isCurrentSession,
+      canWriteCurrentCache: () => !recoveryNeedsRepair,
+      wasDeleted: (owner) => _cacheStore.wasListDeleted(owner, defaultListId),
+      takeCreationPermit: _authService.takeFreshAccountListCreationPermit,
+    );
     _publisher = CuratedListPublisher(
       client: _nostrService,
       gateway: _relayGateway,
       publishClock: _publishClock,
       findList: (id) => isCurrentSession ? getListById(id) : null,
       persistList: _persistPublication,
+      isPublicationAuthorized: _defaultAuthority.canPublish,
+      onPublicationAccepted: _defaultAuthority.accepted,
       recoveryJournal: _recovery,
       isCurrentSession: () => isCurrentSession,
     );
@@ -141,6 +150,8 @@ class CuratedListService extends ChangeNotifier {
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
+  late final CuratedListAccountAuthority _accountAuthority;
+  late final CuratedDefaultPublicationAuthority _defaultAuthority;
   late final PrefsCuratedListStore _cacheStore;
   final CuratedListSessionCoordinator _sessions;
   late final CuratedListSessionLease _sessionLease;
@@ -148,9 +159,7 @@ class CuratedListService extends ChangeNotifier {
 
   // The shared boundary is unresolved even when its owner cannot be read.
   // Do not parse or clear evidence to turn an unknown intent into absence.
-  bool get _hasPendingAccountCleanup =>
-      PendingAccountCleanup.readbackUnknown(_prefs) ||
-      _prefs.containsKey(PendingAccountCleanup.storageKey);
+  bool get _hasPendingAccountCleanup => _accountAuthority.hasPendingCleanup;
   final Duration _relaySyncTimeout;
   late final CuratedListRelayGateway _relayGateway;
   final CuratedListPublishClock _publishClock;
@@ -203,7 +212,8 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Whether this instance may still mutate the active account's cache.
-  bool get isCurrentSession => !_isDisposed && _sessionLease.isCurrent;
+  bool get isCurrentSession =>
+      !_isDisposed && _sessionLease.isCurrent && _accountAuthority.isCurrent;
 
   bool _isCurrent(String? owner) =>
       isCurrentSession && _relayGateway.currentAuthenticatedPubkey() == owner;
@@ -268,8 +278,7 @@ class CuratedListService extends ChangeNotifier {
     _relayGateway.currentAuthenticatedPubkey(),
   );
 
-  /// Initialize the service and create default list if needed.
-  /// Relay sync follows local loading in the background.
+  /// Initialize the list cache and start background relay synchronization.
   Future<void> initialize() async {
     if (_isInitializing || _isInitialized) return;
     _isInitializing = true;
@@ -287,7 +296,7 @@ class CuratedListService extends ChangeNotifier {
         throw const CuratedListAccountBoundaryException();
       }
 
-      await prepareRecovery();
+      if (!_cacheStore.hasUnreadableListSnapshot) await prepareRecovery();
       // Preservation permits reads but cannot prove unknown accepted changes
       // repaired. Do not create defaults, publish, or mutate subscriptions.
       if (recoveryNeedsRepair) {
@@ -393,6 +402,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Unreadable accepted evidence must be repaired before changing lists.
   bool get recoveryNeedsRepair {
+    if (_cacheStore.hasUnreadableListSnapshot) return true;
     final owner = _relayGateway.currentAuthenticatedPubkey();
     return owner == null
         ? _recovery.legacyNeedsRepair
@@ -405,6 +415,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Preserves unreadable evidence before permitting reads with a mutation hold.
   Future<void> prepareRecovery() async {
+    if (_cacheStore.hasUnreadableListSnapshot) return;
     _recoveryPreparations++;
     try {
       final owner = _relayGateway.currentAuthenticatedPubkey();
@@ -417,11 +428,6 @@ class CuratedListService extends ChangeNotifier {
       _recoveryPreparations--;
     }
   }
-
-  /// Generates a list ID that is unique within the cached lists.
-  ///
-  /// The suffix prevents creates in the same millisecond sharing a coordinate.
-  String _generateListId(DateTime now) => _cacheIndex.nextLocalId(now);
 
   Future<CuratedList?> _createList({
     required String name,
@@ -449,7 +455,7 @@ class CuratedListService extends ChangeNotifier {
 
       if (!isCurrentSession || recoveryNeedsRepair) return null;
       final now = clock.now();
-      final listId = id ?? _generateListId(now);
+      final listId = id ?? _cacheIndex.nextLocalId(now);
       final ownerPubkey = _relayGateway.currentAuthenticatedPubkey();
 
       final newList = CuratedList(
@@ -469,6 +475,7 @@ class CuratedListService extends ChangeNotifier {
         playOrder: playOrder,
       );
 
+      if (!_defaultAuthority.authorizeCreation(newList)) return null;
       if (ownerPubkey != null) {
         if (_cacheStore.wasListDeleted(ownerPubkey, listId) &&
             !await _recovery.retirePermissions(ownerPubkey, listId)) {
@@ -523,9 +530,26 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Lists whose current owner evidence permits editing in this session.
-  List<CuratedList> get editableLists =>
-      List.unmodifiable(_lists.where(_canMutateCachedList));
+  /// Reads only this account's proven rows, including during recovery holds.
+  ///
+  /// This is display evidence, never permission to save or sync. The current
+  /// session and owner must still match, and failed initialization stays closed.
+  List<CuratedList> pickerListsForOwner(String owner) {
+    if (!isCurrentSession ||
+        _initializationError != null ||
+        owner.isEmpty ||
+        _authService.currentPublicKeyHex != owner) {
+      return const [];
+    }
+    return _cacheStore.readablePickerLists(
+      _lists,
+      owner,
+      subscriptionsLoaded:
+          _hasLoadedSubscriptionIds &&
+          _relayGateway.currentAuthenticatedPubkey() == owner,
+      subscribedListIds: _subscribedListIds,
+    );
+  }
 
   void _restoreList(CuratedList list) {
     final index = _lists.indexWhere(
@@ -543,6 +567,7 @@ class CuratedListService extends ChangeNotifier {
   /// Remembered owners may edit offline; relay signing still requires auth.
   bool _canMutateCachedList(CuratedList list) {
     if (!isReadyForMutations ||
+        !_defaultAuthority.canMutate(list) ||
         !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
       return false;
     }
@@ -614,6 +639,8 @@ class CuratedListService extends ChangeNotifier {
         CuratedListVisibility.fromList(previous) !=
         CuratedListVisibility.fromList(ownedUpdate);
     if (changesPermissions && !_authService.isAuthenticated) return false;
+    final intent = _defaultAuthority.reserveMutation(previous, ownedUpdate);
+    if (intent == null) return false;
     final locallySaved = ownedUpdate.stageVisibilityFrom(previous);
     _lists[listIndex] = locallySaved;
     if (!await _saveLists(
@@ -621,6 +648,7 @@ class CuratedListService extends ChangeNotifier {
           ? {ownedUpdate.authorScopedId: previous}
           : const {},
     )) {
+      intent.rollback();
       if (_isCurrent(owner) &&
           _prefs.getString(listsStorageKey) != null &&
           getListById(previous.authorScopedId) == locallySaved) {
@@ -770,14 +798,21 @@ class CuratedListService extends ChangeNotifier {
         if (_recovery.record(owner, id) == null) return false;
         return _publisher.retryPlaintextRedactions(listId);
       }
-      if (!isOwnedList(listId)) return false;
+      if (!isOwnedList(listId) ||
+          !_defaultAuthority.canRetrySavedPublication(list)) {
+        return false;
+      }
       if (list.nostrEventId != null &&
           !list.pendingRepublish &&
           list.pendingVisibility == null &&
           list.pendingPlaintextEventIds.isNotEmpty) {
         return _publisher.retryPlaintextRedactions(list.authorScopedId);
       }
-      return _publishListToNostr(list, confirmed: true);
+      return _publishListToNostr(
+        list,
+        confirmed: true,
+        explicitDefaultIntent: true,
+      );
     },
     cancelled: false,
   );
@@ -976,6 +1011,8 @@ class CuratedListService extends ChangeNotifier {
         return const CuratedListUpdateResult.privateListFull();
       }
 
+      final intent = _defaultAuthority.reserveMutation(list, updatedList);
+      if (intent == null) return const CuratedListUpdateResult.failed();
       // Metadata saves locally; visibility and permissions await acceptance.
       final locallySaved = updatedList.stageVisibilityFrom(list);
       _lists[listIndex] = locallySaved;
@@ -984,6 +1021,7 @@ class CuratedListService extends ChangeNotifier {
             ? {updatedList.authorScopedId: list}
             : const {},
       )) {
+        intent.rollback();
         if (_isCurrent(owner) &&
             _prefs.getString(listsStorageKey) != null &&
             getListById(list.authorScopedId) == locallySaved) {
@@ -1201,6 +1239,7 @@ class CuratedListService extends ChangeNotifier {
   /// Subscribe to a curated list (saves list data for offline access)
   Future<bool> subscribeToList(String listId, [CuratedList? listData]) async {
     if (!isReadyForMutations) return false;
+    final owner = _relayGateway.currentAuthenticatedPubkey();
     try {
       // Check if list exists in our cache
       var list = getListById(listId);
@@ -1258,7 +1297,7 @@ class CuratedListService extends ChangeNotifier {
         await _onListSubscribed!(listId, list.videoEventIds);
       }
 
-      return true;
+      return _isCurrent(owner) && isReadyForMutations;
     } catch (e) {
       Log.error(
         'Failed to subscribe to list: $e',
@@ -1272,6 +1311,7 @@ class CuratedListService extends ChangeNotifier {
   /// Unsubscribe from a curated list
   Future<bool> unsubscribeFromList(String listId) async {
     if (!isReadyForMutations) return false;
+    final owner = _relayGateway.currentAuthenticatedPubkey();
     try {
       // Check if subscribed
       final subscriptionId = _subscriptionId(listId);
@@ -1301,7 +1341,7 @@ class CuratedListService extends ChangeNotifier {
       if (!isReadyForMutations) return false;
       _onListUnsubscribed?.call(subscriptionId);
 
-      return true;
+      return _isCurrent(owner) && isReadyForMutations;
     } catch (e) {
       Log.error(
         'Failed to unsubscribe from list: $e',
@@ -1358,52 +1398,9 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Confirmed writes await acceptance; ordinary item edits stay local for retry.
-  Future<bool> _publishListToNostr(
-    CuratedList sourceList, {
-    bool confirmed = false,
-    bool duringInitialization = false,
-    void Function()? onPublicationUnconfirmed,
-  }) =>
-      !isCurrentSession ||
-          recoveryNeedsRepair ||
-          (!isReadyForMutations && !duringInitialization)
-      ? Future.value(false)
-      : _publisher.publish(
-          sourceList,
-          confirmed: confirmed,
-          onPublicationUnconfirmed: onPublicationUnconfirmed,
-        );
-
-  Future<bool> _persistPublication(
-    CuratedList current,
-    CuratedList replacement,
-  ) async {
-    // A disposed account service or an explicitly cleared cache must not
-    // recreate old rows when an in-flight acknowledgement arrives.
-    if (!_isCurrent(current.pubkey) ||
-        _prefs.getString(listsStorageKey) == null) {
-      return false;
-    }
-    final index = _listIndex(current.authorScopedId);
-    if (index == -1 || _lists[index] != current) return false;
-    _lists[index] = replacement;
-    if (await _saveLists()) return true;
-    // A rejected backing write can leave optimistic prefs cached. Restore
-    // this candidate only; a newer reconciled row must never be overwritten.
-    if (_isCurrent(current.pubkey) &&
-        _prefs.getString(listsStorageKey) != null &&
-        getListById(current.authorScopedId) == replacement) {
-      final owner = current.pubkey;
-      _restoreList(owner == null ? current : _recovery.recover(current, owner));
-    }
-    return false;
-  }
-
   void _loadLists() {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    final loaded = CuratedListRecoveryStorage.legacyRead(_prefs).corrupt
-        ? const <CuratedList>[]
-        : _cacheStore.loadLists();
+    final loaded = _cacheStore.loadListsForDisplay();
     _cacheStore.listsLoaded(loaded);
     _lists
       ..clear()
@@ -1548,9 +1545,14 @@ class CuratedListService extends ChangeNotifier {
     if (userPubkey == null) return;
 
     try {
-      final snapshot = await CuratedListRelaySnapshotReader(
-        nostrClient: _nostrService,
-      ).read(ownerPubkey: userPubkey, timeout: _relaySyncTimeout);
+      final snapshot =
+          await CuratedListRelaySnapshotReader(
+            nostrClient: _nostrService,
+          ).read(
+            ownerPubkey: userPubkey,
+            timeout: _relaySyncTimeout,
+            onEventObserved: _defaultAuthority.beginObservation,
+          );
       final receivedEvents = snapshot.events;
       if (!_isCurrent(userPubkey)) return;
       // Merge recovery only for this active owner, and persist before backfill.
@@ -1592,7 +1594,16 @@ class CuratedListService extends ChangeNotifier {
 
   /// Process list events received from relays
   Future<bool> _processReceivedListEvents(List<Event> events) async {
-    final latest = CuratedListConverter.latestRevisions(events);
+    final currentOwner = _relayGateway.currentAuthenticatedPubkey();
+    final latest = CuratedListConverter.latestRevisions(
+      events
+          .where(
+            (event) =>
+                CuratedListConverter.extractDTag(event) != defaultListId ||
+                _defaultAuthority.authenticates(event, currentOwner),
+          )
+          .toList(),
+    );
 
     Log.debug(
       'Processing ${latest.length} unique lists from relays',
@@ -1658,6 +1669,12 @@ class CuratedListService extends ChangeNotifier {
         // An ACKed permission target is completed by the visible Sync now
         // action, never silently through a new edit or startup publication.
         if (current.hasPendingPermissionRecovery) return true;
+        if (current.id == defaultListId &&
+            !_defaultAuthority.authorizeCreation(
+              current.copyWith(pubkey: currentOwner),
+            )) {
+          return true;
+        }
         if (current.nostrEventId != null && !current.pendingRepublish) {
           await _publisher.retryPlaintextRedactions(current.authorScopedId);
           return _isCurrent(owner);
@@ -1687,11 +1704,17 @@ class CuratedListService extends ChangeNotifier {
 
   /// Process a single list event from Nostr
   Future<void> _processListEvent(Event event) async {
+    _defaultAuthority.beginObservation(event);
     if (!isReadyForMutations) return;
     try {
       final owner = _relayGateway.currentAuthenticatedPubkey();
       final unsealedItemTags = await _relayGateway.unsealItemTags(event);
       if (!_isCurrent(owner)) return;
+      _defaultAuthority.observe(event, unsealedItemTags);
+      if (CuratedListConverter.extractDTag(event) == defaultListId &&
+          !_defaultAuthority.hasReadableRevision(event)) {
+        return;
+      }
       CuratedListRelayMerger(
         lists: _lists,
         store: _cacheStore,

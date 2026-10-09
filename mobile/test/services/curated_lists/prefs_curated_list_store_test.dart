@@ -168,6 +168,65 @@ void main() {
       prefs = await SharedPreferences.getInstance();
     });
 
+    group('failed publication external projection', () {
+      test(
+        'adopts a stored winner without writing or erasing a local edit',
+        () async {
+          final store = _store(prefs);
+          final saved = _list('Crew');
+          final other = _list('Other');
+          final external = saved.copyWith(name: 'External winner');
+          final local = other.copyWith(name: 'Unsaved local change');
+          store.listsLoaded([saved, other]);
+          await prefs.setString(
+            _listsKey,
+            jsonEncode([
+              external.toJson(),
+              other.toJson(),
+            ]),
+          );
+          final raw = prefs.getString(_listsKey);
+          final rows = [saved, local];
+          store.refreshUnchangedLists(rows);
+          expect(rows, [external, local]);
+          expect(prefs.getString(_listsKey), raw);
+          // This read does not adopt another writer as our save baseline.
+          expect(store.acknowledgedList(saved.authorScopedId), saved);
+        },
+      );
+
+      test('does not adopt a native-refused optimistic row', () async {
+        final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+        final store = _store(refusing);
+        final saved = _list('Crew');
+        final attempted = saved.copyWith(name: 'Refused name');
+        refusing.accepts = true;
+        expect(await store.saveLists([saved]), isTrue);
+        refusing.accepts = false;
+        expect(await store.saveLists([attempted]), isFalse);
+        final raw = refusing.getString(_listsKey);
+        final rows = [saved];
+        store.refreshUnchangedLists(rows);
+        expect(rows, [saved]);
+        expect(refusing.getString(_listsKey), raw);
+        expect(store.acknowledgedList(saved.authorScopedId), saved);
+      });
+
+      test(
+        'preserves unreadable raw and its previously saved projection',
+        () async {
+          final store = _store(prefs);
+          final saved = _list('Crew');
+          store.listsLoaded([saved]);
+          await prefs.setString(_listsKey, '[null]');
+          final rows = [saved];
+          store.refreshUnchangedLists(rows);
+          expect(rows, [saved]);
+          expect(prefs.getString(_listsKey), '[null]');
+        },
+      );
+    });
+
     group('subscription snapshots', () {
       test('absent metadata is readable empty and decoded exactly once', () {
         final counting = _CountingSubscriptionPrefs(prefs);
@@ -973,41 +1032,57 @@ void main() {
           logs = await _freshLogs();
         });
 
-        test('replaces stored subscriptions that are not valid JSON', () async {
-          await prefs.setString(_subscriptionsKey, 'invalid json {{{');
+        test(
+          'preserves stored subscriptions that are not valid JSON',
+          () async {
+            const raw = 'invalid json {{{';
+            await prefs.setString(_subscriptionsKey, raw);
+
+            final saved = await _store(prefs).saveSubscriptions({'a'});
+
+            expect(saved, isFalse);
+            expect(prefs.get(_subscriptionsKey), raw);
+          },
+        );
+
+        test('preserves stored subscriptions of the wrong shape', () async {
+          final raw = jsonEncode({'a': 1});
+          await prefs.setString(_subscriptionsKey, raw);
 
           final saved = await _store(prefs).saveSubscriptions({'a'});
 
-          expect(saved, isTrue);
-          expect(_storedSubscriptions(prefs), {'a'});
+          expect(saved, isFalse);
+          expect(prefs.get(_subscriptionsKey), raw);
         });
 
-        test('replaces stored subscriptions of the wrong shape', () async {
-          await prefs.setString(_subscriptionsKey, jsonEncode({'a': 1}));
+        test(
+          'retains its baseline until unreadable stored ids are repaired',
+          () async {
+            final raw = jsonEncode(['a', 'b', 1]);
+            await prefs.setString(_subscriptionsKey, raw);
+            final store = _store(prefs)..subscriptionsLoaded({'a', 'b'});
 
-          final saved = await _store(prefs).saveSubscriptions({'a'});
+            final saved = await store.saveSubscriptions({'a', 'c'});
 
-          expect(saved, isTrue);
-          expect(_storedSubscriptions(prefs), {'a'});
-        });
+            expect(saved, isFalse);
+            expect(prefs.get(_subscriptionsKey), raw);
+            await prefs.setString(_subscriptionsKey, jsonEncode(['a', 'b']));
+            expect(await store.saveSubscriptions({'a', 'c'}), isTrue);
+            expect(_storedSubscriptions(prefs), {'a', 'c'});
+          },
+        );
 
-        test('rewrites the ids it loaded before one it cannot read', () async {
-          await prefs.setString(_subscriptionsKey, jsonEncode(['a', 'b', 1]));
-          final store = _store(prefs)..subscriptionsLoaded({'a', 'b'});
+        test(
+          'logs unreadable storage without quoting or replacing it',
+          () async {
+            await prefs.setString(_subscriptionsKey, '$_storedText {{{');
 
-          final saved = await store.saveSubscriptions({'a', 'c'});
+            await _store(prefs).saveSubscriptions({'a'});
 
-          expect(saved, isTrue);
-          expect(_storedSubscriptions(prefs), {'a', 'c'});
-        });
-
-        test('logs what it replaced without quoting the stored data', () async {
-          await prefs.setString(_subscriptionsKey, '$_storedText {{{');
-
-          await _store(prefs).saveSubscriptions({'a'});
-
-          _expectUnreadableLog(logs, what: 'subscriptions');
-        });
+            _expectUnreadableLog(logs, what: 'subscriptions');
+            expect(prefs.get(_subscriptionsKey), '$_storedText {{{');
+          },
+        );
       });
     });
 

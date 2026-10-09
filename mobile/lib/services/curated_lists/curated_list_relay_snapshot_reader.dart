@@ -40,6 +40,7 @@ final class CuratedListRelaySnapshotReader {
   Future<CuratedListRelaySnapshot> read({
     required String ownerPubkey,
     required Duration timeout,
+    void Function(Event event)? onEventObserved,
   }) async {
     Log.info(
       "📋 Fetching user's curated lists from relays for pubkey: ${pubkeyForLogs(ownerPubkey)}",
@@ -75,6 +76,7 @@ final class CuratedListRelaySnapshotReader {
       relaySubscription = subscription.listen(
         (event) {
           receivedEvents.add(event);
+          onEventObserved?.call(event);
           Log.debug(
             'Received list event from relay: ${event.id}',
             name: 'CuratedListService',

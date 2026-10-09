@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -74,6 +75,9 @@ void main() {
     when(() => auth.currentPublicKeyHex)
         .thenReturn(role == 'guest' ? null : _alice);
     stubListPublishing(client: client, auth: auth, pubkey: _alice);
+    if (role == 'authenticated') {
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+    }
     service = CuratedListService(
       nostrService: client,
       authService: auth,
