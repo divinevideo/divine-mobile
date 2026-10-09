@@ -2533,6 +2533,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       video: rendered.video,
       thumbnailPath: rendered.thumbnailPath,
       placeholderFill: event.fill,
+      // The new backdrop is what the still is made from now; keeping the old
+      // one would declare the wrong photo and keep its file alive.
+      derivedFrom: rendered.derivedFrom,
+      clearDerivedFrom: rendered.derivedFrom == null,
     );
     final newClips = List<DivineVideoClip>.of(currentClips)
       ..[currentIndex] = refilled;
