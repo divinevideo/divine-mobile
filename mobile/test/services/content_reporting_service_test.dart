@@ -2168,6 +2168,101 @@ void main() {
       },
     );
 
+    // The note is optional for every reason but Other, and an empty one is
+    // sent empty rather than filled in with the reason's label (#10003). Each
+    // projection then leaves its Details line out, so a moderator can tell
+    // "the reporter said nothing" from "the reporter wrote this".
+    group('an empty note', () {
+      late ContentReportingService crs;
+
+      setUp(() {
+        crs = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: dao,
+          currentModerationPubkey: () => _validEventId('f'),
+        );
+      });
+
+      Future<({String reportContent, String ticket, String moderationDm})>
+      projections(ReportResult result) async {
+        final row = (await dao.getById(result.reportId!))!;
+        final event = jsonDecode(row.eventJson) as Map<String, dynamic>;
+        final ticket = jsonDecode(row.zendeskPayload) as Map<String, dynamic>;
+        final dm = jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
+        return (
+          reportContent: event['content'] as String,
+          ticket: ticket['description'] as String,
+          moderationDm: dm['content'] as String,
+        );
+      }
+
+      for (final details in ['', '   ']) {
+        test('"$details" leaves the Details line out of every projection '
+            'of a content report', () async {
+          final sent = await projections(
+            await crs.reportContent(
+              eventId: _validEventId('a'),
+              authorPubkey: _validEventId('c'),
+              reason: ContentFilterReason.spam,
+              details: details,
+            ),
+          );
+
+          expect(sent.reportContent, isNot(contains('Details')));
+          expect(sent.reportContent, contains('Reason: spam'));
+          expect(sent.ticket, isNot(contains('Details')));
+          expect(sent.ticket, contains('Violation Type: spam'));
+          expect(
+            sent.moderationDm,
+            equals(
+              'Content Report\n'
+              'Reason: spam\n'
+              'Event: ${'a' * 64}',
+            ),
+          );
+        });
+
+        test('"$details" leaves the Details line out of a user report\'s '
+            'moderation DM', () async {
+          final sent = await projections(
+            await crs.reportUser(
+              userPubkey: _validEventId('c'),
+              reason: ContentFilterReason.harassment,
+              details: details,
+            ),
+          );
+
+          expect(
+            sent.moderationDm,
+            equals(
+              'User Report\n'
+              'Reason: harassment\n'
+              'User Pubkey: ${'c' * 64}',
+            ),
+          );
+        });
+      }
+
+      // Positive control: the same projections carry a note that was written.
+      test('a written note appears in every projection', () async {
+        final sent = await projections(
+          await crs.reportContent(
+            eventId: _validEventId('a'),
+            authorPubkey: _validEventId('c'),
+            reason: ContentFilterReason.spam,
+            details: 'weird DM',
+          ),
+        );
+
+        expect(sent.reportContent, contains('Details: weird DM'));
+        expect(sent.ticket, contains('Reporter Details:\nweird DM'));
+        expect(sent.moderationDm, endsWith('Details: weird DM'));
+      });
+    });
+
     group('support ticket', () {
       // divine-relay-manager links a ticket to moderation by parsing these
       // lines: `Event ID:` followed by 64 hex, and `Author Pubkey:`.

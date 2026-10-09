@@ -89,6 +89,36 @@ void main() {
       },
     );
 
+    test(
+      'an empty note is sent empty and leaves Details out of the moderation DM',
+      () async {
+        final cubit = build();
+        addTearDown(cubit.close);
+
+        await cubit.submit(
+          reason: ContentFilterReason.spam,
+          reasonTitle: 'Spam',
+          details: '',
+        );
+
+        final moderationContent =
+            verify(
+                  () => service.reportContent(
+                    eventId: target.eventId,
+                    authorPubkey: target.authorPubkey,
+                    reason: ContentFilterReason.spam,
+                    details: '',
+                    sourceRelay: target.sourceRelay,
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                  ),
+                ).captured.single
+                as String;
+        expect(moderationContent, contains('Reason: Spam'));
+        expect(moderationContent, isNot(contains('Details')));
+      },
+    );
+
     test('reports a list with its coordinate and title context', () async {
       // Full-length hex, never truncated.
       final listAuthor = 'd' * 64;
