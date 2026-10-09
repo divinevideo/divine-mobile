@@ -1,6 +1,8 @@
 // ABOUTME: Recipient kind-10050 lookup against a real NostrClient query pool.
 // ABOUTME: A saturated pool must not starve the indexer leg (#10004).
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,7 @@ import 'package:models/models.dart' show NIP17SendResult, NIP17SendSuccess;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
@@ -74,6 +77,89 @@ const _poolRelayUrl = 'wss://pool.example';
 const _indexerUrl = 'wss://indexer.example';
 const _inboxRelayUrl = 'wss://inbox.example';
 
+/// A [DmRepository] over a real [NostrClient] and relay pool: one pooled
+/// relay, and a [_ScriptedRelay] for each temp relay a read dials.
+Future<
+  ({
+    DmRepository repository,
+    NostrClient client,
+    Nostr nostr,
+    _ScriptedRelay pooled,
+    Map<String, _ScriptedRelay> tempRelays,
+  })
+>
+_harness() async {
+  final tempRelays = <String, _ScriptedRelay>{};
+  final nostr = Nostr(
+    LocalNostrSigner(_secretKey),
+    [],
+    (url) => tempRelays.putIfAbsent(url, () => _ScriptedRelay(url)),
+  );
+  final pooled = _ScriptedRelay(_poolRelayUrl);
+  expect(await nostr.relayPool.add(pooled), isTrue);
+  final relayManager = _MockRelayManager();
+  when(() => relayManager.connectedRelays).thenReturn([_poolRelayUrl]);
+  when(() => relayManager.configuredRelays).thenReturn([_poolRelayUrl]);
+  when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+  when(() => relayManager.diagnosticsSink).thenReturn(null);
+  when(relayManager.dispose).thenAnswer((_) async {});
+  final client = NostrClient.forTesting(
+    nostr: nostr,
+    relayManager: relayManager,
+  );
+  addTearDown(client.dispose);
+  return (
+    repository: DmRepository(
+      nostrClient: client,
+      directMessagesDao: _MockDirectMessagesDao(),
+      conversationsDao: _MockConversationsDao(),
+      dmInboxLookupRelays: const [_indexerUrl],
+    ),
+    client: client,
+    nostr: nostr,
+    pooled: pooled,
+    tempRelays: tempRelays,
+  );
+}
+
+/// Feed reads holding every query slot until [holdFor] runs out, the way they
+/// do right after a publish. `ended` completes when they end.
+Future<({Future<void> ended})> _saturatePool(
+  NostrClient client,
+  _ScriptedRelay pooled, {
+  required Duration holdFor,
+}) async {
+  final occupants = Future.wait([
+    for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+      client.readEvents(
+        [
+          Filter(kinds: const [EventKind.textNote]),
+        ],
+        useCache: false,
+        timeout: holdFor,
+      ),
+  ]);
+  await pooled.awaitReq(NostrClient.maxConcurrentQueries - 1);
+  return (ended: occupants.then((_) {}));
+}
+
+/// The temp relay the pool dialled for [url], if it dials one within
+/// [within].
+Future<_ScriptedRelay?> _dialled(
+  Map<String, _ScriptedRelay> tempRelays,
+  String url, {
+  Duration within = const Duration(seconds: 1),
+}) async {
+  final giveUp = DateTime.now().add(within);
+  while (DateTime.now().isBefore(giveUp)) {
+    for (final entry in tempRelays.entries) {
+      if (entry.key.startsWith(url)) return entry.value;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+  return null;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -81,70 +167,29 @@ void main() {
     'a recipient whose inbox list is on the indexer resolves found while '
     'the query pool is saturated, and the invite is not held (#10004)',
     () async {
-      final tempRelays = <String, _ScriptedRelay>{};
-      final nostr = Nostr(
-        LocalNostrSigner(_secretKey),
-        [],
-        (url) => tempRelays.putIfAbsent(url, () => _ScriptedRelay(url)),
-      );
-      final pooled = _ScriptedRelay(_poolRelayUrl);
-      expect(await nostr.relayPool.add(pooled), isTrue);
-      final relayManager = _MockRelayManager();
-      when(() => relayManager.connectedRelays).thenReturn([_poolRelayUrl]);
-      when(() => relayManager.configuredRelays).thenReturn([_poolRelayUrl]);
-      when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
-      when(() => relayManager.diagnosticsSink).thenReturn(null);
-      when(relayManager.dispose).thenAnswer((_) async {});
-      final client = NostrClient.forTesting(
-        nostr: nostr,
-        relayManager: relayManager,
-      );
-      addTearDown(client.dispose);
-
-      final repository = DmRepository(
-        nostrClient: client,
-        directMessagesDao: _MockDirectMessagesDao(),
-        conversationsDao: _MockConversationsDao(),
-        dmInboxLookupRelays: const [_indexerUrl],
-      );
+      final h = await _harness();
 
       // The collaborator, and the inbox list they published to the indexer.
-      final recipient = await nostr.ensurePublicKey();
-      final inboxList = (await nostr.nostrSigner.signEvent(
+      final recipient = await h.nostr.ensurePublicKey();
+      final inboxList = (await h.nostr.nostrSigner.signEvent(
         Event(recipient, EventKind.dmRelaysList, const [
           ['relay', _inboxRelayUrl],
         ], ''),
       ))!;
 
-      // Feed reads hold every query slot past the indexer leg's 1s slot
-      // window, the way they do right after a publish.
-      final occupants = Future.wait([
-        for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
-          client.readEvents(
-            [
-              Filter(kinds: const [EventKind.textNote]),
-            ],
-            useCache: false,
-            timeout: const Duration(milliseconds: 1500),
-          ),
-      ]);
-      await pooled.awaitReq(NostrClient.maxConcurrentQueries - 1);
+      // Held past the indexer leg's 1s slot window.
+      final occupants = await _saturatePool(
+        h.client,
+        h.pooled,
+        holdFor: const Duration(milliseconds: 1500),
+      );
 
-      final lookup = repository.resolveDmInboxRelaysDetailed(recipient);
+      final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
 
       // The indexer has the list, if the leg reaches it while the feed reads
       // still hold the pool. A leg queued behind them is skipped unsent, and
       // the lookup's outcome below is what shows it.
-      final indexer = await () async {
-        final giveUp = DateTime.now().add(const Duration(seconds: 1));
-        while (DateTime.now().isBefore(giveUp)) {
-          for (final entry in tempRelays.entries) {
-            if (entry.key.startsWith(_indexerUrl)) return entry.value;
-          }
-          await Future<void>.delayed(const Duration(milliseconds: 5));
-        }
-        return null;
-      }();
+      final indexer = await _dialled(h.tempRelays, _indexerUrl);
       if (indexer != null) {
         final indexerSub = await indexer.awaitReq(0);
         await indexer.deliver(['EVENT', indexerSub, inboxList.toJson()]);
@@ -153,13 +198,13 @@ void main() {
 
       // The pool leg gets its slot once the feed reads end, and the pooled
       // relay has nothing.
-      final poolSub = await pooled.awaitReq(
+      final poolSub = await h.pooled.awaitReq(
         NostrClient.maxConcurrentQueries,
       );
-      await pooled.deliver(['EOSE', poolSub]);
+      await h.pooled.deliver(['EOSE', poolSub]);
 
       final inbox = await lookup;
-      await occupants;
+      await occupants.ended;
 
       expect(inbox.state, DmInboxResolution.found);
       expect(inbox.relays, [_inboxRelayUrl]);
@@ -174,6 +219,66 @@ void main() {
         downgradeFallbackPoolDelivery(published, inbox.state),
         isA<NIP17SendSuccess>(),
         reason: 'a found inbox must not hold the invite pending',
+      );
+    },
+  );
+
+  test(
+    'a pool leg skipped for want of a query slot is logged as never leaving '
+    'this device, and still holds the invite (#10004, #7317)',
+    () async {
+      unawaited(LogCaptureService().clearAllLogs());
+      final h = await _harness();
+      final recipient = await h.nostr.ensurePublicKey();
+
+      // Held past the pool leg's own slot window: its 5s budget keeps 1s back
+      // for the relays, so it waits at most 4s.
+      final occupants = await _saturatePool(
+        h.client,
+        h.pooled,
+        holdFor: const Duration(milliseconds: 4500),
+      );
+
+      final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
+      // The indexer answers, and has no list.
+      final indexer = await _dialled(h.tempRelays, _indexerUrl);
+      expect(indexer, isNotNull);
+      await indexer!.deliver(['EOSE', await indexer.awaitReq(0)]);
+
+      final inbox = await lookup;
+      await occupants.ended;
+
+      expect(
+        h.pooled.reqSubIds,
+        hasLength(NostrClient.maxConcurrentQueries),
+        reason: 'the pool leg never reached the pooled relay',
+      );
+      expect(inbox.state, DmInboxResolution.unreadable);
+      final published = NIP17SendResult.success(
+        rumorEventId: 'rumor',
+        messageEventId: 'wrap',
+        recipientPubkey: recipient,
+      );
+      expect(
+        downgradeFallbackPoolDelivery(published, inbox.state),
+        isNot(isA<NIP17SendSuccess>()),
+        reason: 'an unread inbox still holds the invite pending (#7317)',
+      );
+
+      final inconclusive = LogCaptureService()
+          .getRecentLogs()
+          .map((entry) => entry.message)
+          .where((message) => message.contains('lookup for'))
+          .where((message) => message.contains('was inconclusive'))
+          .toList();
+      expect(inconclusive, hasLength(1));
+      expect(
+        inconclusive.single,
+        allOf(
+          contains('never left this device'),
+          contains('no query-pool slot arrived'),
+          isNot(contains('not every relay settled')),
+        ),
       );
     },
   );
