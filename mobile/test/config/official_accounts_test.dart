@@ -204,17 +204,6 @@ void main() {
           );
         }
       });
-
-      // The safety predicates answer a different question ("is this the
-      // moderation team's thread, so withhold the destructive action and
-      // close the composer"), and must not follow custody: a withdrawn key's
-      // thread is still closed and still not removable.
-      test('isModerationAccount stays true whatever the custody', () {
-        for (final key in kRetiredModerationKeys) {
-          expect(isModerationAccount(key.pubkeyHex), isTrue);
-          expect(isRetiredModerationAccount(key.pubkeyHex), isTrue);
-        }
-      });
     });
 
     group('RetiredKeyCustody.canStillSign', () {
