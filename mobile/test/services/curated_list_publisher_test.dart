@@ -5,12 +5,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -21,6 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -68,6 +72,9 @@ void main() {
     late _Auth auth;
     late SharedPreferencesStorePlatform previousPlatform;
     final sent = <Event>[];
+    final opened = <CuratedListService>[];
+
+    setUpAll(() => registerFallbackValue(<Filter>[]));
 
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
@@ -81,6 +88,9 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+      opened.clear();
       sent.clear();
       when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
         final event = i.positionalArguments.single as Event;
@@ -104,6 +114,7 @@ void main() {
         authService: auth,
         prefs: prefs,
       );
+      opened.add(service);
       addTearDown(service.dispose);
       return service;
     }
@@ -111,8 +122,23 @@ void main() {
     Future<void> restart() async {
       // A genuine new preference cache must reload the durable platform value,
       // rather than keep the optimistic value from a rejected setString.
+      // A restarted process cannot retain the outgoing live consumers.
+      for (final service in opened) {
+        service.dispose();
+      }
+      opened.clear();
       SharedPreferences.resetStatic();
       prefs = await SharedPreferences.getInstance();
+      when(() => auth.committedAccountActivationReceipt).thenReturn(null);
+      final owner = auth.currentPublicKeyHex;
+      // Explicit restoration re-proves only the unchanged durable account.
+      // Cold pending/unknown owner and unfinished cleanup stay uncommitted.
+      if (auth.isAuthenticated &&
+          owner != null &&
+          prefs.getString('current_user_pubkey_hex') == owner &&
+          !prefs.containsKey(PendingAccountCleanup.storageKey)) {
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
+      }
     }
 
     Future<CuratedList> seed({bool isPublic = true}) async {
@@ -184,6 +210,12 @@ void main() {
           .clearUserSpecificData(isIdentityChange: true, userPubkey: incoming);
       when(() => auth.currentPublicKeyHex).thenReturn(incoming);
       stubListPublishing(client: client, auth: auth, pubkey: incoming);
+      await prefs.setString('current_user_pubkey_hex', incoming);
+      await stubCommittedListAccount(
+        auth: auth,
+        preferences: prefs,
+        replaceLiveAccount: true,
+      );
       final next = open();
       expect(departing.isCurrentSession, isFalse);
       expect(await next.retryListSync(pending.authorScopedId), isFalse);
@@ -696,7 +728,10 @@ void main() {
                   maxPublishClockDrift: Duration.zero,
                 )
               : open();
-          if (failure == 'clock') addTearDown(current.dispose);
+          if (failure == 'clock') {
+            opened.add(current);
+            addTearDown(current.dispose);
+          }
           expect(
             await current.updateList(listId: list.id, isPublic: false),
             isTrue,
@@ -760,6 +795,7 @@ void main() {
           prefs: prefs,
           maxPublishClockDrift: const Duration(seconds: 2),
         );
+        opened.add(current);
         addTearDown(current.dispose);
         await withClock(Clock(() => now), () async {
           var unknown = 0;
@@ -937,6 +973,7 @@ void main() {
             authService: auth,
             prefs: prefs,
           );
+          opened.add(current);
           var disposed = false;
           addTearDown(() {
             if (!disposed) current.dispose();
@@ -1397,6 +1434,7 @@ void main() {
             prefs: prefs,
             relaySyncTimeout: const Duration(milliseconds: 5),
           );
+          opened.add(current);
           addTearDown(current.dispose);
           await current.fetchUserListsFromRelays(force: true);
           expect(sent, isEmpty);
@@ -1614,6 +1652,12 @@ void main() {
           'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
       when(() => auth.currentPublicKeyHex).thenReturn(incoming);
       stubListPublishing(client: client, auth: auth, pubkey: incoming);
+      await prefs.setString('current_user_pubkey_hex', incoming);
+      await stubCommittedListAccount(
+        auth: auth,
+        preferences: prefs,
+        replaceLiveAccount: true,
+      );
       final active = open();
       decision.complete(acceptedOutcome(attempted));
       expect(await saving, isFalse);
@@ -1652,6 +1696,12 @@ void main() {
       when(() => auth.currentPublicKeyHex).thenReturn(incoming);
       stubListPublishing(client: client, auth: auth, pubkey: incoming);
       await prefs.setString('current_user_pubkey_hex', incoming);
+      await stubCommittedListAccount(
+        auth: auth,
+        preferences: prefs,
+        replaceLiveAccount: true,
+      );
+      await prefs.setString('current_user_pubkey_hex', incoming);
       final active = open();
       final journal = CuratedListRecoveryJournal(
         prefs: prefs,
@@ -1676,6 +1726,12 @@ void main() {
       );
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await stubCommittedListAccount(
+        auth: auth,
+        preferences: prefs,
+        replaceLiveAccount: true,
+      );
       final readded = open();
       decision.complete(acceptedOutcome(attempted));
       expect(await saving, isFalse);
@@ -1770,8 +1826,55 @@ void main() {
       test(
         'default recreation cannot reuse accepted permissions after retirement ${throwing ? 'throws' : 'is refused'}',
         () async {
-          final original = (await seed(isPublic: false))
-              .copyWith(id: CuratedListService.defaultListId);
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          final defaultOwner = (await signer.getPublicKey())!;
+          when(() => auth.currentPublicKeyHex).thenReturn(defaultOwner);
+          await prefs.setString('current_user_pubkey_hex', defaultOwner);
+          await stubCommittedListAccount(
+            auth: auth,
+            preferences: prefs,
+            replaceLiveAccount: true,
+          );
+          when(() => client.signer).thenReturn(signer);
+          when(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            final event = Event(
+              defaultOwner,
+              invocation.namedArguments[#kind] as int,
+              invocation.namedArguments[#tags] as List<List<String>>,
+              invocation.namedArguments[#content] as String,
+              createdAt: invocation.namedArguments[#createdAt] as int?,
+            );
+            await signer.signEvent(event);
+            return event;
+          });
+          final baseline = Event(
+            defaultOwner,
+            30005,
+            [
+              ['d', CuratedListService.defaultListId],
+              ['title', 'Before'],
+              ['collaborative', 'true'],
+              ['collaborator', 'e' * 64],
+              ['e', _video],
+            ],
+            'Current published default',
+            createdAt:
+                clock
+                    .now()
+                    .subtract(const Duration(seconds: 4))
+                    .millisecondsSinceEpoch ~/
+                1000,
+          );
+          await signer.signEvent(baseline);
+          expect(baseline.isValid && baseline.isSigned, isTrue);
+          final original = CuratedListConverter.fromEvent(baseline)!;
           await prefs.setString(
             CuratedListService.listsStorageKey,
             jsonEncode([original.toJson()]),
@@ -1782,7 +1885,7 @@ void main() {
           );
           expect(
             await journal.accepted(
-              owner: _owner,
+              owner: defaultOwner,
               listId: original.id,
               visibility: CuratedListVisibility(
                 isPublic: true,
@@ -1790,14 +1893,18 @@ void main() {
                 allowedCollaborators: ['e' * 64],
                 relayAccepted: true,
               ),
-              eventId: _video,
-              acceptedAt: clock.now(),
+              eventId: baseline.id,
+              acceptedAt: baseline.createdAtDateTime,
               plaintextEventIds: [_oldEvent],
             ),
             isTrue,
           );
+          when(() => client.subscribe(any(), closeOnEose: true))
+              .thenAnswer((_) => Stream.value(baseline));
           final current = open();
-          final key = CuratedListRecoveryJournal.storageKey(_owner);
+          await current.fetchUserListsFromRelays(force: true);
+          expect(current.getDefaultList()!.nostrEventId, baseline.id);
+          final key = CuratedListRecoveryJournal.storageKey(defaultOwner);
           bool retirement(String candidate, Object value) =>
               candidate.endsWith(key) &&
               value is String &&
@@ -1830,37 +1937,34 @@ void main() {
           final retired = CuratedListRecoveryJournal(
             prefs: prefs,
             runCurrent: (op) => op(),
-          ).record(_owner, original.id)!;
+          ).record(defaultOwner, original.id)!;
           expect(retired.visibility, isNull);
           expect(retired.plaintextEventIds, [_oldEvent]);
           expect(retired.permissionsRetired, isTrue);
-          // Existing explicit restore resets this preference before initialize.
+          // A legacy shared preference cannot lift this owner's tombstone.
           await prefs.setBool(
             CuratedListService.defaultListDeletedStorageKey,
             false,
           );
-          when(
-            () => client.subscribe(
-              any(),
-              closeOnEose: true,
-              onEose: any(named: 'onEose'),
-            ),
-          ).thenAnswer((_) => const Stream.empty());
+          when(() => client.subscribe(any(), closeOnEose: true))
+              .thenAnswer((_) => Stream.value(baseline));
           sent.clear();
           final restored = open();
           await restored.initialize();
-          final created = restored.getDefaultList()!;
-          expect(created.isPublic, isFalse);
-          expect(created.isCollaborative, isFalse);
-          expect(created.allowedCollaborators, isEmpty);
-          expect(created.hasPendingPermissionRecovery, isFalse);
-          expect(await restored.retryListSync(created.authorScopedId), isTrue);
-          await restart();
-          final durable = open().getDefaultList()!;
-          expect(durable.isPublic, isFalse);
-          expect(durable.isCollaborative, isFalse);
-          expect(durable.allowedCollaborators, isEmpty);
-          expect(durable.hasPendingPermissionRecovery, isFalse);
+          await restored.fetchUserListsFromRelays(force: true);
+          expect(restored.isInitialized, isTrue);
+          expect(restored.getDefaultList(), isNull);
+          expect(sent, isEmpty);
+          expect(
+            CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (op) => op(),
+            ).record(defaultOwner, original.id)!.plaintextEventIds,
+            [_oldEvent],
+          );
+          // Explicit journal erasure is independent of default creation rights.
+          expect(await restored.retryListSync(original.authorScopedId), isTrue);
+          expect(sent.where((event) => event.kind == 30005), isEmpty);
           expect(
             sent
                 .where((event) => event.kind == 5)
@@ -1872,30 +1976,16 @@ void main() {
                 ),
             isTrue,
           );
-          final replacements = sent
-              .where((event) => event.kind == 30005)
-              .toList();
-          expect(replacements, isNotEmpty);
-          expect(durable.nostrEventId, replacements.last.id);
+          expect(restored.getDefaultList(), isNull);
+          await restart();
+          expect(open().getDefaultList(), isNull);
           expect(
-            replacements.every(
-              (event) => event.tags.every((tag) => tag[0] != 'e'),
-            ),
-            isTrue,
+            CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (op) => op(),
+            ).record(defaultOwner, original.id)?.visibility,
+            isNull,
           );
-          expect(
-            replacements.every((event) => unsealForTest(event.content) != null),
-            isTrue,
-          );
-          final redactionIndex = sent.indexWhere(
-            (event) =>
-                event.kind == 5 &&
-                event.tags.any(
-                  (tag) =>
-                      tag.length > 1 && tag[0] == 'e' && tag[1] == _oldEvent,
-                ),
-          );
-          expect(redactionIndex, greaterThan(sent.indexOf(replacements.first)));
         },
       );
     }
@@ -1932,6 +2022,12 @@ void main() {
           await prefs.remove(CuratedListService.listsStorageKey);
           when(() => auth.currentPublicKeyHex).thenReturn(incoming);
           stubListPublishing(client: client, auth: auth, pubkey: incoming);
+          await prefs.setString('current_user_pubkey_hex', incoming);
+          await stubCommittedListAccount(
+            auth: auth,
+            preferences: prefs,
+            replaceLiveAccount: true,
+          );
           final active = open();
           final key = CuratedListRecoveryJournal.storageKey(_owner);
           if (throwing) {
@@ -2140,19 +2236,39 @@ void main() {
       test(
         'startup and direct creates cannot replace unknown-owner $form legacy evidence',
         () async {
-          final raw = malformedLegacy(form, await seed());
+          final healthyRow = await seed();
+          final raw = malformedLegacy(form, healthyRow);
           await storeMalformedLegacy(raw);
+          final originalArchive = prefs.get(
+            CuratedListRecoveryStorage.sharedQuarantineKey,
+          );
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
           final logs = LogCaptureService();
           await logs.clearAllLogs();
           final current = open();
           expect(current.recoveryNeedsRepair, isTrue);
           await current.prepareRecovery();
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
           await current.initialize();
           expect(current.isInitialized, isTrue);
           expect(current.initializationError, isNull);
           expect(current.isReadyForMutations, isFalse);
           expect(current.getDefaultList(), isNull);
+          expect(
+            current.getListById(healthyRow.authorScopedId),
+            form == 'partially corrupt row' ? healthyRow : isNull,
+          );
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
           expect(await current.createList(name: 'New list'), isNull);
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
+          verifyNever(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          );
           expect(sent, isEmpty);
           final captured = (await logs.getAllLogsAsText()).join('\n');
           expect(
@@ -2161,14 +2277,18 @@ void main() {
           );
           expect(captured, isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')));
           await restart();
-          final archive = jsonDecode(
-            prefs.getString(
-              CuratedListRecoveryStorage.sharedQuarantineKey,
-            )!,
-          ) as Map<String, dynamic>;
-          expect(archive['rawBuckets'], [
-            if (raw is String) raw else jsonEncode(raw),
-          ]);
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
+          expect(
+            prefs.get(CuratedListRecoveryStorage.sharedQuarantineKey),
+            originalArchive,
+          );
+          final reopened = open();
+          await reopened.prepareRecovery();
+          await reopened.initialize();
+          expect(reopened.isReadyForMutations, isFalse);
+          expect(await reopened.createList(name: 'After restart'), isNull);
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
+          expect(sent, isEmpty);
           expect(open().recoveryNeedsRepair, isTrue);
         },
       );

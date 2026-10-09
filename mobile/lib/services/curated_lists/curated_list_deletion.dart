@@ -13,6 +13,7 @@ extension _CuratedListDeletion on CuratedListService {
 
       final list = _lists[listIndex];
       if (!isOwnedList(listId) ||
+          !_defaultAuthority.canMutate(list) ||
           !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
         Log.warning(
           'Cannot delete list not owned by current user: $listId',
@@ -26,6 +27,7 @@ extension _CuratedListDeletion on CuratedListService {
         if (!await _relayGateway.publishListDeletion(
           list.id,
           ownerPubkey: list.pubkey!,
+          isAuthorized: () => _defaultAuthority.canMutate(list),
           createdAt: _publishClock.next(
             ownerPubkey: list.pubkey!,
             listId: list.id,

@@ -11,7 +11,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -25,7 +27,9 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
+import '../helpers/signed_curated_list.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -120,8 +124,7 @@ class _Preferences extends Fake implements SharedPreferences {
   }
 }
 
-const _ownerA =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const String _ownerA = signedListFixtureOwner;
 const _ownerB =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
@@ -140,6 +143,8 @@ CuratedList _row(String owner, {String id = 'crew'}) => CuratedList(
 void _actor(_Auth auth, _Client client, String owner) {
   when(() => auth.isAuthenticated).thenReturn(true);
   when(() => auth.currentPublicKeyHex).thenReturn(owner);
+  when(() => auth.accountActivationChanges)
+      .thenAnswer((_) => const Stream.empty());
   stubListPublishing(client: client, auth: auth, pubkey: owner);
   when(() => client.subscribe(any(), closeOnEose: true))
       .thenAnswer((_) => const Stream.empty());
@@ -147,10 +152,26 @@ void _actor(_Auth auth, _Client client, String owner) {
 
 void main() {
   group('CuratedListService account isolation', () {
-    setUpAll(() => registerFallbackValue(Duration.zero));
+    setUpAll(() {
+      registerFallbackValue(Duration.zero);
+      registerFallbackValue(<Filter>[]);
+    });
     late _Preferences prefs;
     late _Auth authA;
     late _Client clientA;
+    _Auth? activeAuth;
+
+    Future<void> activateActor(_Auth auth) async {
+      if (PendingAccountCleanup.read(prefs) != null) {
+        throw StateError('Pending cleanup cannot receive fixture authority');
+      }
+      activeAuth = auth;
+      await stubCommittedListAccount(
+        auth: auth,
+        preferences: prefs,
+        isCurrent: () => identical(activeAuth, auth),
+      );
+    }
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({
@@ -162,7 +183,9 @@ void main() {
       prefs = _Preferences(await SharedPreferences.getInstance());
       authA = _Auth();
       clientA = _Client();
+      activeAuth = null;
       _actor(authA, clientA, _ownerA);
+      await activateActor(authA);
     });
 
     CuratedListService open(
@@ -178,6 +201,39 @@ void main() {
       );
       addTearDown(service.dispose);
       return service;
+    }
+
+    Future<CuratedList> readDefaultBaseline(
+      CuratedListService service,
+      CuratedList row,
+    ) async {
+      // Restored accounts need a genuine readable relay revision before a
+      // default mutation. Cached event IDs cannot establish that authority.
+      final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+      final revision = await signedCuratedListFixture(
+        row.copyWith(updatedAt: row.updatedAt.add(const Duration(seconds: 1))),
+        signer,
+      );
+      expect(revision.isValid && revision.isSigned, isTrue);
+      when(() => clientA.signer).thenReturn(signer);
+      when(() => clientA.subscribe(any(), closeOnEose: true))
+          .thenAnswer((_) => Stream.value(revision));
+      await service.fetchUserListsFromRelays(force: true);
+      when(() => clientA.subscribe(any(), closeOnEose: true))
+          .thenAnswer((_) => const Stream.empty());
+      final baseline = service.getDefaultList()!;
+      expect(baseline.nostrEventId, revision.id);
+      expect(baseline.videoEventIds, row.videoEventIds);
+      expect(
+        baseline,
+        CuratedListConverter.fromEvent(
+          revision,
+          privateTags: CuratedListConverter.toItemTags(row),
+          isPrivateEvent: true,
+        )!.copyWith(createdAt: row.createdAt),
+      );
+      expect(service.isReadyForMutations, isTrue);
+      return baseline;
     }
 
     test(
@@ -200,6 +256,7 @@ void main() {
         final authB = _Auth();
         final clientB = _Client();
         _actor(authB, clientB, _ownerB);
+        await activateActor(authB);
         final incoming = open(authB, clientB);
         await incoming.initialize();
         await incoming.fetchUserListsFromRelays(force: true);
@@ -215,7 +272,7 @@ void main() {
           incomingRows,
         );
         final restarted = open(authB, clientB);
-        expect(restarted.getDefaultList()?.pubkey, _ownerB);
+        expect(restarted.getDefaultList(), isNull);
         expect(restarted.lists.any((list) => list.pubkey == _ownerA), isFalse);
         expect(authA.currentPublicKeyHex, _ownerA);
       },
@@ -230,14 +287,15 @@ void main() {
         'wipe waits for dispatched $key and old completion cannot refill it',
         () async {
           final old = open(authA, clientA);
-          prefs.gateKey = key;
           final Future<bool> operation;
           if (key == CuratedListService.listsStorageKey) {
+            prefs.gateKey = key;
             operation = old.updateList(
               listId: 'crew',
               name: 'Pending old metadata',
             );
           } else if (key == CuratedListService.subscribedListsStorageKey) {
+            prefs.gateKey = key;
             operation = old.subscribeToList('$_ownerA:crew');
           } else {
             final defaultRow = _row(
@@ -249,6 +307,8 @@ void main() {
               jsonEncode([defaultRow.toJson()]),
             );
             final withDefault = open(authA, clientA);
+            await readDefaultBaseline(withDefault, defaultRow);
+            prefs.gateKey = key;
             operation = withDefault.deleteOwnedList(defaultRow.authorScopedId);
           }
           await prefs.writeStarted.future;
@@ -269,9 +329,10 @@ void main() {
           final authB = _Auth();
           final clientB = _Client();
           _actor(authB, clientB, _ownerB);
+          await activateActor(authB);
           final incoming = open(authB, clientB);
           await incoming.initialize();
-          expect(incoming.getDefaultList()?.pubkey, _ownerB);
+          expect(incoming.getDefaultList(), isNull);
           expect(incoming.lists.any((list) => list.pubkey == _ownerA), isFalse);
         },
       );
@@ -294,6 +355,7 @@ void main() {
         final authB = _Auth();
         final clientB = _Client();
         _actor(authB, clientB, _ownerB);
+        await activateActor(authB);
         final incoming = open(authB, clientB);
         await incoming.initialize();
         final before = prefs.getString(CuratedListService.listsStorageKey);
@@ -398,20 +460,19 @@ void main() {
         expect(recovered.isInitialized, isTrue);
         expect(recovered.isReadyForMutations, isTrue);
         expect(recovered.initializationError, isNull);
-        final defaultRow = recovered.getDefaultList()!;
-        expect(defaultRow.pubkey, _ownerA);
-        expect(
-          await recovered.updateList(
-            listId: defaultRow.authorScopedId,
-            name: 'Restored account',
-          ),
-          isTrue,
-        );
+        expect(recovered.getDefaultList(), isNull);
         final created = await recovered.createList(
           name: 'After verified cleanup',
         );
         expect(created, isNotNull);
         expect(created!.pubkey, _ownerA);
+        expect(
+          await recovered.updateList(
+            listId: created.authorScopedId,
+            name: 'Restored account',
+          ),
+          isTrue,
+        );
         expect(
           recovered.lists.any(
             (row) => row.authorScopedId == created.authorScopedId,
@@ -446,6 +507,7 @@ void main() {
       );
       final callbacks = <String>[];
       final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+      await readDefaultBaseline(service, row);
       prefs.rejectSubscriptions = true;
       expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
       expect(service.getDefaultList(), isNull);
@@ -468,18 +530,20 @@ void main() {
 
     test(
       'public list reads stay available while initialization awaits the '
-      'default list publish',
+      'shared cache recovery queue',
       () async {
-        final published = Completer<Event>();
-        final ack = Completer<PublishOutcome>();
-        when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
-          published.complete(call.positionalArguments.first as Event);
-          return ack.future;
-        });
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final held = CuratedListSessionCoordinator.forPreferences(prefs).writes
+            .runExclusive(() async {
+              entered.complete();
+              await release.future;
+            });
+        await entered.future;
         final service = open(authA, clientA);
 
         final initialization = service.initialize();
-        final signed = await published.future;
+        await pumpEventQueue();
         expect(service.isReadyForMutations, isFalse);
         expect(service.initializationError, isNull);
         when(
@@ -499,7 +563,8 @@ void main() {
             onEose: any(named: 'onEose'),
           ),
         ).called(1);
-        ack.complete(acceptedOutcome(signed));
+        release.complete();
+        await held;
         await initialization;
         expect(service.isInitialized, isTrue);
       },
@@ -516,6 +581,7 @@ void main() {
         jsonEncode([row.authorScopedId]),
       );
       final original = open(authA, clientA);
+      await readDefaultBaseline(original, row);
       prefs.rejectSubscriptions = true;
       expect(await original.deleteOwnedList(row.authorScopedId), isFalse);
       final callbacks = <String>[];
@@ -629,12 +695,14 @@ void main() {
         final authB = _Auth();
         final clientB = _Client();
         _actor(authB, clientB, _ownerB);
+        await activateActor(authB);
         await open(authB, clientB).initialize();
         await UserDataCleanupService(prefs)
             .clearUserSpecificData(userPubkey: _ownerB);
         final restoredAuth = _Auth();
         final restoredClient = _Client();
         _actor(restoredAuth, restoredClient, _ownerA);
+        await activateActor(restoredAuth);
         final restored = open(restoredAuth, restoredClient);
         await restored.initialize();
         final before = prefs.getString(CuratedListService.listsStorageKey);
@@ -644,7 +712,7 @@ void main() {
         expect(old.isCurrentSession, isFalse);
         expect(restored.isCurrentSession, isTrue);
         expect(restored.getListById('crew'), isNull);
-        expect(restored.getDefaultList()?.pubkey, _ownerA);
+        expect(restored.getDefaultList(), isNull);
       },
     );
 
@@ -803,6 +871,7 @@ void main() {
           }
           final callbacks = <String>[];
           final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+          await readDefaultBaseline(service, row);
           prefs.rejectDefaultFlag = true;
           expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
           await prefs.backing.reload();
@@ -857,10 +926,11 @@ void main() {
           jsonEncode([row.authorScopedId]),
         );
         final service = open(authA, clientA);
+        final baseline = await readDefaultBaseline(service, row);
         prefs.rejectDefaultRecovery = true;
         expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
         await prefs.backing.reload();
-        expect(open(authA, clientA).getDefaultList(), row);
+        expect(open(authA, clientA).getDefaultList(), baseline);
         expect(
           open(authA, clientA).subscribedListIds,
           contains(row.authorScopedId),
@@ -888,6 +958,7 @@ void main() {
         );
         final callbacks = <String>[];
         final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+        await readDefaultBaseline(service, row);
         prefs.rejectRecoveryRemoval = true;
         expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
         await prefs.backing.reload();
@@ -906,23 +977,55 @@ void main() {
       },
     );
 
-    test('default list write refusal is observable and retryable', () async {
-      await prefs.backing.remove(CuratedListService.listsStorageKey);
-      final service = open(authA, clientA);
-      prefs.rejectLists = true;
-      await service.initialize();
-      expect(service.isInitialized, isFalse);
-      expect(service.isReadyForMutations, isFalse);
-      expect(service.initializationError, isA<CuratedCacheWriteException>());
-      expect(service.getDefaultList(), isNull);
-      verifyNever(() => clientA.publishEventAwaitOk(any()));
-      prefs.rejectLists = false;
-      await service.initialize();
-      expect(service.isInitialized, isTrue);
-      expect(service.initializationError, isNull);
-      expect(service.getDefaultList(), isNotNull);
-      expect(prefs.getString(CuratedListService.listsStorageKey), isNotNull);
-    });
+    test(
+      'restoring an empty cache never invents a canonical default',
+      () async {
+        await prefs.backing.remove(CuratedListService.listsStorageKey);
+        final service = open(authA, clientA);
+        await service.initialize();
+        expect(service.isInitialized, isTrue);
+        expect(service.isReadyForMutations, isTrue);
+        expect(service.initializationError, isNull);
+        expect(service.getDefaultList(), isNull);
+        expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
+        verifyNever(() => clientA.publishEventAwaitOk(any()));
+      },
+    );
+
+    test(
+      'an ordinary saved-list write refusal is observable and retryable',
+      () async {
+        final service = open(authA, clientA);
+        await service.initialize();
+        final baseline = service.getListById('$_ownerA:crew')!;
+        prefs.rejectLists = true;
+        expect(
+          await service.updateList(
+            listId: baseline.authorScopedId,
+            name: 'Retry',
+          ),
+          isFalse,
+        );
+        expect(service.getListById(baseline.authorScopedId), baseline);
+        expect(service.isInitialized, isTrue);
+        expect(service.initializationError, isNull);
+        expect(service.isReadyForMutations, isTrue);
+        verifyNever(() => clientA.publishEventAwaitOk(any()));
+        prefs.rejectLists = false;
+        expect(
+          await service.updateList(
+            listId: baseline.authorScopedId,
+            name: 'Retry',
+          ),
+          isTrue,
+        );
+        expect(service.isInitialized, isTrue);
+        expect(service.initializationError, isNull);
+        expect(service.isReadyForMutations, isTrue);
+        expect(service.getListById(baseline.authorScopedId)!.name, 'Retry');
+        expect(prefs.getString(CuratedListService.listsStorageKey), isNotNull);
+      },
+    );
 
     test(
       'provider exposes recovery failure and retries after storage recovers',
@@ -936,9 +1039,11 @@ void main() {
           CuratedListService.subscribedListsStorageKey,
           jsonEncode([row.authorScopedId]),
         );
+        final original = open(authA, clientA);
+        await readDefaultBaseline(original, row);
         prefs.rejectSubscriptions = true;
         expect(
-          await open(authA, clientA).deleteOwnedList(row.authorScopedId),
+          await original.deleteOwnedList(row.authorScopedId),
           isFalse,
         );
         final container = ProviderContainer(

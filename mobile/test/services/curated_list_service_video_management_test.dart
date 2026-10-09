@@ -5,15 +5,19 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
+import '../helpers/signed_curated_list.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -25,6 +29,7 @@ void main() {
     late _MockNostrClient mockNostr;
     late _MockAuthService mockAuth;
     late SharedPreferences prefs;
+    late LocalNostrSigner signer;
 
     setUpAll(() {
       registerFallbackValue(
@@ -43,6 +48,7 @@ void main() {
 
     // Helper to stub common mocks - call after reset(mockNostr)
     void stubMocks() {
+      when(() => mockNostr.signer).thenReturn(signer);
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(
           event: invocation.positionalArguments[0] as Event,
@@ -71,8 +77,10 @@ void main() {
 
     setUp(() async {
       mockNostr = _MockNostrClient();
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(mockNostr, signedListFixtureOwner);
       mockAuth = _MockAuthService();
+      signer = LocalNostrSigner('1'.padLeft(64, '0'));
+      when(() => mockNostr.signer).thenReturn(signer);
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
 
@@ -80,7 +88,7 @@ void main() {
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(signedListFixtureOwner);
 
       // Mock successful event publishing
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
@@ -117,19 +125,18 @@ void main() {
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
         ),
-      ).thenAnswer(
-        // Echoes what it was asked to sign, so a test can assert on the tags
-        // and content the service actually built.
-        (invocation) async => Event.fromJson({
-          'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': invocation.namedArguments[#createdAt],
-          'kind': invocation.namedArguments[#kind],
-          'tags': invocation.namedArguments[#tags],
-          'content': invocation.namedArguments[#content],
-          'sig': 'test_signature',
-        }),
-      );
+      ).thenAnswer((invocation) async {
+        final event = Event(
+          signedListFixtureOwner,
+          invocation.namedArguments[#kind] as int,
+          invocation.namedArguments[#tags] as List<List<String>>,
+          invocation.namedArguments[#content] as String,
+          createdAt: invocation.namedArguments[#createdAt] as int?,
+        );
+        await signer.signEvent(event);
+        return event;
+      });
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
 
       service = CuratedListService(
         nostrService: mockNostr,
@@ -237,7 +244,7 @@ void main() {
         );
         reset(mockNostr);
         stubMocks();
-        stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+        stubListSigner(mockNostr, signedListFixtureOwner);
 
         await service.addVideoToList(list!.id, 'video_event_123');
 
@@ -373,7 +380,7 @@ void main() {
         await service.addVideoToList(list!.id, 'video_event_123');
         reset(mockNostr);
         stubMocks();
-        stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+        stubListSigner(mockNostr, signedListFixtureOwner);
 
         await service.removeVideoFromList(list.id, 'video_event_123');
 
@@ -425,30 +432,50 @@ void main() {
     });
 
     group('isVideoInDefaultList()', () {
+      setUp(() async {
+        final revision = await signedCuratedListFixture(
+          CuratedList(
+            id: CuratedListService.defaultListId,
+            name: 'My List',
+            pubkey: signedListFixtureOwner,
+            isPublic: false,
+            videoEventIds: const [],
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          ),
+          signer,
+        );
+        when(() => mockNostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => Stream.value(revision));
+      });
+
       test('returns true when video is in default list', () async {
         await service.initialize();
+        await service.fetchUserListsFromRelays(force: true);
         final defaultList = service.getDefaultList();
 
-        await service.addVideoToList(defaultList!.id, 'video_event_123');
+        await service.addVideoToList(defaultList!.id, 'a' * 64);
 
-        expect(service.isVideoInDefaultList('video_event_123'), isTrue);
+        expect(service.isVideoInDefaultList('a' * 64), isTrue);
       });
 
       test('returns false when video is not in default list', () async {
         await service.initialize();
+        await service.fetchUserListsFromRelays(force: true);
 
-        expect(service.isVideoInDefaultList('video_event_123'), isFalse);
+        expect(service.isVideoInDefaultList('a' * 64), isFalse);
       });
 
       test('uses defaultListId constant', () async {
         await service.initialize();
+        await service.fetchUserListsFromRelays(force: true);
 
         await service.addVideoToList(
           CuratedListService.defaultListId,
-          'video_event_123',
+          'a' * 64,
         );
 
-        expect(service.isVideoInDefaultList('video_event_123'), isTrue);
+        expect(service.isVideoInDefaultList('a' * 64), isTrue);
       });
     });
 

@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -15,12 +14,15 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/committed_list_account.dart';
+import '../helpers/curated_list_auth_fixture.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -34,7 +36,7 @@ String _seal(String plaintext) => sealForTest(plaintext);
 String? _unseal(String ciphertext) => unsealForTest(ciphertext);
 
 const _ownerPubkey =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
 const _otherPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
@@ -197,6 +199,7 @@ void main() {
         );
       });
 
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,
@@ -204,10 +207,66 @@ void main() {
       );
     });
 
+    AuthService? freshAuth;
+    final freshPublished = <Event>[];
+
+    Future<void> useFreshAccount() async {
+      service.dispose();
+      when(() => mockAuth.isAuthenticated).thenReturn(false);
+      final fixture = await createFreshCuratedListAccount(
+        preferences: prefs,
+        client: mockNostr,
+      );
+      freshAuth = fixture.auth;
+      freshPublished.clear();
+      when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer((call) async {
+        final event = call.positionalArguments.single as Event;
+        freshPublished.add(event);
+        return _accepted(event);
+      });
+      when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
+        (_) => Stream.fromIterable(
+          List<Event>.of(freshPublished.where((event) => event.kind == 30005)),
+        ),
+      );
+      service = CuratedListService(
+        nostrService: mockNostr,
+        authService: fixture.auth,
+        prefs: prefs,
+      );
+      addTearDown(service.dispose);
+    }
+
+    Future<Event> useReadableDefault({List<String> items = const []}) async {
+      final event = await stubReadableCuratedDefault(
+        auth: mockAuth,
+        client: mockNostr,
+        items: items,
+      );
+      when(() => mockNostr.subscribe(any(), closeOnEose: true))
+          .thenAnswer((_) => Stream.value(event));
+      await service.fetchUserListsFromRelays(force: true);
+      return event;
+    }
+
+    Future<SharedPreferences> freshPreferencesProof() async {
+      service.dispose();
+      final current = await SharedPreferences.getInstance();
+      when(() => mockAuth.committedAccountActivationReceipt).thenReturn(null);
+      await current.setString('current_user_pubkey_hex', _ownerPubkey);
+      await stubCommittedListAccount(
+        auth: mockAuth,
+        preferences: current,
+        replaceLiveAccount: true,
+      );
+      return current;
+    }
+
     group('initialize()', () {
       setUp(stubPrivateListEncryption);
 
       test('creates default list when none exists', () async {
+        await useFreshAccount();
         // Start with no lists
         expect(service.hasDefaultList(), isFalse);
 
@@ -224,6 +283,7 @@ void main() {
       });
 
       test('creates default list with correct ID', () async {
+        await useFreshAccount();
         // Start with no lists
         expect(service.hasDefaultList(), isFalse);
 
@@ -238,127 +298,33 @@ void main() {
       });
 
       test('does not create duplicate default list after relaunch', () async {
-        // Collect lists saved to the relay
-        final lists = <CuratedList>[];
-
-        when(
-          () => mockAuth.createAndSignEvent(
-            kind: any(named: 'kind'),
-            content: any(named: 'content'),
-            tags: any(named: 'tags'),
-            createdAt: any(named: 'createdAt'),
-          ),
-        ).thenAnswer((invocation) {
-          final now =
-              invocation.namedArguments[#createdAt] as int? ??
-              DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          final event = Event.fromJson({
-            'id': sha256
-                .convert(
-                  utf8.encode(
-                    json.encode([
-                      0,
-                      _ownerPubkey,
-                      now,
-                      30005,
-                      invocation.namedArguments[#tags] as List<List<String>>,
-                      invocation.namedArguments[#content] as String,
-                    ]),
-                  ),
-                )
-                .toString(),
-            'pubkey': _ownerPubkey,
-            'created_at': now,
-            'kind': 30005,
-            'tags': invocation.namedArguments[#tags] as List<List<String>>,
-            'content': invocation.namedArguments[#content] as String,
-            'sig': 'test_signature',
-          });
-
-          return Future.value(event);
-        });
-
-        when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) {
-          final event = invocation.positionalArguments[0] as Event;
-          final list = CuratedListConverter.fromEvent(event);
-          if (list != null) {
-            lists.add(list);
-          }
-          return Future.value(PublishSuccess(event: event));
-        });
-
-        // Mock subscription to return collected lists
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
-          invocation,
-        ) {
-          final filters = invocation.positionalArguments[0] as List<Filter>;
-
-          if (filters.isNotEmpty) {
-            final filter = filters.first;
-
-            if (filter.kinds?.contains(30005) ?? false) {
-              if (filter.authors?.contains(_ownerPubkey) ?? false) {
-                return Stream.fromIterable(
-                  lists.map((l) {
-                    final tags = CuratedListConverter.toEventTags(l);
-                    final description =
-                        l.description ?? 'Curated video list: ${l.name}';
-
-                    return Event.fromJson({
-                      'id': sha256
-                          .convert(
-                            utf8.encode(
-                              json.encode([
-                                0,
-                                _ownerPubkey,
-                                DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                                30005,
-                                tags,
-                                description,
-                              ]),
-                            ),
-                          )
-                          .toString(),
-                      'pubkey': _ownerPubkey,
-                      'created_at':
-                          DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                      'kind': 30005,
-                      'tags': tags,
-                      'content': description,
-                      'sig': 'test_signature',
-                    });
-                  }),
-                );
-              }
-            }
-          }
-
-          return const Stream.empty();
-        });
-
+        await useFreshAccount();
         expect(service.hasDefaultList(), isFalse);
-
         await service.initialize();
-
         expect(service.hasDefaultList(), isTrue);
         expect(service.lists.length, 1);
-
-        // Trigger the constructor again
+        expect(freshPublished, hasLength(1));
+        expect(
+          freshPublished.single.isValid && freshPublished.single.isSigned,
+          isTrue,
+        );
+        final original = service.getDefaultList()!;
+        service.dispose();
         service = CuratedListService(
           nostrService: mockNostr,
-          authService: mockAuth,
+          authService: freshAuth!,
           prefs: prefs,
         );
-
-        // Initialize again
         await service.initialize();
-
-        // Verify that there is still only the default list
+        await service.fetchUserListsFromRelays(force: true);
         expect(service.hasDefaultList(), isTrue);
         expect(service.lists.length, 1);
+        expect(service.getDefaultList()!.nostrEventId, original.nostrEventId);
+        expect(freshPublished, hasLength(1));
       });
 
       test('does not recreate default list after explicit deletion', () async {
+        await useReadableDefault();
         await service.initialize();
         final defaultList = service.getDefaultList();
         expect(defaultList, isNotNull);
@@ -383,6 +349,7 @@ void main() {
       });
 
       test('does not create duplicate default list', () async {
+        await useFreshAccount();
         // Initialize once
         await service.initialize();
         final firstDefaultList = service.getDefaultList();
@@ -491,7 +458,7 @@ void main() {
         final upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
-          prefs: await SharedPreferences.getInstance(),
+          prefs: await freshPreferencesProof(),
         );
 
         await upgraded.fetchUserListsFromRelays();
@@ -538,7 +505,7 @@ void main() {
         final upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
-          prefs: await SharedPreferences.getInstance(),
+          prefs: await freshPreferencesProof(),
           relaySyncTimeout: const Duration(milliseconds: 10),
         );
 
@@ -556,13 +523,15 @@ void main() {
         await neverCompletes.close();
       });
 
-      test('merges divergent unpublished and relay item sets', () async {
+      test('retains divergent default items without authorizing implicit overwrite', () async {
+        final localVideo = 'a' * 64;
+        final relayVideo = 'b' * 64;
         SharedPreferences.setMockInitialValues({
           CuratedListService.listsStorageKey: jsonEncode([
             CuratedList(
               id: CuratedListService.defaultListId,
               name: 'My List',
-              videoEventIds: const ['local_video'],
+              videoEventIds: [localVideo],
               createdAt: DateTime(2025),
               updatedAt: DateTime(2025),
               isPublic: false,
@@ -570,58 +539,45 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
-            Event.fromJson({
-              'id': 'other_device_event',
-              'pubkey': _ownerPubkey,
-              'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-              'kind': 30005,
-              'tags': [
-                ['d', CuratedListService.defaultListId],
-                ['title', 'My List'],
-              ],
-              'content': _seal(
-                jsonEncode([
-                  ['e', 'relay_video'],
-                ]),
-              ),
-              'sig': 'test_signature',
-            }),
-          ),
+        final returnedPrefs = await freshPreferencesProof();
+        final baseline = await stubReadableCuratedDefault(
+          auth: mockAuth,
+          client: mockNostr,
+          items: [relayVideo],
         );
+        when(() => mockNostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => Stream.value(baseline));
         final upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
-          prefs: await SharedPreferences.getInstance(),
+          prefs: returnedPrefs,
         );
-
+        addTearDown(upgraded.dispose);
         await upgraded.fetchUserListsFromRelays();
-
         final merged = upgraded.getDefaultList()!;
-        expect(
-          merged.videoEventIds,
-          containsAll(['local_video', 'relay_video']),
-        );
+        expect(merged.videoEventIds, containsAll([localVideo, relayVideo]));
         expect(merged.isPublic, isFalse);
-        expect(merged.nostrEventId, isNotNull);
-        final republished =
-            verify(
-                  () => mockNostr.publishEventAwaitOk(captureAny()),
-                ).captured.single
-                as Event;
+        expect(merged.nostrEventId, isNull);
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        expect(await upgraded.retryListSync(merged.authorScopedId), isFalse);
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
         expect(
-          jsonDecode(_unseal(republished.content)!),
-          containsAll([
-            ['e', 'local_video'],
-            ['e', 'relay_video'],
-          ]),
+          upgraded.getDefaultList()!.videoEventIds,
+          containsAll([localVideo, relayVideo]),
+        );
+        final durable = jsonDecode(
+          returnedPrefs.getString(CuratedListService.listsStorageKey)!,
+        ) as List;
+        expect(
+          (durable.single as Map)['videoEventIds'],
+          containsAll([localVideo, relayVideo]),
         );
       });
 
       test(
         'does not restore deleted default list from a stale relay event',
         () async {
+          final baseline = await useReadableDefault();
           await service.initialize();
           final defaultList = service.getDefaultList();
           expect(defaultList, isNotNull);
@@ -634,23 +590,8 @@ void main() {
           expect(deleted, isTrue);
           clearInteractions(mockNostr);
 
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) => Stream.value(
-              Event.fromJson({
-                'id': 'stale_default_event',
-                'pubkey': _ownerPubkey,
-                'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                'kind': 30005,
-                'tags': [
-                  ['d', CuratedListService.defaultListId],
-                  ['title', 'My List'],
-                  ['e', 'stale_default_video'],
-                ],
-                'content': 'My favorite vines and videos',
-                'sig': 'test_signature',
-              }),
-            ),
-          );
+          when(() => mockNostr.subscribe(any(), closeOnEose: true))
+              .thenAnswer((_) => Stream.value(baseline));
 
           await service.fetchUserListsFromRelays(force: true);
 
@@ -761,7 +702,7 @@ void main() {
         final upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
-          prefs: await SharedPreferences.getInstance(),
+          prefs: await freshPreferencesProof(),
         );
 
         await upgraded.fetchUserListsFromRelays();
@@ -811,7 +752,7 @@ void main() {
           final upgraded = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
-            prefs: await SharedPreferences.getInstance(),
+            prefs: await freshPreferencesProof(),
           );
 
           await upgraded.fetchUserListsFromRelays();
@@ -870,7 +811,7 @@ void main() {
           final upgraded = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
-            prefs: await SharedPreferences.getInstance(),
+            prefs: await freshPreferencesProof(),
           );
 
           await upgraded.fetchUserListsFromRelays();
@@ -907,7 +848,7 @@ void main() {
         upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
-          prefs: await SharedPreferences.getInstance(),
+          prefs: await freshPreferencesProof(),
         );
 
         await upgraded.fetchUserListsFromRelays();
@@ -933,7 +874,7 @@ void main() {
           final upgraded = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
-            prefs: await SharedPreferences.getInstance(),
+            prefs: await freshPreferencesProof(),
           );
 
           await upgraded.fetchUserListsFromRelays();
@@ -955,6 +896,7 @@ void main() {
           SharedPreferences.setMockInitialValues({
             CuratedListService.listsStorageKey: _strandedListsSeed(),
           });
+          final returnedPrefs = await freshPreferencesProof();
           var publishCount = 0;
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer((
             invocation,
@@ -970,13 +912,33 @@ void main() {
               when(
                 mockSigner.getPublicKey,
               ).thenAnswer((_) async => scenario.nextOwner);
+              if (scenario.nextOwner != null) {
+                await returnedPrefs.setString(
+                  'current_user_pubkey_hex',
+                  scenario.nextOwner!,
+                );
+                await stubCommittedListAccount(
+                  auth: mockAuth,
+                  preferences: returnedPrefs,
+                  replaceLiveAccount: true,
+                );
+              } else {
+                // An unresolved identity has a real pending native epoch;
+                // it receives neither a committed receipt nor default rights.
+                await AccountActivationCoordinator.forPreferences(returnedPrefs)
+                    .begin(
+                      ownerPubkey: _ownerPubkey,
+                      replaceLiveAccount: true,
+                      isCurrent: () => mockAuth.currentPublicKeyHex == null,
+                    );
+              }
             }
             return _accepted(invocation.positionalArguments[0] as Event);
           });
           final upgraded = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
-            prefs: await SharedPreferences.getInstance(),
+            prefs: returnedPrefs,
           );
 
           await upgraded.fetchUserListsFromRelays();
@@ -1008,15 +970,32 @@ void main() {
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownerPubkey);
           when(mockSigner.getPublicKey).thenAnswer((_) async => _ownerPubkey);
 
-          await upgraded.fetchUserListsFromRelays(force: true);
+          await returnedPrefs.setString(
+            'current_user_pubkey_hex',
+            _ownerPubkey,
+          );
+          await stubCommittedListAccount(
+            auth: mockAuth,
+            preferences: returnedPrefs,
+            replaceLiveAccount: true,
+          );
+          expect(upgraded.isCurrentSession, isFalse);
+          final returned = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: returnedPrefs,
+          );
+          addTearDown(returned.dispose);
+          await returned.fetchUserListsFromRelays(force: true);
+          expect(upgraded.isCurrentSession, isFalse);
 
           verify(() => mockNostr.publishEventAwaitOk(any())).called(2);
           expect(
-            upgraded.getListById('first-stranded')!.nostrEventId,
+            returned.getListById('first-stranded')!.nostrEventId,
             isNotNull,
           );
           expect(
-            upgraded.getListById('second-stranded')!.nostrEventId,
+            returned.getListById('second-stranded')!.nostrEventId,
             isNotNull,
           );
         });
@@ -2370,33 +2349,41 @@ void main() {
       );
 
       test(
-        'a re-created default list is not blocked by its own tombstone',
+        'a default coordinate tombstone survives a torn shared flag write',
         () async {
-          // The tombstone and the default-deleted flag are two separate pref
-          // writes, so a launch killed between them leaves the tombstone set and
-          // the flag clear. initialize() then re-creates "My List" on the same
-          // coordinate, and without lifting the tombstone the new list's own
-          // relay events would be discarded for the life of the install.
           SharedPreferences.setMockInitialValues({
             PrefsCuratedListStore.deletedCoordinatesStorageKey: <String>[
               '$_ownerPubkey:${CuratedListService.defaultListId}',
             ],
           });
+          final returnedPrefs = await freshPreferencesProof();
+          final baseline = await stubReadableCuratedDefault(
+            auth: mockAuth,
+            client: mockNostr,
+          );
+          when(() => mockNostr.subscribe(any(), closeOnEose: true))
+              .thenAnswer((_) => Stream.value(baseline));
           final relaunched = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
-            prefs: await SharedPreferences.getInstance(),
+            prefs: returnedPrefs,
           );
           await relaunched.initialize();
-          final defaultList = relaunched.getDefaultList();
-          expect(defaultList, isNotNull);
-
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) => Stream.value(_listEvent(defaultList!.id, 'My List')),
-          );
           await relaunched.fetchUserListsFromRelays(force: true);
-
-          expect(relaunched.getDefaultList(), isNotNull);
+          expect(relaunched.isInitialized, isTrue);
+          expect(relaunched.getDefaultList(), isNull);
+          expect(
+            returnedPrefs.getStringList(
+              PrefsCuratedListStore.deletedCoordinatesStorageKey,
+            ),
+            ['$_ownerPubkey:${CuratedListService.defaultListId}'],
+          );
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          expect(
+            await relaunched.createList(name: 'Ordinary owned list'),
+            isNotNull,
+          );
+          expect(relaunched.getDefaultList(), isNull);
         },
       );
 
@@ -2423,10 +2410,29 @@ void main() {
                 Stream.value(_listEvent(listId, 'Someone Else', _otherPubkey)),
           );
 
-          await service.fetchUserListsFromRelays(force: true);
+          await prefs.setString('current_user_pubkey_hex', _otherPubkey);
+          await stubCommittedListAccount(
+            auth: mockAuth,
+            preferences: prefs,
+            replaceLiveAccount: true,
+          );
+          expect(service.isCurrentSession, isFalse);
+          final incoming = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          addTearDown(incoming.dispose);
+          await incoming.fetchUserListsFromRelays(force: true);
 
-          expect(service.getListById(listId), isNotNull);
-          expect(service.getListById(listId)!.pubkey, _otherPubkey);
+          expect(incoming.getListById(listId), isNotNull);
+          expect(incoming.getListById(listId)!.pubkey, _otherPubkey);
+          expect(
+            prefs.getStringList(
+              PrefsCuratedListStore.deletedCoordinatesStorageKey,
+            ),
+            contains('$_ownerPubkey:$listId'),
+          );
         },
       );
 
@@ -2515,6 +2521,7 @@ void main() {
       );
 
       test('publishes a deletion for the default list', () async {
+        await useReadableDefault();
         await service.initialize();
         final defaultList = service.getDefaultList();
         expect(defaultList, isNotNull);
@@ -2594,7 +2601,9 @@ void main() {
       });
 
       test('returns false for missing and unowned list', () async {
+        await useReadableDefault();
         await service.initialize();
+        await service.fetchUserListsFromRelays(force: true);
         final missingResult = await service.deleteOwnedList('missing-list');
         final now = DateTime(2026);
         final unownedList = CuratedList(

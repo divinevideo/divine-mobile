@@ -134,7 +134,15 @@ void main() {
         );
       });
 
-      Future<bool> publish(CuratedList source, {bool confirmed = false}) {
+      Future<bool> publish(
+        CuratedList source, {
+        bool confirmed = false,
+        bool Function(CuratedList)? authorized,
+        bool Function()? sessionCurrent,
+        void Function()? afterPersist,
+        void Function()? afterRecoveryBarrier,
+        void Function(CuratedList, Event)? onAccepted,
+      }) {
         var stored = source;
         return CuratedListPublisher(
           client: mockNostr,
@@ -145,22 +153,232 @@ void main() {
           persistList: (current, replacement) async {
             if (stored != current) return false;
             stored = replacement;
+            afterPersist?.call();
             return true;
           },
           recoveryJournal: CuratedListRecoveryJournal(
             prefs: prefs,
-            runCurrent: (operation) => operation(),
+            runCurrent: (operation) async {
+              final result = await operation();
+              afterRecoveryBarrier?.call();
+              return result;
+            },
           ),
-          isCurrentSession: () => true,
+          isCurrentSession: sessionCurrent ?? () => true,
+          isPublicationAuthorized: authorized ?? (_) => true,
+          onPublicationAccepted: onAccepted,
         ).publish(source, confirmed: confirmed);
       }
+
+      group('positive publication authority', () {
+        test('missing authority refuses before signing or dispatch', () async {
+          expect(await publish(_list(), authorized: (_) => false), isFalse);
+          verifyNever(
+            () => mockAuth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired during signing cannot dispatch', () async {
+          var authorized = true;
+          when(
+            () => mockAuth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            authorized = false;
+            return _event(
+              content: invocation.namedArguments[#content] as String,
+              pubkey: _ownerPubkey,
+              tags: invocation.namedArguments[#tags] as List<List<String>>,
+            );
+          });
+          expect(
+            await publish(_list(), authorized: (_) => authorized),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired during persistence cannot dispatch', () async {
+          var authorized = true;
+          expect(
+            await publish(
+              _list(),
+              authorized: (_) => authorized,
+              afterPersist: () => authorized = false,
+            ),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired across ticket cannot dispatch', () async {
+          var authorized = true;
+          final source = _list(isPublic: true).copyWith(
+            pendingVisibility: CuratedListVisibility.fromList(
+              _list(),
+              relayAccepted: true,
+            ),
+          );
+          expect(
+            await publish(
+              source,
+              authorized: (_) => authorized,
+              afterRecoveryBarrier: () => authorized = false,
+            ),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test(
+          'unconfirmed dispatch never advances acknowledged authority',
+          () async {
+            var acknowledged = false;
+            expect(
+              await publish(_list(), onAccepted: (_, _) => acknowledged = true),
+              isTrue,
+            );
+            expect(acknowledged, isFalse);
+            verify(() => mockNostr.publishEvent(any())).called(1);
+          },
+        );
+
+        test(
+          'current confirmed acceptance advances exact target once',
+          () async {
+            final acceptedTargets = <CuratedList>[];
+            final acceptedEvents = <Event>[];
+            final source = _list();
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                onAccepted: (target, event) {
+                  acceptedTargets.add(target);
+                  acceptedEvents.add(event);
+                },
+              ),
+              isTrue,
+            );
+            expect(acceptedTargets, [source]);
+            expect(acceptedEvents.single.pubkey, _ownerPubkey);
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+
+        test(
+          'retired dispatched ACK keeps recovery without granting authority',
+          () async {
+            var current = true;
+            var acknowledged = false;
+            when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+              (invocation) async {
+                current = false;
+                return acceptedOutcome(
+                  invocation.positionalArguments.single as Event,
+                );
+              },
+            );
+            final source = _list(isPublic: true).copyWith(
+              pendingVisibility: CuratedListVisibility.fromList(
+                _list(),
+                relayAccepted: true,
+              ),
+            );
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                sessionCurrent: () => current,
+                onAccepted: (_, _) => acknowledged = true,
+              ),
+              isFalse,
+            );
+            expect(acknowledged, isFalse);
+            final journal = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (operation) => operation(),
+            );
+            expect(
+              journal
+                  .record(_ownerPubkey, source.id)
+                  ?.visibility
+                  ?.relayAccepted,
+              isTrue,
+            );
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+
+        test(
+          'newer revision during dispatch keeps ACK without committing stale target',
+          () async {
+            var authorized = true;
+            var persisted = 0;
+            var acknowledged = false;
+            when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+              (invocation) async {
+                authorized = false;
+                return acceptedOutcome(
+                  invocation.positionalArguments.single as Event,
+                );
+              },
+            );
+            final source = _list(isPublic: true).copyWith(
+              pendingVisibility: CuratedListVisibility.fromList(
+                _list(),
+                relayAccepted: true,
+              ),
+            );
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                authorized: (_) => authorized,
+                afterPersist: () => persisted += 1,
+                onAccepted: (_, _) => acknowledged = true,
+              ),
+              isFalse,
+            );
+            expect(persisted, 1);
+            expect(acknowledged, isFalse);
+            final journal = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (operation) => operation(),
+            );
+            expect(
+              journal
+                  .record(_ownerPubkey, source.id)
+                  ?.visibility
+                  ?.relayAccepted,
+              isTrue,
+            );
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+      });
 
       for (final isPublic in [false, true]) {
         test(
           'rejects foreign ${isPublic ? 'public' : 'private'} record before signing or sealing',
           () async {
-            final foreign = _list(isPublic: isPublic)
-                .copyWith(pubkey: _strangerPubkey);
+            final foreign = _list(
+              isPublic: isPublic,
+            ).copyWith(pubkey: _strangerPubkey);
             expect(
               await gateway.signList(
                 foreign,
@@ -224,8 +442,9 @@ void main() {
             ).thenAnswer((_) => signed.future);
             final pending = publish(_list(isPublic: isPublic));
             await pumpEventQueue();
-            when(() => mockAuth.currentPublicKeyHex)
-                .thenReturn(_strangerPubkey);
+            when(
+              () => mockAuth.currentPublicKeyHex,
+            ).thenReturn(_strangerPubkey);
             signed.complete(_event(content: '', pubkey: _ownerPubkey));
             expect(await pending, isFalse);
             verifyNever(() => mockNostr.publishEvent(any()));
@@ -295,8 +514,9 @@ void main() {
         const privatePayload = '[PRIVATE_ITEM_PAYLOAD_INVALID_JSON';
         final logs = LogCaptureService();
         await logs.clearAllLogs();
-        when(() => mockSigner.nip44Decrypt(any(), any()))
-            .thenAnswer((_) async => privatePayload);
+        when(
+          () => mockSigner.nip44Decrypt(any(), any()),
+        ).thenAnswer((_) async => privatePayload);
         final result = await gateway.unsealItemTags(
           _event(content: sealForTest(privatePayload), pubkey: _ownerPubkey),
         );
@@ -394,9 +614,9 @@ void main() {
         await gateway.redactPlaintextListEvent(_plaintextEventId);
 
         final redaction =
-            verify(() => mockNostr.publishEventAwaitOk(captureAny()))
-                    .captured
-                    .single
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
                 as Event;
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', _plaintextEventId])));

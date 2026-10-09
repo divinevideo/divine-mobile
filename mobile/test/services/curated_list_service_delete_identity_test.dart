@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -36,6 +38,8 @@ void main() {
     late _Auth auth;
     late CuratedListService service;
     late String activeOwner;
+
+    setUpAll(() => registerFallbackValue(<Filter>[]));
 
     CuratedList list(String owner) => CuratedList(
       id: 'shared',
@@ -65,6 +69,7 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
       stubListPublishing(client: client, auth: auth, pubkey: _ownerA);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       service = CuratedListService(
         nostrService: client,
         authService: auth,
@@ -97,8 +102,14 @@ void main() {
           auth: incomingAuth,
           pubkey: _ownerB,
         );
-        when(() => incomingClient.subscribe(any()))
+        when(() => incomingClient.subscribe(any(), closeOnEose: true))
             .thenAnswer((_) => const Stream.empty());
+        await prefs.setString('current_user_pubkey_hex', _ownerB);
+        await stubCommittedListAccount(
+          auth: incomingAuth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
         final incoming = CuratedListService(
           nostrService: incomingClient,
           authService: incomingAuth,

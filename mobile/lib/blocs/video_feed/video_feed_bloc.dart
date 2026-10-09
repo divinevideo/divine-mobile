@@ -1013,10 +1013,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
-  /// Handle curated list subscription changes from [CuratedListRepository].
-  ///
-  /// Only refreshes when the current mode is [FeedMode.following] and the
-  /// feed has already been loaded (avoids double-loading on startup).
+  /// Reconciles the active feed with current curated-list subscriptions.
   Future<void> _onCuratedListsChanged(
     VideoFeedCuratedListsChanged event,
     Emitter<VideoFeedBlocState> emit,

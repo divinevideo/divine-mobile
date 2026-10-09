@@ -18,6 +18,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/committed_list_account.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -632,11 +633,26 @@ void main() {
           pubkey: _alice,
         );
         stubListPublishing(client: bobClient, auth: bobAuth, pubkey: _bob);
+        await prefs.setString('current_user_pubkey_hex', _alice);
+        await stubCommittedListAccount(auth: aliceAuth, preferences: prefs);
         final alice = CuratedListService(
           nostrService: aliceClient,
           authService: aliceAuth,
           prefs: prefs,
         );
+        // Prove Alice's repair hold while she is still the active account.
+        await alice.prepareRecovery();
+        expect(alice.recoveryNeedsRepair, isTrue);
+        expect(await alice.createList(name: 'Held owner'), isNull);
+        verifyNever(() => aliceClient.publishEventAwaitOk(any()));
+        await prefs.setString('current_user_pubkey_hex', _bob);
+        await stubCommittedListAccount(
+          auth: bobAuth,
+          preferences: prefs,
+          replaceLiveAccount: true,
+        );
+        expect(aliceAuth.committedAccountActivationReceipt!.isCurrent, isFalse);
+        expect(alice.isCurrentSession, isFalse);
         final bob = CuratedListService(
           nostrService: bobClient,
           authService: bobAuth,
@@ -644,13 +660,9 @@ void main() {
         );
         addTearDown(alice.dispose);
         addTearDown(bob.dispose);
-        await alice.prepareRecovery();
         await bob.prepareRecovery();
-        expect(alice.recoveryNeedsRepair, isTrue);
         expect(bob.recoveryNeedsRepair, isFalse);
-        expect(await alice.createList(name: 'Held owner'), isNull);
         expect(await bob.createList(name: 'Available owner'), isNotNull);
-        verifyNever(() => aliceClient.publishEventAwaitOk(any()));
         final events = verify(() => bobClient.publishEventAwaitOk(captureAny()))
             .captured
             .cast<Event>();

@@ -82,8 +82,11 @@ abstract final class CuratedListRecoveryStorage {
   static String _raw(Object encoded) =>
       encoded is String ? encoded : jsonEncode(encoded);
 
-  static CuratedListLegacyRead legacyRead(SharedPreferences prefs) {
-    final encoded = prefs.get('curated_lists');
+  static CuratedListLegacyRead legacyRead(
+    SharedPreferences prefs, {
+    String storageKey = 'curated_lists',
+  }) {
+    final encoded = prefs.get(storageKey);
     if (encoded == null) return const CuratedListLegacyRead([]);
     final rows = <CuratedList>[];
     var corrupt = false;

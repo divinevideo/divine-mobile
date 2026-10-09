@@ -4,6 +4,7 @@
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -13,6 +14,9 @@ typedef PersistCuratedList = Future<bool> Function(
   CuratedList current,
   CuratedList replacement,
 );
+
+/// Positive authority for the exact target at the point of relay dispatch.
+typedef CuratedListPublicationAuthorization = bool Function(CuratedList target);
 
 /// The app's publication adapter; the cache owner supplies its storage edge.
 ///
@@ -27,13 +31,17 @@ class CuratedListPublisher {
     required PersistCuratedList persistList,
     required CuratedListRecoveryJournal recoveryJournal,
     required bool Function() isCurrentSession,
+    required CuratedListPublicationAuthorization isPublicationAuthorized,
+    void Function(CuratedList target, Event event)? onPublicationAccepted,
   }) : _client = client,
        _gateway = gateway,
        _clock = publishClock,
        _findList = findList,
        _persistList = persistList,
        _recovery = recoveryJournal,
-       _isCurrentSession = isCurrentSession;
+       _isCurrentSession = isCurrentSession,
+       _isPublicationAuthorized = isPublicationAuthorized,
+       _onPublicationAccepted = onPublicationAccepted;
 
   final NostrClient _client;
   final CuratedListRelayGateway _gateway;
@@ -43,6 +51,8 @@ class CuratedListPublisher {
 
   final CuratedListRecoveryJournal _recovery;
   final bool Function() _isCurrentSession;
+  final CuratedListPublicationAuthorization _isPublicationAuthorized;
+  final void Function(CuratedList target, Event event)? _onPublicationAccepted;
 
   bool _owns(String owner) =>
       _isCurrentSession() && _gateway.currentAuthenticatedPubkey() == owner;
@@ -67,6 +77,7 @@ class CuratedListPublisher {
       if (owner == null ||
           target.pubkey != owner ||
           !_owns(owner) ||
+          !_isPublicationAuthorized(target) ||
           _recovery.needsRepair(owner)) {
         return false;
       }
@@ -75,7 +86,12 @@ class CuratedListPublisher {
         ownerPubkey: owner,
         createdAt: () => _clock.next(ownerPubkey: owner, listId: target.id),
       );
-      if (event == null || event.pubkey != owner || !_owns(owner)) return false;
+      if (event == null ||
+          event.pubkey != owner ||
+          !_owns(owner) ||
+          !_isPublicationAuthorized(target)) {
+        return false;
+      }
 
       var current = _findList(target.authorScopedId);
       if (current == null || current.pubkey != owner) return false;
@@ -97,7 +113,11 @@ class CuratedListPublisher {
           );
       // Persist the attempted revision, but never a new unconfirmed proposal.
       // If this write fails, the cache callback restores only this candidate.
-      if (!await _persistList(current, sending) || !_owns(owner)) return false;
+      if (!await _persistList(current, sending) ||
+          !_owns(owner) ||
+          !_isPublicationAuthorized(target)) {
+        return false;
+      }
 
       final changesPermissions =
           CuratedListVisibility.fromList(current) !=
@@ -108,7 +128,11 @@ class CuratedListPublisher {
       // Ticket capture crosses the shared recovery barrier. A retired lease
       // cannot dispatch, even when that capture produced a ticket before
       // the barrier reported its operation cancelled.
-      if (!_owns(owner) || _recovery.needsRepair(owner)) return false;
+      if (!_owns(owner) ||
+          !_isPublicationAuthorized(target) ||
+          _recovery.needsRepair(owner)) {
+        return false;
+      }
       if (changesPermissions && evidenceTicket == null) return false;
       final priorPlaintextIds = <String>{
         ...current.pendingPlaintextEventIds,
@@ -117,6 +141,7 @@ class CuratedListPublisher {
             current.nostrEventId != null)
           current.nostrEventId!,
       };
+      if (!_owns(owner) || !_isPublicationAuthorized(target)) return false;
       if (confirmed || changesPermissions) {
         attemptedConfirmedSend = true;
         final outcome = await _client.publishEventAwaitOk(event);
@@ -180,7 +205,7 @@ class CuratedListPublisher {
         }
       }
       // Only minimal captured evidence can outlive the cache's account lease.
-      if (!_owns(owner)) return false;
+      if (!_owns(owner) || !_isPublicationAuthorized(target)) return false;
       current = _findList(target.authorScopedId);
       if (current == null || current.pubkey != owner) return false;
       if (current != sending) {
@@ -192,7 +217,7 @@ class CuratedListPublisher {
           CuratedListVisibility.fromList(current) !=
           CuratedListVisibility.fromList(target);
       if (commitsPermissions) {
-        if (!_owns(owner)) return false;
+        if (!_owns(owner) || !_isPublicationAuthorized(target)) return false;
         final journal = target
             .stageVisibilityFrom(
               current,
@@ -207,7 +232,10 @@ class CuratedListPublisher {
             );
         // Even refused recovery storage projects the retained ACK into this
         // session. Only an explicit Sync may settle it; cleanup must drain it.
-        if (!await _persistList(current, journal) || !savedAcceptance) {
+        if (!await _persistList(current, journal) ||
+            !savedAcceptance ||
+            !_owns(owner) ||
+            !_isPublicationAuthorized(target)) {
           return false;
         }
         current = _findList(target.authorScopedId);
@@ -234,7 +262,10 @@ class CuratedListPublisher {
         clearPendingVisibility: true,
         pendingPlaintextEventIds: plaintextIds.toList(growable: false),
       );
-      if (!await _persistList(current, committed) || !_owns(owner)) {
+      if (!_isPublicationAuthorized(target) ||
+          !await _persistList(current, committed) ||
+          !_owns(owner) ||
+          !_isPublicationAuthorized(target)) {
         return false;
       }
       if (!await _recovery.visibilityCommitted(
@@ -242,11 +273,13 @@ class CuratedListPublisher {
             committed.id,
             committed,
           ) ||
-          !_owns(owner)) {
+          !_owns(owner) ||
+          !_isPublicationAuthorized(target)) {
         return false;
       }
       // Failure of advisory redaction does not undo an accepted replacement.
       // Its IDs remain stored for a later sync, without claiming erasure.
+      if (relayAccepted) _onPublicationAccepted?.call(target, event);
       await retryPlaintextRedactions(target.authorScopedId);
       return true;
     } catch (error) {

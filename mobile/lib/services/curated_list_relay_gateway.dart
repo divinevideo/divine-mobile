@@ -22,17 +22,26 @@ import 'package:unified_logger/unified_logger.dart';
 enum UnsealItemTagsStatus { notSealed, unsealed, failed }
 
 final class UnsealedItemTags {
-  const UnsealedItemTags._(this.status, [this.tags]);
+  const UnsealedItemTags._(
+    this.status, [
+    this.tags,
+    this.hasCompleteItemSnapshot = false,
+  ]);
 
   const UnsealedItemTags.notSealed() : this._(UnsealItemTagsStatus.notSealed);
 
-  const UnsealedItemTags.unsealed(List<List<String>> tags)
-    : this._(UnsealItemTagsStatus.unsealed, tags);
+  const UnsealedItemTags.unsealed(
+    List<List<String>> tags, {
+    bool hasCompleteItemSnapshot = false,
+  }) : this._(UnsealItemTagsStatus.unsealed, tags, hasCompleteItemSnapshot);
 
   const UnsealedItemTags.failed() : this._(UnsealItemTagsStatus.failed);
 
   final UnsealItemTagsStatus status;
   final List<List<String>>? tags;
+
+  /// Positive raw completeness, distinct from permissive legacy decoding.
+  final bool hasCompleteItemSnapshot;
 }
 
 /// The relay side of curated lists: reads public lists, seals and unseals
@@ -614,10 +623,16 @@ class CuratedListRelayGateway {
 
       final decoded = jsonDecode(plaintext);
       if (decoded is! List) return const UnsealedItemTags.failed();
-      return UnsealedItemTags.unsealed([
-        for (final dynamic tag in decoded)
-          if (tag is List) tag.map((dynamic value) => '$value').toList(),
-      ]);
+      return UnsealedItemTags.unsealed(
+        [
+          for (final dynamic tag in decoded)
+            if (tag is List) tag.map((dynamic value) => '$value').toList(),
+        ],
+        hasCompleteItemSnapshot: decoded.every(
+          (dynamic tag) =>
+              tag is List && tag.every((dynamic value) => value is String),
+        ),
+      );
     } on Object catch (e) {
       Log.debug(
         'Content of list event ${event.id} is not sealed item tags '
@@ -711,15 +726,30 @@ class CuratedListRelayGateway {
       tags = CuratedListConverter.toPrivateMetadataTags(list);
     }
     if (currentAuthenticatedPubkey() != ownerPubkey) return null;
+    final timestamp = createdAt();
     final event = await _authService.createAndSignEvent(
       kind: 30005,
       content: content,
       tags: tags,
-      createdAt: createdAt(),
+      createdAt: timestamp,
     );
     if (event == null ||
         event.pubkey != ownerPubkey ||
         currentAuthenticatedPubkey() != ownerPubkey) {
+      return null;
+    }
+    // A canonical-default grant covers precisely the requested payload, not
+    // whatever an external signer returns for the same owner coordinate.
+    if (list.id == 'my_vine_list' &&
+        (event.kind != 30005 ||
+            event.createdAt != timestamp ||
+            event.content != content ||
+            (jsonEncode(event.tags) != jsonEncode(tags) &&
+                (Nip89ClientTag.hasClientTag(tags) ||
+                    jsonEncode(event.tags) !=
+                        jsonEncode([...tags, Nip89ClientTag.tag]))) ||
+            !event.isValid ||
+            !event.isSigned)) {
       return null;
     }
     return event;
@@ -729,9 +759,12 @@ class CuratedListRelayGateway {
     String listId, {
     required String ownerPubkey,
     int? createdAt,
+    bool Function()? isAuthorized,
   }) async {
     final currentPubkey = currentAuthenticatedPubkey();
-    if (currentPubkey == null || currentPubkey != ownerPubkey) {
+    if (currentPubkey == null ||
+        currentPubkey != ownerPubkey ||
+        !(isAuthorized?.call() ?? true)) {
       return false;
     }
 
@@ -746,7 +779,8 @@ class CuratedListRelayGateway {
     );
     if (event == null ||
         event.pubkey != ownerPubkey ||
-        currentAuthenticatedPubkey() != ownerPubkey) {
+        currentAuthenticatedPubkey() != ownerPubkey ||
+        !(isAuthorized?.call() ?? true)) {
       return false;
     }
 

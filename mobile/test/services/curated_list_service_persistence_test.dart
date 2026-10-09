@@ -15,6 +15,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -58,6 +59,7 @@ void main() {
       ).thenReturn(
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
 
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(
@@ -272,13 +274,11 @@ void main() {
         expect(recreated.lists, isEmpty);
         expect(recreated.recoveryNeedsRepair, isTrue);
         expect(await recreated.createList(name: 'After Restart'), isNull);
-        expect(prefs.get(CuratedListService.listsStorageKey), '[]');
-        final archive = jsonDecode(
-          prefs.getString(
-            CuratedListRecoveryStorage.sharedQuarantineKey,
-          )!,
-        ) as Map<String, dynamic>;
-        expect(archive['rawBuckets'], [corrupted]);
+        expect(prefs.get(CuratedListService.listsStorageKey), corrupted);
+        expect(
+          prefs.get(CuratedListRecoveryStorage.sharedQuarantineKey),
+          isNull,
+        );
       });
 
       test('preserves all raw rows until the bad row is repaired', () async {
@@ -305,7 +305,7 @@ void main() {
           prefs: prefs,
         );
         addTearDown(service.dispose);
-        expect(service.lists, isEmpty);
+        expect(service.lists, [accepted]);
         expect(service.recoveryNeedsRepair, isTrue);
         expect(service.isReadyForMutations, isFalse);
         expect(await service.createList(name: 'Added'), isNull);
@@ -320,7 +320,7 @@ void main() {
           prefs: prefs,
         );
         addTearDown(recreated.dispose);
-        expect(recreated.lists, isEmpty);
+        expect(recreated.lists, [accepted]);
         expect(recreated.recoveryNeedsRepair, isTrue);
         expect(await recreated.createList(name: 'After Restart'), isNull);
         expect(prefs.get(CuratedListService.listsStorageKey), corrupted);

@@ -15,6 +15,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -117,6 +118,10 @@ void main() {
       );
 
       // Create fresh service instance after clearing prefs
+      await stubCommittedListAccount(
+        auth: mockAuth,
+        preferences: prefs,
+      );
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,

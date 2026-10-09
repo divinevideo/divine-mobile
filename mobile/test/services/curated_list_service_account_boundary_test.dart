@@ -29,13 +29,14 @@ import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../test_setup.dart';
 
@@ -43,20 +44,33 @@ class _OldAuth extends Mock implements AuthService {}
 
 class _Relay extends Mock implements NostrClient {}
 
-class _ArchiveAuth implements AuthService {
+class _Discovery extends Mock implements RelayDiscoveryService {}
+
+class _ArchiveAuth extends AuthService {
+  _ArchiveAuth({
+    required super.userDataCleanupService,
+    required super.backgroundActivityManager,
+    required super.keyStorage,
+    required super.relayDiscoveryService,
+    required super.profileCheckIndexerUrl,
+  });
+
   final calls = <String>[];
   @override
   Future<void> archiveCurrentSignerInfo() async {
     calls.add('archive');
+    await super.archiveCurrentSignerInfo();
   }
 
   @override
-  Future<void> restoreSignerInfoForCurrentAccount() async {
+  Future<void> restoreSignerInfoForCurrentAccount({
+    void Function()? ensureCurrent,
+  }) async {
     calls.add('restore');
+    await super.restoreSignerInfoForCurrentAccount(
+      ensureCurrent: ensureCurrent,
+    );
   }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Keys extends SecureKeyStorage {
@@ -87,18 +101,6 @@ class _Keys extends SecureKeyStorage {
   void dispose() {}
 }
 
-class _OldKey implements SecureKeyContainer {
-  @override
-  String get npub => NostrKeyUtils.encodePubKey(publicKeyHex);
-  @override
-  final String publicKeyHex =
-      '2222222222222222222222222222222222222222222222222222222222222222';
-  @override
-  void dispose() {}
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 class _ReadbackBackend extends InMemorySharedPreferencesStore {
   _ReadbackBackend() : super.withData({});
   bool refuseRead = false;
@@ -119,12 +121,34 @@ void main() {
       'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
   setUpAll(() => registerFallbackValue(<nostr.Filter>[]));
   group('failed account switch', () {
+    Future<void> driveOperation(
+      WidgetTester tester,
+      Future<void> operation, {
+      Object? expected,
+    }) => TestAsyncUtils.guard(() async {
+      var settled = false;
+      final watched = operation.whenComplete(() => settled = true);
+      final checked = expectLater(watched, expected ?? completes);
+      for (var frame = 0; !settled && frame < 250; frame += 1) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+      expect(
+        settled,
+        isTrue,
+        reason: 'Account boundary operation must settle within explicit frames',
+      );
+      await checked;
+    });
+
     for (final deleted in [false, true]) {
       testWidgets(
         deleted
             ? 'real failed account switch preserves owner My List deletion tombstone'
             : 'real failed account switch preserves populated relay My List',
         (tester) async {
+          final oldKey = SecureKeyContainer.fromPrivateKeyHex('2' * 64);
+          final owner = oldKey.publicKeyHex;
           SharedPreferences.setMockInitialValues({
             'current_user_pubkey_hex': owner,
           });
@@ -132,12 +156,32 @@ void main() {
           final db = AppDatabase.test(NativeDatabase.memory());
           addTearDown(db.close);
           final controller = AccountSwitchController();
-          final oldAuth = _OldAuth();
-          final archived = _ArchiveAuth();
           final client = _Relay();
-          final oldKey = _OldKey();
           final target = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
           final keys = _Keys(target, oldKey);
+          final discovery = _Discovery();
+          when(() => discovery.discoverRelays(any())).thenAnswer(
+            (_) async =>
+                RelayDiscoveryResult.failure('No network in boundary tests'),
+          );
+          final archived = (await tester.runAsync(() async {
+            final auth = _ArchiveAuth(
+              userDataCleanupService: UserDataCleanupService(prefs),
+              backgroundActivityManager: BackgroundActivityManager(),
+              keyStorage: _Keys(oldKey, oldKey),
+              relayDiscoveryService: discovery,
+              profileCheckIndexerUrl: 'unsupported://diagnostic.invalid',
+            );
+            await auth.initializeForAccountSwitch();
+            await auth.signInForAccount(owner, AuthenticationSource.automatic);
+            await pumpEventQueue();
+            return auth;
+          }))!;
+          addTearDown(archived.dispose);
+          final oldAuth = archived;
+          expect(oldAuth.committedAccountActivationReceipt!.isCurrent, isTrue);
+          expect(oldAuth.currentPublicKeyHex, owner);
+          expect(oldAuth.takeFreshAccountListCreationPermit(), isNull);
           final timeline = <String>[];
           final published = <Event>[];
           var relayVideoIds = <String>[video];
@@ -165,9 +209,11 @@ void main() {
               ['$owner:${CuratedListService.defaultListId}'],
             );
           }
-          when(() => oldAuth.isAuthenticated).thenReturn(true);
-          when(() => oldAuth.currentPublicKeyHex).thenReturn(owner);
-          stubListPublishing(client: client, auth: oldAuth, pubkey: owner);
+          stubListSigner(client, owner);
+          when(() => client.publishEvent(any())).thenAnswer(
+            (i) async =>
+                PublishSuccess(event: i.positionalArguments.single as Event),
+          );
           when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
             final event = i.positionalArguments.single as Event;
             published.add(event);
@@ -182,7 +228,12 @@ void main() {
                 .toList();
             return acceptedOutcome(event);
           });
-          when(() => client.subscribe(any())).thenAnswer((i) {
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: any(named: 'closeOnEose'),
+            ),
+          ).thenAnswer((i) {
             timeline.add('relay-query');
             return const Stream<Event>.empty();
           });
@@ -206,10 +257,10 @@ void main() {
                 sweepErasedDefaultFlag = !prefs.containsKey(
                   CuratedListService.defaultListDeletedStorageKey,
                 );
-                expect(userPubkey, owner);
-                expect(deleteUserData, isFalse);
-                expect(sweepErasedLists, isTrue);
-                expect(sweepErasedDefaultFlag, isTrue);
+                expectSync(userPubkey, owner);
+                expectSync(deleteUserData, isFalse);
+                expectSync(sweepErasedLists, isTrue);
+                expectSync(sweepErasedDefaultFlag, isTrue);
                 throw const UserDataCleanupException(
                   'Synthetic database unavailable after cache sweep',
                 );
@@ -259,7 +310,10 @@ void main() {
             ),
           );
           final listener = initial.listen(curatedListsStateProvider, (_, _) {});
-          await initial.read(curatedListsStateProvider.future);
+          await driveOperation(
+            tester,
+            initial.read(curatedListsStateProvider.future).then<void>((_) {}),
+          );
           final retired = initial
               .read(curatedListsStateProvider.notifier)
               .service!;
@@ -272,14 +326,15 @@ void main() {
             addedAt: DateTime.utc(2026),
             lastUsedAt: DateTime.utc(2026),
           );
-          await expectLater(
+          await driveOperation(
+            tester,
             swapAccount(
               deviceScope: scope,
               controller: controller,
               currentAuthService: archived,
               account: account,
             ),
-            throwsA(isA<UserDataCleanupException>()),
+            expected: throwsA(isA<UserDataCleanupException>()),
           );
           expect(controller.currentContainer, same(initial));
           expect(keys.restored, same(oldKey));
@@ -290,9 +345,10 @@ void main() {
           final pending = PendingAccountCleanup.read(prefs);
           expect(pending, isNotNull);
           expect(pending!.userPubkey, owner);
-          await expectLater(
-            initial.read(curatedListsStateProvider.future),
-            throwsA(isA<CuratedListAccountBoundaryException>()),
+          await driveOperation(
+            tester,
+            initial.read(curatedListsStateProvider.future).then<void>((_) {}),
+            expected: throwsA(isA<CuratedListAccountBoundaryException>()),
           );
           final rebuilt = initial
               .read(curatedListsStateProvider.notifier)
@@ -346,14 +402,17 @@ void main() {
         SharedPreferences prefs,
       })
     >
-    subject({bool cached = false}) async {
+    subject({bool cached = false, bool committed = false}) async {
       final prefs = await SharedPreferences.getInstance();
       final client = _Relay();
       final auth = _OldAuth();
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(owner);
       stubListPublishing(client: client, auth: auth, pubkey: owner);
-      when(() => client.subscribe(any()))
+      if (committed) {
+        await stubCommittedListAccount(auth: auth, preferences: prefs);
+      }
+      when(() => client.subscribe(any(), closeOnEose: true))
           .thenAnswer((_) => const Stream<Event>.empty());
       if (cached) {
         await prefs.setString(
@@ -383,7 +442,7 @@ void main() {
 
     test('already initialized same-owner continuing list session preserves accepted live deferral', () async {
       SharedPreferences.setMockInitialValues({});
-      final x = await subject(cached: true);
+      final x = await subject(cached: true, committed: true);
       await x.service.initialize();
       await pumpEventQueue();
       expect(x.service.isInitialized, isTrue);
@@ -447,10 +506,16 @@ void main() {
             x.service.initializationError,
             isA<CuratedListAccountBoundaryException>(),
           );
-          expect(x.service.getDefaultList()!.videoEventIds, [video]);
+          expect(x.service.getDefaultList(), isNull);
+          expect(
+            (jsonDecode(
+              x.prefs.getString(CuratedListService.listsStorageKey)!,
+            ) as List).single['videoEventIds'],
+            [video],
+          );
           expect(await x.service.createList(name: 'Blocked'), isNull);
           await x.service.fetchUserListsFromRelays(force: true);
-          verifyNever(() => x.client.subscribe(any()));
+          verifyNever(() => x.client.subscribe(any(), closeOnEose: true));
           verifyNever(() => x.client.publishEventAwaitOk(any()));
           expect(x.prefs.get(PendingAccountCleanup.storageKey), original);
           x.service.dispose();
@@ -480,7 +545,7 @@ void main() {
         await x.service.initialize();
         expect(x.service.isReadyForMutations, isFalse);
         expect(x.service.isInitialized, isFalse);
-        verifyNever(() => x.client.subscribe(any()));
+        verifyNever(() => x.client.subscribe(any(), closeOnEose: true));
         verifyNever(() => x.client.publishEventAwaitOk(any()));
         x.service.dispose();
       } finally {
@@ -521,7 +586,7 @@ void main() {
       expect(PendingAccountCleanup.read(prefs), isNull);
       expect(PendingAccountCleanup.readbackUnknown(prefs), isFalse);
       expect(blocked.service.isCurrentSession, isFalse);
-      final next = await subject(cached: true);
+      final next = await subject(cached: true, committed: true);
       await next.service.initialize();
       await pumpEventQueue();
       expect(next.service.isInitialized, isTrue);
@@ -532,16 +597,17 @@ void main() {
       next.service.dispose();
     });
     test(
-      'ordinary marker-free initialization retains default creation behavior',
+      'marker-free restored account does not infer a default creation grant',
       () async {
         SharedPreferences.setMockInitialValues({});
-        final x = await subject();
+        final x = await subject(committed: true);
         await x.service.initialize();
         await pumpEventQueue();
         expect(x.service.isInitialized, isTrue);
         expect(x.service.isReadyForMutations, isTrue);
-        expect(x.service.getDefaultList(), isNotNull);
-        verify(() => x.client.publishEventAwaitOk(any())).called(1);
+        expect(x.service.getDefaultList(), isNull);
+        expect(x.auth.takeFreshAccountListCreationPermit(), isNull);
+        verifyNever(() => x.client.publishEventAwaitOk(any()));
         x.service.dispose();
       },
     );

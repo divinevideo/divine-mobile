@@ -49,7 +49,12 @@ class SelectListCubit extends Cubit<SelectListState>
     String? owner,
   ) => owner == null || owner.isEmpty
       ? const []
-      : service.myLists.where((list) => list.pubkey == owner).toList();
+      : service
+            .pickerListsForOwner(owner)
+            .where(
+              (list) => list.pubkey == null || list.pubkey == owner,
+            )
+            .toList();
 
   bool _canMutate(String listId) =>
       state.serviceAvailable &&
@@ -59,6 +64,11 @@ class SelectListCubit extends Cubit<SelectListState>
         _service,
         _openingOwnerPubkey,
       ).any((list) => list.id == listId);
+
+  String? _mutationCoordinate(String listId) => _ownedLists(
+    _service,
+    _openingOwnerPubkey,
+  ).firstWhereOrNull((list) => list.id == listId)?.authorScopedId;
 
   bool _permissionRecoveryBlocks(Set<String> ids) => _ownedLists(
     _service,
@@ -245,7 +255,9 @@ class SelectListCubit extends Cubit<SelectListState>
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
-        final added = await service.addVideoToList(listId, _videoEventId);
+        final coordinate = _mutationCoordinate(listId);
+        if (coordinate == null) return _sessionFailure();
+        final added = await service.addVideoToList(coordinate, _videoEventId);
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
         if (added) continue;
@@ -263,8 +275,10 @@ class SelectListCubit extends Cubit<SelectListState>
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
+        final coordinate = _mutationCoordinate(listId);
+        if (coordinate == null) return _sessionFailure();
         final removed = await service.removeVideoFromList(
-          listId,
+          coordinate,
           _videoEventId,
         );
         if (!isSessionCurrent) return _sessionFailure();
@@ -327,6 +341,8 @@ class SelectListCubit extends Cubit<SelectListState>
         !state.pendingSyncListIds.contains(listId)) {
       return;
     }
+    final coordinate = _mutationCoordinate(listId);
+    if (coordinate == null) return;
     emitIfOpen(
       state.copyWith(
         status: SelectListStatus.saving,
@@ -338,7 +354,7 @@ class SelectListCubit extends Cubit<SelectListState>
     final service = _service;
     var synced = false;
     try {
-      synced = await service.retryListSync(listId);
+      synced = await service.retryListSync(coordinate);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
     }

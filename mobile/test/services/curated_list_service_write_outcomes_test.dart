@@ -13,6 +13,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
@@ -20,7 +21,9 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
+import '../helpers/signed_curated_list.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -120,8 +123,7 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   }
 }
 
-const _owner =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const String _owner = signedListFixtureOwner;
 
 CuratedList _list({String name = 'Original', DateTime? updatedAt}) =>
     CuratedList(
@@ -149,6 +151,8 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+      prefs.setterCalls = 0;
     });
 
     CuratedListService open({
@@ -386,9 +390,22 @@ void main() {
             var owner = _owner as String?;
             when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
             when(() => auth.isAuthenticated).thenAnswer((_) => owner != null);
-            final source = _list().copyWith(
+            var source = _list().copyWith(
               id: isDefault ? CuratedListService.defaultListId : 'crew',
             );
+            if (isDefault) {
+              final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+              when(() => client.signer).thenReturn(signer);
+              final revision = await signedCuratedListFixture(source, signer);
+              source = CuratedListConverter.fromEvent(
+                revision,
+                privateTags: CuratedListConverter.toItemTags(source),
+                isPrivateEvent: !source.isPublic,
+              )!;
+              registerFallbackValue(<Filter>[]);
+              when(() => client.subscribe(any(), closeOnEose: true))
+                  .thenAnswer((_) => Stream.value(revision));
+            }
             await prefs.setString(
               CuratedListService.listsStorageKey,
               jsonEncode([source.toJson()]),
@@ -399,6 +416,10 @@ void main() {
             );
             var callbacks = 0;
             final service = open(onUnsubscribed: (_) async => callbacks++);
+            if (isDefault) {
+              await service.fetchUserListsFromRelays(force: true);
+              expect(service.isReadyForMutations, isTrue);
+            }
             var notifications = 0;
             service.addListener(() => notifications++);
             prefs.listWriteStarted = Completer<void>();
@@ -406,6 +427,25 @@ void main() {
             final deleting = service.deleteOwnedList(source.authorScopedId);
             await prefs.listWriteStarted!.future;
             final beforeSwitch = notifications;
+            if (isDefault) {
+              // A genuine restored default has a published revision. Its
+              // coordinate tombstone is authorized before the account retires.
+              final tombstone =
+                  verify(
+                        () => client.publishEventAwaitOk(captureAny()),
+                      ).captured.single
+                      as Event;
+              expect(tombstone.kind, 5);
+              expect(tombstone.pubkey, _owner);
+              expect(
+                tombstone.tags,
+                contains(equals(['a', '30005:${source.authorScopedId}'])),
+              );
+            } else {
+              verifyNever(() => client.publishEventAwaitOk(any()));
+            }
+            verifyNever(() => client.publishEvent(any()));
+            clearInteractions(client);
             owner = nextOwner;
             final retired = CuratedListSessionCoordinator.forPreferences(prefs)
                 .retireAndDrain();
@@ -482,34 +522,32 @@ void main() {
         );
       });
 
-      test('creating it again lifts the deletion record', () async {
-        final service = open();
-        await service.initialize();
-        expect(service.hasDefaultList(), isTrue);
-        expect(
-          prefs.getStringList(
-            PrefsCuratedListStore.deletedCoordinatesStorageKey,
-          ),
-          isEmpty,
+      for (final refusesDeletionWrite in [false, true]) {
+        test(
+          'restart retains the deleted coordinate with refusal=$refusesDeletionWrite',
+          () async {
+            prefs.rejectDeletions = refusesDeletionWrite;
+            final original = prefs.getStringList(
+              PrefsCuratedListStore.deletedCoordinatesStorageKey,
+            );
+            final service = open();
+            await service.initialize();
+            expect(service.hasDefaultList(), isFalse);
+            expect(service.isInitialized, isTrue);
+            expect(service.isReadyForMutations, isTrue);
+            expect(service.initializationError, isNull);
+            expect(
+              prefs.getStringList(
+                PrefsCuratedListStore.deletedCoordinatesStorageKey,
+              ),
+              original,
+            );
+            expect(open().hasDefaultList(), isFalse);
+            verifyNever(() => client.publishEventAwaitOk(any()));
+            verifyNever(() => client.publishEvent(any()));
+          },
         );
-      });
-
-      test('stays absent while the deletion record cannot be lifted', () async {
-        prefs.rejectDeletions = true;
-        final service = open();
-        await service.initialize();
-        expect(service.hasDefaultList(), isFalse);
-        expect(service.isReadyForMutations, isFalse);
-        expect(
-          service.initializationError,
-          isA<CuratedCacheWriteException>().having(
-            (error) => error.status,
-            'status',
-            CuratedCacheWriteStatus.storageRejected,
-          ),
-        );
-        expect(open().hasDefaultList(), isFalse);
-      });
+      }
     });
 
     test('rejected unfollow keeps the last stored subscription', () async {

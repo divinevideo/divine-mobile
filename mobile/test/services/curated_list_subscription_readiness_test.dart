@@ -10,6 +10,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -27,6 +29,7 @@ void main() {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       when(() => auth.isAuthenticated).thenReturn(true);
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
       final service = CuratedListService(
         authService: auth,
         nostrService: _MockNostrClient(),

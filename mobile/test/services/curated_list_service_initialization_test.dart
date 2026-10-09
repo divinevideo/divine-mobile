@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -85,6 +86,7 @@ void main() {
           event: invocation.positionalArguments.single as Event,
         ),
       );
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
     });
 
     test(
@@ -162,7 +164,6 @@ void main() {
             () => mockNostr.subscribe(
               any(),
               closeOnEose: true,
-              onEose: any(named: 'onEose'),
             ),
           ).thenAnswer((_) {
             relaySubscribed = true;
@@ -211,7 +212,6 @@ void main() {
               () => mockNostr.subscribe(
                 any(),
                 closeOnEose: true,
-                onEose: any(named: 'onEose'),
               ),
             ).called(1);
           } finally {
@@ -229,7 +229,6 @@ void main() {
         () => mockNostr.subscribe(
           any(),
           closeOnEose: true,
-          onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((_) => const Stream.empty());
 
@@ -238,6 +237,7 @@ void main() {
         authService: mockAuth,
         prefs: prefs,
       );
+      addTearDown(service.dispose);
 
       var notificationCount = 0;
       service.addListener(() {
@@ -260,7 +260,6 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
-            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
@@ -286,6 +285,7 @@ void main() {
           authService: mockAuth,
           prefs: prefs,
         );
+        addTearDown(service.dispose);
 
         await service.initialize();
 
@@ -312,7 +312,6 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
-            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
@@ -342,6 +341,7 @@ void main() {
           authService: mockAuth,
           prefs: prefs,
         );
+        addTearDown(service.dispose);
 
         await service.initialize();
 
@@ -368,7 +368,6 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
-            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((invocation) {
           // Return a stream that will emit an event after delay
@@ -380,6 +379,7 @@ void main() {
           authService: mockAuth,
           prefs: prefs,
         );
+        addTearDown(service.dispose);
 
         // The property under test is that initialize() does not wait on the
         // relay. Nothing completes relayResponseCompleter until further down,

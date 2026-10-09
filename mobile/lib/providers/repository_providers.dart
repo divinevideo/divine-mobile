@@ -666,6 +666,13 @@ class CuratedListsState extends _$CuratedListsState {
     final authService = ref.watch(authServiceProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
 
+    // An incoming container can build before its first frame commits account
+    // activation. Replace that fenced service when AuthService assigns the
+    // terminal receipt; the auth enum itself may already be authenticated.
+    // The event only triggers reconstruction. The new service must still
+    // obtain and verify its own current receipt.
+    ref.watch(currentAccountActivationReceiptProvider);
+
     final service = CuratedListService(
       nostrService: nostrService,
       authService: authService,
@@ -686,7 +693,7 @@ class CuratedListsState extends _$CuratedListsState {
       service.dispose();
     });
 
-    // Initialize the service to create default list and sync with relays
+    // Load the local list cache and start background relay synchronization.
     await service.initialize();
     if (!providerRef.mounted ||
         !identical(_service, service) ||
