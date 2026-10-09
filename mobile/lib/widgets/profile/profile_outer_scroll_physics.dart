@@ -43,7 +43,8 @@ double profileTabMinimumContentExtent({
     (tabWidth - _gridSpacing * (_gridColumns - 1)) / _gridColumns +
     bottomSafeArea;
 
-/// The geometry of the Videos tab's grid, which the other grids match.
+/// The geometry of the Videos tab's grid. The other tabs' grids differ by a
+/// pixel or two, which a one-row lower bound can ignore.
 const _gridColumns = 3;
 const _gridSpacing = 4.0;
 
