@@ -36,9 +36,9 @@ Other NIP-17 clients ignore the unknown tag and show an ordinary video.
 ## How a clip is signed
 
 Every signing step embeds the signed-in account's creator binding
-(`video.divine.nostr.creator_binding`, a Nostr signature over the file hash) in
-the manifest it writes, so a clip's history names who recorded and who edited
-it. Identities that cannot sign a canonical payload (NIP-46 and NIP-55 signers)
+(`video.divine.nostr.creator_binding`, a Nostr signature over the hash of the
+file as it was before signing) in the manifest it writes, so a clip's history
+names who recorded and who edited it. Identities that cannot sign a canonical payload (NIP-46 and NIP-55 signers)
 sign without one.
 
 - **Recording.** A Divine recording is C2PA-signed by ProofSign at capture,
@@ -68,6 +68,15 @@ sign without one.
   file still matches that hash; nothing else is ever signed as a capture after
   the fact. While such a recording is still unsigned, an edit of it is left
   unsigned too, and the editor offers to retry signing.
+
+  This only works while the clip still carries the hash, which is not always
+  the case yet. The hash is set when the capture proof comes back, which can be
+  after the take was saved to the clip library, and the library entry is not
+  updated then. An edit made before the proof came back copies its sources
+  without the hash, and a recording used as a chroma-key backdrop, or kept as
+  the footage under a key, is named without one. A clip loaded from the
+  library, or edited from such a source, therefore cannot have its recording
+  signed late, and cannot be sent as a clip.
 
 ## The C2PA check
 
@@ -102,6 +111,13 @@ the decrypted file's manifest and requires all of:
 
 The check also returns the accounts whose creator bindings in that history
 verify, which is how the credits below reach every hop.
+
+A verified binding proves that its account signed a file hash, not that the
+hash belongs to this clip. The hash is of the file before it was signed, so it
+cannot be recomputed from the signed file, and nothing else ties the binding to
+the manifest it sits in. A credit is therefore a claim made by the app that
+signed that step, and it is only as strong as the ProofSign signature around
+it. Binding credits to their manifest is tracked in #9981.
 
 The check runs entirely on the device. The private clip is never sent
 anywhere to be checked, and remote manifests and OCSP are never fetched.
