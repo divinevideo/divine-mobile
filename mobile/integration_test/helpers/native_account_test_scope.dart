@@ -2,6 +2,7 @@
 // ABOUTME: Keeps real Keychain and SQLite work and awaits account teardown.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:db_client/db_client.dart';
@@ -9,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
@@ -30,6 +32,7 @@ class NativeAccountTestScope {
     this.database,
     this.prefs,
     this._cacheStore,
+    this._hiveHome,
   ) {
     final crashReporter = CrashReportingService();
     deviceScope = DeviceScope(
@@ -76,12 +79,26 @@ class NativeAccountTestScope {
     );
   }
 
+  static var _hiveScopeActive = false;
+
   static Future<NativeAccountTestScope> create() async {
-    final relay = await FakeRelay.start();
+    if (_hiveScopeActive) {
+      throw StateError('Previous native account Hive storage has not closed');
+    }
+    _hiveScopeActive = true;
+    FakeRelay? relay;
     AppDatabase? database;
     SqliteCacheStore? cacheStore;
+    Directory? hiveHome;
+    var hiveInitialized = false;
     try {
+      relay = await FakeRelay.start();
       SharedPreferences.setMockInitialValues(<String, Object>{});
+      // Production opens Hive before account services. Keep the real box
+      // storage in an owned temporary home, separate from retained app data.
+      hiveHome = await Directory.systemTemp.createTemp('native_account_hive_');
+      Hive.init(hiveHome.path);
+      hiveInitialized = true;
       database = AppDatabase(NativeDatabase.memory());
       cacheStore = SqliteCacheStore(NativeDatabase.memory());
       await CacheSync.init(dao: cacheStore.dao);
@@ -90,12 +107,23 @@ class NativeAccountTestScope {
         database,
         await SharedPreferences.getInstance(),
         cacheStore,
+        hiveHome,
       );
     } on Object catch (error, stack) {
       final failures = <(Object, StackTrace)>[(error, stack)];
-      await _finishCleanup(relay.stop, failures);
+      if (relay != null) await _finishCleanup(relay.stop, failures);
       if (database != null) await _finishCleanup(database.close, failures);
       if (cacheStore != null) await _finishCleanup(cacheStore.close, failures);
+      if (hiveHome != null) {
+        if (hiveInitialized) {
+          await _closeHiveHome(hiveHome, failures);
+        } else {
+          await _finishCleanup(() async {
+            await hiveHome!.delete(recursive: true);
+          }, failures);
+        }
+      }
+      if (!hiveInitialized) _hiveScopeActive = false;
       _throwCleanupFailures(failures);
       rethrow;
     }
@@ -105,6 +133,7 @@ class NativeAccountTestScope {
   final AppDatabase database;
   final SharedPreferences prefs;
   final SqliteCacheStore _cacheStore;
+  final Directory _hiveHome;
   final controller = AccountSwitchController();
   late final DeviceScope deviceScope;
   final _containers = <ProviderContainer>[];
@@ -154,12 +183,29 @@ class NativeAccountTestScope {
     await _finishCleanup(relay.stop, _cleanupFailures);
     await _finishCleanup(database.close, _cleanupFailures);
     await _finishCleanup(_cacheStore.close, _cleanupFailures);
+    await _closeHiveHome(_hiveHome, _cleanupFailures);
     await _finishCleanup(
       () => expect(tester.takeException(), isNull),
       _cleanupFailures,
     );
     _throwCleanupFailures(_cleanupFailures);
   }
+}
+
+Future<void> _closeHiveHome(
+  Directory home,
+  List<(Object, StackTrace)> failures,
+) async {
+  final beforeClose = failures.length;
+  await _finishCleanup(Hive.close, failures);
+  // A failed close may leave boxes open. Preserve their files and surface the
+  // error instead of deleting storage that is still in use.
+  if (failures.length != beforeClose) return;
+  Hive.init(null);
+  NativeAccountTestScope._hiveScopeActive = false;
+  await _finishCleanup(() async {
+    await home.delete(recursive: true);
+  }, failures);
 }
 
 Future<void> _finishCleanup(

@@ -153,12 +153,17 @@ void main() {
 
         // Real unattributed cleanup preserves both accounts' owned rows.
         final container = scope.buildContainer();
-        await container
-            .read(userDataCleanupServiceProvider)
-            .clearUserSpecificData(
-              reason: 'identity_change',
-              isIdentityChange: true,
-            );
+        // This case has no AuthService to retain the auto-dispose cleanup
+        // dependency while its asynchronous callbacks use the provider ref.
+        final cleanupSubscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(cleanupSubscription.close);
+        await cleanupSubscription.read().clearUserSpecificData(
+          reason: 'identity_change',
+          isIdentityChange: true,
+        );
 
         final surviving = await database.select(database.directMessages).get();
         expect(
