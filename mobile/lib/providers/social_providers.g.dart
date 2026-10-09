@@ -159,16 +159,16 @@ final class OutgoingDmRetryServiceProvider
 String _$outgoingDmRetryServiceHash() =>
     r'ecf35e2997e56553a3ea0c561efd523f869e8f63';
 
-/// Auto-sweep service that re-drives undelivered DM reactions (publish failed
-/// or interrupted mid-send) on app-foreground transitions via
-/// [DmReactionsRepository.retry].
+/// Auto-sweep service that re-drives undelivered DM reactions and removals
+/// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
+/// on app-foreground transitions, connectivity changes, and an in-session
+/// follow-up heartbeat while retryable work remains.
 ///
 /// Gives reactions the durable delivery that DM messages already get from
 /// [OutgoingDmRetryService] + the `outgoing_dms` queue: a reaction whose
 /// recipient gift wrap failed to land (common on a flaky relay) is otherwise
 /// lost with no automatic recovery. keepAlive with no UI consumer, so it is
-/// read eagerly at app shell startup (`main.dart`) to wire the foreground
-/// subscription.
+/// read eagerly at app shell startup (`main.dart`) to wire its triggers.
 ///
 /// Returns null until the user is authenticated and the Nostr session is
 /// ready — the same readiness the reaction repository's `setCredentials`
@@ -177,16 +177,16 @@ String _$outgoingDmRetryServiceHash() =>
 @ProviderFor(dmReactionRetryService)
 final dmReactionRetryServiceProvider = DmReactionRetryServiceProvider._();
 
-/// Auto-sweep service that re-drives undelivered DM reactions (publish failed
-/// or interrupted mid-send) on app-foreground transitions via
-/// [DmReactionsRepository.retry].
+/// Auto-sweep service that re-drives undelivered DM reactions and removals
+/// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
+/// on app-foreground transitions, connectivity changes, and an in-session
+/// follow-up heartbeat while retryable work remains.
 ///
 /// Gives reactions the durable delivery that DM messages already get from
 /// [OutgoingDmRetryService] + the `outgoing_dms` queue: a reaction whose
 /// recipient gift wrap failed to land (common on a flaky relay) is otherwise
 /// lost with no automatic recovery. keepAlive with no UI consumer, so it is
-/// read eagerly at app shell startup (`main.dart`) to wire the foreground
-/// subscription.
+/// read eagerly at app shell startup (`main.dart`) to wire its triggers.
 ///
 /// Returns null until the user is authenticated and the Nostr session is
 /// ready — the same readiness the reaction repository's `setCredentials`
@@ -200,16 +200,16 @@ final class DmReactionRetryServiceProvider
           DmReactionRetryService?
         >
     with $Provider<DmReactionRetryService?> {
-  /// Auto-sweep service that re-drives undelivered DM reactions (publish failed
-  /// or interrupted mid-send) on app-foreground transitions via
-  /// [DmReactionsRepository.retry].
+  /// Auto-sweep service that re-drives undelivered DM reactions and removals
+  /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
+  /// on app-foreground transitions, connectivity changes, and an in-session
+  /// follow-up heartbeat while retryable work remains.
   ///
   /// Gives reactions the durable delivery that DM messages already get from
   /// [OutgoingDmRetryService] + the `outgoing_dms` queue: a reaction whose
   /// recipient gift wrap failed to land (common on a flaky relay) is otherwise
   /// lost with no automatic recovery. keepAlive with no UI consumer, so it is
-  /// read eagerly at app shell startup (`main.dart`) to wire the foreground
-  /// subscription.
+  /// read eagerly at app shell startup (`main.dart`) to wire its triggers.
   ///
   /// Returns null until the user is authenticated and the Nostr session is
   /// ready — the same readiness the reaction repository's `setCredentials`
@@ -562,7 +562,7 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'1fb08daac1ba3fbc407f3f44cd0a4b67cb79a9cc';
+    r'6ddec90556e2ce3211f481ce0beb36c2937bf3b2';
 
 /// Hashtag service depends on Video event service
 

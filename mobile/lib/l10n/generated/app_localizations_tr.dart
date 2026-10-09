@@ -303,6 +303,32 @@ class AppLocalizationsTr extends AppLocalizations {
       'Akışları klasik kare formatta tut';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorName: $compactCount döngü',
+      one: '$authorName: $compactCount döngü',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'döngü',
+      one: 'döngü',
+    );
+    return 'bu videoda $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Toplam döngü sayısını göster';
 
   @override
@@ -3622,6 +3648,46 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Kütüphanenden klip';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Galerinden video';
+
+  @override
+  String get dmClipBadge => 'Klip';
+
+  @override
+  String get dmClipChecking =>
+      'Bu klibin Divine ile çekildiği kontrol ediliyor…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Bunun Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden kliplerine eklenmedi.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Gönderdiklerini kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total klipten $sent tanesi gönderildi. Kalanlar gönderilemedi.',
+      one: '$total klipten $sent tanesi gönderildi. Kalanlar gönderilemedi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Videoyu Kaydet';
 
   @override
@@ -3857,6 +3923,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Başlamak için kişi ekle';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Henüz video yok';
 
   @override
@@ -3880,9 +3953,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return '$name listesine ekle';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4863,15 +4933,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Yeni kişi listesi';
-
-  @override
-  String get listCollaboratorsNone => 'Yok';
-
-  @override
-  String get listAddCollaboratorTitle => 'Ortak ekle';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine\'da ara...';
 
   @override
   String get listNameLabel => 'Liste Adı';
@@ -6107,6 +6168,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Listeyi sil';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Liste silinsin mi?';
@@ -8588,6 +8652,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectGlow => 'Parıltı';
 
   @override
+  String get videoEditorEffectEcho => 'Yankı';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
 
@@ -10002,6 +10069,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Seviye';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Fırça boyutu';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -12972,4 +13042,40 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Yeni video listesi';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Bu liste herkese açık. Adını, açıklamasını ve içindeki kişileri herkes görebilir.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Kişiler';
+
+  @override
+  String get peopleListsPeopleNone => 'Henüz kimse eklenmedi';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Takipçilerin ve takip ettiklerin arasında ara';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Özel, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

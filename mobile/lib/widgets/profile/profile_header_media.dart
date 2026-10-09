@@ -6,6 +6,9 @@ part of 'profile_header_widget.dart';
 /// morph one user's avatar into another's during the page transition.
 String _avatarHeroTag(String userIdHex) => 'profile_avatar_hero_$userIdHex';
 
+/// Size of the profile header avatar, the Hero flight's starting point.
+const double _headerAvatarSize = 144;
+
 /// Size and corner radius of the full-screen lightbox avatar.
 const double _lightboxAvatarSize = 288;
 const double _lightboxAvatarCornerRadius = 112;
@@ -464,7 +467,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const avatarSize = 144.0;
+    const avatarSize = _headerAvatarSize;
     final Widget avatar;
     if (showSkeleton) {
       avatar = const _AvatarBone(size: avatarSize);
@@ -685,6 +688,8 @@ class _AvatarHeroFlightShuttle extends StatelessWidget {
           placeholderSeed: userIdHex,
           size: boxSize,
           cornerRadius: boxSize * _avatarHeroCornerRatio,
+          // Reuse the header's decode, already in memory, and scale it.
+          decodeSize: _headerAvatarSize,
         );
       },
     );
@@ -751,6 +756,7 @@ class _AvatarLightbox extends StatelessWidget {
                         placeholderSeed: userIdHex,
                         size: _lightboxAvatarSize,
                         cornerRadius: _lightboxAvatarCornerRadius,
+                        previewDecodeSize: _headerAvatarSize,
                       ),
                     ),
                   ),

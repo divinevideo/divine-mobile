@@ -363,6 +363,32 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hou feeds in het klassieke vierkante formaat';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 van $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 van deze video';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Totaal aantal loops tonen';
 
   @override
@@ -3695,6 +3721,45 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip uit je bibliotheek';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video uit je galerij';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking => 'We checken of deze clip met Divine is gefilmd…';
+
+  @override
+  String get dmClipNotVerified =>
+      'We konden niet bevestigen dat dit met de Divine-camera is gefilmd, dus het staat niet bij je clips.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Wat je stuurt, kan de ander aan de eigen clips toevoegen en posten, met vermelding van jou.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent van $total clips verstuurd. De rest is niet verstuurd.',
+      one: '$sent van $total clip verstuurd. De rest is niet verstuurd.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Video opslaan';
 
   @override
@@ -3931,6 +3996,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Voeg mensen toe om te beginnen';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Nog geen video\'s';
 
   @override
@@ -3954,9 +4026,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Toevoegen aan $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4940,15 +5009,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Nieuwe personenlijst';
-
-  @override
-  String get listCollaboratorsNone => 'Geen';
-
-  @override
-  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
-
-  @override
-  String get listCollaboratorSearchHint => 'Zoek in Divine...';
 
   @override
   String get listNameLabel => 'Lijstnaam';
@@ -6200,6 +6260,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Lijst verwijderen';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Lijst verwijderen?';
@@ -8707,6 +8770,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectGlow => 'Gloed';
 
   @override
+  String get videoEditorEffectEcho => 'Echo';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
 
@@ -10131,6 +10197,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Niveau';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Penseelgrootte';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13118,4 +13187,40 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Nieuwe videolijst';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Deze lijst is openbaar. Iedereen kan de naam, beschrijving en personen in de lijst zien.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personen';
+
+  @override
+  String get peopleListsPeopleNone => 'Geen personen toegevoegd';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Zoek in volgers en mensen die je volgt';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privé, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

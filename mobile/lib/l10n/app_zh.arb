@@ -138,6 +138,8 @@
   "appearanceSettingsSystem": "跟随系统",
   "appearanceSettingsLight": "浅色",
   "appearanceSettingsDark": "深色",
+  "videoOverlayTotalLoops": "{count, plural, other{{authorName} 的 {compactCount} 次循环}}",
+  "videoOverlayVideoLoops": "此视频 {compactCount} {count, plural, other{次循环}}",
   "generalSettingsClosedCaptions": "隐藏字幕",
   "generalSettingsClosedCaptionsSubtitle": "视频带字幕时自动显示",
   "generalSettingsVideoShapeSquareOnly": "仅方形视频",
@@ -1827,6 +1829,15 @@
   "dmVideoSent": "视频已发送",
   "dmVideoSendFailed": "无法发送视频",
   "dmVideoTooLarge": "这个视频太大，无法发送。请选择小于 {maxMegabytes} MB 的视频",
+  "dmAttachClipFromLibrary": "作品库中的片段",
+  "dmAttachVideoFromGallery": "相册中的视频",
+  "dmClipBadge": "片段",
+  "dmClipChecking": "正在确认这个片段是否用 Divine 拍摄…",
+  "dmClipNotVerified": "无法确认这是用 Divine 相机拍摄的，所以没有加入你的片段库。",
+  "dmClipCheckUnavailable": "现在无法检查这个片段，请稍后再试。",
+  "dmClipSendNotVerified": "无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。",
+  "dmAttachReuseNotice": "对方可以把你发送的内容加入他们的片段库并发布，同时会注明你。",
+  "dmClipsPartlySent": "{total, plural, other{已发送 {sent}/{total} 个片段。其余的没有发出去。}}",
   "shareSheetSaveVideo": "保存视频",
   "shareSheetAddToClips": "加入片段库",
   "@shareSheetAddToClips": {
@@ -1959,7 +1970,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "搜索用户",
   "peopleListsAddPeopleError": "加载用户失败，请重试。",
   "peopleListsAddPeopleRetry": "再试一次",
   "peopleListsAddButton": "添加",
@@ -2437,9 +2447,6 @@
   },
   "listCreateNewList": "创建新列表",
   "listNewPeopleList": "新人物列表",
-  "listCollaboratorsNone": "无",
-  "listAddCollaboratorTitle": "添加协作者",
-  "listCollaboratorSearchHint": "搜索 Divine...",
   "listNameLabel": "列表名称",
   "listDescriptionLabel": "描述（可选）",
   "listPublicList": "公开列表",
@@ -4592,6 +4599,7 @@
   "videoEditorEffectSplitScreen": "分屏",
   "videoEditorEffectWave": "波浪",
   "videoEditorEffectGlow": "辉光",
+  "videoEditorEffectEcho": "残影",
   "videoEditorEffectsFlashingReplaced": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。",
   "videoEditorEffectsFlashingNotDuplicated": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。",
   "videoEditorEffectsOnBeat": "卡点",
@@ -5373,6 +5381,7 @@
   "videoEditorAddElementSemanticLabel": "添加元素",
   "videoEditorDoneSemanticLabel": "完成",
   "videoEditorLevelSemanticLabel": "层级",
+  "videoEditorBrushSizeSemanticLabel": "画笔大小",
   "videoMetadataClosePostDetailsSemanticLabel": "关闭帖子详情",
   "videoMetadataDismissHelpDialogSemanticLabel": "关闭帮助对话框",
   "videoMetadataGotItButton": "懂了！",
@@ -6705,5 +6714,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "新建视频列表",
+  "peopleListsPublicNotice": "此列表是公开的。任何人都可以看到它的名称、描述和其中的用户。",
+  "peopleListsPeopleLabel": "用户",
+  "peopleListsPeopleNone": "尚未添加用户",
+  "peopleListsSessionChanged": "你的账号或列表访问权限已更改。请重新打开此页面以继续。",
+  "peopleListsSearchConnectionsHint": "搜索关注者和已关注的用户",
+  "listCardSemanticLabel": "{visibility, select, private{{name}，私密，{count}} other{{name}，{count}}}",
+  "listMemberNamesSeparator": "、",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

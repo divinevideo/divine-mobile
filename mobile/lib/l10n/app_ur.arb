@@ -138,6 +138,8 @@
   "appearanceSettingsSystem": "سسٹم ڈیفالٹ",
   "appearanceSettingsLight": "لائٹ",
   "appearanceSettingsDark": "ڈارک",
+  "videoOverlayTotalLoops": "{count, plural, one{{authorName} کا {compactCount} لوپ} other{{authorName} کے {compactCount} لوپس}}",
+  "videoOverlayVideoLoops": "{count, plural, one{اس ویڈیو کا {compactCount} لوپ} other{اس ویڈیو کے {compactCount} لوپس}}",
   "generalSettingsClosedCaptions": "کلوزڈ کیپشنز",
   "generalSettingsClosedCaptionsSubtitle": "جب ویڈیوز میں کیپشن شامل ہوں تو دکھائیں",
   "generalSettingsVideoShapeSquareOnly": "صرف چوکور ویڈیوز",
@@ -1827,6 +1829,15 @@
   "dmVideoSent": "ویڈیو بھیج دی گئی",
   "dmVideoSendFailed": "ویڈیو نہیں بھیجی جا سکی",
   "dmVideoTooLarge": "یہ ویڈیو بھیجنے کے لیے بہت بڑی ہے۔ {maxMegabytes} MB سے چھوٹی ویڈیو منتخب کریں",
+  "dmAttachClipFromLibrary": "آپ کی لائبریری سے کلپ",
+  "dmAttachVideoFromGallery": "آپ کی گیلری سے ویڈیو",
+  "dmClipBadge": "کلپ",
+  "dmClipChecking": "تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…",
+  "dmClipNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔",
+  "dmClipCheckUnavailable": "ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+  "dmClipSendNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔",
+  "dmAttachReuseNotice": "وہ آپ کی بھیجی ہوئی چیز اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔",
+  "dmClipsPartlySent": "{total, plural, one{{total} کلپ میں سے {sent} بھیجا گیا۔ باقی نہیں جا سکے۔} other{{total} کلپس میں سے {sent} بھیج دیے گئے۔ باقی نہیں جا سکے۔}}",
   "shareSheetSaveVideo": "ویڈیو محفوظ کریں",
   "shareSheetAddToClips": "کلپس میں شامل کریں",
   "@shareSheetAddToClips": {
@@ -1959,7 +1970,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
   "peopleListsAddButton": "شامل کریں",
@@ -2437,9 +2447,6 @@
   },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
-  "listCollaboratorsNone": "کوئی نہیں",
-  "listAddCollaboratorTitle": "شریک کار شامل کریں",
-  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
   "listPublicList": "عوامی فہرست",
@@ -4592,6 +4599,7 @@
   "videoEditorEffectSplitScreen": "اسپلٹ اسکرین",
   "videoEditorEffectWave": "لہر",
   "videoEditorEffectGlow": "دمک",
+  "videoEditorEffectEcho": "گونج",
   "videoEditorEffectsFlashingReplaced": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔",
   "videoEditorEffectsFlashingNotDuplicated": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔",
   "videoEditorEffectsOnBeat": "بیٹ کے ساتھ",
@@ -5373,6 +5381,7 @@
   "videoEditorAddElementSemanticLabel": "عنصر شامل کریں",
   "videoEditorDoneSemanticLabel": "ہو گیا",
   "videoEditorLevelSemanticLabel": "سطح",
+  "videoEditorBrushSizeSemanticLabel": "برش کا سائز",
   "videoMetadataClosePostDetailsSemanticLabel": "پوسٹ کی تفصیلات بند کریں",
   "videoMetadataDismissHelpDialogSemanticLabel": "مدد کا ڈائیلاگ ہٹائیں",
   "videoMetadataGotItButton": "سمجھ گیا!",
@@ -6705,5 +6714,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "نئی ویڈیو فہرست",
+  "peopleListsPublicNotice": "یہ فہرست عوامی ہے۔ کوئی بھی اس کا نام، تفصیل اور اس میں شامل لوگوں کو دیکھ سکتا ہے۔",
+  "peopleListsPeopleLabel": "لوگ",
+  "peopleListsPeopleNone": "ابھی کوئی شخص شامل نہیں کیا گیا",
+  "peopleListsSessionChanged": "آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔",
+  "peopleListsSearchConnectionsHint": "فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "listMemberNamesSeparator": "، ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -44,6 +44,7 @@ import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -225,6 +226,15 @@ const Duration _dmInboxQueryTimeout = Duration(seconds: 5);
 /// indexer cannot hold the whole recipient resolution open (#7317).
 const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 
+/// Kept back from what is left of the resolution budget when the write-relay
+/// leg runs, so the leg returns its own answer — including a list one relay
+/// sent before another stalled — before the whole resolution is abandoned.
+const Duration _dmInboxOutboxSettleMargin = Duration(milliseconds: 250);
+
+/// Most write relays the outbox leg dials for one recipient. Each is a cold
+/// connection on the send path, chosen by the person being messaged.
+const int _dmInboxOutboxRelayCap = 4;
+
 /// Budget for the authoritative own-inbox read that gates the RC3 publish.
 ///
 /// Deliberately shorter than [_dmInboxQueryTimeout]. `requireAllRelaysSettled`
@@ -356,13 +366,15 @@ enum DmInboxResolution {
   /// The recipient advertises a kind-10050 and we read it.
   found,
 
-  /// The relays answered, and the recipient advertises no usable inbox.
-  /// NIP-17 calls this "not ready to receive messages"; we still fall back to
-  /// the default pool so reachability is preserved (#570).
+  /// Every relay asked answered — the pool, the indexer, and up to four
+  /// dialable write relays from the recipient's NIP-65 list — and none holds
+  /// an inbox list. NIP-17 calls this "not ready to receive messages"; we
+  /// still fall back to the default pool so reachability is preserved (#570).
   absent,
 
-  /// We could not read the recipient's inbox: no relay took the REQ, or
-  /// nothing settled inside the budget. Says nothing about the recipient.
+  /// We could not read the recipient's inbox: no relay took the REQ, nothing
+  /// settled inside the budget, or their list names only relays this device
+  /// refuses to dial. Says nothing about where the recipient reads.
   unreadable,
 }
 
@@ -516,6 +528,7 @@ class DmRepository {
     PendingGiftWrapsDao? pendingGiftWrapsDao,
     ProcessedGiftWrapsDao? processedGiftWrapsDao,
     RemovedConversationsDao? removedConversationsDao,
+    RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
     NIP17MessageService? messageService,
     String? userPubkey,
@@ -541,6 +554,7 @@ class DmRepository {
        _pendingGiftWrapsDao = pendingGiftWrapsDao,
        _processedGiftWrapsDao = processedGiftWrapsDao,
        _removedConversationsDao = removedConversationsDao,
+       _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
        _messageService = messageService,
        _userPubkey = userPubkey ?? '',
@@ -593,6 +607,13 @@ class DmRepository {
   /// Durable owner-scoped removal markers. Relay events are replayable, so a
   /// hard delete without this ledger would restore the thread on restart.
   final RemovedConversationsDao? _removedConversationsDao;
+
+  /// Ids of the messages and reactions removed with a conversation (#8179).
+  /// They settle a later kind 5 naming one and keep a replay from storing it
+  /// again. Nullable to keep older test fixtures working without rewiring;
+  /// pass it with [DmReactionsRepository], which deletes the reactions whose
+  /// ids are recorded.
+  final RemovedMessageIdsDao? _removedMessageIdsDao;
 
   final DmSyncState? _syncState;
   NIP17MessageService? _messageService;
@@ -751,6 +772,11 @@ class DmRepository {
   }
 
   static final _sendBatchIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// How many distinct deferred wrapped deletions are logged per session. The
+  /// capture ring keeps every line whatever the level and a sender chooses the
+  /// ids, so a flood of unresolvable retractions must not be able to fill it.
+  static const int maxLoggedDeferredDeletions = 64;
 
   /// Durable queue handle for one recipient of a group send.
   ///
@@ -2731,6 +2757,7 @@ class DmRepository {
     final tryReactionsFirst = _hasKindHint(rumor.tags, EventKind.reaction);
 
     var outcome = DmWrapOutcome.processed;
+    final unresolved = <String>[];
     for (final tag in rumor.tags) {
       if (tag.length < 2 || tag[0] != 'e') continue;
       final rumorId = tag[1];
@@ -2743,9 +2770,16 @@ class DmRepository {
       Future<DmWrapOutcome?> asMessage() async =>
           _applyMessageDeletion(rumorId: rumorId, deletion: rumor);
 
-      final resolved = tryReactionsFirst
+      var resolved = tryReactionsFirst
           ? await asReaction() ?? await asMessage()
           : await asMessage() ?? await asReaction();
+
+      // Removal deleted this target for good: settle by its id, never by a
+      // timestamp or the rumor's tags (#8179).
+      if (resolved == null &&
+          await _wasRemovedWithConversation(rumorId, _ownerPubkey)) {
+        resolved = DmWrapOutcome.processed;
+      }
 
       // Neither store holds the target — it may still arrive, since NIP-59
       // randomizes gift-wrap `created_at` and a deletion can drain ahead of
@@ -2753,10 +2787,51 @@ class DmRepository {
       // lands here too: that is "cannot resolve", not "nothing to do", and
       // cementing it would burn the wrap for every account on the device.
       if ((resolved ?? DmWrapOutcome.deferred) == DmWrapOutcome.deferred) {
+        unresolved.add(rumorId);
         outcome = DmWrapOutcome.deferred;
       }
     }
+    if (unresolved.isNotEmpty) _logDeferredDeletion(giftWrapId, unresolved);
     return outcome;
+  }
+
+  /// Wrap ids already logged by [_logDeferredDeletion] this session.
+  final Set<String> _loggedDeferredDeletions = <String>{};
+
+  static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// Logs why [giftWrapId] stays deferred, once per wrap and for at most
+  /// [maxLoggedDeferredDeletions] wraps a session, because a deferred wrap is
+  /// routed again on every launch. The target is sender text: only a
+  /// well-formed event id is printed.
+  void _logDeferredDeletion(String giftWrapId, List<String> targets) {
+    if (_loggedDeferredDeletions.length >= maxLoggedDeferredDeletions) return;
+    if (!_loggedDeferredDeletions.add(giftWrapId)) return;
+    final first = targets.first;
+    final shown = _eventIdPattern.hasMatch(first) ? first : '<not an event id>';
+    final more = targets.length > 1 ? ' (+${targets.length - 1} more)' : '';
+    Log.debug(
+      'Deferred wrapped deletion $giftWrapId: target $shown$more is not '
+      'resolved yet',
+      category: LogCategory.system,
+    );
+  }
+
+  /// Whether [rumorId] is a message or reaction that [removeConversation] or
+  /// [removeConversations] deleted for [ownerPubkey].
+  ///
+  /// Takes the owner rather than reading the live one: the ingest paths pass
+  /// the owner they started under.
+  Future<bool> _wasRemovedWithConversation(
+    String rumorId,
+    String? ownerPubkey,
+  ) async {
+    if (ownerPubkey == null) return false;
+    return await _removedMessageIdsDao?.contains(
+          rumorId: rumorId,
+          ownerPubkey: ownerPubkey,
+        ) ??
+        false;
   }
 
   /// Whether [tags] carries a `['k', <kind>]` hint naming [kind].
@@ -3351,7 +3426,9 @@ class DmRepository {
             conversationId: conversationId,
             ownerPubkey: ownerPubkey,
           );
-          if (removedAt != null && persistedCreatedAt <= removedAt!) {
+          // A sender picks `created_at`, so only the id proves a removal.
+          if ((removedAt != null && persistedCreatedAt <= removedAt!) ||
+              await _wasRemovedWithConversation(rumor.id, ownerPubkey)) {
             suppressedByRemovedConversation = true;
             return;
           }
@@ -3426,8 +3503,8 @@ class DmRepository {
           );
           Log.debug(
             'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
-            '$conversationId: createdAt $persistedCreatedAt is at or before '
-            'removal at $removedAt',
+            '$conversationId: removed with it, or createdAt '
+            '$persistedCreatedAt is at or before removal at $removedAt',
             category: LogCategory.system,
           );
           return;
@@ -4125,7 +4202,9 @@ class DmRepository {
           conversationId: conversationId,
           ownerPubkey: ownerPubkey,
         );
-        if (removedAt != null && persistedCreatedAt <= removedAt!) {
+        // See the NIP-17 path: the id, not the timestamp, says it was removed.
+        if ((removedAt != null && persistedCreatedAt <= removedAt!) ||
+            await _wasRemovedWithConversation(nip04Event.id, ownerPubkey)) {
           suppressedByRemovedConversation = true;
           return;
         }
@@ -4184,8 +4263,8 @@ class DmRepository {
         await _recordProcessedWrap(nip04Event.id);
         Log.debug(
           'Suppressed NIP-04 DM ${nip04Event.id} in removed conversation '
-          '$conversationId: createdAt $persistedCreatedAt is at or '
-          'before removal at $removedAt',
+          '$conversationId: removed with it, or createdAt '
+          '$persistedCreatedAt is at or before removal at $removedAt',
           category: LogCategory.system,
         );
         return;
@@ -4383,13 +4462,23 @@ class DmRepository {
     // leg comment below.
     String? advertisedRelay,
   }) async {
+    final elapsed = Stopwatch()..start();
     try {
+      final isRecipient = source == _DmRelayListSource.remote;
       final filter = [
         nostr_filter.Filter(
           authors: [pubkey],
           kinds: [EventKind.dmRelaysList],
           limit: 1,
         ),
+        // A recipient's NIP-65 list rides in the same REQ, so reading their
+        // write relays costs a round trip only when no leg carried the inbox.
+        if (isRecipient)
+          nostr_filter.Filter(
+            authors: [pubkey],
+            kinds: [EventKind.relayListMetadata],
+            limit: 1,
+          ),
       ];
 
       // A recipient lookup has two independent legs. The pool leg retains the
@@ -4398,6 +4487,12 @@ class DmRepository {
       // dead indexer is capped independently, so it cannot consume the pool's
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
+      // When neither returns an inbox, a third leg reads the recipient's own
+      // write relays (see [_queryRecipientWriteRelays]).
+      // The lookup leg asks the indexer alone: asking the pool again under its
+      // shorter budget let a slow pool relay mark an answered lookup
+      // unreadable, and let a dead indexer drop out of the judgement while
+      // the pool's answers completed the leg (#7317).
       //
       // The live memo read and the drain's strict read keep a single
       // pool-only leg: the memo is in front of the receiving subscription, and
@@ -4416,12 +4511,12 @@ class DmRepository {
               ? _ownDmInboxAuthoritativeTimeout
               : _dmInboxQueryTimeout,
         ),
-        if (source == _DmRelayListSource.remote &&
-            _dmInboxLookupRelays.isNotEmpty)
+        if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
           _nostrClient.queryEventsDetailed(
             filter,
             useCache: false,
             tempRelays: _dmInboxLookupRelays,
+            relayTypes: const [RelayType.temp],
             requireAllRelaysSettled: true,
             timeout: _dmInboxDiscoveryQueryTimeout,
           ),
@@ -4499,50 +4594,52 @@ class DmRepository {
         );
       }
 
-      if (events.isEmpty) {
-        logInconclusiveRead();
-        return (state: absentOrFailed, relays: null, advertisedMissing: null);
-      }
       final matchingEvents = [
         for (final event in events)
           if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
             event,
       ];
       if (matchingEvents.isEmpty) {
-        Log.warning(
-          'Ignoring off-filter DM inbox relay response for '
-          '${pubkeyForLogs(pubkey)}',
-          category: LogCategory.system,
-        );
+        final relayLists = [
+          for (final event in events)
+            if (isRecipient &&
+                event.kind == EventKind.relayListMetadata &&
+                event.pubkey == pubkey)
+              event,
+        ];
+        if (relayLists.length < events.length) {
+          Log.warning(
+            'Ignoring off-filter DM inbox relay response for '
+            '${pubkeyForLogs(pubkey)}',
+            category: LogCategory.system,
+          );
+        }
+        // The write relays are asked even when an earlier leg did not settle:
+        // a list found there is the answer whatever that leg would have said.
+        // Anything short of finding one keeps the earlier verdict, so an
+        // inconclusive read never becomes `absent` this way.
+        if (isRecipient &&
+            (absentOrFailed == _OwnDmInboxState.absent ||
+                relayLists.isNotEmpty)) {
+          final fromWriteRelays = await _queryRecipientWriteRelays(
+            pubkey,
+            relayLists,
+            budget: inboxResolutionBudget - elapsed.elapsed,
+          );
+          if (absentOrFailed == _OwnDmInboxState.absent ||
+              fromWriteRelays.state == _OwnDmInboxState.found) {
+            return fromWriteRelays;
+          }
+        }
         logInconclusiveRead();
         return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       // Newest wins for a replaceable event served from multiple relays.
       matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The
-      // whole point of #4974 is reading a 10050 a user advertised from
-      // ANOTHER client, and some clients write `r` tags; within a
-      // kind-10050 event both unambiguously denote DM inbox relays. Matches
-      // divine-web's resolveDmReadRelays. Shared with the send path via
-      // resolveDmInboxRelaysDetailed, so it also widens recipient resolution
-      // there.
-      final relays = _admitDmRelays(
-        [
-          for (final tag in matchingEvents.first.tags)
-            if (tag.length >= 2 &&
-                (tag[0] == 'relay' || tag[0] == 'r') &&
-                tag[1].isNotEmpty)
-              tag[1],
-        ],
-        pubkey,
-        source,
-      );
-      if (relays.isEmpty) {
-        return (
-          state: _OwnDmInboxState.absent,
-          relays: null,
-          advertisedMissing: null,
-        );
+      final inbox = _classifyInboxList(matchingEvents.first, pubkey, source);
+      final relays = inbox.relays;
+      if (relays == null) {
+        return (state: inbox.state, relays: null, advertisedMissing: null);
       }
       final advertisedServesList =
           advertisedEvents == null ||
@@ -4582,6 +4679,159 @@ class DmRepository {
         advertisedMissing: null,
       );
     }
+  }
+
+  /// Reads one kind-10050 into the relays a gift wrap may be routed to.
+  ///
+  /// A list with no relay tags advertises no inbox, so it is `absent`. A
+  /// counterparty's list whose every relay this device refuses to dial is
+  /// `failed`: they do have an inbox, we will not route to it, and a
+  /// fallback-pool `OK` must not be scored as delivery there (#7317).
+  ({_OwnDmInboxState state, List<String>? relays}) _classifyInboxList(
+    Event list,
+    String pubkey,
+    _DmRelayListSource source,
+  ) {
+    // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The whole
+    // point of #4974 is reading a 10050 a user advertised from ANOTHER client,
+    // and some clients write `r` tags; within a kind-10050 event both
+    // unambiguously denote DM inbox relays. Matches divine-web's
+    // resolveDmReadRelays.
+    final advertised = [
+      for (final tag in list.tags)
+        if (tag.length >= 2 &&
+            (tag[0] == 'relay' || tag[0] == 'r') &&
+            tag[1].isNotEmpty)
+          tag[1],
+    ];
+    final relays = _admitDmRelays(advertised, pubkey, source);
+    if (relays.isNotEmpty) {
+      return (state: _OwnDmInboxState.found, relays: relays);
+    }
+    if (advertised.isEmpty || source != _DmRelayListSource.remote) {
+      return (state: _OwnDmInboxState.absent, relays: null);
+    }
+    Log.warning(
+      'Recipient kind-10050 for ${pubkeyForLogs(pubkey)} names only relays '
+      'this device will not dial — treating the inbox as unreadable, NOT '
+      'scoring a fallback-pool publish as delivered (#7317)',
+      category: LogCategory.system,
+    );
+    return (state: _OwnDmInboxState.failed, relays: null);
+  }
+
+  /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
+  /// the pool and indexer legs returned no inbox list but did return the
+  /// recipient's NIP-65 list.
+  ///
+  /// NIP-65: "When downloading events from a user, clients SHOULD use the
+  /// write relays of that user." Without this leg, a list held only where its
+  /// author writes reads as `absent`, and the default-pool `OK` that follows
+  /// is scored as delivery to relays the recipient never reads (#7317).
+  /// [relayLists] are the recipient's kind-10002 events the earlier legs
+  /// returned; the newest wins. Relays the earlier legs already asked are
+  /// skipped, and the rest pass the same remote-relay policy as an inbox list.
+  Future<_OwnDmInboxRead> _queryRecipientWriteRelays(
+    String pubkey,
+    List<Event> relayLists, {
+    required Duration budget,
+  }) async {
+    const absent = (
+      state: _OwnDmInboxState.absent,
+      relays: null,
+      advertisedMissing: null,
+    );
+    if (relayLists.isEmpty) return absent;
+    final newest = relayLists.reduce(
+      (a, b) => b.createdAt > a.createdAt ? b : a,
+    );
+    final writeRelays = admitRemoteSuppliedRelays(
+      [
+        for (final tag in newest.tags)
+          // NIP-65: an `r` tag with no marker is both read and write.
+          if (tag.length >= 2 &&
+              tag[0] == 'r' &&
+              tag[1].isNotEmpty &&
+              (tag.length < 3 || tag[2] != 'read'))
+            tag[1],
+      ],
+      cap: RelayListCaps.nip65,
+    );
+    final asked = {
+      for (final url in [
+        ..._nostrClient.configuredRelays,
+        ..._dmInboxLookupRelays,
+      ])
+        RelayAddrUtil.handle(url),
+    };
+    // Relays the policy refuses or the cap leaves out are skipped the same way
+    // on every retry, so reading them as "unreadable" would turn a recipient
+    // with no inbox list into a permanent send failure.
+    final targets = writeRelays
+        .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
+        .take(_dmInboxOutboxRelayCap)
+        .toList();
+    if (targets.isEmpty) return absent;
+
+    // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
+    // phone, so the leg gets whatever the resolution has left rather than a
+    // short fixed bound. A send is optimistic, so the wait costs no visible
+    // latency. An overrun reaches the caller's `TimeoutException` arm, which
+    // classifies it as unreadable.
+    final remaining = budget > Duration.zero ? budget : Duration.zero;
+    final legTimeout = remaining > _dmInboxOutboxSettleMargin
+        ? remaining - _dmInboxOutboxSettleMargin
+        : Duration.zero;
+    final result = await _nostrClient
+        .queryEventsDetailed(
+          [
+            nostr_filter.Filter(
+              authors: [pubkey],
+              kinds: [EventKind.dmRelaysList],
+              limit: 1,
+            ),
+          ],
+          useCache: false,
+          tempRelays: targets,
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: legTimeout,
+        )
+        .timeout(remaining);
+    final lists = [
+      for (final event in result.events)
+        if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
+          event,
+    ];
+    if (lists.isNotEmpty) {
+      final inbox = _classifyInboxList(
+        lists.reduce((a, b) => b.createdAt > a.createdAt ? b : a),
+        pubkey,
+        _DmRelayListSource.remote,
+      );
+      return (
+        state: inbox.state,
+        relays: inbox.relays,
+        advertisedMissing: null,
+      );
+    }
+    if (result.noRelays || result.timedOut) {
+      final reason = result.noRelays
+          ? 'no relay took the REQ'
+          : 'not every relay settled';
+      Log.warning(
+        'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
+        'write relays was inconclusive ($reason) — routing to the default '
+        'pool, and NOT scoring the publish as delivered (#7317)',
+        category: LogCategory.system,
+      );
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
+    }
+    return absent;
   }
 
   /// Publishes a minimal NIP-17 kind-10050 DM inbox relay list for the
@@ -7784,6 +8034,10 @@ class DmRepository {
   /// Blossom server. This method wraps the file URL and metadata in a
   /// Kind 15 event, then encrypts with NIP-59 gift wrapping.
   ///
+  /// [extraTags] are appended to the rumor after the NIP-17 file tags, for
+  /// app-level markers the recipient's client reads back from
+  /// [DmMessage.tags]. They must not repeat a file tag this method writes.
+  ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
   /// metadata is missing.
@@ -7793,6 +8047,7 @@ class DmRepository {
     required String fileUrl,
     required DmFileMetadata fileMetadata,
     String? replyToId,
+    List<List<String>> extraTags = const [],
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -7830,13 +8085,36 @@ class DmRepository {
       if (fileMetadata.thumbnailUrl != null)
         ['thumb', fileMetadata.thumbnailUrl!],
       if (replyToId != null) ['e', replyToId],
+      ...extraTags,
     ];
+
+    // Routed like a text message: to the recipient's kind-10050 inbox, the
+    // default pool only when they advertise none, and confirmed by a relay
+    // `OK` rather than a socket write (#9883). An unreadable inbox publishes
+    // nothing. There is no retry row for a file send, so a pool `OK` there
+    // could neither be scored as delivery nor re-resolved later, and its
+    // self-copy would put a sent video in the thread the sender was told
+    // failed. The same reason keeps the self-copy back when the recipient
+    // `OK` never arrives.
+    final (inbox, selfWrapRelays) = await (
+      resolveDmInboxRelaysDetailed(recipientPubkey),
+      _selfWrapTargetRelays(),
+    ).wait;
+    if (inbox.state == DmInboxResolution.unreadable) {
+      return const NIP17SendResult.failure(
+        'Recipient DM inbox unreadable; file message not published',
+      );
+    }
 
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      targetRelays: inbox.relays,
+      selfWrapTargetRelays: selfWrapRelays,
+      awaitRecipientOk: true,
+      selfWrapOnSoftUnconfirmed: false,
     );
 
     if (result.success) {
@@ -8640,6 +8918,10 @@ class DmRepository {
   /// the sweep publishes a gift wrap into a conversation the user removed
   /// (#7857) — the reaction counterpart of the `outgoing_dms` delete above.
   ///
+  /// The ids of the removed messages and reactions are recorded in the same
+  /// transaction, before the delete, so a later kind 5 naming one can be
+  /// settled and a replay of it is not stored again (#8179).
+  ///
   /// Returns [ConversationRemovalOutcome.refused] without deleting anything
   /// when the injected [DmConversationRemovalPolicy] protects the peer — the
   /// single chokepoint every removal path inherits, so a new caller cannot
@@ -8687,6 +8969,11 @@ class DmRepository {
         ownerPubkey: owner,
         removedAt: removedAt,
       );
+      await _removedMessageIdsDao?.captureForConversations(
+        conversationIds: [conversationId],
+        ownerPubkey: owner,
+        removedAt: removedAt,
+      );
       await _directMessagesDao.deleteConversationMessages(
         conversationId,
         ownerPubkey: owner,
@@ -8708,7 +8995,7 @@ class DmRepository {
 
   /// Remove multiple conversations, their messages, their queued sends, and
   /// their queued reactions atomically. See [removeConversation] for why the
-  /// reaction rows go with them.
+  /// reaction rows go with them and for the ids it records.
   ///
   /// No-op when [conversationIds] is empty.
   ///
@@ -8755,6 +9042,11 @@ class DmRepository {
       // mid-flight must not mix one account's reads with another's writes.
       final removedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _removedConversationsDao?.recordAll(
+        conversationIds: removable,
+        ownerPubkey: owner,
+        removedAt: removedAt,
+      );
+      await _removedMessageIdsDao?.captureForConversations(
         conversationIds: removable,
         ownerPubkey: owner,
         removedAt: removedAt,

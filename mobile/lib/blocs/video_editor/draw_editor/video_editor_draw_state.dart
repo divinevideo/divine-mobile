@@ -38,12 +38,32 @@ enum DrawToolType {
 /// Paint configuration for a drawing tool.
 typedef DrawToolConfig = ({PaintMode mode, double opacity, double strokeWidth});
 
+/// The stroke width, in logical pixels of the editor body, of a brush at
+/// [brushSize] on its 0 to 1 slider.
+///
+/// The slider is quadratic, so the thin end, where a pixel more or less shows
+/// most, gets more of its travel.
+double drawStrokeWidthOf(double brushSize) {
+  const min = VideoEditorConstants.drawMinStrokeWidth;
+  const range = VideoEditorConstants.drawMaxStrokeWidth - min;
+  final size = brushSize.clamp(0.0, 1.0);
+  return min + range * size * size;
+}
+
+/// Where [strokeWidth] sits on the 0 to 1 brush size slider; the inverse of
+/// [drawStrokeWidthOf].
+double drawBrushSizeOf(double strokeWidth) {
+  const min = VideoEditorConstants.drawMinStrokeWidth;
+  const range = VideoEditorConstants.drawMaxStrokeWidth - min;
+  return math.sqrt(((strokeWidth - min) / range).clamp(0.0, 1.0));
+}
+
 /// State for the video editor draw/paint screen.
 class VideoEditorDrawState extends Equatable {
   const VideoEditorDrawState({
     this.canUndo = false,
     this.canRedo = false,
-    this.strokeWidth = 8.0,
+    this.strokeWidths = const {},
     this.opacity = 1.0,
     this.selectedColor = VideoEditorConstants.primaryColor,
     this.selectedTool = .pencil,
@@ -61,8 +81,9 @@ class VideoEditorDrawState extends Equatable {
   /// The currently selected drawing tool.
   final DrawToolType selectedTool;
 
-  /// The stroke width for drawing.
-  final double strokeWidth;
+  /// The stroke widths the creator set per drawing tool. A tool missing here
+  /// draws at the width of its [DrawToolType.config].
+  final Map<DrawToolType, double> strokeWidths;
 
   /// The opacity for drawing.
   final double opacity;
@@ -79,6 +100,16 @@ class VideoEditorDrawState extends Equatable {
   /// How strongly the pixelate tool hides an area, from 0 to 1.
   final double pixelateIntensity;
 
+  /// The stroke width the selected tool draws with.
+  double get strokeWidth => strokeWidthOf(selectedTool);
+
+  /// The stroke width [tool] draws with.
+  double strokeWidthOf(DrawToolType tool) =>
+      strokeWidths[tool] ?? tool.config.strokeWidth;
+
+  /// Where the selected tool's stroke width sits on its 0 to 1 slider.
+  double get brushSize => drawBrushSizeOf(strokeWidth);
+
   /// How strongly the selected censor tool hides an area, from 0 to 1.
   double get censorIntensity => censorIntensityOf(selectedTool);
 
@@ -94,7 +125,7 @@ class VideoEditorDrawState extends Equatable {
     bool? canUndo,
     bool? canRedo,
     DrawToolType? selectedTool,
-    double? strokeWidth,
+    Map<DrawToolType, double>? strokeWidths,
     double? opacity,
     Color? selectedColor,
     PaintMode? mode,
@@ -105,7 +136,7 @@ class VideoEditorDrawState extends Equatable {
       canUndo: canUndo ?? this.canUndo,
       canRedo: canRedo ?? this.canRedo,
       selectedTool: selectedTool ?? this.selectedTool,
-      strokeWidth: strokeWidth ?? this.strokeWidth,
+      strokeWidths: strokeWidths ?? this.strokeWidths,
       opacity: opacity ?? this.opacity,
       selectedColor: selectedColor ?? this.selectedColor,
       mode: mode ?? this.mode,
@@ -119,7 +150,7 @@ class VideoEditorDrawState extends Equatable {
     canUndo,
     canRedo,
     selectedTool,
-    strokeWidth,
+    strokeWidths,
     opacity,
     selectedColor,
     mode,

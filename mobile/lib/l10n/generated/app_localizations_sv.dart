@@ -352,6 +352,32 @@ class AppLocalizationsSv extends AppLocalizations {
       'Behåll flöden i klassiskt kvadratiskt format';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loopar',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 av $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loopar',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 i den här videon';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Visa totalt antal loopar';
 
   @override
@@ -3676,6 +3702,45 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Klipp från ditt bibliotek';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video från ditt galleri';
+
+  @override
+  String get dmClipBadge => 'Klipp';
+
+  @override
+  String get dmClipChecking => 'Kollar att klippet är filmat med Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Vi kunde inte bekräfta att det är filmat med Divine-kameran, så det lades inte till i dina klipp.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Det går inte att kolla klippet just nu. Försök igen om en stund.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Vi kunde inte bekräfta att klippet är filmat med Divine-kameran, så det kan inte skickas som klipp.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Det du skickar kan mottagaren lägga till i sina klipp och publicera, och du krediteras.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent av $total klipp skickade. Resten gick inte iväg.',
+      one: '$sent av $total klipp skickat. Resten gick inte iväg.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Spara video';
 
   @override
@@ -3911,6 +3976,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Lägg till personer för att komma igång';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Inga videor än';
 
   @override
@@ -3935,9 +4007,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Lägg till i $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Sök personer';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4915,15 +4984,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Ny personlista';
-
-  @override
-  String get listCollaboratorsNone => 'Inga';
-
-  @override
-  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
-
-  @override
-  String get listCollaboratorSearchHint => 'Sök i Divine...';
 
   @override
   String get listNameLabel => 'Listnamn';
@@ -6166,6 +6226,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Ta bort lista';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Ta bort lista?';
@@ -8664,6 +8727,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectGlow => 'Glöd';
 
   @override
+  String get videoEditorEffectEcho => 'Eko';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.';
 
@@ -10085,6 +10151,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivå';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Penselstorlek';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13052,4 +13121,40 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Ny videolista';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Den här listan är offentlig. Alla kan se dess namn, beskrivning och personerna i den.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personer';
+
+  @override
+  String get peopleListsPeopleNone => 'Inga personer tillagda';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Sök bland följare och personer du följer';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privat, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

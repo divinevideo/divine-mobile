@@ -1295,6 +1295,93 @@ void main() {
       );
     });
 
+    // The ids of messages removed with a conversation settle later retractions
+    // of them (#8179). Like the tombstone they outlive a plain sign-out, so a
+    // retraction that drains after the user signs back in is still settled.
+    group('removed message ids', () {
+      const messageIdA =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const messageIdB =
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+
+      Future<void> seedRemovedMessage({
+        required String messageId,
+        required String ownerPubkey,
+      }) async {
+        final inserted = await db.directMessagesDao.insertMessage(
+          id: messageId,
+          conversationId: _dmConversationId,
+          senderPubkey: _pubkeyB,
+          content: 'removed with its conversation',
+          createdAt: 1700000000,
+          giftWrapId: 'wrap-$messageId',
+          ownerPubkey: ownerPubkey,
+        );
+        expect(inserted, isTrue, reason: 'the fixture row must really exist');
+        await db.removedMessageIdsDao.captureForConversations(
+          conversationIds: [_dmConversationId],
+          ownerPubkey: ownerPubkey,
+          removedAt: 1700000001,
+        );
+      }
+
+      test('non-destructive cleanup preserves them', () async {
+        await seedRemovedMessage(messageId: messageIdA, ownerPubkey: _pubkeyA);
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        expect(service.onDatabaseCleanup, isNotNull);
+        await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(
+          await db.removedMessageIdsDao.contains(
+            rumorId: messageIdA,
+            ownerPubkey: _pubkeyA,
+          ),
+          isTrue,
+        );
+      });
+
+      test('destructive cleanup purges that owner only', () async {
+        await seedRemovedMessage(messageId: messageIdA, ownerPubkey: _pubkeyA);
+        await seedRemovedMessage(messageId: messageIdB, ownerPubkey: _pubkeyB);
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        expect(service.onDatabaseCleanup, isNotNull);
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(
+          await db.removedMessageIdsDao.contains(
+            rumorId: messageIdA,
+            ownerPubkey: _pubkeyA,
+          ),
+          isFalse,
+        );
+        expect(
+          await db.removedMessageIdsDao.contains(
+            rumorId: messageIdB,
+            ownerPubkey: _pubkeyB,
+          ),
+          isTrue,
+          reason: "the other account's ids must survive",
+        );
+      });
+    });
+
     group('#7325 owner-scoped DM cleanup', () {
       Future<void> seedDm({
         required String messageId,

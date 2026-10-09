@@ -12,8 +12,8 @@ import 'package:people_lists_repository/src/people_list_search_result.dart';
 /// reach into lower layers.
 ///
 /// All publish operations return a [PeopleListPublishResult] that reports
-/// whether the event was submitted to at least one relay socket. The
-/// repository does **not** wait for relay `OK` acknowledgements.
+/// whether at least one relay acknowledged acceptance with `OK true`. This
+/// does not guarantee durable storage on that relay.
 abstract interface class PeopleListsRepository {
   /// Emits the current people lists owned by [ownerPubkey], then re-emits on
   /// every subsequent cache mutation for that owner.
@@ -42,6 +42,15 @@ abstract interface class PeopleListsRepository {
     String? description,
     String? imageUrl,
     Iterable<String> initialPubkeys = const [],
+  });
+
+  /// Updates the public title and description, preserving membership and all
+  /// other source tags/content. An empty [description] removes that tag.
+  Future<PeopleListPublishResult> updateList({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    required String description,
   });
 
   /// Adds [pubkey] to the list identified by [listId] and publishes the
@@ -75,6 +84,9 @@ abstract interface class PeopleListsRepository {
 
   /// Searches public kind `30000` people lists on connected relays whose
   /// decoded name or description contains [query] (case-insensitive).
+  ///
+  /// Fetches at least 500 candidates independently of the displayed [limit].
+  /// Search is bounded to that recent candidate window.
   ///
   /// The stream emits **at most one** list of [PeopleListSearchResult], after
   /// the relay query completes. When the query is blank, when the relay

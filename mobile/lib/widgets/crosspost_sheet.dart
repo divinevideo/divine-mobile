@@ -13,7 +13,7 @@ import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/crosspost_models.dart';
-import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shows the crosspost flow for the current user's own [video].
@@ -26,7 +26,7 @@ Future<void> showCrosspostSheet({
   required VideoEvent video,
   required List<CrosspostingConnection> connections,
 }) {
-  final client = ref.read(crossposterApiClientProvider);
+  final client = ref.read(crosspostingApiClientProvider);
   final container = ProviderScope.containerOf(context, listen: false);
   // Resolved while the opener is mounted: it may be gone by the time the
   // reconnect button is tapped, and Navigator.of on a defunct element throws.

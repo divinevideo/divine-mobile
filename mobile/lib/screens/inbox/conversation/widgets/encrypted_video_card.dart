@@ -33,6 +33,7 @@ class EncryptedVideoCard extends StatefulWidget {
   const EncryptedVideoCard({
     required this.fileMetadata,
     required this.isSent,
+    this.isClip = false,
     this.onTap,
     super.key,
   });
@@ -43,6 +44,11 @@ class EncryptedVideoCard extends StatefulWidget {
 
   /// Whether the enclosing bubble is the current user's own message.
   final bool isSent;
+
+  /// Whether the sender shared this as a raw clip from their library rather
+  /// than a finished video. Labels the card so the recipient knows it can go
+  /// into their clips.
+  final bool isClip;
 
   /// Opens playback. When null the card is not interactive, so it never
   /// becomes a dead tap target.
@@ -56,7 +62,7 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
   @override
   Widget build(BuildContext context) {
     final blurhash = widget.fileMetadata.blurhash;
-    final card = (blurhash == null || blurhash.isEmpty)
+    final preview = (blurhash == null || blurhash.isEmpty)
         ? const _EncryptedVideoPlaceholderCard()
         : ClipRRect(
             borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
@@ -70,6 +76,18 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
               ),
             ),
           );
+    final card = widget.isClip
+        ? Stack(
+            children: [
+              preview,
+              const PositionedDirectional(
+                top: 12,
+                start: 12,
+                child: _ClipBadge(),
+              ),
+            ],
+          )
+        : preview;
 
     final onTap = widget.onTap;
     if (onTap == null) return card;
@@ -99,6 +117,44 @@ class _EncryptedVideoPlaceholderCard extends StatelessWidget {
             icon: DivineIconName.playCircleFill,
             color: context.vineColors.onSurfaceMuted,
             size: 48,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Label on a clip card. Sits over the preview, so it carries its own scrim
+/// and keeps a fixed size rather than growing with the text scale.
+class _ClipBadge extends StatelessWidget {
+  const _ClipBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery.withNoTextScaling(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: VineTheme.scrim65,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              const ExcludeSemantics(
+                child: DivineIcon(
+                  icon: DivineIconName.filmSlate,
+                  color: VineTheme.whiteText,
+                  size: 14,
+                ),
+              ),
+              Text(
+                context.l10n.dmClipBadge,
+                style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
+              ),
+            ],
           ),
         ),
       ),

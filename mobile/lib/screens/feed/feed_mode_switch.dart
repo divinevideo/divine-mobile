@@ -181,8 +181,12 @@ class _FeedModeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      spacing: _trailingGap,
       children: [
-        Flexible(
+        // Expanded rather than Flexible + Spacer: two flex-1 children split
+        // the free width in half, which ellipsized long labels (and any label
+        // at large Dynamic Type sizes) while half the row sat empty.
+        Expanded(
           child: Align(
             alignment: AlignmentDirectional.centerStart,
             child: Semantics(
@@ -219,11 +223,13 @@ class _FeedModeContent extends StatelessWidget {
             ),
           ),
         ),
-        const Spacer(),
         ?trailing,
       ],
     );
   }
+
+  /// Minimum gap kept between the picker and the trailing More button.
+  static const double _trailingGap = 16;
 }
 
 /// Caret icon with the same two drop shadows applied to the feed-mode label

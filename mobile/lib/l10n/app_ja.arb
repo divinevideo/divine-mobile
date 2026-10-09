@@ -1320,6 +1320,15 @@
     "dmVideoSent": "動画を送信しました",
     "dmVideoSendFailed": "動画を送信できませんでした",
     "dmVideoTooLarge": "この動画は大きすぎて送信できません。{maxMegabytes} MB未満の動画を選んでください",
+    "dmAttachClipFromLibrary": "ライブラリのクリップ",
+    "dmAttachVideoFromGallery": "ギャラリーの動画",
+    "dmClipBadge": "クリップ",
+    "dmClipChecking": "このクリップがDivineで撮影されたか確認しています…",
+    "dmClipNotVerified": "Divineのカメラで撮影されたことを確認できなかったため、クリップに追加しませんでした",
+    "dmClipCheckUnavailable": "今はこのクリップを確認できません。少し経ってからもう一度お試しください",
+    "dmClipSendNotVerified": "このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません",
+    "dmAttachReuseNotice": "送ったものは相手が自分のクリップに追加して投稿できます。その際、あなたがクレジットされます。",
+    "dmClipsPartlySent": "{total, plural, other{{total}件のクリップのうち{sent}件を送信しました。残りは送信できませんでした。}}",
     "shareSheetSaveVideo": "動画を保存",
     "shareSheetAddToClips": "クリップに追加",
     "shareSheetAddToClipsFailed": "クリップに追加できませんでした",
@@ -1645,9 +1654,6 @@
     },
     "listCreateNewList": "新しいリストを作る",
     "listNewPeopleList": "新しい人リスト",
-    "listCollaboratorsNone": "なし",
-    "listAddCollaboratorTitle": "コラボレーターを追加",
-    "listCollaboratorSearchHint": "Divineを検索...",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
     "listPublicList": "公開リスト",
@@ -2476,6 +2482,7 @@
   "videoEditorEffectSplitScreen": "分割画面",
   "videoEditorEffectWave": "ウェーブ",
   "videoEditorEffectGlow": "グロー",
+  "videoEditorEffectEcho": "エコー",
   "videoEditorEffectsFlashingReplaced": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。",
   "videoEditorEffectsFlashingNotDuplicated": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。",
   "videoEditorEffectsOnBeat": "ビートに合わせる",
@@ -2509,6 +2516,7 @@
     "videoEditorHueSemanticLabel": "色相",
     "videoEditorKeepEditingButton": "編集を続ける",
     "videoEditorLevelSemanticLabel": "レベル",
+    "videoEditorBrushSizeSemanticLabel": "ブラシのサイズ",
     "videoEditorNoStickersAvailable": "ステッカーがありません",
     "videoEditorNoStickersFound": "ステッカーが見つかりません",
     "videoEditorOpenAudioSemanticLabel": "オーディオエディタを開く",
@@ -3028,7 +3036,6 @@
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
-    "peopleListsAddPeopleSearchHint": "ユーザーを検索",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
     "peopleListsAddButton": "追加",
@@ -3057,6 +3064,8 @@
     "appearanceSettingsSystem": "システムのデフォルト",
     "appearanceSettingsLight": "ライト",
     "appearanceSettingsDark": "ダーク",
+    "videoOverlayTotalLoops": "{count, plural, other{{authorName}のループ{compactCount}回}}",
+    "videoOverlayVideoLoops": "この動画{compactCount}回{count, plural, other{ループ}}",
     "generalSettingsClosedCaptions": "字幕",
     "generalSettingsClosedCaptionsSubtitle": "動画に字幕がある場合に表示するよ",
     "generalSettingsVideoShapeSquareOnly": "正方形の動画のみ",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "新しい動画リスト",
+  "peopleListsPublicNotice": "このリストは公開されます。名前、説明、リスト内のユーザーは誰でも見ることができます。",
+  "peopleListsPeopleLabel": "ユーザー",
+  "peopleListsPeopleNone": "ユーザーはまだ追加されていません",
+  "peopleListsSessionChanged": "アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。",
+  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索",
+  "listCardSemanticLabel": "{visibility, select, private{{name}、非公開、{count}} other{{name}、{count}}}",
+  "listMemberNamesSeparator": "、",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

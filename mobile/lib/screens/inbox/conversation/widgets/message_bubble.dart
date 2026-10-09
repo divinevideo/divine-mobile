@@ -196,6 +196,7 @@ class MessageBubble extends StatefulWidget {
     this.sharedVideoRef,
     this.quotedVideoRef,
     this.fileMetadata,
+    this.isClip = false,
     super.key,
   });
 
@@ -263,6 +264,10 @@ class MessageBubble extends StatefulWidget {
   /// [DmFileMetadata.isVideo] is true the bubble renders an
   /// [EncryptedVideoCard] instead of text. Null for text messages.
   final DmFileMetadata? fileMetadata;
+
+  /// Whether the encrypted video is a clip the sender shared from their
+  /// library. Labels the [EncryptedVideoCard].
+  final bool isClip;
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -512,6 +517,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                               EncryptedVideoCard(
                                 fileMetadata: fileMetadata!,
                                 isSent: isSent,
+                                isClip: widget.isClip,
                                 onTap: isFailedOwnSend
                                     ? null
                                     : onOpenEncryptedVideo,

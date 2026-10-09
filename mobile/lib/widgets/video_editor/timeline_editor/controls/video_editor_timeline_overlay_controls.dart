@@ -16,7 +16,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
-import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
@@ -520,16 +519,12 @@ class _EffectOverlayControls extends StatelessWidget {
     final index = effects.indexWhere((e) => e.id == item.id);
     if (index < 0) return;
     // The copy would lie on top of the original and flash along with it.
-    if (isFlashingVideoEffect(effects[index].effect.type)) {
+    if (effects[index].type.isFlashing) {
       showFlashingEffectNotDuplicatedSnackBar(context);
       return;
     }
 
-    final copy = EditorVideoEffect(
-      id: _copyId(item.id),
-      effect: effects[index].effect,
-      onBeat: effects[index].onBeat,
-    );
+    final copy = effects[index].withId(_copyId(item.id));
     effects.insert(index + 1, copy);
     editor.setVideoEffectEntries(effects);
     context.read<TimelineOverlayBloc>().add(
@@ -549,11 +544,9 @@ class _EffectOverlayControls extends StatelessWidget {
     if (index < 0) return;
 
     final effect = effects[index];
-    final second = EditorVideoEffect(
-      id: _copyId(item.id),
-      effect: effect.effect,
-      onBeat: effect.onBeat,
-    ).retimed(startTime: splitAt, endTime: item.endTime);
+    final second = effect
+        .withId(_copyId(item.id))
+        .retimed(startTime: splitAt, endTime: item.endTime);
 
     effects[index] = effect.retimed(
       startTime: item.startTime,

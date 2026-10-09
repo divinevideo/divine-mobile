@@ -1,0 +1,1150 @@
+// ABOUTME: Tests for DivineListThumbnail: the shared card scaffold plus its
+// ABOUTME: two media variants (video fan, people collage), seams, badges,
+// ABOUTME: fixed-height footer, and tap handling.
+
+import 'dart:async';
+
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' hide AspectRatio;
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/avatar_failure_cache.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
+import '../helpers/test_provider_overrides.dart';
+
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
+
+void main() {
+  setUp(AvatarFailureCache.instance.clear);
+  tearDown(AvatarFailureCache.instance.clear);
+  final now = DateTime(2025, 6, 15);
+  String videoIdFor(int index) => index.toRadixString(16).padLeft(64, '0');
+
+  CuratedList createList({
+    String id = 'test-list',
+    String name = 'Test List',
+    String? description,
+    String? imageUrl,
+    List<String> videoEventIds = const [],
+    List<String> thumbnailUrls = const [],
+    bool isPublic = true,
+  }) {
+    return CuratedList(
+      id: id,
+      name: name,
+      description: description,
+      imageUrl: imageUrl,
+      videoEventIds: videoEventIds,
+      thumbnailUrls: thumbnailUrls,
+      isPublic: isPublic,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
+  UserList createUserList({
+    List<String> pubkeys = const [],
+    String? description,
+  }) => UserList(
+    id: 'people-1',
+    name: 'Divine Team',
+    description: description,
+    pubkeys: pubkeys,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+
+  UserProfile profileFor(
+    String pubkey, {
+    String? picture,
+    String? displayName,
+    String? eventId,
+  }) => UserProfile(
+    pubkey: pubkey,
+    rawData: const {},
+    createdAt: DateTime(2026),
+    eventId: eventId ?? 'e' * 64,
+    picture: picture,
+    displayName: displayName,
+  );
+
+  group(DivineListThumbnail, () {
+    group('videos variant', () {
+      Widget buildSubject({
+        required CuratedList curatedList,
+        VoidCallback? onTap,
+        List<Override> overrides = const [],
+      }) {
+        return ProviderScope(
+          overrides: overrides,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 200,
+                  height: 300,
+                  child: SingleChildScrollView(
+                    child: DivineListThumbnail.videos(
+                      curatedList: curatedList,
+                      onTap: onTap ?? () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('renders title', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(name: 'Dance Moves')),
+        );
+
+        expect(find.text('Dance Moves'), findsOneWidget);
+      });
+
+      testWidgets('renders description when present', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(description: 'Great videos')),
+        );
+
+        expect(find.text('Great videos'), findsOneWidget);
+      });
+
+      testWidgets('linkifies Nostr profile references in descriptions', (
+        tester,
+      ) async {
+        const mentionedPubkey =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        final mentionedNpub = NostrKeyUtils.encodePubKey(mentionedPubkey);
+
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(description: 'by nostr:$mentionedNpub'),
+            overrides: [
+              userProfileReactiveProvider(mentionedPubkey).overrideWith(
+                (ref) => Stream.value(
+                  UserProfile(
+                    pubkey: mentionedPubkey,
+                    displayName: 'Alice',
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(LinkifiedText), findsOneWidget);
+        expect(find.text('by @Alice', findRichText: true), findsOneWidget);
+        expect(find.textContaining('nostr:$mentionedNpub'), findsNothing);
+      });
+
+      testWidgets('renders links in the plain description style', (
+        tester,
+      ) async {
+        // A URL in a preview is plain muted text — the whole card is the
+        // tap target, so no accent color, weight, or size change.
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              description: 'DIY Merch: https://example.org/shop',
+            ),
+          ),
+        );
+
+        final richText = tester.widget<RichText>(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.byType(RichText),
+          ),
+        );
+        final spanStyles = <TextStyle>[];
+        richText.text.visitChildren((span) {
+          if (span is TextSpan && span.style != null) {
+            spanStyles.add(span.style!);
+          }
+          return true;
+        });
+
+        expect(spanStyles, isNotEmpty);
+        for (final style in spanStyles) {
+          expect(style.color, isNot(VineTheme.info));
+          expect(style.fontSize, VineTheme.bodySmallFont().fontSize);
+        }
+      });
+
+      testWidgets('renders no description text when null', (tester) async {
+        await tester.pumpWidget(buildSubject(curatedList: createList()));
+
+        expect(find.text('Test List'), findsOneWidget);
+        // The reserved two-line box stays (see the equal-height test below),
+        // but nothing is rendered into it — asserting only the title would
+        // still pass if the box held a literal "null" or a stray empty Text.
+        expect(find.byType(LinkifiedText), findsNothing);
+      });
+
+      testWidgets('renders no description text when empty', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(description: '')),
+        );
+
+        expect(find.text('Test List'), findsOneWidget);
+        expect(find.byType(LinkifiedText), findsNothing);
+      });
+
+      testWidgets('keeps the same card height with and without a description', (
+        tester,
+      ) async {
+        // The footer reserves a fixed two-line description box, so
+        // equal-width cards align into rows in the gallery columns.
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DivineListThumbnail.videos(
+                        curatedList: createList(
+                          id: 'with-description',
+                          name: 'SLOP \u{1F51D} TEN',
+                          description:
+                              'A description long enough to wrap onto a '
+                              'second line and then keep going past it.',
+                        ),
+                        onTap: () {},
+                      ),
+                    ),
+                    Expanded(
+                      child: DivineListThumbnail.videos(
+                        curatedList: createList(id: 'without-description'),
+                        onTap: () {},
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final sizes = tester
+            .widgetList(find.byType(DivineListThumbnail))
+            .map((card) => tester.getSize(find.byWidget(card)))
+            .toList();
+        expect(sizes, hasLength(2));
+        expect(sizes[0].height, sizes[1].height);
+      });
+
+      testWidgets('paints the fan seams over loaded thumbnails', (
+        tester,
+      ) async {
+        // Regression: a background-positioned border sits under the
+        // full-bleed thumbnail image, so populated cards lost their seams
+        // while empty placeholder cards kept them.
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              videoEventIds: [videoIdFor(1)],
+              thumbnailUrls: ['https://example.com/t.jpg'],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final seams = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .where(
+              (box) =>
+                  box.position == DecorationPosition.foreground &&
+                  (box.decoration as BoxDecoration).border != null,
+            )
+            .toList();
+        expect(seams, isNotEmpty);
+        final border =
+            ((seams.first.decoration as BoxDecoration).border! as Border).top;
+        expect(border.color, VineTheme.darkColors.surface);
+      });
+
+      testWidgets('renders the video count badge', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              videoEventIds: [videoIdFor(1), videoIdFor(2), videoIdFor(3)],
+            ),
+          ),
+        );
+
+        expect(find.text('3'), findsOneWidget);
+      });
+
+      testWidgets('renders a formatted count for large numbers', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              videoEventIds: List.generate(9100, videoIdFor),
+            ),
+          ),
+        );
+
+        expect(find.text('9.1K'), findsOneWidget);
+      });
+
+      testWidgets(
+        'renders 5 card slots with no images when thumbnailUrls is empty',
+        (tester) async {
+          await tester.pumpWidget(buildSubject(curatedList: createList()));
+
+          // 5 slot clips plus the outer media-block clip.
+          expect(find.byType(ClipRRect), findsNWidgets(6));
+          expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        },
+      );
+
+      testWidgets('renders $PassiveAuthThumbnailImage for each thumbnail URL '
+          'while keeping all 5 card slots', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              thumbnailUrls: [
+                'https://example.com/thumb1.jpg',
+                'https://example.com/thumb2.jpg',
+              ],
+              videoEventIds: [videoIdFor(1), videoIdFor(2), videoIdFor(3)],
+            ),
+          ),
+        );
+
+        expect(find.byType(PassiveAuthThumbnailImage), findsNWidgets(2));
+        for (final image in tester.widgetList<PassiveAuthThumbnailImage>(
+          find.byType(PassiveAuthThumbnailImage),
+        )) {
+          expect(image.alignment, equals(Alignment.center));
+        }
+        // All 5 slots stay regardless of how many thumbnails arrive: 5 slot
+        // clips plus the outer media-block clip, same count as the
+        // no-thumbnails case above. `findsAtLeastN` on DecoratedBox could
+        // not catch a drop to 3 slots — each slot builds two of them.
+        expect(find.byType(ClipRRect), findsNWidgets(6));
+      });
+
+      testWidgets('announces each card as a button', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(name: 'Dance Moves')),
+        );
+
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.flagsCollection.isButton,
+          isTrue,
+          reason: 'a list card is a tap target, not a label',
+        );
+        expect(card.hasAction(SemanticsAction.tap), isTrue);
+      });
+
+      testWidgets('activates through the semantics owner', (tester) async {
+        // A pointer tap proves hit testing; assistive tech activates the
+        // node's own action, which the excluded subtree cannot supply.
+        final handle = tester.ensureSemantics();
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(), onTap: () => tapped = true),
+        );
+
+        final node = tester.getSemantics(find.byType(DivineListThumbnail));
+        node.owner!.performAction(node.id, SemanticsAction.tap);
+        await tester.pump();
+
+        expect(tapped, isTrue);
+        handle.dispose();
+      });
+
+      testWidgets('speaks the description as the hint', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(description: 'Best skate clips'),
+          ),
+        );
+
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(card.hint, equals('Best skate clips'));
+      });
+
+      testWidgets('calls onTap when tapped', (tester) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(), onTap: () => tapped = true),
+        );
+
+        await tester.tap(find.text('Test List'));
+        await tester.pumpAndSettle();
+
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('speaks the name and video count as one label', (
+        tester,
+      ) async {
+        // The subtree is excluded, so the title is not read twice with a
+        // bare badge count in between.
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              name: 'My Playlist',
+              videoEventIds: [videoIdFor(1), videoIdFor(2), videoIdFor(3)],
+            ),
+          ),
+        );
+
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.label,
+          l10n.listCardSemanticLabel(
+            'My Playlist',
+            'public',
+            l10n.listVideoCount(3),
+          ),
+        );
+      });
+
+      testWidgets('marks a private list with a lock and says so', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(name: 'Just Mine', isPublic: false),
+          ),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.lockSimple,
+          ),
+          findsOneWidget,
+        );
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.label,
+          l10n.listCardSemanticLabel(
+            'Just Mine',
+            'private',
+            l10n.listVideoCount(0),
+          ),
+        );
+        expect(card.label, contains(l10n.listVisibilityPrivate));
+      });
+
+      testWidgets('shows no lock on a public list', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(name: 'Shared')),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.lockSimple,
+          ),
+          findsNothing,
+        );
+      });
+    });
+
+    group('people variant', () {
+      Widget buildSubject({
+        required UserList userList,
+        VoidCallback? onTap,
+        List<Override> profileOverrides = const [],
+      }) {
+        return ProviderScope(
+          overrides: getStandardTestOverrides(),
+          child: ProviderScope(
+            overrides: profileOverrides,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  width: 185,
+                  child: DivineListThumbnail.people(
+                    userList: userList,
+                    onTap: onTap ?? () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('retires a vanished cached member name and picture', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        var vanished = false;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              profileVanishedProvider(member).overrideWith((ref) => vanished),
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => Stream.value(
+                  profileFor(
+                    member,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/cached-member.jpg',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Cached member'), findsOneWidget);
+        expect(find.byType(UserAvatar), findsOneWidget);
+        vanished = true;
+        ProviderScope.containerOf(
+          tester.element(find.byType(DivineListThumbnail)),
+        ).invalidate(profileVanishedProvider(member));
+        await tester.pump();
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.text(l10n.profileDeletedAccountName), findsOneWidget);
+      });
+
+      testWidgets('hides cached member identity when the blocklist changes', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        final blocklist = _MockContentBlocklistRepository();
+        var hidden = false;
+        when(() => blocklist.shouldFilterFromFeeds(any())).thenAnswer(
+          (_) => hidden,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => Stream.value(
+                  profileFor(
+                    member,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/blocked-member.jpg',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Cached member'), findsOneWidget);
+        expect(find.byType(UserAvatar), findsOneWidget);
+        hidden = true;
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(DivineListThumbnail)),
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.text('1'), findsOneWidget);
+      });
+
+      testWidgets('updates member identities from the reactive cache', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        final profiles = StreamController<UserProfile?>();
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => profiles.stream,
+              ),
+            ],
+          ),
+        );
+        try {
+          profiles.add(profileFor(member, displayName: 'First name'));
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('First name'), findsOneWidget);
+          profiles.add(
+            profileFor(
+              member,
+              displayName: 'Changed name',
+              eventId: 'f' * 64,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('First name'), findsNothing);
+          expect(find.text('Changed name'), findsOneWidget);
+        } finally {
+          // Close while the nested family-override fixture is listening; after
+          // unmount it retains a paused subscription and cannot deliver done.
+          final closed = profiles.close();
+          await tester.pump();
+          await closed;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
+
+      testWidgets('retires the previous avatar when the profile stream fails', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        const oldPicture = 'https://example.com/previous-member.jpg';
+        final profiles = StreamController<UserProfile?>();
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => profiles.stream,
+              ),
+            ],
+          ),
+        );
+        try {
+          profiles.add(
+            profileFor(
+              member,
+              displayName: 'Cached member',
+              picture: oldPicture,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Cached member'), findsOneWidget);
+          expect(
+            tester.widget<UserAvatar>(find.byType(UserAvatar)).imageUrl,
+            oldPicture,
+          );
+
+          profiles.addError(StateError('Profile stream failed'));
+          await tester.pump();
+          await tester.pump();
+          final state = ProviderScope.containerOf(
+            tester.element(find.byType(DivineListThumbnail)),
+          ).read(userProfileReactiveProvider(member));
+          expect(state, isA<AsyncError<UserProfile?>>());
+          expect(state.value?.picture, oldPicture);
+          expect(find.byType(UserAvatar), findsNothing);
+          expect(find.byType(VineCachedImage), findsNothing);
+          expect(find.text('Cached member'), findsNothing);
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor(member)),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<ListSkeletonizer>(find.byType(ListSkeletonizer))
+                .enabled,
+            isFalse,
+          );
+        } finally {
+          // Deliver done before the nested family override pauses at unmount.
+          final closed = profiles.close();
+          await tester.pump();
+          await closed;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
+
+      testWidgets('names its members when the list has no description', (
+        tester,
+      ) async {
+        final alice = 'a' * 64;
+        final bob = 'b' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [alice, bob]),
+            profileOverrides: [
+              userProfileReactiveProvider(alice).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(alice, displayName: 'Alice'),
+                ),
+              ),
+              userProfileReactiveProvider(bob).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(bob, displayName: 'Bob'),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text('Alice${l10n.listMemberNamesSeparator}Bob'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('keeps its own description over member names', (
+        tester,
+      ) async {
+        final alice = 'a' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [alice], description: 'Crew'),
+            profileOverrides: [
+              userProfileReactiveProvider(alice).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(alice, displayName: 'Alice'),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Crew'), findsOneWidget);
+        expect(find.textContaining('Alice'), findsNothing);
+      });
+
+      testWidgets('names a member without a profile the usual way', (
+        tester,
+      ) async {
+        final ghost = 'f' * 64;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [ghost]),
+            profileOverrides: [
+              userProfileReactiveProvider(ghost)
+                  .overrideWith((ref) => Stream<UserProfile?>.value(null)),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text(UserProfile.defaultDisplayNameFor(ghost)),
+          findsOneWidget,
+        );
+      });
+
+      Finder glyphTiles() => find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.user,
+      );
+
+      testWidgets('renders title, description, and member count', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(
+              pubkeys: ['a' * 64, 'b' * 64, 'c' * 64, 'd' * 64],
+              description: 'Curated by the team.',
+            ),
+            profileOverrides: [
+              for (final pubkey in ['a' * 64, 'b' * 64, 'c' * 64, 'd' * 64])
+                userProfileReactiveProvider(
+                  pubkey,
+                ).overrideWith(
+                  (ref) => Stream<UserProfile?>.value(profileFor(pubkey)),
+                ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Divine Team'), findsOneWidget);
+        expect(find.text('Curated by the team.'), findsOneWidget);
+        // The badge shows the full member count, not the tile count.
+        expect(find.text('4'), findsOneWidget);
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.label,
+          l10n.listCardSemanticLabel(
+            'Divine Team',
+            'public',
+            l10n.listMemberCount(4),
+          ),
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.users,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('renders accent glyph tiles when profiles have no picture', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: ['a' * 64]),
+            profileOverrides: [
+              userProfileReactiveProvider(
+                'a' * 64,
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        // One member without a picture plus two empty slots: all three
+        // collage tiles fall back to the glyph placeholder.
+        expect(glyphTiles(), findsNWidgets(3));
+        expect(find.byType(VineCachedImage), findsNothing);
+      });
+
+      testWidgets('inks placeholder glyphs from the avatar palette', (
+        tester,
+      ) async {
+        // The member keeps the accent UserAvatar gives that pubkey, and the
+        // glyph takes that accent's figure ink — never white, which reads
+        // at 1.16:1 on the lime fill.
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: ['a' * 64]),
+            profileOverrides: [
+              userProfileReactiveProvider(
+                'a' * 64,
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final expected = userAvatarPlaceholderColors(
+          userAvatarToneForSeed('a' * 64),
+        );
+        final glyphColors = tester
+            .widgetList<DivineIcon>(glyphTiles())
+            .map((icon) => icon.color)
+            .toList();
+        expect(glyphColors, contains(expected.figure));
+        expect(glyphColors, isNot(contains(VineTheme.whiteText)));
+        final tileFills = tester
+            .widgetList<ColoredBox>(find.byType(ColoredBox))
+            .map((box) => box.color);
+        expect(tileFills, contains(expected.base));
+      });
+
+      testWidgets('renders the profile picture when one resolves', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: ['a' * 64]),
+            profileOverrides: [
+              userProfileReactiveProvider('a' * 64).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor('a' * 64, picture: 'https://example.com/a.jpg'),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(VineCachedImage), findsOneWidget);
+        expect(glyphTiles(), findsNWidgets(2));
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        final avatarSize = tester.getSize(find.byType(UserAvatar));
+        expect(image.memCacheWidth, isNotNull);
+        expect(
+          image.memCacheWidth,
+          lessThanOrEqualTo(
+            (avatarSize.longestSide * tester.view.devicePixelRatio).ceil(),
+          ),
+        );
+      });
+
+      testWidgets('paints the Figma seam structure over the collage', (
+        tester,
+      ) async {
+        // Container outline 2, large tile right 2, and the two small tiles
+        // splitting the horizontal seam as bottom 1 / top 1.
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: ['a' * 64]),
+            profileOverrides: [
+              userProfileReactiveProvider(
+                'a' * 64,
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final seams = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .where((box) => box.position == DecorationPosition.foreground)
+            .map((box) => (box.decoration as BoxDecoration).border)
+            .whereType<Border>()
+            .toList();
+
+        final surface = VineTheme.darkColors.surface;
+        bool only(BorderSide side, double width) =>
+            side.width == width && side.color == surface;
+
+        expect(
+          seams.any(
+            (b) =>
+                only(b.top, 2) &&
+                only(b.bottom, 2) &&
+                only(b.left, 2) &&
+                only(b.right, 2),
+          ),
+          isTrue,
+          reason: 'collage container outline',
+        );
+        expect(
+          seams.any(
+            (b) =>
+                only(b.right, 2) &&
+                b.top == BorderSide.none &&
+                b.bottom == BorderSide.none &&
+                b.left == BorderSide.none,
+          ),
+          isTrue,
+          reason: 'large tile right seam',
+        );
+        expect(
+          seams.any(
+            (b) =>
+                only(b.bottom, 1) &&
+                b.top == BorderSide.none &&
+                b.left == BorderSide.none &&
+                b.right == BorderSide.none,
+          ),
+          isTrue,
+          reason: 'top small tile bottom half-seam',
+        );
+        expect(
+          seams.any(
+            (b) =>
+                only(b.top, 1) &&
+                b.bottom == BorderSide.none &&
+                b.left == BorderSide.none &&
+                b.right == BorderSide.none,
+          ),
+          isTrue,
+          reason: 'bottom small tile top half-seam',
+        );
+      });
+
+      testWidgets('invokes onTap when tapped', (tester) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(),
+            onTap: () => tapped = true,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Divine Team'));
+        expect(tapped, isTrue);
+      });
+    });
+  });
+
+  group('pending thumbnails', () {
+    Widget pending({
+      required Widget child,
+      List<Override> overrides = const [],
+    }) {
+      return ProviderScope(
+        overrides: [...getStandardTestOverrides(), ...overrides],
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SizedBox(width: 185, child: child)),
+        ),
+      );
+    }
+
+    // The skeletonizer widget is built through a subclass, so it has to be
+    // found by predicate rather than by type.
+    Finder skeletonizer() => find.byWidgetPredicate((w) => w is Skeletonizer);
+
+    // A flat placeholder slot clips its image; a bone has no clip. The
+    // frame itself adds one clip around the whole fan.
+    Finder slotClips() => find.descendant(
+      of: find.byType(DivineListThumbnail),
+      matching: find.byType(ClipRRect),
+    );
+
+    testWidgets('shimmers the fan slots a video could still fill', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(
+              videoEventIds: [videoIdFor(1), videoIdFor(2), videoIdFor(3)],
+            ),
+            thumbnailsPending: true,
+            onTap: () {},
+          ),
+        ),
+      );
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isTrue,
+      );
+      // Three of five slots are bones; the two the list can never fill
+      // keep their flat placeholder.
+      expect(slotClips(), findsNWidgets(1 + 2));
+    });
+
+    testWidgets('keeps every slot flat once thumbnails are resolved', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(
+              videoEventIds: [videoIdFor(1), videoIdFor(2), videoIdFor(3)],
+            ),
+            onTap: () {},
+          ),
+        ),
+      );
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isFalse,
+      );
+      expect(slotClips(), findsNWidgets(1 + 5));
+    });
+
+    testWidgets('shimmers a collage tile while the member profile loads', (
+      tester,
+    ) async {
+      final member = 'c' * 64;
+      final neverResolves = Completer<UserProfile?>();
+      await tester.pumpWidget(
+        pending(
+          overrides: [
+            userProfileReactiveProvider(
+              member,
+            ).overrideWith((ref) => neverResolves.future.asStream()),
+          ],
+          child: DivineListThumbnail.people(
+            userList: createUserList(pubkeys: [member]),
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isTrue,
+      );
+      // Exactly the member's tile is a bone: the one filled box with a
+      // rounded collage corner.
+      const corner = Radius.circular(16);
+      final bones = find.descendant(
+        of: find.byType(DivineListThumbnail),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).color != null &&
+              ((w.decoration as BoxDecoration).borderRadius as BorderRadius?)
+                      ?.topLeft ==
+                  corner,
+        ),
+      );
+      expect(bones, findsOneWidget);
+    });
+
+    testWidgets('settles the tile once the profile is known', (tester) async {
+      final member = 'c' * 64;
+      await tester.pumpWidget(
+        pending(
+          overrides: [
+            userProfileReactiveProvider(
+              member,
+            ).overrideWith(
+              (ref) => Stream<UserProfile?>.value(profileFor(member)),
+            ),
+          ],
+          child: DivineListThumbnail.people(
+            userList: createUserList(pubkeys: [member]),
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.widget<Skeletonizer>(skeletonizer()).enabled,
+        isFalse,
+      );
+    });
+  });
+}

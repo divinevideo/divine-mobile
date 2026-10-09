@@ -1276,7 +1276,7 @@ void main() {
             // bloc's optimistic emit has already set state.isLiked=true,
             // so the subscription handler's early-return absorbs this.
             likedIdsController.add([testEventId]);
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
             return true;
           });
         },
@@ -1287,10 +1287,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await pumpEventQueue();
+          expect(likedIdsController.hasListener, isTrue);
           bloc.add(const VideoInteractionsLikeToggled());
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 100),
         expect: () => [
           // Exactly one emit: optimistic flip with both fields. The
           // stream tick that follows is absorbed by the subscription
@@ -1306,11 +1307,13 @@ void main() {
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'optimistic emit lands before publish settles (fire-and-forget)',
         setUp: () {
-          // Hold toggleLike open on a Completer so the publish never
-          // settles within the test window. The bloc handler must still
+          // Hold toggleLike open so the publish stays pending during assertions. The bloc handler must still
           // emit the optimistic state and return — proving that the
           // network publish does not block the bloc's event queue.
           final completer = Completer<bool>();
+          addTearDown(() {
+            if (!completer.isCompleted) completer.complete(true);
+          });
           when(
             () => mockLikesRepository.toggleLike(
               eventId: testEventId,
@@ -1339,25 +1342,26 @@ void main() {
         },
       );
 
+      late Completer<bool> firstLike;
+      late Completer<bool> secondLike;
+
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'older restriction cannot roll back a newer tap',
         setUp: () {
-          final first = Completer<bool>();
-          final second = Completer<bool>();
+          firstLike = Completer<bool>();
+          secondLike = Completer<bool>();
           var call = 0;
           when(
             () => mockLikesRepository.toggleLike(
               eventId: testEventId,
               authorPubkey: testAuthorPubkey,
             ),
-          ).thenAnswer((_) => call++ == 0 ? first.future : second.future);
+          ).thenAnswer(
+            (_) => call++ == 0 ? firstLike.future : secondLike.future,
+          );
           addTearDown(() {
-            if (!first.isCompleted) first.completeError(Exception('unused'));
-            if (!second.isCompleted) second.complete(false);
-          });
-          Future<void>.delayed(const Duration(milliseconds: 20), () {
-            second.complete(false);
-            first.completeError(const LikeAccountRestrictedException());
+            if (!firstLike.isCompleted) firstLike.complete(true);
+            if (!secondLike.isCompleted) secondLike.complete(false);
           });
         },
         build: createBloc,
@@ -1367,10 +1371,20 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsLikeToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoInteractionsLikeToggled());
+          await pumpEventQueue();
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+            ),
+          ).called(2);
+          secondLike.complete(false);
+          await pumpEventQueue();
+          firstLike.completeError(const LikeAccountRestrictedException());
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 80),
         expect: () => [
           const VideoInteractionsState(
             status: VideoInteractionsStatus.success,
@@ -1423,9 +1437,15 @@ void main() {
         ],
       );
 
+      late Completer<bool> closedLike;
+
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'closed bloc does not dispatch settle event after publish resolves',
         setUp: () {
+          closedLike = Completer<bool>();
+          addTearDown(() {
+            if (!closedLike.isCompleted) closedLike.complete(true);
+          });
           // Simulates scroll-away: user taps, immediately the feed item
           // disposes its bloc, and the publish settles afterward. The
           // unawaited future must check isClosed before dispatching a
@@ -1436,10 +1456,7 @@ void main() {
               eventId: testEventId,
               authorPubkey: testAuthorPubkey,
             ),
-          ).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(milliseconds: 5));
-            return true;
-          });
+          ).thenAnswer((_) => closedLike.future);
         },
         build: createBloc,
         seed: () => const VideoInteractionsState(
@@ -1448,10 +1465,16 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsLikeToggled());
-          // Close before the publish has had a chance to resolve.
+          await untilCalled(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+            ),
+          );
           await bloc.close();
+          closedLike.complete(true);
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 50),
         expect: () => [
           // Only the optimistic emit. The settle event would be a no-op
           // on a closed bloc, but we must guard against it being
@@ -1536,14 +1559,17 @@ void main() {
         addTearDown(() async {
           await blocA.close();
           await blocB.close();
+          if (!completerA.isCompleted) completerA.complete(true);
+          if (!completerB.isCompleted) completerB.complete(true);
+          await pumpEventQueue();
         });
 
-        // Tap like on A (publish never resolves), then on B.
+        // Tap like on A while its publish is pending, then on B.
         blocA.add(const VideoInteractionsLikeToggled());
         blocB.add(const VideoInteractionsLikeToggled());
 
         // Allow both event loops to drain.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         // Both blocs already reflect the optimistic flip even though
         // neither publish has settled.
@@ -1589,14 +1615,24 @@ void main() {
 
         final bloc = createBloc(initialLikeCount: 10)
           ..add(const VideoInteractionsLikeToggled());
+        addTearDown(() async {
+          await bloc.close();
+          if (!completer.isCompleted) completer.complete(true);
+          await pumpEventQueue();
+        });
         // Let the handler dispatch the optimistic emit and reach the
         // unawaited(_publishLike).
-        await Future<void>.delayed(Duration.zero);
+        await untilCalled(
+          () => mockLikesRepository.toggleLike(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+          ),
+        );
 
         await bloc.close();
 
         completer.completeError(Exception('relay rejected'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(observer.errors, isEmpty);
       });
@@ -1794,7 +1830,7 @@ void main() {
             // optimistic emit already set state.isReposted=true, so the
             // subscription handler's early-return absorbs the tick.
             repostedIdsController.add({testAddressableId});
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
             return true;
           });
         },
@@ -1805,10 +1841,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await pumpEventQueue();
+          expect(repostedIdsController.hasListener, isTrue);
           bloc.add(const VideoInteractionsRepostToggled());
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 100),
         expect: () => [
           const VideoInteractionsState(
             status: VideoInteractionsStatus.success,
@@ -1822,6 +1859,9 @@ void main() {
         'optimistic emit lands before publish settles (fire-and-forget)',
         setUp: () {
           final completer = Completer<bool>();
+          addTearDown(() {
+            if (!completer.isCompleted) completer.complete(true);
+          });
           when(
             () => mockRepostsRepository.toggleRepost(
               addressableId: testAddressableId,
@@ -1867,12 +1907,23 @@ void main() {
 
         final bloc = createBloc(addressableId: testAddressableId)
           ..add(const VideoInteractionsRepostToggled());
-        await Future<void>.delayed(Duration.zero);
+        addTearDown(() async {
+          await bloc.close();
+          if (!completer.isCompleted) completer.complete(true);
+          await pumpEventQueue();
+        });
+        await untilCalled(
+          () => mockRepostsRepository.toggleRepost(
+            addressableId: testAddressableId,
+            originalAuthorPubkey: testAuthorPubkey,
+            eventId: testEventId,
+          ),
+        );
 
         await bloc.close();
 
         completer.completeError(Exception('relay rejected'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(observer.errors, isEmpty);
       });
@@ -1888,10 +1939,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          expect(likedIdsController.hasListener, isTrue);
           likedIdsController.add([testEventId]);
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 100),
         expect: () => [
           // likeCount stays at 10 — count is only adjusted by _onLikeToggled
           const VideoInteractionsState(
@@ -1913,10 +1965,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          expect(likedIdsController.hasListener, isTrue);
           likedIdsController.add(<String>[]);
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 100),
         expect: () => [
           // likeCount stays at 10 — count is only adjusted by _onLikeToggled
           const VideoInteractionsState(
@@ -1936,10 +1989,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          expect(likedIdsController.hasListener, isTrue);
           likedIdsController.add([testEventId]);
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 100),
         expect: () => <VideoInteractionsState>[],
       );
 
@@ -1962,17 +2016,19 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoInteractionsSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          expect(likedIdsController.hasListener, isTrue);
+          expect(likedAddressableIdsController.hasListener, isTrue);
           // This video's own coordinate is liked (its reaction is recorded
           // under a different, pre-edit event id — never testEventId).
           likedAddressableIdsController.add({testAddressableId});
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // A completely unrelated video is liked elsewhere in the app,
           // ticking the shared watchLikedEventIds stream. testEventId is
           // (correctly) not in this list.
           likedIdsController.add(['some-other-unrelated-event-id']);
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 150),
         expect: () => <VideoInteractionsState>[],
       );
     });
@@ -2050,14 +2106,20 @@ void main() {
     });
 
     group('close', () {
-      test('cancels liked IDs subscription', () async {
-        final bloc = createBloc();
+      test('cancels repository subscriptions', () async {
+        final bloc = createBloc(addressableId: testAddressableId);
+        addTearDown(bloc.close);
+        bloc.add(const VideoInteractionsSubscriptionRequested());
+        await pumpEventQueue();
+        expect(likedIdsController.hasListener, isTrue);
+        expect(likedAddressableIdsController.hasListener, isTrue);
+        expect(repostedIdsController.hasListener, isTrue);
 
         await bloc.close();
 
-        // After closing, stream events should not affect anything
-        // This mainly tests that no errors occur
-        expect(() => likedIdsController.add([testEventId]), returnsNormally);
+        expect(likedIdsController.hasListener, isFalse);
+        expect(likedAddressableIdsController.hasListener, isFalse);
+        expect(repostedIdsController.hasListener, isFalse);
       });
     });
   });

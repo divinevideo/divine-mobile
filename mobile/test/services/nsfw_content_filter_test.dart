@@ -40,6 +40,9 @@ class _FakeLabelEvent extends Fake implements Event {
 const _testPubkey =
     'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
+const _otherPubkey =
+    'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3';
+
 VideoEvent _createVideo({
   List<String> contentWarningLabels = const [],
   List<String> moderationLabels = const [],
@@ -128,7 +131,9 @@ void main() {
     });
 
     group('with default preferences', () {
-      test('keeps owner profanity behind a warning during cache restore', () {
+      test('keeps adult owner profanity behind a warning during cache '
+          'restore', () async {
+        await ageService.setAdultContentVerified(true);
         final filter = createNsfwFilter(
           contentFilterService,
           moderationLabelService: moderationLabelService,
@@ -147,19 +152,63 @@ void main() {
         expect(resolver(cached), ['profanity']);
       });
 
-      test('still hides owner adult and always-filtered self-labels', () {
-        for (final label in ['nudity', 'violence']) {
-          final filter = createNsfwFilter(
-            contentFilterService,
-            moderationLabelService: moderationLabelService,
-            viewerPubkey: () => _testPubkey,
-          );
+      test('keeps owner adult content and drug use hidden before adult '
+          'self-attestation', () {
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final resolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
 
-          expect(
-            filter(_createVideo(contentWarningLabels: [label])),
-            isTrue,
-            reason: '$label must not use the narrow creator carve-out',
-          );
+        for (final label in [
+          'nudity',
+          'sexual',
+          'porn',
+          'drugs',
+        ]) {
+          final video = _createVideo(contentWarningLabels: [label]);
+
+          expect(filter(video), isTrue);
+          expect(resolver(video), isEmpty);
+        }
+      });
+
+      test('warns an unattested owner for the four legacy age-restricted '
+          'self-labels while other viewers still hide them', () {
+        expect(ageService.isAdultContentVerified, isFalse);
+        final ownerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final ownerResolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final otherFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _otherPubkey,
+        );
+        final otherResolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _otherPubkey,
+        );
+
+        for (final label in ['alcohol', 'tobacco', 'profanity', 'gambling']) {
+          final video = _createVideo(contentWarningLabels: [label]);
+
+          expect(ownerFilter(video), isFalse, reason: label);
+          expect(ownerResolver(video), [label], reason: label);
+          expect(otherFilter(video), isTrue, reason: label);
+          expect(otherResolver(video), isEmpty, reason: label);
         }
       });
 
@@ -309,6 +358,74 @@ void main() {
         final video = _createVideo(contentWarningLabels: ['flashing-lights']);
 
         expect(filter(video), isFalse);
+      });
+
+      test('keeps an own video hidden before adult self-attestation '
+          'when '
+          'only the creator applied an unrecognized label', () {
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final resolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final video = _createVideo(
+          contentWarningLabels: ['some-unknown-label'],
+        );
+
+        expect(filter(video), isTrue);
+        expect(resolver(video), isEmpty);
+      });
+
+      test('still hides an own video when only a trusted labeler applied an '
+          'unrecognized label', () async {
+        await seedModerationLabels([
+          ['L', 'content-warning'],
+          ['l', 'some-unknown-label', 'content-warning'],
+          ['x', 'trusted-unknown-hash'],
+        ]);
+        final video = _createVideo(sha256: 'trusted-unknown-hash');
+
+        final viewerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+        );
+        final ownerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+
+        expect(
+          viewerFilter(video),
+          isTrue,
+          reason: 'the trusted unknown label must reach the filter at all',
+        );
+        expect(ownerFilter(video), isTrue);
+      });
+
+      test('still hides an own video when the creator and a trusted labeler '
+          'both applied unrecognized labels', () async {
+        await seedModerationLabels([
+          ['L', 'content-warning'],
+          ['l', 'another-unknown-label', 'content-warning'],
+          ['x', 'trusted-unknown-hash'],
+        ]);
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final video = _createVideo(
+          contentWarningLabels: ['some-unknown-label'],
+          sha256: 'trusted-unknown-hash',
+        );
+
+        expect(filter(video), isTrue);
       });
     });
 

@@ -320,6 +320,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalSettingsVideoShapeSquareOnlySubtitle => '让信息流保持经典方形格式';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorName 的 $compactCount 次循环',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '次循环',
+    );
+    return '此视频 $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => '显示总循环次数';
 
   @override
@@ -3440,6 +3464,40 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => '作品库中的片段';
+
+  @override
+  String get dmAttachVideoFromGallery => '相册中的视频';
+
+  @override
+  String get dmClipBadge => '片段';
+
+  @override
+  String get dmClipChecking => '正在确认这个片段是否用 Divine 拍摄…';
+
+  @override
+  String get dmClipNotVerified => '无法确认这是用 Divine 相机拍摄的，所以没有加入你的片段库。';
+
+  @override
+  String get dmClipCheckUnavailable => '现在无法检查这个片段，请稍后再试。';
+
+  @override
+  String get dmClipSendNotVerified => '无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。';
+
+  @override
+  String get dmAttachReuseNotice => '对方可以把你发送的内容加入他们的片段库并发布，同时会注明你。';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '已发送 $sent/$total 个片段。其余的没有发出去。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '保存视频';
 
   @override
@@ -3662,6 +3720,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => '加一些人进来吧';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => '还没有视频';
 
   @override
@@ -3683,9 +3748,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return '加入$name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => '搜索用户';
 
   @override
   String get peopleListsAddPeopleError => '加载用户失败，请重试。';
@@ -4607,15 +4669,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '新人物列表';
-
-  @override
-  String get listCollaboratorsNone => '无';
-
-  @override
-  String get listAddCollaboratorTitle => '添加协作者';
-
-  @override
-  String get listCollaboratorSearchHint => '搜索 Divine...';
 
   @override
   String get listNameLabel => '列表名称';
@@ -5813,6 +5866,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listDeleteAction => '删除列表';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => '删除列表？';
@@ -8169,6 +8225,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectGlow => '辉光';
 
   @override
+  String get videoEditorEffectEcho => '残影';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。';
 
@@ -9486,6 +9545,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => '层级';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => '画笔大小';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel => '关闭帖子详情';
@@ -12261,4 +12323,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '新建视频列表';
+
+  @override
+  String get peopleListsPublicNotice => '此列表是公开的。任何人都可以看到它的名称、描述和其中的用户。';
+
+  @override
+  String get peopleListsPeopleLabel => '用户';
+
+  @override
+  String get peopleListsPeopleNone => '尚未添加用户';
+
+  @override
+  String get peopleListsSessionChanged => '你的账号或列表访问权限已更改。请重新打开此页面以继续。';
+
+  @override
+  String get peopleListsSearchConnectionsHint => '搜索关注者和已关注的用户';
+
+  @override
+  String get listMemberNamesSeparator => '、';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name，私密，$count',
+        'other': '$name，$count',
+      },
+    );
+    return '$_temp0';
+  }
 }

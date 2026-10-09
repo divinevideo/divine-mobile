@@ -58,6 +58,7 @@ import 'package:openvine/widgets/watermark_download_progress_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 part 'share_sheet_header.dart';
 part 'share_sheet_message_input.dart';
@@ -160,6 +161,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   late final ShareSheetBloc _shareSheetBloc;
   OwnerVideoActionsCubit? _ownerVideoActionsCubit;
   VideoCrosspostCubit? _crosspostCubit;
+  bool _crosspostRowExposed = false;
 
   @override
   void initState() {
@@ -172,25 +174,11 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      // The Crosspost row is offered even with nothing connected, so it must
-      // not appear for an identity the crossposter cannot serve at all.
-      if (ref.read(crosspostingAvailabilityProvider) !=
-          CrosspostingAvailability.unavailable) {
-        final crosspostCubit = VideoCrosspostCubit(
-          client: ref.read(crossposterApiClientProvider),
-          eventId: widget.video.id,
-        );
-        _crosspostCubit = crosspostCubit;
-        final connectionsLoad = crosspostCubit.loadConnections();
-        _runShareDetached(
-          connectionsLoad,
-          'load crosspost connections',
-        );
-        _runShareDetached(
-          _logCrosspostCtaExposure(crosspostCubit, connectionsLoad),
-          'log crosspost CTA exposure',
-        );
-      }
+      // Capture this owner's client now, but do not request signing until tap.
+      _crosspostCubit = VideoCrosspostCubit(
+        client: ref.read(crosspostingApiClientProvider),
+        eventId: widget.video.id,
+      );
     }
     _shareSheetBloc =
         ShareSheetBloc(
@@ -211,23 +199,16 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ..add(const ShareSheetBookmarkStatusRequested());
   }
 
-  Future<void> _logCrosspostCtaExposure(
-    VideoCrosspostCubit cubit,
-    Future<void> connectionsLoad,
-  ) async {
-    await connectionsLoad;
-    if (!mounted || cubit.isClosed) return;
-
-    final state = cubit.state;
-    if (state.status != VideoCrosspostStatus.ready ||
-        state.connectedConnections.isNotEmpty) {
-      return;
-    }
-
-    await logCrosspostCtaShown(
-      ref.read(analyticsEventSinkProvider),
-      surface: CrosspostCtaSurface.shareSheet,
-      cta: CrosspostCta.connect,
+  void _logCrosspostRowExposure() {
+    if (!mounted || _crosspostRowExposed) return;
+    _crosspostRowExposed = true;
+    _runShareDetached(
+      logCrosspostCtaShown(
+        ref.read(analyticsEventSinkProvider),
+        surface: CrosspostCtaSurface.shareSheet,
+        cta: CrosspostCta.crosspostRow,
+      ),
+      'log crosspost row exposure',
     );
   }
 
@@ -289,7 +270,13 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       onSaveOriginal: isOwnContent ? _handleSaveOriginal : null,
       onSaveWithWatermark: _handleSaveWithWatermark,
       onAddVideoToClips: canAddVideoToClips ? _handleAddVideoToClips : null,
-      onCrosspost: _crosspostCubit != null ? _handleCrosspost : null,
+      onCrosspost:
+          isOwnContent &&
+              ref.watch(crosspostingAvailabilityProvider) !=
+                  CrosspostingAvailability.unavailable
+          ? _handleCrosspost
+          : null,
+      onCrosspostShown: _logCrosspostRowExposure,
     );
     final ownerAwareSheetView = switch (_ownerVideoActionsCubit) {
       null => sheetView,
@@ -636,6 +623,23 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   Future<void> _handleCrosspost() async {
     final cubit = _crosspostCubit;
     if (cubit == null) return;
+    // A tap proves visibility even before the detector's batched callback.
+    _logCrosspostRowExposure();
+    _runShareDetached(
+      logCrosspostCtaTapped(
+        ref.read(analyticsEventSinkProvider),
+        surface: CrosspostCtaSurface.shareSheet,
+        cta: CrosspostCta.crosspostRow,
+      ),
+      'log crosspost row tap',
+    );
+    // Loading signs a request and may open an external signer. Defer it until
+    // the creator explicitly chooses Crosspost rather than merely opening Share.
+    if (cubit.state.status == VideoCrosspostStatus.initial) {
+      final connectionsLoad = cubit.loadConnections();
+      await connectionsLoad;
+      if (!mounted) return;
+    }
     // The row is offered before connections load; wait for them rather than
     // sending a creator who is already connected to setup.
     final state = cubit.state.status == VideoCrosspostStatus.loadingConnections
@@ -658,17 +662,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       return;
     }
 
-    // A CTA tap only when the CTA was shown: with a connection the row is
-    // ordinary use, and after a failed load nothing was exposed as a CTA.
-    if (state.status == VideoCrosspostStatus.ready) {
-      unawaited(
-        logCrosspostCtaTapped(
-          ref.read(analyticsEventSinkProvider),
-          surface: CrosspostCtaSurface.shareSheet,
-          cta: CrosspostCta.connect,
-        ),
-      );
-    }
     final container = ProviderScope.containerOf(context, listen: false);
     _safePop(context);
     await openCrosspostingSetup(container);
@@ -840,6 +833,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
     required this.onFindPeople,
     required this.onAddToList,
     required this.onSaveWithWatermark,
+    required this.onCrosspostShown,
     this.onAddVideoToClips,
     this.onEditVideo,
     this.onDeleteVideo,
@@ -858,6 +852,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final Future<void> Function() onSaveWithWatermark;
   final VoidCallback? onAddVideoToClips;
   final Future<void> Function()? onCrosspost;
+  final VoidCallback onCrosspostShown;
 
   @override
   Widget build(BuildContext context) {
@@ -868,9 +863,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
           return operation.deleteStatus == OwnerVideoDeleteStatus.deleting ||
               operation.cleanupStatus == OwnerVideoCleanupStatus.inProgress;
         });
-    final textScaler = MediaQuery.textScalerOf(
-      context,
-    ).clamp(maxScaleFactor: 1.5);
+    final textScaler = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.5);
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: textScaler),
       child: Material(
@@ -935,6 +929,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                         isDeletePending: isDeletePending,
                         bookmarkStatus: state.bookmarkStatus,
                         onCrosspost: onCrosspost,
+                        onCrosspostShown: onCrosspostShown,
                         onSave: () => bloc.add(const ShareSheetSaveRequested()),
                         onSaveOriginal: onSaveOriginal,
                         onSaveWithWatermark: onSaveWithWatermark,

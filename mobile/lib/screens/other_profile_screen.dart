@@ -322,7 +322,11 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
             initialCollaborator: profile,
           );
         } else {
-          await showNewPeopleListSheet(context, initialCollaborator: profile);
+          await showNewPeopleListSheet(
+            context,
+            initialCollaborator: profile,
+            initialPubkey: widget.pubkey,
+          );
         }
       case MoreSheetResult.unfollow:
         await _unfollowUser();

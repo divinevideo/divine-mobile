@@ -1,4 +1,4 @@
-// ABOUTME: Tests reactive OAuth wiring and disposal for crossposting providers
+// ABOUTME: Tests signer-capability eligibility and account-bound client wiring
 // ABOUTME: Uses the injectable client factory without generated Riverpod code
 
 import 'dart:async';
@@ -8,56 +8,67 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
 
-final _authSelectorProvider = StateProvider<AuthService>((_) {
-  throw StateError('Must be overridden');
-});
+const _firstPubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _secondPubkey =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+final _ownerSelectorProvider = StateProvider<String?>((_) => _firstPubkey);
 
 void main() {
   group('crosspostingApiClientProvider', () {
-    test('auth changes rebuild and dispose owner-bound API clients', () async {
-      final firstAuth = _MockAuthService();
-      final secondAuth = _MockAuthService();
+    test('an account change rebuilds the client for the new owner and '
+        'closes the old one', () async {
+      final nip98 = _MockNip98AuthService();
       final firstClient = _MockCrosspostingApiClient();
       final secondClient = _MockCrosspostingApiClient();
-      when(firstAuth.getBoundDivineAccessToken)
-          .thenAnswer((_) async => 'first');
-      when(
-        secondAuth.getBoundDivineAccessToken,
-      ).thenAnswer((_) async => 'second');
       when(firstClient.close).thenReturn(null);
       when(secondClient.close).thenReturn(null);
-      final readers = <CrosspostingAccessTokenReader>[];
+      final owners = <String?>[];
+      final signers = <Nip98AuthService>[];
       final container = ProviderContainer(
         overrides: [
-          _authSelectorProvider.overrideWith((_) => firstAuth),
-          authServiceProvider.overrideWith(
-            (ref) => ref.watch(_authSelectorProvider),
+          nip98AuthServiceProvider.overrideWithValue(nip98),
+          crosspostingOwnerPubkeyProvider.overrideWith(
+            (ref) => ref.watch(_ownerSelectorProvider),
           ),
-          crosspostingApiClientFactoryProvider.overrideWithValue((reader) {
-            readers.add(reader);
-            return readers.length == 1 ? firstClient : secondClient;
+          crosspostingApiClientFactoryProvider.overrideWithValue(({
+            required nip98AuthService,
+            required ownerPubkey,
+          }) {
+            owners.add(ownerPubkey);
+            signers.add(nip98AuthService);
+            return owners.length == 1 ? firstClient : secondClient;
           }),
         ],
       );
 
       expect(container.read(crosspostingApiClientProvider), same(firstClient));
-      expect(await readers.single(), 'first');
-      container.read(_authSelectorProvider.notifier).state = secondAuth;
-      await Future<void>.delayed(Duration.zero);
+      final firstRepository = container.read(crosspostingRepositoryProvider);
+
+      container.read(_ownerSelectorProvider.notifier).state = _secondPubkey;
 
       expect(container.read(crosspostingApiClientProvider), same(secondClient));
-      expect(await readers.last(), 'second');
-      expect(readers, hasLength(2));
+      expect(
+        container.read(crosspostingRepositoryProvider),
+        isNot(same(firstRepository)),
+      );
+      expect(owners, equals([_firstPubkey, _secondPubkey]));
+      expect(signers, everyElement(same(nip98)));
       verify(firstClient.close).called(1);
       verifyNever(secondClient.close);
 
@@ -67,13 +78,43 @@ void main() {
     });
   });
 
+  group('crosspostingOwnerPubkeyProvider', () {
+    ProviderContainer buildContainer(AuthState authState) {
+      final auth = _MockAuthService();
+      when(() => auth.currentPublicKeyHex).thenReturn(_firstPubkey);
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(authState),
+          authServiceProvider.overrideWithValue(auth),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('is the active pubkey while authenticated', () {
+      final container = buildContainer(AuthState.authenticated);
+
+      expect(
+        container.read(crosspostingOwnerPubkeyProvider),
+        equals(_firstPubkey),
+      );
+    });
+
+    test('is null while signed out', () {
+      final container = buildContainer(AuthState.unauthenticated);
+
+      expect(container.read(crosspostingOwnerPubkeyProvider), isNull);
+    });
+  });
+
   group('isCrosspostingAccountEligible', () {
-    test('is true for an authenticated, registered account with a key', () {
+    test('is true for an authenticated, signer-capable account with a key', () {
       expect(
         isCrosspostingAccountEligible(
           authState: AuthState.authenticated,
           publicKeyHex: 'a' * 64,
-          isRegistered: true,
+          canSign: true,
         ),
         isTrue,
       );
@@ -84,7 +125,7 @@ void main() {
         isCrosspostingAccountEligible(
           authState: AuthState.unauthenticated,
           publicKeyHex: 'a' * 64,
-          isRegistered: true,
+          canSign: true,
         ),
         isFalse,
       );
@@ -95,18 +136,18 @@ void main() {
         isCrosspostingAccountEligible(
           authState: AuthState.authenticated,
           publicKeyHex: null,
-          isRegistered: true,
+          canSign: true,
         ),
         isFalse,
       );
     });
 
-    test('is false when the account is not registered', () {
+    test('is false when the account cannot sign', () {
       expect(
         isCrosspostingAccountEligible(
           authState: AuthState.authenticated,
           publicKeyHex: 'a' * 64,
-          isRegistered: false,
+          canSign: false,
         ),
         isFalse,
       );
@@ -119,6 +160,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: true,
           oauthSupported: true,
+          webAccountEligible: false,
         ),
         CrosspostingAvailability.native,
       );
@@ -129,6 +171,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: true,
           oauthSupported: false,
+          webAccountEligible: true,
         ),
         CrosspostingAvailability.webOnly,
       );
@@ -139,6 +182,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: false,
           oauthSupported: true,
+          webAccountEligible: false,
         ),
         CrosspostingAvailability.unavailable,
       );
@@ -150,11 +194,19 @@ void main() {
       bool oauthSupported = true,
       bool resolveSupport = true,
       bool authenticated = true,
-      bool registered = true,
+      bool canSign = true,
+      bool registered = false,
+      bool anonymous = false,
     }) {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
       when(() => auth.isRegistered).thenReturn(registered);
+      when(() => auth.isAnonymous).thenReturn(anonymous);
+      when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
+      when(() => auth.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => auth.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream.empty());
       return ProviderContainer(
         overrides: [
           currentAuthStateProvider.overrideWithValue(
@@ -180,8 +232,86 @@ void main() {
       );
     });
 
+    test(
+      'a signer-ready local-key account needs no Divine registration',
+      () async {
+        final container = buildContainer();
+        addTearDown(container.dispose);
+        await container.read(appOAuthSupportProvider.future);
+
+        expect(
+          container.read(crosspostingAvailabilityProvider),
+          CrosspostingAvailability.native,
+        );
+      },
+    );
+
+    test('anonymous local-key accounts can use native crossposting', () async {
+      final container = buildContainer(anonymous: true);
+      addTearDown(container.dispose);
+      await container.read(appOAuthSupportProvider.future);
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.native,
+      );
+    });
+
+    test('becomes available when a remote signer becomes ready', () async {
+      final auth = _MockAuthService();
+      final capability = StreamController<AuthRpcCapability>.broadcast();
+      addTearDown(capability.close);
+      var canSign = false;
+      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.isRegistered).thenReturn(false);
+      when(() => auth.canPublishNostrWritesNow).thenAnswer((_) => canSign);
+      when(
+        () => auth.authRpcCapability,
+      ).thenReturn(AuthRpcCapability.unavailable);
+      when(
+        () => auth.authRpcCapabilityStream,
+      ).thenAnswer((_) => capability.stream);
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          authServiceProvider.overrideWithValue(auth),
+          appOAuthSupportProvider.overrideWith((ref) async => true),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(appOAuthSupportProvider.future);
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.unavailable,
+      );
+
+      canSign = true;
+      capability.add(AuthRpcCapability.rpcReady);
+      await pumpEventQueue();
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.native,
+      );
+    });
+
+    test(
+      'local-key accounts cannot use the Divine-only web fallback',
+      () async {
+        final container = buildContainer(oauthSupported: false);
+        addTearDown(container.dispose);
+        await container.read(appOAuthSupportProvider.future);
+        expect(
+          container.read(crosspostingAvailabilityProvider),
+          CrosspostingAvailability.unavailable,
+        );
+        expect(
+          await resolveCrosspostingAvailability(container),
+          CrosspostingAvailability.unavailable,
+        );
+      },
+    );
+
     test('is webOnly when OAuth is unsupported', () async {
-      final container = buildContainer(oauthSupported: false);
+      final container = buildContainer(oauthSupported: false, registered: true);
       addTearDown(container.dispose);
       await container.read(appOAuthSupportProvider.future);
 
@@ -192,7 +322,7 @@ void main() {
     });
 
     test('is webOnly while the support lookup is unresolved', () async {
-      final container = buildContainer(resolveSupport: false);
+      final container = buildContainer(resolveSupport: false, registered: true);
       addTearDown(container.dispose);
 
       expect(
@@ -211,8 +341,8 @@ void main() {
       );
     });
 
-    test('is unavailable when the account is not registered', () async {
-      final container = buildContainer(registered: false);
+    test('is unavailable when the account cannot sign', () async {
+      final container = buildContainer(canSign: false);
       addTearDown(container.dispose);
 
       expect(
@@ -226,11 +356,17 @@ void main() {
     ProviderContainer buildContainer({
       Future<bool>? support,
       bool authenticated = true,
-      bool registered = true,
+      bool canSign = true,
+      bool registered = false,
     }) {
       final auth = _MockAuthService();
-      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
       when(() => auth.isRegistered).thenReturn(registered);
+      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
+      when(() => auth.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => auth.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream.empty());
       return ProviderContainer(
         overrides: [
           currentAuthStateProvider.overrideWithValue(
@@ -268,8 +404,8 @@ void main() {
       );
     });
 
-    test('is unavailable when the account is not registered', () async {
-      final container = buildContainer(registered: false);
+    test('is unavailable when the account cannot sign', () async {
+      final container = buildContainer(canSign: false);
       addTearDown(container.dispose);
 
       expect(
@@ -290,7 +426,10 @@ void main() {
     });
 
     test('is webOnly when support resolves false', () async {
-      final container = buildContainer(support: Future.value(false));
+      final container = buildContainer(
+        support: Future.value(false),
+        registered: true,
+      );
       addTearDown(container.dispose);
 
       expect(

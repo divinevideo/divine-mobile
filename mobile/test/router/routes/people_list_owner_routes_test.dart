@@ -17,6 +17,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
+import 'package:openvine/features/people_lists/view/edit_people_list_page.dart';
 import 'package:openvine/features/people_lists/view/people_list_members_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -142,15 +143,18 @@ void main() {
       bool render = false,
       String listId = 'crew',
       bool enabled = true,
+      PeopleListsState? initialState,
     }) async {
       whenListen(
         bloc,
         const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: _owner,
-          lists: [_list(listId)],
-        ),
+        initialState:
+            initialState ??
+            PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: _owner,
+              lists: [_list(listId)],
+            ),
       );
       final auth = createMockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
@@ -180,7 +184,61 @@ void main() {
       expect(tester.takeException(), isNull);
     }
 
-    for (final suffix in ['', '/members', '/add-people']) {
+    testWidgets('opens the owned list editor with its current name', (
+      tester,
+    ) async {
+      await pumpRoute(tester, '/people-lists/crew/edit', render: true);
+      expect(find.text(strings.listEditTitle), findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Own cached list'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('editor reports missing list only after owner read settles', (
+      tester,
+    ) async {
+      await pumpRoute(
+        tester,
+        '/people-lists/crew/edit',
+        render: true,
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _owner,
+        ),
+      );
+      expect(find.text(strings.peopleListsListNotFoundTitle), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+    });
+
+    testWidgets('editor exposes retry after failed owner read', (tester) async {
+      await pumpRoute(
+        tester,
+        '/people-lists/crew/edit',
+        render: true,
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _owner,
+          ownerReadStatus: PeopleListsOwnerReadStatus.failed,
+        ),
+      );
+      expect(find.text(strings.peopleListsLoadFailed), findsOneWidget);
+      expect(find.text(strings.peopleListsListNotFoundTitle), findsNothing);
+      await tester.tap(find.text(strings.peopleListsAddPeopleRetry));
+      verify(() => bloc.add(const PeopleListsOwnerSyncRequested())).called(1);
+    });
+
+    testWidgets('rejects editing another owner list', (tester) async {
+      await pumpRoute(
+        tester,
+        '/people-lists/crew/edit?owner=$_foreignOwner',
+        render: true,
+      );
+      expect(find.byType(RouteErrorScreen), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+    });
+
+    for (final suffix in ['', '/members', '/add-people', '/edit']) {
       for (final query in [
         'owner',
         'owner=',
@@ -220,7 +278,7 @@ void main() {
       }
     }
 
-    for (final suffix in ['', '/members', '/add-people']) {
+    for (final suffix in ['', '/members', '/add-people', '/edit']) {
       testWidgets(
         'crew$suffix with an nprofile whose relay hint is not UTF-8 is rejected',
         (tester) async {
@@ -444,7 +502,7 @@ void main() {
       expect(find.byType(CreatePeopleListPage), findsNothing);
     });
 
-    for (final id in ['members', 'add-people', 'a b/c%d?雪', '%2F']) {
+    for (final id in ['members', 'add-people', 'edit', 'a b/c%d?雪', '%2F']) {
       testWidgets(
         'list d-tag $id roundtrips without route collision or double decoding',
         (
@@ -467,6 +525,21 @@ void main() {
           );
           expect(_selected, isA<AddPeopleToListScreen>());
           expect((_selected! as AddPeopleToListScreen).listId, id);
+          await pumpRoute(
+            tester,
+            RoutePaths.peopleListEditForId(id),
+            listId: id,
+          );
+          expect(_selected, isA<EditPeopleListPage>());
+          expect((_selected! as EditPeopleListPage).listId, id);
+          expect(parseRoute(RoutePaths.peopleListEditForId(id)).listId, id);
+          expect(
+            buildRoute(
+              RouteContext(type: RouteType.peopleListEdit, listId: id),
+            ),
+            RoutePaths.peopleListEditForId(id),
+          );
+
           expect(
             parseRoute(RoutePaths.peopleListAddPeopleForId(id)).listId,
             id,

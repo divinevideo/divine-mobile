@@ -138,6 +138,8 @@
   "appearanceSettingsSystem": "Theo hệ thống",
   "appearanceSettingsLight": "Sáng",
   "appearanceSettingsDark": "Tối",
+  "videoOverlayTotalLoops": "{count, plural, other{{compactCount} lượt lặp của {authorName}}}",
+  "videoOverlayVideoLoops": "video này lặp {compactCount} {count, plural, other{lượt}}",
   "generalSettingsClosedCaptions": "Phụ đề",
   "generalSettingsClosedCaptionsSubtitle": "Hiện phụ đề khi video có sẵn",
   "generalSettingsVideoShapeSquareOnly": "Chỉ video vuông",
@@ -1827,6 +1829,15 @@
   "dmVideoSent": "Đã gửi video",
   "dmVideoSendFailed": "Không gửi được video",
   "dmVideoTooLarge": "Video này quá lớn để gửi. Hãy chọn video dưới {maxMegabytes} MB",
+  "dmAttachClipFromLibrary": "Clip từ thư viện của bạn",
+  "dmAttachVideoFromGallery": "Video từ thư viện ảnh của bạn",
+  "dmClipBadge": "Clip",
+  "dmClipChecking": "Đang kiểm tra clip này có được quay bằng Divine không…",
+  "dmClipNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.",
+  "dmClipCheckUnavailable": "Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.",
+  "dmClipSendNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.",
+  "dmAttachReuseNotice": "Người nhận có thể thêm nội dung bạn gửi vào clip của họ và đăng lên, kèm ghi công cho bạn.",
+  "dmClipsPartlySent": "{total, plural, other{Đã gửi {sent}/{total} clip. Phần còn lại chưa gửi được.}}",
   "shareSheetSaveVideo": "Lưu video",
   "shareSheetAddToClips": "Thêm vào clip",
   "@shareSheetAddToClips": {
@@ -1959,7 +1970,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Tìm người",
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
   "peopleListsAddButton": "Thêm",
@@ -2437,9 +2447,6 @@
   },
   "listCreateNewList": "Tạo danh sách mới",
   "listNewPeopleList": "Danh sách người mới",
-  "listCollaboratorsNone": "Không có",
-  "listAddCollaboratorTitle": "Thêm cộng tác viên",
-  "listCollaboratorSearchHint": "Tìm trên Divine...",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
   "listPublicList": "Danh sách công khai",
@@ -4592,6 +4599,7 @@
   "videoEditorEffectSplitScreen": "Chia màn hình",
   "videoEditorEffectWave": "Sóng",
   "videoEditorEffectGlow": "Phát sáng",
+  "videoEditorEffectEcho": "Tiếng vọng",
   "videoEditorEffectsFlashingReplaced": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.",
   "videoEditorEffectsFlashingNotDuplicated": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.",
   "videoEditorEffectsOnBeat": "Theo nhịp",
@@ -5373,6 +5381,7 @@
   "videoEditorAddElementSemanticLabel": "Thêm phần tử",
   "videoEditorDoneSemanticLabel": "Xong",
   "videoEditorLevelSemanticLabel": "Mức",
+  "videoEditorBrushSizeSemanticLabel": "Kích thước cọ",
   "videoMetadataClosePostDetailsSemanticLabel": "Đóng chi tiết bài đăng",
   "videoMetadataDismissHelpDialogSemanticLabel": "Đóng hộp thoại trợ giúp",
   "videoMetadataGotItButton": "Đã hiểu!",
@@ -6705,5 +6714,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Danh sách video mới",
+  "peopleListsPublicNotice": "Danh sách này là công khai. Ai cũng có thể xem tên, mô tả và những người trong danh sách.",
+  "peopleListsPeopleLabel": "Mọi người",
+  "peopleListsPeopleNone": "Chưa thêm ai",
+  "peopleListsSessionChanged": "Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.",
+  "peopleListsSearchConnectionsHint": "Tìm người theo dõi và người bạn đang theo dõi",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Riêng tư, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
@@ -6,10 +7,15 @@ import 'package:cache_sync/cache_sync.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -22,6 +28,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/profile/profile_grid.dart';
 import 'package:openvine/widgets/profile/profile_saved_grid.dart';
@@ -98,14 +105,29 @@ class _MockCuratedListService extends Mock implements CuratedListService {}
 class _FakeCuratedListsState extends CuratedListsState {
   _FakeCuratedListsState(this._service);
 
-  final CuratedListService _service;
+  CuratedListService _service;
 
   @override
   CuratedListService? get service => _service;
 
   @override
   Future<List<CuratedList>> build() async => _service.lists;
+
+  void replace(CuratedListService service) {
+    _service = service;
+    state = AsyncData(service.lists);
+  }
 }
+
+/// Keeps hydration mounted while tests exercise stale refresh completions.
+CuratedList _ownedRefreshList(String ownerPubkey) => CuratedList(
+  id: 'refresh-safety-list',
+  pubkey: ownerPubkey,
+  name: 'Refresh safety list',
+  videoEventIds: const [],
+  createdAt: DateTime.utc(2026),
+  updatedAt: DateTime.utc(2026),
+);
 
 VideoEvent _fallbackVideoEvent() {
   final now = DateTime(2024);
@@ -220,6 +242,7 @@ void main() {
       CuratedListService? curatedListService,
       BookmarksRepository? bookmarksRepository,
       Locale? locale,
+      List<Override> additionalOverrides = const [],
     }) {
       final grid = MultiBlocProvider(
         providers: [
@@ -272,6 +295,7 @@ void main() {
             ),
           if (bookmarksRepository != null)
             bookmarksRepositoryProvider.overrideWithValue(bookmarksRepository),
+          ...additionalOverrides,
         ],
       );
     }
@@ -629,6 +653,322 @@ void main() {
         () => curatedListService.fetchUserListsFromRelays(force: true),
       ).called(1);
     });
+
+    for (final initiallyFound in [true, false]) {
+      testWidgets(
+        'lists refresh retries ${initiallyFound ? 'changed thumbnail metadata' : 'missing thumbnails'}',
+        (tester) async {
+          const eventId =
+              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+          final list = CuratedList(
+            id: 'refresh-list',
+            pubkey: userIdHex,
+            name: 'Refresh list',
+            videoEventIds: const [eventId],
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          );
+          final service = _MockCuratedListService();
+          when(() => service.lists).thenReturn([list]);
+          when(() => service.myLists).thenReturn([list]);
+          when(
+            () => service.fetchUserListsFromRelays(
+              force: any(named: 'force'),
+            ),
+          ).thenAnswer((_) async {});
+          var requests = 0;
+          var found = initiallyFound;
+          var thumbnail = 'https://example.com/first.jpg';
+          final client = MockClient((_) async {
+            requests++;
+            return found
+                ? http.Response(
+                    jsonEncode({
+                      'id': eventId,
+                      'pubkey': userIdHex,
+                      'kind': 34236,
+                      'thumbnail': thumbnail,
+                    }),
+                    200,
+                  )
+                : http.Response('', 404);
+          });
+          final repository = CuratedListRepository(
+            nostrClient: nostrClient,
+            funnelcakeApiClient: FunnelcakeApiClient(
+              baseUrl: 'https://example.com',
+              httpClient: client,
+            ),
+          );
+          addTearDown(() async {
+            await repository.dispose();
+            client.close();
+          });
+          await tester.pumpWidget(
+            buildSubject(
+              isOwnProfile: true,
+              curatedListService: service,
+              additionalOverrides: [
+                curatedListRepositoryProvider.overrideWithValue(repository),
+              ],
+            ),
+          );
+          await tester.tap(
+            find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+          );
+          await tester.pumpAndSettle();
+          expect(requests, 1);
+          found = true;
+          thumbnail = 'https://example.com/refreshed.jpg';
+          await tester
+              .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+              .onRefresh();
+          await tester.pumpAndSettle();
+          expect(requests, 2);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(ProfileGridView)),
+          );
+          expect(
+            container
+                .read(myListsWithThumbnailsProvider)
+                .value
+                ?.single
+                .thumbnailUrls,
+            [thumbnail],
+          );
+        },
+      );
+    }
+
+    testWidgets('old lists refresh does not invalidate a replacement service', (
+      tester,
+    ) async {
+      final original = _MockCuratedListService();
+      final replacement = _MockCuratedListService();
+      for (final service in [original, replacement]) {
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
+      }
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      when(
+        () => original.fetchUserListsFromRelays(
+          force: any(named: 'force'),
+        ),
+      ).thenAnswer((_) => release.future);
+      late _FakeCuratedListsState notifier;
+      var thumbnailPasses = 0;
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: true,
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(
+              () => notifier = _FakeCuratedListsState(original),
+            ),
+            myListsWithThumbnailsProvider.overrideWith((_) async {
+              thumbnailPasses++;
+              return const [];
+            }),
+          ],
+        ),
+      );
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+      );
+      await tester.pumpAndSettle();
+      final refresh = tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      notifier.replace(replacement);
+      await tester.pump();
+      final passesBeforeCompletion = thumbnailPasses;
+      expect(passesBeforeCompletion, 2);
+      release.complete();
+      await refresh;
+      await tester.pumpAndSettle();
+      expect(thumbnailPasses, passesBeforeCompletion);
+    });
+
+    testWidgets(
+      'unmounted lists refresh completes without restarting hydration',
+      (
+        tester,
+      ) async {
+        final service = _MockCuratedListService();
+        when(() => service.lists).thenReturn(const []);
+        when(() => service.myLists).thenReturn(const []);
+        final release = Completer<void>();
+        addTearDown(() {
+          if (!release.isCompleted) release.complete();
+        });
+        when(
+          () => service.fetchUserListsFromRelays(force: any(named: 'force')),
+        ).thenAnswer((_) => release.future);
+        await tester.pumpWidget(
+          buildSubject(isOwnProfile: true, curatedListService: service),
+        );
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+        );
+        await tester.pumpAndSettle();
+        final refresh = tester
+            .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+            .onRefresh();
+        await tester.pumpWidget(const SizedBox());
+        release.complete();
+        await refresh;
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'old refresh does not restart hydration after client replacement',
+      (
+        tester,
+      ) async {
+        final service = _MockCuratedListService();
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
+        final release = Completer<void>();
+        addTearDown(() {
+          if (!release.isCompleted) release.complete();
+        });
+        when(
+          () => service.fetchUserListsFromRelays(force: any(named: 'force')),
+        ).thenAnswer((_) => release.future);
+        var thumbnailPasses = 0;
+        final overrides = [
+          myListsWithThumbnailsProvider.overrideWith((_) async {
+            thumbnailPasses++;
+            return const [];
+          }),
+        ];
+        await tester.pumpWidget(
+          buildSubject(
+            isOwnProfile: true,
+            curatedListService: service,
+            additionalOverrides: overrides,
+          ),
+        );
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+        );
+        await tester.pumpAndSettle();
+        final refresh = tester
+            .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+            .onRefresh();
+        nostrClient = createMockNostrService();
+        when(() => nostrClient.publicKey).thenReturn('b' * 64);
+        await tester.pumpWidget(
+          buildSubject(
+            isOwnProfile: true,
+            curatedListService: service,
+            additionalOverrides: overrides,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final passesBeforeCompletion = thumbnailPasses;
+        expect(passesBeforeCompletion, 2);
+        release.complete();
+        await refresh;
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, passesBeforeCompletion);
+      },
+    );
+
+    testWidgets(
+      'failed lists sync retries thumbnails and preserves its error',
+      (
+        tester,
+      ) async {
+        final service = _MockCuratedListService();
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(
+          () => service.fetchUserListsFromRelays(force: any(named: 'force')),
+        ).thenAnswer((_) async => throw StateError('sync failed'));
+        var thumbnailPasses = 0;
+        await tester.pumpWidget(
+          buildSubject(
+            isOwnProfile: true,
+            curatedListService: service,
+            additionalOverrides: [
+              myListsWithThumbnailsProvider.overrideWith((_) async {
+                thumbnailPasses++;
+                return const [];
+              }),
+            ],
+          ),
+        );
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+        );
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, 1);
+        await expectLater(
+          tester
+              .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+              .onRefresh(),
+          throwsStateError,
+        );
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, 2);
+      },
+    );
+
+    testWidgets(
+      'old refresh cannot revive after A to B to A reuses its objects',
+      (
+        tester,
+      ) async {
+        final service = _MockCuratedListService();
+        when(() => service.lists).thenReturn([_ownedRefreshList(userIdHex)]);
+        when(() => service.myLists).thenReturn([_ownedRefreshList(userIdHex)]);
+        final release = Completer<void>();
+        addTearDown(() {
+          if (!release.isCompleted) release.complete();
+        });
+        when(
+          () => service.fetchUserListsFromRelays(force: any(named: 'force')),
+        ).thenAnswer((_) => release.future);
+        var thumbnailPasses = 0;
+        final overrides = [
+          myListsWithThumbnailsProvider.overrideWith((_) async {
+            thumbnailPasses++;
+            return const [];
+          }),
+        ];
+        Widget subject() => buildSubject(
+          isOwnProfile: true,
+          curatedListService: service,
+          additionalOverrides: overrides,
+        );
+        await tester.pumpWidget(subject());
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.profileListsTab),
+        );
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, 1);
+        final refresh = tester
+            .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+            .onRefresh();
+        await tester.pump();
+        expect(thumbnailPasses, 2);
+        when(() => nostrClient.publicKey).thenReturn('b' * 64);
+        await tester.pumpWidget(subject());
+        await tester.pumpAndSettle();
+        when(() => nostrClient.publicKey).thenReturn(userIdHex);
+        await tester.pumpWidget(subject());
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, 2);
+        release.complete();
+        await refresh;
+        await tester.pumpAndSettle();
+        expect(thumbnailPasses, 2);
+      },
+    );
 
     testWidgets('pull gesture triggers profile metadata and feed refresh', (
       tester,

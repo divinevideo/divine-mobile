@@ -648,6 +648,28 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return result != null;
   }
 
+  /// Ids of every message, deleted ones included, that
+  /// [deleteConversationMessages] would remove from [conversationIds] for
+  /// [ownerPubkey].
+  ///
+  /// Shares the delete's owner predicate, so an id captured here is exactly an
+  /// id that removal then deletes.
+  Future<List<String>> messageIdsForConversations(
+    Iterable<String> conversationIds, {
+    required String ownerPubkey,
+  }) async {
+    final ids = conversationIds.toList(growable: false);
+    if (ids.isEmpty) return const [];
+    final query = selectOnly(directMessages)
+      ..addColumns([directMessages.id])
+      ..where(
+        directMessages.conversationId.isIn(ids) &
+            _visibleToOwner(directMessages, ownerPubkey),
+      );
+    final rows = await query.get();
+    return [for (final row in rows) row.read(directMessages.id)!];
+  }
+
   /// Delete all messages in a conversation.
   ///
   /// Returns the number of deleted rows.

@@ -16,6 +16,7 @@ import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -23,11 +24,12 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { delete }
+enum _PeopleListAction { edit, delete, report }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -60,39 +62,48 @@ class UserListPeopleScreen extends StatefulWidget {
 }
 
 class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
-  /// The delete this screen is waiting on, with the owner it was issued for.
+  bool _deleting = false;
+
+  /// Deletes the list and reports only what its own operation settled to.
   ///
-  /// The owner is part of the record because the bloc clears its pending
-  /// mutations wholesale whenever it tears its state down. On the mutation map
-  /// alone, an account switch or a `FeatureFlag.curatedLists` flag-off is
-  /// indistinguishable from the delete settling (#6504).
-  ///
-  /// Only [_pendingDeleteResolved] and the listener read this — [build] does
-  /// not — so it is assigned without `setState`.
-  ({String listId, String? ownerPubkey})? _pendingDelete;
-
-  void _deleteList(String listId) {
-    final bloc = context.read<PeopleListsBloc>();
-    _pendingDelete = (listId: listId, ownerPubkey: bloc.state.ownerPubkey);
-    bloc.add(PeopleListsDeleteRequested(listId: listId));
-  }
-
-  bool _pendingDeleteResolved(
-    PeopleListsState previous,
-    PeopleListsState current,
-  ) {
-    final pending = _pendingDelete;
-    if (pending == null) return false;
-    return _hasPendingDelete(previous, pending.listId) &&
-        !_hasPendingDelete(current, pending.listId);
-  }
-
-  static bool _hasPendingDelete(PeopleListsState state, String listId) {
-    return state.pendingMutations.values.any(
-      (mutation) =>
-          mutation.kind == PeopleListsMutationKind.deleteList &&
-          mutation.listId == listId,
+  /// The bloc resolves the operation as `cancelled` when it tears the request
+  /// down — an account switch, a `FeatureFlag.curatedLists` flag-off or a
+  /// repository swap — so nothing is announced and the route stays put. A
+  /// teardown also clears the pending mutations, which is indistinguishable
+  /// from the delete settling if read from state alone (#6504).
+  Future<void> _deleteList(String listId) async {
+    if (_deleting) return;
+    setState(() => _deleting = true);
+    final result = await context.read<PeopleListsBloc>().submit(
+      PeopleListsDeleteRequested(listId: listId),
     );
+    if (!mounted) return;
+    setState(() => _deleting = false);
+    switch (result) {
+      case PeopleListsOperationResult.cancelled:
+        return;
+      case PeopleListsOperationResult.failed:
+        final message = context.l10n.peopleListsDeleteFailed;
+        announceDetached(
+          context,
+          message,
+          description: 'announce people list deletion failure',
+          logName: 'UserListPeopleScreen',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+        );
+      case PeopleListsOperationResult.succeeded:
+        announceDetached(
+          context,
+          context.l10n.curatedListDeletedSnack,
+          description: 'announce people list deletion',
+          logName: 'UserListPeopleScreen',
+        );
+        if (context.canPop()) {
+          context.pop();
+        }
+    }
   }
 
   @override
@@ -107,78 +118,42 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
       );
     }
 
-    return BlocListener<PeopleListsBloc, PeopleListsState>(
-      listenWhen: _pendingDeleteResolved,
-      listener: (context, state) {
-        final pending = _pendingDelete;
-        final failed = state.status == PeopleListsStatus.failure;
-        _pendingDelete = null;
-        // The bloc dropped the mutation rather than resolving it: the feature
-        // was turned off, or another account took over. Nothing settled, so
-        // announce nothing and stay on the route.
-        if (pending == null ||
-            !state.enabled ||
-            state.ownerPubkey != pending.ownerPubkey) {
-          return;
-        }
-        if (failed) {
-          final message = context.l10n.peopleListsDeleteFailed;
-          announceDetached(
-            context,
-            message,
-            description: 'announce people list deletion failure',
-            logName: 'UserListPeopleScreen',
+    return BlocSelector<
+      PeopleListsBloc,
+      PeopleListsState,
+      ({bool listsKnown, bool readFailed, UserList? list})
+    >(
+      selector: (state) => (
+        listsKnown: state.listsKnown,
+        readFailed:
+            state.activeOwnerPubkey != null &&
+            state.ownerReadStatus == PeopleListsOwnerReadStatus.failed,
+        list: _ownListById(state, widget.listId),
+      ),
+      builder: (context, selected) {
+        final userList = selected.list;
+        if (userList != null) {
+          return _UserListPeopleView(
+            userList: userList,
+            onDeleteConfirmed: _deleteList,
           );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message), backgroundColor: VineTheme.error),
-          );
-          return;
         }
-        announceDetached(
-          context,
-          context.l10n.curatedListDeletedSnack,
-          description: 'announce people list deletion',
-          logName: 'UserListPeopleScreen',
-        );
-        if (context.canPop()) {
-          context.pop();
-        }
-      },
-      child:
-          BlocSelector<
-            PeopleListsBloc,
-            PeopleListsState,
-            ({bool listsKnown, bool readFailed, UserList? list})
-          >(
-            selector: (state) => (
-              listsKnown: state.listsKnown,
-              readFailed:
-                  state.activeOwnerPubkey != null &&
-                  state.ownerReadStatus == PeopleListsOwnerReadStatus.failed,
-              list: _ownListById(state, widget.listId),
+        // The bloc removes optimistically before the relay acknowledges.
+        // Until this operation settles, absence is not a missing-list result.
+        if (_deleting) return const _ListLoadingView();
+        // Absence is known only after both the cached snapshot and the owner
+        // relay read settle. Existing cached lists render above while the read
+        // is pending or failed.
+        if (selected.readFailed) {
+          return _ListLoadFailedView(
+            onRetry: () => context.read<PeopleListsBloc>().add(
+              const PeopleListsOwnerSyncRequested(),
             ),
-            builder: (context, selected) {
-              final userList = selected.list;
-              if (userList != null) {
-                return _UserListPeopleView(
-                  userList: userList,
-                  onDeleteConfirmed: _deleteList,
-                );
-              }
-              // Absence is known only after both the cached snapshot and the
-              // owner relay read settle. Existing cached lists render above
-              // while the read is pending or failed.
-              if (selected.readFailed) {
-                return _ListLoadFailedView(
-                  onRetry: () => context.read<PeopleListsBloc>().add(
-                    const PeopleListsOwnerSyncRequested(),
-                  ),
-                );
-              }
-              if (!selected.listsKnown) return const _ListLoadingView();
-              return const _ListNotFoundView();
-            },
-          ),
+          );
+        }
+        if (!selected.listsKnown) return const _ListLoadingView();
+        return const _ListNotFoundView();
+      },
     );
   }
 }
@@ -426,17 +401,17 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: context.vineColors.surfaceContainer,
+        backgroundColor: dialogContext.vineColors.surfaceContainer,
         title: Text(
           l10n.peopleListsDeleteConfirmTitle,
           style: VineTheme.titleMediumFont(
-            color: context.vineColors.primaryText,
+            color: dialogContext.vineColors.primaryText,
           ),
         ),
         content: Text(
           l10n.peopleListsDeleteConfirmBody,
           style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
+            color: dialogContext.vineColors.secondaryText,
           ),
         ),
         actions: [
@@ -445,7 +420,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
             child: Text(
               l10n.commonCancel,
               style: VineTheme.labelMediumFont(
-                color: context.vineColors.secondaryText,
+                color: dialogContext.vineColors.secondaryText,
               ),
             ),
           ),
@@ -465,10 +440,22 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     widget.onDeleteConfirmed(userList.id);
   }
 
+  /// What a report on this list names, or null when the list cannot be
+  /// reported: the viewer's own list, a built-in list with no owner, or one
+  /// with no event to point at. Reporting your own list stays disabled, as
+  /// it is for videos.
+  ({String eventId, String owner})? _reportTarget(UserList userList) {
+    final owner = widget.ownerPubkey;
+    final eventId = userList.nostrEventId;
+    if (userList.isEditable || owner == null || eventId == null) return null;
+    return (eventId: eventId, owner: owner);
+  }
+
   @override
   Widget build(BuildContext context) {
     final userList = widget.userList;
     final profileRepository = ref.watch(profileRepositoryProvider);
+    final blocklist = ref.watch(contentBlocklistRepositoryProvider);
     // Fullscreen playback draws its own chrome over the whole screen.
     final PreferredSizeWidget? appBar;
     final Widget body;
@@ -490,14 +477,42 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
             ),
         ],
         customActions: [
-          if (userList.isEditable)
+          if (userList.isEditable || _reportTarget(userList) != null)
             _PeopleListActionsMenu(
+              actions: userList.isEditable
+                  ? const [_PeopleListAction.edit, _PeopleListAction.delete]
+                  : const [_PeopleListAction.report],
               onSelected: (action) {
                 switch (action) {
+                  case _PeopleListAction.edit:
+                    runDetached(
+                      context.push<void>(
+                        RoutePaths.peopleListEditForId(userList.id),
+                      ),
+                      'edit people list',
+                      logName: 'UserListPeopleScreen',
+                      category: LogCategory.ui,
+                    );
                   case _PeopleListAction.delete:
                     runDetached(
                       _confirmDeleteList(userList),
                       'confirm people list deletion',
+                      logName: 'UserListPeopleScreen',
+                      category: LogCategory.ui,
+                    );
+                  case _PeopleListAction.report:
+                    final target = _reportTarget(userList);
+                    if (target == null) return;
+                    runDetached(
+                      ReportContentDialog.showForList(
+                        context,
+                        kind: ReportedListKind.people,
+                        eventId: target.eventId,
+                        authorPubkey: target.owner,
+                        dTag: userList.id,
+                        title: userList.name,
+                      ),
+                      'report people list',
                       logName: 'UserListPeopleScreen',
                       category: LogCategory.ui,
                     );
@@ -520,10 +535,15 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       );
     }
     return BlocProvider<PeopleListMembersCubit>(
-      key: ValueKey((profileRepository, Object.hashAll(userList.pubkeys))),
+      key: ValueKey((
+        profileRepository,
+        blocklist,
+        Object.hashAll(userList.pubkeys),
+      )),
       create: (_) {
         final cubit = PeopleListMembersCubit(
           profileRepository: profileRepository,
+          contentBlocklistRepository: blocklist,
           pubkeys: userList.pubkeys,
         );
         unawaited(cubit.load());
@@ -767,8 +787,12 @@ class _NoPeopleView extends StatelessWidget {
 }
 
 class _PeopleListActionsMenu extends StatelessWidget {
-  const _PeopleListActionsMenu({required this.onSelected});
+  const _PeopleListActionsMenu({
+    required this.actions,
+    required this.onSelected,
+  });
 
+  final List<_PeopleListAction> actions;
   final ValueChanged<_PeopleListAction> onSelected;
 
   @override
@@ -782,13 +806,18 @@ class _PeopleListActionsMenu extends StatelessWidget {
       ),
       onSelected: onSelected,
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _PeopleListAction.delete,
-          child: Text(
-            context.l10n.listDeleteAction,
-            style: TextStyle(color: context.vineColors.primaryText),
+        for (final action in actions)
+          PopupMenuItem(
+            value: action,
+            child: switch (action) {
+              _PeopleListAction.edit => Text(context.l10n.listEditInfoAction),
+              _PeopleListAction.delete => Text(
+                context.l10n.listDeleteAction,
+                style: TextStyle(color: context.vineColors.primaryText),
+              ),
+              _PeopleListAction.report => Text(context.l10n.listReportAction),
+            },
           ),
-        ),
       ],
     );
   }

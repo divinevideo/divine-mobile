@@ -261,6 +261,12 @@ CuratedListRepository curatedListRepository(Ref ref) {
     nostrClient: ref.watch(nostrServiceProvider),
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     blockFilter: createBlockedAuthorFilter(ref),
+    // Policy changes must not retire the subscribed-list stream held by Home.
+    // Each resolver check reads the current policy, including its final check
+    // after asynchronous REST/relay work. Real client replacements still
+    // dispose this repository and deny late previews through the mounted gate.
+    videoFilter: (video) =>
+        !ref.mounted || ref.read(curatedListThumbnailFilterProvider)(video),
   );
 
   // Bridge: push curated list updates from legacy service into repository
@@ -272,13 +278,79 @@ CuratedListRepository curatedListRepository(Ref ref) {
           service == null ? const [] : subscribedListsForHomeBridge(service),
         )
         ..setOwnLists(
-          service == null ? const [] : ownListsForSearchBridge(service),
+          service == null
+              ? const []
+              : ownListsForSearchBridge(
+                  service,
+                  viewerPubkey: ref
+                      .read(authServiceProvider)
+                      .currentPublicKeyHex,
+                ),
         );
     });
-  });
+  }, fireImmediately: true);
 
   ref.onDispose(repository.dispose);
   return repository;
+}
+
+/// Counts deletions the video service learns, so resolved previews retire.
+final videoDeletionVersionProvider =
+    NotifierProvider<VideoDeletionVersion, int>(VideoDeletionVersion.new);
+
+class VideoDeletionVersion extends Notifier<int> {
+  @override
+  int build() {
+    final subscription = ref
+        .watch(videoEventServiceProvider)
+        .removedVideoIds
+        .listen((_) => state++);
+    ref.onDispose(subscription.cancel);
+    return 0;
+  }
+}
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
+@Riverpod(keepAlive: true)
+CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
+  ref.watch(currentAuthStateProvider);
+  ref.watch(blocklistVersionProvider);
+  ref.watch(contentFilterVersionProvider);
+  ref.watch(divineHostFilterVersionProvider);
+  ref.watch(videoProvenanceFilterVersionProvider);
+  ref.watch(adultContentVerificationVersionProvider);
+  ref.watch(videoDeletionVersionProvider);
+  final videoService = ref.watch(videoEventServiceProvider);
+  final videos = ref.watch(videosRepositoryProvider);
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  return (video) {
+    if (disposed || videoService.shouldHideVideo(video)) return true;
+    // Feed shape controls feed discovery, not the videos inside an opened list.
+    // Reuse every safety gate while matching that list's permitted previews.
+    final permitted = videos.applyContentPreferences(
+      [video],
+      includeFeedShape: false,
+    );
+    // Cards carry plain URLs and cannot show the playback warning overlay.
+    return permitted.isEmpty || permitted.single.warnLabels.isNotEmpty;
+  };
+}
+
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+@Riverpod(keepAlive: true)
+Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
+  final age = ref.watch(ageVerificationServiceProvider);
+  final content = ref.watch(contentFilterServiceProvider);
+  await Future.wait([age.initialized, content.initialized]);
 }
 
 @visibleForTesting
@@ -287,9 +359,21 @@ List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
 
 /// The viewer's own lists, which the search matches alongside the subscribed
 /// ones; `subscribedLists` never holds them.
+///
+/// The repository keys lists by author, and a list created before the account
+/// had a pubkey carries none, so it would sit beside its own relay copy
+/// instead of replacing it. Every own list leaves here under [viewerPubkey].
 @visibleForTesting
-List<CuratedList> ownListsForSearchBridge(CuratedListService service) =>
-    service.myLists;
+List<CuratedList> ownListsForSearchBridge(
+  CuratedListService service, {
+  required String? viewerPubkey,
+}) => [
+  for (final list in service.myLists)
+    if (list.pubkey == null && viewerPubkey != null)
+      list.copyWith(pubkey: viewerPubkey)
+    else
+      list,
+];
 
 /// Provider for HashtagRepository instance.
 ///
@@ -777,6 +861,7 @@ DmRepository dmRepository(Ref ref) {
     pendingGiftWrapsDao: db.pendingGiftWrapsDao,
     processedGiftWrapsDao: db.processedGiftWrapsDao,
     removedConversationsDao: db.removedConversationsDao,
+    removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),
     reactionsRepository: reactionsRepository,
     // Identity is sufficient to scope local storage. Signing, publishing, and

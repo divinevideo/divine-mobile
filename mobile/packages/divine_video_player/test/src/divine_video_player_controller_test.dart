@@ -602,6 +602,38 @@ void main() {
           containsPair('index', 2),
         );
       });
+
+      test('setFrameEffects sends the effects', () async {
+        const effect = <String, Object?>{
+          'id': 'test.echo',
+          'params': {'intensity': 0.5},
+          'startUs': 1000000,
+          'endUs': null,
+        };
+
+        await controller.setFrameEffects(const [effect]);
+
+        expect(playerCalls.last.method, equals('setFrameEffects'));
+        expect(
+          playerCalls.last.arguments,
+          containsPair('effects', const [effect]),
+        );
+      });
+
+      test('setFrameEffects does nothing on the Linux backend', () async {
+        controller = DivineVideoPlayerController();
+        DivineVideoPlayerController.debugForceLinuxBackend = true;
+        DivineVideoPlayerController.linuxBackendFactory =
+            _ControllerFakeLinuxBackend.new;
+        await controller.initialize();
+        playerCalls.clear();
+
+        await controller.setFrameEffects(const [
+          {'id': 'test.echo'},
+        ]);
+
+        expect(playerCalls, isEmpty);
+      });
     });
 
     group('setSource and setClips', () {

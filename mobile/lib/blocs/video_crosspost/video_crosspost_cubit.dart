@@ -38,6 +38,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   final Duration _pollTimeout;
 
   Timer? _pollTimer;
+  bool _pollInFlight = false;
 
   Future<void> loadConnections() async {
     emit(state.copyWith(status: VideoCrosspostStatus.loadingConnections));
@@ -147,6 +148,10 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
         }
         return;
       }
+      // Remote signers may take longer than the polling interval. Keep the
+      // timeout ticking, but never queue another signing request.
+      if (_pollInFlight) return;
+      _pollInFlight = true;
       try {
         final jobs = await _client.getCrossposts(eventId: _eventId);
         if (isClosed || _pollTimer == null) return;
@@ -168,6 +173,8 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
           name: 'VideoCrosspostCubit',
         );
         addError(e, stackTrace);
+      } finally {
+        _pollInFlight = false;
       }
     });
   }

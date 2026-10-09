@@ -86,6 +86,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     PendingGiftWraps,
     ProcessedGiftWraps,
     RemovedConversations,
+    RemovedMessageIds,
     PendingProfileSaves,
     IdentityEvents,
     IdentityVerifications,
@@ -120,6 +121,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     PendingGiftWrapsDao,
     ProcessedGiftWrapsDao,
     RemovedConversationsDao,
+    RemovedMessageIdsDao,
     PendingProfileSavesDao,
     IdentityEventsDao,
     IdentityVerificationsDao,
@@ -138,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -256,6 +258,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 20 && to >= 20) {
         await _repairSchemaV20();
+      }
+      if (from < 21 && to >= 21) {
+        // Composite primary key, no `@TableIndex.sql`, so `createTable` is
+        // the whole job; see the `from < 13` step.
+        await m.createTable(removedMessageIds);
       }
     },
     beforeOpen: (details) async {

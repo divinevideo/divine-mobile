@@ -23,13 +23,15 @@ enum PushRegistrationResult {
   /// The relay confirmed that it stored the registration event.
   published,
 
-  /// No relay received the event, so retrying cannot create a duplicate.
+  /// Nothing was published, so retrying cannot create a duplicate: the FCM
+  /// token or signer was not ready yet, or no relay received the event.
   retryableFailure,
 
   /// A relay may have stored the event but did not confirm it.
   uncertainFailure,
 
-  /// A prerequisite failed or the relay rejected the event; do not retry.
+  /// The session/configuration is invalid, an interactive signer failed, or
+  /// the relay rejected the event; do not retry.
   terminalFailure,
 }
 
@@ -104,6 +106,9 @@ class PushNotificationService {
   /// Gets the current FCM token, NIP-44 encrypts it, and publishes a kind
   /// [pushRegistrationKind] Nostr event to the push service pubkey.
   ///
+  /// Returns [PushRegistrationResult.retryableFailure] while the FCM token or
+  /// a silent signer is not ready yet, so the caller can try again.
+  ///
   /// Does nothing on web ([kIsWeb] is true).
   Future<PushRegistrationResult> register(
     String userPubkey, {
@@ -124,26 +129,33 @@ class PushNotificationService {
       token = await _getToken();
     } on Object catch (error) {
       Log.warning(
-        'FCM token is unavailable - skipping push notification registration: '
+        'FCM token is unavailable for push notification registration: '
         '$error',
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return error is Exception
+          ? PushRegistrationResult.retryableFailure
+          : PushRegistrationResult.terminalFailure;
     }
     if (!await _isPublishCurrent(isCurrent)) {
       return PushRegistrationResult.terminalFailure;
     }
     if (token == null) {
       Log.warning(
-        'FCM token is null — skipping push notification registration',
+        'FCM token is not ready — will retry push notification registration',
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return PushRegistrationResult.retryableFailure;
     }
 
-    return _publishRegistration(token, pushServicePubkey, isCurrent: isCurrent);
+    return _publishRegistration(
+      userPubkey,
+      token,
+      pushServicePubkey,
+      isCurrent: isCurrent,
+    );
   }
 
   Future<PushRegistrationResult> registerToken(
@@ -164,7 +176,12 @@ class PushNotificationService {
       return PushRegistrationResult.terminalFailure;
     }
 
-    return _publishRegistration(token, pushServicePubkey, isCurrent: isCurrent);
+    return _publishRegistration(
+      userPubkey,
+      token,
+      pushServicePubkey,
+      isCurrent: isCurrent,
+    );
   }
 
   /// Deregisters this device from the divine push service.
@@ -283,21 +300,23 @@ class PushNotificationService {
   /// Does nothing on web ([kIsWeb] is true).
   Future<bool> updatePreferences(NotificationPreferences prefs) async {
     if (kIsWeb) return false;
+    final identity = _authService.currentIdentity;
+    if (identity == null) return false;
 
     final pushServicePubkey = _configuredPushServicePubkey();
     if (pushServicePubkey == null) return false;
-    if (!await _isPublishCurrent(null)) return false;
+    if (!await _isIdentityCurrent(identity, null)) return false;
     final kinds = prefs.toKindsList();
     final plaintext = jsonEncode({
       'kinds': kinds,
       'campaignsEnabled': prefs.campaignsEnabled,
     });
 
-    final encrypted = await _nostrClient.signer.nip44Encrypt(
+    final encrypted = await identity.nip44Encrypt(
       pushServicePubkey,
       plaintext,
     );
-    if (!await _isPublishCurrent(null)) return false;
+    if (!await _isIdentityCurrent(identity, null)) return false;
 
     if (encrypted == null) {
       Log.error(
@@ -316,7 +335,7 @@ class PushNotificationService {
         ['app', pushAppIdentifier],
       ],
     );
-    if (!await _isPublishCurrent(null)) return false;
+    if (!await _isIdentityCurrent(identity, null)) return false;
 
     if (event == null) {
       Log.error(
@@ -326,7 +345,7 @@ class PushNotificationService {
       );
       return false;
     }
-    if (!await _isPublishCurrent(null)) return false;
+    if (!await _isIdentityCurrent(identity, null)) return false;
 
     return (await _publishPushControlEvent(event, 'preferences')).confirmed;
   }
@@ -367,26 +386,46 @@ class PushNotificationService {
   // ---------------------------------------------------------------------------
 
   Future<PushRegistrationResult> _publishRegistration(
+    String userPubkey,
     String token,
     String pushServicePubkey, {
     FutureOr<bool> Function()? isCurrent,
   }) async {
-    if (!await _isPublishCurrent(isCurrent)) {
+    final identity = _authService.currentIdentity;
+    if (identity == null || identity.pubkey != userPubkey) {
       return PushRegistrationResult.terminalFailure;
     }
+    final beforeEncryption = await _registrationIdentityFailure(
+      identity,
+      isCurrent,
+    );
+    if (beforeEncryption != null) return beforeEncryption;
 
     final plaintext = jsonEncode({
       'token': token,
       'timezoneOffsetMinutes': _timeZoneOffsetMinutes(),
     });
 
-    final encrypted = await _nostrClient.signer.nip44Encrypt(
-      pushServicePubkey,
-      plaintext,
-    );
-    if (!await _isPublishCurrent(isCurrent)) {
-      return PushRegistrationResult.terminalFailure;
+    String? encrypted;
+    try {
+      encrypted = await identity.nip44Encrypt(
+        pushServicePubkey,
+        plaintext,
+      );
+    } on Exception catch (error) {
+      Log.warning(
+        'Push registration encryption unavailable (${error.runtimeType})',
+        name: 'PushNotificationService',
+        category: LogCategory.system,
+      );
+      return await _registrationIdentityFailure(identity, isCurrent) ??
+          _signerUnavailableResult();
     }
+    final afterEncryption = await _registrationIdentityFailure(
+      identity,
+      isCurrent,
+    );
+    if (afterEncryption != null) return afterEncryption;
 
     if (encrypted == null) {
       Log.error(
@@ -394,7 +433,7 @@ class PushNotificationService {
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return _signerUnavailableResult();
     }
 
     final expirationTimestamp =
@@ -412,9 +451,11 @@ class PushNotificationService {
         ['expiration', expirationTimestamp.toString()],
       ],
     );
-    if (!await _isPublishCurrent(isCurrent)) {
-      return PushRegistrationResult.terminalFailure;
-    }
+    final afterSigning = await _registrationIdentityFailure(
+      identity,
+      isCurrent,
+    );
+    if (afterSigning != null) return afterSigning;
 
     if (event == null) {
       Log.error(
@@ -422,7 +463,7 @@ class PushNotificationService {
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return _signerUnavailableResult();
     }
 
     final outcome = await _publishPushControlEvent(event, 'registration');
@@ -439,6 +480,35 @@ class PushNotificationService {
     // to a relay. The named relay lands in unreachableTargets, so the outcome
     // is not literally empty.
     return PushRegistrationResult.retryableFailure;
+  }
+
+  Future<PushRegistrationResult?> _registrationIdentityFailure(
+    NostrIdentity identity,
+    FutureOr<bool> Function()? isCurrent,
+  ) async {
+    if (!await _isPublishCurrent(isCurrent)) {
+      return PushRegistrationResult.terminalFailure;
+    }
+    final current = _authService.currentIdentity;
+    if (current?.pubkey != identity.pubkey) {
+      return PushRegistrationResult.terminalFailure;
+    }
+    if (identical(current, identity)) return null;
+    // An in-flight same-account silent upgrade must wake another attempt,
+    // not stop the coordinator while it deliberately reuses the client.
+    return _signerUnavailableResult();
+  }
+
+  PushRegistrationResult _signerUnavailableResult() {
+    final identity = _authService.currentIdentity;
+    // Retry silent local/Keycast recovery, including an offline OAuth restore.
+    // External signers can require approval: never repeatedly prompt on denial.
+    if (identity is PubkeyOnlyNostrIdentity ||
+        (identity?.signsWithLocalKey ?? false) ||
+        (identity?.signsRemotelyNonInteractive ?? false)) {
+      return PushRegistrationResult.retryableFailure;
+    }
+    return PushRegistrationResult.terminalFailure;
   }
 
   Future<PublishOutcome> _publishPushControlEvent(
@@ -482,17 +552,22 @@ class PushNotificationService {
   Future<Event?> _createLiveDeregistrationEvent(
     String pushServicePubkey,
   ) async {
+    final identity = _authService.currentIdentity;
+    if (identity == null) return null;
     final content = await _encryptedDeregistrationContent(
       pushServicePubkey,
-      _nostrClient.signer.nip44Encrypt,
+      identity.nip44Encrypt,
     );
-    if (content == null) return null;
+    if (content == null || !await _isIdentityCurrent(identity, null)) {
+      return null;
+    }
 
     final event = await _authService.createAndSignEvent(
       kind: pushDeregistrationKind,
       content: content,
       tags: _deregistrationTags(pushServicePubkey),
     );
+    if (!await _isIdentityCurrent(identity, null)) return null;
     if (event == null) {
       Log.error(
         'Failed to sign deregistration event',
@@ -572,6 +647,15 @@ class PushNotificationService {
       return null;
     }
   }
+
+  /// Same-account signer upgrades are picked up on the next operation. A
+  /// change during encryption/signing must not mix two identity lifetimes.
+  Future<bool> _isIdentityCurrent(
+    NostrIdentity identity,
+    FutureOr<bool> Function()? isCurrent,
+  ) async =>
+      await _isPublishCurrent(isCurrent) &&
+      identical(_authService.currentIdentity, identity);
 
   Future<bool> _isPublishCurrent(
     FutureOr<bool> Function()? isCurrent, {

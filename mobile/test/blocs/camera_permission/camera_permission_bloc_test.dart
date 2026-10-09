@@ -248,20 +248,21 @@ void main() {
         ],
       );
 
-      blocTest<CameraPermissionBloc, CameraPermissionState>(
+      test(
         'restartable request lets a refreshed retry supersede a stuck request',
-        setUp: () {
+        () async {
+          final firstStarted = Completer<void>();
+          final firstRequest = Completer<PermissionStatus>();
           var cameraCalls = 0;
           when(
             () => mockPermissionsService.requestCameraPermission(),
-          ).thenAnswer((_) async {
+          ).thenAnswer((_) {
             cameraCalls++;
-            // The first request never completes (mimics the Android
-            // back-dismiss hang); the superseding request resolves.
             if (cameraCalls == 1) {
-              return Completer<PermissionStatus>().future;
+              firstStarted.complete();
+              return firstRequest.future;
             }
-            return PermissionStatus.granted;
+            return Future.value(PermissionStatus.granted);
           });
           when(
             () => mockPermissionsService.requestMicrophonePermission(),
@@ -269,40 +270,68 @@ void main() {
           when(
             () => mockPermissionsService.requestGalleryPermission(),
           ).thenAnswer((_) async => PermissionStatus.granted);
-          // The retry refreshes the stuck Loading back to a requestable status
-          // before re-requesting (mirrors pushToCameraWithPermission on a
-          // second camera tap).
           when(
             () => mockPermissionsService.checkCameraStatus(),
           ).thenAnswer((_) async => PermissionStatus.canRequest);
           when(
             () => mockPermissionsService.checkMicrophoneStatus(),
           ).thenAnswer((_) async => PermissionStatus.canRequest);
-        },
-        build: () => CameraPermissionBloc(
-          permissionsService: mockPermissionsService,
-          skipLinuxBypass: true,
-        ),
-        seed: () =>
-            const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
-        act: (bloc) async {
-          // First request hangs on the camera prompt (state -> Loading).
-          bloc.add(const CameraPermissionRequest());
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-          // Refresh un-sticks Loading back to canRequest.
+
+          final bloc = CameraPermissionBloc(
+            permissionsService: mockPermissionsService,
+            skipLinuxBypass: true,
+          );
+          addTearDown(bloc.close);
+          addTearDown(() async {
+            if (!firstRequest.isCompleted) {
+              firstRequest.complete(PermissionStatus.canRequest);
+            }
+            await pumpEventQueue();
+          });
+          final ready = bloc.stream.firstWhere(
+            (state) =>
+                state ==
+                const CameraPermissionLoaded(
+                  CameraPermissionStatus.canRequest,
+                ),
+          );
           bloc.add(const CameraPermissionRefresh());
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-          // With droppable this would be dropped (the first is still in
-          // flight); restartable lets it supersede and resolve.
+          await ready;
+          final states = <CameraPermissionState>[];
+          final subscription = bloc.stream.listen(states.add);
+          addTearDown(subscription.cancel);
+
           bloc.add(const CameraPermissionRequest());
+          await firstStarted.future;
+          expect(bloc.state, const CameraPermissionLoading());
+
+          final refreshed = bloc.stream.firstWhere(
+            (state) =>
+                state ==
+                const CameraPermissionLoaded(
+                  CameraPermissionStatus.canRequest,
+                ),
+          );
+          bloc.add(const CameraPermissionRefresh());
+          await refreshed;
+          bloc.add(const CameraPermissionRequest());
+          await pumpEventQueue();
+
+          expect(cameraCalls, 2);
+          expect(firstRequest.isCompleted, isFalse);
+          expect(
+            bloc.state,
+            const CameraPermissionLoaded(CameraPermissionStatus.authorized),
+          );
+          firstRequest.complete(PermissionStatus.canRequest);
+          await pumpEventQueue();
+          expect(states, const [
+            CameraPermissionLoading(),
+            CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+            CameraPermissionLoading(),
+            CameraPermissionLoaded(CameraPermissionStatus.authorized),
+          ]);
         },
-        wait: const Duration(milliseconds: 50),
-        expect: () => [
-          const CameraPermissionLoading(),
-          const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
-          const CameraPermissionLoading(),
-          const CameraPermissionLoaded(CameraPermissionStatus.authorized),
-        ],
       );
 
       blocTest<CameraPermissionBloc, CameraPermissionState>(
@@ -445,37 +474,49 @@ void main() {
         },
       );
 
-      blocTest<CameraPermissionBloc, CameraPermissionState>(
+      test(
         'drops a duplicate refresh while a permission check is in flight',
-        setUp: () {
-          when(() => mockPermissionsService.checkCameraStatus()).thenAnswer((
-            _,
-          ) async {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
-            return PermissionStatus.canRequest;
-          });
+        () async {
+          final started = Completer<void>();
+          final permission = Completer<PermissionStatus>();
+          when(() => mockPermissionsService.checkCameraStatus())
+              .thenAnswer((_) {
+                if (!started.isCompleted) started.complete();
+                return permission.future;
+              });
           when(
             () => mockPermissionsService.checkMicrophoneStatus(),
           ).thenAnswer((_) async => PermissionStatus.canRequest);
-        },
-        build: () => CameraPermissionBloc(
-          permissionsService: mockPermissionsService,
-          skipLinuxBypass: true,
-        ),
-        act: (bloc) {
-          bloc
-            ..add(const CameraPermissionRefresh())
-            ..add(const CameraPermissionRefresh());
-        },
-        wait: const Duration(milliseconds: 20),
-        expect: () => [
-          const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
-        ],
-        verify: (_) {
+          final bloc = CameraPermissionBloc(
+            permissionsService: mockPermissionsService,
+            skipLinuxBypass: true,
+          );
+          addTearDown(bloc.close);
+          addTearDown(() async {
+            if (!permission.isCompleted) {
+              permission.complete(PermissionStatus.canRequest);
+            }
+            await pumpEventQueue();
+          });
+          final states = <CameraPermissionState>[];
+          final subscription = bloc.stream.listen(states.add);
+          addTearDown(subscription.cancel);
+
+          bloc.add(const CameraPermissionRefresh());
+          await started.future;
+          bloc.add(const CameraPermissionRefresh());
+          await pumpEventQueue();
           verify(() => mockPermissionsService.checkCameraStatus()).called(1);
+
+          permission.complete(PermissionStatus.canRequest);
+          await pumpEventQueue();
+          verifyNever(() => mockPermissionsService.checkCameraStatus());
           verify(
             () => mockPermissionsService.checkMicrophoneStatus(),
           ).called(1);
+          expect(states, const [
+            CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+          ]);
         },
       );
 

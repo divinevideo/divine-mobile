@@ -56,6 +56,17 @@ class VideoEditorDrawCensorIntensityChanged extends VideoEditorDrawEvent {
   List<Object?> get props => [intensity];
 }
 
+/// Triggered when the creator sets how thick the selected drawing tool draws,
+/// from 0 to 1 on its slider.
+class VideoEditorDrawBrushSizeChanged extends VideoEditorDrawEvent {
+  const VideoEditorDrawBrushSizeChanged(this.brushSize);
+
+  final double brushSize;
+
+  @override
+  List<Object?> get props => [brushSize];
+}
+
 /// Triggered when the draw editor opens to reset undo/redo capabilities.
 class VideoEditorDrawReset extends VideoEditorDrawEvent {
   const VideoEditorDrawReset();

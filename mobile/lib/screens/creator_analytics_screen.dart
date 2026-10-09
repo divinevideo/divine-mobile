@@ -20,6 +20,7 @@ import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
 import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/creator_analytics/social_counts_info_sheet.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
@@ -74,9 +75,14 @@ class _CreatorAnalyticsScreenState
   }
 
   void _openPostAnalytics(VideoPerformance performance) {
-    context.push(
-      PostAnalyticsDetailScreen.pathForId(performance.video.id),
-      extra: performance,
+    runDetached(
+      context.push<void>(
+        PostAnalyticsDetailScreen.pathForId(performance.video.id),
+        extra: performance,
+      ),
+      'open post analytics',
+      logName: 'CreatorAnalyticsScreen',
+      category: LogCategory.ui,
     );
   }
 
@@ -1252,8 +1258,15 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                       expanded: true,
                       onPressed: performance.video.id.isEmpty
                           ? null
-                          : () => context.push(
-                              VideoDetailScreen.pathForId(performance.video.id),
+                          : () => runDetached(
+                              context.push<void>(
+                                VideoDetailScreen.pathForId(
+                                  performance.video.id,
+                                ),
+                              ),
+                              'open post video',
+                              logName: 'CreatorAnalyticsScreen',
+                              category: LogCategory.ui,
                             ),
                     ),
                   ],

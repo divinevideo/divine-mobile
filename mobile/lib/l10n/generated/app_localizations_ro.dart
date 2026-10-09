@@ -384,6 +384,34 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'de bucle',
+      few: 'bucle',
+      one: 'buclă',
+    );
+    return '$authorName: $compactCount $_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'de bucle ale acestui videoclip',
+      few: 'bucle ale acestui videoclip',
+      one: 'buclă a acestui videoclip',
+    );
+    return '$compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Arată totalul buclelor';
 
   @override
@@ -3794,6 +3822,47 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip din biblioteca ta';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Videoclip din galeria ta';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Verificăm dacă acest clip a fost filmat cu Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Nu am putut confirma că a fost filmat cu camera Divine, așa că nu a fost adăugat la clipurile tale.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Persoana poate adăuga ce trimiți la clipurile sale și le poate publica, menționându-te.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Trimise $sent din $total de clipuri. Restul nu a plecat.',
+      few: 'Trimise $sent din $total clipuri. Restul nu a plecat.',
+      one: 'Trimis $sent din $total clip. Restul nu a plecat.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Salvează videoclipul';
 
   @override
@@ -4037,6 +4106,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Adaugă persoane pentru a începe';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Niciun videoclip încă';
 
   @override
@@ -4062,9 +4138,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Adaugă la $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Caută persoane';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -5067,15 +5140,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Listă nouă de persoane';
-
-  @override
-  String get listCollaboratorsNone => 'Niciunul';
-
-  @override
-  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Caută în Divine...';
 
   @override
   String get listNameLabel => 'Numele listei';
@@ -6335,6 +6399,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Șterge lista';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Ștergi lista?';
@@ -8865,6 +8932,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectGlow => 'Strălucire';
 
   @override
+  String get videoEditorEffectEcho => 'Ecou';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
 
@@ -10300,6 +10370,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivel';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Dimensiunea pensulei';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13312,4 +13385,40 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Listă nouă de videoclipuri';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Această listă este publică. Oricine poate vedea numele, descrierea și persoanele din ea.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Persoane';
+
+  @override
+  String get peopleListsPeopleNone => 'Nicio persoană adăugată';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Caută printre urmăritori și persoanele urmărite';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privată, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

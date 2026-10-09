@@ -58,7 +58,7 @@ void main() {
     List<(String, Duration?, Duration?)> windows(
       List<EditorVideoEffect> effects,
     ) => [
-      for (final e in effects) (e.id, e.effect.startTime, e.effect.endTime),
+      for (final e in effects) (e.id, e.startTime, e.endTime),
     ];
 
     var created = 0;
@@ -133,7 +133,7 @@ void main() {
         ('piece-0', s(3), null),
         ('negative', s(2), s(3)),
       ]);
-      expect(result[1].effect.type, VideoEffectType.strobe);
+      expect(result[1].effect!.type, VideoEffectType.strobe);
     });
 
     test('keeps both pieces of a cut effect on the beat on the beat', () {
@@ -744,6 +744,103 @@ void main() {
           }
         }
       });
+    });
+
+    group('customVideoEffectsOnOutput', () {
+      const echo = CustomVideoEffect(
+        id: echoVideoEffectId,
+        params: {EditorVideoEffect.intensityParam: 0.6},
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 4),
+      );
+
+      test('moves the window onto the shorter exported video', () {
+        expect(customVideoEffectsOnOutput(const [echo], compressed), [
+          CustomVideoEffect(
+            id: echoVideoEffectId,
+            params: echo.params,
+            startTime: ms(1000),
+            endTime: ms(3600),
+          ),
+        ]);
+      });
+
+      test('leaves the window alone when no transition shortens the '
+          'video', () {
+        expect(customVideoEffectsOnOutput(const [echo], plain), const [echo]);
+      });
+
+      test('keeps an end that reaches the end of the video open', () {
+        const untilTheEnd = CustomVideoEffect(
+          id: echoVideoEffectId,
+          startTime: Duration(seconds: 1),
+        );
+
+        final onOutput = customVideoEffectsOnOutput(const [
+          untilTheEnd,
+        ], compressed);
+
+        expect(onOutput.single.startTime, ms(1000));
+        expect(onOutput.single.endTime, isNull);
+      });
+    });
+  });
+
+  group('EditorVideoEffect custom', () {
+    const echo = EditorVideoEffect.custom(
+      id: 'echo-1',
+      custom: CustomVideoEffect(
+        id: echoVideoEffectId,
+        params: {EditorVideoEffect.intensityParam: 0.4, 'unrelated': 'kept'},
+        startTime: Duration(seconds: 1),
+      ),
+    );
+
+    test('reads its type, intensity and window from the custom effect', () {
+      expect(echo.type, EditorEffectType.echo);
+      expect(echo.intensity, 0.4);
+      expect(echo.startTime, const Duration(seconds: 1));
+      expect(echo.endTime, isNull);
+      expect(echo.effect, isNull);
+    });
+
+    test('survives toMap and fromMap', () {
+      expect(EditorVideoEffect.fromMap(echo.toMap(), fallbackId: 'x'), echo);
+    });
+
+    test('rejects a custom effect this build does not know', () {
+      final map = {
+        EditorVideoEffect.idKey: 'a',
+        EditorVideoEffect.customKey: const CustomVideoEffect(
+          id: 'someone.else',
+        ).toMap(),
+      };
+      expect(
+        () => EditorVideoEffect.fromMap(map, fallbackId: 'x'),
+        throwsArgumentError,
+      );
+    });
+
+    test('keeps its params when retimed', () {
+      final moved = echo.retimed(
+        startTime: const Duration(seconds: 2),
+        endTime: const Duration(seconds: 3),
+      );
+      expect(moved.custom!.params, echo.custom!.params);
+      expect(moved.startTime, const Duration(seconds: 2));
+      expect(moved.endTime, const Duration(seconds: 3));
+    });
+
+    test('never counts as flashing', () {
+      expect(EditorEffectType.echo.isFlashing, isFalse);
+      expect(
+        withoutFlashingOverlaps(
+          [echo],
+          keepId: 'echo-1',
+          createId: () => 'new',
+        ),
+        isNull,
+      );
     });
   });
 }

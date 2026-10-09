@@ -249,6 +249,8 @@
   "appearanceSettingsSystem": "సిస్టమ్ డిఫాల్ట్",
   "appearanceSettingsLight": "కాంతి",
   "appearanceSettingsDark": "చీకటి",
+  "videoOverlayTotalLoops": "{authorName} {compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}}",
+  "videoOverlayVideoLoops": "ఈ వీడియోకు {compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}}",
   "generalSettingsClosedCaptions": "సంవృత శీర్షికలు",
   "generalSettingsClosedCaptionsSubtitle": "వీడియోలు వాటిని చేర్చినప్పుడు వాటిని చూపండి",
   "generalSettingsVideoShapeSquareOnly": "స్క్వేర్ వీడియోలు మాత్రమే",
@@ -2181,6 +2183,15 @@
   "dmVideoSent": "వీడియో పంపబడింది",
   "dmVideoSendFailed": "వీడియోను పంపడం సాధ్యపడలేదు",
   "dmVideoTooLarge": "ఈ వీడియో పంపడానికి చాలా పెద్దది. {maxMegabytes} MB కంటే తక్కువ ఉన్నదాన్ని ఎంచుకోండి",
+  "dmAttachClipFromLibrary": "మీ లైబ్రరీ నుండి క్లిప్",
+  "dmAttachVideoFromGallery": "మీ గ్యాలరీ నుండి వీడియో",
+  "dmClipBadge": "క్లిప్",
+  "dmClipChecking": "ఈ క్లిప్ Divineతో చిత్రీకరించబడిందో లేదో తనిఖీ చేస్తున్నాం…",
+  "dmClipNotVerified": "ఇది Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి ఇది మీ క్లిప్‌లకు జోడించబడలేదు.",
+  "dmClipCheckUnavailable": "ప్రస్తుతం ఈ క్లిప్‌ను తనిఖీ చేయడం సాధ్యపడలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "dmClipSendNotVerified": "ఈ క్లిప్ Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి దీన్ని క్లిప్‌గా పంపలేరు.",
+  "dmAttachReuseNotice": "మీరు పంపినదాన్ని వారు తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.",
+  "dmClipsPartlySent": "{total, plural, one{{total} క్లిప్‌లో {sent} పంపబడింది. మిగిలినవి వెళ్లలేదు.} other{{total} క్లిప్‌లలో {sent} పంపబడ్డాయి. మిగిలినవి వెళ్లలేదు.}}",
   "shareSheetSaveVideo": "వీడియోను సేవ్ చేయండి",
   "shareSheetAddToClips": "క్లిప్‌లకు జోడించండి",
   "@shareSheetAddToClips": {
@@ -2313,7 +2324,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
   "peopleListsAddButton": "జోడించండి",
@@ -2898,9 +2908,6 @@
   },
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
-  "listCollaboratorsNone": "ఏదీ లేదు",
-  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
-  "listCollaboratorSearchHint": "శోధన Divine...",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
   "listPublicList": "పబ్లిక్ జాబితా",
@@ -5428,6 +5435,7 @@
   "videoEditorEffectSplitScreen": "స్ప్లిట్ స్క్రీన్",
   "videoEditorEffectWave": "వేవ్",
   "videoEditorEffectGlow": "మెరుపు",
+  "videoEditorEffectEcho": "ప్రతిధ్వని",
   "videoEditorEffectsFlashingReplaced": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.",
   "videoEditorEffectsFlashingNotDuplicated": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.",
   "videoEditorEffectsOnBeat": "బీట్‌కు అనుగుణంగా",
@@ -6218,6 +6226,7 @@
   "videoEditorAddElementSemanticLabel": "మూలకాన్ని జోడించండి",
   "videoEditorDoneSemanticLabel": "పూర్తయింది",
   "videoEditorLevelSemanticLabel": "స్థాయి",
+  "videoEditorBrushSizeSemanticLabel": "బ్రష్ పరిమాణం",
   "videoMetadataClosePostDetailsSemanticLabel": "పోస్ట్ వివరాలను మూసివేయండి",
   "videoMetadataDismissHelpDialogSemanticLabel": "సహాయ డైలాగ్‌ను తీసివేయండి",
   "videoMetadataGotItButton": "అర్థమైంది!",
@@ -8449,5 +8458,26 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "అన్నీ చూడండి"
+  "peopleListsViewAllMembers": "అన్నీ చూడండి",
+  "listNewVideoList": "కొత్త వీడియో జాబితా",
+  "peopleListsPublicNotice": "ఈ జాబితా పబ్లిక్. దీని పేరు, వివరణ మరియు ఇందులోని వ్యక్తులను ఎవరైనా చూడవచ్చు.",
+  "peopleListsPeopleLabel": "వ్యక్తులు",
+  "peopleListsPeopleNone": "ఇంకా ఎవరినీ జోడించలేదు",
+  "peopleListsSessionChanged": "మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.",
+  "peopleListsSearchConnectionsHint": "అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, ప్రైవేట్, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

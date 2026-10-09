@@ -334,6 +334,32 @@ class AppLocalizationsFil extends AppLocalizations {
       'Panatilihin ang feeds sa classic na square format';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$compactCount loop ni $authorName',
+      one: '$compactCount loop ni $authorName',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loops',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 ng video na ito';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Ipakita ang kabuuang loops';
 
   @override
@@ -3702,6 +3728,46 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip mula sa library mo';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video mula sa gallery mo';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Tinitingnan kung kinunan sa Divine ang clip na ito…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Hindi namin makumpirma na kinunan ito gamit ang Divine camera, kaya hindi ito naidagdag sa clips mo.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Puwede nilang idagdag sa clips nila ang ipinadala mo at i-post ito, at mababanggit ka.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Naipadala ang $sent sa $total na clip. Hindi naipadala ang iba.',
+      one: 'Naipadala ang $sent sa $total clip. Hindi naipadala ang iba.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'I-save ang Video';
 
   @override
@@ -3942,6 +4008,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Magdagdag ng mga tao para magsimula';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Wala pang video';
 
   @override
@@ -3966,9 +4039,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Idagdag sa $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4954,15 +5024,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Bagong people list';
-
-  @override
-  String get listCollaboratorsNone => 'Wala';
-
-  @override
-  String get listAddCollaboratorTitle => 'Magdagdag ng collaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Maghanap sa Divine...';
 
   @override
   String get listNameLabel => 'Pangalan ng Listahan';
@@ -6213,6 +6274,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Burahin ang list';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Burahin ang list?';
@@ -8728,6 +8792,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectGlow => 'Glow';
 
   @override
+  String get videoEditorEffectEcho => 'Echo';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
 
@@ -10163,6 +10230,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Antas';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Laki ng brush';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13161,4 +13231,40 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Bagong listahan ng video';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Pampubliko ang listahang ito. Makikita ng kahit sino ang pangalan, paglalarawan, at mga tao rito.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Mga tao';
+
+  @override
+  String get peopleListsPeopleNone => 'Wala pang idinagdag na tao';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Nagbago ang account mo o ang access sa listahan. Buksan ulit ang pahinang ito para magpatuloy.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Maghanap sa mga tagasubaybay at sinusubaybayan';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Pribado, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

@@ -5,8 +5,8 @@
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
 
 /// Whether [layer] is a draw layer that can take part in a merge.
 ///
@@ -145,7 +145,7 @@ class TimelineOverlayItem extends Equatable {
   /// The look of an effect item, which its tile names in the user's language.
   ///
   /// `null` for non-effect items.
-  final VideoEffectType? effectType;
+  final EditorEffectType? effectType;
 
   /// When a layer item's keyframes sit, measured from [startTime] and in
   /// order. Empty for any other item and a layer without keyframes.
@@ -186,7 +186,7 @@ class TimelineOverlayItem extends Equatable {
     AudioSource? audioSource,
     Duration? fadeIn,
     Duration? fadeOut,
-    VideoEffectType? effectType,
+    EditorEffectType? effectType,
     List<Duration>? keyframeTimes,
     bool? effectOnBeat,
   }) {

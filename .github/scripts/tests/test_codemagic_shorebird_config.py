@@ -290,6 +290,61 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         # release but must not publish it to Zapstore.
         self.assertNotIn("- *publish_zapstore", self._workflow_block("ios-build"))
 
+    def test_release_channel_is_explicit_and_defaults_to_beta(self) -> None:
+        config = self._resolved_config()
+        for name in ('ios-build', 'android-build', 'macos-build'):
+            channel = config['workflows'][name]['inputs']['RELEASE_CHANNEL']
+            self.assertEqual(channel['default'], 'BETA')
+            self.assertEqual(channel['options'], ['BETA', 'PRODUCTION'])
+
+    def test_beta_zapstore_step_exits_before_credentials_or_network(self) -> None:
+        scripts = self._resolved_config()['workflows']['android-build']['scripts']
+        script = next(step['script'] for step in scripts if step['name'] == 'Publish to Zapstore')
+        script = script.replace('${{ inputs.PUBLISH_TO_GITHUB }}', 'YES')
+        script = script.replace('${{ inputs.RELEASE_CHANNEL }}', 'BETA')
+        result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, env={})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Skipping Zapstore', result.stdout)
+
+    def test_stable_publish_refuses_non_main_branches(self) -> None:
+        scripts = self._resolved_config()['workflows']['macos-build']['scripts']
+        original = next(step['script'] for step in scripts if step['name'] == 'Publish to GitHub Release')
+        for channel, branch, allowed in [('PRODUCTION', 'main', True),
+                                          ('PRODUCTION', 'feature/test', False),
+                                          ('PRODUCTION', '', False),
+                                          ('BETA', 'feature/test', True)]:
+            with self.subTest(channel=channel, branch=branch):
+                script = original.replace('${{ inputs.PUBLISH_TO_GITHUB }}', 'YES')
+                script = script.replace('${{ inputs.RELEASE_CHANNEL }}', channel)
+                script = script.split('python3 scripts/publish_github_release.py', 1)[0]
+                result = subprocess.run(['bash', '-c', script], capture_output=True,
+                                        text=True, env={'CM_BRANCH': branch})
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
+    def test_zapstore_docs_require_production_and_manual_command_excludes_betas(self) -> None:
+        root = CODEMAGIC_PATH.parent
+        agents = (root / 'AGENTS.md').read_text()
+        section = agents.split('## Zapstore Publishing Notes\n', 1)[1].split('\n## ', 1)[0]
+        self.assertIn('RELEASE_CHANNEL=PRODUCTION', section)
+        command = re.search(r'`SIGN_WITH=\.\.\. zsp publish ([^`]+)`', section)
+        self.assertIsNotNone(command)
+        self.assertNotIn('--pre-release', command.group(1))
+        self.assertIn('RELEASE_CHANNEL=PRODUCTION', (root / 'README.md').read_text())
+
+    def test_store_candidates_use_beta_and_promote_without_rebuilding(self) -> None:
+        workflows = self._resolved_config()['workflows']
+        for name in ('ios-build', 'android-build'):
+            with self.subTest(workflow=name):
+                description = workflows[name]['inputs']['RELEASE_CHANNEL']['description']
+                self.assertIn('Use BETA for store builds', description)
+                self.assertIn('--promote-from', description)
+                self.assertIn('Do not rebuild with PRODUCTION', description)
+        root = CODEMAGIC_PATH.parent
+        checklist = (root / 'docs' / 'RELEASE_CHECKLIST.md').read_text()
+        self.assertIn('Only macOS can use a new `RELEASE_CHANNEL=PRODUCTION` build', checklist)
+        for path in ('AGENTS.md', 'README.md'):
+            self.assertIn('manual Zapstore publication', (root / path).read_text())
+
     def test_zapstore_publish_is_pinned_and_fails_closed(self) -> None:
         definition = self._definition_block("publish_zapstore")
         release = self._definition_block("publish_github_release")
@@ -301,40 +356,18 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
         self.assertIn("set -euo pipefail", definition)
 
-        # The guard only works if it compares against the same version the
-        # release step just tagged. The extraction is duplicated by design, so
-        # pin that both copies exist rather than letting one drift.
-        version_query = (
-            "VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' "
-            "| sed 's/+.*//')"
-        )
-        self.assertIn(version_query, release)
-        self.assertIn(version_query, definition)
-
-        # zsp selects the newest release it can download an APK from, so a
-        # stale or missing release would publish the wrong APK under this
-        # signing key. The guard refuses unless the newest release is the one
-        # this build cut. Drafts are excluded because zsp skips them.
-        self.assertIn(
-            'REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1',
-            definition,
-        )
-        self.assertIn("--exclude-drafts", definition)
+        self.assertIn('python3 scripts/publish_github_release.py', release)
+        self.assertIn('--channel "${{ inputs.RELEASE_CHANNEL }}"', release)
+        self.assertIn('if [ "${{ inputs.RELEASE_CHANNEL }}" != "PRODUCTION" ]; then', definition)
+        self.assertIn('--exclude-drafts --exclude-pre-releases', definition)
         self.assertIn('if [ "$REMOTE_TAG" != "$TAG" ]; then', definition)
-
-        # --check parses the arm64 APK before anything is signed.
-        # --pre-release is what makes the CI-created prerelease selectable at
-        # all; without it zsp steps back to the previous public release, which
-        # is how 1.0.9 was published wrong. --skip-certificate-linking keeps
-        # the one-time keystore prompt out of a release build.
-        self.assertIn(
-            '"$ZSP_BIN" publish --check --pre-release zapstore.yaml', definition
-        )
+        self.assertIn('"$ZSP_BIN" publish --check zapstore.yaml', definition)
         self.assertRegex(
             definition,
-            r'"\$ZSP_BIN" publish zapstore.yaml --quiet --skip-preview \\\n\s+'
-            r"--skip-certificate-linking --pre-release",
+            r'"\$ZSP_BIN" publish zapstore\.yaml --quiet --skip-preview\s*\\\s*'
+            r'--skip-certificate-linking',
         )
+        self.assertNotIn('--pre-release', definition)
 
         # The release asset name drops the tag's leading "v"; deriving it from
         # ZSP_VERSION stops a version bump from downloading the previous asset

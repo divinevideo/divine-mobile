@@ -2,6 +2,8 @@
 // ABOUTME: Covers candidate rendering, filtering, selection, disabled
 // ABOUTME: already-member rows, and batch-add dispatch through the cubit.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -19,6 +22,7 @@ import 'package:openvine/features/people_lists/view/add_people_to_list_screen.da
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -104,9 +108,14 @@ void main() {
   group(AddPeopleToListScreen, () {
     late _MockPeopleListsBloc bloc;
     late _MockAddPeopleToListCubit cubit;
+    late MockGoRouter router;
 
     setUp(() {
+      router = MockGoRouter();
+      when(() => router.canPop()).thenReturn(true);
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
       cubit = _MockAddPeopleToListCubit();
     });
 
@@ -123,15 +132,158 @@ void main() {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<PeopleListsBloc>.value(value: bloc),
-            BlocProvider<AddPeopleToListCubit>.value(value: cubit),
-          ],
-          child: AddPeopleToListView(userList: userList),
+        home: MockGoRouterProvider(
+          goRouter: router,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PeopleListsBloc>.value(value: bloc),
+              BlocProvider<AddPeopleToListCubit>.value(value: cubit),
+            ],
+            child: AddPeopleToListView(userList: userList),
+          ),
         ),
       );
     }
+
+    testWidgets(
+      'partial batch failure keeps failed people selected and retry publishes only those people',
+      (tester) async {
+        final list = _buildList(id: 'crew', name: 'Crew');
+        final follow = _MockFollowRepository();
+        when(() => follow.followingPubkeys)
+            .thenReturn([_candidateA, _candidateC]);
+        when(() => follow.followingStream)
+            .thenAnswer((_) => const Stream.empty());
+        when(follow.watchMyFollowers).thenAnswer((_) => const Stream.empty());
+        final picker = AddPeopleToListCubit(
+          followRepository: follow,
+          profileRepository: null,
+          existingMemberPubkeys: [],
+        );
+        addTearDown(picker.close);
+        await picker.started();
+        picker.candidateToggled(_candidateA);
+        picker.candidateToggled(_candidateC);
+        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+        final pending = Completer<PeopleListsOperationResult>();
+        when(
+          () => bloc.submit(
+            const PeopleListsPubkeyAddRequested(
+              listId: 'crew',
+              pubkey: _candidateC,
+            ),
+          ),
+        ).thenAnswer((_) => pending.future);
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MockGoRouterProvider(
+              goRouter: router,
+              child: MultiBlocProvider(
+                providers: [
+                  BlocProvider<PeopleListsBloc>.value(value: bloc),
+                  BlocProvider<AddPeopleToListCubit>.value(value: picker),
+                ],
+                child: AddPeopleToListView(userList: list),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.widgetWithText(DivineButton, 'Add 2'));
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        pending.complete(PeopleListsOperationResult.failed);
+        await tester.pumpAndSettle();
+        expect(picker.state.selectedPubkeys, {_candidateC});
+        expect(
+          picker.state.candidates
+              .singleWhere((person) => person.pubkey == _candidateA)
+              .isAlreadyInList,
+          isTrue,
+        );
+        expect(
+          picker.state.candidates
+              .singleWhere((person) => person.pubkey == _candidateC)
+              .isAlreadyInList,
+          isFalse,
+        );
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).listUpdateFailed,
+          ),
+          findsOneWidget,
+        );
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+        await tester.tap(find.widgetWithText(DivineButton, 'Add 1'));
+        await tester.pumpAndSettle();
+        expect(picker.state.selectedPubkeys, isEmpty);
+        verify(
+          () => bloc.submit(
+            const PeopleListsPubkeyAddRequested(
+              listId: 'crew',
+              pubkey: _candidateA,
+            ),
+          ),
+        ).called(1);
+        verify(
+          () => bloc.submit(
+            const PeopleListsPubkeyAddRequested(
+              listId: 'crew',
+              pubkey: _candidateC,
+            ),
+          ),
+        ).called(2);
+      },
+    );
+
+    group('after a confirmed add', () {
+      Future<void> addSelected(WidgetTester tester) async {
+        final list = _buildList(id: 'list-42', name: 'Close Friends');
+        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+        await tester.pumpWidget(
+          buildViewSubject(
+            userList: list,
+            cubitState: AddPeopleToListState(
+              status: AddPeopleToListStatus.ready,
+              candidates: [_candidate(_candidateA, displayName: 'Alice')],
+              selectedPubkeys: const {_candidateA},
+            ),
+          ),
+        );
+        await tester.tap(find.widgetWithText(DivineButton, 'Add 1'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('returns to the previous route', (tester) async {
+        await addSelected(tester);
+
+        verify(() => router.pop()).called(1);
+        verifyNever(() => router.go(any()));
+      });
+
+      testWidgets('leaves for the fallback when nothing is below', (
+        tester,
+      ) async {
+        when(() => router.canPop()).thenReturn(false);
+
+        await addSelected(tester);
+
+        verify(() => router.go(defaultSafePopFallback)).called(1);
+        verifyNever(() => router.pop());
+      });
+
+      testWidgets('stays put when a person could not be added', (tester) async {
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.failed);
+
+        await addSelected(tester);
+
+        verifyNever(() => router.pop());
+        verifyNever(() => router.go(any()));
+      });
+    });
 
     test('exposes route name and path constants', () {
       expect(AddPeopleToListScreen.routeName, equals('people-list-add-people'));
@@ -416,7 +568,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyAddRequested(
               listId: 'list-42',
               pubkey: _candidateA,
@@ -424,7 +576,7 @@ void main() {
           ),
         ).called(1);
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyAddRequested(
               listId: 'list-42',
               pubkey: _candidateC,
@@ -432,7 +584,7 @@ void main() {
           ),
         ).called(1);
         verifyNever(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyAddRequested(
               listId: 'list-42',
               pubkey: _candidateB,
@@ -449,6 +601,8 @@ void main() {
 
     setUp(() {
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
       mockFollowRepository = _MockFollowRepository();
 
       when(
@@ -546,6 +700,8 @@ void main() {
       'route opens the full-screen picker using handwritten $GoRoute',
       (tester) async {
         final bloc = _MockPeopleListsBloc();
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
         addTearDown(() async => bloc.close());
         final mockFollowRepository = _MockFollowRepository();
         when(

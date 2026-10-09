@@ -28,6 +28,14 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     private var pollTimer: Timer?
     #endif
     private var latestPixelBuffer: CVPixelBuffer?
+
+    /// Draws the frame effects Dart switched on (see `setFrameEffects`).
+    private let frameEffects = VideoFrameEffectProcessor()
+
+    /// The last decoded frame before any effect, and its time, so a change
+    /// of effects can redraw a paused frame.
+    private var latestSourceBuffer: CVPixelBuffer?
+    private var latestSourceTime = CMTime.invalid
     private var hasDeliveredFirstFrame = false
     private weak var player: AVPlayer?
     /// Item the output is currently attached to, so we can detach cleanly.
@@ -210,6 +218,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         if let warm = warmOutputs.first(where: { $0.item === item })?.output {
             videoOutput = warm
             attachedItem = item
+            frameEffects.playerItem = item
             // Reset like the cold path below: a new clip set builds a new
             // looper whose items are prewarmed before this runs, so this is
             // the branch a second video takes. Leaving the flag set there
@@ -235,6 +244,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         item.add(output)
         videoOutput = output
         attachedItem = item
+        frameEffects.playerItem = item
         hasDeliveredFirstFrame = false
         pendingSeekTime = .invalid
         mediaDataRearmCount = 0
@@ -322,6 +332,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// and re-arm; [attach] re-arms a warm output the moment it is adopted.
     func outputSequenceWasFlushed(_ output: AVPlayerItemOutput) {
         guard output === videoOutput else { return }
+        frameEffects.reset()
         mediaDataRearmCount = 0
         lastDeliveredItemTime = .invalid
         (output as? AVPlayerItemVideoOutput)?
@@ -406,6 +417,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     func dispose(unregisterTexture: Bool = true) {
         isDisposed = true
         isFrameDeliveryEnabled = false
+        frameEffects.dispose()
         stopFrameDriver()
         itemStatusObservation?.invalidate()
         itemStatusObservation = nil
@@ -475,11 +487,52 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     }
     #endif
 
-    private func deliverFrame(_ pixelBuffer: CVPixelBuffer, at itemTime: CMTime) {
+    /// Switches the frame effects to `configs` and, when the list changed,
+    /// redraws the frame on screen with them, so a paused preview shows the
+    /// change at once.
+    func setFrameEffects(_ configs: [[String: Any]]) {
+        frameEffects.playerItem = attachedItem
+        frameEffects.onHistoryFilled = { [weak self] in self?.redrawWithEffects() }
+        guard frameEffects.setEffects(configs) else { return }
+        redrawWithEffects()
+    }
+
+    /// Draws the last decoded frame again with the current frame effects.
+    private func redrawWithEffects() {
+        guard !isDisposed, let source = latestSourceBuffer,
+            let timeUs = latestSourceTime.microseconds
+        else { return }
+        let shown = frameEffects.process(source, timeUs: timeUs)
+        os_unfair_lock_lock(&pixelBufferLock)
+        latestPixelBuffer = shown
+        os_unfair_lock_unlock(&pixelBufferLock)
+        guard isFrameDeliveryEnabled else { return }
+        registry.textureFrameAvailable(textureId)
+    }
+
+    /// Where each clip starts, in seconds, so frame effects that look back
+    /// start over at every cut.
+    func setClipOffsets(_ offsets: [Double]) {
+        frameEffects.setClipOffsets(offsets)
+    }
+
+    /// Delivers `pixelBuffer`, the frame for `itemTime`. `frameTime` is the
+    /// frame's own presentation time when known, which frame effects key
+    /// their history on; the display tick that pulled it can lie after it.
+    private func deliverFrame(
+        _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
+    ) {
         lastDeliveredItemTime = itemTime
         nextStallRecoveryTime = 0
+        let time = frameTime.isValid ? frameTime : itemTime
+        latestSourceBuffer = pixelBuffer
+        latestSourceTime = time
+        var shown = pixelBuffer
+        if frameEffects.isActive, let timeUs = time.microseconds {
+            shown = frameEffects.process(pixelBuffer, timeUs: timeUs)
+        }
         os_unfair_lock_lock(&pixelBufferLock)
-        latestPixelBuffer = pixelBuffer
+        latestPixelBuffer = shown
         os_unfair_lock_unlock(&pixelBufferLock)
         guard isFrameDeliveryEnabled else { return }
         PlaybackDiagnostics.shared.recordFrameDelivered()
@@ -499,15 +552,16 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
 
         let itemTime = player.currentTime()
 
+        var frameTime = CMTime.invalid
         if CACurrentMediaTime() < forceRefreshDeadline {
             if let pixelBuffer = output.copyPixelBuffer(
                 forItemTime: itemTime,
-                itemTimeForDisplay: nil
+                itemTimeForDisplay: &frameTime
             ) {
                 pendingSeekTime = .invalid
                 forceRefreshDeadline = 0
                 forceWindowFailCount = 0
-                deliverFrame(pixelBuffer, at: itemTime)
+                deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
             } else {
                 forceWindowFailCount += 1
             }
@@ -538,9 +592,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         // re-prime via `recoverStalledTextureIfNeeded`.
         if let pixelBuffer = output.copyPixelBuffer(
             forItemTime: itemTime,
-            itemTimeForDisplay: nil
+            itemTimeForDisplay: &frameTime
         ) {
-            deliverFrame(pixelBuffer, at: itemTime)
+            deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)
         }

@@ -1,8 +1,11 @@
 // ABOUTME: Tests showNewPeopleListSheet's curatedLists gate.
 // ABOUTME: The sheet reads the lazily-registered global PeopleListsBloc.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,6 +145,7 @@ void main() {
         _buildSubject(
           curatedListsEnabled: true,
           createBloc: () => bloc,
+          initialCollaborator: collaborator,
           extraOverrides: [
             vanishedProfilePubkeysProvider.overrideWith(
               (ref) => Stream.value({vanishedPubkey}),
@@ -154,10 +158,6 @@ void main() {
       );
 
       await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.listCollaboratorsNone));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.profileDeletedAccountName).last);
       await tester.pumpAndSettle();
 
       expect(find.text('Aeontropy'), findsNothing);
@@ -187,6 +187,141 @@ void main() {
         verifyNever(() => bloc.add(any()));
       },
     );
+    testWidgets("joins the collaborators' names with the locale's own "
+        'separator', (tester) async {
+      // Japanese lists names with 、, so a Latin ", " cannot pass here.
+      const seededPubkey =
+          'c75b9a3131f4263add94ba20beb352a1'
+          '1032684f2dac07a7e1af827c6f3c1505';
+      const pickedPubkey =
+          'd75b9a3131f4263add94ba20beb352a1'
+          '1032684f2dac07a7e1af827c6f3c1505';
+      UserProfile profile(String pubkey, String name) => UserProfile(
+        pubkey: pubkey,
+        displayName: name,
+        rawData: const {},
+        createdAt: DateTime(2026),
+        eventId: 'e' * 64,
+      );
+      final seeded = profile(seededPubkey, 'Aki');
+      final picked = profile(pickedPubkey, 'Rin');
+
+      final profileRepo = _MockProfileRepository();
+      when(
+        () => profileRepo.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (_) => Stream.value(
+          ProgressiveSearchResult(
+            profiles: [picked],
+            sources: const {},
+            isComplete: true,
+          ),
+        ),
+      );
+      when(
+        () => profileRepo.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+      ).thenAnswer((_) async => [picked]);
+      when(
+        () => profileRepo.getCachedProfile(pubkey: any(named: 'pubkey')),
+      ).thenAnswer((_) async => picked);
+      final followRepo = _MockFollowRepository();
+      when(() => followRepo.followingPubkeys).thenReturn([pickedPubkey]);
+      when(() => followRepo.isInitialized).thenReturn(true);
+      when(() => followRepo.followingCount).thenReturn(1);
+      when(() => followRepo.followingStream).thenAnswer(
+        (_) => BehaviorSubject<List<String>>.seeded([pickedPubkey]).stream,
+      );
+      when(
+        followRepo.streamMyFollowers,
+      ).thenAnswer((_) => Stream.value([pickedPubkey]));
+      when(followRepo.getMyFollowers).thenAnswer((_) async => [pickedPubkey]);
+      final blocklist = _MockContentBlocklistRepository();
+      when(() => blocklist.shouldFilterFromFeeds(any())).thenReturn(false);
+
+      await tester.pumpWidget(
+        _buildSubject(
+          curatedListsEnabled: true,
+          createBloc: () => bloc,
+          initialCollaborator: seeded,
+          locale: const Locale('ja'),
+          extraOverrides: [
+            // Nobody is vanished; the real provider is a drift stream whose
+            // teardown timer would outlive the test.
+            vanishedProfilePubkeysProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
+            profileRepositoryProvider.overrideWithValue(profileRepo),
+            followRepositoryProvider.overrideWithValue(followRepo),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+          ],
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aki'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Rin');
+      // Advance the search's configured debounce before waiting for results.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rin').last);
+      await tester.pumpAndSettle();
+
+      final ja = lookupAppLocalizations(const Locale('ja'));
+      expect(ja.listMemberNamesSeparator, isNot(', '));
+      expect(
+        find.text(['Aki', 'Rin'].join(ja.listMemberNamesSeparator)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Done stays disabled until a name is entered', (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      final done = find.widgetWithText(DivineButton, l10n.listDone);
+
+      expect(tester.widget<DivineButton>(done).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).first, '   ');
+      await tester.pump();
+      expect(tester.widget<DivineButton>(done).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).first, 'Film Club');
+      await tester.pump();
+      expect(tester.widget<DivineButton>(done).onPressed, isNotNull);
+    });
+
+    testWidgets('keeps entered name open until confirmed and after failure', (
+      tester,
+    ) async {
+      final pending = Completer<PeopleListsOperationResult>();
+      when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+      await tester.pumpWidget(
+        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'My people');
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.listDone));
+      await tester.pump();
+      expect(find.text('My people'), findsOneWidget);
+      pending.complete(PeopleListsOperationResult.failed);
+      await tester.pumpAndSettle();
+      expect(find.text('My people'), findsOneWidget);
+      expect(find.text(l10n.listCreateFailed), findsOneWidget);
+    });
 
     testWidgets('opens when curatedLists is on', (tester) async {
       await tester.pumpWidget(
@@ -208,6 +343,9 @@ Widget _buildSubject({
   required PeopleListsBloc Function() createBloc,
   List<Override> extraOverrides = const [],
   MockAuthService? auth,
+  UserProfile? initialCollaborator,
+  String? initialPubkey,
+  Locale? locale,
 }) {
   return ProviderScope(
     overrides: [
@@ -222,12 +360,17 @@ Widget _buildSubject({
     child: BlocProvider<PeopleListsBloc>(
       create: (_) => createBloc(),
       child: MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(
-              onPressed: () => showNewPeopleListSheet(context),
+              onPressed: () => showNewPeopleListSheet(
+                context,
+                initialCollaborator: initialCollaborator,
+                initialPubkey: initialPubkey,
+              ),
               child: const Text('open'),
             ),
           ),

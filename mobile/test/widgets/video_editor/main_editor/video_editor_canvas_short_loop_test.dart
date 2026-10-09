@@ -1,5 +1,5 @@
-// ABOUTME: Pins how the canvas drives the timeline position on a short loop:
-// ABOUTME: from its playhead ticker, wrapping, with native reports suppressed.
+// ABOUTME: Pins how the canvas drives the timeline position on a short loop,
+// ABOUTME: and that it hands the frame effects to the player after each load.
 
 import 'dart:io';
 
@@ -13,16 +13,19 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, EditorVideo;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/divine_video_player_channel.dart';
@@ -80,15 +83,18 @@ void main() {
   late Directory tempDir;
   late _PlayerReports reports;
   late VideoEditorMainBloc mainBloc;
+  late VideoEditorEffectsCubit effectsCubit;
   late _MockClipEditorBloc clipBloc;
   late _MockTimelineOverlayBloc overlayBloc;
   late SharedPreferences prefs;
+  final playerCalls = <MethodCall>[];
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     tempDir = Directory.systemTemp.createTempSync('canvas_short_loop');
     reports = _PlayerReports();
+    playerCalls.clear();
     DivineVideoPlayerController.resetIdCounterForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -111,6 +117,7 @@ void main() {
           null,
         );
     await mainBloc.close();
+    await effectsCubit.close();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -132,8 +139,15 @@ void main() {
     // bloc's event pipeline schedule on the binding's fake zone, where a
     // plain pump delivers them; created in setUp they would run on the real
     // event loop instead.
-    installMockDivineVideoPlayer(streamHandler: reports);
+    installMockDivineVideoPlayer(
+      streamHandler: reports,
+      onMethodCall: (call) async {
+        playerCalls.add(call);
+        return null;
+      },
+    );
     mainBloc = VideoEditorMainBloc();
+    effectsCubit = VideoEditorEffectsCubit();
     final clip = clipOf(duration);
     whenListen(
       clipBloc,
@@ -169,6 +183,7 @@ void main() {
               BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
               BlocProvider(create: (_) => VideoEditorDrawBloc()),
               BlocProvider(create: (_) => VideoEditorFilterBloc()),
+              BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
             ],
             child: VideoEditorScope(
               editorKey: GlobalKey(),
@@ -317,6 +332,63 @@ void main() {
       await settleBloc(tester);
 
       expect(mainBloc.state.currentPosition, const Duration(seconds: 1));
+      await unmount(tester);
+    });
+  });
+
+  group('frame effects', () {
+    const loop = Duration(seconds: 6);
+    const echo = EditorVideoEffect.custom(
+      id: 'echo',
+      custom: CustomVideoEffect(
+        id: echoVideoEffectId,
+        params: {EditorVideoEffect.intensityParam: 0.6},
+        startTime: Duration(seconds: 1),
+      ),
+    );
+
+    const echoArguments = {
+      'effects': [
+        {
+          'id': echoVideoEffectId,
+          'params': {EditorVideoEffect.intensityParam: 0.6},
+          'startUs': 1000000,
+          'endUs': null,
+        },
+      ],
+    };
+
+    List<MethodCall> frameEffectCalls() => [
+      for (final call in playerCalls)
+        if (call.method == 'setFrameEffects') call,
+    ];
+
+    testWidgets('hands the echo to the player again once the clips are '
+        'reloaded', (tester) async {
+      await pumpCanvas(tester, loop);
+      // The canvas mirrors the editor's history into the cubit while it
+      // comes up, so the echo is applied once that has settled.
+      effectsCubit.syncApplied(const [echo]);
+      await tester.pump();
+      expect(frameEffectCalls().last.arguments, echoArguments);
+      playerCalls.clear();
+
+      // A trim moves nothing in the effects themselves, so only the reload
+      // can make the canvas send them again.
+      ProviderScope.containerOf(
+        tester.element(find.byType(VideoEditorCanvas)),
+      ).read(clipManagerProvider.notifier).replaceClips([
+        clipOf(loop).copyWith(trimEnd: const Duration(seconds: 1)),
+      ], autosave: false);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(
+        playerCalls.map((call) => call.method),
+        containsAllInOrder(['setClips', 'setFrameEffects']),
+      );
+      expect(frameEffectCalls().single.arguments, echoArguments);
       await unmount(tester);
     });
   });

@@ -1,8 +1,10 @@
 // ABOUTME: Cubit behind a people list's roster. Ranks the members by how
 // ABOUTME: much they post and totals their videos and loops from Funnelcake.
 
+import 'dart:async';
 import 'dart:math';
 
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_members_state.dart';
@@ -35,23 +37,61 @@ typedef _MemberStats = ({int videoCount, double? totalLoops});
 /// total, so the totals stay `null` unless every member was asked about and
 /// every member answered with a count: a member Funnelcake does not know,
 /// or one whose stats carry no vertical count, leaves the total unknown.
+///
+/// Members [ContentBlocklistRepository.shouldFilterFromFeeds] hides are left
+/// out of [PeopleListMembersState.members], on the viewer's own lists too,
+/// and the view follows the blocklist as it changes. They stay in the
+/// totals: #9740 kept those list-wide on purpose.
 class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     with CloseGuardedEmit<PeopleListMembersState> {
   PeopleListMembersCubit({
     required ProfileRepository? profileRepository,
+    required ContentBlocklistRepository contentBlocklistRepository,
     required List<String> pubkeys,
   }) : _profileRepository = profileRepository,
+       _blocklist = contentBlocklistRepository,
        _pubkeys = List.unmodifiable(pubkeys),
-       super(
-         PeopleListMembersState(
-           members: List.unmodifiable([
-             for (final pubkey in pubkeys) PeopleListMember(pubkey: pubkey),
-           ]),
-         ),
-       );
+       super(_unranked(pubkeys, contentBlocklistRepository)) {
+    _blocklistSubscription = contentBlocklistRepository.stateStream.listen(
+      (_) => emitIfOpen(
+        state.copyWith(members: _visibleTo(_blocklist, state.roster)),
+      ),
+    );
+  }
 
   final ProfileRepository? _profileRepository;
+  final ContentBlocklistRepository _blocklist;
   final List<String> _pubkeys;
+  late final StreamSubscription<void> _blocklistSubscription;
+
+  static PeopleListMembersState _unranked(
+    List<String> pubkeys,
+    ContentBlocklistRepository blocklist,
+  ) {
+    final roster = List<PeopleListMember>.unmodifiable([
+      for (final pubkey in pubkeys) PeopleListMember(pubkey: pubkey),
+    ]);
+    return PeopleListMembersState(
+      roster: roster,
+      members: _visibleTo(blocklist, roster),
+    );
+  }
+
+  /// The roster minus the members the viewer should not see. Filtering here
+  /// rather than before the stats fetch keeps every member's stats, so an
+  /// unblocked member returns ranked without another request.
+  static List<PeopleListMember> _visibleTo(
+    ContentBlocklistRepository blocklist,
+    List<PeopleListMember> roster,
+  ) => List.unmodifiable(
+    roster.where((member) => !blocklist.shouldFilterFromFeeds(member.pubkey)),
+  );
+
+  @override
+  Future<void> close() async {
+    await _blocklistSubscription.cancel();
+    return super.close();
+  }
 
   /// Fetches the members' stats and ranks the roster. Safe to call again.
   Future<void> load() async {
@@ -126,7 +166,7 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     required PeopleListMembersStatus status,
     required bool complete,
   }) {
-    final members = [
+    final roster = [
       for (final pubkey in _pubkeys)
         PeopleListMember(
           pubkey: pubkey,
@@ -136,7 +176,7 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     ];
     // Ranked members first, most videos first; ties and the unranked keep
     // the list's own order. Indexed because List.sort is not stable.
-    final indexed = members.indexed.toList()
+    final indexed = roster.indexed.toList()
       ..sort((a, b) {
         final byVideos = (b.$2.videoCount ?? -1).compareTo(
           a.$2.videoCount ?? -1,
@@ -147,12 +187,13 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     final withStats = ranked.where((member) => member.hasStats).toList();
     // Every page answering is not enough: a member absent from a page, or
     // one without a vertical count, is a member the sum would leave out.
-    final hasTotals = complete && withStats.length == members.length;
+    final hasTotals = complete && withStats.length == roster.length;
     final loopsKnown = withStats.every((member) => member.totalLoops != null);
 
     return PeopleListMembersState(
       status: status,
-      members: List.unmodifiable(ranked),
+      roster: List.unmodifiable(ranked),
+      members: _visibleTo(_blocklist, ranked),
       totalVideos: hasTotals
           ? withStats.fold<int>(0, (sum, member) => sum + member.videoCount!)
           : null,

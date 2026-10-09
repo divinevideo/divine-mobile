@@ -156,6 +156,8 @@
     "appearanceSettingsSystem": "የሥርዓት ነባሪ",
     "appearanceSettingsLight": "ብሩህ",
     "appearanceSettingsDark": "ጨለማ",
+    "videoOverlayTotalLoops": "የ{authorName} {compactCount} {count, plural, =1{ዙር} other{ዙሮች}}",
+    "videoOverlayVideoLoops": "የዚህ ቪዲዮ {compactCount} {count, plural, =1{ዙር} other{ዙሮች}}",
     "generalSettingsClosedCaptions": "የተዘጉ መግለጫዎች",
     "generalSettingsClosedCaptionsSubtitle": "ቪዲዮዎች መግለጫዎችን ሲያካትቱ አሳይ",
     "generalSettingsVideoShapeSquareOnly": "ካሬ ቪዲዮዎች ብቻ",
@@ -1598,6 +1600,15 @@
     "dmVideoSent": "ቪዲዮ ተልኳል",
     "dmVideoSendFailed": "ቪዲዮ መልክ አልተቸልም",
     "dmVideoTooLarge": "ይህ ቪዲዮ ለመላክ በጣም ትልቅ ነው። ከ{maxMegabytes} MB በታች የሆነ ይምረጡ",
+    "dmAttachClipFromLibrary": "ክሊፕ ከቤተ-መጽሐፍትዎ",
+    "dmAttachVideoFromGallery": "ቪዲዮ ከጋለሪዎ",
+    "dmClipBadge": "ክሊፕ",
+    "dmClipChecking": "ይህ ክሊፕ በDivine መቀረጹን በማረጋገጥ ላይ…",
+    "dmClipNotVerified": "ይህ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ ወደ ክሊፖችዎ አልተጨመረም።",
+    "dmClipCheckUnavailable": "አሁን ይህን ክሊፕ ማረጋገጥ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
+    "dmClipSendNotVerified": "ይህ ክሊፕ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ እንደ ክሊፕ መላክ አይቻልም።",
+    "dmAttachReuseNotice": "የሚልኩትን ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።",
+    "dmClipsPartlySent": "{total, plural, one{ከ{total} ክሊፕ ውስጥ {sent} ተልኳል። የቀሩት አልተላኩም።} other{ከ{total} ክሊፖች ውስጥ {sent} ተልከዋል። የቀሩት አልተላኩም።}}",
     "shareSheetSaveVideo": "ቪዲዮ አስቀምጥ",
     "shareSheetAddToClips": "ወደ ቅንጥቦች ያክሉ",
     "@shareSheetAddToClips": {
@@ -1695,7 +1706,6 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
     "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
     "peopleListsAddButton": "አክል",
@@ -2053,9 +2063,6 @@
     },
     "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
     "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
-    "listCollaboratorsNone": "ምንም",
-    "listAddCollaboratorTitle": "ተባባሪ ጨምር",
-    "listCollaboratorSearchHint": "Divine ፈልግ...",
     "listNameLabel": "የዝርዝር ስም",
     "listDescriptionLabel": "መግለጫ (አማራጭ)",
     "listPublicList": "የህዝብ ዝርዝር",
@@ -3116,6 +3123,7 @@
   "videoEditorEffectSplitScreen": "የተከፈለ ስክሪን",
   "videoEditorEffectWave": "ሞገድ",
   "videoEditorEffectGlow": "ፍካት",
+  "videoEditorEffectEcho": "ማሚቶ",
   "videoEditorEffectsFlashingReplaced": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።",
   "videoEditorEffectsFlashingNotDuplicated": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።",
   "videoEditorEffectsOnBeat": "ከምቱ ጋር",
@@ -3475,6 +3483,7 @@
     "videoEditorAddElementSemanticLabel": "ኤለመንት አክል",
     "videoEditorDoneSemanticLabel": "ተከናውኗል",
     "videoEditorLevelSemanticLabel": "ደረጃ",
+    "videoEditorBrushSizeSemanticLabel": "የብሩሽ መጠን",
     "videoMetadataClosePostDetailsSemanticLabel": "የልጥፍ ዝርዝሮችን ዝጋ",
     "videoMetadataDismissHelpDialogSemanticLabel": "የእገዛ ንግግርን አሰናብት",
     "videoMetadataGotItButton": "ገባኝ!",
@@ -5044,5 +5053,26 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ"
+  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ",
+  "listNewVideoList": "አዲስ የቪዲዮ ዝርዝር",
+  "peopleListsPublicNotice": "ይህ ዝርዝር ይፋዊ ነው። ማንም ሰው ስሙን፣ መግለጫውን እና በውስጡ ያሉትን ሰዎች ማየት ይችላል።",
+  "peopleListsPeopleLabel": "ሰዎች",
+  "peopleListsPeopleNone": "ምንም ሰዎች አልተጨመሩም",
+  "peopleListsSessionChanged": "መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።",
+  "peopleListsSearchConnectionsHint": "ተከታዮችን እና የምትከተላቸውን ፈልግ",
+  "listMemberNamesSeparator": "፣ ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

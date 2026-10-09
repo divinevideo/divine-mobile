@@ -70,6 +70,65 @@ void main() {
   });
 
   group(CollaboratorAvatarRowBody, () {
+    group('padding', () {
+      testWidgets('adds no space when every collaborator is filtered out', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _wrap(
+            const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CollaboratorAvatarRowBody(
+                  visibility: CollaboratorVisibility(
+                    taggedPubkeys: [_collab1],
+                    statusByPubkey: {_collab1: CollaboratorStatus.pending},
+                    currentUserPubkey: _thirdPartyPubkey,
+                    creatorPubkey: _creatorPubkey,
+                    isResolved: true,
+                  ),
+                  padding: EdgeInsets.only(top: 4),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        expect(_divineIcon(DivineIconName.users), findsNothing);
+        expect(
+          tester.getSize(find.byType(CollaboratorAvatarRowBody)).height,
+          equals(0),
+        );
+      });
+
+      testWidgets('adds the padding above a visible row', (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CollaboratorAvatarRowBody(
+                  visibility: CollaboratorVisibility.fallback(
+                    taggedPubkeys: [_collab1],
+                  ),
+                  padding: EdgeInsets.only(top: 4),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final rowTop = tester.getTopLeft(
+          find.byType(CollaboratorAvatarRowBody),
+        );
+        final pillTop = tester.getTopLeft(
+          find.bySemanticsIdentifier('collaborator_avatar_row'),
+        );
+        expect(pillTop.dy - rowTop.dy, equals(4));
+      });
+    });
+
     testWidgets(
       'fallback mode: renders all tagged pubkeys with no decoration',
       (tester) async {

@@ -279,7 +279,17 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Without this the editor's detached clips froze on iOS once they had
     /// run out: the composition looping round seeks them back to the start,
     /// and they stayed paused there.
+    ///
+    /// Read when that seek lands, not when it is sent, so a pause arriving in
+    /// between still wins.
     private var playsWhenLeavingEnd = false
+    /// Set when a seek off the end that should resume playback lands while
+    /// the app is inactive, so the clip plays once it is active again.
+    /// Separate from [wasPlayingBeforePause]: a pause cancels this, never that.
+    private var resumesSeekOnForeground = false
+    /// Bumped by every call that moves, replaces or releases the media, so a
+    /// `seekTo` completion landing after one of them leaves playback alone.
+    private var seekGeneration = 0
     private var errorMessage: String?
     private var errorCode: String?
     private var firstFrameRendered: Bool = false
@@ -347,6 +357,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.safePreroll(at: actualTime)
             }
         }
+        output.setClipOffsets(clipOffsets)
         textureOutput = output
         return output.textureId
     }
@@ -370,6 +381,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             audioOverlayManager.resumeActive(speed: speed)
             result(nil)
         case "pause":
+            resumesSeekOnForeground = false
             playsWhenLeavingEnd = false
             player?.pause()
             audioOverlayManager.pauseAndDeactivateAll()
@@ -394,6 +406,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             handleRemoveAllAudioTracks(result: result)
         case "setAudioTrackVolume":
             handleSetAudioTrackVolume(call, result: result)
+        case "setFrameEffects":
+            let args = call.arguments as? [String: Any]
+            textureOutput?.setFrameEffects(args?["effects"] as? [[String: Any]] ?? [])
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -454,6 +470,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             return
         }
 
+        seekGeneration += 1
+        playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
+        wasPlayingBeforePause = false
         armSetClipsTimeout()
         setClipsGeneration += 1
         let callGeneration = setClipsGeneration
@@ -513,6 +533,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 }
                 self.remoteClipLoader = built.streamedLoop?.loader
                 self.clipOffsets = offsets
+                self.textureOutput?.setClipOffsets(offsets)
                 self.clipDurations = durations
                 self.clipCount = offsets.count
                 self.totalDuration = offsets.last.map { $0 + (durations.last ?? 0) } ?? 0
@@ -1374,20 +1395,42 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         reportedPositionOverrideMs = targetPositionMs
         let time = CMTime(value: targetPositionMs, timescale: 1000)
         // Seeking off the end leaves it, as ExoPlayer leaves STATE_ENDED.
-        let resumes = currentStatus == "completed" && playsWhenLeavingEnd
         if currentStatus == "completed" { currentStatus = "ready" }
-        playsWhenLeavingEnd = false
-        player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-            guard let self else {
+        seekGeneration += 1
+        let generation = seekGeneration
+        // A failed item never completes a seek: answer now instead of leaving
+        // the call, and the block AVPlayer would hold for it, pending.
+        guard let seekingPlayer = player, let seekingItem = seekingPlayer.currentItem,
+            seekingItem.status != .failed
+        else {
+            result(nil)
+            return
+        }
+        // Weak, so a seek that never completes cannot keep the player alive
+        // after `dispose()`.
+        seekingPlayer.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) {
+            [weak self, weak seekingPlayer, weak seekingItem] finished in
+            guard let self, finished, !self.diagnosticDisposed,
+                self.seekGeneration == generation,
+                let seekingPlayer, self.player === seekingPlayer,
+                let seekingItem, seekingPlayer.currentItem === seekingItem
+            else {
                 result(nil)
                 return
             }
             self.textureOutput?.forceRefresh(for: time)
             self.syncAudioOverlays()
-            if resumes {
-                self.player?.play()
-                self.player?.rate = Float(self.speed)
-                self.audioOverlayManager.resumeActive(speed: self.speed)
+            // Pause may arrive while AVPlayer is seeking. Keep the end intent
+            // live until the latest successful seek consumes it.
+            if self.playsWhenLeavingEnd {
+                self.playsWhenLeavingEnd = false
+                if self.isBackgrounded {
+                    self.resumesSeekOnForeground = true
+                } else {
+                    self.player?.play()
+                    self.player?.rate = Float(self.speed)
+                    self.audioOverlayManager.resumeActive(speed: self.speed)
+                }
             }
             // The loop's sound runs on its own clock; the seek only moved
             // the picture.
@@ -1488,6 +1531,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             result(nil)
             return
         }
+        seekGeneration += 1
+        playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         let targetPositionMs = Int64((clipOffsets[index] * 1000).rounded())
         reportedPositionOverrideMs = targetPositionMs
         let targetTime = CMTime(seconds: clipOffsets[index], preferredTimescale: 600)
@@ -1510,6 +1556,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     // MARK: - Stop
 
     private func handleStop(result: @escaping FlutterResult) {
+        wasPlayingBeforePause = false
+        resumesSeekOnForeground = false
+        seekGeneration += 1
         audioOverlayManager.pauseAndDeactivateAll()
         clearSetClipsTimeout()
         clearBufferingWatchdog(resetReported: true)
@@ -1837,6 +1886,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     private func rebuildQueueForLoopingChange() {
         guard let player, let item = templateItem else { return }
+        seekGeneration += 1
+        playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         // `currentTime()` answers an invalid time whenever the queue has no
         // current item — an item still loading, or a queue already drained by
         // an earlier rebuild. `AVPlayerItem` raises `NSInvalidArgumentException`
@@ -2455,11 +2507,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     func onAppForegrounded() {
         isBackgrounded = false
         textureOutput?.resumeFrameDelivery()
-        if wasPlayingBeforePause {
+        if wasPlayingBeforePause || resumesSeekOnForeground {
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)
             wasPlayingBeforePause = false
+            resumesSeekOnForeground = false
         }
         // Resync unconditionally: a status change suppressed by the gate
         // while backgrounded (e.g. a paused item that failed on a dropped
@@ -2477,6 +2530,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// messenger's own shell-guarded paths.
     func dispose(engineTearingDown: Bool = false) {
         diagnosticDisposed = true
+        seekGeneration += 1
+        playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
             timeObserver = nil

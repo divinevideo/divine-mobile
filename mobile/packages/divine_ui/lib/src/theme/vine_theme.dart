@@ -1049,6 +1049,12 @@ class VineTheme {
   /// Scrim at 35% opacity (black 35%).
   static const Color scrim35 = Color(0x58000000);
 
+  /// Scrim at 56% opacity (black 56%).
+  ///
+  /// The lightest black scrim that keeps white text at 5:1 contrast over a
+  /// pure-white frame.
+  static const Color scrim56 = Color(0x90000000);
+
   /// Scrim at 65% opacity (black 65%).
   static const Color scrim65 = Color(0xA6000000);
 

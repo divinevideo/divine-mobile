@@ -74,11 +74,6 @@ AudioEvent _sound({
   ),
 );
 
-Future<void> _settle() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
-}
-
 void main() {
   late SavedSoundsService service;
   late _ControlledProbe probe;
@@ -107,7 +102,7 @@ void main() {
     SoundSyncRepository syncRepository,
   ) async {
     final syncedBloc = buildBloc(syncRepository: syncRepository);
-    await _settle();
+    await pumpEventQueue();
     return syncedBloc;
   }
 
@@ -116,9 +111,8 @@ void main() {
     service = SavedSoundsService(await SharedPreferences.getInstance());
     probe = _ControlledProbe();
     bloc = buildBloc();
+    addTearDown(bloc.close);
   });
-
-  tearDown(() => bloc.close());
 
   group('SavedSoundsLoadRequested', () {
     test('loads persisted records', () async {
@@ -127,7 +121,7 @@ void main() {
       );
 
       bloc.add(const SavedSoundsLoadRequested());
-      await _settle();
+      await pumpEventQueue();
 
       expect(bloc.state.sounds.single.id, 'existing');
     });
@@ -137,7 +131,12 @@ void main() {
     test(
       'durably saves basic context and catalog tags before probe finishes',
       () async {
-        probe.completer = Completer<SavedSoundMediaResult?>();
+        final probing = Completer<SavedSoundMediaResult?>();
+        probe.completer = probing;
+        addTearDown(() async {
+          if (!probing.isCompleted) probing.complete();
+          await pumpEventQueue();
+        });
         const context = SavedSoundSourceContext(
           creatorName: 'Alice',
           description: 'A rainy loop',
@@ -158,7 +157,7 @@ void main() {
       'duplicate save reports alreadySaved and does not probe again',
       () async {
         await bloc.saveSound(_sound());
-        await _settle();
+        await pumpEventQueue();
         final result = await bloc.saveSound(_sound());
 
         expect(result, SavedSoundSaveResult.alreadySaved);
@@ -169,7 +168,12 @@ void main() {
     test(
       'successful probe replaces duration and waveform on the same full ID',
       () async {
-        probe.completer = Completer<SavedSoundMediaResult?>();
+        final probing = Completer<SavedSoundMediaResult?>();
+        probe.completer = probing;
+        addTearDown(() async {
+          if (!probing.isCompleted) probing.complete();
+          await pumpEventQueue();
+        });
         await bloc.saveSound(_sound());
 
         probe.completer!.complete(
@@ -178,7 +182,7 @@ void main() {
             waveformSamples: [0.1, 0.8],
           ),
         );
-        await _settle();
+        await pumpEventQueue();
 
         expect(bloc.state.sounds.single.id, 'sound-1');
         expect(bloc.state.sounds.single.audio.duration, 4.5);
@@ -192,7 +196,7 @@ void main() {
         probe.result = null;
 
         expect(await bloc.saveSound(_sound()), SavedSoundSaveResult.saved);
-        await _settle();
+        await pumpEventQueue();
 
         expect(bloc.state.sounds.single.id, 'sound-1');
         expect(bloc.state.unsavedSoundIds, isEmpty);
@@ -210,7 +214,7 @@ void main() {
           hashtags: ['#Practice', 'practice', ' Guitar '],
         ),
       );
-      await _settle();
+      await pumpEventQueue();
 
       final saved = service.loadSavedSounds().single;
       expect(saved.personalLabel, 'Warm up');
@@ -237,7 +241,7 @@ void main() {
           ),
         );
         bloc.add(const SavedSoundsLoadRequested());
-        await _settle();
+        await pumpEventQueue();
 
         for (final query in [
           'morning',
@@ -249,14 +253,14 @@ void main() {
           'field recording',
         ]) {
           bloc.add(SavedSoundsQueryChanged(query));
-          await _settle();
+          await pumpEventQueue();
           expect(bloc.state.visibleSounds, hasLength(1), reason: query);
         }
         bloc.add(const SavedSoundsHashtagSelected('missing'));
-        await _settle();
+        await pumpEventQueue();
         expect(bloc.state.visibleSounds, isEmpty);
         bloc.add(const SavedSoundsHashtagSelected('practice'));
-        await _settle();
+        await pumpEventQueue();
         expect(bloc.state.visibleSounds, hasLength(1));
       },
     );
@@ -267,7 +271,7 @@ void main() {
       await bloc.saveSound(_sound());
 
       await bloc.removeSound('sound-1');
-      await _settle();
+      await pumpEventQueue();
 
       expect(bloc.state.sounds, isEmpty);
       expect(service.loadSavedSounds(), isEmpty);
@@ -289,7 +293,7 @@ void main() {
         failingBloc.removeSound('sound-1'),
         throwsA(isA<StateError>()),
       );
-      await _settle();
+      await pumpEventQueue();
 
       expect(
         failingBloc.state.sounds,
@@ -519,7 +523,7 @@ void main() {
             hashtags: const ['practice'],
           ),
         );
-        await _settle();
+        await pumpEventQueue();
 
         verify(
           () => syncRepository.publishLocalChange('e' * 64),
@@ -538,7 +542,7 @@ void main() {
         addTearDown(syncedBloc.close);
 
         await syncedBloc.saveSound(_sound(id: 'f' * 64));
-        await _settle();
+        await pumpEventQueue();
 
         verify(
           () => syncRepository.publishLocalChange('f' * 64),
@@ -568,7 +572,7 @@ void main() {
         verifyNever(() => syncRepository.publishLocalChange(any()));
 
         controller.add(syncRepository);
-        await _settle();
+        await pumpEventQueue();
         await coldStartBloc.saveSound(_sound(id: 'h' * 64));
 
         verify(() => syncRepository.publishLocalChange('h' * 64)).called(1);
@@ -635,6 +639,10 @@ void main() {
         // The publish is best-effort, so the sound must reach the library
         // while it is still in flight rather than after it settles.
         final publishing = Completer<void>();
+        addTearDown(() async {
+          if (!publishing.isCompleted) publishing.complete();
+          await pumpEventQueue();
+        });
         when(
           () => syncRepository.publishLocalChange(any()),
         ).thenAnswer((_) => publishing.future);
@@ -655,6 +663,10 @@ void main() {
       'a removal drops the row without waiting on the relay publish',
       () async {
         final publishing = Completer<void>();
+        addTearDown(() async {
+          if (!publishing.isCompleted) publishing.complete();
+          await pumpEventQueue();
+        });
         final syncedBloc = await buildSyncedBloc(syncRepository);
         addTearDown(syncedBloc.close);
         await syncedBloc.saveSound(_sound(id: 'l' * 64));
@@ -734,7 +746,7 @@ void main() {
       expect(deleting.state.sounds, hasLength(1));
 
       final result = await deleting.deletePublishedSound('d' * 64);
-      await _settle();
+      await pumpEventQueue();
 
       expect(result.success, isTrue);
       expect(deleting.state.sounds, isEmpty);
@@ -777,7 +789,7 @@ void main() {
           ),
         ),
       );
-      await _settle();
+      await pumpEventQueue();
 
       expect(deleting.state.sounds, hasLength(1));
       expect(evicted, isEmpty);
@@ -799,11 +811,11 @@ void main() {
       ).thenAnswer((_) async => accepted());
       final deleting = deletingBloc(syncRepository: syncRepository);
       addTearDown(deleting.close);
-      await _settle();
+      await pumpEventQueue();
       await deleting.saveSound(ownSound());
 
       await deleting.deletePublishedSound('d' * 64);
-      await _settle();
+      await pumpEventQueue();
 
       verify(() => syncRepository.publishLocalDeletion('d' * 64)).called(1);
     });

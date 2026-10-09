@@ -135,6 +135,10 @@ abstract final class RoutePaths {
   static String peopleListAddPeopleForId(String listId) =>
       '/people-lists/${Uri.encodeComponent(listId)}/add-people';
 
+  /// Metadata editor for the viewer's own people list.
+  static String peopleListEditForId(String listId) =>
+      '/people-lists/${Uri.encodeComponent(listId)}/edit';
+
   static String curatedListFeedForId(String listId) {
     final encodedId = Uri.encodeComponent(listId);
     return '$curatedListFeedBase/$encodedId';

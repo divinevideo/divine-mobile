@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Vidéo envoyée",
     "dmVideoSendFailed": "Impossible d'envoyer la vidéo",
     "dmVideoTooLarge": "Cette vidéo est trop lourde pour être envoyée. Choisis-en une de moins de {maxMegabytes} Mo",
+    "dmAttachClipFromLibrary": "Clip de ta bibliothèque",
+    "dmAttachVideoFromGallery": "Vidéo de ta galerie",
+    "dmClipBadge": "Clip",
+    "dmClipChecking": "On vérifie que ce clip a été filmé avec Divine…",
+    "dmClipNotVerified": "Impossible de confirmer que ça a été filmé avec la caméra Divine, donc ça n'a pas été ajouté à tes clips.",
+    "dmClipCheckUnavailable": "Impossible de vérifier ce clip pour l'instant. Réessaie dans un moment.",
+    "dmClipSendNotVerified": "Impossible de confirmer que ce clip a été filmé avec la caméra Divine, donc il ne peut pas être envoyé comme clip.",
+    "dmAttachReuseNotice": "Ce que tu envoies peut être ajouté à ses clips et publié, avec ton nom en crédit.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} sur {total} clip envoyé. Le reste n'est pas parti.} many{{sent} sur {total} de clips envoyés. Le reste n'est pas parti.} other{{sent} sur {total} clips envoyés. Le reste n'est pas parti.}}",
     "shareSheetSaveVideo": "Enregistrer la vidéo",
     "shareSheetAddToClips": "Ajouter aux clips",
     "shareSheetAddToClipsFailed": "Impossible d'ajouter aux clips",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Créer une nouvelle liste",
     "listNewPeopleList": "Nouvelle liste de personnes",
-    "listCollaboratorsNone": "Aucun",
-    "listAddCollaboratorTitle": "Ajouter un collaborateur",
-    "listCollaboratorSearchHint": "Rechercher dans Divine...",
     "listNameLabel": "Nom de la liste",
     "listDescriptionLabel": "Description (facultatif)",
     "listPublicList": "Liste publique",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Écran partagé",
   "videoEditorEffectWave": "Vague",
   "videoEditorEffectGlow": "Lueur",
+  "videoEditorEffectEcho": "Écho",
   "videoEditorEffectsFlashingReplaced": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l'autre ici.",
   "videoEditorEffectsFlashingNotDuplicated": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.",
   "videoEditorEffectsOnBeat": "Sur le rythme",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Ajouter un élément",
     "videoEditorDoneSemanticLabel": "Terminé",
     "videoEditorLevelSemanticLabel": "Niveau",
+    "videoEditorBrushSizeSemanticLabel": "Taille du pinceau",
     "videoMetadataClosePostDetailsSemanticLabel": "Fermer les détails de la publication",
     "videoMetadataDismissHelpDialogSemanticLabel": "Fermer la fenêtre d'aide",
     "videoMetadataGotItButton": "Compris !",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Erreur lors du chargement des vidéos",
     "peopleListsNoPeopleToAdd": "Aucune personne disponible à ajouter.",
     "peopleListsAddToListName": "Ajouter à {name}",
-    "peopleListsAddPeopleSearchHint": "Rechercher des personnes",
     "peopleListsAddPeopleError": "Impossible de charger les personnes. Veuillez réessayer.",
     "peopleListsAddPeopleRetry": "Réessayer",
     "peopleListsAddButton": "Ajouter",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Paramètre du système",
     "appearanceSettingsLight": "Clair",
     "appearanceSettingsDark": "Sombre",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{boucle} many{boucles} other{boucles}} de {authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{boucle} many{boucles} other{boucles}} de cette vidéo",
     "generalSettingsClosedCaptions": "Sous-titres",
     "generalSettingsClosedCaptionsSubtitle": "Affiche les sous-titres quand les vidéos en proposent",
     "generalSettingsVideoShapeSquareOnly": "Vidéos carrées uniquement",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nouvelle liste de vidéos",
+  "peopleListsPublicNotice": "Cette liste est publique. Tout le monde peut voir son nom, sa description et les personnes qui y figurent.",
+  "peopleListsPeopleLabel": "Personnes",
+  "peopleListsPeopleNone": "Aucune personne ajoutée",
+  "peopleListsSessionChanged": "Ton compte ou ton accès à la liste a changé. Rouvre cette page pour continuer.",
+  "peopleListsSearchConnectionsHint": "Rechercher parmi les abonnés et les abonnements",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privée, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

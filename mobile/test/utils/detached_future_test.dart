@@ -65,19 +65,28 @@ void main() {
     });
 
     test(
-      'logs a rejected operation instead of leaking the rejection',
+      'logs a rejected operation amid unrelated logging without leaking it',
       () async {
         final errors = await unhandledErrorsWhile(() async {
+          Log.info('Background work started', name: 'OtherBackgroundWork');
           runDetached(
             Future<void>.error(StateError('boom')),
             'load badges',
             logName: 'BadgeLoader',
             category: LogCategory.ui,
           );
+          scheduleMicrotask(() {
+            Log.info('Background work completed', name: 'OtherBackgroundWork');
+          });
         });
 
         expect(errors, isEmpty);
-        final logs = logCapture.getRecentLogs();
+        final allLogs = logCapture.getRecentLogs();
+        expect(
+          allLogs.where((entry) => entry.name == 'OtherBackgroundWork'),
+          hasLength(2),
+        );
+        final logs = allLogs.where((entry) => entry.name == 'BadgeLoader');
         expect(logs, hasLength(1));
         expect(logs.single.level, LogLevel.error);
         expect(logs.single.name, 'BadgeLoader');
@@ -150,7 +159,12 @@ void main() {
 
         expect(unhandledErrors, isEmpty);
         expect(reporter.recordedErrors, isEmpty);
-        expect(logCapture.getRecentLogs(), hasLength(1));
+        expect(
+          logCapture.getRecentLogs().where(
+            (entry) => entry.name == 'BadgeLoader',
+          ),
+          hasLength(1),
+        );
       },
     );
 
@@ -173,7 +187,9 @@ void main() {
         });
 
         expect(errors, isEmpty);
-        final logs = logCapture.getRecentLogs();
+        final logs = logCapture.getRecentLogs().where(
+          (entry) => entry.name == 'Autosave',
+        );
         expect(logs, hasLength(1));
         expect(
           logs.single.message,

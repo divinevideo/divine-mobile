@@ -955,6 +955,15 @@
     "dmVideoSent": "Naipadala ang video",
     "dmVideoSendFailed": "Hindi maipadala ang video",
     "dmVideoTooLarge": "Masyadong malaki ang video na ito para ipadala. Pumili ng mas maliit sa {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Clip mula sa library mo",
+    "dmAttachVideoFromGallery": "Video mula sa gallery mo",
+    "dmClipBadge": "Clip",
+    "dmClipChecking": "Tinitingnan kung kinunan sa Divine ang clip na ito…",
+    "dmClipNotVerified": "Hindi namin makumpirma na kinunan ito gamit ang Divine camera, kaya hindi ito naidagdag sa clips mo.",
+    "dmClipCheckUnavailable": "Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.",
+    "dmClipSendNotVerified": "Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.",
+    "dmAttachReuseNotice": "Puwede nilang idagdag sa clips nila ang ipinadala mo at i-post ito, at mababanggit ka.",
+    "dmClipsPartlySent": "{total, plural, one{Naipadala ang {sent} sa {total} clip. Hindi naipadala ang iba.} other{Naipadala ang {sent} sa {total} na clip. Hindi naipadala ang iba.}}",
     "shareSheetSaveVideo": "I-save ang Video",
     "shareSheetAddToClips": "Idagdag sa clips",
     "shareSheetAddToClipsFailed": "Hindi naidagdag sa clips",
@@ -1212,9 +1221,6 @@
     "listAddedTo": "Naidagdag sa {name}",
     "listCreateNewList": "Gumawa ng Bagong Listahan",
     "listNewPeopleList": "Bagong people list",
-    "listCollaboratorsNone": "Wala",
-    "listAddCollaboratorTitle": "Magdagdag ng collaborator",
-    "listCollaboratorSearchHint": "Maghanap sa Divine...",
     "listNameLabel": "Pangalan ng Listahan",
     "listDescriptionLabel": "Description (opsyonal)",
     "listPublicList": "Public na Listahan",
@@ -1801,6 +1807,7 @@
   "videoEditorEffectSplitScreen": "Split Screen",
   "videoEditorEffectWave": "Wave",
   "videoEditorEffectGlow": "Glow",
+  "videoEditorEffectEcho": "Echo",
   "videoEditorEffectsFlashingReplaced": "Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.",
   "videoEditorEffectsFlashingNotDuplicated": "Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.",
   "videoEditorEffectsOnBeat": "Sa beat",
@@ -2106,6 +2113,7 @@
     "videoEditorAddElementSemanticLabel": "Magdagdag ng element",
     "videoEditorDoneSemanticLabel": "Tapos na",
     "videoEditorLevelSemanticLabel": "Antas",
+    "videoEditorBrushSizeSemanticLabel": "Laki ng brush",
     "videoMetadataClosePostDetailsSemanticLabel": "Isara ang mga detalye ng post",
     "videoMetadataDismissHelpDialogSemanticLabel": "I-dismiss ang help dialog",
     "videoMetadataGotItButton": "Sige na!",
@@ -2296,7 +2304,6 @@
     "peopleListsAddButtonWithCount": "Idagdag ang {count}",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
-    "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
     "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan",
     "peopleListsAddPeopleTitle": "Magdagdag ng tao",
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
@@ -2504,6 +2511,8 @@
     "appearanceSettingsSystem": "Default ng system",
     "appearanceSettingsLight": "Maliwanag",
     "appearanceSettingsDark": "Madilim",
+    "videoOverlayTotalLoops": "{count, plural, one{{compactCount} loop ni {authorName}} other{{compactCount} loop ni {authorName}}}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} ng video na ito",
     "generalSettingsClosedCaptions": "Closed Captions",
     "generalSettingsClosedCaptionsSubtitle": "Ipakita ang captions kapag may captions ang video",
     "generalSettingsVideoShapeSquareOnly": "Square videos lang",
@@ -3930,5 +3939,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Bagong listahan ng video",
+  "peopleListsPublicNotice": "Pampubliko ang listahang ito. Makikita ng kahit sino ang pangalan, paglalarawan, at mga tao rito.",
+  "peopleListsPeopleLabel": "Mga tao",
+  "peopleListsPeopleNone": "Wala pang idinagdag na tao",
+  "peopleListsSessionChanged": "Nagbago ang account mo o ang access sa listahan. Buksan ulit ang pahinang ito para magpatuloy.",
+  "peopleListsSearchConnectionsHint": "Maghanap sa mga tagasubaybay at sinusubaybayan",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Pribado, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

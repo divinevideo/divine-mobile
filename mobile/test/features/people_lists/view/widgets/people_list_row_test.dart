@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for PeopleListRow toggle affordance.
 // ABOUTME: Verifies checkbox state, theming, and event dispatch on tap.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -73,6 +75,8 @@ void main() {
 
     setUp(() {
       bloc = _MockPeopleListsBloc();
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
     });
 
     tearDown(() async {
@@ -100,6 +104,35 @@ void main() {
         ),
       );
     }
+
+    testWidgets('shows pending and retryable failure for its own toggle', (
+      tester,
+    ) async {
+      final list = _buildList(id: 'crew', name: 'Crew');
+      final pending = Completer<PeopleListsOperationResult>();
+      when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+      when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+      await tester.pumpWidget(buildSubject(list: list, pubkey: _targetPubkey));
+      await tester.tap(find.text('Crew'));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.tap(find.text('Crew'));
+      verify(() => bloc.submit(any())).called(1);
+      pending.complete(PeopleListsOperationResult.failed);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(lookupAppLocalizations(const Locale('en')).listUpdateFailed),
+        findsOneWidget,
+      );
+      when(() => bloc.submit(any()))
+          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+      await tester.tap(find.text('Crew'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(lookupAppLocalizations(const Locale('en')).listUpdateFailed),
+        findsNothing,
+      );
+    });
 
     testWidgets('renders list name', (tester) async {
       final list = _buildList(id: 'list-1', name: 'Close Friends');
@@ -168,7 +201,7 @@ void main() {
         await tester.pump();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyToggleRequested(
               listId: 'list-42',
               pubkey: _targetPubkey,

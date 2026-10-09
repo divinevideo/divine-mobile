@@ -82,6 +82,9 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
        super(const DmVideoPlaybackState());
 
   final DmMessage _message;
+
+  /// The kind 15 message this cubit plays.
+  DmMessage get message => _message;
   final DmVideoDecryptor _decryptor;
   final GallerySaveService _gallerySaveService;
 

@@ -24,7 +24,8 @@
 #   - PROOFMODE_SIGNING_SERVER_TOKEN
 # 8 - PUBLISH_TO_GITHUB is configured via build inputs (dropdown) when starting builds
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
-#     and to publish that release to Zapstore
+#     and, with RELEASE_CHANNEL=PRODUCTION, publish that release to Zapstore
+#   - RELEASE_CHANNEL defaults to BETA; choose PRODUCTION only after this version is live in both stores
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
 # 9 - Android publishing reads the service account from environment variable
@@ -48,8 +49,9 @@
 # 11 - Create environment variable group "zapstore_credentials" with:
 #   - ZAPSTORE_NSEC (mark as secure) — the nsec that signs the Zapstore release
 #     events. The android-build workflow publishes to Zapstore automatically
-#     when PUBLISH_TO_GITHUB=YES and signs with this key, so it reaches public
-#     relays without a manual `zsp publish`. Never log or echo this value.
+#     when PUBLISH_TO_GITHUB=YES and RELEASE_CHANNEL=PRODUCTION. It signs with
+#     this key to reach public relays without a manual `zsp publish`. Never log
+#     or echo this value.
 #
 # Every group named under a workflow's `groups:` key must appear in this
 # checklist. Codemagic validates this whole file before it provisions a machine,
@@ -564,44 +566,15 @@ definitions:
           echo "Skipping GitHub Release (PUBLISH_TO_GITHUB != YES)"
           exit 0
         fi
-        VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-        TAG="$VERSION"
-        echo "Publishing to GitHub Release $TAG"
-        # Collect artifacts that exist for this platform
-        ARTIFACTS=()
-        # Android APKs
-        for f in build/app/outputs/apk/release/*arm64*.apk build/app/outputs/apk/release/*armeabi*.apk; do
-          [ -f "$f" ] && ARTIFACTS+=("$f")
-        done
-        # iOS IPA
-        for f in build/ios/ipa/*.ipa; do
-          [ -f "$f" ] && ARTIFACTS+=("$f")
-        done
-        # macOS DMG
-        for f in build/macos/Build/Products/Release/*.dmg; do
-          [ -f "$f" ] && ARTIFACTS+=("$f")
-        done
-        if [ ${#ARTIFACTS[@]} -eq 0 ]; then
-          echo "No artifacts found to upload"
+        set -euo pipefail
+        if [ "${{ inputs.RELEASE_CHANNEL }}" = "PRODUCTION" ] && [ "${CM_BRANCH:-}" != "main" ]; then
+          echo "Refusing stable publication outside main (branch: '${CM_BRANCH:-unset}')."
           exit 1
         fi
-        echo "Uploading ${#ARTIFACTS[@]} artifact(s): ${ARTIFACTS[*]}"
-        # If release already exists, upload assets to it; otherwise create new
-        if gh release view "$TAG" --repo "$CM_REPO_SLUG" > /dev/null 2>&1; then
-          echo "Release $TAG exists, uploading assets (replacing existing)"
-          gh release upload "$TAG" \
-            --repo "$CM_REPO_SLUG" \
-            --clobber \
-            "${ARTIFACTS[@]}"
-        else
-          echo "Creating new release $TAG"
-          gh release create "$TAG" \
-            --repo "$CM_REPO_SLUG" \
-            --title "$TAG" \
-            --prerelease \
-            --generate-notes \
-            "${ARTIFACTS[@]}"
-        fi
+        python3 scripts/publish_github_release.py \
+          --repo "$CM_REPO_SLUG" \
+          --channel "${{ inputs.RELEASE_CHANNEL }}" \
+          --backend "${{ inputs.DEFAULT_ENV }}"
     - &publish_zapstore
       name: Publish to Zapstore
       script: |
@@ -610,14 +583,18 @@ definitions:
           exit 0
         fi
         set -euo pipefail
+        if [ "${{ inputs.RELEASE_CHANNEL }}" != "PRODUCTION" ]; then
+          echo "Skipping Zapstore: beta builds are distributed through GitHub only"
+          exit 0
+        fi
         VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
         TAG="$VERSION"
         # zsp fetches the newest GitHub release it can download an APK from,
         # so a stale or missing release would publish someone else's APK under
         # this signing key. Only publish when the newest release is the one
-        # this build just cut. Drafts are excluded because zsp skips them.
+        # this build just cut. Drafts and betas are excluded, matching zsp.
         REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
-          --exclude-drafts --json tagName --jq '.[0].tagName')
+          --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')
         if [ "$REMOTE_TAG" != "$TAG" ]; then
           echo "Newest release is '$REMOTE_TAG', expected '$TAG'. Refusing to publish."
           exit 1
@@ -641,15 +618,14 @@ definitions:
         # ./mobile/assets/icon/app_icon.png, so zsp must run from there.
         cd "$CM_BUILD_DIR"
         # --check proves the arm64 asset resolves before anything is signed.
-        "$ZSP_BIN" publish --check --pre-release zapstore.yaml
-        # --pre-release: the release this build just cut is a prerelease, so
-        # without it zsp skips it for the previous public release (the 1.0.9 bug).
+        "$ZSP_BIN" publish --check zapstore.yaml
+        # Only stable GitHub releases are eligible for Zapstore.
         # --skip-certificate-linking: linking the keystore to the identity is a
         # one-time proof, not a per-release step; run `zsp identity --link-key`
         # separately.
         SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
           "$ZSP_BIN" publish zapstore.yaml --quiet --skip-preview \
-          --skip-certificate-linking --pre-release
+          --skip-certificate-linking
     - &build_ios
       name: Build and sign iOS (Shorebird release)
       script: |
@@ -1003,6 +979,13 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
+      RELEASE_CHANNEL:
+        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
+        type: choice
+        default: BETA
+        options:
+          - BETA
+          - PRODUCTION
       PUBLISH_TO_GITHUB:
         description: Upload IPA to GitHub Release (for direct distribution)
         type: choice
@@ -1134,8 +1117,15 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
+      RELEASE_CHANNEL:
+        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
+        type: choice
+        default: BETA
+        options:
+          - BETA
+          - PRODUCTION
       PUBLISH_TO_GITHUB:
-        description: Create a GitHub Release with APK artifacts and publish it to Zapstore
+        description: Upload APKs to GitHub (production also publishes to Zapstore)
         type: choice
         default: "NO"
         options:
@@ -1393,6 +1383,13 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
+      RELEASE_CHANNEL:
+        description: GitHub release channel; PRODUCTION sets Latest and triggers update prompts. Run only after this version is available to all users in App Store and Google Play.
+        type: choice
+        default: BETA
+        options:
+          - BETA
+          - PRODUCTION
       PUBLISH_TO_GITHUB:
         description: Upload DMG to GitHub Release (for direct distribution)
         type: choice

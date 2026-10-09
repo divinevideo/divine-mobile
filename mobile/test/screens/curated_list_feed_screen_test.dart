@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -285,6 +286,92 @@ void main() {
     });
 
     group('viewer actions', () {
+      // Full-length hex, never truncated.
+      final listEventId = 'e' * 64;
+      final listAuthor = 'b' * 64;
+
+      CuratedList reportableList() => CuratedList(
+        id: 'external-list',
+        name: 'External List',
+        pubkey: listAuthor,
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        nostrEventId: listEventId,
+      );
+
+      testWidgets('offers no report on your own uncached discovered list', (
+        tester,
+      ) async {
+        // A deep link can resolve before the background owner-list sync.
+        // The local store is ready but does not contain this list yet.
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: listAuthor,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets("reports someone else's list from its menu", (
+        tester,
+      ) async {
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: 'a' * 64,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listReportAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      });
+
+      testWidgets(
+        'looks the list up to report it when opened without its event',
+        (tester) async {
+          await tester.pumpWidget(
+            buildSubject(
+              authorPubkey: listAuthor,
+              extraOverrides: [
+                publicCuratedListProvider(
+                  authorPubkey: listAuthor,
+                  listId: 'external-list',
+                ).overrideWith((ref) async => reportableList()),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.listReportAction), findsOneWidget);
+        },
+      );
+
       testWidgets('shows follow pill and share action for a public list', (
         tester,
       ) async {
@@ -483,6 +570,8 @@ void main() {
         expect(find.text(l10n.listManageVideosAction), findsOneWidget);
         expect(find.text(l10n.listShareAction), findsOneWidget);
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
+        // Reporting your own list stays disabled, as it is for videos.
+        expect(find.text(l10n.listReportAction), findsNothing);
       });
 
       testWidgets('sheet tiles activate through the semantics owner', (

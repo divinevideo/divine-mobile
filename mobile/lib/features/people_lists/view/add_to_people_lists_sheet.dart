@@ -25,7 +25,7 @@ import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
 /// there are no editable lists, an empty state offers a `Create list`
 /// affordance. When lists do exist, the list rows are scrollable and a
 /// "Create new list" button is pinned floating at the bottom. Both paths
-/// pre-seed the new list with [initialCollaborator] when provided.
+/// pre-seed the new list with [pubkey], independently of optional metadata.
 class AddToPeopleListsSheet extends StatelessWidget {
   /// Creates the sheet widget.
   const AddToPeopleListsSheet({
@@ -49,7 +49,7 @@ class AddToPeopleListsSheet extends StatelessWidget {
   final String? displayName;
 
   /// When set, the "Create new list" sheet opens pre-seeded with this
-  /// profile as the first collaborator.
+  /// profile as the first person. Membership always uses [pubkey].
   final UserProfile? initialCollaborator;
 
   /// Shows the sheet as a modal [VineBottomSheet].
@@ -73,6 +73,7 @@ class AddToPeopleListsSheet extends StatelessWidget {
       context: context,
       title: Text(context.l10n.peopleListsSheetTitle),
       bottomInput: _CreateNewListButton(
+        pubkey: pubkey,
         initialCollaborator: initialCollaborator,
       ),
       buildScrollBody: (scrollController) => AddToPeopleListsSheet(
@@ -92,16 +93,42 @@ class AddToPeopleListsSheet extends StatelessWidget {
           .toList(growable: false),
     );
 
+    final state = context.watch<PeopleListsBloc>().state;
+    if (editableLists.isEmpty && !state.listsKnown) {
+      if (state.ownerReadStatus == PeopleListsOwnerReadStatus.failed) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.l10n.peopleListsLoadFailed),
+            DivineButton(
+              label: context.l10n.peopleListsAddPeopleRetry,
+              onPressed: () => context.read<PeopleListsBloc>().add(
+                const PeopleListsOwnerSyncRequested(),
+              ),
+            ),
+          ],
+        );
+      }
+      return const Center(child: DivineCircularProgressIndicator());
+    }
     if (editableLists.isEmpty) {
       return const _EmptyListRows();
     }
 
     return ListView.builder(
+      key: ValueKey((state.activeOwnerPubkey, pubkey)),
+      findChildIndexCallback: (key) {
+        final index = editableLists.indexWhere(
+          (list) => ValueKey(list.id) == key,
+        );
+        return index < 0 ? null : index;
+      },
       padding: EdgeInsets.zero,
       itemCount: editableLists.length,
       itemBuilder: (context, index) {
         final list = editableLists[index];
         return PeopleListRow(
+          key: ValueKey(list.id),
           listId: list.id,
           listName: list.name,
           pubkey: pubkey,
@@ -114,7 +141,9 @@ class AddToPeopleListsSheet extends StatelessWidget {
 
 /// Floating "Create new list" button pinned to the bottom of the sheet.
 class _CreateNewListButton extends StatelessWidget {
-  const _CreateNewListButton({this.initialCollaborator});
+  const _CreateNewListButton({required this.pubkey, this.initialCollaborator});
+
+  final String pubkey;
 
   final UserProfile? initialCollaborator;
 
@@ -135,6 +164,7 @@ class _CreateNewListButton extends StatelessWidget {
         onPressed: () => showNewPeopleListSheet(
           context,
           initialCollaborator: initialCollaborator,
+          initialPubkey: pubkey,
         ),
       ),
     );

@@ -1,6 +1,6 @@
-// ABOUTME: Foreground-triggered sweep that re-drives undelivered DM reactions
-// ABOUTME: (publish failed / interrupted) via DmReactionsRepository, giving
-// ABOUTME: reactions the durable retry that DM messages already have.
+// ABOUTME: Sweep that re-drives undelivered DM reactions and removals via
+// ABOUTME: DmReactionsRepository on foreground, connectivity, repository
+// ABOUTME: nudges and a follow-up heartbeat, so a stable session still recovers.
 
 import 'dart:async';
 
@@ -29,7 +29,8 @@ abstract class DmReactionRetryServiceReportableSites {
 /// Mirrors `OutgoingDmRetryConfig` (5 retries, 2 s → 5 min, 2× backoff) so
 /// reaction and message retries behave the same. Retry accounting is kept in
 /// memory rather than on the `dm_message_reactions` row, so the budget resets
-/// on a cold start — bounded further by the foreground-only trigger.
+/// on a cold start. The follow-up heartbeat spends that budget within a
+/// session; it never extends it.
 class DmReactionRetryConfig {
   /// Construct a retry config.
   const DmReactionRetryConfig({
@@ -38,6 +39,7 @@ class DmReactionRetryConfig {
     this.maxDelay = const Duration(minutes: 5),
     this.backoffMultiplier = 2.0,
     this.interruptedPendingMinAge = const Duration(seconds: 30),
+    this.followUpSweepGap = const Duration(seconds: 30),
   });
 
   /// Attempts a single reaction gets before the sweep drops it (a manual
@@ -53,11 +55,18 @@ class DmReactionRetryConfig {
   /// Growth factor applied per attempt.
   final double backoffMultiplier;
 
-  /// A `'pending'` row younger than this is skipped: its original publish may
-  /// still be in flight (a reaction publish caps at 15 s), so re-driving it
-  /// now would race the in-flight attempt's own DAO write. Older `'pending'`
-  /// rows are app-killed-mid-send survivors, safe to replay.
+  /// A `'pending'` row younger than this is skipped to avoid unnecessary
+  /// retry work while its original publish is likely still in flight.
+  /// Older rows may be interrupted sends. A group publish can outlive this
+  /// guard; the repository coalesces retries with any original still running.
   final Duration interruptedPendingMinAge;
+
+  /// How long after a pass that leaves retryable work behind (or after a
+  /// repository nudge) the next pass runs on its own. Mirrors
+  /// `OutgoingDmRetryService`'s follow-up gap, so a reaction or removal that
+  /// did not confirm is re-driven within the session instead of waiting for
+  /// the next foreground transition or connectivity change.
+  final Duration followUpSweepGap;
 
   /// Minimum gap required before re-attempting a reaction whose previous
   /// attempt count is [retryCount]. Clamped at [maxDelay].
@@ -74,9 +83,9 @@ class DmReactionRetryConfig {
 
 enum _RetryAttemptOutcome { recovered, refused, failed }
 
-/// Re-drives undelivered own DM reactions on every app-foreground transition,
-/// closing the reliability gap that leaves a reaction lost when its recipient
-/// gift wrap fails to land on a flaky relay.
+/// Re-drives undelivered own DM reactions and removals, closing the
+/// reliability gap that leaves a reaction lost when its recipient gift wrap
+/// fails to land on a flaky relay.
 ///
 /// DM *messages* get this durability from the `outgoing_dms` queue +
 /// `OutgoingDmRetryService`; reactions previously had only a manual re-tap.
@@ -86,12 +95,20 @@ enum _RetryAttemptOutcome { recovered, refused, failed }
 /// [DmReactionsRepository.retry], which requires the relay's NIP-20 `OK`
 /// before marking the reaction sent.
 ///
-/// **Trigger:** [appForegroundStream] transitions to `true`. The provider
+/// **Triggers:** [appForegroundStream] transitions to `true` (the provider
 /// seeds the current foreground state, so the cold-start sweep fires
-/// automatically.
+/// automatically), the optional connectivity stream, the repository's
+/// `retryableReactionWork` nudge, and a follow-up heartbeat. The heartbeat is
+/// armed whenever a pass leaves rows that can still be retried this session,
+/// and by a nudge when none is armed. Without it a session on stable
+/// connectivity has no second pass at all: a removal that did not confirm
+/// leaves no chip to re-tap, so the counterparty keeps a reaction the sender
+/// believes is gone.
 ///
 /// **Re-entrancy:** a sweep already in progress short-circuits the next
-/// trigger; the deferred work is picked up on the next foreground transition.
+/// trigger. A nudge or heartbeat that lands mid-pass is remembered and arms a
+/// follow-up when the pass ends, because the pass may have listed its rows
+/// before the new one existed.
 ///
 /// **Backoff/budget:** per-reaction attempts are tracked in memory. A reaction
 /// is skipped until `lastAttempt + backoff(attempts)` elapses and dropped from
@@ -158,16 +175,26 @@ class DmReactionRetryService {
 
   StreamSubscription<bool>? _foregroundSubscription;
   StreamSubscription<void>? _retryTriggerSubscription;
+  StreamSubscription<void>? _retryableWorkSubscription;
+  Timer? _followUpTimer;
   bool _isInitialized = false;
   bool _isSweeping = false;
+
+  /// A nudge or heartbeat arrived while a pass was running. Consumed after
+  /// the pass so a row that landed mid-pass still arms a follow-up.
+  bool _wakeRequestedDuringSweep = false;
+
+  /// Passes in a row that threw before listing the worklist. Bounds the
+  /// heartbeat so a persistent fault cannot loop for the rest of the session.
+  int _consecutiveSweepFaults = 0;
 
   bool get isInitialized => _isInitialized;
 
   @visibleForTesting
   bool get isSweeping => _isSweeping;
 
-  /// Subscribe to foreground transitions. Idempotent: calling twice is a
-  /// no-op so the eager-init read in `main.dart` and any test setup coexist.
+  /// Subscribe to the retry triggers. Idempotent: calling twice is a no-op so
+  /// the eager-init read in `main.dart` and any test setup coexist.
   Future<void> initialize() async {
     if (_isInitialized) return;
     _isInitialized = true;
@@ -182,6 +209,10 @@ class DmReactionRetryService {
       unawaited(sweep());
     });
 
+    _retryableWorkSubscription = _repository.retryableReactionWork.listen(
+      (_) => _onRepositoryNudge(),
+    );
+
     Log.info(
       'initialized',
       name: 'DmReactionRetryService',
@@ -189,14 +220,18 @@ class DmReactionRetryService {
     );
   }
 
-  /// Cancel the trigger subscriptions and mark the service un-init.
-  /// Idempotent.
+  /// Cancel the trigger subscriptions and the heartbeat, and mark the service
+  /// un-init. Idempotent.
   Future<void> dispose() async {
+    _isInitialized = false;
+    _followUpTimer?.cancel();
+    _followUpTimer = null;
     await _foregroundSubscription?.cancel();
     _foregroundSubscription = null;
     await _retryTriggerSubscription?.cancel();
     _retryTriggerSubscription = null;
-    _isInitialized = false;
+    await _retryableWorkSubscription?.cancel();
+    _retryableWorkSubscription = null;
   }
 
   /// One pass over the retryable reactions. Public so tests can drive it
@@ -216,6 +251,7 @@ class DmReactionRetryService {
     // retries once credentials are wired.
     if (!_repository.isInitialized) return;
     _isSweeping = true;
+    var sweepThrew = false;
 
     try {
       // Offline: every dispatch would deterministically hit the send path's
@@ -283,7 +319,17 @@ class DmReactionRetryService {
         name: 'DmReactionRetryService',
         category: LogCategory.system,
       );
+
+      _scheduleFollowUp(workRemains: r.stillRetryable + d.stillRetryable > 0);
     } on Object catch (e, stackTrace) {
+      sweepThrew = true;
+      _consecutiveSweepFaults++;
+      // Queue state is unknown after a throw, so assume work remains, but
+      // only for as many passes as a row gets attempts: a fault that never
+      // clears must not keep the heartbeat alive for the rest of the session.
+      _scheduleFollowUp(
+        workRemains: _consecutiveSweepFaults < _config.maxRetries,
+      );
       Log.error(
         'sweep failed: $e',
         name: 'DmReactionRetryService',
@@ -299,8 +345,50 @@ class DmReactionRetryService {
         ),
       );
     } finally {
+      if (!sweepThrew) _consecutiveSweepFaults = 0;
       _isSweeping = false;
+      // Consumed after `_isSweeping` clears: checking earlier would reopen a
+      // window between the pass's own scheduling and this flag.
+      if (_wakeRequestedDuringSweep) {
+        _wakeRequestedDuringSweep = false;
+        _armFollowUpIfIdle();
+      }
     }
+  }
+
+  /// Arm the heartbeat to run one more pass after [DmReactionRetryConfig
+  /// .followUpSweepGap], or cancel it when nothing can be retried.
+  void _scheduleFollowUp({required bool workRemains}) {
+    _followUpTimer?.cancel();
+    _followUpTimer = null;
+    if (!workRemains || !_isInitialized) return;
+    _followUpTimer = Timer(_config.followUpSweepGap, _onFollowUpTimer);
+  }
+
+  /// Arm the heartbeat only when none is armed, so a burst of nudges cannot
+  /// keep pushing an armed deadline out.
+  void _armFollowUpIfIdle() {
+    if (!_isInitialized || _followUpTimer != null) return;
+    _followUpTimer = Timer(_config.followUpSweepGap, _onFollowUpTimer);
+  }
+
+  void _onFollowUpTimer() {
+    _followUpTimer = null;
+    if (_isSweeping) {
+      _wakeRequestedDuringSweep = true;
+      return;
+    }
+    unawaited(sweep());
+  }
+
+  /// The repository left a row for the sweep. Emissions can follow a database
+  /// write that is still being read, so this only arms a timer.
+  void _onRepositoryNudge() {
+    if (_isSweeping) {
+      _wakeRequestedDuringSweep = true;
+      return;
+    }
+    _armFollowUpIfIdle();
   }
 
   /// Drive one list of retry [targets] through [driver]. Backoff/attempt
@@ -315,6 +403,7 @@ class DmReactionRetryService {
       int skippedBackoff,
       int skippedExhausted,
       int skippedTooYoung,
+      int stillRetryable,
     })
   >
   _driveTargets(
@@ -331,6 +420,12 @@ class DmReactionRetryService {
     var skippedExhausted = 0;
     var skippedTooYoung = 0;
 
+    // Rows this session may still attempt: they back off, age past the
+    // in-flight guard, or failed with budget left. A row that was delivered,
+    // refused, or has spent its budget will never be attempted again, so it
+    // must not keep the heartbeat alive.
+    var stillRetryable = 0;
+
     for (final target in targets) {
       final id = '$phase:${target.rumorId}';
       final attempts = _attempts[id] ?? 0;
@@ -345,19 +440,21 @@ class DmReactionRetryService {
         final gap = _now().difference(last);
         if (gap < _config.backoffFor(attempts)) {
           skippedBackoff++;
+          stillRetryable++;
           continue;
         }
       }
 
-      // A still-`pending` reaction may have an in-flight publish (a reaction
-      // publish caps at 15 s); only treat it as interrupted once it's older
-      // than the guard, so the sweep never races an in-flight attempt.
+      // Avoid re-driving very fresh pending rows. Age alone cannot establish
+      // that a sequential group publish finished: the timeout is per recipient.
+      // The repository joins any original still running instead of replaying it.
       if (applyPendingMinAge && target.publishStatus == 'pending') {
         final age = _now().difference(
           DateTime.fromMillisecondsSinceEpoch(target.createdAt * 1000),
         );
         if (age < _config.interruptedPendingMinAge) {
           skippedTooYoung++;
+          stillRetryable++;
           continue;
         }
       }
@@ -376,11 +473,13 @@ class DmReactionRetryService {
             _attempts[id] = attempts + 1;
             _lastAttempt[id] = _now();
             failed++;
+            if (attempts + 1 < _config.maxRetries) stillRetryable++;
         }
       } on Object catch (e, stackTrace) {
         _attempts[id] = attempts + 1;
         _lastAttempt[id] = _now();
         failed++;
+        if (attempts + 1 < _config.maxRetries) stillRetryable++;
         Log.error(
           'reaction retry threw for $id: $e',
           name: 'DmReactionRetryService',
@@ -406,6 +505,7 @@ class DmReactionRetryService {
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
       skippedTooYoung: skippedTooYoung,
+      stillRetryable: stillRetryable,
     );
   }
 

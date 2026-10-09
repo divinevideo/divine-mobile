@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Vídeo enviado",
     "dmVideoSendFailed": "Não foi possível enviar o vídeo",
     "dmVideoTooLarge": "Este vídeo é grande demais para enviar. Escolha um com menos de {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Clipe da sua biblioteca",
+    "dmAttachVideoFromGallery": "Vídeo da sua galeria",
+    "dmClipBadge": "Clipe",
+    "dmClipChecking": "Conferindo se este clipe foi gravado com o Divine…",
+    "dmClipNotVerified": "Não conseguimos confirmar que isso foi gravado com a câmera do Divine, então não foi adicionado aos seus clipes.",
+    "dmClipCheckUnavailable": "Não dá para verificar este clipe agora. Tente de novo daqui a pouco.",
+    "dmClipSendNotVerified": "Não conseguimos confirmar que este clipe foi gravado com a câmera do Divine, então ele não pode ser enviado como clipe.",
+    "dmAttachReuseNotice": "A pessoa pode adicionar o que você envia aos clipes dela e publicar, com crédito para você.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} de {total} clipe enviado. O resto não foi enviado.} many{{sent} de {total} de clipes enviados. O resto não foi enviado.} other{{sent} de {total} clipes enviados. O resto não foi enviado.}}",
     "shareSheetSaveVideo": "Salvar vídeo",
     "shareSheetAddToClips": "Adicionar aos clipes",
     "shareSheetAddToClipsFailed": "Não foi possível adicionar aos clipes",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Criar nova lista",
     "listNewPeopleList": "Nova lista de pessoas",
-    "listCollaboratorsNone": "Nenhum",
-    "listAddCollaboratorTitle": "Adicionar colaborador",
-    "listCollaboratorSearchHint": "Pesquisar no Divine...",
     "listNameLabel": "Nome da lista",
     "listDescriptionLabel": "Descrição (opcional)",
     "listPublicList": "Lista pública",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Tela dividida",
   "videoEditorEffectWave": "Onda",
   "videoEditorEffectGlow": "Fulgor",
+  "videoEditorEffectEcho": "Eco",
   "videoEditorEffectsFlashingReplaced": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.",
   "videoEditorEffectsFlashingNotDuplicated": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.",
   "videoEditorEffectsOnBeat": "No ritmo",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Adicionar elemento",
     "videoEditorDoneSemanticLabel": "Concluído",
     "videoEditorLevelSemanticLabel": "Nível",
+    "videoEditorBrushSizeSemanticLabel": "Tamanho do pincel",
     "videoMetadataClosePostDetailsSemanticLabel": "Fechar detalhes da publicação",
     "videoMetadataDismissHelpDialogSemanticLabel": "Fechar diálogo de ajuda",
     "videoMetadataGotItButton": "Entendi!",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Erro ao carregar vídeos",
     "peopleListsNoPeopleToAdd": "Nenhuma pessoa disponível para adicionar.",
     "peopleListsAddToListName": "Adicionar a {name}",
-    "peopleListsAddPeopleSearchHint": "Pesquisar pessoas",
     "peopleListsAddPeopleError": "Não foi possível carregar as pessoas. Tente novamente.",
     "peopleListsAddPeopleRetry": "Tentar novamente",
     "peopleListsAddButton": "Adicionar",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Padrão do sistema",
     "appearanceSettingsLight": "Claro",
     "appearanceSettingsDark": "Escuro",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} many{loops} other{loops}} de {authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} many{loops} other{loops}} deste vídeo",
     "generalSettingsClosedCaptions": "Legendas",
     "generalSettingsClosedCaptionsSubtitle": "Mostrar legendas quando os vídeos tiverem",
     "generalSettingsVideoShapeSquareOnly": "Só vídeos quadrados",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nova lista de vídeos",
+  "peopleListsPublicNotice": "Esta lista é pública. Qualquer pessoa pode ver o nome, a descrição e as pessoas nela.",
+  "peopleListsPeopleLabel": "Pessoas",
+  "peopleListsPeopleNone": "Nenhuma pessoa adicionada",
+  "peopleListsSessionChanged": "Sua conta ou seu acesso à lista mudou. Abra esta página novamente para continuar.",
+  "peopleListsSearchConnectionsHint": "Buscar seguidores e pessoas que você segue",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privada, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

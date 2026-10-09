@@ -185,6 +185,25 @@ void main() {
         expect(stats.text.toPlainText(), equals(l10n.listMemberCount(4)));
       });
 
+      testWidgets(
+        'no members row when every member is hidden from the viewer',
+        (tester) async {
+          await _pumpHeader(tester, previewPubkeys: const [], onViewAll: () {});
+
+          // The count stays list-wide; only the row into an empty roster goes.
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is RichText &&
+                  widget.text.toPlainText().contains(l10n.listMemberCount(3)),
+            ),
+            findsOneWidget,
+          );
+          expect(find.byType(PeopleListMembersPreview), findsNothing);
+          expect(find.text(l10n.peopleListsViewAllMembers), findsNothing);
+        },
+      );
+
       testWidgets('at most five piled avatars, best-ranked first', (
         tester,
       ) async {

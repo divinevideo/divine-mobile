@@ -15,10 +15,12 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
+import 'package:openvine/utils/curated_lists_snapshot.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -356,6 +358,55 @@ Future<CuratedList?> publicCuratedList(
   await ref.read(curatedListsStateProvider.future);
   final service = notifier.service;
   return service?.fetchPublicList(authorPubkey: authorPubkey, listId: listId);
+}
+
+/// The viewer's own video lists with card-fan thumbnails resolved.
+///
+/// The profile's My Lists gallery renders instantly from the service's
+/// lists (placeholder fans) and swaps to these enriched copies when the
+/// resolver returns.
+@riverpod
+Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final notifier = ref.watch(curatedListsStateProvider.notifier);
+  final repository = ref.watch(curatedListRepositoryProvider);
+  // The repository keeps its subscription stream stable across policy changes;
+  // this consumer still retires loaded and in-flight preview snapshots.
+  final policy = ref.watch(curatedListThumbnailFilterProvider);
+  final policyInitialized = ref.watch(
+    curatedListThumbnailPolicyInitializedProvider.future,
+  );
+  final authService = ref.watch(authServiceProvider);
+  final owner = authService.currentPublicKeyHex;
+  // Service rebuilds retain the notifier, so its construction dependencies
+  // must also invalidate a pending thumbnail pass.
+  ref.watch(currentAuthStateProvider);
+  ref.watch(nostrServiceProvider);
+  ref.watch(sharedPreferencesProvider);
+  final selectedFuture = ref.watch(
+    curatedListsStateProvider.selectAsync((_) {
+      final service = notifier.service;
+      return (
+        service: service,
+        snapshot: CuratedListsSnapshot(
+          service?.myLists ?? const <CuratedList>[],
+        ),
+      );
+    }),
+  );
+  final (selected, _) = await (selectedFuture, policyInitialized).wait;
+  bool isCurrent() =>
+      !disposed &&
+      ref.mounted &&
+      identical(notifier.service, selected.service) &&
+      authService.currentPublicKeyHex == owner &&
+      identical(ref.read(curatedListThumbnailFilterProvider), policy);
+  if (!isCurrent()) return const <CuratedList>[];
+  final lists = selected.snapshot.lists;
+  if (lists.isEmpty) return lists;
+  final resolved = await repository.resolveListThumbnails(lists);
+  return isCurrent() ? resolved : const <CuratedList>[];
 }
 
 /// Provider that fetches actual VideoEvent objects for a curated list

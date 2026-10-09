@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Video skickad",
     "dmVideoSendFailed": "Det gick inte att skicka videon",
     "dmVideoTooLarge": "Den här videon är för stor för att skickas. Välj en under {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Klipp från ditt bibliotek",
+    "dmAttachVideoFromGallery": "Video från ditt galleri",
+    "dmClipBadge": "Klipp",
+    "dmClipChecking": "Kollar att klippet är filmat med Divine…",
+    "dmClipNotVerified": "Vi kunde inte bekräfta att det är filmat med Divine-kameran, så det lades inte till i dina klipp.",
+    "dmClipCheckUnavailable": "Det går inte att kolla klippet just nu. Försök igen om en stund.",
+    "dmClipSendNotVerified": "Vi kunde inte bekräfta att klippet är filmat med Divine-kameran, så det kan inte skickas som klipp.",
+    "dmAttachReuseNotice": "Det du skickar kan mottagaren lägga till i sina klipp och publicera, och du krediteras.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} av {total} klipp skickat. Resten gick inte iväg.} other{{sent} av {total} klipp skickade. Resten gick inte iväg.}}",
     "shareSheetSaveVideo": "Spara video",
     "shareSheetAddToClips": "Lägg till i klipp",
     "shareSheetAddToClipsFailed": "Kunde inte lägga till i klipp",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Skapa ny lista",
     "listNewPeopleList": "Ny personlista",
-    "listCollaboratorsNone": "Inga",
-    "listAddCollaboratorTitle": "Lägg till medarbetare",
-    "listCollaboratorSearchHint": "Sök i Divine...",
     "listNameLabel": "Listnamn",
     "listDescriptionLabel": "Beskrivning (valfritt)",
     "listPublicList": "Publik lista",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Delad skärm",
   "videoEditorEffectWave": "Våg",
   "videoEditorEffectGlow": "Glöd",
+  "videoEditorEffectEcho": "Eko",
   "videoEditorEffectsFlashingReplaced": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.",
   "videoEditorEffectsFlashingNotDuplicated": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.",
   "videoEditorEffectsOnBeat": "I takt",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Lägg till element",
     "videoEditorDoneSemanticLabel": "Klar",
     "videoEditorLevelSemanticLabel": "Nivå",
+    "videoEditorBrushSizeSemanticLabel": "Penselstorlek",
     "videoMetadataClosePostDetailsSemanticLabel": "Stäng inläggsdetaljer",
     "videoMetadataDismissHelpDialogSemanticLabel": "Stäng hjälpdialog",
     "videoMetadataGotItButton": "Jag fattar!",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
-    "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
     "peopleListsAddButton": "Lägg till",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Systemstandard",
     "appearanceSettingsLight": "Ljust",
     "appearanceSettingsDark": "Mörkt",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loopar}} av {authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loopar}} i den här videon",
     "generalSettingsClosedCaptions": "Undertexter",
     "generalSettingsClosedCaptionsSubtitle": "Visa undertexter när videor har dem",
     "generalSettingsVideoShapeSquareOnly": "Endast kvadratiska videor",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Ny videolista",
+  "peopleListsPublicNotice": "Den här listan är offentlig. Alla kan se dess namn, beskrivning och personerna i den.",
+  "peopleListsPeopleLabel": "Personer",
+  "peopleListsPeopleNone": "Inga personer tillagda",
+  "peopleListsSessionChanged": "Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.",
+  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -16,6 +16,12 @@ import 'package:rxdart/rxdart.dart';
 /// Returns `true` when content from [pubkey] should be hidden.
 typedef BlockedCuratedListFilter = bool Function(String pubkey);
 
+/// Returns `true` when a video must not appear in a list-card preview.
+///
+/// The app supplies its current content policy for parsed REST and relay
+/// videos. Keeping the predicate here avoids app or UI dependencies.
+typedef CuratedListVideoFilter = bool Function(VideoEvent video);
+
 /// NIP-51 kind for curated video lists.
 const _curatedListKind = 30005;
 
@@ -49,13 +55,16 @@ class CuratedListRepository {
     required NostrClient nostrClient,
     required FunnelcakeApiClient funnelcakeApiClient,
     BlockedCuratedListFilter? blockFilter,
+    CuratedListVideoFilter? videoFilter,
   }) : _nostrClient = nostrClient,
        _funnelcakeApiClient = funnelcakeApiClient,
-       _blockFilter = blockFilter;
+       _blockFilter = blockFilter,
+       _videoFilter = videoFilter;
 
   final NostrClient _nostrClient;
   final FunnelcakeApiClient _funnelcakeApiClient;
   final BlockedCuratedListFilter? _blockFilter;
+  final CuratedListVideoFilter? _videoFilter;
   final Map<String, CuratedList> _subscribedLists = {};
   final Map<String, CuratedList> _ownLists = {};
 
@@ -148,22 +157,18 @@ class CuratedListRepository {
     final lowerQuery = query.toLowerCase();
     final matches = <String, CuratedList>{};
     for (final list in [..._ownLists.values, ..._subscribedLists.values]) {
-      if (!list.isPublic || _isBlocked(list.pubkey)) continue;
+      if (!list.isPublic) continue;
+      if (_isBlocked(list.pubkey)) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
-      matches.putIfAbsent(_coordinateOf(list), () => list);
+      matches.putIfAbsent(list.authorScopedId, () => list);
     }
-    return matches.values.toList();
+    return List.unmodifiable(matches.values);
   }
 
   static bool _matchesQuery(CuratedList list, String lowerQuery) =>
       list.name.toLowerCase().contains(lowerQuery) ||
       (list.description?.toLowerCase().contains(lowerQuery) ?? false) ||
       list.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
-
-  /// Author-qualified identity. Every account owns a `my_vine_list`, so the
-  /// d-tag alone conflates lists from different authors.
-  static String _coordinateOf(CuratedList list) =>
-      '${list.pubkey ?? ''}:${list.id}';
 
   /// Returns subscribed public lists that contain the given [tag].
   List<CuratedList> getListsByTag(String tag) {
@@ -237,12 +242,12 @@ class CuratedListRepository {
   Future<List<CuratedList>> _queryListsFromRelays({
     required String query,
     int limit = _relaySearchWindow,
-    Set<String>? excludeCoordinates,
+    Set<String>? excludeAuthorScopedIds,
   }) async {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
-    final excluded = excludeCoordinates ?? const {};
+    final excluded = excludeAuthorScopedIds ?? const {};
 
     final events = await _nostrClient.queryEvents([
       Filter(kinds: [_curatedListKind], limit: limit),
@@ -253,18 +258,17 @@ class CuratedListRepository {
       if (_isBlocked(event.pubkey)) continue;
       final list = CuratedListConverter.fromEvent(event);
       if (list == null) continue;
-      final coordinate = _coordinateOf(list);
-      if (excluded.contains(coordinate)) continue;
-      if (!list.isPublic) continue;
-      if (list.videoEventIds.isEmpty) continue;
+      final key = list.authorScopedId;
+      if (excluded.contains(key)) continue;
+      if (!list.isPublic || !list.hasVideos) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
 
       // Dedup per author and d-tag, keep newest
-      final existing = seen[coordinate];
+      final existing = seen[key];
       if (existing != null && existing.updatedAt.isAfter(list.updatedAt)) {
         continue;
       }
-      seen[coordinate] = list;
+      seen[key] = list;
     }
 
     return seen.values.toList();
@@ -295,9 +299,12 @@ class CuratedListRepository {
   }) async* {
     if (query.trim().isEmpty) return;
 
-    final localResults = searchLists(query);
+    final localResults = [
+      for (final list in searchLists(query))
+        list.copyWith(thumbnailUrls: const []),
+    ];
     final merged = <String, CuratedList>{
-      for (final list in localResults) _coordinateOf(list): list,
+      for (final list in localResults) list.authorScopedId: list,
     };
 
     // Yield 1: local results immediately (no thumbnails)
@@ -310,16 +317,16 @@ class CuratedListRepository {
     );
     merged
       ..clear()
-      ..addEntries(enrichedLocal.map((l) => MapEntry(_coordinateOf(l), l)));
+      ..addEntries(enrichedLocal.map((l) => MapEntry(l.authorScopedId, l)));
     yield List.unmodifiable(merged.values.toList());
 
     // Yield 3: relay results merged (no thumbnails on new items)
     final relayResults = await _queryListsFromRelays(
       query: query,
-      excludeCoordinates: merged.keys.toSet(),
+      excludeAuthorScopedIds: merged.keys.toSet(),
     );
     for (final list in relayResults) {
-      merged[_coordinateOf(list)] = list;
+      merged[list.authorScopedId] = list;
     }
     yield List.unmodifiable(merged.values.toList());
 
@@ -329,7 +336,7 @@ class CuratedListRepository {
       maxThumbnails: maxThumbnails,
     );
     for (final list in enrichedRelay) {
-      merged[_coordinateOf(list)] = list;
+      merged[list.authorScopedId] = list;
     }
     yield List.unmodifiable(merged.values.toList());
   }
@@ -355,6 +362,17 @@ class CuratedListRepository {
   /// (Nostr event ID). Non-matching entries are addressable coordinates.
   static final _hexEventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 
+  /// Resolves up to [maxThumbnails] thumbnail URLs for each of [lists].
+  ///
+  /// The same funnelcake-first, batched-relay-fallback pipeline the search
+  /// stream uses to enrich its results, exposed for discovery surfaces that
+  /// fetch their lists elsewhere (the relay discovery stream) and render
+  /// thumbnail collages.
+  Future<List<CuratedList>> resolveListThumbnails(
+    List<CuratedList> lists, {
+    int maxThumbnails = 5,
+  }) => _resolveAllThumbnails(lists, maxThumbnails: maxThumbnails);
+
   /// Resolves thumbnail URLs for a batch of [lists] concurrently.
   ///
   /// Each list gets up to [maxThumbnails] thumbnail URLs populated from
@@ -374,39 +392,55 @@ class CuratedListRepository {
   ///
   /// Strategy per video reference:
   /// 1. Hex event ID → try FunnelCake API (`getVideoStats`), use
-  ///    `VideoStats.thumbnail`.
-  /// 2. If FunnelCake fails or returns empty → fall back to Nostr relay
-  ///    query, parse as `VideoEvent`, use `effectiveThumbnailUrl`.
+  ///    parsed video metadata and its thumbnail.
+  /// 2. If FunnelCake fails or a permitted result has no thumbnail → fall back
+  ///    to Nostr relay, parse as `VideoEvent`, use `effectiveThumbnailUrl`.
   /// 3. Addressable coordinate → query relay with appropriate filter,
   ///    parse as `VideoEvent`, use `effectiveThumbnailUrl`.
-  /// 4. If all fail → skip (becomes a placeholder in the UI).
+  /// 4. Apply the current author and video policy; hidden or unresolved videos
+  ///    become placeholders in the UI.
   ///
   /// Returns the list with [CuratedList.thumbnailUrls] populated.
   Future<CuratedList> _resolveThumbnails(
     CuratedList list, {
     required int maxThumbnails,
   }) async {
-    if (list.videoEventIds.isEmpty) return list;
+    if (list.videoEventIds.isEmpty) {
+      return list.copyWith(thumbnailUrls: const []);
+    }
 
     final candidates = list.videoEventIds.take(maxThumbnails).toList();
 
     // Phase 1: Try FunnelCake for each hex ID (parallel HTTP calls).
     final fcResults = await Future.wait(candidates.map(_tryFunnelcake));
 
-    // Phase 2: Collect refs needing relay fallback, batch into one query.
+    // Phase 2: Only unavailable or permitted thumbnail-less REST results may
+    // fall back. Less complete relay metadata must not erase a known denial.
+    final deniedRefs = <String>{};
     final needsRelay = <String>[];
     for (var i = 0; i < candidates.length; i++) {
-      if (fcResults[i] == null) {
+      final video = fcResults[i];
+      if (video != null && _shouldHidePreview(video)) {
+        deniedRefs.add(candidates[i]);
+      } else if (video?.effectiveThumbnailUrl == null) {
         needsRelay.add(candidates[i]);
       }
     }
 
-    final relayThumbnails = await _batchRelayThumbnails(needsRelay);
+    final relayVideos = await _batchRelayVideos(needsRelay);
 
     // Merge results in candidate order.
     final urls = <String>[];
     for (var i = 0; i < candidates.length; i++) {
-      final url = fcResults[i] ?? relayThumbnails[candidates[i]];
+      if (deniedRefs.contains(candidates[i])) continue;
+      final restVideo = fcResults[i];
+      final video = restVideo?.effectiveThumbnailUrl != null
+          ? restVideo
+          : relayVideos[candidates[i]];
+      if (video == null || _shouldHidePreview(video)) {
+        continue;
+      }
+      final url = video.effectiveThumbnailUrl;
       if (url != null) urls.add(url);
     }
 
@@ -415,14 +449,15 @@ class CuratedListRepository {
 
   /// Tries FunnelCake API for a hex event ID.
   ///
-  /// Returns the thumbnail URL, or `null` if [videoRef] is not a hex ID
-  /// or FunnelCake has no result.
-  Future<String?> _tryFunnelcake(String videoRef) async {
+  /// Returns parsed video metadata, or `null` if [videoRef] is not a hex ID
+  /// or FunnelCake has no metadata. Thumbnail-less metadata still carries
+  /// policy evidence and cannot be discarded before deciding to use a relay.
+  Future<VideoEvent?> _tryFunnelcake(String videoRef) async {
     if (!_hexEventIdPattern.hasMatch(videoRef)) return null;
     try {
       final stats = await _funnelcakeApiClient.getVideoStats(videoRef);
-      if (stats != null && stats.thumbnail.isNotEmpty) {
-        return stats.thumbnail;
+      if (stats != null) {
+        return stats.toVideoEvent();
       }
     } on Exception {
       // Fall through to relay fallback.
@@ -430,14 +465,17 @@ class CuratedListRepository {
     return null;
   }
 
-  /// Resolves relay-side thumbnail URLs for a batch of video references.
+  bool _shouldHidePreview(VideoEvent video) =>
+      _isBlocked(video.pubkey) || (_videoFilter?.call(video) ?? false);
+
+  /// Resolves relay-side video metadata for a batch of video references.
   ///
   /// Batches all relay lookups into a single `queryEvents` call: hex IDs
   /// go into one `Filter(ids: [...])` and addressable coordinates become
   /// individual filters in the same request.
   ///
-  /// Returns a map from video ref → thumbnail URL for refs that resolved.
-  Future<Map<String, String?>> _batchRelayThumbnails(List<String> refs) async {
+  /// Returns parsed videos keyed by their exact event ID or coordinate.
+  Future<Map<String, VideoEvent>> _batchRelayVideos(List<String> refs) async {
     if (refs.isEmpty) return {};
 
     final hexIds = <String>[];
@@ -470,30 +508,54 @@ class CuratedListRepository {
       return {};
     }
 
-    final results = <String, String?>{};
-
+    // Select raw revisions before parsing or discarding thumbnail-less videos.
+    // A current revision must not reveal an older revision's thumbnail when
+    // its metadata is hidden, unavailable, or unparseable.
+    final selectedEvents = <String, Event>{};
     for (final event in events) {
-      try {
-        final videoEvent = VideoEvent.fromNostrEvent(event, permissive: true);
-        final thumb = videoEvent.effectiveThumbnailUrl;
-        if (thumb == null) continue;
+      // An immutable event ID remains independent of coordinate revisions.
+      if (hexIds.contains(event.id)) {
+        selectedEvents[event.id] = event;
+      }
 
-        // Match hex IDs by event ID.
-        if (hexIds.contains(event.id)) {
-          results[event.id] = thumb;
-          continue;
+      // NIP-01 coordinates use the first raw d-tag, including an empty d-tag.
+      for (final ref in coordRefs) {
+        final parts = ref.split(':');
+        if (int.tryParse(parts[0]) == event.kind &&
+            parts[1] == event.pubkey &&
+            parts.sublist(2).join(':') == event.dTagValue) {
+          final selected = selectedEvents[ref];
+          if (selected == null ||
+              event.createdAt > selected.createdAt ||
+              (event.createdAt == selected.createdAt &&
+                  event.id.compareTo(selected.id) < 0)) {
+            selectedEvents[ref] = event;
+          }
+          break;
         }
+      }
+    }
 
-        // Match addressable coords by reconstructing the coordinate.
-        for (final ref in coordRefs) {
-          final parts = ref.split(':');
-          if (parts.length >= 3 &&
-              int.tryParse(parts[0]) == event.kind &&
-              parts[1] == event.pubkey) {
-            results[ref] = thumb;
-            break;
+    final results = <String, VideoEvent>{};
+    for (final entry in selectedEvents.entries) {
+      try {
+        final videoEvent = VideoEvent.fromNostrEvent(
+          entry.value,
+          permissive: true,
+        );
+        if (!_hexEventIdPattern.hasMatch(entry.key)) {
+          final parts = entry.key.split(':');
+          // Policy lookups must use the same identity as the requested
+          // coordinate. Contradictory parsed metadata cannot revive an older
+          // image or redirect this preview to a different coordinate.
+          if (int.tryParse(parts[0]) != videoEvent.eventKind ||
+              parts[1] != videoEvent.pubkey ||
+              parts.sublist(2).join(':') != videoEvent.addressableDTag) {
+            continue;
           }
         }
+        if (videoEvent.effectiveThumbnailUrl == null) continue;
+        results[entry.key] = videoEvent;
       } on Object {
         // Skip unparseable events (e.g. non-video kinds throw
         // ArgumentError from VideoEvent.fromNostrEvent).

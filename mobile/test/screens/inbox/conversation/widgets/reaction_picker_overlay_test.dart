@@ -126,6 +126,48 @@ void main() {
       expect(result?.action, MessageAction.saveVideo);
     });
 
+    testWidgets('returns addToClips when adding to clips is offered', (
+      tester,
+    ) async {
+      ReactionPickerResult? result;
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: TextButton(
+                  onPressed: () async {
+                    result = await ReactionPickerOverlay.show(
+                      context: context,
+                      isSent: false,
+                      isEncryptedVideo: true,
+                      canAddToClips: true,
+                    );
+                  },
+                  child: const Text('open'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.shareSheetAddToClips));
+      await tester.pumpAndSettle();
+
+      expect(result?.action, MessageAction.addToClips);
+    });
+
+    testWidgets('offers no add-to-clips action unless it is offered', (
+      tester,
+    ) async {
+      await openOverlay(tester, isEncryptedVideo: true);
+
+      expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+    });
+
     testWidgets('dismisses after selecting a quick reaction', (tester) async {
       await openOverlay(tester);
 

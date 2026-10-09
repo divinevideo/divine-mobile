@@ -649,6 +649,22 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
+  /// The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{compactCount} {authorName}\'s {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  );
+
+  /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{compactCount} this video\'s {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayVideoLoops(String compactCount, int count);
+
   /// No description provided for @generalSettingsShowTotalLoops.
   ///
   /// In en, this message translates to:
@@ -6277,6 +6293,60 @@ abstract class AppLocalizations {
   /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
   String dmVideoTooLarge(String maxMegabytes);
 
+  /// Option in the DM composer's attach menu that opens the user's clip library to send a raw clip they recorded with the Divine camera. The recipient can add a sent clip to their own clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip from your library'**
+  String get dmAttachClipFromLibrary;
+
+  /// Option in the DM composer's attach menu that opens the device photo gallery to send any video. Unlike a library clip it is not labelled as a clip, though the recipient can still try to add it to their clips, which only works if its C2PA credential proves a Divine camera recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Video from your gallery'**
+  String get dmAttachVideoFromGallery;
+
+  /// Short label on an encrypted video message in a DM thread marking it as a raw clip the sender shared from their clip library, as opposed to a finished video.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip'**
+  String get dmClipBadge;
+
+  /// SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Making sure this clip was shot on Divine…'**
+  String get dmClipChecking;
+
+  /// SnackBar shown when a clip received in a DM fails the C2PA check that proves it was recorded with the Divine camera and not changed since, so it is not added to the clip library. Must not accuse the sender; the clip may simply lack credentials.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm this was shot with the Divine camera, so it stays out of your clips.'**
+  String get dmClipNotVerified;
+
+  /// SnackBar shown when the C2PA check on a received clip cannot run right now, for example offline with no cached trust list. Nothing was concluded about the clip, so the copy invites a retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check this clip right now. Try again in a bit.'**
+  String get dmClipCheckUnavailable;
+
+  /// SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.'**
+  String get dmClipSendNotVerified;
+
+  /// Short note at the top of the DM composer's attach menu. Tells the sender, before they pick what to send, that the recipient can add a sent video to their own clip library and post it, and that the sender is then credited publicly in that post.
+  ///
+  /// In en, this message translates to:
+  /// **'They can add what you send to their clips and post it. You\'ll get credit.'**
+  String get dmAttachReuseNotice;
+
+  /// SnackBar after sending several clips in a DM when only some went out before a failure. {sent} clips were delivered out of {total} picked; the rest were not sent.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, one{Sent {sent} of {total} clip. The rest didn\'t go through.} other{Sent {sent} of {total} clips. The rest didn\'t go through.}}'**
+  String dmClipsPartlySent(int sent, int total);
+
   /// No description provided for @shareSheetSaveVideo.
   ///
   /// In en, this message translates to:
@@ -6709,6 +6779,18 @@ abstract class AppLocalizations {
   /// **'Add some people to get started'**
   String get peopleListsNoPeopleSubtitle;
 
+  /// Title of a people list's member roster when the list has members but every one is hidden from the viewer, because the viewer blocked or muted them or they blocked or muted the viewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone here is hidden'**
+  String get peopleListsAllMembersHiddenTitle;
+
+  /// Supporting copy under peopleListsAllMembersHiddenTitle. Deliberately neutral about who did the blocking or muting: the hidden members may include accounts that blocked or muted the viewer, and the copy must not reveal that.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked and muted accounts don\'t show up in lists.'**
+  String get peopleListsAllMembersHiddenSubtitle;
+
   /// No description provided for @peopleListsNoVideosTitle.
   ///
   /// In en, this message translates to:
@@ -6750,12 +6832,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to {name}'**
   String peopleListsAddToListName(String name);
-
-  /// No description provided for @peopleListsAddPeopleSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search people'**
-  String get peopleListsAddPeopleSearchHint;
 
   /// No description provided for @peopleListsAddPeopleError.
   ///
@@ -8388,24 +8464,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New people list'**
   String get listNewPeopleList;
-
-  /// No description provided for @listCollaboratorsNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get listCollaboratorsNone;
-
-  /// No description provided for @listAddCollaboratorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a collaborator'**
-  String get listAddCollaboratorTitle;
-
-  /// No description provided for @listCollaboratorSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Divine...'**
-  String get listCollaboratorSearchHint;
 
   /// No description provided for @listNameLabel.
   ///
@@ -10578,6 +10636,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete list'**
   String get listDeleteAction;
+
+  /// Menu action on someone else's video or people list that opens the report sheet for that list.
+  ///
+  /// In en, this message translates to:
+  /// **'Report list'**
+  String get listReportAction;
 
   /// No description provided for @peopleListsDeleteConfirmTitle.
   ///
@@ -14723,6 +14787,12 @@ abstract class AppLocalizations {
   /// **'Glow'**
   String get videoEditorEffectGlow;
 
+  /// Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo'**
+  String get videoEditorEffectEcho;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:
@@ -17168,6 +17238,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Level'**
   String get videoEditorLevelSemanticLabel;
+
+  /// Screen reader label for the vertical slider that sets how thick the draw editor's pencil, marker, arrow or eraser draws.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush size'**
+  String get videoEditorBrushSizeSemanticLabel;
 
   /// No description provided for @videoMetadataClosePostDetailsSemanticLabel.
   ///
@@ -21890,6 +21966,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' ∙ '**
   String get listStatsSeparator;
+
+  /// No description provided for @listNewVideoList.
+  ///
+  /// In en, this message translates to:
+  /// **'New video list'**
+  String get listNewVideoList;
+
+  /// No description provided for @peopleListsPublicNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is public. Anyone can see its name, description, and people.'**
+  String get peopleListsPublicNotice;
+
+  /// No description provided for @peopleListsPeopleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get peopleListsPeopleLabel;
+
+  /// No description provided for @peopleListsPeopleNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No people added'**
+  String get peopleListsPeopleNone;
+
+  /// No description provided for @peopleListsSessionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account or list access changed. Reopen this page to continue.'**
+  String get peopleListsSessionChanged;
+
+  /// No description provided for @peopleListsSearchConnectionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search followers and following'**
+  String get peopleListsSearchConnectionsHint;
+
+  /// Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ').
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get listMemberNamesSeparator;
+
+  /// Screen-reader label for a list card, read as one sentence: the list's name, 'Private' for a private list, and its count as already localized by listVideoCount or listMemberCount. A private list encrypts its video membership; its title, description, tags and cover are published. Do not translate 'Private' as device-only. The order and the punctuation between them are the locale's to choose.
+  ///
+  /// In en, this message translates to:
+  /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
+  String listCardSemanticLabel(String name, String visibility, String count);
 }
 
 class _AppLocalizationsDelegate

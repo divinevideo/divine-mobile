@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Video verzonden",
     "dmVideoSendFailed": "Video kon niet worden verzonden",
     "dmVideoTooLarge": "Deze video is te groot om te versturen. Kies er een onder de {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Clip uit je bibliotheek",
+    "dmAttachVideoFromGallery": "Video uit je galerij",
+    "dmClipBadge": "Clip",
+    "dmClipChecking": "We checken of deze clip met Divine is gefilmd…",
+    "dmClipNotVerified": "We konden niet bevestigen dat dit met de Divine-camera is gefilmd, dus het staat niet bij je clips.",
+    "dmClipCheckUnavailable": "Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.",
+    "dmClipSendNotVerified": "We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.",
+    "dmAttachReuseNotice": "Wat je stuurt, kan de ander aan de eigen clips toevoegen en posten, met vermelding van jou.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} van {total} clip verstuurd. De rest is niet verstuurd.} other{{sent} van {total} clips verstuurd. De rest is niet verstuurd.}}",
     "shareSheetSaveVideo": "Video opslaan",
     "shareSheetAddToClips": "Toevoegen aan clips",
     "shareSheetAddToClipsFailed": "Kon niet toevoegen aan clips",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Nieuwe lijst maken",
     "listNewPeopleList": "Nieuwe personenlijst",
-    "listCollaboratorsNone": "Geen",
-    "listAddCollaboratorTitle": "Medewerker toevoegen",
-    "listCollaboratorSearchHint": "Zoek in Divine...",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
     "listPublicList": "Openbare lijst",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Gesplitst scherm",
   "videoEditorEffectWave": "Golf",
   "videoEditorEffectGlow": "Gloed",
+  "videoEditorEffectEcho": "Echo",
   "videoEditorEffectsFlashingReplaced": "Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.",
   "videoEditorEffectsFlashingNotDuplicated": "Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.",
   "videoEditorEffectsOnBeat": "Op de beat",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Element toevoegen",
     "videoEditorDoneSemanticLabel": "Gereed",
     "videoEditorLevelSemanticLabel": "Niveau",
+    "videoEditorBrushSizeSemanticLabel": "Penseelgrootte",
     "videoMetadataClosePostDetailsSemanticLabel": "Berichtdetails sluiten",
     "videoMetadataDismissHelpDialogSemanticLabel": "Helpdialoog sluiten",
     "videoMetadataGotItButton": "Begrepen!",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",
-    "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
     "peopleListsAddButton": "Toevoegen",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Systeemstandaard",
     "appearanceSettingsLight": "Licht",
     "appearanceSettingsDark": "Donker",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loops}} van {authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} van deze video",
     "generalSettingsClosedCaptions": "Ondertiteling",
     "generalSettingsClosedCaptionsSubtitle": "Toon ondertiteling als video's die hebben",
     "generalSettingsVideoShapeSquareOnly": "Alleen vierkante video's",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nieuwe videolijst",
+  "peopleListsPublicNotice": "Deze lijst is openbaar. Iedereen kan de naam, beschrijving en personen in de lijst zien.",
+  "peopleListsPeopleLabel": "Personen",
+  "peopleListsPeopleNone": "Geen personen toegevoegd",
+  "peopleListsSessionChanged": "Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.",
+  "peopleListsSearchConnectionsHint": "Zoek in volgers en mensen die je volgt",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privé, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

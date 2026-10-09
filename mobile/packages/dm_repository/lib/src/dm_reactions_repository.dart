@@ -193,6 +193,35 @@ class DmReactionsRepository {
   final Map<String, Future<DmReactionDeletionOutcome>>
   _deletionRecoveriesInFlight = <String, Future<DmReactionDeletionOutcome>>{};
 
+  // The pending-age guard is not proof a group fan-out finished: each
+  // recipient has its own timeout. Share original publishes and retries so
+  // a late failure cannot overwrite a concurrent successful delivery.
+  final Map<(String, String), Future<DmReactionPublishResult>>
+  _reactionPublishesInFlight = {};
+
+  /// Fires whenever a publish or removal leaves a row for the retry sweep: an
+  /// unconfirmed or failed reaction, a removal whose kind-5 did not confirm,
+  /// or a removal recorded before its recipients were known. The retry
+  /// service listens and arms its in-session follow-up pass. Without it, such
+  /// a row waits for the next foreground transition or connectivity change,
+  /// and a removal has no chip left for the user to re-tap.
+  ///
+  /// Some emissions follow a database write that other work may still be
+  /// reading, so listeners MUST NOT touch the database synchronously: arm a
+  /// timer instead.
+  final StreamController<void> _retryableWorkController =
+      StreamController<void>.broadcast();
+
+  /// See [_retryableWorkController]. App-scoped like the repository itself;
+  /// never closed.
+  Stream<void> get retryableReactionWork => _retryableWorkController.stream;
+
+  void _notifyRetryableWork() {
+    if (!_retryableWorkController.isClosed) {
+      _retryableWorkController.add(null);
+    }
+  }
+
   /// Maximum permitted reaction content length. NIP-25 has no hard cap,
   /// but anything over ~128 chars is almost certainly malformed.
   static const int _maxReactionContentLength = 128;
@@ -454,6 +483,32 @@ class DmReactionsRepository {
     );
     final rumorId = rumor.id;
 
+    return _coalesceReactionAttempt(
+      ownerPubkey,
+      rumorId,
+      () => _publishRumor(
+        conversationId: conversationId,
+        targetMessageId: targetMessageId,
+        targetMessageAuthor: targetMessageAuthor,
+        emoji: emoji,
+        rumor: rumor,
+        ownerPubkey: ownerPubkey,
+        messageService: messageService,
+      ),
+    );
+  }
+
+  Future<DmReactionPublishResult> _publishRumor({
+    required String conversationId,
+    required String targetMessageId,
+    required String targetMessageAuthor,
+    required String emoji,
+    required Event rumor,
+    required String ownerPubkey,
+    required NIP17MessageService messageService,
+  }) async {
+    final rumorId = rumor.id;
+
     // Worked out before the row is written, so the row carries the people it
     // is for whenever they can be established: the retry sweep sends it to
     // this set (#7880).
@@ -576,11 +631,13 @@ class DmReactionsRepository {
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
+            _notifyRetryableWork();
           } else {
             await _reactionsDao.markFailed(
               placeholderId: rumorId,
               ownerPubkey: ownerPubkey,
             );
+            _notifyRetryableWork();
           }
           return DmReactionPublishResult(
             success: false,
@@ -598,6 +655,7 @@ class DmReactionsRepository {
         placeholderId: rumorId,
         ownerPubkey: ownerPubkey,
       );
+      _notifyRetryableWork();
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
@@ -625,6 +683,9 @@ class DmReactionsRepository {
   ///    so the chip is tappable again immediately. A soft outcome — a lost
   ///    `OK`, or an inbox we could not read (#8443) — leaves the pre-send
   ///    `'pending'` so the sweep keeps re-driving it.
+  /// 4. When an attempt for this rumor is already running — the original
+  ///    [publish] of a group reaction, or an earlier retry — nothing is sent
+  ///    again: the call joins that attempt and returns its outcome.
   Future<DmReactionPublishResult> retry({
     required String rumorId,
     required String targetMessageAuthor,
@@ -638,6 +699,25 @@ class DmReactionsRepository {
         errorMessage: 'Repository not initialized',
       );
     }
+
+    return _coalesceReactionAttempt(
+      ownerPubkey,
+      rumorId,
+      () => _retryReaction(
+        rumorId: rumorId,
+        targetMessageAuthor: targetMessageAuthor,
+        ownerPubkey: ownerPubkey,
+        messageService: messageService,
+      ),
+    );
+  }
+
+  Future<DmReactionPublishResult> _retryReaction({
+    required String rumorId,
+    required String targetMessageAuthor,
+    required String ownerPubkey,
+    required NIP17MessageService messageService,
+  }) async {
     final row = await _reactionsDao.getById(
       id: rumorId,
       ownerPubkey: ownerPubkey,
@@ -698,15 +778,18 @@ class DmReactionsRepository {
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
-          } else if (!retryablePending) {
+          } else {
             // Confirmed rejection/error: flip to 'failed' so the chip is
             // tappable again. A soft (retryablePending) failure instead
-            // falls through untouched, leaving the pre-send 'pending' so
-            // the sweep keeps re-driving it.
-            await _reactionsDao.markFailed(
-              placeholderId: rumorId,
-              ownerPubkey: ownerPubkey,
-            );
+            // leaves the pre-send 'pending' untouched, so the sweep keeps
+            // re-driving it. Both stay on the sweep's worklist.
+            if (!retryablePending) {
+              await _reactionsDao.markFailed(
+                placeholderId: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+            }
+            _notifyRetryableWork();
           }
           return DmReactionPublishResult(
             success: false,
@@ -721,12 +804,30 @@ class DmReactionsRepository {
         placeholderId: rumorId,
         ownerPubkey: ownerPubkey,
       );
+      _notifyRetryableWork();
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
         errorMessage: e.toString(),
       );
     }
+  }
+
+  Future<DmReactionPublishResult> _coalesceReactionAttempt(
+    String ownerPubkey,
+    String rumorId,
+    Future<DmReactionPublishResult> Function() attempt,
+  ) {
+    final key = (ownerPubkey, rumorId);
+    final existing = _reactionPublishesInFlight[key];
+    if (existing != null) return existing;
+    final future = attempt().whenComplete(() {
+      _reactionPublishesInFlight.removeWhere(
+        (activeKey, _) => activeKey == key,
+      );
+    });
+    _reactionPublishesInFlight[key] = future;
+    return future;
   }
 
   /// List this user's own outgoing reactions still awaiting durable delivery
@@ -760,6 +861,13 @@ class DmReactionsRepository {
   /// sweep.
   ///
   /// Does nothing when this account holds no row for [rumorId].
+  ///
+  /// Throws:
+  ///
+  /// * the database error when the reaction row cannot be read, or the
+  ///   error when the removal cannot be built or recorded. Nothing is sent
+  ///   and the reaction stays live, so a caller that already hid it must
+  ///   show it again.
   Future<void> removeOwn({
     required String rumorId,
     required String targetMessageAuthor,
@@ -805,8 +913,11 @@ class DmReactionsRepository {
   /// removal; the wire publish itself is `unawaited` and re-driven by the sweep
   /// via [retryDeletion] on any failed/offline attempt. The first attempt and
   /// every retry are coalesced by rumor id, so only one fan-out can drive the
-  /// stored kind-5 at a time. On a DAO write failure the deletion is reported
-  /// to [reportSite] and skipped (no wire attempt).
+  /// stored kind-5 at a time.
+  ///
+  /// When the kind-5 cannot be built or recorded, the failure is reported to
+  /// [reportSite] and rethrown, with no wire attempt: no kind-5 is queued for
+  /// the sweep to deliver.
   ///
   /// An empty [recipients] means they could not be established. The removal
   /// is recorded all the same, tagged with [targetMessageAuthor] like the
@@ -821,17 +932,17 @@ class DmReactionsRepository {
     required String reportSite,
     Future<Map<String, DmInboxLookup>>? inboxes,
   }) async {
-    final deletion = messageService.buildRumor(
-      recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', EventKind.reaction.toString()],
-      ],
-    );
-
+    final Event deletion;
     try {
+      deletion = messageService.buildRumor(
+        recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
+        content: '',
+        eventKind: EventKind.eventDeletion,
+        additionalTags: [
+          ['e', rumorId],
+          ['k', EventKind.reaction.toString()],
+        ],
+      );
       await _reactionsDao.markOwnDeletionPending(
         id: rumorId,
         ownerPubkey: ownerPubkey,
@@ -839,9 +950,12 @@ class DmReactionsRepository {
       );
     } on Object catch (e, st) {
       _errorReporter?.call(e, st, site: reportSite);
+      rethrow;
+    }
+    if (recipients.isEmpty) {
+      _notifyRetryableWork();
       return;
     }
-    if (recipients.isEmpty) return;
 
     unawaited(
       _coalesceDeletionAttempt(
@@ -950,6 +1064,7 @@ class DmReactionsRepository {
             'DM reaction deletion retry was unconfirmed: $error',
             category: LogCategory.system,
           );
+          _notifyRetryableWork();
           return DmReactionDeletionOutcome.unconfirmed;
       }
     } on Object catch (e) {
@@ -957,6 +1072,7 @@ class DmReactionsRepository {
         'DM reaction deletion retry threw: $e',
         category: LogCategory.system,
       );
+      _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
   }
@@ -994,6 +1110,7 @@ class DmReactionsRepository {
             );
             return DmReactionDeletionOutcome.refused;
           }
+          _notifyRetryableWork();
           return DmReactionDeletionOutcome.unconfirmed;
       }
     } on Object catch (e) {
@@ -1001,6 +1118,7 @@ class DmReactionsRepository {
         'DM reaction deletion publish threw: $e',
         category: LogCategory.system,
       );
+      _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
   }
@@ -1564,16 +1682,22 @@ class DmReactionsRepository {
   }) async {
     for (final MapEntry(key: priorId, value: priorRecipients)
         in priors.entries) {
-      await _durablyDeleteReaction(
-        rumorId: priorId,
-        recipients: priorRecipients,
-        targetMessageAuthor: targetMessageAuthor,
-        ownerPubkey: ownerPubkey,
-        messageService: messageService,
-        reportSite:
-            DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
-        inboxes: inboxes,
-      );
+      try {
+        await _durablyDeleteReaction(
+          rumorId: priorId,
+          recipients: priorRecipients,
+          targetMessageAuthor: targetMessageAuthor,
+          ownerPubkey: ownerPubkey,
+          messageService: messageService,
+          reportSite:
+              DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
+          inboxes: inboxes,
+        );
+      } on Object {
+        // Already reported by _durablyDeleteReaction. The new reaction is
+        // persisted by now, so it is still sent; this prior's kind-5 is lost
+        // (#9915).
+      }
     }
   }
 

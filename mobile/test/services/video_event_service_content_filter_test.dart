@@ -6,6 +6,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -69,6 +70,7 @@ void main() {
   late ModerationLabelService moderationLabelService;
   late ContentFilterService contentFilterService;
   late AgeVerificationService ageVerificationService;
+  var isProtectedMinor = false;
 
   Future<void> seedModerationLabels(List<List<String>> tags) async {
     when(
@@ -99,6 +101,7 @@ void main() {
   });
 
   setUp(() async {
+    isProtectedMinor = false;
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     mockNostrClient = _MockNostrClient();
@@ -117,6 +120,7 @@ void main() {
 
     ageVerificationService = AgeVerificationService(
       preferences: prefs,
+      isProtectedMinor: () => isProtectedMinor,
       currentPubkeyHex: () =>
           '1111111111111111111111111111111111111111111111111111111111111111',
     );
@@ -200,6 +204,14 @@ void main() {
         .ageRestrictedCategories
         .where((label) => !ContentFilterService.adultCategories.contains(label))
         .toList();
+    const ownerPubkey =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+    const legacyOwnerWarningLabels = [
+      ContentLabel.alcohol,
+      ContentLabel.tobacco,
+      ContentLabel.profanity,
+      ContentLabel.gambling,
+    ];
 
     test('a self-labeled warn-category video stays visible behind the overlay '
         'for a non-age-verified viewer', () async {
@@ -242,7 +254,8 @@ void main() {
       }
     });
 
-    test('owner keeps an age-restricted self-label behind the overlay', () {
+    test('adult owner keeps a warning preference behind the overlay', () async {
+      await ageVerificationService.setAdultContentVerified(true);
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-profanity',
@@ -254,7 +267,8 @@ void main() {
       expect(result.single.warnLabels, equals(['profanity']));
     });
 
-    test('relay ingest warns instead of hiding an owner profanity label', () {
+    test('relay ingest warns for an adult owner profanity preference', () async {
+      await ageVerificationService.setAdultContentVerified(true);
       videoEventService.setCurrentUserPubkeyProvider(
         () =>
             'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -272,17 +286,23 @@ void main() {
       expect(result.$2, ['profanity']);
     });
 
-    test('relay ingest still hides an owner violence label', () {
+    test('relay ingest warns for an adult owner drugs preference', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      await contentFilterService.setPreference(
+        ContentLabel.drugs,
+        ContentFilterPreference.warn,
+      );
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
           pubkey: '1111111111111111111111111111111111111111111111111111111111111111',
           tags: const [
-            ['content-warning', 'violence'],
+            ['content-warning', 'drugs'],
           ],
         ),
       );
 
-      expect(result.$1, ContentFilterPreference.hide);
+      expect(result.$1, ContentFilterPreference.warn);
+      expect(result.$2, ['drugs']);
     });
 
     test('non-owner remains hidden by an age-restricted self-label', () {
@@ -297,7 +317,53 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('owner remains hidden by an always-filtered self-label', () {
+    test('unattested owner keeps the four legacy age-restricted self-labels '
+        'behind the overlay while other authors stay hidden', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
+      for (final label in legacyOwnerWarningLabels) {
+        final ownerResult = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'owner-${label.value}',
+            contentWarningLabels: [label.value],
+          ),
+        ]);
+        final otherResult = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'other-${label.value}',
+            pubkey: otherPubkey,
+            contentWarningLabels: [label.value],
+          ),
+        ]);
+
+        expect(ownerResult, hasLength(1), reason: label.value);
+        expect(ownerResult.single.warnLabels, [label.value]);
+        expect(otherResult, isEmpty, reason: label.value);
+      }
+    });
+
+    test('relay ingest warns an unattested owner for the four legacy '
+        'age-restricted self-labels and hides them for other authors', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
+      for (final label in legacyOwnerWarningLabels) {
+        final tags = [
+          ['content-warning', label.value],
+        ];
+        final ownerResult = videoEventService.getFilterAction(
+          _FakeLabelEvent(pubkey: ownerPubkey, tags: tags),
+        );
+        final otherResult = videoEventService.getFilterAction(
+          _FakeLabelEvent(pubkey: otherPubkey, tags: tags),
+        );
+
+        expect(ownerResult.$1, ContentFilterPreference.warn);
+        expect(ownerResult.$2, [label.value]);
+        expect(otherResult.$1, ContentFilterPreference.hide);
+      }
+    });
+
+    test('owner keeps a non-age-restricted self-label behind the overlay', () {
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-violence',
@@ -305,10 +371,14 @@ void main() {
         ),
       ]);
 
-      expect(result, isEmpty);
+      expect(result, hasLength(1));
+      expect(result.single.warnLabels, equals(['violence']));
     });
 
-    test('owner remains hidden by an adult self-label without age proof', () {
+    test('ordinary owner adult self-label stays hidden before adult '
+        'self-attestation', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-nudity',
@@ -317,6 +387,96 @@ void main() {
       ]);
 
       expect(result, isEmpty);
+    });
+
+    test('protected-minor ownership cannot bypass any age-restricted label '
+        'during relay ingest or list filtering', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      for (final label in ContentFilterService.ageRestrictedCategories) {
+        await contentFilterService.setPreference(
+          label,
+          ContentFilterPreference.show,
+        );
+      }
+      isProtectedMinor = true;
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
+      for (final label in ContentFilterService.ageRestrictedCategories) {
+        final relayResult = videoEventService.getFilterAction(
+          _FakeLabelEvent(
+            pubkey: '1111111111111111111111111111111111111111111111111111111111111111',
+            tags: [
+              ['content-warning', label.value],
+            ],
+          ),
+        );
+        expect(relayResult.$1, ContentFilterPreference.hide);
+        expect(
+          videoEventService.filterVideoList([
+            _createVideo(
+              id: 'protected-owner-${label.value}',
+              contentWarningLabels: [label.value],
+            ),
+          ]),
+          isEmpty,
+          reason: '${label.value} bypassed the protected-minor restriction',
+        );
+      }
+    });
+
+    test('server drug-use category follows adult hide warn and show choices '
+        'without adding an ML warning overlay', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      for (final preference in ContentFilterPreference.values) {
+        await contentFilterService.setPreference(
+          ContentLabel.drugs,
+          preference,
+        );
+        final result = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'classified-drug-use',
+            pubkey: otherPubkey,
+            moderationLabels: const ['recreational-drug'],
+          ),
+        ]);
+
+        if (preference == ContentFilterPreference.hide) {
+          expect(result, isEmpty);
+        } else {
+          expect(result, hasLength(1));
+          expect(result.single.warnLabels, isEmpty);
+        }
+      }
+
+      await contentFilterService.setPreference(
+        ContentLabel.drugs,
+        ContentFilterPreference.show,
+      );
+      final classified = _createVideo(
+        id: 'protected-classified-drug-use',
+        moderationLabels: const ['recreational-drug'],
+      );
+      expect(videoEventService.filterVideoList([classified]), hasLength(1));
+      isProtectedMinor = true;
+      expect(videoEventService.filterVideoList([classified]), isEmpty);
+    });
+
+    test('server drug-use hide still wins over a creator warning', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      expect(
+        contentFilterService.getPreference(ContentLabel.drugs),
+        ContentFilterPreference.hide,
+      );
+      expect(
+        videoEventService.filterVideoList([
+          _createVideo(
+            id: 'creator-and-classified-drug-use',
+            contentWarningLabels: const ['violence'],
+            moderationLabels: const ['recreational-drug'],
+          ),
+        ]),
+        isEmpty,
+      );
     });
 
     test('owner remains hidden by a Funnelcake moderation label', () {
@@ -334,7 +494,7 @@ void main() {
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-self-and-moderated',
-          contentWarningLabels: const ['profanity'],
+          contentWarningLabels: const ['violence'],
           moderationLabels: const ['violence'],
         ),
       ]);
@@ -361,6 +521,10 @@ void main() {
       await ageVerificationService.setAdultContentVerified(true);
 
       for (final label in nonAdultAgeRestrictedLabels) {
+        await contentFilterService.setPreference(
+          label,
+          ContentFilterPreference.warn,
+        );
         final result = videoEventService.filterVideoList([
           _createVideo(
             id: 'video-${label.value}-verified',

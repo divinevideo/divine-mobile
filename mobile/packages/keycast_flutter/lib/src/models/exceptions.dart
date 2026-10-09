@@ -27,7 +27,8 @@ class OAuthException extends KeycastException {
 }
 
 /// OAuth request failed before Keycast could authoritatively accept or reject
-/// the token, such as a network transport error or timeout.
+/// the token, such as a network transport error, a timeout, or a temporary
+/// server error (5xx, 408, 429).
 class OAuthNetworkException extends OAuthException {
   OAuthNetworkException([String? message])
     : super(message ?? 'OAuth request failed due to a network error');

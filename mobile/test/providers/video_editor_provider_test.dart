@@ -21,6 +21,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -3618,6 +3619,37 @@ void main() {
             .editorEditingParameters
             ?.videoEffectsFromCompleteMeta,
         const [VideoEffect.vhs(intensity: 0.4)],
+      );
+    });
+
+    test('stores parameters whose only change is an echo, so the export '
+        'renders it', () {
+      const echo = EditorVideoEffect.custom(
+        id: 'echo-1',
+        custom: CustomVideoEffect(
+          id: echoVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.6},
+        ),
+      );
+      CompleteParameters paramsWithEntries(List<EditorVideoEffect> entries) =>
+          CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
+            meta: {
+              VideoEditorConstants.effectsStateHistoryKey: [
+                for (final entry in entries) entry.toMap(),
+              ],
+            },
+          );
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      notifier.updateEditorEditingParameters(paramsWithEntries(const []));
+      notifier.updateEditorEditingParameters(paramsWithEntries(const [echo]));
+
+      expect(
+        container
+            .read(videoEditorProvider)
+            .editorEditingParameters
+            ?.customVideoEffectsFromCompleteMeta,
+        [echo.custom],
       );
     });
   });

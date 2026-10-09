@@ -63,8 +63,8 @@ void main() {
               builder: (context, ref, _) {
                 return Scaffold(
                   body: ElevatedButton(
-                    onPressed: () {
-                      showSaveOriginalSheet(
+                    onPressed: () async {
+                      await showSaveOriginalSheet(
                         context: context,
                         ref: ref,
                         video: video,

@@ -291,6 +291,30 @@ class AppLocalizationsJa extends AppLocalizations {
       'クラシックな正方形フォーマットでフィードを保つ';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorNameのループ$compactCount回',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ループ',
+    );
+    return 'この動画$compactCount回$_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => '合計ループ数を表示';
 
   @override
@@ -3443,6 +3467,43 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'ライブラリのクリップ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'ギャラリーの動画';
+
+  @override
+  String get dmClipBadge => 'クリップ';
+
+  @override
+  String get dmClipChecking => 'このクリップがDivineで撮影されたか確認しています…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Divineのカメラで撮影されたことを確認できなかったため、クリップに追加しませんでした';
+
+  @override
+  String get dmClipCheckUnavailable => '今はこのクリップを確認できません。少し経ってからもう一度お試しください';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません';
+
+  @override
+  String get dmAttachReuseNotice =>
+      '送ったものは相手が自分のクリップに追加して投稿できます。その際、あなたがクレジットされます。';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件のクリップのうち$sent件を送信しました。残りは送信できませんでした。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '動画を保存';
 
   @override
@@ -3668,6 +3729,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => '始めるにはユーザーを追加してください';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'まだ動画がありません';
 
   @override
@@ -3689,9 +3757,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return '$nameに追加';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
 
   @override
   String get peopleListsAddPeopleError => 'ユーザーを読み込めませんでした。もう一度お試しください。';
@@ -4626,15 +4691,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '新しい人リスト';
-
-  @override
-  String get listCollaboratorsNone => 'なし';
-
-  @override
-  String get listAddCollaboratorTitle => 'コラボレーターを追加';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divineを検索...';
 
   @override
   String get listNameLabel => 'リスト名';
@@ -5844,6 +5900,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'リストを削除';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'リストを削除する?';
@@ -8240,6 +8299,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectGlow => 'グロー';
 
   @override
+  String get videoEditorEffectEcho => 'エコー';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
 
@@ -9586,6 +9648,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'レベル';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'ブラシのサイズ';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel => '投稿の詳細を閉じる';
@@ -12406,4 +12471,39 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '新しい動画リスト';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'このリストは公開されます。名前、説明、リスト内のユーザーは誰でも見ることができます。';
+
+  @override
+  String get peopleListsPeopleLabel => 'ユーザー';
+
+  @override
+  String get peopleListsPeopleNone => 'ユーザーはまだ追加されていません';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。';
+
+  @override
+  String get peopleListsSearchConnectionsHint => 'フォロワーとフォロー中のユーザーを検索';
+
+  @override
+  String get listMemberNamesSeparator => '、';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name、非公開、$count',
+        'other': '$name、$count',
+      },
+    );
+    return '$_temp0';
+  }
 }

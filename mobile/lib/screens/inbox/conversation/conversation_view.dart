@@ -16,6 +16,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
+    show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
@@ -26,7 +28,10 @@ import 'package:openvine/blocs/dm/video_dm_send/video_dm_send_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -36,7 +41,9 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -77,6 +84,9 @@ class ConversationView extends ConsumerStatefulWidget {
 /// The choice made on the recovery bottom sheet opened by
 /// [_ConversationViewState._onFailedMessageTap].
 enum _FailedMessageAction { resend, delete }
+
+/// Where the composer's attach menu picks a video from.
+enum _AttachSource { clipLibrary, gallery }
 
 class _ConversationViewState extends ConsumerState<ConversationView> {
   bool _isOpeningOptions = false;
@@ -370,6 +380,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             gallerySaveService: ref.read(gallerySaveServiceProvider),
           ),
         ),
+        const DmClipSaveProvider(),
       ],
       child: MultiBlocListener(
         listeners: [
@@ -795,9 +806,11 @@ class _SendBar extends ConsumerWidget {
     // Keyed on the service so an account switch that rebuilds the DM
     // repository or Blossom client also rebuilds the cubit around them.
     final service = ref.watch(dmVideoSendServiceProvider);
+    final clipVerifier = ref.watch(clipProvenanceVerifierProvider);
     return BlocProvider<VideoDmSendCubit>(
-      key: ValueKey(service),
-      create: (_) => VideoDmSendCubit(service: service),
+      key: ValueKey((service, clipVerifier)),
+      create: (_) =>
+          VideoDmSendCubit(service: service, clipVerifier: clipVerifier),
       child: _SendBarBody(participantPubkeys: participantPubkeys),
     );
   }
@@ -819,6 +832,117 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Offers a clip from the library or a video from the gallery, where this
+  /// platform can check a clip's C2PA credential. Elsewhere it goes straight
+  /// to the gallery, since a clip could not be checked on either end.
+  Future<void> _onAttach() async {
+    if (!ClipProvenanceVerifier.isSupportedPlatform) {
+      await _onAttachVideo();
+      return;
+    }
+
+    final l10n = context.l10n;
+    _AttachSource? source;
+    await VineBottomSheetActionMenu.show(
+      context: context,
+      // Any received video can be added to the recipient's clips and end up
+      // in a post that credits the sender, so say so before they pick.
+      title: Text(
+        l10n.dmAttachReuseNotice,
+        style: VineTheme.bodyMediumFont(
+          color: context.vineColors.secondaryText,
+        ),
+      ),
+      options: [
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.filmSlate.assetPath,
+          label: l10n.dmAttachClipFromLibrary,
+          onTap: () => source = _AttachSource.clipLibrary,
+        ),
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.images.assetPath,
+          label: l10n.dmAttachVideoFromGallery,
+          onTap: () => source = _AttachSource.gallery,
+        ),
+      ],
+    );
+    if (!mounted) return;
+
+    switch (source) {
+      case _AttachSource.clipLibrary:
+        await _onAttachClip();
+      case _AttachSource.gallery:
+        await _onAttachVideo();
+      case null:
+        return;
+    }
+  }
+
+  /// Picks clips from the library and sends each to the thread's single
+  /// counterparty, marked as clips so they can add them to their own
+  /// library.
+  Future<void> _onAttachClip() async {
+    final participantPubkeys = widget.participantPubkeys;
+    if (participantPubkeys.length != 1) return;
+    final recipient = participantPubkeys.first;
+    if (recipient.isEmpty) return;
+
+    final clips = await VineBottomSheet.show<List<DivineVideoClip>>(
+      context: context,
+      maxChildSize: 1,
+      initialChildSize: 0.9,
+      minChildSize: VineTheme.bottomSheetDismissFloor,
+      buildScrollBody: (scrollController) => LibraryScreen(
+        initialTabIndex: 1,
+        selectionMode: true,
+        clipTypeFilter: LibraryClipTypeFilter.video,
+        scrollController: scrollController,
+      ),
+    );
+    if (clips == null || clips.isEmpty || !mounted) return;
+
+    // The send outlives this screen, so everything needed to report it is
+    // captured now and the outcome goes to the app's messenger.
+    final messenger = ScaffoldMessenger.of(context);
+    final view = View.of(context);
+    final textDirection = Directionality.of(context);
+    final l10n = context.l10n;
+    final outcome = await context.read<VideoDmSendCubit>().sendClips(
+      recipientPubkey: recipient,
+      clips: clips,
+    );
+    if (outcome == null) return;
+
+    final (message, isError) = switch (outcome) {
+      ClipSendOutcome(isPartial: true) => (
+        l10n.dmClipsPartlySent(outcome.sentCount, outcome.total),
+        true,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.sent) => (
+        l10n.dmVideoSent,
+        false,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.tooLarge) => (
+        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
+        true,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.clipNotVerified) => (
+        l10n.dmClipSendNotVerified,
+        true,
+      ),
+      _ => (l10n.dmVideoSendFailed, true),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
+    runDetached(
+      SemanticsService.sendAnnouncement(view, message, textDirection),
+      'announce DM clip send outcome',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
+    );
   }
 
   /// Picks a video from the gallery and sends it to the thread's single
@@ -866,7 +990,9 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
         l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
         true,
       ),
+      VideoDmSendStatus.clipNotVerified => (l10n.dmClipSendNotVerified, true),
       VideoDmSendStatus.idle ||
+      VideoDmSendStatus.checking ||
       VideoDmSendStatus.encrypting ||
       VideoDmSendStatus.uploading ||
       VideoDmSendStatus.sending => (null, false),
@@ -923,9 +1049,7 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
         controller: _controller,
         // Video DMs address a single recipient; a group has none, so the
         // affordance is hidden rather than a dead tap.
-        onAttachVideo: widget.participantPubkeys.length == 1
-            ? _onAttachVideo
-            : null,
+        onAttachVideo: widget.participantPubkeys.length == 1 ? _onAttach : null,
         isAttachVideoBusy: isVideoSendBusy,
         onSend: (text) {
           _lastSubmitted = text;
@@ -1345,11 +1469,18 @@ class _MessageList extends StatelessWidget {
         !(isSent &&
             (deliveryStatus == DmDeliveryStatus.failed ||
                 deliveryStatus == DmDeliveryStatus.blocked));
+    // Offered for every received encrypted video, not only tagged clips:
+    // the tag is sender-asserted, and the C2PA check decides admission.
+    final canAddToClips =
+        !isSent &&
+        message.fileMetadata?.isVideo == true &&
+        ClipProvenanceVerifier.isSupportedPlatform;
     final result = await ReactionPickerOverlay.show(
       context: context,
       isSent: isSent,
       isVideoShare: videoTarget != null,
       isEncryptedVideo: message.fileMetadata?.isVideo == true,
+      canAddToClips: canAddToClips,
       showPicker: showPicker,
       showDelete:
           (retractionsEnabled || !isPersisted) &&
@@ -1382,7 +1513,18 @@ class _MessageList extends StatelessWidget {
         if (videoTarget == null) return;
         await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
       case MessageAction.playVideo:
-        await DmVideoPlayPage.open(context, message);
+        await DmVideoPlayPage.open(
+          context,
+          message,
+          canAddToClips: canAddToClips,
+        );
+      case MessageAction.addToClips:
+        runDetached(
+          addReceivedClipToLibrary(context, message),
+          'add DM clip to library',
+          logName: 'ConversationView',
+          category: LogCategory.video,
+        );
       case MessageAction.saveVideo:
         if (message.fileMetadata?.isVideo == true && videoTarget == null) {
           runDetached(
@@ -1682,11 +1824,17 @@ class _MessageList extends StatelessWidget {
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
             fileMetadata: message.fileMetadata,
+            isClip: message.isDivineClip,
             // A received (or own) encrypted video DM opens a decrypt-and-play
             // page on tap. A failed own send ignores this and keeps the outer
             // resend affordance.
             onOpenEncryptedVideo: message.fileMetadata?.isVideo == true
-                ? () => DmVideoPlayPage.open(context, message)
+                ? () => DmVideoPlayPage.open(
+                    context,
+                    message,
+                    canAddToClips:
+                        !isSent && ClipProvenanceVerifier.isSupportedPlatform,
+                  )
                 : null,
           );
           return Column(

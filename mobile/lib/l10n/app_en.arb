@@ -268,6 +268,23 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
+  "videoOverlayTotalLoops": "{compactCount} {authorName}'s {count, plural, =1{loop} other{loops}}",
+  "@videoOverlayTotalLoops": {
+    "description": "The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.",
+    "placeholders": {
+      "compactCount": {"type": "String"},
+      "count": {"type": "int"},
+      "authorName": {"type": "String"}
+    }
+  },
+  "videoOverlayVideoLoops": "{compactCount} this video's {count, plural, =1{loop} other{loops}}",
+  "@videoOverlayVideoLoops": {
+    "description": "The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.",
+    "placeholders": {
+      "compactCount": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
   "generalSettingsShowTotalLoops": "Show total loops",
   "generalSettingsShowTotalLoopsSubtitle": "The creator's loop count across all their videos",
   "generalSettingsShowVideoLoops": "Show video loops",
@@ -2354,6 +2371,46 @@
       }
     }
   },
+  "dmAttachClipFromLibrary": "Clip from your library",
+  "@dmAttachClipFromLibrary": {
+    "description": "Option in the DM composer's attach menu that opens the user's clip library to send a raw clip they recorded with the Divine camera. The recipient can add a sent clip to their own clip library."
+  },
+  "dmAttachVideoFromGallery": "Video from your gallery",
+  "@dmAttachVideoFromGallery": {
+    "description": "Option in the DM composer's attach menu that opens the device photo gallery to send any video. Unlike a library clip it is not labelled as a clip, though the recipient can still try to add it to their clips, which only works if its C2PA credential proves a Divine camera recording."
+  },
+  "dmClipBadge": "Clip",
+  "@dmClipBadge": {
+    "description": "Short label on an encrypted video message in a DM thread marking it as a raw clip the sender shared from their clip library, as opposed to a finished video."
+  },
+  "dmClipChecking": "Making sure this clip was shot on Divine…",
+  "@dmClipChecking": {
+    "description": "SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library."
+  },
+  "dmClipNotVerified": "We couldn't confirm this was shot with the Divine camera, so it stays out of your clips.",
+  "@dmClipNotVerified": {
+    "description": "SnackBar shown when a clip received in a DM fails the C2PA check that proves it was recorded with the Divine camera and not changed since, so it is not added to the clip library. Must not accuse the sender; the clip may simply lack credentials."
+  },
+  "dmClipCheckUnavailable": "Couldn't check this clip right now. Try again in a bit.",
+  "@dmClipCheckUnavailable": {
+    "description": "SnackBar shown when the C2PA check on a received clip cannot run right now, for example offline with no cached trust list. Nothing was concluded about the clip, so the copy invites a retry."
+  },
+  "dmClipSendNotVerified": "We couldn't confirm this clip was shot with the Divine camera, so it can't be sent as a clip.",
+  "@dmClipSendNotVerified": {
+    "description": "SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips."
+  },
+  "dmAttachReuseNotice": "They can add what you send to their clips and post it. You'll get credit.",
+  "@dmAttachReuseNotice": {
+    "description": "Short note at the top of the DM composer's attach menu. Tells the sender, before they pick what to send, that the recipient can add a sent video to their own clip library and post it, and that the sender is then credited publicly in that post."
+  },
+  "dmClipsPartlySent": "{total, plural, one{Sent {sent} of {total} clip. The rest didn't go through.} other{Sent {sent} of {total} clips. The rest didn't go through.}}",
+  "@dmClipsPartlySent": {
+    "description": "SnackBar after sending several clips in a DM when only some went out before a failure. {sent} clips were delivered out of {total} picked; the rest were not sent.",
+    "placeholders": {
+      "sent": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "shareSheetSaveVideo": "Save Video",
   "shareSheetAddToClips": "Add to clips",
   "@shareSheetAddToClips": {
@@ -2472,6 +2529,14 @@
   "peopleListsListDeletedSubtitle": "This list may have been deleted.",
   "peopleListsNoPeopleTitle": "No people in this list",
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
+  "peopleListsAllMembersHiddenTitle": "Everyone here is hidden",
+  "@peopleListsAllMembersHiddenTitle": {
+    "description": "Title of a people list's member roster when the list has members but every one is hidden from the viewer, because the viewer blocked or muted them or they blocked or muted the viewer."
+  },
+  "peopleListsAllMembersHiddenSubtitle": "Blocked and muted accounts don't show up in lists.",
+  "@peopleListsAllMembersHiddenSubtitle": {
+    "description": "Supporting copy under peopleListsAllMembersHiddenTitle. Deliberately neutral about who did the blocking or muting: the hidden members may include accounts that blocked or muted the viewer, and the copy must not reveal that."
+  },
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
@@ -2486,7 +2551,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Search people",
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
   "peopleListsAddButton": "Add",
@@ -3122,9 +3186,6 @@
   },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
-  "listCollaboratorsNone": "None",
-  "listAddCollaboratorTitle": "Add a collaborator",
-  "listCollaboratorSearchHint": "Search Divine...",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
   "listPublicList": "Public List",
@@ -4053,6 +4114,10 @@
   "curatedListDeleteFailed": "Couldn't delete list",
   "peopleListsActionsTooltip": "List actions",
   "listDeleteAction": "Delete list",
+  "listReportAction": "Report list",
+  "@listReportAction": {
+    "description": "Menu action on someone else's video or people list that opens the report sheet for that list."
+  },
   "peopleListsDeleteConfirmTitle": "Delete list?",
   "peopleListsDeleteConfirmBody": "This removes the list for everyone. The people in it will not be unfollowed.",
   "peopleListsDeleteFailed": "Couldn't delete list",
@@ -5825,6 +5890,10 @@
   "@videoEditorEffectGlow": {
     "description": "Name of a video effect: the bright areas of the picture bloom softly into their surroundings, like stage lights or a sunset. Must read differently from the Brightness adjustment (videoEditorTuneBrightness)."
   },
+  "videoEditorEffectEcho": "Echo",
+  "@videoEditorEffectEcho": {
+    "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."
@@ -6968,6 +7037,10 @@
   "videoEditorAddElementSemanticLabel": "Add element",
   "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
+  "videoEditorBrushSizeSemanticLabel": "Brush size",
+  "@videoEditorBrushSizeSemanticLabel": {
+    "description": "Screen reader label for the vertical slider that sets how thick the draw editor's pencil, marker, arrow or eraser draws."
+  },
   "videoMetadataClosePostDetailsSemanticLabel": "Close post details",
   "videoMetadataDismissHelpDialogSemanticLabel": "Dismiss help dialog",
   "videoMetadataGotItButton": "Got it!",
@@ -9310,5 +9383,33 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "New video list",
+  "peopleListsPublicNotice": "This list is public. Anyone can see its name, description, and people.",
+  "peopleListsPeopleLabel": "People",
+  "peopleListsPeopleNone": "No people added",
+  "peopleListsSessionChanged": "Your account or list access changed. Reopen this page to continue.",
+  "peopleListsSearchConnectionsHint": "Search followers and following",
+  "@listMemberNamesSeparator": {
+    "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
+  },
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "description": "Screen-reader label for a list card, read as one sentence: the list's name, 'Private' for a private list, and its count as already localized by listVideoCount or listMemberCount. A private list encrypts its video membership; its title, description, tags and cover are published. Do not translate 'Private' as device-only. The order and the punctuation between them are the locale's to choose.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Weekend loops"
+      },
+      "visibility": {
+        "type": "String",
+        "example": "private"
+      },
+      "count": {
+        "type": "String",
+        "example": "3 videos"
+      }
+    }
+  },
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}"
 }

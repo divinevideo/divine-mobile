@@ -1,8 +1,11 @@
 // ABOUTME: Riverpod wiring for importing videos into the clip library.
 // ABOUTME: Keeps the import service testable while using app cache and storage services.
 
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -34,5 +37,9 @@ VideoClipImportService videoClipImportService(Ref ref) {
       );
     },
     extractLastFrame: VideoThumbnailService.extractLastFrame,
+    publishedSourceResolver: PublishedClipSourceResolver(
+      mediaServer: Uri.parse(ref.watch(currentEnvironmentProvider).blossomUrl),
+      videosByAuthor: ref.watch(videosRepositoryProvider).getVideosByAuthor,
+    ),
   );
 }

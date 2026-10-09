@@ -123,7 +123,7 @@ Codemagic workflows and their publishing targets:
 
 Additional distribution paths:
 
-- Zapstore — the arm64 release APK, described by `zapstore.yaml` (MPL-2.0). The Android build publishes it automatically after creating the GitHub release (`PUBLISH_TO_GITHUB=YES`), signing with `ZAPSTORE_NSEC` from the `zapstore_credentials` group; see the Zapstore notes in `AGENTS.md`.
+- Zapstore — the arm64 release APK, described by `zapstore.yaml` (MPL-2.0). Build store candidates with BETA, promote the original beta on GitHub after both stores are available to prompted users, then perform manual Zapstore publication. Do not rebuild Android to trigger Zapstore. The Android workflow's automatic path requires `PUBLISH_TO_GITHUB=YES` and `RELEASE_CHANNEL=PRODUCTION`; beta builds never publish to Zapstore. See the signed command in `AGENTS.md` and [release channels and beta promotion](release-notes/README.md).
 - Web — the Flutter web build deploys to Cloudflare (`mobile/deploy-web.sh`, `.github/workflows/mobile_web_production_deploy.yml`).
 - Shorebird — over-the-air code-push patches, configured in `mobile/shorebird.yaml`.
 

@@ -138,6 +138,8 @@
   "appearanceSettingsSystem": "Lalai sistem",
   "appearanceSettingsLight": "Cerah",
   "appearanceSettingsDark": "Gelap",
+  "videoOverlayTotalLoops": "{count, plural, other{{compactCount} ulangan {authorName}}}",
+  "videoOverlayVideoLoops": "{compactCount} {count, plural, other{ulangan}} video ini",
   "generalSettingsClosedCaptions": "Sarikata Tertutup",
   "generalSettingsClosedCaptionsSubtitle": "Papar sarikata apabila video menyertainya",
   "generalSettingsVideoShapeSquareOnly": "Video segi empat sahaja",
@@ -1827,6 +1829,15 @@
   "dmVideoSent": "Video dihantar",
   "dmVideoSendFailed": "Tidak dapat menghantar video",
   "dmVideoTooLarge": "Video ini terlalu besar untuk dihantar. Pilih yang kurang daripada {maxMegabytes} MB",
+  "dmAttachClipFromLibrary": "Klip daripada pustaka anda",
+  "dmAttachVideoFromGallery": "Video daripada galeri anda",
+  "dmClipBadge": "Klip",
+  "dmClipChecking": "Memastikan klip ini dirakam dengan Divine…",
+  "dmClipNotVerified": "Kami tidak dapat mengesahkan ini dirakam dengan kamera Divine, jadi ia tidak ditambah ke klip anda.",
+  "dmClipCheckUnavailable": "Klip ini tidak dapat disemak sekarang. Cuba lagi sebentar nanti.",
+  "dmClipSendNotVerified": "Kami tidak dapat mengesahkan klip ini dirakam dengan kamera Divine, jadi ia tidak boleh dihantar sebagai klip.",
+  "dmAttachReuseNotice": "Mereka boleh tambah apa yang anda hantar ke klip mereka dan siarkannya, dengan kredit kepada anda.",
+  "dmClipsPartlySent": "{total, plural, other{{sent} daripada {total} klip dihantar. Selebihnya tidak berjaya dihantar.}}",
   "shareSheetSaveVideo": "Simpan Video",
   "shareSheetAddToClips": "Tambah ke klip",
   "@shareSheetAddToClips": {
@@ -1959,7 +1970,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Cari orang",
   "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
   "peopleListsAddPeopleRetry": "Cuba lagi",
   "peopleListsAddButton": "Tambah",
@@ -2437,9 +2447,6 @@
   },
   "listCreateNewList": "Cipta Senarai Baharu",
   "listNewPeopleList": "Senarai orang baharu",
-  "listCollaboratorsNone": "Tiada",
-  "listAddCollaboratorTitle": "Tambah kolaborator",
-  "listCollaboratorSearchHint": "Cari Divine...",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
   "listPublicList": "Senarai Awam",
@@ -4592,6 +4599,7 @@
   "videoEditorEffectSplitScreen": "Skrin Pisah",
   "videoEditorEffectWave": "Gelombang",
   "videoEditorEffectGlow": "Sinaran",
+  "videoEditorEffectEcho": "Gema",
   "videoEditorEffectsFlashingReplaced": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.",
   "videoEditorEffectsOnBeat": "Ikut rentak",
@@ -5373,6 +5381,7 @@
   "videoEditorAddElementSemanticLabel": "Tambah elemen",
   "videoEditorDoneSemanticLabel": "Siap",
   "videoEditorLevelSemanticLabel": "Tahap",
+  "videoEditorBrushSizeSemanticLabel": "Saiz berus",
   "videoMetadataClosePostDetailsSemanticLabel": "Tutup butiran siaran",
   "videoMetadataDismissHelpDialogSemanticLabel": "Ketepikan dialog bantuan",
   "videoMetadataGotItButton": "Faham!",
@@ -6705,5 +6714,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Senarai video baharu",
+  "peopleListsPublicNotice": "Senarai ini terbuka kepada umum. Sesiapa sahaja boleh melihat nama, penerangan dan orang di dalamnya.",
+  "peopleListsPeopleLabel": "Orang",
+  "peopleListsPeopleNone": "Belum ada orang ditambah",
+  "peopleListsSessionChanged": "Akaun atau akses anda kepada senarai telah berubah. Buka semula halaman ini untuk meneruskan.",
+  "peopleListsSearchConnectionsHint": "Cari pengikut dan orang yang diikuti",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Peribadi, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

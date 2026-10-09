@@ -33,8 +33,9 @@ class PeopleListHeroHeader extends StatelessWidget {
   final String name;
   final int memberCount;
 
-  /// Members to pile up, best-ranked first; only the first
-  /// [kPeopleListPreviewMembers] are drawn.
+  /// Members to pile up, best-ranked first, without the ones hidden from
+  /// the viewer; only the first [kPeopleListPreviewMembers] are drawn. Empty
+  /// drops the members row.
   final List<String> previewPubkeys;
 
   final VoidCallback onViewAll;
@@ -76,7 +77,9 @@ class PeopleListHeroHeader extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-          if (memberCount > 0)
+          // Keyed on who the viewer can see, not the count: a list whose
+          // members are all hidden would otherwise lead to an empty roster.
+          if (previewPubkeys.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: PeopleListMembersPreview(

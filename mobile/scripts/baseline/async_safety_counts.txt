@@ -5,7 +5,6 @@
 # their futures and reduce the baseline when they touch these paths.
 discarded_futures|lib/app/divine_app.dart	4
 discarded_futures|lib/app_update/view/update_dialog.dart	1
-discarded_futures|lib/features/feature_flags/providers/feature_flag_providers.dart	1
 discarded_futures|lib/main.dart	1
 discarded_futures|lib/mixins/grid_prefetch_mixin.dart	2
 discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
@@ -13,9 +12,7 @@ discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
 discarded_futures|lib/repositories/feed_repository_impl.dart	2
 discarded_futures|lib/screens/category_gallery_screen.dart	2
 discarded_futures|lib/screens/content_filters_screen.dart	2
-discarded_futures|lib/screens/creator_analytics_screen.dart	1
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
-discarded_futures|lib/screens/feed/video_feed_page/feed_error_widget.dart	1
 discarded_futures|lib/screens/hashtag_feed_screen.dart	2
 discarded_futures|lib/screens/library_screen.dart	1
 discarded_futures|lib/screens/minor_account_review_screen.dart	5
@@ -30,8 +27,6 @@ discarded_futures|lib/screens/web_auth_screen.dart	1
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/auth/forgot_password_dialog.dart	1
 discarded_futures|lib/widgets/bug_report_dialog.dart	1
-discarded_futures|lib/widgets/categories_tab.dart	1
-discarded_futures|lib/widgets/classic_vines_tab.dart	1
 discarded_futures|lib/widgets/composable_video_grid.dart	1
 discarded_futures|lib/widgets/delete_account_dialog.dart	2
 discarded_futures|lib/widgets/developer_options/shorebird_patch_section.dart	2
@@ -42,13 +37,10 @@ discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/new_videos_tab.dart	1
-discarded_futures|lib/widgets/popular_videos_tab.dart	1
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
-discarded_futures|lib/widgets/report_content_confirmation.dart	1
 discarded_futures|lib/widgets/report_content_dialog.dart	2
 discarded_futures|lib/widgets/save_original_progress_sheet.dart	1
 discarded_futures|lib/widgets/show_edit_dialog_for_video.dart	1
-discarded_futures|lib/widgets/stop_motion/stop_motion_player.dart	1
 discarded_futures|lib/widgets/support_capped_text_field.dart	2
 discarded_futures|lib/widgets/trending_hashtags_section.dart	1
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
@@ -56,10 +48,6 @@ discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
 discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
-discarded_futures|test/repositories/community_content_label_repository_test.dart	1
-discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
-discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
-discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/screens/feed/video_feed_page.dart	1
@@ -69,6 +57,3 @@ unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
 unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
-unawaited_futures|test/features/feature_flags/screens/feature_flag_screen_route_test.dart	1
-unawaited_futures|test/services/profile_editing_test.dart	1
-unawaited_futures|test/widgets/composable_video_grid_test.dart	1

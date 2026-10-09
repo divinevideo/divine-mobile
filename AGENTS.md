@@ -354,12 +354,12 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 
 ## Zapstore Publishing Notes
 
-- The Android build publishes to Zapstore automatically once it creates the GitHub release (`PUBLISH_TO_GITHUB=YES`). It runs a pinned `zsp` against the tracked root `zapstore.yaml`, so there is no manual `zsp publish` step in the normal release flow.
+- Store candidates use `RELEASE_CHANNEL=BETA`; beta builds never publish to Zapstore. After both stores are available to prompted users, promote the original beta on GitHub and perform manual Zapstore publication using the signed command below. Do not rebuild Android with PRODUCTION to trigger Zapstore. The Android workflow's automatic Zapstore step runs only when `PUBLISH_TO_GITHUB=YES` and `RELEASE_CHANNEL=PRODUCTION`; it is not the beta-promotion path. See `release-notes/README.md` before publication.
 - The workflow signs with `ZAPSTORE_NSEC` from the `zapstore_credentials` Codemagic group. Never paste that `nsec` into chat, a shell command, a log, or a file that would land in history.
-- `--pre-release` is required: the CI-created GitHub release is a prerelease, so without the flag `zsp` skips it for the previous public release. Divine `1.0.9` was published wrong for exactly this reason.
-- The workflow refuses to publish when the newest GitHub release does not match the version it just cut, so a stale or missing release cannot be published under the signing key.
+- Publish only stable GitHub releases to Zapstore. Never add `--pre-release`: that flag makes beta downloads eligible for signing and publication.
+- The workflow refuses to publish when the newest non-draft, non-prerelease GitHub release does not match the version it just cut.
 - Certificate linking (`zsp identity --link-key`) is a one-time proof, not a per-release step, and is deliberately skipped during publish. Run it separately with `KEYSTORE_PASSWORD` set.
-- To publish by hand, run from the repo root so the config's icon path resolves: `SIGN_WITH=... zsp publish zapstore.yaml --quiet --skip-preview --skip-certificate-linking --pre-release`, and confirm the fetched version before signing.
+- Before publishing by hand, verify that the fetched stable release is the intended version. Run from the repo root so the icon path resolves: `SIGN_WITH=... zsp publish zapstore.yaml --quiet --skip-preview --skip-certificate-linking`. For beta promotion without rebuilding, follow `release-notes/README.md`.
 
 ## Clean Workspace Expectations
 

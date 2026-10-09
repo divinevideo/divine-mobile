@@ -4,8 +4,6 @@
 // ABOUTME: affordance in the paused-video overlay. Compilations and
 // ABOUTME: captions confirm their new state in a snackbar.
 
-import 'dart:ui';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +14,7 @@ import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/widgets/media_chrome_backdrop.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Scrim-30 backdrop-blurred capsule housing the three playback toggles:
@@ -35,42 +34,24 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    // The pill floats over video, so light mode gets the light chrome
-    // treatment; dark mode keeps the scrim-30 capsule unchanged.
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final chromeBackground = isLight ? colors.mediaChrome : VineTheme.scrim30;
-    final chromeForeground = isLight
-        ? colors.mediaChromeForeground
-        : VineTheme.onSurface;
-    return ClipRRect(
+    final chromeForeground = MediaChromeBackdrop.foregroundOf(context);
+    return MediaChromeBackdrop(
       borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: chromeBackground,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: VineTheme.scrim15),
-            boxShadow: const [
-              BoxShadow(color: VineTheme.shadow25, blurRadius: 4),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                _PlaybackModeToggle(
-                  foregroundColor: chromeForeground,
-                  onAutoAdvanceToggled: onAutoAdvanceToggled,
-                ),
-                _AudioToggle(foregroundColor: chromeForeground),
-                _CaptionsToggle(foregroundColor: chromeForeground),
-              ],
+      border: Border.all(color: VineTheme.scrim15),
+      boxShadow: const [BoxShadow(color: VineTheme.shadow25, blurRadius: 4)],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            _PlaybackModeToggle(
+              foregroundColor: chromeForeground,
+              onAutoAdvanceToggled: onAutoAdvanceToggled,
             ),
-          ),
+            _AudioToggle(foregroundColor: chromeForeground),
+            _CaptionsToggle(foregroundColor: chromeForeground),
+          ],
         ),
       ),
     );

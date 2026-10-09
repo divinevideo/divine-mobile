@@ -113,6 +113,7 @@ class _FakeVideoSendService extends DmVideoSendService {
     required String mimeType,
     String? blurhash,
     String? dimensions,
+    List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase phase)? onPhase,
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
@@ -3833,7 +3834,29 @@ void main() {
           find.bySemanticsIdentifier('dm_attach_video_button'),
         );
         await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmAttachVideoFromGallery));
+        await tester.pumpAndSettle();
       }
+
+      testWidgets('offers a library clip beside a gallery video', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmAttachClipFromLibrary), findsOneWidget);
+        expect(find.text(l10n.dmAttachVideoFromGallery), findsOneWidget);
+        expect(find.text(l10n.dmAttachReuseNotice), findsOneWidget);
+      });
 
       testWidgets('confirms a delivered video DM', (tester) async {
         await attachVideo(

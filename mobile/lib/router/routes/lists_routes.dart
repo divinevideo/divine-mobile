@@ -8,6 +8,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
+import 'package:openvine/features/people_lists/view/edit_people_list_page.dart';
 import 'package:openvine/features/people_lists/view/people_list_members_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -136,6 +137,31 @@ List<RouteBase> listsRoutes(Ref ref) {
           listId: state.pathParameters['listId'],
           roster: true,
         );
+      },
+    ),
+
+    GoRoute(
+      path: EditPeopleListPage.path,
+      name: EditPeopleListPage.routeName,
+      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
+      builder: (context, state) {
+        final listId = state.pathParameters['listId'];
+        final owner = _peopleListOwner(state.uri);
+        final currentOwner = ref.read(authServiceProvider).currentPublicKeyHex;
+        if (listId == null ||
+            listId.isEmpty ||
+            currentOwner == null ||
+            currentOwner.isEmpty ||
+            owner.invalid ||
+            (owner.pubkey != null &&
+                owner.pubkey != currentOwner.toLowerCase())) {
+          return RouteErrorScreen(
+            message: context.l10n.routeInvalidListId,
+            title: context.l10n.listEditTitle,
+            showBackButton: true,
+          );
+        }
+        return EditPeopleListPage(listId: listId);
       },
     ),
 

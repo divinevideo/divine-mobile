@@ -208,7 +208,126 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'33126d21cc217b4b18a7c9a2743c81eac25d4933';
+    r'0a51d226f11eae6005e559b2186a9659d0c7fa32';
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
+
+@ProviderFor(curatedListThumbnailFilter)
+final curatedListThumbnailFilterProvider =
+    CuratedListThumbnailFilterProvider._();
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
+
+final class CuratedListThumbnailFilterProvider
+    extends
+        $FunctionalProvider<
+          CuratedListVideoFilter,
+          CuratedListVideoFilter,
+          CuratedListVideoFilter
+        >
+    with $Provider<CuratedListVideoFilter> {
+  /// Shared preview policy for My Lists and public list search.
+  ///
+  /// A retired callback fails closed. The stable curated-list repository reads
+  /// this provider at each check, while thumbnail consumers watch it to clear
+  /// displayed previews and restart pending hydration on policy changes.
+  CuratedListThumbnailFilterProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'curatedListThumbnailFilterProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$curatedListThumbnailFilterHash();
+
+  @$internal
+  @override
+  $ProviderElement<CuratedListVideoFilter> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CuratedListVideoFilter create(Ref ref) {
+    return curatedListThumbnailFilter(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CuratedListVideoFilter value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CuratedListVideoFilter>(value),
+    );
+  }
+}
+
+String _$curatedListThumbnailFilterHash() =>
+    r'c5b5b18384ba0750ca64df3993868bb42570195a';
+
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+
+@ProviderFor(curatedListThumbnailPolicyInitialized)
+final curatedListThumbnailPolicyInitializedProvider =
+    CuratedListThumbnailPolicyInitializedProvider._();
+
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+
+final class CuratedListThumbnailPolicyInitializedProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Settles persisted preview policy before consumers start metadata hydration.
+  ///
+  /// Verification initialization notifies the current policy after retiring
+  /// legacy keys. Await the services' memoized futures so that notification can
+  /// retire a pending pass before it sends a duplicate metadata request.
+  CuratedListThumbnailPolicyInitializedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'curatedListThumbnailPolicyInitializedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$curatedListThumbnailPolicyInitializedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return curatedListThumbnailPolicyInitialized(ref);
+  }
+}
+
+String _$curatedListThumbnailPolicyInitializedHash() =>
+    r'e0c08cf7fe224d9b7038242fdf2ce9b13cc9885c';
 
 /// Provider for HashtagRepository instance.
 ///
@@ -1181,7 +1300,7 @@ final class DmRepositoryProvider
   }
 }
 
-String _$dmRepositoryHash() => r'd54263d699b3506506cba06ad0e29b94f4452bdc';
+String _$dmRepositoryHash() => r'955cb4f853a83d1fba4b08debb8a4a147ae8dd46';
 
 /// Provider for CommentsRepository instance
 ///

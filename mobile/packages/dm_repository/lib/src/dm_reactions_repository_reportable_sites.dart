@@ -1,10 +1,10 @@
-// ABOUTME: Stable identifiers for the swallow sites in DmReactionsRepository.
+// ABOUTME: Stable identifiers for the failures DmReactionsRepository reports.
 // ABOUTME: Used as the `site:` annotation on the reporter port calls. Per
 // ABOUTME: the error-handling matrix, only DAO-layer invariants reach
 // ABOUTME: Crashlytics — network/IO publish failures stay local.
 
-/// Stable site identifiers for the swallow points in
-/// `DmReactionsRepository`. The wiring layer forwards each call to
+/// Stable site identifiers for the failures `DmReactionsRepository`
+/// reports. The wiring layer forwards each call to
 /// Crashlytics with `reason: 'DmReactionsRepository.<site>'` so the
 /// dashboard aggregates per site.
 abstract class DmReactionsRepositoryReportableSites {
@@ -32,13 +32,14 @@ abstract class DmReactionsRepositoryReportableSites {
   /// the next app start picks up the rescue sweep.
   static const String publishSwapPlaceholder = 'publish.swapPlaceholder';
 
-  /// `removeOwn`: recording the removal (the soft-delete and its stored
-  /// kind-5) threw. Nothing was sent, and the reaction stays as it was.
+  /// `removeOwn`: building or recording the removal (the soft-delete and its
+  /// stored kind-5) threw. Nothing was sent and the reaction stays as it was;
+  /// the error is rethrown so the caller can show the reaction again.
   static const String removeOwnSoftDelete = 'removeOwn.softDelete';
 
-  /// `publish`: recording the durable `deletion_pending` row for a superseded
-  /// prior reaction (cap-at-one emoji swap) threw. The new reaction still
-  /// publishes; the superseded emoji's kind-5 removal is the part at risk.
+  /// `publish`: building or recording the durable `deletion_pending` row for a
+  /// superseded prior reaction (cap-at-one emoji swap) threw. The new reaction
+  /// still publishes; the superseded emoji's kind-5 removal is lost (#9915).
   static const String publishSupersedeDeletion = 'publish.supersedeDeletion';
 
   /// `publish`: reading a superseded prior reaction's row, to see who it was

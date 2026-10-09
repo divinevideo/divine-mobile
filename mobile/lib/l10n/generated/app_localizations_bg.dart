@@ -369,6 +369,32 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запази емисиите в класическия квадратен формат';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'повторения',
+      one: 'повторение',
+    );
+    return '$compactCount $_temp0 на $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'повторения',
+      one: 'повторение',
+    );
+    return '$compactCount $_temp0 на това видео';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Показвай общия брой лупове';
 
   @override
@@ -3732,6 +3758,45 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Клип от библиотеката ти';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Видео от галерията ти';
+
+  @override
+  String get dmClipBadge => 'Клип';
+
+  @override
+  String get dmClipChecking => 'Проверяваме дали клипът е заснет с Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Не успяхме да потвърдим, че е заснет с камерата на Divine, затова не е добавен към клиповете ти.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Не можем да проверим клипа в момента. Опитай пак след малко.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Не успяхме да потвърдим, че клипът е заснет с камерата на Divine, затова не може да се изпрати като клип.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Могат да добавят това, което изпращаш, към клиповете си и да го публикуват, като те посочат.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Изпратени $sent от $total клипа. Останалите не минаха.',
+      one: 'Изпратен $sent от $total клип. Останалите не минаха.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Запази видео';
 
   @override
@@ -3968,6 +4033,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Добави някого, за да започнеш';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Още няма видеа';
 
   @override
@@ -3990,9 +4062,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Добави към $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Търси хора';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4974,15 +5043,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Нов списък с хора';
-
-  @override
-  String get listCollaboratorsNone => 'Няма';
-
-  @override
-  String get listAddCollaboratorTitle => 'Добави сътрудник';
-
-  @override
-  String get listCollaboratorSearchHint => 'Търсене Divine...';
 
   @override
   String get listNameLabel => 'Име на списък';
@@ -6230,6 +6290,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Изтрий списъка';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Да изтрием списъка?';
@@ -8746,6 +8809,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectGlow => 'Сияние';
 
   @override
+  String get videoEditorEffectEcho => 'Ехо';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
 
@@ -10180,6 +10246,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Ниво';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Размер на четката';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13174,4 +13243,40 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Нов списък с видеа';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Този списък е публичен. Всеки може да види името, описанието и хората в него.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Хора';
+
+  @override
+  String get peopleListsPeopleNone => 'Няма добавени хора';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Търси сред последователи и следвани';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Частен, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

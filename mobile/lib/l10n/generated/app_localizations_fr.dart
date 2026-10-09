@@ -375,6 +375,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'Garde les fils dans le format carré classique';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'boucles',
+      many: 'boucles',
+      one: 'boucle',
+    );
+    return '$compactCount $_temp0 de $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'boucles',
+      many: 'boucles',
+      one: 'boucle',
+    );
+    return '$compactCount $_temp0 de cette vidéo';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Afficher le total des loops';
 
   @override
@@ -3741,6 +3769,47 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip de ta bibliothèque';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Vidéo de ta galerie';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'On vérifie que ce clip a été filmé avec Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Impossible de confirmer que ça a été filmé avec la caméra Divine, donc ça n\'a pas été ajouté à tes clips.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Impossible de vérifier ce clip pour l\'instant. Réessaie dans un moment.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Impossible de confirmer que ce clip a été filmé avec la caméra Divine, donc il ne peut pas être envoyé comme clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Ce que tu envoies peut être ajouté à ses clips et publié, avec ton nom en crédit.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent sur $total clips envoyés. Le reste n\'est pas parti.',
+      many: '$sent sur $total de clips envoyés. Le reste n\'est pas parti.',
+      one: '$sent sur $total clip envoyé. Le reste n\'est pas parti.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Enregistrer la vidéo';
 
   @override
@@ -3981,6 +4050,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoute des personnes pour commencer';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Pas encore de vidéos';
 
   @override
@@ -4006,9 +4082,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Ajouter à $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Rechercher des personnes';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4994,15 +5067,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Nouvelle liste de personnes';
-
-  @override
-  String get listCollaboratorsNone => 'Aucun';
-
-  @override
-  String get listAddCollaboratorTitle => 'Ajouter un collaborateur';
-
-  @override
-  String get listCollaboratorSearchHint => 'Rechercher dans Divine...';
 
   @override
   String get listNameLabel => 'Nom de la liste';
@@ -6255,6 +6319,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Supprimer la liste';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Supprimer la liste ?';
@@ -8793,6 +8860,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectGlow => 'Lueur';
 
   @override
+  String get videoEditorEffectEcho => 'Écho';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l\'autre ici.';
 
@@ -10237,6 +10307,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Niveau';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Taille du pinceau';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13245,4 +13318,40 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Nouvelle liste de vidéos';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Cette liste est publique. Tout le monde peut voir son nom, sa description et les personnes qui y figurent.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personnes';
+
+  @override
+  String get peopleListsPeopleNone => 'Aucune personne ajoutée';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Ton compte ou ton accès à la liste a changé. Rouvre cette page pour continuer.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Rechercher parmi les abonnés et les abonnements';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privée, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

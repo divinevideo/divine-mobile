@@ -179,39 +179,42 @@ void main() {
         errors: () => [isA<PostCommentFailedException>()],
       );
 
-      blocTest<InlineCommentComposerCubit, InlineCommentComposerState>(
-        'drops re-entrant submits while one is in flight',
-        setUp: () {
-          // Long-running future so the first call stays in `submitting`.
-          when(
+      test('drops re-entrant submits while one is in flight', () async {
+        final publishResult = Completer<Comment>();
+        when(
+          () => commentsRepository.postComment(
+            content: any(named: 'content'),
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootEventAuthorPubkey: any(named: 'rootEventAuthorPubkey'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer((_) => publishResult.future);
+        final cubit = InlineCommentComposerCubit(
+          commentsRepository: commentsRepository,
+        );
+        final firstSubmit = cubit.submit(video: buildVideo(), content: 'first');
+        Future<void>? secondSubmit;
+        try {
+          expect(cubit.state.status, InlineCommentComposerStatus.submitting);
+          secondSubmit = cubit.submit(video: buildVideo(), content: 'second');
+          await pumpEventQueue();
+
+          expect(cubit.state.status, InlineCommentComposerStatus.submitting);
+          verifyNever(
             () => commentsRepository.postComment(
-              content: any(named: 'content'),
+              content: 'second',
               rootEventId: any(named: 'rootEventId'),
               rootEventKind: any(named: 'rootEventKind'),
               rootEventAuthorPubkey: any(named: 'rootEventAuthorPubkey'),
               rootAddressableId: any(named: 'rootAddressableId'),
             ),
-          ).thenAnswer(
-            (_) => Future.delayed(
-              const Duration(milliseconds: 100),
-              buildComment,
-            ),
           );
-        },
-        build: () => InlineCommentComposerCubit(
-          commentsRepository: commentsRepository,
-        ),
-        act: (cubit) async {
-          // Fire-and-forget the first submit so the cubit reaches submitting
-          // before the second call is dispatched.
-          unawaited(
-            cubit.submit(video: buildVideo(), content: 'first'),
-          );
-          await Future<void>.delayed(Duration.zero);
-          await cubit.submit(video: buildVideo(), content: 'second');
-        },
-        verify: (_) {
-          // Only the first publish should reach the repository.
+
+          publishResult.complete(buildComment());
+          await firstSubmit;
+          await secondSubmit;
+          expect(cubit.state.status, InlineCommentComposerStatus.submitted);
           verify(
             () => commentsRepository.postComment(
               content: 'first',
@@ -230,8 +233,15 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
             ),
           );
-        },
-      );
+        } finally {
+          if (!publishResult.isCompleted) {
+            publishResult.complete(buildComment());
+          }
+          await firstSubmit;
+          await secondSubmit;
+          await cubit.close();
+        }
+      });
     });
 
     group('acknowledge', () {

@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Video inviato",
     "dmVideoSendFailed": "Impossibile inviare il video",
     "dmVideoTooLarge": "Questo video è troppo grande da inviare. Scegline uno sotto i {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Clip dalla tua libreria",
+    "dmAttachVideoFromGallery": "Video dalla tua galleria",
+    "dmClipBadge": "Clip",
+    "dmClipChecking": "Controlliamo che questo clip sia stato girato con Divine…",
+    "dmClipNotVerified": "Non abbiamo potuto confermare che sia stato girato con la fotocamera di Divine, quindi non è stato aggiunto ai tuoi clip.",
+    "dmClipCheckUnavailable": "Impossibile controllare questo clip adesso. Riprova tra poco.",
+    "dmClipSendNotVerified": "Non abbiamo potuto confermare che questo clip sia stato girato con la fotocamera di Divine, quindi non può essere inviato come clip.",
+    "dmAttachReuseNotice": "Può aggiungere ciò che invii alle sue clip e pubblicarlo, citandoti.",
+    "dmClipsPartlySent": "{total, plural, one{Inviate {sent} su {total} clip. Le altre non sono partite.} many{Inviate {sent} su {total} di clip. Le altre non sono partite.} other{Inviate {sent} su {total} clip. Le altre non sono partite.}}",
     "shareSheetSaveVideo": "Salva video",
     "shareSheetAddToClips": "Aggiungi ai clip",
     "shareSheetAddToClipsFailed": "Impossibile aggiungere ai clip",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Crea nuova lista",
     "listNewPeopleList": "Nuova lista persone",
-    "listCollaboratorsNone": "Nessuno",
-    "listAddCollaboratorTitle": "Aggiungi un collaboratore",
-    "listCollaboratorSearchHint": "Cerca su Divine...",
     "listNameLabel": "Nome lista",
     "listDescriptionLabel": "Descrizione (opzionale)",
     "listPublicList": "Lista pubblica",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Schermo diviso",
   "videoEditorEffectWave": "Onda",
   "videoEditorEffectGlow": "Bagliore",
+  "videoEditorEffectEcho": "Eco",
   "videoEditorEffectsFlashingReplaced": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l'altro.",
   "videoEditorEffectsFlashingNotDuplicated": "Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.",
   "videoEditorEffectsOnBeat": "A tempo",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Aggiungi elemento",
     "videoEditorDoneSemanticLabel": "Fatto",
     "videoEditorLevelSemanticLabel": "Livello",
+    "videoEditorBrushSizeSemanticLabel": "Dimensione del pennello",
     "videoMetadataClosePostDetailsSemanticLabel": "Chiudi dettagli del post",
     "videoMetadataDismissHelpDialogSemanticLabel": "Chiudi finestra di aiuto",
     "videoMetadataGotItButton": "Capito!",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
-    "peopleListsAddPeopleSearchHint": "Cerca persone",
     "peopleListsAddPeopleError": "Impossibile caricare le persone. Riprova.",
     "peopleListsAddPeopleRetry": "Riprova",
     "peopleListsAddButton": "Aggiungi",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Predefinito di sistema",
     "appearanceSettingsLight": "Chiaro",
     "appearanceSettingsDark": "Scuro",
+    "videoOverlayTotalLoops": "{count, plural, one{{compactCount} loop di {authorName}} many{{compactCount} loop di {authorName}} other{{compactCount} loop di {authorName}}}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, one{loop} many{loop} other{loop}} di questo video",
     "generalSettingsClosedCaptions": "Sottotitoli",
     "generalSettingsClosedCaptionsSubtitle": "Mostra i sottotitoli quando i video li includono",
     "generalSettingsVideoShapeSquareOnly": "Solo video quadrati",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nuova lista di video",
+  "peopleListsPublicNotice": "Questa lista è pubblica. Chiunque può vederne il nome, la descrizione e le persone incluse.",
+  "peopleListsPeopleLabel": "Persone",
+  "peopleListsPeopleNone": "Nessuna persona aggiunta",
+  "peopleListsSessionChanged": "Il tuo account o l’accesso alla lista è cambiato. Riapri questa pagina per continuare.",
+  "peopleListsSearchConnectionsHint": "Cerca tra follower e persone che segui",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privata, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

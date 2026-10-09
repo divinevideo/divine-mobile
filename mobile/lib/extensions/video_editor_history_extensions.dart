@@ -5,7 +5,8 @@ import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, VideoEffect;
 
 extension VideoEditorHistoryExtensions on StateManager {
   List<AudioEvent> get audioTracks {
@@ -35,6 +36,11 @@ extension VideoEditorHistoryExtensions on StateManager {
   List<EditorVideoEffect> get videoEffectEntries => videoEffectEntriesFromMeta(
     activeMeta[VideoEditorConstants.effectsStateHistoryKey],
   );
+
+  /// The effects of [videoEffectEntries] Divine renders itself.
+  List<CustomVideoEffect> get customVideoEffects => [
+    for (final entry in videoEffectEntries) ?entry.custom,
+  ];
 
   /// Restores timeline marker positions from the current history metadata.
   List<Duration> get timelineMarkers {
@@ -130,7 +136,13 @@ extension VideoEditorHistoryExtensions on StateManager {
 /// A draft written by a newer app can carry an effect type this build does
 /// not know; that entry is skipped rather than failing the whole list.
 List<VideoEffect> videoEffectsFromMeta(Object? raw) => [
-  for (final entry in videoEffectEntriesFromMeta(raw)) entry.effect,
+  for (final entry in videoEffectEntriesFromMeta(raw)) ?entry.effect,
+];
+
+/// The effects Divine renders itself, like [videoEffectsFromMeta] does for
+/// the built-in ones.
+List<CustomVideoEffect> customVideoEffectsFromMeta(Object? raw) => [
+  for (final entry in videoEffectEntriesFromMeta(raw)) ?entry.custom,
 ];
 
 /// Like [videoEffectsFromMeta], with each effect's timeline id. An entry

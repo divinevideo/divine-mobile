@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for creating a new people list from a profile
-// ABOUTME: Shows list name and description inputs with close and done buttons
+// ABOUTME: Shows list name and description inputs with a Done button
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
+import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -18,7 +19,7 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 /// Shows the "New people list" bottom sheet.
 ///
 /// Creates the list via [PeopleListsBloc] dispatching
-/// [PeopleListsCreateRequested] when the check button is tapped.
+/// [PeopleListsCreateRequested] when Done is tapped.
 ///
 /// [initialCollaborator] is pre-added as the first member — useful when
 /// opening the sheet directly from a profile.
@@ -30,6 +31,7 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 Future<void> showNewPeopleListSheet(
   BuildContext context, {
   UserProfile? initialCollaborator,
+  String? initialPubkey,
 }) {
   if (!curatedListsEnabled(context)) return Future<void>.value();
 
@@ -40,23 +42,17 @@ Future<void> showNewPeopleListSheet(
       openingOwner.isNotEmpty &&
       container.read(authServiceProvider).currentPublicKeyHex == openingOwner;
   if (!isSessionCurrent()) return Future<void>.value();
-  final bodyKey = GlobalKey<_NewPeopleListSheetBodyState>();
   final l10n = context.l10n;
 
   return VineBottomSheet.show<void>(
     context: context,
     scrollable: false,
     title: Text(l10n.listNewPeopleList),
-    onComplete: () async {
-      await bodyKey.currentState?._createList();
-    },
-    closeSemanticLabel: l10n.commonClose,
-    completeSemanticLabel: l10n.listDone,
     body: _NewPeopleListSheetBody(
-      key: bodyKey,
       ownerPubkey: openingOwner!,
       isSessionCurrent: isSessionCurrent,
       initialCollaborator: initialCollaborator,
+      initialPubkey: initialPubkey,
     ),
   );
 }
@@ -66,13 +62,14 @@ class _NewPeopleListSheetBody extends StatefulWidget {
     required this.ownerPubkey,
     required this.isSessionCurrent,
     this.initialCollaborator,
-    super.key,
+    this.initialPubkey,
   });
 
   final String ownerPubkey;
   final bool Function() isSessionCurrent;
 
   final UserProfile? initialCollaborator;
+  final String? initialPubkey;
 
   @override
   State<_NewPeopleListSheetBody> createState() =>
@@ -84,6 +81,8 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
   final TextEditingController _descriptionController = TextEditingController();
 
   late final List<UserProfile> _collaborators;
+  bool _submitting = false;
+  PeopleListsOperationResult? _result;
 
   @override
   void initState() {
@@ -91,21 +90,31 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
     _collaborators = [
       if (widget.initialCollaborator != null) widget.initialCollaborator!,
     ];
+    _nameController.addListener(_onNameChanged);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nameController
+      ..removeListener(_onNameChanged)
+      ..dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
+  // Rebuilds the Done button so it tracks whether a name has been entered.
+  void _onNameChanged() => setState(() {});
+
+  bool get _canSubmit => !_submitting && _nameController.text.trim().isNotEmpty;
+
   /// Creates the list via [PeopleListsBloc] dispatching
   /// [PeopleListsCreateRequested].
   Future<void> _createList() async {
+    if (_submitting) return;
     if (!widget.isSessionCurrent() ||
         context.read<PeopleListsBloc>().state.activeOwnerPubkey !=
             widget.ownerPubkey) {
+      setState(() => _result = PeopleListsOperationResult.cancelled);
       return;
     }
     final name = _nameController.text.trim();
@@ -114,9 +123,17 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
     final description = _descriptionController.text.trim().isEmpty
         ? null
         : _descriptionController.text.trim();
-    final pubkeys = _collaborators.map((p) => p.pubkey).toList();
+    final pubkeys = {
+      if (widget.initialPubkey case final pubkey? when pubkey.isNotEmpty)
+        pubkey,
+      ..._collaborators.map((p) => p.pubkey),
+    }.toList();
+    setState(() {
+      _submitting = true;
+      _result = null;
+    });
 
-    context.read<PeopleListsBloc>().add(
+    final result = await context.read<PeopleListsBloc>().submit(
       PeopleListsCreateRequested(
         expectedOwnerPubkey: widget.ownerPubkey,
         name: name,
@@ -124,17 +141,27 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
         initialPubkeys: pubkeys,
       ),
     );
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _result = result;
+    });
+    if (result == PeopleListsOperationResult.succeeded) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _pickCollaborator() async {
     if (!widget.isSessionCurrent()) return;
     await showUserPickerSheet(
       context,
-      filterMode: UserPickerFilterMode.mutualFollowsOnly,
-      title: context.l10n.listAddCollaboratorTitle,
-      searchText: context.l10n.videoMetadataMutualFollowersSearchText,
-      searchHint: context.l10n.listCollaboratorSearchHint,
-      excludePubkeys: _collaborators.map((p) => p.pubkey).toSet(),
+      filterMode: UserPickerFilterMode.allUsers,
+      title: context.l10n.peopleListsAddPeopleTitle,
+      searchHint: context.l10n.userPickerSearchByNameHint,
+      excludePubkeys: {
+        if (widget.initialPubkey != null) widget.initialPubkey!,
+        ..._collaborators.map((p) => p.pubkey),
+      },
       onUserToggled: (profile) {
         if (!mounted || !widget.isSessionCurrent()) return;
         setState(() {
@@ -163,6 +190,7 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
           DivineAuthTextField(
             label: l10n.listNameLabel,
             controller: _nameController,
+            enabled: !_submitting,
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.next,
           ),
@@ -170,14 +198,30 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
           DivineAuthTextField(
             label: l10n.listDescriptionLabel,
             controller: _descriptionController,
+            enabled: !_submitting,
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.done,
           ),
           const SizedBox(height: 24),
+          Text(l10n.peopleListsPublicNotice),
+          const SizedBox(height: 16),
           _CollaboratorsRow(
             collaborators: _collaborators,
-            onTap: _pickCollaborator,
+            onTap: _submitting ? null : _pickCollaborator,
+            initialPubkey: widget.initialPubkey,
             l10n: l10n,
+          ),
+          PeopleListResultNotice(
+            result: _result,
+            failedMessage: l10n.listCreateFailed,
+          ),
+          const SizedBox(height: 16),
+          if (_submitting)
+            const Center(child: DivineCircularProgressIndicator()),
+          DivineButton(
+            label: l10n.listDone,
+            expanded: true,
+            onPressed: _canSubmit ? _createList : null,
           ),
         ],
       ),
@@ -197,29 +241,34 @@ class _CollaboratorsRow extends ConsumerWidget {
     required this.collaborators,
     required this.onTap,
     required this.l10n,
+    this.initialPubkey,
   });
 
   final List<UserProfile> collaborators;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final String? initialPubkey;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasCollaborators = collaborators.isNotEmpty;
+    final hasCollaborators = collaborators.isNotEmpty || initialPubkey != null;
     final names = [
+      if (initialPubkey != null &&
+          !collaborators.any((p) => p.pubkey == initialPubkey))
+        UserProfile.defaultDisplayNameFor(initialPubkey!),
       for (final profile in collaborators)
         vanishedAccountName(
           context,
           isVanished: ref.watch(profileVanishedProvider(profile.pubkey)),
           fallbackName: profile.bestDisplayName,
         ),
-    ].join(', ');
+    ].join(l10n.listMemberNamesSeparator);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.metadataCollaboratorsLabel,
+          l10n.peopleListsPeopleLabel,
           style: VineTheme.titleSmallFont(
             color: context.vineColors.onSurfaceVariant,
           ),
@@ -243,7 +292,7 @@ class _CollaboratorsRow extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         )
                       : Text(
-                          l10n.listCollaboratorsNone,
+                          l10n.peopleListsPeopleNone,
                           style: VineTheme.titleMediumFont(
                             color: context.vineColors.primaryText,
                           ),

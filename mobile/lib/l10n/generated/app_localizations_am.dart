@@ -363,6 +363,32 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ዙሮች',
+      one: 'ዙር',
+    );
+    return 'የ$authorName $compactCount $_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ዙሮች',
+      one: 'ዙር',
+    );
+    return 'የዚህ ቪዲዮ $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'ጠቅላላ ሉፖችን ያሳዩ';
 
   @override
@@ -3602,6 +3628,45 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'ክሊፕ ከቤተ-መጽሐፍትዎ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'ቪዲዮ ከጋለሪዎ';
+
+  @override
+  String get dmClipBadge => 'ክሊፕ';
+
+  @override
+  String get dmClipChecking => 'ይህ ክሊፕ በDivine መቀረጹን በማረጋገጥ ላይ…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ይህ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ ወደ ክሊፖችዎ አልተጨመረም።';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'አሁን ይህን ክሊፕ ማረጋገጥ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ይህ ክሊፕ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ እንደ ክሊፕ መላክ አይቻልም።';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'የሚልኩትን ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'ከ$total ክሊፖች ውስጥ $sent ተልከዋል። የቀሩት አልተላኩም።',
+      one: 'ከ$total ክሊፕ ውስጥ $sent ተልኳል። የቀሩት አልተላኩም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'ቪዲዮ አስቀምጥ';
 
   @override
@@ -3831,6 +3896,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'ለመጀመር አንዳንድ ሰዎችን ያክሉ';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'እስካሁን ምንም ቪዲዮዎች የሉም';
 
   @override
@@ -3852,9 +3924,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'ወደ $name ጨምር';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
 
   @override
   String get peopleListsAddPeopleError => 'ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
@@ -4803,15 +4872,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'አዲስ ሰዎች ዝርዝር';
-
-  @override
-  String get listCollaboratorsNone => 'ምንም';
-
-  @override
-  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
 
   @override
   String get listNameLabel => 'የዝርዝር ስም';
@@ -6033,6 +6093,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'ዝርዝር ሰርዝ';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'ዝርዝር ይሰረዝ?';
@@ -8472,6 +8535,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectGlow => 'ፍካት';
 
   @override
+  String get videoEditorEffectEcho => 'ማሚቶ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
 
@@ -9843,6 +9909,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'ደረጃ';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'የብሩሽ መጠን';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel => 'የልጥፍ ዝርዝሮችን ዝጋ';
@@ -12715,4 +12784,39 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'አዲስ የቪዲዮ ዝርዝር';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'ይህ ዝርዝር ይፋዊ ነው። ማንም ሰው ስሙን፣ መግለጫውን እና በውስጡ ያሉትን ሰዎች ማየት ይችላል።';
+
+  @override
+  String get peopleListsPeopleLabel => 'ሰዎች';
+
+  @override
+  String get peopleListsPeopleNone => 'ምንም ሰዎች አልተጨመሩም';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።';
+
+  @override
+  String get peopleListsSearchConnectionsHint => 'ተከታዮችን እና የምትከተላቸውን ፈልግ';
+
+  @override
+  String get listMemberNamesSeparator => '፣ ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name፣ የግል፣ $count',
+        'other': '$name፣ $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

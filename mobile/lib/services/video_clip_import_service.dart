@@ -1,6 +1,7 @@
 // ABOUTME: Imports videos into the local clip library.
 // ABOUTME: Copies cached media into documents so saved clip paths survive app restarts.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:characters/characters.dart';
@@ -8,6 +9,8 @@ import 'package:models/models.dart' as models;
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -33,6 +36,9 @@ typedef DocumentsPathProvider = Future<String> Function();
 typedef Clock = DateTime Function();
 
 typedef VideoMetadataReader = Future<VideoMetadata> Function(EditorVideo video);
+
+/// Returns the lowercase hex SHA-256 of the file at `filePath`.
+typedef FileSha256Hasher = Future<String> Function(String filePath);
 
 class VideoClipThumbnail {
   const VideoClipThumbnail({required this.path, required this.timestamp});
@@ -62,6 +68,14 @@ enum VideoClipImportFailureReason {
   unsupportedPlatform,
   downloadFailed,
   copyFailed,
+
+  /// The copied file could not be probed for a duration, so it cannot be
+  /// placed on a timeline.
+  unreadableVideo,
+
+  /// It could not be determined whether the received file is an already
+  /// published post, so it is not known whom to credit.
+  sourceLookupFailed,
   saveFailed,
 }
 
@@ -74,6 +88,8 @@ class VideoClipImportService {
     required VideoClipLastFrameExtractor extractLastFrame,
     Clock? now,
     VideoMetadataReader? readVideoMetadata,
+    FileSha256Hasher? hashFile,
+    PublishedClipSourceResolver? publishedSourceResolver,
   }) : _clipLibraryService = clipLibraryService,
        _getDocumentsPath = getDocumentsPath,
        _downloadVideo = downloadVideo,
@@ -81,7 +97,9 @@ class VideoClipImportService {
        _extractLastFrame = extractLastFrame,
        _now = now ?? DateTime.now,
        _readVideoMetadata =
-           readVideoMetadata ?? ProVideoEditor.instance.getMetadata;
+           readVideoMetadata ?? ProVideoEditor.instance.getMetadata,
+       _hashFile = hashFile ?? NativeProofModeService.generateSha256FileHash,
+       _publishedSourceResolver = publishedSourceResolver;
 
   static const _logName = 'VideoClipImportService';
 
@@ -97,6 +115,8 @@ class VideoClipImportService {
   final VideoClipLastFrameExtractor _extractLastFrame;
   final Clock _now;
   final VideoMetadataReader _readVideoMetadata;
+  final PublishedClipSourceResolver? _publishedSourceResolver;
+  final FileSha256Hasher _hashFile;
 
   Future<VideoClipImportResult> importToLibrary(
     models.VideoEvent video, {
@@ -189,6 +209,148 @@ class VideoClipImportService {
         name: _logName,
         category: LogCategory.video,
       );
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.saveFailed,
+      );
+    }
+  }
+
+  /// Imports a clip received in a direct message into the library.
+  ///
+  /// [source] must already have passed the C2PA camera-capture check: the
+  /// clip is stored with a proof record naming [c2paManifestId], so the
+  /// editor's render step treats it as attested and does not re-sign the
+  /// file as the recipient's own capture.
+  ///
+  /// The clip credits [senderPubkey] unless the file turns out to be a post
+  /// already published on Divine: a published video is signed as a fresh
+  /// capture too, so the check alone cannot tell it from a raw recording.
+  /// Then whoever published it is credited, linked to the post. When that
+  /// cannot be determined, the import fails with
+  /// [VideoClipImportFailureReason.sourceLookupFailed] rather than guess.
+  ///
+  /// [targetAspectRatio] is the crop the sender recorded for. When absent it
+  /// is derived from the file: near-square and wider maps to square,
+  /// anything narrower to vertical.
+  ///
+  /// The clip's id is derived from [messageId], so saving the same message
+  /// again returns the clip already in the library instead of adding a
+  /// duplicate or overwriting edits made to it since.
+  ///
+  /// [source] is copied, never moved; the caller still owns it.
+  Future<VideoClipImportResult> importReceivedClip({
+    required File source,
+    required String messageId,
+    required String senderPubkey,
+    required String c2paManifestId,
+    models.AspectRatio? targetAspectRatio,
+  }) async {
+    final documentsPath = await _getDocumentsPath();
+    if (documentsPath.isEmpty) {
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.unsupportedPlatform,
+      );
+    }
+
+    final clipId =
+        'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}';
+    final existing = await _clipLibraryService.getClipById(clipId);
+    if (existing != null && existing.deletedAt == null) {
+      return VideoClipImportSuccess(existing);
+    }
+
+    final importedAt = _now();
+
+    File? copiedVideo;
+    try {
+      final videoHash = await _hashFile(source.path);
+      final PublishedClipSource? published;
+      try {
+        published = await _publishedSourceResolver?.resolve(videoHash);
+      } on PublishedClipSourceLookupException catch (e) {
+        Log.warning(
+          'Could not tell whether a received clip is a published post: $e',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const VideoClipImportFailure(
+          VideoClipImportFailureReason.sourceLookupFailed,
+        );
+      }
+
+      await Directory(documentsPath).create(recursive: true);
+      copiedVideo = await _copyVideoIntoDocuments(
+        source,
+        documentsPath,
+        clipId,
+      );
+
+      final metadata = await _probeMetadata(copiedVideo);
+      final duration = metadata?.duration;
+      if (duration == null || duration <= Duration.zero) {
+        await _deleteQuietly(copiedVideo);
+        return const VideoClipImportFailure(
+          VideoClipImportFailureReason.unreadableVideo,
+        );
+      }
+
+      final thumbnail = await _extractThumbnail(
+        videoPath: copiedVideo.path,
+        targetTimestamp: _thumbnailTimestampFor(duration),
+      );
+      final ghostFramePath = await _extractLastFrame(
+        videoPath: copiedVideo.path,
+        videoDuration: duration,
+      );
+
+      final actualRatio = _ratioOf(metadata);
+      final proof = models.NativeProofData(
+        videoHash: videoHash,
+        c2paManifestId: c2paManifestId,
+      );
+      final post = published?.video;
+
+      final clip = DivineVideoClip(
+        id: clipId,
+        video: EditorVideo.file(copiedVideo.path),
+        duration: duration,
+        recordedAt: importedAt,
+        thumbnailPath: thumbnail?.path,
+        thumbnailTimestamp: thumbnail?.timestamp,
+        originalAspectRatio: actualRatio,
+        targetAspectRatio:
+            targetAspectRatio ?? _targetAspectRatioForRatio(actualRatio),
+        ghostFramePath: ghostFramePath,
+        proofManifestJson: jsonEncode(proof.toJson()),
+        // A forwarded post credits whoever published it, linked to the post
+        // the way a clip imported from a published video is. Only footage
+        // that was never published credits the person who sent it.
+        sourceAuthorPubkey:
+            post?.pubkey ?? published?.ownerPubkey ?? senderPubkey,
+        sourceEventId: post?.id,
+        sourceAddressableId: post?.addressableId,
+        sourceRelayHint: post?.sourceRelay,
+      );
+
+      await _clipLibraryService.saveClip(clip);
+      return VideoClipImportSuccess(clip);
+    } on FileSystemException catch (e) {
+      Log.warning(
+        'Failed to copy received clip into documents: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.copyFailed,
+      );
+    } catch (e) {
+      Log.warning(
+        'Failed to save received clip: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
       return const VideoClipImportFailure(
         VideoClipImportFailureReason.saveFailed,
       );
@@ -339,6 +501,31 @@ class VideoClipImportService {
     return half < preferred ? half : preferred;
   }
 
+  /// Display aspect ratio of a probed file, or null when it has no size.
+  double? _ratioOf(VideoMetadata? metadata) {
+    if (metadata == null) return null;
+    final width = metadata.resolution.width;
+    final height = metadata.resolution.height;
+    if (width <= 0 || height <= 0) return null;
+    // ProVideoEditor reports display dimensions with rotation applied.
+    return width / height;
+  }
+
+  models.AspectRatio _targetAspectRatioForRatio(double? actualRatio) {
+    if (actualRatio != null && actualRatio >= _squareishMinAspectRatio) {
+      return models.AspectRatio.square;
+    }
+    return models.AspectRatio.vertical;
+  }
+
+  Future<void> _deleteQuietly(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on FileSystemException {
+      // Best effort: the library's orphan sweep reclaims a leftover copy.
+    }
+  }
+
   double? _aspectRatioFor(models.VideoEvent video) {
     final dimensions = video.dimensions;
     if (dimensions == null || dimensions.isEmpty) return null;
@@ -362,15 +549,7 @@ class VideoClipImportService {
     models.VideoEvent video,
     VideoMetadata? metadata,
   ) {
-    final fromEvent = _aspectRatioFor(video);
-    if (fromEvent != null) return fromEvent;
-    if (metadata == null) return null;
-
-    final width = metadata.resolution.width;
-    final height = metadata.resolution.height;
-    if (width <= 0 || height <= 0) return null;
-    // ProVideoEditor reports display dimensions with rotation applied.
-    return width / height;
+    return _aspectRatioFor(video) ?? _ratioOf(metadata);
   }
 
   /// Determines the target crop aspect ratio for the editor.
@@ -385,9 +564,6 @@ class VideoClipImportService {
     double? actualRatio,
   ) {
     if (video.isOriginalVine) return models.AspectRatio.square;
-    if (actualRatio != null && actualRatio >= _squareishMinAspectRatio) {
-      return models.AspectRatio.square;
-    }
-    return models.AspectRatio.vertical;
+    return _targetAspectRatioForRatio(actualRatio);
   }
 }

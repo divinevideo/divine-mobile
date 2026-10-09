@@ -2189,7 +2189,7 @@ void main() {
         expect(savedHandle, 'new_handle');
       });
 
-      test('returns null and clears refresh token on non-200', () async {
+      test('returns null and clears refresh token on invalid_grant', () async {
         final storage = MemoryKeycastStorage();
         await storage.write('keycast_refresh_token', 'expired_refresh');
 
@@ -2242,6 +2242,39 @@ void main() {
           );
         },
       );
+
+      // A Keycast outage answers every route with the Cloud Run HTML error
+      // page. Clearing the token there signed people out for good.
+      for (final (status, body) in [
+        (500, '<html><title>500 Server Error</title></html>'),
+        (503, '{"error":"Service temporarily unavailable."}'),
+        (429, '{"error":"Too many attempts"}'),
+      ]) {
+        test('throws network exception and preserves refresh token on '
+            'HTTP $status', () async {
+          final storage = MemoryKeycastStorage();
+          await storage.write('keycast_refresh_token', 'my_refresh_token');
+
+          final mockClient = MockClient(
+            (request) async => http.Response(body, status),
+          );
+
+          final oauth = KeycastOAuth(
+            config: config,
+            httpClient: mockClient,
+            storage: storage,
+          );
+
+          await expectLater(
+            oauth.refreshSession(),
+            throwsA(isA<OAuthNetworkException>()),
+          );
+          expect(
+            await storage.read('keycast_refresh_token'),
+            'my_refresh_token',
+          );
+        });
+      }
 
       test('binds userPubkey before saving session', () async {
         final storage = MemoryKeycastStorage();

@@ -107,9 +107,8 @@ void main() {
       addTearDown(authService.dispose);
 
       // Setup mock behaviors
-      when(
-        () => mockCleanupService.shouldClearDataForUser(any()),
-      ).thenReturn(false);
+      when(() => mockCleanupService.shouldClearDataForUser(any()))
+          .thenReturn(false);
       when(
         () => mockCleanupService.clearUserSpecificData(
           reason: any(named: 'reason'),
@@ -117,20 +116,14 @@ void main() {
           deleteUserData: any(named: 'deleteUserData'),
         ),
       ).thenAnswer((_) async => 0);
-      when(
-        () => mockCleanupService.claimLegacyRows(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockKeyStorage.deleteIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockKeyStorage.getKeyContainer(),
-      ).thenAnswer((_) async => null);
+      when(() => mockCleanupService.claimLegacyRows(any()))
+          .thenAnswer((_) async {});
+      when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
+          .thenAnswer((_) async {});
+      when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+          .thenAnswer((_) async {});
+      when(() => mockKeyStorage.getKeyContainer())
+          .thenAnswer((_) async => null);
     });
 
     test('signOut should clear current_user_pubkey_hex', () async {
@@ -164,10 +157,9 @@ void main() {
     });
 
     test('signOut clears configured and user-removed relays', () async {
-      await prefs.setStringList(
-        SharedPreferencesRelayStorage.defaultKey,
-        ['wss://relay.divine.video'],
-      );
+      await prefs.setStringList(SharedPreferencesRelayStorage.defaultKey, [
+        'wss://relay.divine.video',
+      ]);
       await prefs.setStringList(
         SharedPreferencesRelayStorage.defaultRemovedRelaysKey,
         ['wss://relay.divine.video'],
@@ -211,19 +203,15 @@ void main() {
     test('remove-device signOut preserves owner-scoped user data', () async {
       // Arrange
       when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async => {});
-      when(
-        () => mockKeyStorage.deleteIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async {});
+      when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+          .thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
       when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
 
       // Auto-create new identity after deletion
       final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
-      when(
-        () => mockKeyStorage.generateAndStoreKeys(),
-      ).thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.generateAndStoreKeys())
+          .thenAnswer((_) async => newKeyContainer);
 
       // Act: remove local login material without deleting local work.
       await authService.signOut(deleteKeys: true);
@@ -254,16 +242,12 @@ void main() {
         ['wss://relay.divine.video'],
       );
       when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async => {});
-      when(
-        () => mockKeyStorage.deleteIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async {});
+      when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+          .thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
       when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
-      when(
-        () => mockKeyStorage.generateAndStoreKeys(),
-      ).thenAnswer((_) async => SecureKeyContainer.fromNsec(testNsec));
+      when(() => mockKeyStorage.generateAndStoreKeys())
+          .thenAnswer((_) async => SecureKeyContainer.fromNsec(testNsec));
 
       await authService.signOut(deleteKeys: true);
 
@@ -278,18 +262,14 @@ void main() {
     test('account deletion signOut deletes owner-scoped user data', () async {
       // Arrange
       when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async => {});
-      when(
-        () => mockKeyStorage.deleteIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async {});
+      when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+          .thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
       when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
 
       final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
-      when(
-        () => mockKeyStorage.generateAndStoreKeys(),
-      ).thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.generateAndStoreKeys())
+          .thenAnswer((_) async => newKeyContainer);
 
       await authService.signOut(deleteKeys: true, deleteLocalUserData: true);
 
@@ -316,17 +296,13 @@ void main() {
         );
 
         when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async => {});
-        when(
-          () => mockKeyStorage.deleteIdentityKeyContainer(
-            any(),
-          ),
-        ).thenAnswer((_) async {});
+        when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+            .thenAnswer((_) async {});
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
         when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
         final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
-        when(
-          () => mockKeyStorage.generateAndStoreKeys(),
-        ).thenAnswer((_) async => newKeyContainer);
+        when(() => mockKeyStorage.generateAndStoreKeys())
+            .thenAnswer((_) async => newKeyContainer);
 
         await authService.signOut(deleteKeys: true);
 
@@ -336,22 +312,19 @@ void main() {
       },
     );
 
-    test(
-      'non-destructive signOut without a current pubkey skips cache '
-      'invalidation',
-      () async {
-        await cacheDao.write(
-          key: 'aa11:my_followers',
-          payload: '{"pubkeys":["a"],"count":1}',
-        );
-        when(() => mockKeyStorage.clearCache()).thenReturn(null);
+    test('non-destructive signOut without a current pubkey skips cache '
+        'invalidation', () async {
+      await cacheDao.write(
+        key: 'aa11:my_followers',
+        payload: '{"pubkeys":["a"],"count":1}',
+      );
+      when(() => mockKeyStorage.clearCache()).thenReturn(null);
 
-        await authService.signOut();
+      await authService.signOut();
 
-        expect(cacheDao.deletePrefixCalls, isEmpty);
-        expect(cacheDao.store, isNotEmpty);
-      },
-    );
+      expect(cacheDao.deletePrefixCalls, isEmpty);
+      expect(cacheDao.store, isNotEmpty);
+    });
 
     group('account-scoped CacheSync invalidation (multi-account)', () {
       const pubkeyA =
@@ -390,17 +363,13 @@ void main() {
         'destructive signOut also invalidates only the leaving account prefix',
         () async {
           when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async => {});
-          when(
-            () => mockKeyStorage.deleteIdentityKeyContainer(
-              any(),
-            ),
-          ).thenAnswer((_) async {});
+          when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+              .thenAnswer((_) async {});
           when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
           when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
           final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
-          when(
-            () => mockKeyStorage.generateAndStoreKeys(),
-          ).thenAnswer((_) async => newKeyContainer);
+          when(() => mockKeyStorage.generateAndStoreKeys())
+              .thenAnswer((_) async => newKeyContainer);
 
           await authService.signOut(deleteKeys: true);
 
@@ -410,32 +379,29 @@ void main() {
         },
       );
 
-      test(
-        'signOut completes despite a throwing invalidatePrefix',
-        () async {
-          // The cache-layer failure must NOT abort the rest of signOut.
-          // Without the try/catch around CacheSync.invalidatePrefix, a
-          // disk error would short-circuit key cleanup, signer
-          // teardown, and the auth-state transition.
-          cacheDao.throwOnDeletePrefix = StateError(
-            'cache layer simulated failure',
-          );
+      test('signOut completes despite a throwing invalidatePrefix', () async {
+        // The cache-layer failure must NOT abort the rest of signOut.
+        // Without the try/catch around CacheSync.invalidatePrefix, a
+        // disk error would short-circuit key cleanup, signer
+        // teardown, and the auth-state transition.
+        cacheDao.throwOnDeletePrefix = StateError(
+          'cache layer simulated failure',
+        );
 
-          await authService.signOut();
+        await authService.signOut();
 
-          // The invalidation was attempted with the right prefix...
-          expect(cacheDao.deletePrefixCalls, equals([pubkeyA]));
-          // ...the throw was swallowed and signOut still completed...
-          expect(authService.authState, equals(AuthState.unauthenticated));
-          // ...and because the fake throws before any rows are removed,
-          // every seeded entry (A's and B's) is still on disk. This pins
-          // the contract that a failed invalidation leaves the cache in
-          // its pre-call state — no partial cleanup.
-          expect(cacheDao.store['$pubkeyA:my_followers'], isNotNull);
-          expect(cacheDao.store['$pubkeyA:my_following'], isNotNull);
-          expect(cacheDao.store['$pubkeyB:my_followers'], isNotNull);
-        },
-      );
+        // The invalidation was attempted with the right prefix...
+        expect(cacheDao.deletePrefixCalls, equals([pubkeyA]));
+        // ...the throw was swallowed and signOut still completed...
+        expect(authService.authState, equals(AuthState.unauthenticated));
+        // ...and because the fake throws before any rows are removed,
+        // every seeded entry (A's and B's) is still on disk. This pins
+        // the contract that a failed invalidation leaves the cache in
+        // its pre-call state — no partial cleanup.
+        expect(cacheDao.store['$pubkeyA:my_followers'], isNotNull);
+        expect(cacheDao.store['$pubkeyA:my_following'], isNotNull);
+        expect(cacheDao.store['$pubkeyB:my_followers'], isNotNull);
+      });
     });
 
     test('signOut should set auth state to unauthenticated', () async {
@@ -553,6 +519,7 @@ void main() {
             when(() => mockKeyStorage.clearCache()).thenReturn(null);
             final events = <String>[];
             var completed = false;
+            Object? signOutError;
             final slow = Completer<void>();
 
             authService.registerBeforeSessionTeardownCallback(() async {
@@ -564,9 +531,14 @@ void main() {
               events.add('second started');
             });
 
-            authService.signOut().then((_) {
-              completed = true;
-            });
+            // Not awaited: signOut only completes once fakeAsync elapses the
+            // teardown timeout below.
+            unawaited(
+              authService.signOut().then<void>(
+                (_) => completed = true,
+                onError: (Object error) => signOutError = error,
+              ),
+            );
             async.flushMicrotasks();
 
             expect(events, ['slow started']);
@@ -574,6 +546,7 @@ void main() {
             async.elapse(const Duration(seconds: 5));
             async.flushMicrotasks();
 
+            expect(signOutError, isNull);
             expect(events, ['slow started', 'second started']);
             expect(completed, isTrue);
             expect(authService.authState, AuthState.unauthenticated);
@@ -638,15 +611,11 @@ void main() {
             ),
           ).thenThrow(StateError('database cleanup failed'));
           when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-          when(
-            () => mockKeyStorage.deleteIdentityKeyContainer(
-              any(),
-            ),
-          ).thenAnswer((_) async {});
+          when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+              .thenAnswer((_) async {});
           when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
-          when(
-            () => mockKeyStorage.getKeyContainer(),
-          ).thenAnswer((_) async => null);
+          when(() => mockKeyStorage.getKeyContainer())
+              .thenAnswer((_) async => null);
 
           await expectLater(
             authService.signOut(deleteKeys: true, deleteLocalUserData: true),

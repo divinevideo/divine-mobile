@@ -312,7 +312,7 @@ void main() {
             ],
           );
           expect(effects.map((i) => i.row), [0, 1]);
-          expect(effects.map((i) => i.effectType), [
+          expect(effects.map((i) => i.effectType?.builtIn), [
             VideoEffectType.vhs,
             VideoEffectType.strobe,
           ]);

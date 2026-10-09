@@ -355,7 +355,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Returns the active account's Divine OAuth access token.
   ///
   /// The token is owner-bound and refreshes through the process-wide
-  /// single-flight coordinator so crossposter requests cannot race Keycast's
+  /// single-flight coordinator so OAuth-backed requests cannot race Keycast's
   /// rotating refresh token or reuse another account's stored session.
   Future<String?> getBoundDivineAccessToken() async {
     final ownerPubkey = currentPublicKeyHex;

@@ -10,8 +10,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show VideoEffect, VideoEffectType;
+import 'package:pro_video_editor/pro_video_editor.dart' show CustomVideoEffect;
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -92,9 +91,9 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         isEditing: true,
         editingId: current?.id,
         clearEditingId: current == null,
-        selectedType: current?.effect.type,
+        selectedType: current?.type,
         clearSelectedType: current == null,
-        intensity: current?.effect.intensity ?? defaultIntensity,
+        intensity: current?.intensity ?? defaultIntensity,
         onBeat: current?.onBeat ?? false,
         startedPlayback: startedPlayback,
       ),
@@ -105,7 +104,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// Picks [type], or no effect for `null`.
   ///
   /// Switching to another effect keeps the intensity the user dialed in.
-  void selectType(VideoEffectType? type) {
+  void selectType(EditorEffectType? type) {
     emit(state.copyWith(selectedType: type, clearSelectedType: type == null));
     unawaited(_refreshBeats());
   }
@@ -113,7 +112,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// Makes the picked effect fire on the beat, or play all through its window.
   ///
   /// Kept for the next effect picked; it only applies to one that
-  /// [canFireOnBeat].
+  /// [EditorEffectType.supportsOnBeat].
   void setOnBeat({required bool onBeat}) {
     emit(state.copyWith(onBeat: onBeat));
     unawaited(_refreshBeats());
@@ -149,27 +148,19 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       committedId = entry.id;
       if (picked == null) continue;
       effects.add(
-        EditorVideoEffect(
+        EditorVideoEffect.of(
           id: entry.id,
-          effect: VideoEffect(
-            type: picked.type,
-            intensity: picked.intensity,
-            startTime: entry.effect.startTime,
-            endTime: entry.effect.endTime,
-          ),
-          onBeat: state.selectionOnBeat,
+          type: picked.type,
+          intensity: picked.intensity,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          onBeat: picked.onBeat,
         ),
       );
     }
     if (committedId == null && picked != null) {
       committedId = _createId();
-      effects.add(
-        EditorVideoEffect(
-          id: committedId,
-          effect: picked,
-          onBeat: state.selectionOnBeat,
-        ),
-      );
+      effects.add(picked.withId(committedId));
     }
 
     final separated = picked == null || committedId == null

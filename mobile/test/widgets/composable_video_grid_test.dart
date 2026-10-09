@@ -48,6 +48,7 @@ import 'package:openvine/widgets/composable_video_grid.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -118,7 +119,9 @@ void main() {
     late List<VideoEvent> testVideos;
     late broken_tracker.BrokenVideoTracker mockTracker;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+
       final now = DateTime.now();
       final nowTimestamp = now.millisecondsSinceEpoch ~/ 1000;
       testVideos = [
@@ -162,6 +165,7 @@ void main() {
 
       // Create mock tracker with no broken videos
       mockTracker = broken_tracker.BrokenVideoTracker();
+      await mockTracker.initialize();
     });
 
     testWidgets('renders grid with provided videos', (tester) async {
@@ -192,11 +196,16 @@ void main() {
       tester,
     ) async {
       // Mark video as broken
-      mockTracker.markVideoBroken('broken_video', 'Test broken');
+      await mockTracker.markVideoBroken('broken_video', 'Test broken');
+
+      // Reload from storage so the grid sees the persisted mark
+      final persistedTracker = broken_tracker.BrokenVideoTracker();
+      await persistedTracker.initialize();
+      expect(persistedTracker.isVideoBroken('broken_video'), isTrue);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: _gridOverrides(mockTracker),
+          overrides: _gridOverrides(persistedTracker),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

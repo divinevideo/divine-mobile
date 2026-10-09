@@ -89,12 +89,12 @@ void main() {
       await logCrosspostCtaTapped(
         sink,
         surface: CrosspostCtaSurface.shareSheet,
-        cta: CrosspostCta.connect,
+        cta: CrosspostCta.crosspostRow,
       );
 
       expect(
         sink.events.single.parameters,
-        equals({'surface': 'share_sheet', 'cta': 'connect'}),
+        equals({'surface': 'share_sheet', 'cta': 'crosspost_row'}),
       );
     });
 

@@ -76,7 +76,7 @@ void main() {
       );
 
       expect(effectsCubit.state.editingId, 'strobe');
-      expect(effectsCubit.state.selectedType, VideoEffectType.strobe);
+      expect(effectsCubit.state.selectedType?.builtIn, VideoEffectType.strobe);
     });
   });
 

@@ -48,6 +48,7 @@ class PeopleListMember extends Equatable {
 class PeopleListMembersState extends Equatable {
   const PeopleListMembersState({
     this.status = PeopleListMembersStatus.initial,
+    this.roster = const [],
     this.members = const [],
     this.totalVideos,
     this.totalLoops,
@@ -55,8 +56,13 @@ class PeopleListMembersState extends Equatable {
 
   final PeopleListMembersStatus status;
 
-  /// Members ranked by [PeopleListMember.videoCount], most first. Members
-  /// without stats follow, in the list's own order.
+  /// Every member of the list, ranked by [PeopleListMember.videoCount], most
+  /// first. Members without stats follow, in the list's own order. The
+  /// totals are computed over this.
+  final List<PeopleListMember> roster;
+
+  /// The [roster] minus the members hidden from the viewer: accounts either
+  /// side blocked or muted. This is what the screens render.
   final List<PeopleListMember> members;
 
   /// Every member's videos, summed. `null` unless every member answered
@@ -72,12 +78,14 @@ class PeopleListMembersState extends Equatable {
 
   PeopleListMembersState copyWith({
     PeopleListMembersStatus? status,
+    List<PeopleListMember>? roster,
     List<PeopleListMember>? members,
     int? totalVideos,
     double? totalLoops,
   }) {
     return PeopleListMembersState(
       status: status ?? this.status,
+      roster: roster ?? this.roster,
       members: members ?? this.members,
       totalVideos: totalVideos ?? this.totalVideos,
       totalLoops: totalLoops ?? this.totalLoops,
@@ -85,5 +93,11 @@ class PeopleListMembersState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, members, totalVideos, totalLoops];
+  List<Object?> get props => [
+    status,
+    roster,
+    members,
+    totalVideos,
+    totalLoops,
+  ];
 }

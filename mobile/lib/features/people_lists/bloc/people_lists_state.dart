@@ -79,9 +79,8 @@ class PeopleListsState extends Equatable {
   /// In-flight mutations keyed by stable mutation id.
   final Map<String, PeopleListsMutation> pendingMutations;
 
-  /// The id of the most recently submitted event (if any). Submitted
-  /// means the repository successfully handed the event to at least one
-  /// relay socket — not relay `OK` confirmation.
+  /// The id of the most recent event acknowledged by at least one relay.
+  /// The repository waits for relay acceptance before reporting submission.
   final String? lastSubmittedEventId;
 
   /// Whether the curated-lists feature is currently enabled.

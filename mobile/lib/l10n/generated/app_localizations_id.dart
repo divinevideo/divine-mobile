@@ -304,6 +304,30 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$compactCount putaran $authorName',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'putaran',
+    );
+    return '$compactCount $_temp0 video ini';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Tampilkan total loop';
 
   @override
@@ -3610,6 +3634,44 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Klip dari perpustakaanmu';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video dari galerimu';
+
+  @override
+  String get dmClipBadge => 'Klip';
+
+  @override
+  String get dmClipChecking => 'Memastikan klip ini direkam dengan Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Kami tidak dapat memastikan ini direkam dengan kamera Divine, jadi tidak ditambahkan ke klipmu.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Klip ini tidak bisa dicek sekarang. Coba lagi sebentar lagi.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Kami tidak dapat memastikan klip ini direkam dengan kamera Divine, jadi tidak bisa dikirim sebagai klip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Mereka bisa menambahkan yang kamu kirim ke klip mereka dan mempostingnya, dengan kredit untukmu.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Terkirim $sent dari $total klip. Sisanya gagal terkirim.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override
@@ -3846,6 +3908,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Tambahkan orang untuk memulai';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Belum ada video';
 
   @override
@@ -3869,9 +3938,6 @@ class AppLocalizationsId extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Tambahkan ke $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Cari orang';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4851,15 +4917,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Daftar orang baru';
-
-  @override
-  String get listCollaboratorsNone => 'Tidak ada';
-
-  @override
-  String get listAddCollaboratorTitle => 'Tambah kolaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Cari di Divine...';
 
   @override
   String get listNameLabel => 'Nama Daftar';
@@ -6101,6 +6158,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Hapus daftar';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Hapus daftar?';
@@ -8585,6 +8645,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectGlow => 'Pendar';
 
   @override
+  String get videoEditorEffectEcho => 'Gema';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.';
 
@@ -10001,6 +10064,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Level';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Ukuran kuas';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -12954,4 +13020,40 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Daftar video baru';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Daftar ini bersifat publik. Siapa pun bisa melihat nama, deskripsi, dan orang di dalamnya.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Orang';
+
+  @override
+  String get peopleListsPeopleNone => 'Belum ada orang yang ditambahkan';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Cari pengikut dan yang diikuti';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privat, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

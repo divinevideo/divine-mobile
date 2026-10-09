@@ -242,18 +242,27 @@ void main() {
             ).thenAnswer((_) => Completer<List<Event>>().future);
 
             Object? caught;
-            repository
-                .communityLabelsForVideo(video)
-                .then<void>((_) {})
-                .catchError((Object e) {
-                  caught = e;
-                });
+            // Hold the request open so fake time trips the repository timeout;
+            // onError captures the degraded result asserted below.
+            unawaited(
+              repository
+                  .communityLabelsForVideo(video)
+                  .then<void>(
+                    (_) {},
+                    onError: (Object error) {
+                      caught = error;
+                    },
+                  ),
+            );
+
+            async.elapse(
+              CommunityContentWarningConstants.queryTimeout -
+                  const Duration(milliseconds: 1),
+            );
+            expect(caught, isNull);
 
             async
-              ..elapse(
-                CommunityContentWarningConstants.queryTimeout +
-                    const Duration(seconds: 1),
-              )
+              ..elapse(const Duration(seconds: 1))
               ..flushMicrotasks();
 
             expect(caught, isA<CommunityLabelUnavailableException>());

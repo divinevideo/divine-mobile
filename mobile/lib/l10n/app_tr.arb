@@ -1327,6 +1327,15 @@
     "dmVideoSent": "Video gönderildi",
     "dmVideoSendFailed": "Video gönderilemedi",
     "dmVideoTooLarge": "Bu video göndermek için çok büyük. {maxMegabytes} MB'den küçük bir video seç",
+    "dmAttachClipFromLibrary": "Kütüphanenden klip",
+    "dmAttachVideoFromGallery": "Galerinden video",
+    "dmClipBadge": "Klip",
+    "dmClipChecking": "Bu klibin Divine ile çekildiği kontrol ediliyor…",
+    "dmClipNotVerified": "Bunun Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden kliplerine eklenmedi.",
+    "dmClipCheckUnavailable": "Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.",
+    "dmClipSendNotVerified": "Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.",
+    "dmAttachReuseNotice": "Gönderdiklerini kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.",
+    "dmClipsPartlySent": "{total, plural, one{{total} klipten {sent} tanesi gönderildi. Kalanlar gönderilemedi.} other{{total} klipten {sent} tanesi gönderildi. Kalanlar gönderilemedi.}}",
     "shareSheetSaveVideo": "Videoyu Kaydet",
     "shareSheetAddToClips": "Kliplere ekle",
     "shareSheetAddToClipsFailed": "Kliplere eklenemedi",
@@ -1652,9 +1661,6 @@
     },
     "listCreateNewList": "Yeni Liste Oluştur",
     "listNewPeopleList": "Yeni kişi listesi",
-    "listCollaboratorsNone": "Yok",
-    "listAddCollaboratorTitle": "Ortak ekle",
-    "listCollaboratorSearchHint": "Divine'da ara...",
     "listNameLabel": "Liste Adı",
     "listDescriptionLabel": "Açıklama (opsiyonel)",
     "listPublicList": "Herkese Açık Liste",
@@ -2483,6 +2489,7 @@
   "videoEditorEffectSplitScreen": "Bölünmüş Ekran",
   "videoEditorEffectWave": "Dalga",
   "videoEditorEffectGlow": "Parıltı",
+  "videoEditorEffectEcho": "Yankı",
   "videoEditorEffectsFlashingReplaced": "Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.",
   "videoEditorEffectsFlashingNotDuplicated": "Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir.",
   "videoEditorEffectsOnBeat": "Ritme göre",
@@ -2516,6 +2523,7 @@
     "videoEditorHueSemanticLabel": "Ton",
     "videoEditorKeepEditingButton": "Düzenlemeye devam et",
     "videoEditorLevelSemanticLabel": "Seviye",
+    "videoEditorBrushSizeSemanticLabel": "Fırça boyutu",
     "videoEditorNoStickersAvailable": "Kullanılabilir çıkartma yok",
     "videoEditorNoStickersFound": "Çıkartma bulunamadı",
     "videoEditorOpenAudioSemanticLabel": "Ses düzenleyiciyi aç",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
-    "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
     "peopleListsAddButton": "Ekle",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Sistem varsayılanı",
     "appearanceSettingsLight": "Açık",
     "appearanceSettingsDark": "Koyu",
+    "videoOverlayTotalLoops": "{count, plural, one{{authorName}: {compactCount} döngü} other{{authorName}: {compactCount} döngü}}",
+    "videoOverlayVideoLoops": "bu videoda {compactCount} {count, plural, one{döngü} other{döngü}}",
     "generalSettingsClosedCaptions": "Altyazılar",
     "generalSettingsClosedCaptionsSubtitle": "Videolarda altyazı varsa göster",
     "generalSettingsVideoShapeSquareOnly": "Sadece kare videolar",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Yeni video listesi",
+  "peopleListsPublicNotice": "Bu liste herkese açık. Adını, açıklamasını ve içindeki kişileri herkes görebilir.",
+  "peopleListsPeopleLabel": "Kişiler",
+  "peopleListsPeopleNone": "Henüz kimse eklenmedi",
+  "peopleListsSessionChanged": "Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.",
+  "peopleListsSearchConnectionsHint": "Takipçilerin ve takip ettiklerin arasında ara",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Özel, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

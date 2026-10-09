@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_member_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -135,10 +137,12 @@ class _RosterPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(profileRepositoryProvider);
+    final blocklist = ref.watch(contentBlocklistRepositoryProvider);
     return _RosterSession(
-      key: ValueKey((repository, list.id)),
+      key: ValueKey((repository, blocklist, list.id)),
       list: list,
       profileRepository: repository,
+      contentBlocklistRepository: blocklist,
     );
   }
 }
@@ -147,10 +151,12 @@ class _RosterSession extends StatefulWidget {
   const _RosterSession({
     required this.list,
     required this.profileRepository,
+    required this.contentBlocklistRepository,
     super.key,
   });
   final UserList list;
   final ProfileRepository? profileRepository;
+  final ContentBlocklistRepository contentBlocklistRepository;
 
   @override
   State<_RosterSession> createState() => _RosterSessionState();
@@ -169,6 +175,7 @@ class _RosterSessionState extends State<_RosterSession> {
   void _loadRanking() {
     _cubit = PeopleListMembersCubit(
       profileRepository: widget.profileRepository,
+      contentBlocklistRepository: widget.contentBlocklistRepository,
       pubkeys: widget.list.pubkeys,
     );
     unawaited(_cubit.load());
@@ -287,7 +294,8 @@ class _RosterScaffold extends StatelessWidget {
   }
 }
 
-/// The ranked roster, or the empty view for a list with no members yet.
+/// The ranked roster, or an empty view: for a list with no members yet, or
+/// for one whose members are all hidden from the viewer.
 class _RosterBody extends StatelessWidget {
   const _RosterBody({required this.list, required this.scrollController});
 
@@ -297,36 +305,49 @@ class _RosterBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (list.pubkeys.isEmpty) return const _EmptyRosterView();
+    final l10n = context.l10n;
+    if (list.pubkeys.isEmpty) {
+      return _EmptyRosterView(
+        title: l10n.peopleListsNoPeopleTitle,
+        subtitle: l10n.peopleListsNoPeopleSubtitle,
+      );
+    }
     return BlocBuilder<PeopleListMembersCubit, PeopleListMembersState>(
-      builder: (context, state) => ListView.builder(
-        controller: scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: state.members.length,
-        findChildIndexCallback: (key) {
-          if (key is! ValueKey<String>) return null;
-          final index = state.members.indexWhere(
-            (member) => member.pubkey == key.value,
-          );
-          return index < 0 ? null : index;
-        },
-        itemBuilder: (context, index) => PeopleListMemberTile(
-          key: ValueKey(state.members[index].pubkey),
-          pubkey: state.members[index].pubkey,
-          listId: list.id,
-          canRemove: list.isEditable,
-        ),
-      ),
+      builder: (context, state) => state.members.isEmpty
+          ? _EmptyRosterView(
+              title: l10n.peopleListsAllMembersHiddenTitle,
+              subtitle: l10n.peopleListsAllMembersHiddenSubtitle,
+            )
+          : ListView.builder(
+              controller: scrollController,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: state.members.length,
+              findChildIndexCallback: (key) {
+                if (key is! ValueKey<String>) return null;
+                final index = state.members.indexWhere(
+                  (member) => member.pubkey == key.value,
+                );
+                return index < 0 ? null : index;
+              },
+              itemBuilder: (context, index) => PeopleListMemberTile(
+                key: ValueKey(state.members[index].pubkey),
+                pubkey: state.members[index].pubkey,
+                listId: list.id,
+                canRemove: list.isEditable,
+              ),
+            ),
     );
   }
 }
 
 class _EmptyRosterView extends StatelessWidget {
-  const _EmptyRosterView();
+  const _EmptyRosterView({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -340,14 +361,14 @@ class _EmptyRosterView extends StatelessWidget {
               color: context.vineColors.secondaryText,
             ),
             Text(
-              l10n.peopleListsNoPeopleTitle,
+              title,
               style: VineTheme.titleMediumFont(
                 color: context.vineColors.primaryText,
               ),
               textAlign: TextAlign.center,
             ),
             Text(
-              l10n.peopleListsNoPeopleSubtitle,
+              subtitle,
               style: VineTheme.bodyMediumFont(
                 color: context.vineColors.secondaryText,
               ),

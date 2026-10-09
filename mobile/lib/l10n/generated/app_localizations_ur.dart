@@ -365,6 +365,32 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorName کے $compactCount لوپس',
+      one: '$authorName کا $compactCount لوپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'اس ویڈیو کے $compactCount لوپس',
+      one: 'اس ویڈیو کا $compactCount لوپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'کل لوپ دکھائیں';
 
   @override
@@ -3686,6 +3712,45 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'آپ کی لائبریری سے کلپ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'آپ کی گیلری سے ویڈیو';
+
+  @override
+  String get dmClipBadge => 'کلپ';
+
+  @override
+  String get dmClipChecking => 'تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'وہ آپ کی بھیجی ہوئی چیز اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total کلپس میں سے $sent بھیج دیے گئے۔ باقی نہیں جا سکے۔',
+      one: '$total کلپ میں سے $sent بھیجا گیا۔ باقی نہیں جا سکے۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'ویڈیو محفوظ کریں';
 
   @override
@@ -3923,6 +3988,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'شروع کرنے کے لیے کچھ لوگ شامل کریں';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'ابھی کوئی ویڈیو نہیں';
 
   @override
@@ -3946,9 +4018,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return '$name میں شامل کریں';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4929,15 +4998,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'لوگوں کی نئی فہرست';
-
-  @override
-  String get listCollaboratorsNone => 'کوئی نہیں';
-
-  @override
-  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
 
   @override
   String get listNameLabel => 'فہرست کا نام';
@@ -6180,6 +6240,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'فہرست حذف کریں';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'فہرست حذف کریں؟';
@@ -8669,6 +8732,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectGlow => 'دمک';
 
   @override
+  String get videoEditorEffectEcho => 'گونج';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
 
@@ -10083,6 +10149,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'سطح';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'برش کا سائز';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13040,4 +13109,40 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'نئی ویڈیو فہرست';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'یہ فہرست عوامی ہے۔ کوئی بھی اس کا نام، تفصیل اور اس میں شامل لوگوں کو دیکھ سکتا ہے۔';
+
+  @override
+  String get peopleListsPeopleLabel => 'لوگ';
+
+  @override
+  String get peopleListsPeopleNone => 'ابھی کوئی شخص شامل نہیں کیا گیا';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں';
+
+  @override
+  String get listMemberNamesSeparator => '، ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name، نجی، $count',
+        'other': '$name، $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

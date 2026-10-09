@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,6 +20,7 @@ part 'video_editor_draw_state.dart';
 /// - Tool selection state (pencil, marker, arrow, eraser, and blur and
 ///   pixelate, which hide an area instead)
 /// - Color selection state
+/// - Brush size state, per drawing tool
 /// - Undo/redo availability state
 class VideoEditorDrawBloc
     extends Bloc<VideoEditorDrawEvent, VideoEditorDrawState> {
@@ -29,6 +32,25 @@ class VideoEditorDrawBloc
     on<VideoEditorDrawReset>(_onReset);
     on<VideoEditorDrawOpened>(_onOpened);
     on<VideoEditorDrawCensorIntensityChanged>(_onCensorIntensityChanged);
+    on<VideoEditorDrawBrushSizeChanged>(_onBrushSizeChanged);
+  }
+
+  /// Stores how thick the selected drawing tool draws its next strokes.
+  void _onBrushSizeChanged(
+    VideoEditorDrawBrushSizeChanged event,
+    Emitter<VideoEditorDrawState> emit,
+  ) {
+    final tool = state.selectedTool;
+    // Intentional no-op: a censor area is a rectangle and has no stroke.
+    if (tool.isCensor) return;
+    emit(
+      state.copyWith(
+        strokeWidths: {
+          ...state.strokeWidths,
+          tool: drawStrokeWidthOf(event.brushSize),
+        },
+      ),
+    );
   }
 
   /// Stores how strongly the selected censor tool hides an area.
@@ -61,7 +83,6 @@ class VideoEditorDrawBloc
         selectedTool: tool,
         mode: config.mode,
         opacity: config.opacity,
-        strokeWidth: config.strokeWidth,
       ),
     );
   }
@@ -119,7 +140,6 @@ class VideoEditorDrawBloc
         selectedTool: tool,
         mode: config.mode,
         opacity: config.opacity,
-        strokeWidth: config.strokeWidth,
       ),
     );
   }

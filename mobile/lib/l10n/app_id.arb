@@ -1327,6 +1327,15 @@
     "dmVideoSent": "Video terkirim",
     "dmVideoSendFailed": "Tidak dapat mengirim video",
     "dmVideoTooLarge": "Video ini terlalu besar untuk dikirim. Pilih yang di bawah {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Klip dari perpustakaanmu",
+    "dmAttachVideoFromGallery": "Video dari galerimu",
+    "dmClipBadge": "Klip",
+    "dmClipChecking": "Memastikan klip ini direkam dengan Divine…",
+    "dmClipNotVerified": "Kami tidak dapat memastikan ini direkam dengan kamera Divine, jadi tidak ditambahkan ke klipmu.",
+    "dmClipCheckUnavailable": "Klip ini tidak bisa dicek sekarang. Coba lagi sebentar lagi.",
+    "dmClipSendNotVerified": "Kami tidak dapat memastikan klip ini direkam dengan kamera Divine, jadi tidak bisa dikirim sebagai klip.",
+    "dmAttachReuseNotice": "Mereka bisa menambahkan yang kamu kirim ke klip mereka dan mempostingnya, dengan kredit untukmu.",
+    "dmClipsPartlySent": "{total, plural, other{Terkirim {sent} dari {total} klip. Sisanya gagal terkirim.}}",
     "shareSheetSaveVideo": "Simpan Video",
     "shareSheetAddToClips": "Tambahkan ke klip",
     "shareSheetAddToClipsFailed": "Tidak dapat menambahkan ke klip",
@@ -1652,9 +1661,6 @@
     },
     "listCreateNewList": "Buat Daftar Baru",
     "listNewPeopleList": "Daftar orang baru",
-    "listCollaboratorsNone": "Tidak ada",
-    "listAddCollaboratorTitle": "Tambah kolaborator",
-    "listCollaboratorSearchHint": "Cari di Divine...",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
     "listPublicList": "Daftar Publik",
@@ -2483,6 +2489,7 @@
   "videoEditorEffectSplitScreen": "Layar Terbagi",
   "videoEditorEffectWave": "Gelombang",
   "videoEditorEffectGlow": "Pendar",
+  "videoEditorEffectEcho": "Gema",
   "videoEditorEffectsFlashingReplaced": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.",
   "videoEditorEffectsOnBeat": "Sesuai ketukan",
@@ -2516,6 +2523,7 @@
     "videoEditorHueSemanticLabel": "Rona",
     "videoEditorKeepEditingButton": "Lanjutkan mengedit",
     "videoEditorLevelSemanticLabel": "Level",
+    "videoEditorBrushSizeSemanticLabel": "Ukuran kuas",
     "videoEditorNoStickersAvailable": "Tidak ada stiker tersedia",
     "videoEditorNoStickersFound": "Stiker tidak ditemukan",
     "videoEditorOpenAudioSemanticLabel": "Buka editor audio",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
-    "peopleListsAddPeopleSearchHint": "Cari orang",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
     "peopleListsAddButton": "Tambah",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Default sistem",
     "appearanceSettingsLight": "Terang",
     "appearanceSettingsDark": "Gelap",
+    "videoOverlayTotalLoops": "{count, plural, other{{compactCount} putaran {authorName}}}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, other{putaran}} video ini",
     "generalSettingsClosedCaptions": "Teks Tertutup",
     "generalSettingsClosedCaptionsSubtitle": "Tampilkan teks saat video menyertakannya",
     "generalSettingsVideoShapeSquareOnly": "Video persegi saja",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Daftar video baru",
+  "peopleListsPublicNotice": "Daftar ini bersifat publik. Siapa pun bisa melihat nama, deskripsi, dan orang di dalamnya.",
+  "peopleListsPeopleLabel": "Orang",
+  "peopleListsPeopleNone": "Belum ada orang yang ditambahkan",
+  "peopleListsSessionChanged": "Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.",
+  "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

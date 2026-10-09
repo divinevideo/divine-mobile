@@ -45,6 +45,11 @@ String _responseErrorMessage(Map<String, dynamic> json, String fallback) =>
     json['error']?.toString() ??
     fallback;
 
+/// Whether Keycast (or something in front of it) failed without judging the
+/// request: an outage, an overloaded dependency, or a rate limit.
+bool _isTemporaryStatus(int statusCode) =>
+    statusCode == 408 || statusCode == 429 || statusCode >= 500;
+
 KeycastAuthFailure _failureForStatusCode(int statusCode) {
   if (statusCode == 409) {
     return KeycastAuthFailure.emailAlreadyRegistered;
@@ -52,7 +57,7 @@ KeycastAuthFailure _failureForStatusCode(int statusCode) {
   if (statusCode == 401 || statusCode == 404) {
     return KeycastAuthFailure.expiredVerification;
   }
-  if (statusCode == 408 || statusCode == 429 || statusCode >= 500) {
+  if (_isTemporaryStatus(statusCode)) {
     return KeycastAuthFailure.temporary;
   }
   return KeycastAuthFailure.unknown;
@@ -148,11 +153,12 @@ class KeycastOAuth {
   /// [userPubkey] is attached to the session before it is persisted so
   /// the saved session is always owner-bound.
   ///
-  /// On HTTP error the consumed refresh token is cleared (server may have
-  /// rotated it) and the method returns null. On network error or timeout —
-  /// including socket errors while the network is unavailable — an
-  /// [OAuthNetworkException] is thrown and the token is preserved since the
-  /// server may not have consumed it.
+  /// When Keycast rejects the token (`400 invalid_grant`) it is cleared and
+  /// the method returns null. On network error, timeout, or a temporary
+  /// server answer (5xx, 408, 429) an [OAuthNetworkException] is thrown and
+  /// the token is preserved: Keycast never judged it, so a later retry can
+  /// still succeed. Clearing it there turned a Keycast outage into a
+  /// permanent sign-out.
   Future<KeycastSession?> refreshSession({String? userPubkey}) async {
     final refreshEpoch = _storageEpoch;
     final refreshToken = await _storage.read(_storageKeyRefreshToken);
@@ -194,7 +200,13 @@ class KeycastOAuth {
       return session;
     }
 
-    // HTTP error — server consumed the token, clear it
+    if (_isTemporaryStatus(response.statusCode)) {
+      throw OAuthNetworkException(
+        'Refresh request failed: HTTP ${response.statusCode}',
+      );
+    }
+
+    // Keycast rejected the token — it is spent, clear it.
     await _storage.delete(_storageKeyRefreshToken);
     return null;
   }
@@ -206,8 +218,9 @@ class KeycastOAuth {
   /// Returns `null` only when no session can be recovered at all because no
   /// refresh token is available or the server rejects the token.
   ///
-  /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast or
-  /// times out. The refresh token is preserved for a later retry in that case.
+  /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast,
+  /// times out, or gets a temporary server error. The refresh token is
+  /// preserved for a later retry in that case.
   ///
   /// [userPubkey] is forwarded to [refreshSession] so the saved session
   /// is owner-bound when a refresh is needed.

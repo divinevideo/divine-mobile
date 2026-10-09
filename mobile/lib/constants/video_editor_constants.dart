@@ -684,6 +684,20 @@ class VideoEditorConstants {
   /// Width of drawing tool items in the draw editor toolbar.
   static const double drawItemWidth = 48.0;
 
+  /// Thinnest stroke the draw editor's brush size slider reaches, in logical
+  /// pixels of the editor body.
+  static const double drawMinStrokeWidth = 2.0;
+
+  /// Thickest stroke the draw editor's brush size slider reaches; see
+  /// [drawMinStrokeWidth].
+  static const double drawMaxStrokeWidth = 40.0;
+
+  /// How long the brush preview takes to fade out after the brush size
+  /// slider is released.
+  static const Duration drawBrushPreviewFadeDuration = Duration(
+    milliseconds: 250,
+  );
+
   /// Standard deviation of the blur that hides an area, in logical pixels of
   /// the editor canvas. The preview blurs with it, and the export scales it
   /// to the video's pixels like the area itself.

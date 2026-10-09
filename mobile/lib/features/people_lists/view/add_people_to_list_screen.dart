@@ -8,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
+import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -26,7 +28,8 @@ import 'package:openvine/utils/detached_future.dart';
 /// authenticated user's following and followers sets, not passed in.
 /// Candidates already in the target list are rendered selected + disabled.
 /// Tapping the pinned "Add N" button dispatches one
-/// [PeopleListsPubkeyAddRequested] per selected pubkey, then pops.
+/// [PeopleListsPubkeyAddRequested] per selected pubkey and waits for each result.
+/// Failed choices remain selected so retry publishes only unconfirmed people.
 ///
 /// Per project rules, full Nostr pubkeys flow through the screen verbatim —
 /// they are never truncated in state, events, or navigation.
@@ -182,7 +185,7 @@ class _SearchFieldState extends State<_SearchField> {
         controller: _controller,
         style: VineTheme.bodyMediumFont(color: context.vineColors.onSurface),
         decoration: InputDecoration(
-          hintText: context.l10n.peopleListsAddPeopleSearchHint,
+          hintText: context.l10n.peopleListsSearchConnectionsHint,
           prefixIcon: Padding(
             padding: const EdgeInsets.all(12),
             child: DivineIcon(
@@ -327,10 +330,25 @@ class _CandidateList extends StatelessWidget {
   }
 }
 
-class _AddButtonBar extends StatelessWidget {
+class _AddButtonBar extends StatefulWidget {
   const _AddButtonBar({required this.listId});
 
   final String listId;
+
+  @override
+  State<_AddButtonBar> createState() => _AddButtonBarState();
+}
+
+class _AddButtonBarState extends State<_AddButtonBar> {
+  bool _pending = false;
+  PeopleListsOperationResult? _result;
+  late final String? _owner;
+
+  @override
+  void initState() {
+    super.initState();
+    _owner = context.read<PeopleListsBloc>().state.activeOwnerPubkey;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -346,23 +364,59 @@ class _AddButtonBar extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: DivineButton(
-        label: label,
-        expanded: true,
-        onPressed: count == 0 ? null : () => _submit(context, selected),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PeopleListResultNotice(
+            result: _result,
+            failedMessage: l10n.listUpdateFailed,
+          ),
+          if (_pending) const DivineCircularProgressIndicator(),
+          DivineButton(
+            label: label,
+            expanded: true,
+            onPressed: count == 0 || _pending ? null : () => _submit(selected),
+          ),
+        ],
       ),
     );
   }
 
-  void _submit(BuildContext context, Set<String> selected) {
+  Future<void> _submit(Set<String> selected) async {
     final bloc = context.read<PeopleListsBloc>();
-    for (final pubkey in selected) {
-      bloc.add(
-        PeopleListsPubkeyAddRequested(listId: listId, pubkey: pubkey),
-      );
+    final cubit = context.read<AddPeopleToListCubit>();
+    if (_pending) return;
+    if (_owner == null || _owner != bloc.state.activeOwnerPubkey) {
+      setState(() => _result = PeopleListsOperationResult.cancelled);
+      return;
     }
-    // Use Navigator.maybePop so the screen works even when no GoRouter is
-    // present (e.g., simple widget-test harnesses without MaterialApp.router).
-    Navigator.of(context).maybePop();
+    setState(() {
+      _pending = true;
+      _result = null;
+    });
+    final pubkeys = selected.toList();
+    final results = await Future.wait([
+      for (final pubkey in pubkeys)
+        bloc.submit(
+          PeopleListsPubkeyAddRequested(listId: widget.listId, pubkey: pubkey),
+        ),
+    ]);
+    if (!mounted) return;
+    cubit.additionsConfirmed({
+      for (var i = 0; i < pubkeys.length; i++)
+        if (results[i] == PeopleListsOperationResult.succeeded) pubkeys[i],
+    });
+    final result = results.contains(PeopleListsOperationResult.cancelled)
+        ? PeopleListsOperationResult.cancelled
+        : results.contains(PeopleListsOperationResult.failed)
+        ? PeopleListsOperationResult.failed
+        : PeopleListsOperationResult.succeeded;
+    setState(() {
+      _pending = false;
+      _result = result;
+    });
+    if (result == PeopleListsOperationResult.succeeded) {
+      context.safePop();
+    }
   }
 }

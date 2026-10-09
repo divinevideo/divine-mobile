@@ -371,6 +371,32 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'లూప్‌లు',
+      one: 'లూప్',
+    );
+    return '$authorName $compactCount $_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'లూప్‌లు',
+      one: 'లూప్',
+    );
+    return 'ఈ వీడియోకు $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'మొత్తం లూప్‌లను చూపించండి';
 
   @override
@@ -3819,6 +3845,46 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'మీ లైబ్రరీ నుండి క్లిప్';
+
+  @override
+  String get dmAttachVideoFromGallery => 'మీ గ్యాలరీ నుండి వీడియో';
+
+  @override
+  String get dmClipBadge => 'క్లిప్';
+
+  @override
+  String get dmClipChecking =>
+      'ఈ క్లిప్ Divineతో చిత్రీకరించబడిందో లేదో తనిఖీ చేస్తున్నాం…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ఇది Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి ఇది మీ క్లిప్‌లకు జోడించబడలేదు.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'ప్రస్తుతం ఈ క్లిప్‌ను తనిఖీ చేయడం సాధ్యపడలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ఈ క్లిప్ Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి దీన్ని క్లిప్‌గా పంపలేరు.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'మీరు పంపినదాన్ని వారు తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total క్లిప్‌లలో $sent పంపబడ్డాయి. మిగిలినవి వెళ్లలేదు.',
+      one: '$total క్లిప్‌లో $sent పంపబడింది. మిగిలినవి వెళ్లలేదు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'వీడియోను సేవ్ చేయండి';
 
   @override
@@ -4063,6 +4129,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రారంభించడానికి కొంతమంది వ్యక్తులను జోడించండి';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'ఇంకా వీడియోలు లేవు';
 
   @override
@@ -4087,9 +4160,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'దీనికి జోడించండి $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -5094,15 +5164,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'కొత్త వ్యక్తుల జాబితా';
-
-  @override
-  String get listCollaboratorsNone => 'ఏదీ లేదు';
-
-  @override
-  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
-
-  @override
-  String get listCollaboratorSearchHint => 'శోధన Divine...';
 
   @override
   String get listNameLabel => 'జాబితా పేరు';
@@ -6370,6 +6431,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'జాబితాను తొలగించండి';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'జాబితాను తొలగించాలా?';
@@ -8917,6 +8981,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectGlow => 'మెరుపు';
 
   @override
+  String get videoEditorEffectEcho => 'ప్రతిధ్వని';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
 
@@ -10367,6 +10434,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'స్థాయి';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'బ్రష్ పరిమాణం';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -13389,4 +13459,40 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'కొత్త వీడియో జాబితా';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'ఈ జాబితా పబ్లిక్. దీని పేరు, వివరణ మరియు ఇందులోని వ్యక్తులను ఎవరైనా చూడవచ్చు.';
+
+  @override
+  String get peopleListsPeopleLabel => 'వ్యక్తులు';
+
+  @override
+  String get peopleListsPeopleNone => 'ఇంకా ఎవరినీ జోడించలేదు';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, ప్రైవేట్, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

@@ -1330,6 +1330,15 @@
     "dmVideoSent": "Videoclip trimis",
     "dmVideoSendFailed": "Nu am putut trimite videoclipul",
     "dmVideoTooLarge": "Acest videoclip e prea mare pentru a fi trimis. Alege unul sub {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Clip din biblioteca ta",
+    "dmAttachVideoFromGallery": "Videoclip din galeria ta",
+    "dmClipBadge": "Clip",
+    "dmClipChecking": "Verificăm dacă acest clip a fost filmat cu Divine…",
+    "dmClipNotVerified": "Nu am putut confirma că a fost filmat cu camera Divine, așa că nu a fost adăugat la clipurile tale.",
+    "dmClipCheckUnavailable": "Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.",
+    "dmClipSendNotVerified": "Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.",
+    "dmAttachReuseNotice": "Persoana poate adăuga ce trimiți la clipurile sale și le poate publica, menționându-te.",
+    "dmClipsPartlySent": "{total, plural, one{Trimis {sent} din {total} clip. Restul nu a plecat.} few{Trimise {sent} din {total} clipuri. Restul nu a plecat.} other{Trimise {sent} din {total} de clipuri. Restul nu a plecat.}}",
     "shareSheetSaveVideo": "Salvează videoclipul",
     "shareSheetAddToClips": "Adaugă la clipuri",
     "shareSheetAddToClipsFailed": "Nu s-a putut adăuga la clipuri",
@@ -1655,9 +1664,6 @@
     },
     "listCreateNewList": "Creează o listă nouă",
     "listNewPeopleList": "Listă nouă de persoane",
-    "listCollaboratorsNone": "Niciunul",
-    "listAddCollaboratorTitle": "Adaugă un colaborator",
-    "listCollaboratorSearchHint": "Caută în Divine...",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
     "listPublicList": "Listă publică",
@@ -2521,6 +2527,7 @@
   "videoEditorEffectSplitScreen": "Ecran împărțit",
   "videoEditorEffectWave": "Val",
   "videoEditorEffectGlow": "Strălucire",
+  "videoEditorEffectEcho": "Ecou",
   "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
   "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
   "videoEditorEffectsOnBeat": "Pe ritm",
@@ -2880,6 +2887,7 @@
     "videoEditorAddElementSemanticLabel": "Adaugă element",
     "videoEditorDoneSemanticLabel": "Gata",
     "videoEditorLevelSemanticLabel": "Nivel",
+    "videoEditorBrushSizeSemanticLabel": "Dimensiunea pensulei",
     "videoMetadataClosePostDetailsSemanticLabel": "Închide detaliile postării",
     "videoMetadataDismissHelpDialogSemanticLabel": "Închide dialogul de ajutor",
     "videoMetadataGotItButton": "Am înțeles!",
@@ -3035,7 +3043,6 @@
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
-    "peopleListsAddPeopleSearchHint": "Caută persoane",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
     "peopleListsAddButton": "Adaugă",
@@ -3064,6 +3071,8 @@
     "appearanceSettingsSystem": "Implicit de sistem",
     "appearanceSettingsLight": "Luminos",
     "appearanceSettingsDark": "Întunecat",
+    "videoOverlayTotalLoops": "{authorName}: {compactCount} {count, plural, =1{buclă} few{bucle} other{de bucle}}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{buclă a acestui videoclip} few{bucle ale acestui videoclip} other{de bucle ale acestui videoclip}}",
     "generalSettingsClosedCaptions": "Subtitrări",
     "generalSettingsClosedCaptionsSubtitle": "Afișează subtitrările când videoclipurile le includ",
     "generalSettingsVideoShapeSquareOnly": "Doar videoclipuri pătrate",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Listă nouă de videoclipuri",
+  "peopleListsPublicNotice": "Această listă este publică. Oricine poate vedea numele, descrierea și persoanele din ea.",
+  "peopleListsPeopleLabel": "Persoane",
+  "peopleListsPeopleNone": "Nicio persoană adăugată",
+  "peopleListsSessionChanged": "Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.",
+  "peopleListsSearchConnectionsHint": "Caută printre urmăritori și persoanele urmărite",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

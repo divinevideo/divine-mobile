@@ -1320,6 +1320,15 @@
     "dmVideoSent": "تم إرسال الفيديو",
     "dmVideoSendFailed": "تعذّر إرسال الفيديو",
     "dmVideoTooLarge": "هذا الفيديو كبير جدًا للإرسال. اختر فيديو أصغر من {maxMegabytes} ميغابايت",
+    "dmAttachClipFromLibrary": "مقطع من مكتبتك",
+    "dmAttachVideoFromGallery": "فيديو من معرض الصور",
+    "dmClipBadge": "مقطع",
+    "dmClipChecking": "جارٍ التحقق من أن هذا المقطع صُوّر على Divine…",
+    "dmClipNotVerified": "تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لم تتم إضافته إلى مقاطعك.",
+    "dmClipCheckUnavailable": "تعذّر التحقق من هذا المقطع الآن. يُرجى المحاولة بعد قليل.",
+    "dmClipSendNotVerified": "تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لا يمكن إرساله كمقطع.",
+    "dmAttachReuseNotice": "يمكنهم إضافة ما ترسله إلى مقاطعهم ونشره، مع الإشارة إليك.",
+    "dmClipsPartlySent": "{total, plural, zero{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.} one{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.} two{تم إرسال {sent} من {total} مقطعين. لم يُرسل الباقي.} few{تم إرسال {sent} من {total} مقاطع. لم يُرسل الباقي.} many{تم إرسال {sent} من {total} مقطعًا. لم يُرسل الباقي.} other{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.}}",
     "shareSheetSaveVideo": "حفظ الفيديو",
     "shareSheetAddToClips": "إضافة إلى المقاطع",
     "shareSheetAddToClipsFailed": "تعذّرت الإضافة إلى المقاطع",
@@ -1645,9 +1654,6 @@
     },
     "listCreateNewList": "إنشاء قائمة جديدة",
     "listNewPeopleList": "قائمة أشخاص جديدة",
-    "listCollaboratorsNone": "لا أحد",
-    "listAddCollaboratorTitle": "إضافة متعاون",
-    "listCollaboratorSearchHint": "ابحث في Divine...",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
     "listPublicList": "قائمة عامة",
@@ -2476,6 +2482,7 @@
   "videoEditorEffectSplitScreen": "شاشة مقسّمة",
   "videoEditorEffectWave": "موجة",
   "videoEditorEffectGlow": "توهج",
+  "videoEditorEffectEcho": "صدى",
   "videoEditorEffectsFlashingReplaced": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.",
   "videoEditorEffectsFlashingNotDuplicated": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.",
   "videoEditorEffectsOnBeat": "على الإيقاع",
@@ -2509,6 +2516,7 @@
     "videoEditorHueSemanticLabel": "الصبغة",
     "videoEditorKeepEditingButton": "مواصلة التحرير",
     "videoEditorLevelSemanticLabel": "المستوى",
+    "videoEditorBrushSizeSemanticLabel": "حجم الفرشاة",
     "videoEditorNoStickersAvailable": "لا توجد ملصقات متاحة",
     "videoEditorNoStickersFound": "لم يتم العثور على ملصقات",
     "videoEditorOpenAudioSemanticLabel": "فتح محرر الصوت",
@@ -3028,7 +3036,6 @@
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
-    "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
     "peopleListsAddButton": "إضافة",
@@ -3057,6 +3064,8 @@
     "appearanceSettingsSystem": "إعداد النظام",
     "appearanceSettingsLight": "فاتح",
     "appearanceSettingsDark": "داكن",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, zero{تكرار} =1{تكرار} two{تكرار} few{تكرارات} many{تكرارًا} other{تكرار}} لـ{authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, zero{دورة} =1{دورة} two{دورة} few{دورات} many{دورةً} other{دورة}} لهذا الفيديو",
     "generalSettingsClosedCaptions": "الترجمة المصاحبة",
     "generalSettingsClosedCaptionsSubtitle": "اعرض الترجمة عندما تتضمّنها الفيديوهات",
     "generalSettingsVideoShapeSquareOnly": "فيديوهات مربّعة فقط",
@@ -4938,5 +4947,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "قائمة فيديوهات جديدة",
+  "peopleListsPublicNotice": "هذه القائمة عامة. يمكن لأي شخص رؤية اسمها ووصفها والأشخاص فيها.",
+  "peopleListsPeopleLabel": "الأشخاص",
+  "peopleListsPeopleNone": "لم تتم إضافة أي أشخاص",
+  "peopleListsSessionChanged": "تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.",
+  "peopleListsSearchConnectionsHint": "ابحث في المتابعين ومن تتابعهم",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، خاصة، {count}} other{{name}، {count}}}",
+  "listMemberNamesSeparator": "، ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

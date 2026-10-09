@@ -140,6 +140,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.profileView:
     case RouteType.curatedList:
     case RouteType.discoverLists:
+    case RouteType.peopleListEdit:
     case RouteType.peopleListCreate:
     case RouteType.peopleListMembers:
     case RouteType.peopleListRoster:

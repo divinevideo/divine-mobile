@@ -1414,6 +1414,15 @@
     "dmVideoSent": "Видеото е изпратено",
     "dmVideoSendFailed": "Видеото не можа да се изпрати",
     "dmVideoTooLarge": "Това видео е твърде голямо за изпращане. Избери такова под {maxMegabytes} MB",
+    "dmAttachClipFromLibrary": "Клип от библиотеката ти",
+    "dmAttachVideoFromGallery": "Видео от галерията ти",
+    "dmClipBadge": "Клип",
+    "dmClipChecking": "Проверяваме дали клипът е заснет с Divine…",
+    "dmClipNotVerified": "Не успяхме да потвърдим, че е заснет с камерата на Divine, затова не е добавен към клиповете ти.",
+    "dmClipCheckUnavailable": "Не можем да проверим клипа в момента. Опитай пак след малко.",
+    "dmClipSendNotVerified": "Не успяхме да потвърдим, че клипът е заснет с камерата на Divine, затова не може да се изпрати като клип.",
+    "dmAttachReuseNotice": "Могат да добавят това, което изпращаш, към клиповете си и да го публикуват, като те посочат.",
+    "dmClipsPartlySent": "{total, plural, one{Изпратен {sent} от {total} клип. Останалите не минаха.} other{Изпратени {sent} от {total} клипа. Останалите не минаха.}}",
     "shareSheetSaveVideo": "Запази видео",
     "shareSheetAddToClips": "Добави към клипове",
     "@shareSheetAddToClips": {
@@ -1511,7 +1520,6 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "Търси хора",
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
     "peopleListsAddButton": "Добави",
@@ -1860,9 +1868,6 @@
     },
     "listCreateNewList": "Създаване на нов списък",
     "listNewPeopleList": "Нов списък с хора",
-    "listCollaboratorsNone": "Няма",
-    "listAddCollaboratorTitle": "Добави сътрудник",
-    "listCollaboratorSearchHint": "Търсене Divine...",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
     "listPublicList": "Публичен списък",
@@ -2775,6 +2780,7 @@
   "videoEditorEffectSplitScreen": "Разделен екран",
   "videoEditorEffectWave": "Вълна",
   "videoEditorEffectGlow": "Сияние",
+  "videoEditorEffectEcho": "Ехо",
   "videoEditorEffectsFlashingReplaced": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.",
   "videoEditorEffectsFlashingNotDuplicated": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.",
   "videoEditorEffectsOnBeat": "В ритъм",
@@ -3134,6 +3140,7 @@
     "videoEditorAddElementSemanticLabel": "Добави елемент",
     "videoEditorDoneSemanticLabel": "Готово",
     "videoEditorLevelSemanticLabel": "Ниво",
+    "videoEditorBrushSizeSemanticLabel": "Размер на четката",
     "videoMetadataClosePostDetailsSemanticLabel": "Затваряне на подробностите за публикацията",
     "videoMetadataDismissHelpDialogSemanticLabel": "Отхвърляне на диалоговия прозорец за помощ",
     "videoMetadataGotItButton": "Разбрах!",
@@ -3218,6 +3225,8 @@
     "appearanceSettingsSystem": "Системна настройка",
     "appearanceSettingsLight": "Светла",
     "appearanceSettingsDark": "Тъмна",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} на {authorName}",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} на това видео",
     "generalSettingsClosedCaptions": "Субтитри",
     "generalSettingsClosedCaptionsSubtitle": "Показвай субтитри, когато видеата ги имат",
     "generalSettingsVideoShapeSquareOnly": "Само квадратни видеа",
@@ -5062,5 +5071,26 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Нов списък с видеа",
+  "peopleListsPublicNotice": "Този списък е публичен. Всеки може да види името, описанието и хората в него.",
+  "peopleListsPeopleLabel": "Хора",
+  "peopleListsPeopleNone": "Няма добавени хора",
+  "peopleListsSessionChanged": "Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.",
+  "peopleListsSearchConnectionsHint": "Търси сред последователи и следвани",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Частен, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -168,7 +168,7 @@ void main() {
               hasMore: true,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         expect: () => [
           NotificationFeedState(
@@ -189,7 +189,7 @@ void main() {
           snapshotController.add(
             NotificationPage(items: [_actorNotif()], unreadCount: 1),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         expect: () => [
           NotificationFeedState(
@@ -213,7 +213,7 @@ void main() {
               unreadCount: 1,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         expect: () => [
           NotificationFeedState(
@@ -260,15 +260,18 @@ void main() {
 
         final bloc = createBloc();
         addTearDown(bloc.close);
+        addTearDown(() {
+          if (!markCompleter.isCompleted) markCompleter.complete();
+        });
 
         bloc.add(NotificationFeedStarted());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         // Empty inbox: the repository emits an empty page from inside
         // `refreshFeed`, so `notifications` stays empty. This is the case
         // that would fall through to the full-screen spinner branch if
         // `loaded` were held across the mark-all write.
         snapshotController.add(NotificationPage.empty);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.notifications, isEmpty);
         expect(
@@ -281,7 +284,7 @@ void main() {
         expect(bloc.state.isRefreshing, isTrue);
 
         markCompleter.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.isRefreshing, isFalse);
       });
@@ -296,25 +299,28 @@ void main() {
 
           final bloc = createBloc();
           addTearDown(bloc.close);
+          addTearDown(() {
+            if (!markCompleter.isCompleted) markCompleter.complete();
+          });
 
           bloc.add(NotificationFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           bloc.add(NotificationFeedRefreshed());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockNotificationRepo.refreshFeed(null)).called(1);
           verify(() => mockNotificationRepo.markAllAsRead()).called(1);
           expect(bloc.state.isRefreshing, isTrue);
 
           markCompleter.complete();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           when(
             () => mockNotificationRepo.markAllAsRead(),
           ).thenAnswer((_) async {});
           bloc.add(NotificationFeedRefreshed());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockNotificationRepo.refreshFeed(null)).called(1);
           verify(() => mockNotificationRepo.markAllAsRead()).called(1);
@@ -325,8 +331,10 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'clears the platform app badge after successful unfiltered open',
         build: () => createBloc(appBadgeClearer: mockAppBadgeClearer),
-        act: (bloc) => bloc.add(NotificationFeedStarted()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+        },
         expect: () => [
           NotificationFeedState(isRefreshing: true),
           NotificationFeedState(
@@ -347,8 +355,10 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'does not clear the platform app badge for filtered opens',
         build: () => createFollowBloc(appBadgeClearer: mockAppBadgeClearer),
-        act: (bloc) => bloc.add(NotificationFeedStarted()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+        },
         expect: () => [
           NotificationFeedState(isRefreshing: true),
           NotificationFeedState(status: NotificationFeedStatus.loaded),
@@ -370,8 +380,10 @@ void main() {
           ).thenThrow(Exception('badge clear failed'));
         },
         build: () => createBloc(appBadgeClearer: mockAppBadgeClearer),
-        act: (bloc) => bloc.add(NotificationFeedStarted()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+        },
         expect: () => [
           NotificationFeedState(isRefreshing: true),
           NotificationFeedState(
@@ -395,8 +407,10 @@ void main() {
           ).thenThrow(StateError('badge invariant'));
         },
         build: () => createBloc(appBadgeClearer: mockAppBadgeClearer),
-        act: (bloc) => bloc.add(NotificationFeedStarted()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+        },
         expect: () => [
           NotificationFeedState(isRefreshing: true),
           NotificationFeedState(
@@ -617,7 +631,7 @@ void main() {
           snapshotController.add(
             NotificationPage(items: const [], unreadCount: 0, hasMore: true),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         expect: () => [
           NotificationFeedState(
@@ -663,7 +677,7 @@ void main() {
 
         final bloc = createFollowBloc()..add(NotificationFeedStarted());
         addTearDown(bloc.close);
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         verify(
           () => mockNotificationRepo.loadNextPageFor(NotificationKind.follow),
@@ -699,7 +713,7 @@ void main() {
 
         final bloc = createFollowBloc()..add(NotificationFeedStarted());
         addTearDown(bloc.close);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         verify(
           () => mockNotificationRepo.loadNextPageFor(NotificationKind.follow),
@@ -759,7 +773,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(NotificationFeedLoadMore());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(NotificationFeedLoadMore());
         },
         expect: () => [
@@ -831,8 +845,10 @@ void main() {
         'marks seen without refreshing when the kept-alive inbox becomes '
         'visible again',
         build: () => createBloc(appBadgeClearer: mockAppBadgeClearer),
-        act: (bloc) => bloc.add(NotificationFeedBecameVisible()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedBecameVisible());
+          await pumpEventQueue();
+        },
         expect: () => <NotificationFeedState>[],
         verify: (_) {
           verifyNever(() => mockNotificationRepo.refreshFeed(any()));
@@ -844,8 +860,10 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'does not mark seen for filtered tab visibility',
         build: createFollowBloc,
-        act: (bloc) => bloc.add(NotificationFeedBecameVisible()),
-        wait: const Duration(milliseconds: 1),
+        act: (bloc) async {
+          bloc.add(NotificationFeedBecameVisible());
+          await pumpEventQueue();
+        },
         expect: () => <NotificationFeedState>[],
         verify: (_) {
           verifyNever(() => mockNotificationRepo.refreshFeed(any()));
@@ -864,17 +882,20 @@ void main() {
 
           final bloc = createBloc(appBadgeClearer: mockAppBadgeClearer);
           addTearDown(bloc.close);
+          addTearDown(() {
+            if (!markCompleter.isCompleted) markCompleter.complete();
+          });
 
           bloc.add(NotificationFeedBecameVisible());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(NotificationFeedBecameVisible());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockNotificationRepo.markAllAsRead()).called(1);
           verifyNever(() => mockAppBadgeClearer.clear());
 
           markCompleter.complete();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockAppBadgeClearer.clear()).called(1);
         },
@@ -890,22 +911,25 @@ void main() {
 
           final bloc = createBloc(appBadgeClearer: mockAppBadgeClearer);
           addTearDown(bloc.close);
+          addTearDown(() {
+            if (!markCompleter.isCompleted) markCompleter.complete();
+          });
 
           // _onStarted marks seen after refreshFeed; hold that write in
           // flight so a became-visible mark would overlap it.
           bloc.add(NotificationFeedStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           // Different event type from Started, so droppable() cannot drop
           // it. Only _markSeenInFlight prevents the second mark-all POST.
           bloc.add(NotificationFeedBecameVisible());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockNotificationRepo.markAllAsRead()).called(1);
           verifyNever(() => mockAppBadgeClearer.clear());
 
           markCompleter.complete();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           verify(() => mockAppBadgeClearer.clear()).called(1);
         },
@@ -949,12 +973,15 @@ void main() {
 
         final bloc = createBloc();
         addTearDown(bloc.close);
+        addTearDown(() {
+          if (!markCompleter.isCompleted) markCompleter.complete();
+        });
         final states = <NotificationFeedState>[];
         final subscription = bloc.stream.listen(states.add);
         addTearDown(subscription.cancel);
 
         bloc.add(NotificationFeedRefreshed());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Refresh resolved, mark-all still pending: content is renderable
         // (`loaded` dismisses the cold-start spinner) but the revalidation bar
@@ -968,11 +995,11 @@ void main() {
         ]);
 
         bloc.add(NotificationFeedRefreshed());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         verify(() => mockNotificationRepo.refreshFeed(null)).called(1);
 
         markCompleter.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(states, [
           NotificationFeedState(isRefreshing: true),

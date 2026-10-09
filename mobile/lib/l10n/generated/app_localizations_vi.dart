@@ -334,6 +334,30 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$compactCount lượt lặp của $authorName',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'lượt',
+    );
+    return 'video này lặp $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Hiện tổng số loop';
 
   @override
@@ -3653,6 +3677,45 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip từ thư viện của bạn';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video từ thư viện ảnh của bạn';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Đang kiểm tra clip này có được quay bằng Divine không…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      'Người nhận có thể thêm nội dung bạn gửi vào clip của họ và đăng lên, kèm ghi công cho bạn.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đã gửi $sent/$total clip. Phần còn lại chưa gửi được.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override
@@ -3889,6 +3952,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Thêm vài người để bắt đầu';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Chưa có video nào';
 
   @override
@@ -3911,9 +3981,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return 'Thêm vào $name';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Tìm người';
 
   @override
   String get peopleListsAddPeopleError =>
@@ -4889,15 +4956,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Danh sách người mới';
-
-  @override
-  String get listCollaboratorsNone => 'Không có';
-
-  @override
-  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
-
-  @override
-  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
 
   @override
   String get listNameLabel => 'Tên danh sách';
@@ -6142,6 +6200,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listDeleteAction => 'Xóa danh sách';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => 'Xóa danh sách?';
@@ -8634,6 +8695,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectGlow => 'Phát sáng';
 
   @override
+  String get videoEditorEffectEcho => 'Tiếng vọng';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
 
@@ -10042,6 +10106,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => 'Mức';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => 'Kích thước cọ';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
@@ -12995,4 +13062,40 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Danh sách video mới';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Danh sách này là công khai. Ai cũng có thể xem tên, mô tả và những người trong danh sách.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Mọi người';
+
+  @override
+  String get peopleListsPeopleNone => 'Chưa thêm ai';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Tìm người theo dõi và người bạn đang theo dõi';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Riêng tư, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

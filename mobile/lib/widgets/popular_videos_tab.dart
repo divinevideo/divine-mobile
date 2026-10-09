@@ -20,6 +20,7 @@ import 'package:openvine/providers/popular_videos_feed_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
@@ -329,18 +330,23 @@ class _PopularVideosTrendingContentState
                   'videoId=${videoList[index].id}',
                   category: LogCategory.video,
                 );
-                context.push(
-                  PooledFullscreenVideoFeedScreen.pathForVideoId(
-                    videoList[index].id,
+                runDetached(
+                  context.push<void>(
+                    PooledFullscreenVideoFeedScreen.pathForVideoId(
+                      videoList[index].id,
+                    ),
+                    extra: PooledFullscreenVideoFeedArgs(
+                      source: const PopularViewSource(),
+                      feedRepository: ref.read(feedRepositoryProvider),
+                      initialIndex: index,
+                      initialVideoId: videoList[index].id,
+                      contextTitle: context.l10n.popularVideosContextTitle,
+                      trafficSource: ViewTrafficSource.discoveryPopular,
+                    ),
                   ),
-                  extra: PooledFullscreenVideoFeedArgs(
-                    source: const PopularViewSource(),
-                    feedRepository: ref.read(feedRepositoryProvider),
-                    initialIndex: index,
-                    initialVideoId: videoList[index].id,
-                    contextTitle: context.l10n.popularVideosContextTitle,
-                    trafficSource: ViewTrafficSource.discoveryPopular,
-                  ),
+                  'open popular video',
+                  logName: 'PopularVideosTab',
+                  category: LogCategory.ui,
                 );
               },
               onRefresh: () async {

@@ -54,6 +54,9 @@ class DmVideoSendService {
   /// [onPhase], when supplied, is invoked at each real pipeline stage (before
   /// encryption, before upload, before the NIP-17 send) so a caller can render
   /// progress. It is never invoked for a stage that has not started.
+  ///
+  /// [extraTags] are forwarded to [DmRepository.sendFileMessage], e.g. the
+  /// marker that identifies a Divine camera clip.
   @useResult
   Future<NIP17SendResult> sendVideo({
     required String recipientPubkey,
@@ -61,6 +64,7 @@ class DmVideoSendService {
     required String mimeType,
     String? blurhash,
     String? dimensions,
+    List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase phase)? onPhase,
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
@@ -98,6 +102,7 @@ class DmVideoSendService {
           // ignore: avoid_redundant_argument_values
           thumbnailUrl: null,
         ),
+        extraTags: extraTags,
       );
     } finally {
       await _deleteCiphertextQuietly(enc.ciphertextFile);

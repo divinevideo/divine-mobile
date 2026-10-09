@@ -19,8 +19,7 @@ import 'package:openvine/screens/search_results/widgets/search_section_empty_sta
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_search_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -150,13 +149,15 @@ class _ResultsGrid extends StatelessWidget {
             if (index < videoResults.length) {
               final list = videoResults[index];
               return _ListCard(
+                key: ValueKey(list.authorScopedId),
                 curatedList: list,
                 onTap: () => _navigateToCuratedList(context, list),
               );
             }
             final peopleResult = peopleResults[index - videoResults.length];
             return _PeopleListCard(
-              userList: peopleResult.list,
+              key: ValueKey(peopleResult.addressableId),
+              result: peopleResult,
               onTap: () => _navigateToPeopleList(context, peopleResult),
             );
           }, childCount: totalCount),
@@ -179,6 +180,7 @@ class _ResultsGrid extends StatelessWidget {
             if (previewVideo != null)
               Expanded(
                 child: _ListCard(
+                  key: ValueKey(previewVideo.authorScopedId),
                   curatedList: previewVideo,
                   onTap: () => _navigateToCuratedList(context, previewVideo),
                 ),
@@ -186,7 +188,8 @@ class _ResultsGrid extends StatelessWidget {
             if (previewPeople != null)
               Expanded(
                 child: _PeopleListCard(
-                  userList: previewPeople.list,
+                  key: ValueKey(previewPeople.addressableId),
+                  result: previewPeople,
                   onTap: () => _navigateToPeopleList(context, previewPeople),
                 ),
               ),
@@ -201,27 +204,35 @@ class _ResultsGrid extends StatelessWidget {
 
 /// Card widget for a curated video list result.
 class _ListCard extends StatelessWidget {
-  const _ListCard({required this.curatedList, required this.onTap});
+  const _ListCard({
+    required this.curatedList,
+    required this.onTap,
+    super.key,
+  });
 
   final CuratedList curatedList;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return CuratedListSearchCard(curatedList: curatedList, onTap: onTap);
+    return DivineListThumbnail.videos(curatedList: curatedList, onTap: onTap);
   }
 }
 
 /// Card widget for a people list result.
 class _PeopleListCard extends StatelessWidget {
-  const _PeopleListCard({required this.userList, required this.onTap});
+  const _PeopleListCard({required this.result, required this.onTap, super.key});
 
-  final UserList userList;
+  final PeopleListSearchResult result;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return PeopleListSearchCard(userList: userList, onTap: onTap);
+    return DivineListThumbnail.people(
+      userList: result.list,
+      showMemberIdentities: false,
+      onTap: onTap,
+    );
   }
 }
 
@@ -343,22 +354,6 @@ class _ListCardSkeletonItem extends StatelessWidget {
   }
 }
 
-void _navigateToCuratedList(BuildContext context, CuratedList list) {
-  runDetached(
-    context.push<void>(
-      CuratedListFeedScreen.pathForId(list.id),
-      extra: CuratedListRouteExtra(
-        listName: list.name,
-        videoIds: list.videoEventIds,
-        authorPubkey: list.pubkey,
-      ),
-    ),
-    'open curated list search result',
-    logName: 'ListsSection',
-    category: LogCategory.ui,
-  );
-}
-
 void _navigateToPeopleList(
   BuildContext context,
   PeopleListSearchResult result,
@@ -371,6 +366,22 @@ void _navigateToPeopleList(
       ),
     ),
     'open people list search result',
+    logName: 'ListsSection',
+    category: LogCategory.ui,
+  );
+}
+
+void _navigateToCuratedList(BuildContext context, CuratedList list) {
+  runDetached(
+    context.push<void>(
+      CuratedListFeedScreen.pathForId(list.id),
+      extra: CuratedListRouteExtra(
+        listName: list.name,
+        videoIds: list.videoEventIds,
+        authorPubkey: list.pubkey,
+      ),
+    ),
+    'open curated list search result',
     logName: 'ListsSection',
     category: LogCategory.ui,
   );

@@ -236,6 +236,9 @@ class ContentReportingService implements ReportChannelDriver {
   /// `success` result still needs its [ReportResult.delivery] checked. A
   /// discarded result is therefore indistinguishable from a delivered
   /// report, which is the defect in #6387 and #6595.
+  ///
+  /// [addressableCoordinate] names an addressable target, such as a list, as
+  /// an `a` tag beside the NIP-56 `e` and `p` tags.
   @useResult
   Future<ReportResult> reportContent({
     required String eventId,
@@ -248,6 +251,7 @@ class ContentReportingService implements ReportChannelDriver {
     List<String>? nip56EventIds,
     String? moderationContent,
     List<List<String>> moderationTags = const [],
+    String? addressableCoordinate,
   }) async {
     try {
       if (!_isInitialized) {
@@ -313,6 +317,7 @@ class ContentReportingService implements ReportChannelDriver {
           additionalContext: safeAdditionalContext,
           hashtags: hashtags,
           nip56EventIds: nip56EventIds,
+          addressableCoordinate: addressableCoordinate,
           sign: false,
         );
         if (event == null ||
@@ -388,6 +393,7 @@ class ContentReportingService implements ReportChannelDriver {
         additionalContext: safeAdditionalContext,
         hashtags: hashtags,
         nip56EventIds: nip56EventIds,
+        addressableCoordinate: addressableCoordinate,
       );
 
       if (reportEvent == null) {
@@ -658,6 +664,7 @@ class ContentReportingService implements ReportChannelDriver {
     String? additionalContext,
     List<String> hashtags = const [],
     List<String>? nip56EventIds,
+    String? addressableCoordinate,
     bool sign = true,
   }) async {
     try {
@@ -680,6 +687,11 @@ class ContentReportingService implements ReportChannelDriver {
       final tags = <List<String>>[
         for (final nip56EventId in eventTagIds) ['e', nip56EventId, nip56Type],
         ['p', authorPubkey, nip56Type],
+        // NIP-56 does not define `a` on a report. It is a Divine convention
+        // naming an addressable target, such as a list, so moderation can
+        // follow it across edits that republish it under a new event id.
+        // Other clients ignore it; `e` and `p` stay the NIP-56 targets.
+        if (addressableCoordinate != null) ['a', addressableCoordinate],
         ..._nip32ReportLabelTags(reason),
       ];
 

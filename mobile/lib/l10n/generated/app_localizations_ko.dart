@@ -292,6 +292,30 @@ class AppLocalizationsKo extends AppLocalizations {
       '피드를 클래식한 정사각형으로 유지해요';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorName의 반복 $compactCount회',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '회 반복',
+    );
+    return '이 동영상 $compactCount$_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => '전체 루프 수 표시';
 
   @override
@@ -3459,6 +3483,42 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => '보관함의 클립';
+
+  @override
+  String get dmAttachVideoFromGallery => '갤러리의 동영상';
+
+  @override
+  String get dmClipBadge => '클립';
+
+  @override
+  String get dmClipChecking => '이 클립이 Divine으로 촬영됐는지 확인하고 있어요…';
+
+  @override
+  String get dmClipNotVerified => 'Divine 카메라로 촬영된 것을 확인할 수 없어서 클립에 추가하지 않았어요.';
+
+  @override
+  String get dmClipCheckUnavailable => '지금은 이 클립을 확인할 수 없어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      '이 클립이 Divine 카메라로 촬영된 것을 확인할 수 없어서 클립으로 보낼 수 없어요.';
+
+  @override
+  String get dmAttachReuseNotice =>
+      '보낸 영상은 상대방이 자기 클립에 추가해서 게시할 수 있어요. 이때 회원님이 출처로 표시돼요.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '클립 $total개 중 $sent개를 보냈어요. 나머지는 보내지 못했어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '영상 저장';
 
   @override
@@ -3684,6 +3744,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => '시작하려면 사람을 추가하세요';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => '아직 동영상 없음';
 
   @override
@@ -3705,9 +3772,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String peopleListsAddToListName(String name) {
     return '$name에 추가';
   }
-
-  @override
-  String get peopleListsAddPeopleSearchHint => '사람 검색';
 
   @override
   String get peopleListsAddPeopleError => '사람을 불러올 수 없습니다. 다시 시도해 주세요.';
@@ -4645,15 +4709,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listNewPeopleList => '새 사람 목록';
-
-  @override
-  String get listCollaboratorsNone => '없음';
-
-  @override
-  String get listAddCollaboratorTitle => '협업자 추가';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine 검색...';
 
   @override
   String get listNameLabel => '목록 이름';
@@ -5866,6 +5921,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listDeleteAction => '목록 삭제';
+
+  @override
+  String get listReportAction => 'Report list';
 
   @override
   String get peopleListsDeleteConfirmTitle => '목록을 삭제할까요?';
@@ -8257,6 +8315,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectGlow => '글로우';
 
   @override
+  String get videoEditorEffectEcho => '에코';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어서 여기서는 다른 효과를 바꿨어요.';
 
@@ -9603,6 +9664,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLevelSemanticLabel => '레벨';
+
+  @override
+  String get videoEditorBrushSizeSemanticLabel => '브러시 크기';
 
   @override
   String get videoMetadataClosePostDetailsSemanticLabel => '게시물 세부 정보 닫기';
@@ -12420,4 +12484,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => '새 동영상 목록';
+
+  @override
+  String get peopleListsPublicNotice =>
+      '이 목록은 공개됩니다. 누구나 이름, 설명, 목록에 있는 사람을 볼 수 있어요.';
+
+  @override
+  String get peopleListsPeopleLabel => '사람';
+
+  @override
+  String get peopleListsPeopleNone => '추가된 사람이 없어요';
+
+  @override
+  String get peopleListsSessionChanged =>
+      '계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.';
+
+  @override
+  String get peopleListsSearchConnectionsHint => '팔로워 및 팔로우 중인 사람 검색';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, 비공개, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }
