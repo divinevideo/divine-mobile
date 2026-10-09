@@ -4836,6 +4836,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportWhyReporting => 'آپ یہ مواد کیوں رپورٹ کر رہے ہیں؟';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine مواد کی رپورٹس پر 24 گھنٹوں کے اندر کارروائی کرے گا: مواد ہٹا کر اور قاعدہ توڑنے والا مواد دینے والے صارف کو نکال کر۔';
 
@@ -7008,13 +7011,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'یہ مواد فلیگ کریں';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'اس تبصرے کو فلیگ کرنے کی وجہ منتخب کریں';
-
-  @override
-  String get commentOptionsFlagSubmit => 'جمع کریں';
-
-  @override
   String get commentOptionsTitle => 'اختیارات';
 
   @override
@@ -8320,9 +8316,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'تبصرے پر ووٹ نہیں ہو سکا';
-
-  @override
-  String get commentsErrorReportFailed => 'تبصرے کی رپورٹ نہیں ہو سکی';
 
   @override
   String get commentsErrorBlockFailed => 'صارف بلاک نہیں ہو سکا';

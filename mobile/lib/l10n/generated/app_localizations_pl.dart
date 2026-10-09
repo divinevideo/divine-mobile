@@ -4953,6 +4953,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reportWhyReporting => 'Dlaczego zgłaszasz tę treść?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine zareaguje na zgłoszenia treści w ciągu 24 godzin, usuwając treść i wyrzucając użytkownika, który dostarczył obraźliwą treść.';
 
@@ -7174,13 +7177,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Zgłoś tę treść';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Wybierz powód zgłoszenia tego komentarza';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Wyślij';
-
-  @override
   String get commentOptionsTitle => 'Opcje';
 
   @override
@@ -8501,9 +8497,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Nie udało się zagłosować na komentarz';
-
-  @override
-  String get commentsErrorReportFailed => 'Nie udało się zgłosić komentarza';
 
   @override
   String get commentsErrorBlockFailed => 'Nie udało się zablokować użytkownika';

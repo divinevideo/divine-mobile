@@ -4555,6 +4555,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportWhyReporting => '이 콘텐츠를 왜 신고하시나요?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine은 24시간 이내에 신고된 콘텐츠를 조치하여 콘텐츠를 삭제하고 문제가 된 콘텐츠를 제공한 사용자를 퇴출해요.';
 
@@ -6660,12 +6663,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => '이 콘텐츠 신고';
 
   @override
-  String get commentOptionsFlagReasonPrompt => '이 댓글을 신고하는 이유를 선택해주세요';
-
-  @override
-  String get commentOptionsFlagSubmit => '제출';
-
-  @override
   String get commentOptionsTitle => '옵션';
 
   @override
@@ -7918,9 +7915,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => '댓글 투표에 실패했어요';
-
-  @override
-  String get commentsErrorReportFailed => '댓글을 신고하지 못했어요';
 
   @override
   String get commentsErrorBlockFailed => '사용자를 차단하지 못했어요';

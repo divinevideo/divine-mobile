@@ -4716,6 +4716,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportWhyReporting => 'ይህን ይዘት ለምን ሪፖርት ያደርጋሉ?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ይዘቱን በማስወገድ እና አጸያፊ ይዘቱን ያቀረበውን ተጠቃሚ በማስወጣት የይዘት ሪፖርቶችን በ24 ሰዓታት ውስጥ ይሰራል።';
 
@@ -6845,13 +6848,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'ይህን ይዘት ምልክት አድርግ';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ';
-
-  @override
-  String get commentOptionsFlagSubmit => 'አስገባ';
-
-  @override
   String get commentOptionsTitle => 'አማራጮች';
 
   @override
@@ -8130,9 +8126,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'በአስተያየቱ ላይ መምረጥ አልተሳካም';
-
-  @override
-  String get commentsErrorReportFailed => 'አስተያየቱን ሪፖርት ማድረግ አልተሳካም';
 
   @override
   String get commentsErrorBlockFailed => 'ተጠቃሚውን ማገድ አልተሳካም';

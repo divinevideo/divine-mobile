@@ -4152,8 +4152,6 @@
   "commentOptionsEditSemanticLabel": "వ్యాఖ్యను సవరించండి",
   "commentOptionsFlagContentLabel": "ఫ్లాగ్ కంటెంట్",
   "commentOptionsFlagContentSemanticLabel": "ఈ కంటెంట్‌ను ఫ్లాగ్ చేయండి",
-  "commentOptionsFlagReasonPrompt": "ఈ వ్యాఖ్యను ఫ్లాగ్ చేయడానికి కారణాన్ని ఎంచుకోండి",
-  "commentOptionsFlagSubmit": "సమర్పించండి",
   "commentOptionsTitle": "ఎంపికలు",
   "commentsEmptyClassicVineMessage": "మేము ఇప్పటికీ ఆర్కైవ్ నుండి పాత వ్యాఖ్యలను దిగుమతి చేసే పనిలో ఉన్నాము. వారు ఇంకా సిద్ధంగా లేరు.",
   "commentsEmptyClassicVineTitle": "క్లాసిక్ Vine",
@@ -5108,10 +5106,6 @@
   "commentsErrorVoteFailed": "వ్యాఖ్యపై ఓటు వేయడం విఫలమైంది",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "వ్యాఖ్యను నివేదించడంలో విఫలమైంది",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "వినియోగదారుని నిరోధించడంలో విఫలమైంది",
   "@commentsErrorBlockFailed": {

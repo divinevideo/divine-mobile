@@ -4766,6 +4766,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportWhyReporting => 'Bu içeriği neden bildiriyorsun?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine, içerik bildirimlerine 24 saat içinde içeriği kaldırarak ve söz konusu içeriği sağlayan kullanıcıyı çıkararak işlem yapar.';
 
@@ -6930,13 +6933,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Bu içeriği işaretle';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Bu yorumu işaretlemek için bir neden seç';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Gönder';
-
-  @override
   String get commentOptionsTitle => 'Seçenekler';
 
   @override
@@ -8237,9 +8233,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Yoruma oy verilemedi';
-
-  @override
-  String get commentsErrorReportFailed => 'Yorum bildirilemedi';
 
   @override
   String get commentsErrorBlockFailed => 'Kullanıcı engellenemedi';

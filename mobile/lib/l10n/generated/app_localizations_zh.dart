@@ -4516,6 +4516,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportWhyReporting => '你为什么要举报该内容？';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。';
 
@@ -6596,12 +6599,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => '标记此内容';
 
   @override
-  String get commentOptionsFlagReasonPrompt => '选择标记该评论的原因';
-
-  @override
-  String get commentOptionsFlagSubmit => '提交';
-
-  @override
   String get commentOptionsTitle => '选项';
 
   @override
@@ -7827,9 +7824,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => '评论投票失败';
-
-  @override
-  String get commentsErrorReportFailed => '评论举报失败';
 
   @override
   String get commentsErrorBlockFailed => '屏蔽用户失败';

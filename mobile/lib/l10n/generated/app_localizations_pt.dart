@@ -4858,6 +4858,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Por que você está denunciando este conteúdo?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'O Divine vai agir sobre denúncias de conteúdo em até 24 horas, removendo o conteúdo e expulsando o usuário que o publicou.';
 
@@ -7059,13 +7062,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Sinalizar este conteúdo';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Selecione um motivo para sinalizar este comentário';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Enviar';
-
-  @override
   String get commentOptionsTitle => 'Opções';
 
   @override
@@ -8382,10 +8378,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Não foi possível votar no comentário';
-
-  @override
-  String get commentsErrorReportFailed =>
-      'Não foi possível denunciar o comentário';
 
   @override
   String get commentsErrorBlockFailed => 'Não foi possível bloquear a pessoa';

@@ -4874,6 +4874,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportWhyReporting => '¿Por qué estás reportando este contenido?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine va a actuar sobre los reportes de contenido dentro de las 24 horas, removiendo el contenido y expulsando al usuario que lo publicó.';
 
@@ -7070,13 +7073,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Marcar este contenido';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Elegí un motivo para marcar este comentario';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Enviar';
-
-  @override
   String get commentOptionsTitle => 'Opciones';
 
   @override
@@ -8395,9 +8391,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'No se pudo votar el comentario';
-
-  @override
-  String get commentsErrorReportFailed => 'No se pudo denunciar el comentario';
 
   @override
   String get commentsErrorBlockFailed => 'No se pudo bloquear a la persona';

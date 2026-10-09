@@ -4840,6 +4840,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportWhyReporting => 'Waarom meld je deze inhoud?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine handelt binnen 24 uur op meldingen van inhoud door de inhoud te verwijderen en de gebruiker die de schendende inhoud plaatste eruit te zetten.';
 
@@ -7036,13 +7039,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Deze inhoud markeren';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Selecteer een reden om deze reactie te markeren';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Verzenden';
-
-  @override
   String get commentOptionsTitle => 'Opties';
 
   @override
@@ -8352,9 +8348,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Stemmen op de reactie is mislukt';
-
-  @override
-  String get commentsErrorReportFailed => 'Reactie kon niet worden gemeld';
 
   @override
   String get commentsErrorBlockFailed =>

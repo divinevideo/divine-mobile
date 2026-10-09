@@ -4817,6 +4817,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportWhyReporting => 'Varför rapporterar du det här innehållet?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine agerar på innehållsrapporter inom 24 timmar genom att ta bort innehållet och stänga av användaren som tillhandahöll det felaktiga innehållet.';
 
@@ -6998,13 +7001,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Flagga det här innehållet';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Välj en anledning till att flagga den här kommentaren';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Skicka';
-
-  @override
   String get commentOptionsTitle => 'Alternativ';
 
   @override
@@ -8310,9 +8306,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Kunde inte rösta på kommentaren';
-
-  @override
-  String get commentsErrorReportFailed => 'Kunde inte rapportera kommentaren';
 
   @override
   String get commentsErrorBlockFailed => 'Kunde inte blockera användaren';

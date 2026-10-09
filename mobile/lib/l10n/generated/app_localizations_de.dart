@@ -4886,6 +4886,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get reportWhyReporting => 'Warum meldest du diesen Inhalt?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine reagiert innerhalb von 24 Stunden auf Inhaltsmeldungen, indem der Inhalt entfernt und der Nutzer, der den problematischen Inhalt bereitgestellt hat, ausgeschlossen wird.';
 
@@ -7097,13 +7100,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Diesen Inhalt melden';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Wähle einen Grund für die Meldung dieses Kommentars';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Absenden';
-
-  @override
   String get commentOptionsTitle => 'Optionen';
 
   @override
@@ -8426,10 +8422,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get commentsErrorVoteFailed =>
       'Abstimmen über den Kommentar fehlgeschlagen';
-
-  @override
-  String get commentsErrorReportFailed =>
-      'Kommentar konnte nicht gemeldet werden';
 
   @override
   String get commentsErrorBlockFailed => 'Person konnte nicht blockiert werden';

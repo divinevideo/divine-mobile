@@ -4964,6 +4964,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportWhyReporting => 'De ce raportezi acest conținut?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine va acționa asupra rapoartelor de conținut în 24 de ore eliminând conținutul și excluțând utilizatorul care a furnizat conținutul ofensator.';
 
@@ -7180,13 +7183,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Semnalează acest conținut';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Alege un motiv pentru semnalarea acestui comentariu';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Trimite';
-
-  @override
   String get commentOptionsTitle => 'Opțiuni';
 
   @override
@@ -8508,9 +8504,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Nu am putut vota comentariul';
-
-  @override
-  String get commentsErrorReportFailed => 'Nu am putut raporta comentariul';
 
   @override
   String get commentsErrorBlockFailed => 'Nu am putut bloca utilizatorul';

@@ -3512,8 +3512,6 @@
   "commentOptionsEditSemanticLabel": "Sunting komen",
   "commentOptionsFlagContentLabel": "Tandakan Kandungan",
   "commentOptionsFlagContentSemanticLabel": "Tandakan kandungan ini",
-  "commentOptionsFlagReasonPrompt": "Pilih sebab untuk menandakan komen ini",
-  "commentOptionsFlagSubmit": "Hantar",
   "commentOptionsTitle": "Pilihan",
   "commentsEmptyClassicVineMessage": "Kami masih berusaha mengimport komen lama daripada arkib. Ia belum sedia lagi.",
   "commentsEmptyClassicVineTitle": "Vine Klasik",
@@ -4335,10 +4333,6 @@
   "commentsErrorVoteFailed": "Gagal mengundi komen",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "Gagal melaporkan komen",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "Gagal menyekat pengguna",
   "@commentsErrorBlockFailed": {

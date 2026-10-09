@@ -4990,6 +4990,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportWhyReporting => 'మీరు ఈ కంటెంట్‌ను ఎందుకు నివేదిస్తున్నారు?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine కంటెంట్‌ని తీసివేసి, ఆక్షేపణీయ కంటెంట్‌ని అందించిన వినియోగదారుని ఎజెక్ట్ చేయడం ద్వారా 24 గంటలలోపు కంటెంట్ నివేదికలపై పని చేస్తుంది.';
 
@@ -7215,13 +7218,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ కంటెంట్‌ను ఫ్లాగ్ చేయండి';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ఈ వ్యాఖ్యను ఫ్లాగ్ చేయడానికి కారణాన్ని ఎంచుకోండి';
-
-  @override
-  String get commentOptionsFlagSubmit => 'సమర్పించండి';
-
-  @override
   String get commentOptionsTitle => 'ఎంపికలు';
 
   @override
@@ -8563,9 +8559,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'వ్యాఖ్యపై ఓటు వేయడం విఫలమైంది';
-
-  @override
-  String get commentsErrorReportFailed => 'వ్యాఖ్యను నివేదించడంలో విఫలమైంది';
 
   @override
   String get commentsErrorBlockFailed => 'వినియోగదారుని నిరోధించడంలో విఫలమైంది';

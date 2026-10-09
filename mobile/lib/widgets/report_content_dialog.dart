@@ -34,6 +34,11 @@ import 'package:openvine/widgets/support_capped_text_field.dart';
 ///   context,
 ///   userPubkey: pubkey,
 /// );
+/// await ReportContentDialog.showForComment(
+///   context,
+///   commentId: comment.id,
+///   authorPubkey: comment.authorPubkey,
+/// );
 /// ```
 /// The kinds of list that can be reported, with their NIP-51 event kinds.
 enum ReportedListKind {
@@ -48,6 +53,15 @@ enum ReportedListKind {
   final int nostrKind;
 }
 
+/// What the report form's heading names as the thing being reported.
+enum ReportedSubject {
+  /// A video, list, message, or account: the general wording.
+  content,
+
+  /// A comment.
+  comment,
+}
+
 class ReportContentDialog extends ConsumerWidget {
   ReportContentDialog({
     super.key,
@@ -60,6 +74,7 @@ class ReportContentDialog extends ConsumerWidget {
     this.reasons = ContentFilterReason.values,
     this.additionalContext,
     this.addressableCoordinate,
+    this.subject = ReportedSubject.content,
     this.isFromShareMenu = false,
     this.draggableController,
     this.scrollController,
@@ -111,6 +126,9 @@ class ReportContentDialog extends ConsumerWidget {
   /// Coordinate of a reported addressable event, such as a list, published
   /// as an `a` tag beside the NIP-56 targets.
   final String? addressableCoordinate;
+
+  /// What the heading names as the thing being reported.
+  final ReportedSubject subject;
 
   final bool isFromShareMenu;
 
@@ -169,6 +187,35 @@ class ReportContentDialog extends ConsumerWidget {
             authorPubkey: senderPubkey,
             moderationKindLabel: 'DM Message Report',
             moderationEventLabel: 'Message ID',
+            draggableController: controller,
+            scrollController: scrollController,
+          ),
+        )
+        .whenComplete(controller.dispose);
+  }
+
+  /// Shows the bottom sheet for reporting a comment.
+  ///
+  /// The same form, reasons, and note rules as every other report; only the
+  /// heading and the moderation-DM labels name a comment.
+  static Future<void> showForComment(
+    BuildContext context, {
+    required String commentId,
+    required String authorPubkey,
+  }) {
+    final controller = DraggableScrollableController();
+    return context
+        .showVideoPausingVineBottomSheet<void>(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: VineTheme.bottomSheetDismissFloor,
+          draggableController: controller,
+          buildScrollBody: (scrollController) => ReportContentDialog(
+            eventId: commentId,
+            authorPubkey: authorPubkey,
+            moderationKindLabel: 'Comment Report',
+            moderationEventLabel: 'Comment ID',
+            subject: ReportedSubject.comment,
             draggableController: controller,
             scrollController: scrollController,
           ),
@@ -273,6 +320,7 @@ class ReportContentDialog extends ConsumerWidget {
       ),
       child: _ReportContentView(
         reasons: reasons,
+        subject: subject,
         isFromShareMenu: isFromShareMenu,
         draggableController: draggableController,
         scrollController: scrollController,
@@ -286,12 +334,14 @@ class ReportContentDialog extends ConsumerWidget {
 class _ReportContentView extends StatefulWidget {
   const _ReportContentView({
     required this.reasons,
+    required this.subject,
     required this.isFromShareMenu,
     this.draggableController,
     this.scrollController,
   });
 
   final List<ContentFilterReason> reasons;
+  final ReportedSubject subject;
   final bool isFromShareMenu;
   final DraggableScrollableController? draggableController;
   final ScrollController? scrollController;
@@ -449,6 +499,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
                 ? const ReportConfirmationBody()
                 : _ReportFormBody(
                     reasons: widget.reasons,
+                    subject: widget.subject,
                     selectedReason: _selectedReason,
                     onReasonSelected: _onReasonSelected,
                     detailsController: _detailsController,
@@ -588,6 +639,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
 class _ReportFormBody extends StatelessWidget {
   const _ReportFormBody({
     required this.reasons,
+    required this.subject,
     required this.selectedReason,
     required this.onReasonSelected,
     required this.detailsController,
@@ -601,6 +653,7 @@ class _ReportFormBody extends StatelessWidget {
   });
 
   final List<ContentFilterReason> reasons;
+  final ReportedSubject subject;
   final ContentFilterReason? selectedReason;
   final ValueChanged<ContentFilterReason> onReasonSelected;
   final TextEditingController detailsController;
@@ -634,7 +687,10 @@ class _ReportFormBody extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         Text(
-          l10n.reportWhyReporting,
+          switch (subject) {
+            ReportedSubject.content => l10n.reportWhyReporting,
+            ReportedSubject.comment => l10n.reportWhyReportingComment,
+          },
           style: VineTheme.titleMediumFont(
             color: context.vineColors.primaryText,
           ),

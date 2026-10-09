@@ -4790,6 +4790,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportWhyReporting => 'Tại sao bạn báo cáo nội dung này?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.';
 
@@ -6971,13 +6974,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Gắn cờ nội dung này';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Chọn lý do gắn cờ bình luận này';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Gửi';
-
-  @override
   String get commentOptionsTitle => 'Tùy chọn';
 
   @override
@@ -8281,9 +8277,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Không bình chọn được bình luận';
-
-  @override
-  String get commentsErrorReportFailed => 'Không báo cáo được bình luận';
 
   @override
   String get commentsErrorBlockFailed => 'Không chặn được người dùng';

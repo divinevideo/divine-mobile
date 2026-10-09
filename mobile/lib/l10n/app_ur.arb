@@ -3512,8 +3512,6 @@
   "commentOptionsEditSemanticLabel": "تبصرہ میں ترمیم کریں",
   "commentOptionsFlagContentLabel": "مواد فلیگ کریں",
   "commentOptionsFlagContentSemanticLabel": "یہ مواد فلیگ کریں",
-  "commentOptionsFlagReasonPrompt": "اس تبصرے کو فلیگ کرنے کی وجہ منتخب کریں",
-  "commentOptionsFlagSubmit": "جمع کریں",
   "commentOptionsTitle": "اختیارات",
   "commentsEmptyClassicVineMessage": "ہم آرکائیو سے پرانے تبصرے درآمد کرنے پر ابھی کام کر رہے ہیں۔ وہ ابھی تیار نہیں ہیں۔",
   "commentsEmptyClassicVineTitle": "کلاسک Vine",
@@ -4335,10 +4333,6 @@
   "commentsErrorVoteFailed": "تبصرے پر ووٹ نہیں ہو سکا",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "تبصرے کی رپورٹ نہیں ہو سکی",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "صارف بلاک نہیں ہو سکا",
   "@commentsErrorBlockFailed": {

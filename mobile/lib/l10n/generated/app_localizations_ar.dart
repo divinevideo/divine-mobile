@@ -4804,6 +4804,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportWhyReporting => 'لماذا تُبلِّغ عن هذا المحتوى؟';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'ستتصرف Divine بشأن بلاغات المحتوى خلال 24 ساعة بإزالة المحتوى وإخراج المستخدم الذي قدَّم المحتوى المخالف.';
 
@@ -6977,13 +6980,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'الإبلاغ عن هذا المحتوى';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'اختر سبب الإبلاغ عن هذا التعليق';
-
-  @override
-  String get commentOptionsFlagSubmit => 'إرسال';
-
-  @override
   String get commentOptionsTitle => 'خيارات';
 
   @override
@@ -8289,9 +8285,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'تعذّر التصويت على التعليق';
-
-  @override
-  String get commentsErrorReportFailed => 'تعذّر الإبلاغ عن التعليق';
 
   @override
   String get commentsErrorBlockFailed => 'تعذّر حظر المستخدم';

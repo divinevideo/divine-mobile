@@ -4874,6 +4874,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reportWhyReporting => 'Защо подаваш сигнал за това съдържание?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ще преглежда сигналите за съдържание до 24 часа и при нужда ще премахва съдържание или ще блокира акаунта, който го е публикувал.';
 
@@ -7074,13 +7077,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Сигнализирай това съдържание';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Избери причина да сигнализираш този коментар';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Изпрати';
-
-  @override
   String get commentOptionsTitle => 'Опции';
 
   @override
@@ -8391,9 +8387,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Гласуването за коментара не мина';
-
-  @override
-  String get commentsErrorReportFailed => 'Коментарът не беше докладван';
 
   @override
   String get commentsErrorBlockFailed => 'Потребителят не беше блокиран';

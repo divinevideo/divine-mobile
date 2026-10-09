@@ -3512,8 +3512,6 @@
   "commentOptionsEditSemanticLabel": "编辑评论",
   "commentOptionsFlagContentLabel": "标记内容",
   "commentOptionsFlagContentSemanticLabel": "标记此内容",
-  "commentOptionsFlagReasonPrompt": "选择标记该评论的原因",
-  "commentOptionsFlagSubmit": "提交",
   "commentOptionsTitle": "选项",
   "commentsEmptyClassicVineMessage": "我们还在从存档中导入旧评论，还没准备好。",
   "commentsEmptyClassicVineTitle": "经典 Vine",
@@ -4335,10 +4333,6 @@
   "commentsErrorVoteFailed": "评论投票失败",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "评论举报失败",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "屏蔽用户失败",
   "@commentsErrorBlockFailed": {

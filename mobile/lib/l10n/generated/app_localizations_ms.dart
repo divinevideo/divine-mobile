@@ -4820,6 +4820,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportWhyReporting => 'Mengapa anda melaporkan kandungan ini?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.';
 
@@ -7008,13 +7011,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get commentOptionsFlagContentSemanticLabel => 'Tandakan kandungan ini';
 
   @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pilih sebab untuk menandakan komen ini';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Hantar';
-
-  @override
   String get commentOptionsTitle => 'Pilihan';
 
   @override
@@ -8321,9 +8317,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Gagal mengundi komen';
-
-  @override
-  String get commentsErrorReportFailed => 'Gagal melaporkan komen';
 
   @override
   String get commentsErrorBlockFailed => 'Gagal menyekat pengguna';
