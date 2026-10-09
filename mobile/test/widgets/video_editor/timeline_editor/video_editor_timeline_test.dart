@@ -22,6 +22,7 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
@@ -956,6 +957,61 @@ void main() {
             .toList();
 
         expect(audio.single.endTime, const Duration(seconds: 3));
+      });
+    });
+
+    group('layer row move', () {
+      testWidgets('reorders the layer through the editor when only its row '
+          'changes', (tester) async {
+        final editor = _MockProImageEditorState();
+        final layers = [
+          EmojiLayer(emoji: '🍎', id: 'bottom'),
+          EmojiLayer(emoji: '🍌', id: 'middle'),
+          EmojiLayer(emoji: '🍒', id: 'top'),
+        ];
+        when(() => editor.activeLayers).thenReturn(layers);
+        when(
+          () => mockOverlayBloc.state,
+        ).thenReturn(
+          TimelineOverlayState(
+            items: [
+              for (final (row, layer) in layers.indexed)
+                TimelineOverlayItem(
+                  id: layer.id,
+                  type: .layer,
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 2),
+                  row: row,
+                ),
+            ],
+          ),
+        );
+        when(() => mockClipBloc.state).thenReturn(
+          ClipEditorState(clips: [_createTestClip(id: 'a')]),
+        );
+
+        await tester.pumpWidget(buildWidget(editor: editor));
+        await tester.pump();
+
+        final body = tester.widget<VideoEditorTimelineInteractiveBody>(
+          find.byType(VideoEditorTimelineInteractiveBody),
+        );
+        body.onOverlayItemMoved(
+          item: mockOverlayBloc.state.items.last,
+          startTime: Duration.zero,
+          row: 0,
+          insertAbove: true,
+        );
+
+        // A row-only move leaves the time unchanged, so only this call tells
+        // the canvas to redraw the stacking order.
+        verify(
+          () => editor.moveLayerListPosition(
+            oldIndex: 2,
+            newIndex: 0,
+            skipUpdateHistory: true,
+          ),
+        ).called(1);
       });
     });
   });
