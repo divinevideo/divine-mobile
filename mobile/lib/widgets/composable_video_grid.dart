@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
@@ -149,7 +150,12 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
   void dispose() {
     disposePagination();
     _scrollController.dispose();
-    _ownerVideoActionsCubit.close();
+    runDetached(
+      _ownerVideoActionsCubit.close(),
+      'close owner video actions BLoC',
+      logName: 'ComposableVideoGrid',
+      category: LogCategory.ui,
+    );
     super.dispose();
   }
 
