@@ -87,9 +87,11 @@ sealed class NIP17SendResult {
     String? queuedRumorId,
   }) = NIP17SendFailure;
 
-  /// Build a policy-block result (protected-minor DM restriction, #176). Unlike
-  /// a transient failure, a blocked send must NOT be retried — retrying only
-  /// re-hits the same policy — so the UI surfaces distinct, no-retry copy.
+  /// Build a blocked result: a send that is refused for good, such as a policy
+  /// block (protected-minor DM restriction, #176) or a queued one-to-one
+  /// message addressed to its own sender (#8363). Unlike a transient failure, a
+  /// blocked send must NOT be retried — retrying only re-hits the same refusal
+  /// — so the UI surfaces distinct, no-retry copy.
   const factory NIP17SendResult.blocked(
     String error, {
     NIP17BlockedSendDisposition? disposition,
@@ -109,8 +111,10 @@ sealed class NIP17SendResult {
   /// recipient) reached at least one relay. The headline send status.
   bool get success => this is NIP17SendSuccess;
 
-  /// Whether this failure is a policy block (#176), not a transient/network
-  /// error. Blocked sends are not retriable. Always `false` for success.
+  /// Whether this failure is a terminal refusal — a policy block (#176), or a
+  /// queued message addressed to its own sender (#8363) — not a
+  /// transient/network error. Blocked sends are not retriable. Always `false`
+  /// for success.
   bool get blocked => false;
 
   /// How an existing durable row should be treated for a policy block.
@@ -258,7 +262,9 @@ final class NIP17SendFailure extends NIP17SendResult {
        _blockedDisposition = null,
        tooLong = false;
 
-  /// A policy block (#176): same non-delivery as a failure, but not retriable.
+  /// A terminal refusal — a policy block (#176), or a queued message addressed
+  /// to its own sender (#8363): same non-delivery as a failure, but not
+  /// retriable.
   ///
   /// Never carries a [queuedRumorId]: the send gate returns before the
   /// enqueue, so a block leaves no row behind to coalesce onto.

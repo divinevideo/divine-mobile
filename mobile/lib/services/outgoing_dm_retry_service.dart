@@ -324,6 +324,7 @@ class OutgoingDmRetryService {
 
       var processedSelfWrap = 0;
       var failedSelfWrap = 0;
+      var blockedSelfWrap = 0;
       var processedFullSend = 0;
       var failedFullSend = 0;
       var blockedFullSend = 0;
@@ -362,6 +363,12 @@ class OutgoingDmRetryService {
               // recoverSelfWrap deleted the row on success. The bumped
               // retryCount would be moot anyway, so skip incrementRetry.
               processedSelfWrap++;
+            } else if (result.blocked) {
+              // Terminal: the row is addressed to its own sender, which
+              // recoverSelfWrap refuses and drops (#8363). It is never
+              // retried, so the counter is not bumped and the pass does not
+              // count it as a failure.
+              blockedSelfWrap++;
             } else {
               // Publish failed. recoverSelfWrap already wrote
               // selfWrapStatus=failed + lastError + lastAttemptAt via
@@ -437,10 +444,11 @@ class OutgoingDmRetryService {
               // skip incrementRetry.
               processedFullSend++;
             } else if (result.blocked) {
-              // recoverFullSend deleted the row: a #176 policy block is
-              // terminal, not transient. Don't bump the retry counter (the
-              // row is gone and the gate would refuse every retry anyway),
-              // and count it as terminal rather than a failure.
+              // Terminal, not transient: recoverFullSend settled the row for
+              // a #176 policy block, or dropped a one-to-one row addressed to
+              // its own sender (#8363). Don't bump the retry counter (every
+              // retry would be refused again), and count it as terminal
+              // rather than a failure.
               blockedFullSend++;
             } else if (result.retryablePending) {
               // Soft-unconfirmed: recoverFullSend already bumped the retry
@@ -557,7 +565,7 @@ class OutgoingDmRetryService {
               processedInterrupted++;
             } else if (result.blocked) {
               // Terminal, same as the failed-send arm: recoverFullSend
-              // deleted the row for a #176 policy block, so don't re-arm it.
+              // settled or dropped the row, so don't re-arm it.
               blockedInterrupted++;
             } else if (result.retryablePending) {
               // Soft-unconfirmed: the repo already bumped the counter via
@@ -610,6 +618,7 @@ class OutgoingDmRetryService {
         'sweep complete: '
         'self-wrap-recovered=$processedSelfWrap '
         'self-wrap-failed=$failedSelfWrap '
+        'self-wrap-blocked=$blockedSelfWrap '
         'full-send-recovered=$processedFullSend '
         'full-send-failed=$failedFullSend '
         'full-send-blocked=$blockedFullSend '
