@@ -8,8 +8,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/video_reply_parent_provider.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -35,6 +38,19 @@ void main() {
 
   group(VideoReplyParentLink, () {
     group('navigation', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
       testWidgets('tapping the reply parent opens its video route', (
         tester,
       ) async {
@@ -90,7 +106,7 @@ void main() {
         final router = MockGoRouter();
         when(
           () => router.push<void>(any()),
-        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+        ).thenAnswer((_) => Future<void>.error(StateError('route failed')));
 
         await tester.pumpWidget(
           MockGoRouterProvider(
@@ -131,9 +147,36 @@ void main() {
         expect(failures.single.category, equals(LogCategory.video));
         expect(
           failures.single.message,
-          equals('Failed to open reply parent video: Exception: route failed'),
+          equals('Failed to open reply parent video: Bad state: route failed'),
+        );
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
         );
       });
     });
   });
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
