@@ -496,7 +496,10 @@ dependencies:
   # 14.9.0 adds the typewriter and word-by-word text reveals with
   # ExportedLayer.revealBytes, and previews wiggle, bounce and loops with the
   # export's own easing (#9849, hm21/pro_image_editor#883).
-  pro_image_editor: ^14.9.0
+  # 14.10.1 makes the draw editor's eraser erase under the finger instead of
+  # beside it, and at its own size on scaled or merged drawings (#9956,
+  # hm21/pro_image_editor#885).
+  pro_image_editor: ^14.10.1
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0
