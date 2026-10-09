@@ -1,7 +1,6 @@
 // ABOUTME: Tests OAuth account preservation after local account removal
 // ABOUTME: Verifies remaining accounts are available without silent auto-restore
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,12 +11,83 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
 
-class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
+/// Consumer fixture with actual key-derived ownership and readback. Backend
+/// current/legacy native slot behavior is exercised by the package's real tests.
+class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {
+  final identitySnapshots = <String, SecureKeyContainer>{};
+
+  @override
+  Future<bool> hasKeysStrict() async => (await getKeyContainer()) != null;
+
+  @override
+  Future<void> deleteOwnedLoginStrict(
+    String owner, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(owner)) {
+      throw const SecureKeyStorageException('Invalid deletion owner');
+    }
+    final coordinate = SecureKeyContainer.fromPublicKey(owner);
+    final npub = coordinate.npub;
+    coordinate.dispose();
+    final beforePrimary = await getKeyContainer();
+    ensureCurrent?.call();
+    final beforeArchive = identitySnapshots[npub];
+    if (beforeArchive != null && beforeArchive.publicKeyHex != owner) {
+      throw const SecureKeyStorageException('Contradictory saved identity');
+    }
+    // These are the same storage-only native fakes the existing assertions
+    // observe. Acknowledgement without a matching readback is not success.
+    await deleteIdentityKeyContainer(npub);
+    ensureCurrent?.call();
+    if (beforePrimary?.publicKeyHex == owner) {
+      await deleteKeys();
+      ensureCurrent?.call();
+    }
+    final afterPrimary = await getKeyContainer();
+    ensureCurrent?.call();
+    if (identitySnapshots.containsKey(npub) ||
+        afterPrimary?.publicKeyHex == owner ||
+        (beforePrimary != null &&
+            beforePrimary.publicKeyHex != owner &&
+            !identical(afterPrimary, beforePrimary))) {
+      throw const SecureKeyStorageException('Owner removal readback failed');
+    }
+  }
+}
+
+/// Invokes AuthService's real persistence boundary around a storage-only fake.
+Future<SecureKeyContainer> _completeGeneratedKeys(
+  Invocation invocation,
+  SecureKeyContainer keys,
+  _MockSecureKeyStorage keyStorage,
+) async {
+  final guard =
+      invocation.namedArguments[#primaryWriteGuard]
+          as PrimaryKeyPersistenceGuard;
+  var persisted = false;
+  await guard(keys.publicKeyHex, () async {
+    if (persisted) {
+      throw StateError('PRIMARY was persisted more than once');
+    }
+    persisted = true;
+    // The PRIMARY fake must reflect the same successful native write that
+    // AuthService reads back under its actual activation lease.
+    when(keyStorage.getKeyContainer).thenAnswer((_) async => keys);
+    when(keyStorage.hasKeys).thenAnswer((_) async => true);
+  });
+  if (!persisted) {
+    throw StateError('PRIMARY persistence was not completed');
+  }
+  return keys;
+}
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
@@ -77,23 +147,16 @@ class _FakeFlutterSecureStorage extends Fake implements FlutterSecureStorage {
 const _testNsec =
     'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
-/// Runs [body] while silencing unhandled async errors from `_performDiscovery`.
-Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
-  final completer = Completer<T>();
-  await runZonedGuarded(
-    () async {
-      try {
-        final result = await body();
-        completer.complete(result);
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    },
-    (error, stack) {
-      // Silently absorb async errors from unawaited _performDiscovery
-    },
+class _MockRelayDiscoveryService extends Mock
+    implements RelayDiscoveryService {}
+
+RelayDiscoveryService _networkFreeDiscovery() {
+  final discovery = _MockRelayDiscoveryService();
+  when(() => discovery.discoverRelays(any())).thenAnswer(
+    (_) async => RelayDiscoveryResult.failure('No network in auth tests'),
   );
-  return completer.future;
+  when(() => discovery.clearCache(any())).thenAnswer((_) async {});
+  return discovery;
 }
 
 void main() {
@@ -114,84 +177,10 @@ void main() {
     registerFallbackValue(SecureKeyContainer.fromNsec(_testNsec));
   });
 
-  setUp(() {
-    mockKeyStorage = _MockSecureKeyStorage();
-    mockCleanupService = _MockUserDataCleanupService();
-    mockOAuthClient = _MockKeycastOAuth();
-    fakeSecureStorage = _FakeFlutterSecureStorage();
-    testKeyContainer = SecureKeyContainer.fromNsec(_testNsec);
-
-    accountA = SecureKeyContainer.fromNsec(
-      'nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl',
-    );
-    sessionA = KeycastSession(
-      bunkerUrl: 'https://keycast.example.com',
-      accessToken: 'access_token_A',
-      expiresAt: DateTime.now().add(const Duration(hours: 1)),
-      refreshToken: 'refresh_token_A',
-      authorizationHandle: 'auth_handle_A',
-      userPubkey: accountA.publicKeyHex,
-    );
-
-    // Default key storage stubs
-    when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
-    when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
-    when(() => mockKeyStorage.clearCache()).thenReturn(null);
-    when(() => mockKeyStorage.dispose()).thenReturn(null);
-    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.deleteIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.generateAndStoreKeys(),
-    ).thenAnswer((_) async => testKeyContainer);
-    when(
-      () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.getIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async => null);
-    when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
-    when(
-      () => mockKeyStorage.switchToIdentity(
-        any(),
-      ),
-    ).thenAnswer((_) async => true);
-
-    when(
-      () => mockCleanupService.shouldClearDataForUser(any()),
-    ).thenReturn(false);
-    when(
-      () => mockCleanupService.clearUserSpecificData(
-        reason: any(named: 'reason'),
-        isIdentityChange: any(named: 'isIdentityChange'),
-        userPubkey: any(named: 'userPubkey'),
-        deleteUserData: any(named: 'deleteUserData'),
-      ),
-    ).thenAnswer((_) async => 0);
-    when(
-      () => mockCleanupService.claimLegacyRows(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
-    ).thenAnswer((_) async {});
-
-    // Mock OAuth client: logout clears the same keys that the real
-    // KeycastOAuth.logout() would clear via SecureKeycastStorage.
-    when(() => mockOAuthClient.logout()).thenAnswer((_) async {
-      fakeSecureStorage.data.remove('keycast_session');
-      fakeSecureStorage.data.remove('keycast_refresh_token');
-      fakeSecureStorage.data.remove('keycast_auth_handle');
-    });
-    when(() => mockOAuthClient.close()).thenReturn(null);
-  });
-
   AuthService createAuthService() {
     return AuthService(
+      relayDiscoveryService: _networkFreeDiscovery(),
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
       backgroundActivityManager: BackgroundActivityManager(),
       userDataCleanupService: mockCleanupService,
       keyStorage: mockKeyStorage,
@@ -206,6 +195,100 @@ void main() {
 
   group('OAuth account preservation after local account removal', () {
     setUp(() {
+      mockKeyStorage = _MockSecureKeyStorage();
+      mockCleanupService = _MockUserDataCleanupService();
+      mockOAuthClient = _MockKeycastOAuth();
+      fakeSecureStorage = _FakeFlutterSecureStorage();
+      testKeyContainer = SecureKeyContainer.fromNsec(_testNsec);
+
+      accountA = SecureKeyContainer.fromNsec(
+        'nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl',
+      );
+      sessionA = KeycastSession(
+        bunkerUrl: 'https://keycast.example.com',
+        accessToken: 'access_token_A',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+        refreshToken: 'refresh_token_A',
+        authorizationHandle: 'auth_handle_A',
+        userPubkey: accountA.publicKeyHex,
+      );
+
+      // Default key storage stubs
+      when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
+      when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
+      when(() => mockKeyStorage.clearCache()).thenReturn(null);
+      when(() => mockKeyStorage.dispose()).thenReturn(null);
+      when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {
+        when(mockKeyStorage.getKeyContainer).thenAnswer((_) async => null);
+        when(mockKeyStorage.hasKeys).thenAnswer((_) async => false);
+      });
+      when(
+        () => mockKeyStorage.deleteIdentityKeyContainer(
+          any(),
+        ),
+      ).thenAnswer((invocation) async {
+        mockKeyStorage.identitySnapshots.remove(
+          invocation.positionalArguments.single as String,
+        );
+      });
+      when(
+        () => mockKeyStorage.generateAndStoreKeys(
+          primaryWriteGuard: any(named: 'primaryWriteGuard'),
+        ),
+      ).thenAnswer(
+        (invocation) => _completeGeneratedKeys(
+          invocation,
+          testKeyContainer,
+          mockKeyStorage,
+        ),
+      );
+      when(
+        () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
+      ).thenAnswer((invocation) async {
+        mockKeyStorage.identitySnapshots[invocation.positionalArguments.first
+                as String] =
+            invocation.positionalArguments.last as SecureKeyContainer;
+      });
+      when(
+        () => mockKeyStorage.getIdentityKeyContainer(
+          any(),
+        ),
+      ).thenAnswer((_) async => null);
+      when(() => mockKeyStorage.getKeyContainer())
+          .thenAnswer((_) async => null);
+      when(
+        () => mockKeyStorage.switchToIdentity(
+          any(),
+        ),
+      ).thenAnswer((_) async => true);
+
+      when(
+        () => mockCleanupService.shouldClearDataForUser(any()),
+      ).thenReturn(false);
+      when(
+        () => mockCleanupService.clearUserSpecificData(
+          reason: any(named: 'reason'),
+          isIdentityChange: any(named: 'isIdentityChange'),
+          userPubkey: any(named: 'userPubkey'),
+          deleteUserData: any(named: 'deleteUserData'),
+        ),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => mockCleanupService.claimLegacyRows(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
+      ).thenAnswer((_) async {});
+
+      // Mock OAuth client: logout clears the same keys that the real
+      // KeycastOAuth.logout() would clear via SecureKeycastStorage.
+      when(() => mockOAuthClient.logout()).thenAnswer((_) async {
+        fakeSecureStorage.data.remove('keycast_session');
+        fakeSecureStorage.data.remove('keycast_refresh_token');
+        fakeSecureStorage.data.remove('keycast_auth_handle');
+      });
+      when(() => mockOAuthClient.close()).thenReturn(null);
+
       // Archive A's OAuth session in fake secure storage
       fakeSecureStorage.data['keycast_session_${accountA.publicKeyHex}'] =
           jsonEncode(sessionA.toJson());
@@ -239,7 +322,7 @@ void main() {
       'keeps remaining OAuth account for welcome without auto-restore',
       () async {
         // Sign in as B (local keys)
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         expect(authService.isAuthenticated, isTrue);
 
         // Delete B (destructive sign-out)
@@ -280,7 +363,7 @@ void main() {
       'initialize after removal does not refresh an archived OAuth account',
       () async {
         // Sign in as B
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         expect(authService.isAuthenticated, isTrue);
 
         // Delete B
@@ -305,7 +388,7 @@ void main() {
 
         // Create fresh AuthService (simulates app restart)
         authService = createAuthService();
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.isAuthenticated, isFalse);
         expect(
@@ -329,7 +412,7 @@ void main() {
       'initialize after removal leaves valid archived OAuth account selectable',
       () async {
         // Sign in as B
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         expect(authService.isAuthenticated, isTrue);
 
         // Delete B
@@ -346,7 +429,7 @@ void main() {
         expect(archived.hasRpcAccess, isTrue);
 
         authService = createAuthService();
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.isAuthenticated, isFalse);
         expect(

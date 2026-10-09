@@ -1,12 +1,5 @@
-// ABOUTME: Unit test reproducing bug #2233 — event signature validation failure
-// ABOUTME: after switching accounts. Runs on CI without emulator.
-//
-// Root cause: createAndSignEvent uses _keyStorage.withPrivateKey (reads PRIMARY
-// key slot) but builds the event with _currentKeyContainer.publicKeyHex (which
-// came from getIdentityKeyContainer on account switch). After importing a
-// second account, PRIMARY has nsec_B while _currentKeyContainer has pubkey_A.
-
-import 'dart:async';
+// ABOUTME: Regression coverage for #2233 signing after account switching.
+// ABOUTME: Real channel-backed PRIMARY restoration must match account A's signer.
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,324 +11,169 @@ import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/signer_factory.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
-
-class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
+import 'support/auth_service_test_harness.dart';
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
 
-class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
+class _MockRelayDiscoveryService extends Mock
+    implements RelayDiscoveryService {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
 
-// Two known test keypairs
 const _nsecA =
     'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 const _nsecB =
     'nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl';
 
-/// Runs [body] while silencing unhandled async errors from _performDiscovery.
-Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
-  final completer = Completer<T>();
-  await runZonedGuarded(
-    () async {
-      try {
-        final result = await body();
-        completer.complete(result);
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    },
-    (error, stack) {
-      // Silently absorb async errors from unawaited _performDiscovery
-    },
+RelayDiscoveryService _networkFreeDiscovery() {
+  final discovery = _MockRelayDiscoveryService();
+  when(() => discovery.discoverRelays(any())).thenAnswer(
+    (_) async => RelayDiscoveryResult.failure('No network in signing tests'),
   );
-  return completer.future;
+  when(() => discovery.clearCache(any())).thenAnswer((_) async {});
+  return discovery;
 }
 
 void main() {
   setupTestEnvironment();
 
-  late _MockSecureKeyStorage mockKeyStorage;
-  late _MockUserDataCleanupService mockCleanupService;
-  late _MockFlutterSecureStorage mockSecureStorage;
+  late SecureKeyStorage keyStorage;
+  late AuthServiceChannelMocks nativeChannels;
   late AuthService authService;
   late SecureKeyContainer containerA;
   late SecureKeyContainer containerB;
 
   setUpAll(() {
-    registerFallbackValue(SecureKeyContainer.fromNsec(_nsecA));
     registerFallbackValue(Event('0' * 64, 0, const [], ''));
   });
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({kKnownAccountsKey: '[]'});
-    mockKeyStorage = _MockSecureKeyStorage();
-    mockCleanupService = _MockUserDataCleanupService();
-    mockSecureStorage = _MockFlutterSecureStorage();
+    nativeChannels = AuthServiceChannelMocks.install();
+    keyStorage = SecureKeyStorage(securityConfig: SecurityConfig.desktop);
+    await keyStorage.initialize();
     containerA = SecureKeyContainer.fromNsec(_nsecA);
     containerB = SecureKeyContainer.fromNsec(_nsecB);
-
-    // Default stubs
-    when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
-    when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
-    when(() => mockKeyStorage.clearCache()).thenReturn(null);
-    when(() => mockKeyStorage.dispose()).thenReturn(null);
-    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.deleteIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-    ).thenAnswer((_) async {});
-    when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
-    when(
-      () => mockKeyStorage.switchToIdentity(
-        any(),
-      ),
-    ).thenAnswer((_) async => true);
-
-    when(
-      () => mockCleanupService.shouldClearDataForUser(any()),
-    ).thenReturn(false);
-    when(
-      () => mockCleanupService.clearUserSpecificData(
-        reason: any(named: 'reason'),
-        isIdentityChange: any(named: 'isIdentityChange'),
-        userPubkey: any(named: 'userPubkey'),
-        deleteUserData: any(named: 'deleteUserData'),
-      ),
-    ).thenAnswer((_) async => 0);
-    when(
-      () => mockCleanupService.claimLegacyRows(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
-    ).thenAnswer((_) async {});
-
-    when(
-      () => mockSecureStorage.read(key: any(named: 'key')),
-    ).thenAnswer((_) async => null);
-    when(
-      () => mockSecureStorage.write(
-        key: any(named: 'key'),
-        value: any(named: 'value'),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockSecureStorage.delete(key: any(named: 'key')),
-    ).thenAnswer((_) async {});
-
+    // Archive A independently from PRIMARY so the restore must actually write
+    // the selected account's keys and prove the write through native readback.
+    await keyStorage.storeIdentityKeyContainer(containerA.npub, containerA);
+    final cleanup = _MockUserDataCleanupService();
+    stubUserDataCleanupSuccess(cleanup);
     authService = AuthService(
       backgroundActivityManager: BackgroundActivityManager(),
-      userDataCleanupService: mockCleanupService,
-      keyStorage: mockKeyStorage,
-      flutterSecureStorage: mockSecureStorage,
+      userDataCleanupService: cleanup,
+      keyStorage: keyStorage,
+      flutterSecureStorage: const FlutterSecureStorage(),
+      relayDiscoveryService: _networkFreeDiscovery(),
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
     );
   });
 
   tearDown(() async {
     await authService.dispose();
+    containerA.dispose();
+    containerB.dispose();
+    AuthServiceChannelMocks.remove();
   });
 
+  Future<void> restoreAccountA() async {
+    await authService.signInForAccount(
+      containerA.publicKeyHex,
+      AuthenticationSource.automatic,
+    );
+    expect(authService.isAuthenticated, isTrue);
+    expect(authService.currentPublicKeyHex, containerA.publicKeyHex);
+    expect(authService.committedAccountActivationReceipt!.isCurrent, isTrue);
+    // clearCache makes this a read from the channel's actual backing map.
+    keyStorage.clearCache();
+    expect(
+      (await keyStorage.getKeyContainer())!.publicKeyHex,
+      containerA.publicKeyHex,
+    );
+    expect(nativeChannels.secureStorage['nostr_primary_key'], isNotNull);
+  }
+
+  void expectSignedByAccountA(Event? event, {String? reason}) {
+    expect(event, isNotNull, reason: reason);
+    expect(event!.pubkey, containerA.publicKeyHex);
+    expect(event.isSigned, isTrue);
+    expect(event.isValid, isTrue);
+  }
+
   group('Bug #2233: signing after account switch', () {
-    test('createAndSignEvent fails when PRIMARY key slot has different nsec '
-        'than _currentKeyContainer', () async {
-      // ── Setup: simulate the state AFTER the corruption ──
-      //
-      // 1. signInForAccount(pubkeyA, automatic) loaded identity[npubA]
-      //    into _currentKeyContainer (has pubkey_A).
-      // 2. PRIMARY key slot still has nsec_B from a previous import.
-      //
-      // We mock getIdentityKeyContainer to return containerA (pubkey_A)
-      // and withPrivateKey to return nsec_B (simulating corrupted PRIMARY).
-
-      final npubA = containerA.npub;
-
-      // getIdentityKeyContainer returns A's container
-      when(
-        () => mockKeyStorage.getIdentityKeyContainer(
-          npubA,
-        ),
-      ).thenAnswer((_) async => containerA);
-
-      // Track which private key the PRIMARY slot holds.
-      // Starts with nsec_B (simulating corrupted state from previous import).
-      String? privateKeyBHex;
-      containerB.withPrivateKey<void>((pk) => privateKeyBHex = pk);
-      String? privateKeyAHex;
-      containerA.withPrivateKey<void>((pk) => privateKeyAHex = pk);
-      var primaryPrivateKey = privateKeyBHex!;
-
-      // switchToIdentity syncs PRIMARY — the fix calls this before signing
-      when(
-        () => mockKeyStorage.switchToIdentity(
-          any(),
-        ),
-      ).thenAnswer((_) async {
-        primaryPrivateKey = privateKeyAHex!;
-        return true;
-      });
-
-      when(
-        () => mockKeyStorage.withPrivateKey<Event?>(
-          any(),
-        ),
-      ).thenAnswer((invocation) async {
-        final operation =
-            invocation.positionalArguments[0] as Event? Function(String);
-        // Returns whatever PRIMARY currently holds
-        return operation(primaryPrivateKey);
-      });
-
-      // Sign in as account A
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          containerA.publicKeyHex,
-          AuthenticationSource.automatic,
-        ),
-      );
-
-      expect(authService.isAuthenticated, isTrue);
-      expect(authService.currentPublicKeyHex, equals(containerA.publicKeyHex));
-
-      // ── Act: try to sign an event ──
-      final signedEvent = await authService.createAndSignEvent(
-        kind: 1,
-        content: 'test after account switch',
-      );
-
-      // ── Assert: signing should succeed (fails with bug #2233) ──
-      expect(
-        signedEvent,
-        isNotNull,
-        reason:
-            'BUG #2233: createAndSignEvent returns null because '
-            '_keyStorage.withPrivateKey reads nsec_B from PRIMARY but '
-            'the event was created with pubkey_A from '
-            '_currentKeyContainer.',
-      );
-    });
-
-    test('createAndSignEvent succeeds when PRIMARY key slot matches '
-        '_currentKeyContainer', () async {
-      // Control case: when PRIMARY has the correct nsec, signing works.
-
-      final npubA = containerA.npub;
-
-      when(
-        () => mockKeyStorage.getIdentityKeyContainer(
-          npubA,
-        ),
-      ).thenAnswer((_) async => containerA);
-
-      // withPrivateKey returns nsec_A (correct key)
-      String? privateKeyAHex;
-      containerA.withPrivateKey<void>((pk) => privateKeyAHex = pk);
-
-      when(
-        () => mockKeyStorage.withPrivateKey<Event?>(
-          any(),
-        ),
-      ).thenAnswer((invocation) async {
-        final operation =
-            invocation.positionalArguments[0] as Event? Function(String);
-        return operation(privateKeyAHex!);
-      });
-
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          containerA.publicKeyHex,
-          AuthenticationSource.automatic,
-        ),
-      );
-
-      final signedEvent = await authService.createAndSignEvent(
-        kind: 1,
-        content: 'test with matching keys',
-      );
-
-      expect(signedEvent, isNotNull);
-      expect(signedEvent!.pubkey, equals(containerA.publicKeyHex));
-    });
-
     test(
-      'createAndSignEvent fails when PRIMARY key slot was wiped by deleteKeys '
-      '(log 2: signer returned null)',
+      'createAndSignEvent succeeds after restoring account A over PRIMARY B',
       () async {
-        // ── Setup: simulate the state AFTER destructive sign-out ──
-        //
-        // 1. User had auto identity A, then created auto identity B.
-        // 2. User deleted account B (deleteKeys: true) — PRIMARY slot wiped.
-        // 3. User switches back to A via signInForAccount.
-        // 4. _currentKeyContainer has pubkey_A from identity storage.
-        // 5. PRIMARY slot is empty — withPrivateKey returns null.
-
-        final npubA = containerA.npub;
-        String? privateKeyAHex;
-        containerA.withPrivateKey<void>((pk) => privateKeyAHex = pk);
-
-        when(
-          () => mockKeyStorage.getIdentityKeyContainer(
-            npubA,
-          ),
-        ).thenAnswer((_) async => containerA);
-
-        // PRIMARY slot is empty (wiped by deleteKeys)
-        var primaryRestored = false;
-
-        when(
-          () => mockKeyStorage.switchToIdentity(
-            any(),
-          ),
-        ).thenAnswer((_) async {
-          primaryRestored = true;
-          return true;
-        });
-
-        when(
-          () => mockKeyStorage.withPrivateKey<Event?>(
-            any(),
-          ),
-        ).thenAnswer((invocation) async {
-          if (!primaryRestored) {
-            // PRIMARY is empty — this is the bug
-            return null;
-          }
-          final operation =
-              invocation.positionalArguments[0] as Event? Function(String);
-          return operation(privateKeyAHex!);
-        });
-
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            containerA.publicKeyHex,
-            AuthenticationSource.automatic,
-          ),
+        await keyStorage.importFromNsec(_nsecB);
+        expect(
+          (await keyStorage.getKeyContainer())!.publicKeyHex,
+          containerB.publicKeyHex,
         );
+        await restoreAccountA();
 
         final signedEvent = await authService.createAndSignEvent(
           kind: 1,
-          content: 'test after delete + switch back',
+          content: 'test after account switch',
         );
-
-        expect(
+        expectSignedByAccountA(
           signedEvent,
-          isNotNull,
           reason:
-              'BUG #2233 (log 2): createAndSignEvent returns null because '
-              'PRIMARY key slot was wiped by deleteKeys and '
-              'signInForAccount did not restore it.',
+              'BUG #2233: restoring A must replace PRIMARY B before signing.',
         );
-        expect(signedEvent!.pubkey, equals(containerA.publicKeyHex));
+        final archivedB = await keyStorage.getIdentityKeyContainer(
+          containerB.npub,
+        );
+        expect(archivedB!.publicKeyHex, containerB.publicKeyHex);
+        archivedB.dispose();
       },
     );
+
+    test(
+      'createAndSignEvent succeeds when PRIMARY already matches account A',
+      () async {
+        await keyStorage.importFromNsec(_nsecA);
+        expect(
+          (await keyStorage.getKeyContainer())!.publicKeyHex,
+          containerA.publicKeyHex,
+        );
+        await restoreAccountA();
+
+        final signedEvent = await authService.createAndSignEvent(
+          kind: 1,
+          content: 'test with matching keys',
+        );
+        expectSignedByAccountA(signedEvent);
+      },
+    );
+
+    test('createAndSignEvent succeeds after restoring account A into empty '
+        'PRIMARY after deleting account B keys', () async {
+      await keyStorage.importFromNsec(_nsecB);
+      await keyStorage.deleteKeys();
+      expect(await keyStorage.hasKeysStrict(), isFalse);
+      expect(await keyStorage.getKeyContainer(), isNull);
+      final archivedA = await keyStorage.getIdentityKeyContainer(
+        containerA.npub,
+      );
+      expect(archivedA!.publicKeyHex, containerA.publicKeyHex);
+      archivedA.dispose();
+      await restoreAccountA();
+
+      final signedEvent = await authService.createAndSignEvent(
+        kind: 1,
+        content: 'test after delete + switch back',
+      );
+      expectSignedByAccountA(
+        signedEvent,
+        reason: 'BUG #2233: restoring A must repopulate an empty PRIMARY slot.',
+      );
+    });
   });
 
   group('#5450: pubkey-mismatch guard', () {
@@ -343,32 +181,7 @@ void main() {
       'createAndSignEvent rejects a signer that returns a validly-signed '
       'event bound to a different account',
       () async {
-        final npubA = containerA.npub;
-
-        when(
-          () => mockKeyStorage.getIdentityKeyContainer(
-            npubA,
-          ),
-        ).thenAnswer((_) async => containerA);
-
-        String? privateKeyAHex;
-        containerA.withPrivateKey<void>((pk) => privateKeyAHex = pk);
-        when(
-          () => mockKeyStorage.withPrivateKey<Event?>(
-            any(),
-          ),
-        ).thenAnswer((invocation) async {
-          final operation =
-              invocation.positionalArguments[0] as Event? Function(String);
-          return operation(privateKeyAHex!);
-        });
-
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            containerA.publicKeyHex,
-            AuthenticationSource.automatic,
-          ),
-        );
+        await restoreAccountA();
         expect(authService.isAuthenticated, isTrue);
 
         // A self-consistent event for account B: id == hash and the signature
@@ -404,6 +217,7 @@ void main() {
           content: 'legitimate content',
         );
 
+        verify(() => mockRpc.signEvent(any())).called(1);
         expect(
           signedEvent,
           isNull,

@@ -5,4 +5,3 @@
 # CI vs origin/main). The runtime heal-and-blame tearDown is the primary guard;
 # this ratchet just stops new raw installs from accruing. Migrate an entry by
 # routing it through overrideSharedChannel(...), then shrink this baseline.
-test/services/auth_service_signout_cleanup_test.dart
