@@ -176,6 +176,66 @@ NostrClient _clientOver(
 
 Filter _textNotes() => Filter(kinds: const [EventKind.textNote]);
 
+/// The pooled relay [_saturatedPool] fills every query slot against.
+const _pooledRelayUrl = 'wss://pool.example';
+
+/// A client whose one pooled relay holds every query slot with a read it never
+/// answers, plus a [_ScriptedRelay] for each temp relay a read dials.
+///
+/// The occupying reads end on their own deadline, [holdFor], so a test must
+/// await `occupants` before it ends.
+Future<
+  ({
+    NostrClient client,
+    Nostr nostr,
+    _ScriptedRelay pooled,
+    Map<String, _ScriptedRelay> tempRelays,
+    Future<void> occupants,
+  })
+>
+_saturatedPool({required Duration holdFor}) async {
+  final tempRelays = <String, _ScriptedRelay>{};
+  final nostr = Nostr(
+    LocalNostrSigner(_secretKey),
+    [],
+    (url) => tempRelays.putIfAbsent(url, () => _ScriptedRelay(url)),
+  );
+  final pooled = _ScriptedRelay(_pooledRelayUrl);
+  expect(await nostr.relayPool.add(pooled), isTrue);
+  final relayManager = _MockRelayManager();
+  when(() => relayManager.connectedRelays).thenReturn([_pooledRelayUrl]);
+  when(() => relayManager.configuredRelays).thenReturn([_pooledRelayUrl]);
+  when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+  when(() => relayManager.diagnosticsSink).thenReturn(null);
+  when(relayManager.dispose).thenAnswer((_) async {});
+  final client = NostrClient.forTesting(
+    nostr: nostr,
+    relayManager: relayManager,
+  );
+  addTearDown(client.dispose);
+  final occupants = Future.wait([
+    for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+      client.readEvents([_textNotes()], useCache: false, timeout: holdFor),
+  ]);
+  await pooled.awaitReq(NostrClient.maxConcurrentQueries - 1);
+  return (
+    client: client,
+    nostr: nostr,
+    pooled: pooled,
+    tempRelays: tempRelays,
+    occupants: occupants,
+  );
+}
+
+/// The temp relay the pool dialled for [url], whatever trailing slash the
+/// pool's address handling gave it.
+_ScriptedRelay? _tempRelayFor(Map<String, _ScriptedRelay> relays, String url) {
+  for (final entry in relays.entries) {
+    if (entry.key.startsWith(url)) return entry.value;
+  }
+  return null;
+}
+
 /// The `queryCompletion` entries in [lines], whoever filed them. The relay
 /// pool also reports connection and dispatch activity into the same sink.
 List<RelayDiagnostic> _completionLines(List<RelayDiagnostic> lines) => [
@@ -1295,6 +1355,136 @@ void main() {
           isEmpty,
           reason: 'a walk with no budget left must not open a page',
         );
+      },
+    );
+  });
+
+  // The query pool throttles REQs to the relays it holds. A read that asks
+  // none of them has nothing to throttle, and queueing it behind feed reads
+  // only starved it: a recipient-inbox lookup right after a publish was
+  // skipped for want of a slot and held the invite (#10004).
+  group('NostrClient query pool', () {
+    const indexerUrl = 'wss://indexer.example';
+    // The recipient-inbox lookup's own shape: a 2s indexer leg, which leaves
+    // 1s to win a slot. The occupants outlast that window.
+    const lookupTimeout = Duration(seconds: 2);
+    const holdFor = Duration(milliseconds: 1500);
+    Filter inboxList() => Filter(kinds: const [EventKind.dmRelaysList]);
+
+    test(
+      'a temp-only read over relays outside the pool does not wait for a '
+      'query slot',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor);
+        final pubkey = await setup.nostr.ensurePublicKey();
+        final inbox = (await setup.nostr.nostrSigner.signEvent(
+          Event(pubkey, EventKind.dmRelaysList, const [
+            ['relay', 'wss://inbox.example'],
+          ], ''),
+        ))!;
+        var occupantsDone = false;
+        unawaited(setup.occupants.then((_) => occupantsDone = true));
+
+        final read = setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+        await pumpEventQueue();
+        final indexer = _tempRelayFor(setup.tempRelays, indexerUrl);
+        expect(
+          indexer,
+          isNotNull,
+          reason: 'the read must dial the indexer while every slot is held',
+        );
+        final subId = await indexer!.awaitReq(0);
+        expect(occupantsDone, isFalse, reason: 'the pool is still saturated');
+        await indexer.deliver(['EVENT', subId, inbox.toJson()]);
+        await indexer.deliver(['EOSE', subId]);
+
+        final result = await read;
+
+        expect(result.timedOut, isFalse);
+        expect(result.events.map((event) => event.id), [inbox.id]);
+        expect(
+          setup.pooled.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+          reason: 'the pooled relay was asked nothing beyond the occupants',
+        );
+        await setup.occupants;
+      },
+    );
+
+    test('a temp read naming a pool member still waits for a slot', () async {
+      final setup = await _saturatedPool(holdFor: holdFor);
+
+      final result = await setup.client.queryEventsDetailed(
+        [inboxList()],
+        useCache: false,
+        // A trailing slash must not make a pool member look like an outsider.
+        tempRelays: const ['$_pooledRelayUrl/'],
+        relayTypes: const [RelayType.temp],
+        requireAllRelaysSettled: true,
+        timeout: lookupTimeout,
+      );
+
+      expect(result.timedOut, isTrue);
+      expect(
+        setup.pooled.reqSubIds,
+        hasLength(NostrClient.maxConcurrentQueries),
+        reason: 'no slot arrived, so the pooled relay must not be asked',
+      );
+      await setup.occupants;
+    });
+
+    test(
+      'a temp read naming a pool member beside an outsider still waits',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor);
+
+        final result = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl, _pooledRelayUrl],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        expect(result.timedOut, isTrue);
+        expect(_tempRelayFor(setup.tempRelays, indexerUrl), isNull);
+        expect(
+          setup.pooled.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+        );
+        await setup.occupants;
+      },
+    );
+
+    test(
+      'a read that also asks the pooled relays still waits, whatever temp '
+      'relays it names',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor);
+
+        final result = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        expect(result.timedOut, isTrue);
+        expect(_tempRelayFor(setup.tempRelays, indexerUrl), isNull);
+        expect(
+          setup.pooled.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+        );
+        await setup.occupants;
       },
     );
   });

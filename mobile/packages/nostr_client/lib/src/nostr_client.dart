@@ -1294,7 +1294,9 @@ class NostrClient {
       timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
-        network = useQueryPool
+        network =
+            useQueryPool &&
+                !_asksOnlyRelaysOutsidePool(effectiveTempRelays, relayTypes)
             ? await runPooledWebSocketQuery()
             : await runWebSocketQuery().timeout(overrunBackstop());
       } on _QueryPoolWaitExpired {
@@ -1944,6 +1946,37 @@ class NostrClient {
     if (tempRelays == null || tempRelays.isEmpty) return false;
     final pooled = _relayManager.configuredRelays.toSet();
     return tempRelays.any(
+      (url) => !pooled.contains(normalizeRelayUrl(url) ?? url),
+    );
+  }
+
+  /// Whether a read over [tempRelays] and [relayTypes] asks no relay the pool
+  /// owns: it asks temp relays alone, and none of them is a pool member.
+  ///
+  /// Such a read skips the query pool. The pool exists to keep a burst of
+  /// one-shot REQs from tripping a pooled relay's concurrent-REQ limit, and
+  /// this read sends those relays nothing, so queueing it behind feed reads
+  /// only starves it. A recipient-inbox lookup's 2s indexer leg got 1s to win
+  /// a slot right after a publish, was skipped, and held the collaborator
+  /// invite pending (#10004). A temp relay that IS a pool member resolves to
+  /// the pooled socket (see [_hasRelayOutsidePool]), so naming one keeps the
+  /// whole read in the pool.
+  ///
+  /// The only reads this frees today are DmRepository's per-recipient inbox
+  /// legs, each a single REQ to at most a handful of relays. A caller that
+  /// fans many temp-only reads out to the same outside relay gets no throttle
+  /// from here and must bound its own concurrency.
+  bool _asksOnlyRelaysOutsidePool(
+    List<String>? tempRelays,
+    List<int> relayTypes,
+  ) {
+    if (tempRelays == null || tempRelays.isEmpty) return false;
+    if (relayTypes.isEmpty ||
+        relayTypes.any((type) => type != RelayType.temp)) {
+      return false;
+    }
+    final pooled = _relayManager.configuredRelays.toSet();
+    return tempRelays.every(
       (url) => !pooled.contains(normalizeRelayUrl(url) ?? url),
     );
   }
