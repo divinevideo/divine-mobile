@@ -5,6 +5,8 @@
 import 'dart:ui' show SemanticsFlags, Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -14,6 +16,7 @@ import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
@@ -1113,6 +1116,48 @@ void main() {
         expect(
           flagsOf(tester, personRow('Alice')).isSelected,
           Tristate.isFalse,
+        );
+      });
+
+      testWidgets('withdraws group mode when a DM restriction resolves while '
+          'the sheet is open', (tester) async {
+        final isRestricted = StateProvider<bool>((ref) => false);
+        final outcome = await openSheet(
+          tester,
+          allowGroups: true,
+          contacts: [
+            candidate(alicePubkey, 'Alice'),
+            candidate(bobPubkey, 'Bob'),
+          ],
+          extraOverrides: [
+            isDmRestrictedProvider.overrideWith(
+              (ref) => ref.watch(isRestricted),
+            ),
+          ],
+        );
+        await enterGroupMode(tester);
+        await tapPerson(tester, 'Alice');
+        expect(chipFor('Alice'), findsOneWidget);
+        expect(startButton(), findsOneWidget);
+
+        ProviderScope.containerOf(
+          tester.element(find.byType(NewMessageSheet)),
+        ).read(isRestricted.notifier).state = true;
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.newMessageTitle), findsOneWidget);
+        expect(newGroupRow(), findsNothing);
+        expect(startButton(), findsNothing);
+        expect(chipFor('Alice'), findsNothing);
+        expect(find.byType(DivineSpriteCheckbox), findsNothing);
+
+        await tester.tap(personRow('Bob'));
+        await tester.pumpAndSettle();
+
+        expect(outcome.didClose, isTrue);
+        expect(
+          outcome.selected?.map((profile) => profile.pubkey),
+          equals([bobPubkey]),
         );
       });
     });

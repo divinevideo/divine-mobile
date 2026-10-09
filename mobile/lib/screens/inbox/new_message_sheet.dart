@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -48,6 +49,9 @@ class NewMessageSheet extends ConsumerWidget {
 
   /// Whether the sheet offers the "New group" row, and with it the mode that
   /// picks several people. Without it the first tap picks one person.
+  ///
+  /// A protected-minor restriction withdraws it even after the sheet opened:
+  /// the verdict can resolve while the sheet is up.
   final bool allowGroups;
 
   /// Shows the sheet and returns who the new conversation is with: one
@@ -86,7 +90,9 @@ class NewMessageSheet extends ConsumerWidget {
         ),
       )..add(const NewMessageSearchStarted()),
       child: _PeerLabelSync(
-        child: _NewMessageSheetView(allowGroups: allowGroups),
+        child: _NewMessageSheetView(
+          allowGroups: allowGroups && !ref.watch(isDmRestrictedProvider),
+        ),
       ),
     );
   }
@@ -132,6 +138,18 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
   final _searchController = TextEditingController();
 
   @override
+  void didUpdateWidget(covariant _NewMessageSheetView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Groups were withdrawn while the sheet was open, so a group being picked
+    // must not survive it.
+    if (oldWidget.allowGroups && !widget.allowGroups) {
+      context.read<NewMessageSearchBloc>().add(
+        const NewMessageSearchGroupModeChanged(enabled: false),
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -151,9 +169,12 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final isGroupMode = context.select(
+    final isInGroupMode = context.select(
       (NewMessageSearchBloc bloc) => bloc.state.isGroupMode,
     );
+    // Withdrawn groups take the start button with them at once; the bloc
+    // leaves the mode itself once it handles the event didUpdateWidget sent.
+    final isGroupMode = widget.allowGroups && isInGroupMode;
 
     return Material(
       color: context.vineColors.surface,
