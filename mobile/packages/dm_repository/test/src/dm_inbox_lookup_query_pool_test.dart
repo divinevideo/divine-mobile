@@ -1,8 +1,6 @@
 // ABOUTME: Recipient kind-10050 lookup against a real NostrClient query pool.
 // ABOUTME: A saturated pool must not starve the indexer leg (#10004).
 
-import 'dart:async';
-
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
