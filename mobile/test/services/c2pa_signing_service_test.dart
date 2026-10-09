@@ -728,6 +728,86 @@ void main() {
         expect(configs, hasLength(2));
       });
 
+      test('signs videos with a generated history as a plain composite, '
+          'not as captures', () async {
+        final output = writeFile('merged.mp4', const [1]);
+        final take = writeFile('take.mp4', const [2]);
+        final generated = writeFile('generated.mp4', const [3]);
+        when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.single == generated.path
+              ? ManifestStoreInfo(
+                  activeManifest: 'urn:c2pa:generated',
+                  manifests: {
+                    'urn:c2pa:generated': ManifestInfo(
+                      label: 'urn:c2pa:generated',
+                      assertions: [
+                        AssertionInfo(
+                          label: 'c2pa.actions.v2',
+                          data: {
+                            'actions': [
+                              {
+                                'action': 'c2pa.created',
+                                'digitalSourceType': DigitalSourceType
+                                    .trainedAlgorithmicMedia
+                                    .url,
+                              },
+                            ],
+                          },
+                        ),
+                      ],
+                    ),
+                  },
+                )
+              : const ManifestStoreInfo(activeManifest: 'urn:c2pa:x'),
+        );
+        final builder = stubBuilder(signedBytes: const [7, 7, 7]);
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [
+            C2paEditSource(path: take.path),
+            C2paEditSource(path: generated.path),
+          ],
+        );
+
+        expect(result.success, isTrue);
+        verify(
+          () => builder.setIntent(
+            ManifestIntent.create,
+            DigitalSourceType.composite,
+          ),
+        ).called(1);
+      });
+
+      test('signs nothing when a source video failed validation', () async {
+        final output = writeFile('edited.mp4', const [1, 2]);
+        final source = writeFile('altered.mp4', const [3]);
+        when(() => mockC2pa.readManifestFromFile(any())).thenAnswer(
+          (_) async => const ManifestStoreInfo(
+            activeManifest: 'urn:c2pa:x',
+            validationErrors: [
+              ValidationError(
+                code: 'assertion.bmffHash.mismatch',
+                message: 'the video no longer matches its hash',
+              ),
+            ],
+          ),
+        );
+
+        final result = await service.signEditInPlace(
+          outputPath: output.path,
+          sources: [C2paEditSource(path: source.path)],
+        );
+
+        expect(
+          result.failureReason,
+          C2paSigningFailureReason.sourceUnattested,
+        );
+        verifyNever(() => mockC2pa.createBuilder(any()));
+        expect(output.readAsBytesSync(), equals([1, 2]));
+      });
+
       test('signs nothing when a source video carries no manifest', () async {
         final output = writeFile('edited.mp4', const [1, 2]);
         final source = writeFile('unsigned.mp4', const [3]);

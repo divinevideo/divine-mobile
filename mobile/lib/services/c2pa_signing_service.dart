@@ -388,14 +388,18 @@ class C2paSigningService {
   /// capture. Made from one video, it is an edit of that video: the source is
   /// its `parentOf` ingredient, [actions] record what was done, and C2PA adds
   /// a `c2pa.opened` action for the source. Made from several videos, it is a
-  /// composite of captures: it is `c2pa.created` with the `compositeCapture`
-  /// source type and every video is a `componentOf` ingredient. Either way,
-  /// each video's own manifest is embedded with it, so a verifier can follow
-  /// the history back to the recordings.
+  /// composite: it is `c2pa.created` and every video is a `componentOf`
+  /// ingredient. Its source type is `compositeCapture` when every history it
+  /// embeds names nothing but captures, and the plain `composite` otherwise,
+  /// so footage another tool generated is never relabelled as captured.
+  /// Either way, each video's own manifest is embedded with it, so a verifier
+  /// can follow the history back to the recordings.
   ///
-  /// Every video source must carry a manifest; when one does not, nothing is
-  /// signed and the result is [C2paSigningFailureReason.sourceUnattested], so
-  /// no history is fabricated. Images and sounds are added as `componentOf`
+  /// Every video source must carry a manifest that validates, apart from its
+  /// signer not being among this app's (empty) trust anchors; when one does
+  /// not, nothing is signed and the result is
+  /// [C2paSigningFailureReason.sourceUnattested], so no history is
+  /// fabricated. Images and sounds are added as `componentOf`
   /// ingredients, with their own manifest when they have one and as a plain
   /// declaration when they do not.
   ///
@@ -448,28 +452,31 @@ class C2paSigningService {
       final videos = <C2paEditSource>[];
       final attested = <C2paEditSource>[];
       final declared = <Ingredient>[];
+      var onlyCaptures = true;
       for (final source in sources) {
         // A sound streamed from the library is declared by its URL; only a
         // local file can carry a manifest.
-        final hasManifest =
-            File(source.path).existsSync() &&
-            (await readManifest(source.path))?.activeManifest != null;
+        final manifest = File(source.path).existsSync()
+            ? await readManifest(source.path)
+            : null;
+        final hasManifest = manifest?.activeManifest != null;
         if (source.kind == C2paSourceKind.video) {
-          if (!hasManifest) {
+          final rejection = _describeUnusableManifest(manifest);
+          if (rejection != null) {
             Log.info(
-              'Not signing "$outputPath": source "${source.path}" has no '
-              'manifest to carry forward',
+              'Not signing "$outputPath": source "${source.path}" $rejection',
               name: 'C2paSigningService',
               category: LogCategory.video,
             );
             return C2paSigningResult(
               signedFilePath: outputPath,
               success: false,
-              error: 'A source video has no manifest to carry forward',
+              error: 'A source video $rejection',
               failureReason: C2paSigningFailureReason.sourceUnattested,
             );
           }
           videos.add(source);
+          onlyCaptures = onlyCaptures && _namesOnlyCaptures(manifest!);
         } else if (hasManifest) {
           attested.add(source);
         } else {
@@ -510,7 +517,9 @@ class C2paSigningService {
         } else {
           builder.setIntent(
             ManifestIntent.create,
-            DigitalSourceType.compositeCapture,
+            onlyCaptures
+                ? DigitalSourceType.compositeCapture
+                : DigitalSourceType.composite,
           );
         }
         for (final video in videos) {
@@ -616,6 +625,30 @@ class C2paSigningService {
         failureReason: failureReason,
       );
     }
+  }
+
+  /// Whether every action in [store] that names a source type names a camera
+  /// capture or a composite of captures.
+  static bool _namesOnlyCaptures(ManifestStoreInfo store) {
+    for (final manifest in store.manifests.values) {
+      for (final assertion in manifest.assertions) {
+        if (!assertion.label.startsWith('c2pa.actions')) continue;
+        final actions = assertion.data['actions'];
+        if (actions is! List) continue;
+        for (final action in actions.whereType<Map<dynamic, dynamic>>()) {
+          final type = action['digitalSourceType'];
+          if (type == null) continue;
+          final sourceType = type is String
+              ? DigitalSourceType.fromUrl(type)
+              : null;
+          if (sourceType != DigitalSourceType.digitalCapture &&
+              sourceType != DigitalSourceType.compositeCapture) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   /// The file name of [path], or of the URL path when [path] is a URL.
