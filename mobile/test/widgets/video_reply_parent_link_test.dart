@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the reply parent link shown on a reply video.
 // ABOUTME: Covers opening the parent route and logging a rejected push.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/video_reply_parent_provider.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -35,6 +38,35 @@ void main() {
       ['K', '34236'],
     ],
   );
+
+  Future<void> pumpLink(WidgetTester tester, MockGoRouter router) async {
+    await tester.pumpWidget(
+      MockGoRouterProvider(
+        goRouter: router,
+        child: ProviderScope(
+          overrides: [
+            videoReplyParentProvider.overrideWith((ref, routeId) async => null),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoReplyParentLink(
+                video: reply,
+                variant: VideoReplyParentLinkVariant.metadata,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  bool isPageOpen(WidgetTester tester) => ProviderScope.containerOf(
+    tester.element(find.byType(VideoReplyParentLink)),
+    listen: false,
+  ).read(overlayVisibilityProvider).isPageOpen;
 
   group(VideoReplyParentLink, () {
     group('navigation', () {
@@ -97,6 +129,27 @@ void main() {
         expect(find.text('Opened $parentId'), findsOneWidget);
       });
 
+      testWidgets('keeps the feed paused until the parent route closes', (
+        tester,
+      ) async {
+        final routeClosed = Completer<void>();
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any()),
+        ).thenAnswer((_) => routeClosed.future);
+
+        await pumpLink(tester, router);
+        expect(isPageOpen(tester), isFalse);
+
+        await tester.tap(find.text(fallbackLabel));
+        await tester.pump();
+        expect(isPageOpen(tester), isTrue);
+
+        routeClosed.complete();
+        await tester.pump();
+        expect(isPageOpen(tester), isFalse);
+      });
+
       testWidgets('logs a rejected parent route push instead of leaking it', (
         tester,
       ) async {
@@ -108,36 +161,14 @@ void main() {
           () => router.push<void>(any()),
         ).thenAnswer((_) => Future<void>.error(StateError('route failed')));
 
-        await tester.pumpWidget(
-          MockGoRouterProvider(
-            goRouter: router,
-            child: ProviderScope(
-              overrides: [
-                videoReplyParentProvider.overrideWith(
-                  (ref, routeId) async => null,
-                ),
-              ],
-              child: MaterialApp(
-                localizationsDelegates: appLocalizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(
-                  body: VideoReplyParentLink(
-                    video: reply,
-                    variant: VideoReplyParentLinkVariant.metadata,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
+        await pumpLink(tester, router);
         await tester.tap(find.text(fallbackLabel));
         await tester.pump();
 
         verify(() => router.push<void>(VideoDetailScreen.pathForId(parentId)))
             .called(1);
         expect(tester.takeException(), isNull);
+        expect(isPageOpen(tester), isFalse);
         final failures = logCapture
             .getRecentLogs()
             .where((entry) => entry.name == 'VideoReplyParentLink')
