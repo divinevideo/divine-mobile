@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
@@ -10,12 +13,149 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
+import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../helpers/scroll.dart';
 import '../helpers/url_launcher_test_double.dart';
 
+class _MockMinorReviewAuthService extends Mock implements AuthService {}
+
 void main() {
+  group('MinorAccountReviewScreen incomplete logout feedback', () {
+    late _MockMinorReviewAuthService authService;
+
+    setUp(() {
+      authService = _MockMinorReviewAuthService();
+    });
+
+    Future<AppLocalizations> pumpLogoutReview(
+      WidgetTester tester, {
+      Widget home = const MinorAccountReviewScreen(),
+    }) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(authService),
+            currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+              return const MinorAccountReviewStatus(
+                restrictionStatus:
+                    AccountRestrictionStatus.restrictedMinorReview,
+                currentCase: MinorReviewCase(
+                  id: 'logout-review-case',
+                  state: MinorReviewCaseState.submittedForReview,
+                  suspectedAgeBand: SuspectedAgeBand.age13To15,
+                  allowedResolution:
+                      MinorReviewResolutionType.parentVideoOrEmail,
+                  instructions: MinorReviewInstructions(
+                    title: 'Account review required',
+                    body: 'We need parental consent information.',
+                  ),
+                  supportEmail: 'support@divine.video',
+                ),
+              );
+            }),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: home,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MinorAccountReviewScreen)),
+      );
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.minorAccountReviewLogOut),
+        200,
+        scrollable: find.byType(Scrollable),
+      );
+      return l10n;
+    }
+
+    testWidgets('reports refusal and allows another logout attempt', (
+      tester,
+    ) async {
+      when(() => authService.signOut()).thenAnswer(
+        (_) async => throw const UserDataCleanupException('cleanup incomplete'),
+      );
+      final l10n = await pumpLogoutReview(tester);
+      await tester.tap(find.text(l10n.minorAccountReviewLogOut));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(find.byType(MinorAccountReviewScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      verify(() => authService.signOut()).called(1);
+
+      // The floating error still covers the button after its entrance animation.
+      // Let its actual display duration finish before attempting the retry.
+      final snackbar = tester.widget<SnackBar>(find.byType(SnackBar));
+      await tester.pump(snackbar.duration);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.authAccountCleanupFailed), findsNothing);
+      expect(
+        find.text(l10n.minorAccountReviewLogOut).hitTestable(),
+        findsOneWidget,
+      );
+
+      when(() => authService.signOut()).thenAnswer((_) async {});
+      await tester.tap(find.text(l10n.minorAccountReviewLogOut));
+      await tester.pumpAndSettle();
+
+      verify(() => authService.signOut()).called(1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a healthy logout leaves navigation to the auth router', (
+      tester,
+    ) async {
+      when(() => authService.signOut()).thenAnswer((_) async {});
+      final l10n = await pumpLogoutReview(tester);
+      await tester.tap(find.text(l10n.minorAccountReviewLogOut));
+      await tester.pumpAndSettle();
+
+      verify(() => authService.signOut()).called(1);
+      expect(find.text(l10n.authAccountCleanupFailed), findsNothing);
+      expect(find.byType(MinorAccountReviewScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reports refusal after the review screen tears down', (
+      tester,
+    ) async {
+      final screen = ValueNotifier<Widget>(const MinorAccountReviewScreen());
+      addTearDown(screen.dispose);
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+      final l10n = await pumpLogoutReview(
+        tester,
+        home: ValueListenableBuilder<Widget>(
+          valueListenable: screen,
+          builder: (_, child, _) => child,
+        ),
+      );
+      await tester.tap(find.text(l10n.minorAccountReviewLogOut));
+      await tester.pumpAndSettle();
+      screen.value = const Scaffold(body: Text('Welcome host'));
+      await tester.pumpAndSettle();
+      signOut.completeError(
+        const UserDataCleanupException('cleanup incomplete'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MinorAccountReviewScreen), findsNothing);
+      expect(find.text('Welcome host'), findsOneWidget);
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('MinorAccountReviewScreen', () {
     testWidgets('shows the welcome-entry family guidance copy', (tester) async {
       await tester.pumpWidget(

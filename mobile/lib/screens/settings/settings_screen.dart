@@ -208,8 +208,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!proceed || !mounted) return;
 
     final authService = ref.read(authServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final cleanupFailedMessage = context.l10n.authAccountCleanupFailed;
+    final previousPendingTarget = authService.pendingAccountSwitchPubkey;
+    final leavingOwner = authService.currentPublicKeyHex;
+    final leavingIdentity = authService.currentIdentity;
+    final leavingReceipt = authService.committedAccountActivationReceipt;
     authService.pendingAccountSwitchPubkey = account.pubkeyHex;
-    await authService.signOut();
+    try {
+      await authService.signOut();
+    } catch (error, stackTrace) {
+      Log.error(
+        'Account reauthentication could not complete sign-out',
+        name: 'SettingsScreen',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted &&
+          identical(ref.read(authServiceProvider), authService) &&
+          authService.isAuthenticated &&
+          leavingOwner != null &&
+          authService.currentPublicKeyHex == leavingOwner &&
+          identical(authService.currentIdentity, leavingIdentity) &&
+          authService.pendingAccountSwitchPubkey == account.pubkeyHex) {
+        final receipt = authService.committedAccountActivationReceipt;
+        if (receipt == null || identical(receipt, leavingReceipt)) {
+          authService.pendingAccountSwitchPubkey = previousPendingTarget;
+        }
+      }
+      if (!messenger.mounted) return;
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(cleanupFailedMessage, error: true),
+      );
+    }
   }
 
   Future<bool> _parkUploadsBeforeAccountChange(
@@ -342,7 +373,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // switch above does, under the same warning this sheet opened with.
             if (!await _parkUploadsBeforeAccountChange(publishBloc)) return;
             if (!mounted) return;
-            await _accountCubit.addNewAccount();
+            final messenger = ScaffoldMessenger.of(context);
+            final cleanupFailedMessage = context.l10n.authAccountCleanupFailed;
+            try {
+              await _accountCubit.addNewAccount();
+            } catch (error, stackTrace) {
+              Log.error(
+                'Adding an account could not complete sign-out',
+                name: 'SettingsScreen',
+                error: error,
+                stackTrace: stackTrace,
+              );
+              if (!messenger.mounted) return;
+              messenger.showSnackBar(
+                DivineSnackbarContainer.snackBar(
+                  cleanupFailedMessage,
+                  error: true,
+                ),
+              );
+            }
           },
         ),
       ],
