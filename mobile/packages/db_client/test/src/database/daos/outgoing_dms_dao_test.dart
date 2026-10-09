@@ -1207,5 +1207,22 @@ void main() {
         );
       },
     );
+
+    test(
+      'getAllForOwner reads only the owner rows, oldest first',
+      () async {
+        await dao.enqueue(
+          makeDm(id: 'a-late', queuedAt: DateTime.utc(2026, 5, 3)),
+        );
+        await dao.enqueue(
+          makeDm(id: 'a-early', queuedAt: DateTime.utc(2026, 5, 2)),
+        );
+        await dao.enqueue(makeDm(id: 'b-1', owner: ownerB));
+
+        final rows = await dao.getAllForOwner(ownerA);
+
+        expect(rows.map((r) => r.id), equals(['a-early', 'a-late']));
+      },
+    );
   });
 }
