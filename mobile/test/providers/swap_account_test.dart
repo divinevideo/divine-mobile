@@ -15,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/known_account.dart';
@@ -26,9 +27,12 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/swap_account.dart';
+import 'package:openvine/providers/swap_account.dart'
+    show accountSwitchInitialLocation;
+import 'package:openvine/providers/swap_account.dart' as switching;
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -36,6 +40,7 @@ import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
@@ -47,7 +52,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
-class _MockAuthService extends Mock implements AuthService {}
+class _MockDiscovery extends Mock implements RelayDiscoveryService {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -91,10 +96,10 @@ void main() {
   late _FakeSecureKeyStorage keyStorage;
   late _FakeAuthService currentAuthService;
 
-  const leavingHex =
-      '2222222222222222222222222222222222222222222222222222222222222222';
-  const targetHex =
-      '1111111111111111111111111111111111111111111111111111111111111111';
+  final leavingHex = SecureKeyContainer.fromPrivateKeyHex('2' * 64)
+      .publicKeyHex;
+  late SecureKeyContainer leavingKeys;
+  final targetHex = SecureKeyContainer.fromPrivateKeyHex('1' * 64).publicKeyHex;
   // A third identity, belonging to neither account. A preserve case built on
   // the target's own npub cannot fail: both the retarget branch and the
   // preserve branch emit the same string.
@@ -114,13 +119,41 @@ void main() {
     lastUsedAt: DateTime(2026),
   );
 
+  WidgetTester? activeTester;
+  AuthService? incomingAuthOverride;
+
   setUp(() async {
+    activeTester = null;
+    incomingAuthOverride = null;
     database = AppDatabase.test(NativeDatabase.memory());
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     controller = AccountSwitchController();
-    keyStorage = _FakeSecureKeyStorage();
-    currentAuthService = _FakeAuthService();
+    leavingKeys = SecureKeyContainer.fromPrivateKeyHex('2' * 64);
+    keyStorage = _FakeSecureKeyStorage()..primary = leavingKeys;
+    final outgoingStorage = _RestorableSecureKeyStorage(leavingKeys)
+      ..primary = leavingKeys;
+    final discovery = _MockDiscovery();
+    when(() => discovery.discoverRelays(any())).thenAnswer(
+      (_) async => RelayDiscoveryResult.failure('No network in swap tests'),
+    );
+    currentAuthService = _FakeAuthService(
+      userDataCleanupService: UserDataCleanupService(prefs),
+      backgroundActivityManager: BackgroundActivityManager(),
+      keyStorage: outgoingStorage,
+      relayDiscoveryService: discovery,
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
+    );
+    await currentAuthService.initializeForAccountSwitch();
+    await currentAuthService.signInForAccount(
+      leavingHex,
+      AuthenticationSource.automatic,
+    );
+    expect(
+      currentAuthService.committedAccountActivationReceipt?.isCurrent,
+      isTrue,
+    );
+    await pumpEventQueue();
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
@@ -142,7 +175,10 @@ void main() {
     );
   });
 
-  tearDown(() => database.close());
+  tearDown(() async {
+    await currentAuthService.dispose();
+    await database.close();
+  });
 
   void overridePushSync(PushNotificationSessionCoordinator? coordinator) {
     deviceScope = DeviceScope(
@@ -163,6 +199,112 @@ void main() {
       ],
     );
   }
+
+  AuthService makeIncomingAuth({bool failClaim = false}) {
+    final discovery = _MockDiscovery();
+    when(() => discovery.discoverRelays(any())).thenAnswer(
+      (_) async =>
+          RelayDiscoveryResult.failure('No network in account swap tests'),
+    );
+    final cleanup = UserDataCleanupService(deviceScope.sharedPreferences);
+    if (failClaim) {
+      cleanup.onClaimLegacyRows = (owner) async =>
+          throw StateError('database unavailable');
+    }
+    return AuthService(
+      userDataCleanupService: cleanup,
+      backgroundActivityManager: BackgroundActivityManager(),
+      keyStorage: keyStorage,
+      relayDiscoveryService: discovery,
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
+    );
+  }
+
+  // Callback fixtures continue to assert routing, push and DM orchestration;
+  // their success path now also performs the real identity/session settlement.
+  Future<void> swapAccount({
+    required DeviceScope deviceScope,
+    required AccountSwitchController controller,
+    required AuthService currentAuthService,
+    required KnownAccount account,
+    switching.AccountSignIn? signIn,
+  }) async {
+    Future<void> run() {
+      if (signIn == null) {
+        return switching.swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+        );
+      }
+      final scope = DeviceScope(
+        database: deviceScope.database,
+        sharedPreferences: deviceScope.sharedPreferences,
+        feedModePersistence: deviceScope.feedModePersistence,
+        switchController: deviceScope.switchController,
+        appVersion: deviceScope.appVersion,
+        documentsPath: deviceScope.documentsPath,
+        startupPerformance: deviceScope.startupPerformance,
+        crashReporting: deviceScope.crashReporting,
+        logMessageBatcher: deviceScope.logMessageBatcher,
+        accountOverrides: [
+          ...deviceScope.accountOverrides.where(
+            (o) => o.origin != authServiceProvider,
+          ),
+          authServiceProvider.overrideWith((ref) {
+            final auth = incomingAuthOverride ?? makeIncomingAuth();
+            ref.onDispose(() => unawaited(auth.dispose()));
+            return auth;
+          }),
+        ],
+      );
+      return switching.swapAccount(
+        deviceScope: scope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        signIn: (container, selected) async {
+          await signIn(container, selected);
+          final auth = container.read(authServiceProvider);
+          await auth.initializeForAccountSwitch();
+          await auth.signInForAccount(
+            selected.pubkeyHex,
+            selected.authSource,
+            claimLegacyRows: false,
+          );
+        },
+      );
+    }
+
+    return run();
+  }
+
+  Future<void> driveSwap(
+    Future<void> operation, {
+    Object? expected,
+    String reason = 'Account switch must settle within explicit frames',
+  }) => TestAsyncUtils.guard(() async {
+    final tester = activeTester!;
+    var settled = false;
+    final watched = operation.whenComplete(() {
+      settled = true;
+    });
+    // Install the exact matcher before any guarded widget operation begins.
+    final checked = expectLater(watched, expected ?? completes);
+    for (var frame = 0; !settled && frame < 250; frame += 1) {
+      // Native storage and coordinator tails may originate in setUp's
+      // real async zone. Let those callbacks progress between host frames.
+      await tester.runAsync(pumpEventQueue);
+      await tester.pump();
+    }
+    expect(
+      settled,
+      isTrue,
+      reason: reason,
+    );
+    await checked;
+  });
 
   group('accountSwitchInitialLocation', () {
     test('retargets the leaving account own-profile route', () {
@@ -420,9 +562,19 @@ void main() {
     List<Override> accountOverrides = const [],
     Widget Function(ProviderContainer container)? childBuilder,
   }) async {
+    activeTester = tester;
     final initial = buildAccountContainer(
       deviceScope,
-      accountOverrides: accountOverrides,
+      accountOverrides: [
+        if (!deviceScope.accountOverrides.any(
+              (override) => override.origin == authServiceProvider,
+            ) &&
+            !accountOverrides.any(
+              (override) => override.origin == authServiceProvider,
+            ))
+          authServiceProvider.overrideWithValue(currentAuthService),
+        ...accountOverrides,
+      ],
     );
     await tester.pumpWidget(
       ContainerSwapHost(
@@ -456,10 +608,7 @@ void main() {
         );
         final targetKey = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
         final storage = _RestorableSecureKeyStorage(targetKey);
-        final oldKey = _FakeSecureKeyContainer(
-          npub: leavingNpub,
-          publicKeyHex: leavingHex,
-        );
+        final oldKey = leavingKeys;
         storage.primary = oldKey;
         final refusingPrefs = _RefusingCleanupPreferences(prefs);
         final cleanup = UserDataCleanupService(refusingPrefs);
@@ -474,8 +623,7 @@ void main() {
             };
         var incomingDisposed = false;
         var authContainers = 0;
-        final oldAuth = _MockAuthService();
-        when(() => oldAuth.currentPublicKeyHex).thenReturn(leavingHex);
+        final oldAuth = currentAuthService;
         deviceScope = DeviceScope(
           database: database,
           sharedPreferences: prefs,
@@ -492,7 +640,9 @@ void main() {
             secureKeyStorageProvider.overrideWithValue(storage),
             pushNotificationSyncProvider.overrideWithValue(null),
             authServiceProvider.overrideWith((ref) {
-              if (authContainers++ == 0) return oldAuth;
+              if (authContainers++ == 0) {
+                return oldAuth;
+              }
               final auth = AuthService(
                 backgroundActivityManager: BackgroundActivityManager(),
                 userDataCleanupService: cleanup,
@@ -514,14 +664,14 @@ void main() {
           addedAt: DateTime(2026),
           lastUsedAt: DateTime(2026),
         );
-        await expectLater(
+        await driveSwap(
           swapAccount(
             deviceScope: deviceScope,
             controller: controller,
             currentAuthService: currentAuthService,
             account: targetAccount,
           ),
-          throwsA(isA<UserDataCleanupException>()),
+          expected: throwsA(isA<UserDataCleanupException>()),
         );
         expect(controller.currentContainer, same(initial));
         expect(_isDisposed(initial), isFalse);
@@ -562,8 +712,7 @@ void main() {
     WidgetTester tester,
     String from,
   ) async {
-    final auth = _MockAuthService();
-    when(() => auth.currentPublicKeyHex).thenReturn(leavingHex);
+    final auth = currentAuthService;
     final router = GoRouter(
       initialLocation: from,
       routes: [
@@ -593,14 +742,16 @@ void main() {
     );
 
     String? seeded;
-    await swapAccount(
-      deviceScope: deviceScope,
-      controller: controller,
-      currentAuthService: currentAuthService,
-      account: account,
-      signIn: (container, _) async {
-        seeded = container.read(routerInitialLocationProvider);
-      },
+    await driveSwap(
+      swapAccount(
+        deviceScope: deviceScope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        signIn: (container, _) async {
+          seeded = container.read(routerInitialLocationProvider);
+        },
+      ),
     );
     await tester.pump();
     return seeded;
@@ -643,7 +794,7 @@ void main() {
       ).thenAnswer((
         _,
       ) async {
-        expect(controller.currentContainer, same(signedInto));
+        expectSync(controller.currentContainer, same(signedInto));
         events.add('deregister outgoing');
         await cleanupCompleter.future;
       });
@@ -651,16 +802,18 @@ void main() {
       final initial = await pumpHost(tester);
       initial.read(pushNotificationSyncProvider);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (container, acct) async {
-          signedInto = container;
-          events.add('sign in target');
-          expect(acct, equals(account));
-        },
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, acct) async {
+            signedInto = container;
+            events.add('sign in target');
+            expectSync(acct, equals(account));
+          },
+        ),
       );
       await tester.pump();
 
@@ -681,20 +834,226 @@ void main() {
   });
 
   group('account swap failure boundaries', () {
+    testWidgets(
+      'account label alone cannot grant outgoing rollback authority',
+      (tester) async {
+        final initial = await pumpHost(tester);
+        final before = currentAuthService.committedAccountActivationReceipt;
+        final unauthenticated = makeIncomingAuth();
+        addTearDown(unauthenticated.dispose);
+        var signInAttempted = false;
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: unauthenticated,
+            account: account,
+            signIn: (_, _) async => signInAttempted = true,
+          ),
+          expected: throwsA(isA<AccountActivationRetiredException>()),
+        );
+        expect(signInAttempted, isFalse);
+        expect(currentAuthService.calls, isEmpty);
+        expect(controller.currentContainer, same(initial));
+        expect(
+          currentAuthService.committedAccountActivationReceipt,
+          same(before),
+        );
+        expect(before!.isCurrent, isTrue);
+        expect(keyStorage.restoredPrimary, isNull);
+      },
+    );
+
+    testWidgets(
+      'foreign primary snapshot cannot be restored for the old owner',
+      (tester) async {
+        final initial = await pumpHost(tester);
+        final receipt = currentAuthService.committedAccountActivationReceipt!;
+        final foreignKeys = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
+        keyStorage.primary = foreignKeys;
+        var signInAttempted = false;
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => signInAttempted = true,
+          ),
+          expected: throwsA(isA<StateError>()),
+        );
+        expect(signInAttempted, isFalse);
+        expect(controller.currentContainer, same(initial));
+        expect(keyStorage.primary, same(foreignKeys));
+        expect(keyStorage.restoredPrimary, isNull);
+        expect(currentAuthService.calls, ['archive']);
+        expect(receipt.isCurrent, isTrue);
+        expect(
+          deviceScope.sharedPreferences.getString('current_user_pubkey_hex'),
+          leavingHex,
+        );
+      },
+    );
+
+    testWidgets(
+      'failed switch positively restores the original session owner',
+      (tester) async {
+        await pumpHost(tester);
+        final original = currentAuthService.committedAccountActivationReceipt!;
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => throw _FakeSignInException(),
+          ),
+          expected: throwsA(isA<_FakeSignInException>()),
+        );
+        final restored = currentAuthService.committedAccountActivationReceipt!;
+        expect(original.isCurrent, isFalse);
+        expect(restored.isCurrent, isTrue);
+        expect(restored.ownerPubkey, leavingHex);
+        expect(currentAuthService.isAuthenticated, isTrue);
+        expect(keyStorage.restoredPrimary, same(leavingKeys));
+        expect(currentAuthService.takeFreshAccountListCreationPermit(), isNull);
+        expect(
+          AccountActivationCoordinator.forPreferences(
+            deviceScope.sharedPreferences,
+          ).hasUnresolvedActivation,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets(
+      'retired native rollback drains before the next real owner writes',
+      (tester) async {
+        await pumpHost(tester);
+        keyStorage.restoreEntered = Completer<void>();
+        keyStorage.resumeRestore = Completer<void>();
+        final resumed = keyStorage.resumeRestore!;
+        final failure = expectLater(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => throw _FakeSignInException(),
+          ),
+          throwsA(isA<_FakeSignInException>()),
+        );
+        AuthService? nextAuth;
+        Future<void>? nextChecked;
+        final nextKeys = SecureKeyContainer.fromPrivateKeyHex('3' * 64);
+        var nextSettled = false;
+        try {
+          for (
+            var frame = 0;
+            !keyStorage.restoreEntered!.isCompleted && frame < 250;
+            frame += 1
+          ) {
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+          }
+          expect(keyStorage.restoreEntered!.isCompleted, isTrue);
+          await tester.pumpWidget(const SizedBox());
+          keyStorage.restorationTarget = nextKeys;
+          nextAuth = makeIncomingAuth();
+          addTearDown(nextAuth.dispose);
+          await nextAuth.initializeForAccountSwitch();
+          final nextBegun = AccountActivationCoordinator.forPreferences(
+            deviceScope.sharedPreferences,
+          ).changes.first;
+          final nextOperation = nextAuth
+              .signInForAccount(
+                nextKeys.publicKeyHex,
+                AuthenticationSource.automatic,
+              )
+              .whenComplete(() => nextSettled = true);
+          nextChecked = expectLater(nextOperation, completes);
+          await nextBegun;
+          expect(
+            nextSettled,
+            isFalse,
+            reason: 'The pending native lease must drain before new metadata',
+          );
+          expect(
+            deviceScope.sharedPreferences.getString('current_user_pubkey_hex'),
+            leavingHex,
+          );
+        } finally {
+          if (!resumed.isCompleted) {
+            resumed.complete();
+          }
+          await failure;
+          if (nextChecked != null) {
+            await nextChecked;
+          }
+        }
+        expect(nextSettled, isTrue);
+        expect(currentAuthService.committedAccountActivationReceipt, isNull);
+        expect(nextAuth.committedAccountActivationReceipt!.isCurrent, isTrue);
+        expect(nextAuth.currentPublicKeyHex, nextKeys.publicKeyHex);
+        expect(keyStorage.primary, same(nextKeys));
+        expect(
+          deviceScope.sharedPreferences.getString('current_user_pubkey_hex'),
+          nextKeys.publicKeyHex,
+        );
+        expect(
+          jsonDecode(
+            deviceScope.sharedPreferences.getString(
+              AccountActivationCoordinator.storageKey,
+            )!,
+          )['ownerPubkey'],
+          nextKeys.publicKeyHex,
+        );
+      },
+    );
+
     testWidgets('failed switch rebuilds a fresh outgoing list session', (
       tester,
     ) async {
       final prefs = deviceScope.sharedPreferences;
-      final liveAuth = _MockAuthService();
+      final oldKeys = SecureKeyContainer.fromPrivateKeyHex('2' * 64);
+      final owner = oldKeys.publicKeyHex;
+      final oldStorage = _RestorableSecureKeyStorage(oldKeys)
+        ..primary = oldKeys;
+      keyStorage.primary = oldKeys;
+      final discovery = _MockDiscovery();
+      when(() => discovery.discoverRelays(any())).thenAnswer(
+        (_) async =>
+            RelayDiscoveryResult.failure('No network in account swap tests'),
+      );
+      final liveAuth = (await tester.runAsync(() async {
+        final auth = AuthService(
+          userDataCleanupService: UserDataCleanupService(prefs),
+          backgroundActivityManager: BackgroundActivityManager(),
+          keyStorage: oldStorage,
+          relayDiscoveryService: discovery,
+          profileCheckIndexerUrl: 'unsupported://profile.invalid',
+        );
+        currentAuthService.retireAccountSwitchActivation();
+        await auth.initializeForAccountSwitch();
+        await auth.signInForAccount(owner, AuthenticationSource.automatic);
+        await pumpEventQueue();
+        return auth;
+      }))!;
+      addTearDown(liveAuth.dispose);
       final client = _MockNostrClient();
-      when(() => liveAuth.isAuthenticated).thenReturn(true);
-      when(() => liveAuth.currentPublicKeyHex).thenReturn(leavingHex);
-      stubListPublishing(client: client, auth: liveAuth, pubkey: leavingHex);
-      when(() => client.subscribe(any()))
-          .thenAnswer((_) => const Stream.empty());
+      stubListSigner(client, owner);
+      when(() => client.publishEventAwaitOk(any())).thenAnswer(
+        (i) async => acceptedOutcome(i.positionalArguments[0] as Event),
+      );
+      when(() => client.publishEvent(any())).thenAnswer(
+        (i) async => PublishSuccess(event: i.positionalArguments[0] as Event),
+      );
+      when(
+        () => client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
+      ).thenAnswer((_) => const Stream.empty());
       final row = CuratedList(
         id: CuratedListService.defaultListId,
-        pubkey: leavingHex,
+        pubkey: owner,
         name: 'Existing list',
         isPublic: false,
         videoEventIds: const [],
@@ -715,28 +1074,36 @@ void main() {
         ],
       );
       final listening = initial.listen(curatedListsStateProvider, (_, _) {});
-      await initial.read(curatedListsStateProvider.future);
+      await driveSwap(
+        initial.read(curatedListsStateProvider.future).then<void>((_) {}),
+        reason: 'Outgoing list provider must settle within explicit frames',
+      );
       final retired = initial.read(curatedListsStateProvider.notifier).service!;
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
-          currentAuthService: currentAuthService,
+          currentAuthService: liveAuth,
           account: account,
           signIn: (_, _) async {
-            expect(retired.isCurrentSession, isFalse);
+            expectSync(retired.isCurrentSession, isFalse);
             await UserDataCleanupService(prefs).clearUserSpecificData(
-              userPubkey: leavingHex,
+              userPubkey: owner,
               isIdentityChange: true,
             );
             throw _FakeSignInException();
           },
         ),
-        throwsA(isA<_FakeSignInException>()),
+        expected: throwsA(isA<_FakeSignInException>()),
       );
       expect(controller.currentContainer, same(initial));
-      expect(currentAuthService.calls, ['archive', 'restore']);
-      await initial.read(curatedListsStateProvider.future);
+      expect(liveAuth.committedAccountActivationReceipt!.isCurrent, isTrue);
+      expect(oldKeys.isDisposed, isFalse);
+      expect(liveAuth.currentPublicKeyHex, owner);
+      await driveSwap(
+        initial.read(curatedListsStateProvider.future).then<void>((_) {}),
+        reason: 'Restored list provider must settle within explicit frames',
+      );
       final restored = initial
           .read(curatedListsStateProvider.notifier)
           .service!;
@@ -747,7 +1114,12 @@ void main() {
         await retired.updateList(listId: row.id, name: 'Old callback'),
         isFalse,
       );
-      expect(await restored.subscribeToList('$leavingHex:${row.id}'), isTrue);
+      await driveSwap(
+        restored.subscribeToList(row.authorScopedId, row).then<void>((saved) {
+          expectSync(saved, isTrue);
+        }),
+        reason: 'Restored list subscription must settle within explicit frames',
+      );
       listening.close();
     });
     testWidgets('keeps the target account live when push cleanup fails', (
@@ -762,12 +1134,14 @@ void main() {
       initial.read(pushNotificationSyncProvider);
       ProviderContainer? signedInto;
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (container, _) async => signedInto = container,
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, _) async => signedInto = container,
+        ),
       );
       await tester.pump();
 
@@ -789,12 +1163,14 @@ void main() {
       final initial = await pumpHost(tester);
       initial.read(pushNotificationSyncProvider);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async {},
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async {},
+        ),
       );
       await tester.pump();
 
@@ -809,41 +1185,59 @@ void main() {
       tester,
     ) async {
       final pushCoordinator = _MockPushNotificationSessionCoordinator();
-      when(
-        pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch,
-      ).thenAnswer((_) async {});
+      when(pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch)
+          .thenAnswer((_) async {});
       overridePushSync(pushCoordinator);
       final initial = await pumpHost(tester);
       initial.read(pushNotificationSyncProvider);
       ProviderContainer? attempted;
-
-      await expectLater(
-        swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: currentAuthService,
-          account: account,
-          signIn: (container, _) async {
-            attempted = container;
-            await tester.pumpWidget(const SizedBox());
-          },
-        ),
-        throwsStateError,
+      final entered = Completer<void>();
+      final resume = Completer<void>();
+      final operation = swapAccount(
+        deviceScope: deviceScope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        signIn: (container, _) async {
+          attempted = container;
+          entered.complete();
+          await resume.future;
+        },
       );
-
+      final assertion = expectLater(
+        operation,
+        throwsA(isA<AccountActivationRetiredException>()),
+      );
+      try {
+        for (var frame = 0; !entered.isCompleted && frame < 100; frame += 1) {
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        }
+        expect(entered.isCompleted, isTrue);
+      } finally {
+        // Retire the real host before releasing sign-in, even if its entry
+        // assertion fails, and settle the watched operation before teardown.
+        await tester.pumpWidget(const SizedBox());
+        if (!resume.isCompleted) {
+          resume.complete();
+        }
+        await driveSwap(
+          assertion,
+          reason: 'Retired host switch must settle within explicit frames',
+        );
+      }
       expect(attempted, isNotNull);
       expect(_isDisposed(attempted!), isTrue);
-      expect(currentAuthService.calls, equals(['archive', 'restore']));
+      // A retired host must never restore old signer slots over a newer host.
+      expect(currentAuthService.calls, equals(['archive']));
       verifyNever(pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch);
     });
 
     testWidgets('keeps the target account live when legacy claiming fails', (
       tester,
     ) async {
-      final targetAuthService = _MockAuthService();
-      when(
-        targetAuthService.claimLegacyRowsForCurrentUser,
-      ).thenThrow(Exception('database unavailable'));
+      final targetAuthService = makeIncomingAuth(failClaim: true);
+      incomingAuthOverride = targetAuthService;
       deviceScope = DeviceScope(
         database: database,
         sharedPreferences: deviceScope.sharedPreferences,
@@ -865,12 +1259,14 @@ void main() {
       final initial = await pumpHost(tester);
       ProviderContainer? signedInto;
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (container, _) async => signedInto = container,
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, _) async => signedInto = container,
+        ),
       );
       await tester.pump();
 
@@ -920,13 +1316,9 @@ void main() {
       final initial = await pumpHost(tester);
       initial.read(pushNotificationSyncProvider);
       ProviderContainer? attempted;
-      keyStorage.primary = _FakeSecureKeyContainer(
-        npub: 'npub_previous',
-        publicKeyHex:
-            '2222222222222222222222222222222222222222222222222222222222222222',
-      );
+      keyStorage.primary = leavingKeys;
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -937,7 +1329,7 @@ void main() {
             throw Exception('signer unreachable');
           },
         ),
-        throwsException,
+        expected: throwsException,
       );
       await tester.pump();
 
@@ -959,12 +1351,14 @@ void main() {
     ) async {
       await pumpHost(tester);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => currentAuthService.calls.add('signIn'),
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => currentAuthService.calls.add('signIn'),
+        ),
       );
       await tester.pump();
 
@@ -992,12 +1386,14 @@ void main() {
       );
       initial.read(dmRepositoryProvider);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => events.add('sign in target'),
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
       );
       await tester.pump();
 
@@ -1025,7 +1421,7 @@ void main() {
       );
       initial.read(dmRepositoryProvider);
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1036,7 +1432,7 @@ void main() {
             throw Exception('signer unavailable');
           },
         ),
-        throwsException,
+        expected: throwsException,
       );
       await tester.pump();
 
@@ -1057,7 +1453,7 @@ void main() {
       currentAuthService.archiveError = Exception('keychain unavailable');
       var signInAttempted = false;
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1065,7 +1461,7 @@ void main() {
           account: account,
           signIn: (_, _) async => signInAttempted = true,
         ),
-        throwsException,
+        expected: throwsException,
       );
       await tester.pump();
 
@@ -1080,16 +1476,12 @@ void main() {
       tester,
     ) async {
       await pumpHost(tester);
-      keyStorage.primary = _FakeSecureKeyContainer(
-        npub: 'npub_previous',
-        publicKeyHex:
-            '2222222222222222222222222222222222222222222222222222222222222222',
-      );
+      keyStorage.primary = leavingKeys;
       keyStorage.restoreError = Exception('primary restore failed');
 
       // The caller dispatches on this type to offer a fresh sign-in, so a
       // rollback failure must not replace it with its own.
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1097,7 +1489,7 @@ void main() {
           account: account,
           signIn: (_, _) async => throw _FakeSignInException(),
         ),
-        throwsA(isA<_FakeSignInException>()),
+        expected: throwsA(isA<_FakeSignInException>()),
       );
       await tester.pump();
 
@@ -1150,14 +1542,16 @@ void main() {
       ) async {
         await pumpLeavingHost(tester);
 
-        await swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: currentAuthService,
-          account: account,
-          // Stands in for AuthService._setupUserSession, whose
-          // clearUserSpecificData wipes the shared DM tables.
-          signIn: (_, _) async => events.add('sign in target'),
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            // Stands in for AuthService._setupUserSession, whose
+            // clearUserSpecificData wipes the shared DM tables.
+            signIn: (_, _) async => events.add('sign in target'),
+          ),
         );
         await tester.pump();
 
@@ -1170,7 +1564,7 @@ void main() {
     ) async {
       await pumpLeavingHost(tester);
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1178,7 +1572,7 @@ void main() {
           account: account,
           signIn: (_, _) async => throw _FakeSignInException(),
         ),
-        throwsA(isA<_FakeSignInException>()),
+        expected: throwsA(isA<_FakeSignInException>()),
       );
       await tester.pump();
 
@@ -1191,13 +1585,10 @@ void main() {
       tester,
     ) async {
       await pumpLeavingHost(tester);
-      keyStorage.primary = _FakeSecureKeyContainer(
-        npub: 'npub_previous',
-        publicKeyHex: leavingHex,
-      );
+      keyStorage.primary = leavingKeys;
       keyStorage.restoreError = Exception('primary restore failed');
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1205,7 +1596,7 @@ void main() {
           account: account,
           signIn: (_, _) async => throw _FakeSignInException(),
         ),
-        throwsA(isA<_FakeSignInException>()),
+        expected: throwsA(isA<_FakeSignInException>()),
       );
       await tester.pump();
 
@@ -1310,8 +1701,10 @@ class _RefusingCleanupPreferences extends Fake implements SharedPreferences {
 }
 
 class _RestorableSecureKeyStorage extends _FakeSecureKeyStorage {
-  _RestorableSecureKeyStorage(this.target);
-  final SecureKeyContainer target;
+  _RestorableSecureKeyStorage(this._restoredTarget);
+  final SecureKeyContainer _restoredTarget;
+  @override
+  SecureKeyContainer get target => _restoredTarget;
   @override
   Future<void> initialize() async {}
   @override
@@ -1329,7 +1722,15 @@ class _RestorableSecureKeyStorage extends _FakeSecureKeyStorage {
 
 class _FakeSignInException implements Exception {}
 
-class _FakeAuthService implements AuthService {
+class _FakeAuthService extends AuthService {
+  _FakeAuthService({
+    required super.userDataCleanupService,
+    required super.backgroundActivityManager,
+    required super.keyStorage,
+    required super.relayDiscoveryService,
+    required super.profileCheckIndexerUrl,
+  });
+
   final calls = <String>[];
 
   /// Set to make the pre-swap archive fail, as a keychain write would.
@@ -1339,20 +1740,50 @@ class _FakeAuthService implements AuthService {
   Future<void> archiveCurrentSignerInfo() async {
     calls.add('archive');
     final error = archiveError;
-    if (error != null) throw error;
+    if (error != null) {
+      throw error;
+    }
+    await super.archiveCurrentSignerInfo();
   }
 
   @override
-  Future<void> restoreSignerInfoForCurrentAccount() async =>
-      calls.add('restore');
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  Future<void> restoreSignerInfoForCurrentAccount({
+    void Function()? ensureCurrent,
+  }) async {
+    calls.add('restore');
+    await super.restoreSignerInfoForCurrentAccount(
+      ensureCurrent: ensureCurrent,
+    );
+  }
 }
 
 class _FakeSecureKeyStorage extends SecureKeyStorage {
   SecureKeyContainer? primary;
   SecureKeyContainer? restoredPrimary;
+  final _target = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
+  SecureKeyContainer? restorationTarget;
+  SecureKeyContainer get target => restorationTarget ?? _target;
+  Completer<void>? restoreEntered;
+  Completer<void>? resumeRestore;
+
+  @override
+  Future<void> initialize() async {}
+  @override
+  Future<SecureKeyContainer?> getIdentityKeyContainer(String npub) async =>
+      npub == target.npub ? target : null;
+  @override
+  Future<bool> switchToIdentity(String npub) async {
+    primary = target;
+    return true;
+  }
+
+  @override
+  Future<void> storeIdentityKeyContainer(
+    String npub,
+    SecureKeyContainer key,
+  ) async {}
+  @override
+  void dispose() {}
 
   /// Set to make the rollback's primary restore fail. The real one can: it
   /// hands the snapshot to `storeKey`, which reaches into the private key.
@@ -1368,24 +1799,17 @@ class _FakeSecureKeyStorage extends SecureKeyStorage {
     SecureKeyContainer? keyContainer,
   ) async {
     final error = restoreError;
-    if (error != null) throw error;
+    if (error != null) {
+      throw error;
+    }
     restoredPrimary = keyContainer;
     primary = keyContainer;
+    final entered = restoreEntered;
+    final resume = resumeRestore;
+    resumeRestore = null;
+    entered?.complete();
+    if (resume != null) {
+      await resume.future;
+    }
   }
-}
-
-class _FakeSecureKeyContainer implements SecureKeyContainer {
-  _FakeSecureKeyContainer({required this.npub, required this.publicKeyHex});
-
-  @override
-  final String npub;
-
-  @override
-  final String publicKeyHex;
-
-  @override
-  void dispose() {}
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

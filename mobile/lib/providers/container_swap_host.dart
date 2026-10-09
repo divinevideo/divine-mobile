@@ -6,6 +6,27 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Attests a rendered container generation, rather than a scheduled setState.
+class AccountContainerCommitReceipt {
+  AccountContainerCommitReceipt._(
+    this._controller,
+    this.container,
+    this._host,
+    this._generation,
+  );
+
+  final AccountSwitchController _controller;
+  final ProviderContainer container;
+  final Object _host;
+  final int _generation;
+
+  /// Re-evaluated after every asynchronous settlement step.
+  bool get isCurrent =>
+      identical(_controller._host, _host) &&
+      identical(_controller.currentContainer, container) &&
+      _controller._committedGeneration == _generation;
+}
+
 /// Handle the UI uses to request an in-place container swap.
 ///
 /// The switch trigger lives *above* the [ProviderContainer] (it must outlive
@@ -15,12 +36,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// [swapTo] with a freshly-built, already-signed-in container for the target
 /// account.
 class AccountSwitchController {
-  Future<void> Function(
+  Future<AccountContainerCommitReceipt> Function(
     ProviderContainer next,
     Future<void> Function()? beforePreviousContainerDispose,
   )?
   _onSwap;
   ProviderContainer? _currentContainer;
+  Object? _host;
+  int? _committedGeneration;
   bool _switchInProgress = false;
 
   /// Whether a [ContainerSwapHost] is mounted and ready to swap.
@@ -28,6 +51,14 @@ class AccountSwitchController {
 
   /// The currently mounted account container, when a host is active.
   ProviderContainer? get currentContainer => _currentContainer;
+
+  AccountContainerCommitReceipt? get currentCommit {
+    final host = _host;
+    final container = _currentContainer;
+    final generation = _committedGeneration;
+    if (host == null || container == null || generation == null) return null;
+    return AccountContainerCommitReceipt._(this, container, host, generation);
+  }
 
   /// Runs [body] while rejecting overlapping switch attempts.
   Future<T> runExclusive<T>(Future<T> Function() body) async {
@@ -56,6 +87,18 @@ class AccountSwitchController {
     if (onSwap == null) {
       throw StateError('ContainerSwapHost is not mounted');
     }
+    // Keep scheduling compatibility for callers that pump the frame themselves.
+    // Authentication settlement uses swapToAndCommit and awaits the receipt.
+    onSwap(next, beforePreviousContainerDispose).ignore();
+    return Future<void>.value();
+  }
+
+  Future<AccountContainerCommitReceipt> swapToAndCommit(
+    ProviderContainer next, {
+    Future<void> Function()? beforePreviousContainerDispose,
+  }) {
+    final onSwap = _onSwap;
+    if (onSwap == null) throw StateError('ContainerSwapHost is not mounted');
     return onSwap(next, beforePreviousContainerDispose);
   }
 }
@@ -96,31 +139,60 @@ class _ContainerSwapHostState extends State<ContainerSwapHost> {
     _container = widget.initialContainer;
     widget.controller._currentContainer = _container;
     widget.controller._onSwap = _swap;
+    widget.controller._host = this;
+    widget.controller._committedGeneration = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.controller._host == this && _generation == 0) {
+        widget.controller._committedGeneration = 0;
+      }
+    });
   }
 
-  Future<void> _swap(
+  Future<AccountContainerCommitReceipt> _swap(
     ProviderContainer next,
     Future<void> Function()? beforePreviousContainerDispose,
-  ) async {
+  ) {
     if (!mounted) {
       // The host is gone; the caller owns the orphaned container.
-      next.dispose();
-      return;
+      throw StateError('ContainerSwapHost is not mounted');
     }
-    if (identical(next, _container)) return;
+    if (identical(next, _container)) {
+      final receipt = widget.controller.currentCommit;
+      if (receipt == null) throw StateError('Container has not committed');
+      return Future.value(receipt);
+    }
 
     final previous = _container;
+    final committed = Completer<AccountContainerCommitReceipt>();
     setState(() {
       _container = next;
       _generation += 1;
       widget.controller._currentContainer = next;
+      widget.controller._committedGeneration = null;
     });
+    final generation = _generation;
 
     // Dispose the leaving container only after this frame commits, so widgets
     // still reading it during the unmount don't hit a disposed container. A
     // post-commit cleanup may retain account-scoped signers owned by that
     // container, so keep it alive until the cleanup settles.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          widget.controller._host == this &&
+          _generation == generation &&
+          identical(_container, next)) {
+        widget.controller._committedGeneration = generation;
+        committed.complete(
+          AccountContainerCommitReceipt._(
+            widget.controller,
+            next,
+            this,
+            generation,
+          ),
+        );
+      } else {
+        committed.completeError(StateError('Account container commit retired'));
+      }
       unawaited(
         (() async {
           try {
@@ -131,6 +203,7 @@ class _ContainerSwapHostState extends State<ContainerSwapHost> {
         })(),
       );
     });
+    return committed.future;
   }
 
   @override
@@ -140,6 +213,8 @@ class _ContainerSwapHostState extends State<ContainerSwapHost> {
     if (widget.controller._onSwap == _swap) {
       widget.controller._onSwap = null;
       widget.controller._currentContainer = null;
+      widget.controller._host = null;
+      widget.controller._committedGeneration = null;
     }
     _container.dispose();
     super.dispose();
