@@ -43,12 +43,12 @@ class NativeAccountTestScope {
       accountOverrides: [
         authServiceProvider.overrideWith((ref) {
           final auth = AuthService(
-            userDataCleanupService: ref.read(userDataCleanupServiceProvider),
+            userDataCleanupService: ref.watch(userDataCleanupServiceProvider),
             backgroundActivityManager: ref.read(
               backgroundActivityManagerProvider,
             ),
-            keyStorage: ref.read(secureKeyStorageProvider),
-            flutterSecureStorage: ref.read(flutterSecureStorageProvider),
+            keyStorage: ref.watch(secureKeyStorageProvider),
+            flutterSecureStorage: ref.watch(flutterSecureStorageProvider),
             crashReporter: crashReporter,
             profileCheckIndexerUrl: relay.url,
             indexerRelays: [relay.url],
