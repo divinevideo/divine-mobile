@@ -2971,17 +2971,6 @@
     "newMessageFindPeople": "사람 찾기",
     "newMessageNoContacts": "연락처가 없어요.\n사람들을 팔로우하면 여기서 볼 수 있어요.",
     "newMessageNoUsersFound": "사용자를 찾지 못했어요",
-    "hashtagSearchTitle": "해시태그 검색",
-    "hashtagSearchSubtitle": "인기 토픽과 콘텐츠를 둘러봐요",
-    "hashtagSearchNoResults": "\"{query}\"에 대한 해시태그를 찾지 못했어요",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "검색에 실패했어요",
     "userNotAvailableTitle": "계정을 사용할 수 없어요",
     "userNotAvailableBody": "이 계정은 지금 사용할 수 없어요.",
     "blossomValidServerUrl": "올바른 서버 URL을 입력해주세요 (예: https://blossom.band)",

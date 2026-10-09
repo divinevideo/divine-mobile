@@ -13223,30 +13223,6 @@ abstract class AppLocalizations {
   /// **'No users found'**
   String get newMessageNoUsersFound;
 
-  /// No description provided for @hashtagSearchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Search for hashtags'**
-  String get hashtagSearchTitle;
-
-  /// No description provided for @hashtagSearchSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover trending topics and content'**
-  String get hashtagSearchSubtitle;
-
-  /// No description provided for @hashtagSearchNoResults.
-  ///
-  /// In en, this message translates to:
-  /// **'No hashtags found for \"{query}\"'**
-  String hashtagSearchNoResults(String query);
-
-  /// No description provided for @hashtagSearchFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Search failed'**
-  String get hashtagSearchFailed;
-
   /// No description provided for @userNotAvailableTitle.
   ///
   /// In en, this message translates to:

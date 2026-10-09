@@ -7795,20 +7795,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get newMessageNoUsersFound => 'Inga användare hittades';
 
   @override
-  String get hashtagSearchTitle => 'Sök efter hashtags';
-
-  @override
-  String get hashtagSearchSubtitle => 'Upptäck trendande ämnen och innehåll';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Inga hashtags hittades för \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Sökning misslyckades';
-
-  @override
   String get userNotAvailableTitle => 'Konto ej tillgängligt';
 
   @override

@@ -7837,20 +7837,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get newMessageNoUsersFound => 'Geen gebruikers gevonden';
 
   @override
-  String get hashtagSearchTitle => 'Zoek hashtags';
-
-  @override
-  String get hashtagSearchSubtitle => 'Ontdek trending onderwerpen en inhoud';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Geen hashtags gevonden voor \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Zoeken mislukt';
-
-  @override
   String get userNotAvailableTitle => 'Account niet beschikbaar';
 
   @override

@@ -5098,17 +5098,6 @@
   "newMessageFindPeople": "Find people",
   "newMessageNoContacts": "No contacts found.\nFollow people to see them here.",
   "newMessageNoUsersFound": "No users found",
-  "hashtagSearchTitle": "Search for hashtags",
-  "hashtagSearchSubtitle": "Discover trending topics and content",
-  "hashtagSearchNoResults": "No hashtags found for \"{query}\"",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "Search failed",
   "userNotAvailableTitle": "Account not available",
   "userNotAvailableBody": "This account isn't available right now.",
   "classicVinersTitle": "OG Viners",

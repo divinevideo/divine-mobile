@@ -7402,20 +7402,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newMessageNoUsersFound => 'ユーザーが見つからなかった';
 
   @override
-  String get hashtagSearchTitle => 'ハッシュタグを検索';
-
-  @override
-  String get hashtagSearchSubtitle => 'トレンドのトピックとコンテンツを見つけよう';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '「$query」のハッシュタグは見つからなかった';
-  }
-
-  @override
-  String get hashtagSearchFailed => '検索に失敗';
-
-  @override
   String get userNotAvailableTitle => 'アカウントは利用できないよ';
 
   @override

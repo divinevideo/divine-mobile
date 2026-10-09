@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "人を探す",
     "newMessageNoContacts": "連絡先が見つからなかった。\n人をフォローするとここに出るよ。",
     "newMessageNoUsersFound": "ユーザーが見つからなかった",
-    "hashtagSearchTitle": "ハッシュタグを検索",
-    "hashtagSearchSubtitle": "トレンドのトピックとコンテンツを見つけよう",
-    "hashtagSearchNoResults": "「{query}」のハッシュタグは見つからなかった",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "検索に失敗",
     "userNotAvailableTitle": "アカウントは利用できないよ",
     "userNotAvailableBody": "このアカウントは今は利用できないよ。",
     "blossomValidServerUrl": "有効なサーバー URL を入力してね (例: https://blossom.band)",

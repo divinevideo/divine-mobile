@@ -7777,20 +7777,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newMessageNoUsersFound => 'لم يُعثر على مستخدمين';
 
   @override
-  String get hashtagSearchTitle => 'ابحث عن وسوم';
-
-  @override
-  String get hashtagSearchSubtitle => 'اكتشف المواضيع والمحتوى الرائج';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'لم يُعثر على وسوم لـ \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'فشل البحث';
-
-  @override
   String get userNotAvailableTitle => 'الحساب غير متاح';
 
   @override

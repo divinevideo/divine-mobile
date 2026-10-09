@@ -3956,17 +3956,6 @@
   "newMessageFindPeople": "找人",
   "newMessageNoContacts": "没有找到联系人。\n关注一些人，他们就会出现在这里。",
   "newMessageNoUsersFound": "没有找到用户",
-  "hashtagSearchTitle": "搜索话题标签",
-  "hashtagSearchSubtitle": "发现热门话题和内容",
-  "hashtagSearchNoResults": "没有找到“{query}”相关的话题标签",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "搜索失败",
   "userNotAvailableTitle": "账号不可用",
   "userNotAvailableBody": "该账号暂时不可用。",
   "classicVinersTitle": "OG Viners",

@@ -7727,21 +7727,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get newMessageNoUsersFound => 'Kullanıcı bulunamadı';
 
   @override
-  String get hashtagSearchTitle => 'Etiket ara';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'Trend olan konuları ve içerikleri keşfet';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\"$query\" için etiket bulunamadı';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Arama başarısız';
-
-  @override
   String get userNotAvailableTitle => 'Hesap kullanılamıyor';
 
   @override

@@ -7807,20 +7807,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get newMessageNoUsersFound => 'کوئی صارف نہیں ملا';
 
   @override
-  String get hashtagSearchTitle => 'ہیش ٹیگز تلاش کریں';
-
-  @override
-  String get hashtagSearchSubtitle => 'مقبول موضوعات اور مواد دریافت کریں';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\"$query\" کے لیے کوئی ہیش ٹیگ نہیں ملا';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'تلاش ناکام';
-
-  @override
   String get userNotAvailableTitle => 'اکاؤنٹ دستیاب نہیں';
 
   @override

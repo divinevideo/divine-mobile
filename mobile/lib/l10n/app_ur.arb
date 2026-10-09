@@ -3956,17 +3956,6 @@
   "newMessageFindPeople": "لوگ تلاش کریں",
   "newMessageNoContacts": "کوئی رابطہ نہیں ملا۔\nلوگوں کو یہاں دیکھنے کے لیے انہیں فالو کریں۔",
   "newMessageNoUsersFound": "کوئی صارف نہیں ملا",
-  "hashtagSearchTitle": "ہیش ٹیگز تلاش کریں",
-  "hashtagSearchSubtitle": "مقبول موضوعات اور مواد دریافت کریں",
-  "hashtagSearchNoResults": "\"{query}\" کے لیے کوئی ہیش ٹیگ نہیں ملا",
-  "@hashtagSearchNoResults": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "hashtagSearchFailed": "تلاش ناکام",
   "userNotAvailableTitle": "اکاؤنٹ دستیاب نہیں",
   "userNotAvailableBody": "یہ اکاؤنٹ ابھی دستیاب نہیں ہے۔",
   "classicVinersTitle": "OG Viners",

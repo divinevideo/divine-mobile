@@ -7332,20 +7332,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newMessageNoUsersFound => '没有找到用户';
 
   @override
-  String get hashtagSearchTitle => '搜索话题标签';
-
-  @override
-  String get hashtagSearchSubtitle => '发现热门话题和内容';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '没有找到“$query”相关的话题标签';
-  }
-
-  @override
-  String get hashtagSearchFailed => '搜索失败';
-
-  @override
   String get userNotAvailableTitle => '账号不可用';
 
   @override

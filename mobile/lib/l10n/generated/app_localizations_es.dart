@@ -7879,20 +7879,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newMessageNoUsersFound => 'No se encontraron usuarios';
 
   @override
-  String get hashtagSearchTitle => 'Buscá hashtags';
-
-  @override
-  String get hashtagSearchSubtitle => 'Descubrí temas y contenido en tendencia';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'No se encontraron hashtags para \"$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Falló la búsqueda';
-
-  @override
   String get userNotAvailableTitle => 'Cuenta no disponible';
 
   @override

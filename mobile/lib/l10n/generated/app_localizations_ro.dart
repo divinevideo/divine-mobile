@@ -7988,21 +7988,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get newMessageNoUsersFound => 'Niciun utilizator găsit';
 
   @override
-  String get hashtagSearchTitle => 'Caută hashtaguri';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'Descoperă subiecte și conținut în tendințe';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return 'Niciun hashtag găsit pentru „$query”';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'Căutarea a eșuat';
-
-  @override
   String get userNotAvailableTitle => 'Cont indisponibil';
 
   @override

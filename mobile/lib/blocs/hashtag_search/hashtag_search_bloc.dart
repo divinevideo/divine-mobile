@@ -23,7 +23,7 @@ EventTransformer<E> _debounceRestartable<E>() {
 }
 
 /// Hashtag chips are visually short, so each page needs to add enough rows to
-/// stay ahead of `ScrollPaginationMixin`'s viewport-relative prefetch.
+/// stay ahead of the Tags section's `SliverPaginationTrigger` prefetch.
 const _pageSize = 50;
 
 /// BLoC for searching hashtags via the Funnelcake API.

@@ -8044,21 +8044,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get newMessageNoUsersFound => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override
-  String get hashtagSearchTitle => 'హ్యాష్‌ట్యాగ్‌ల కోసం శోధించండి';
-
-  @override
-  String get hashtagSearchSubtitle =>
-      'ట్రెండింగ్ విషయాలు మరియు కంటెంట్‌ను కనుగొనండి';
-
-  @override
-  String hashtagSearchNoResults(String query) {
-    return '\" కోసం హ్యాష్‌ట్యాగ్‌లు ఏవీ కనుగొనబడలేదు$query\"';
-  }
-
-  @override
-  String get hashtagSearchFailed => 'శోధన విఫలమైంది';
-
-  @override
   String get userNotAvailableTitle => 'ఖాతా అందుబాటులో లేదు';
 
   @override

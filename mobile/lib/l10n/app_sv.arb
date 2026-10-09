@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "Hitta personer",
     "newMessageNoContacts": "Inga kontakter hittades.\nFölj personer för att se dem här.",
     "newMessageNoUsersFound": "Inga användare hittades",
-    "hashtagSearchTitle": "Sök efter hashtags",
-    "hashtagSearchSubtitle": "Upptäck trendande ämnen och innehåll",
-    "hashtagSearchNoResults": "Inga hashtags hittades för \"{query}\"",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Sökning misslyckades",
     "userNotAvailableTitle": "Konto ej tillgängligt",
     "userNotAvailableBody": "Det här kontot är inte tillgängligt just nu.",
     "blossomValidServerUrl": "Ange en giltig server-URL (t.ex. https://blossom.band)",

@@ -3542,17 +3542,6 @@
     "newMessageFindPeople": "Намери хора",
     "newMessageNoContacts": "Не са намерени контакти.\nПоследвай хора, за да ги виждаш тук.",
     "newMessageNoUsersFound": "Не са намерени потребители",
-    "hashtagSearchTitle": "Търси хаштагове",
-    "hashtagSearchSubtitle": "Открий популярни теми и съдържание",
-    "hashtagSearchNoResults": "Няма намерени хаштагове за „{query}“",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Търсенето не успя",
     "userNotAvailableTitle": "Акаунтът не е наличен",
     "userNotAvailableBody": "Този акаунт в момента не е наличен.",
     "blossomValidServerUrl": "Въведи валиден URL на сървър (напр. https://blossom.band)",

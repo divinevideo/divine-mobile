@@ -3425,17 +3425,6 @@
     "newMessageFindPeople": "Găsește oameni",
     "newMessageNoContacts": "Niciun contact găsit.\nUrmărește oameni ca să-i vezi aici.",
     "newMessageNoUsersFound": "Niciun utilizator găsit",
-    "hashtagSearchTitle": "Caută hashtaguri",
-    "hashtagSearchSubtitle": "Descoperă subiecte și conținut în tendințe",
-    "hashtagSearchNoResults": "Niciun hashtag găsit pentru „{query}”",
-    "@hashtagSearchNoResults": {
-        "placeholders": {
-            "query": {
-                "type": "String"
-            }
-        }
-    },
-    "hashtagSearchFailed": "Căutarea a eșuat",
     "userNotAvailableTitle": "Cont indisponibil",
     "userNotAvailableBody": "Acest cont nu e disponibil acum.",
     "blossomValidServerUrl": "Introdu un URL valid de server (ex.: https://blossom.band)",
