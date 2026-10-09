@@ -53,8 +53,8 @@ final moderationPresentationResolverProvider =
 /// policy) read [isModerationAccount] / [isRetiredModerationAccount], which do
 /// not depend on custody.
 final ProviderFamily<ModerationPresentation, String>
-moderationPresentationProvider =
-    Provider.family<ModerationPresentation, String>((ref, pubkeyHex) {
+moderationPresentationProvider = Provider.autoDispose
+    .family<ModerationPresentation, String>((ref, pubkeyHex) {
       return ref.watch(moderationPresentationResolverProvider)(pubkeyHex);
     });
 
