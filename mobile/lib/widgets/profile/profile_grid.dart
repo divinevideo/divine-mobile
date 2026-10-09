@@ -248,9 +248,11 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
   /// Measure the inputs of [_outerScrollLimit]: the whole scrolling header
   /// (banner included), the tab bar at rest, and each tab's content.
-  final GlobalKey _headerSliverKey = GlobalKey();
-  final GlobalKey _tabBarKey = GlobalKey();
-  final GlobalKey<NestedScrollViewState> _nestedScrollKey = GlobalKey();
+  ///
+  /// Renewed by [_renewScrollKeys] when the viewed profile changes.
+  GlobalKey _headerSliverKey = GlobalKey();
+  GlobalKey _tabBarKey = GlobalKey();
+  GlobalKey<NestedScrollViewState> _nestedScrollKey = GlobalKey();
   final Map<ProfileTabKind, GlobalKey> _tabContentKeys = {};
 
   /// Cached in [build] so the scroll physics can read them mid-layout.
@@ -283,6 +285,17 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     }
     // An own↔other flip changes the tab set (#5213).
     syncTabController();
+    if (oldWidget.userIdHex != widget.userIdHex) _renewScrollKeys();
+  }
+
+  /// A GlobalKey re-attaches its subtree even where an ancestor is re-keyed,
+  /// so these would carry the previous profile's scroll position into the
+  /// next one instead of starting it at the top.
+  void _renewScrollKeys() {
+    _headerSliverKey = GlobalKey();
+    _tabBarKey = GlobalKey();
+    _nestedScrollKey = GlobalKey();
+    _tabContentKeys.clear();
   }
 
   @override

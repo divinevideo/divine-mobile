@@ -245,6 +245,7 @@ void main() {
       List<VideoEvent> videos = const [],
       ScrollController? scrollController,
       List<Override> additionalOverrides = const [],
+      String viewedUserHex = userIdHex,
     }) {
       final grid = MultiBlocProvider(
         providers: [
@@ -253,7 +254,7 @@ void main() {
         ],
         child: ProfileGridView(
           key: const ValueKey('profile-grid'),
-          userIdHex: userIdHex,
+          userIdHex: viewedUserHex,
           isOwnProfile: isOwnProfile,
           videos: videos,
           isLoadingVideos: isLoadingVideos,
@@ -1280,6 +1281,35 @@ void main() {
           epsilon: 1,
         ),
       );
+    });
+
+    testWidgets('starts at the top when the profile changes in place', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      expect(scrollController.offset, greaterThan(0));
+
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+          viewedUserHex: 'b' * 64,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, equals(0));
     });
 
     testWidgets('keeps an empty tab and its message on screen', (
