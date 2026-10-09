@@ -26,6 +26,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/c2pa_creator_binding_factory.dart';
@@ -256,6 +257,24 @@ class CurrentAuthState extends _$CurrentAuthState {
     });
     ref.onDispose(subscription.cancel);
     return authService.authState;
+  }
+}
+
+/// Terminal account proof, assigned only after native storage and the host
+/// frame have committed. A repeated auth enum cannot represent that boundary.
+@Riverpod(keepAlive: true)
+class CurrentAccountActivationReceipt
+    extends _$CurrentAccountActivationReceipt {
+  @override
+  AccountActivationReceipt? build() {
+    final authService = ref.watch(authServiceProvider);
+    final subscription = authService.accountActivationChanges.listen((_) {
+      // A stream notification cannot supply authority by itself. Read the
+      // service's verified current receipt after its terminal assignment.
+      state = authService.committedAccountActivationReceipt;
+    });
+    ref.onDispose(subscription.cancel);
+    return authService.committedAccountActivationReceipt;
   }
 }
 

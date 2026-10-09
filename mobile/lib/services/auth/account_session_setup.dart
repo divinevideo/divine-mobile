@@ -6,14 +6,18 @@ part of '../auth_service.dart';
 /// Captures eligibility at an entry boundary, including an explicitly cold
 /// entry. Internal continuations must never recapture a newer live identity.
 class _ContinuingAccountSession {
-  const _ContinuingAccountSession(this.identity);
+  const _ContinuingAccountSession(this.identity, this.keys);
 
   final NostrIdentity? identity;
+  final SecureKeyContainer? keys;
 }
 
 extension _AccountSessionSetup on AuthService {
   _ContinuingAccountSession _captureContinuingAccountSession() =>
-      _ContinuingAccountSession(isAuthenticated ? _currentIdentity : null);
+      _ContinuingAccountSession(
+        isAuthenticated ? _currentIdentity : null,
+        isAuthenticated ? _currentKeyContainer : null,
+      );
 
   /// An interrupted non-destructive identity sweep stays an entry gate, but
   /// must not tear down the same established live account during refresh.
@@ -66,12 +70,14 @@ extension _AccountSessionSetup on AuthService {
     bool allowPubkeyOnlyIdentity = false,
     bool claimLegacyRows = true,
     bool followingKnownEmpty = false,
+    _FreshAccountCreationOrigin? freshlyGenerated,
   }) async {
     // Only an explicitly captured entry context permits live deferral.
     // Cold initialization, import and creation callers have no such context;
     // a concurrent operation authenticating during their awaits cannot grant it.
     final establishedSession =
-        identical(_currentIdentity, continuingSession?.identity)
+        identical(_currentIdentity, continuingSession?.identity) &&
+            identical(_currentKeyContainer, continuingSession?.keys)
         ? continuingSession?.identity
         : null;
     Log.info(
@@ -151,6 +157,18 @@ extension _AccountSessionSetup on AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final pubkeyHex = keyContainer.publicKeyHex;
+      if (!identical(tentativeIdentity, _currentIdentity) ||
+          !identical(keyContainer, _currentKeyContainer)) {
+        throw const AccountActivationRetiredException();
+      }
+      final activation = await _beginSessionActivation(
+        prefs,
+        tentativeIdentity,
+        keyContainer,
+      );
+      final coordinator = _activation.coordinator!;
+      void ensureCurrent() => coordinator.ensureCurrent(activation);
+      ensureCurrent();
 
       // Check if we need to clear user-specific data due to identity change
       if (_userDataCleanupService.shouldClearDataForUser(pubkeyHex) &&
@@ -176,16 +194,26 @@ extension _AccountSessionSetup on AuthService {
         // cause permanent data loss on account switch and mismatched re-login.
         // Destructive per-user DAO deletion is reserved for account deletion
         // (signOut(deleteKeys: true, deleteLocalUserData: true)).
-        await _userDataCleanupService.clearUserSpecificData(
-          reason: 'identity_change',
-          isIdentityChange: true,
-          userPubkey: oldPubkey,
-          // deleteUserData omitted — defaults to false. Owner-scoped rows
-          // (drafts, clips, uploads) are already invisible to the incoming
-          // account via ownerPubkey filtering; no deletion is needed here.
+        await coordinator.runGuardedStorage(
+          activation,
+          () => _userDataCleanupService.clearUserSpecificData(
+            reason: 'identity_change',
+            isIdentityChange: true,
+            userPubkey: oldPubkey,
+            // deleteUserData omitted — defaults to false. Owner-scoped rows
+            // (drafts, clips, uploads) are already invisible to the incoming
+            // account via ownerPubkey filtering; no deletion is needed here.
+          ),
         );
-        // restore the TOS acceptance since we wouldn't be here otherwise
-        await acceptTerms();
+        ensureCurrent();
+        // Restore the accepted terms only while this activation still owns them.
+        await coordinator.runGuardedStorage(
+          activation,
+          () => AccountSessionStore(
+            prefs,
+          ).acceptTerms(ensureCurrent: ensureCurrent),
+        );
+        ensureCurrent();
       } else {
         Log.debug(
           '_setupUserSession: same identity — no data cleanup needed',
@@ -193,22 +221,96 @@ extension _AccountSessionSetup on AuthService {
           category: LogCategory.auth,
         );
       }
-      await prefs.setString('current_user_pubkey_hex', pubkeyHex);
-
-      if (claimLegacyRows) {
-        await claimLegacyRowsForCurrentUser();
+      ensureCurrent();
+      final storedOwner = await coordinator.runGuardedStorage(
+        activation,
+        () => prefs.setString('current_user_pubkey_hex', pubkeyHex),
+      );
+      ensureCurrent();
+      if (!storedOwner) {
+        throw StateError('Could not persist the active account');
       }
 
-      await AccountSessionStore(prefs).recordAuthentication(
-        source: source,
-        npub: keyContainer.npub,
-      );
+      if (claimLegacyRows) {
+        await coordinator.runGuardedStorage(
+          activation,
+          claimLegacyRowsForCurrentUser,
+        );
+        ensureCurrent();
+      }
 
-      final hasFollowingCache = await prepareFollowingAuthRedirect(
-        prefs,
-        pubkeyHex,
-        followingKnownEmpty,
+      await coordinator.runGuardedStorage(
+        activation,
+        () => AccountSessionStore(prefs).recordAuthentication(
+          source: source,
+          npub: keyContainer.npub,
+          ensureCurrent: ensureCurrent,
+        ),
       );
+      ensureCurrent();
+
+      final hasFollowingCache = await coordinator.runGuardedStorage(
+        activation,
+        () => prepareFollowingAuthRedirect(
+          prefs,
+          pubkeyHex,
+          followingKnownEmpty,
+          ensureCurrent: ensureCurrent,
+        ),
+      );
+      ensureCurrent();
+      await coordinator.runGuardedStorage(
+        activation,
+        () => _knownAccounts.upsert(
+          pubkeyHex,
+          source,
+          ensureCurrent: ensureCurrent,
+        ),
+      );
+      ensureCurrent();
+      await coordinator.runGuardedStorage(activation, prefs.reload);
+      ensureCurrent();
+      if (prefs.getString('current_user_pubkey_hex') != pubkeyHex ||
+          prefs.getString(kAuthenticationSourceKey) != source.code ||
+          prefs.getString(kLastUsedNpubKey) != keyContainer.npub) {
+        throw StateError('Account session readback did not match');
+      }
+      _activation.metadataIsCurrent = () =>
+          prefs.get('current_user_pubkey_hex') == pubkeyHex &&
+          prefs.get(kAuthenticationSourceKey) == source.code &&
+          prefs.get(kLastUsedNpubKey) == keyContainer.npub;
+      // Store identity keys for multi-account switching
+      try {
+        await _keyStorage.storeIdentityKeyContainer(
+          keyContainer.npub,
+          keyContainer,
+        );
+        ensureCurrent();
+        Log.debug(
+          '_setupUserSession: identity keys stored for multi-account',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+      } on AccountActivationRetiredException {
+        rethrow;
+      } catch (e) {
+        // Best-effort — external signers may not have local keys to store
+        Log.debug(
+          '_setupUserSession: could not store identity keys '
+          '(expected for external signers): $e',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+      }
+
+      ensureCurrent();
+      await coordinator.markIdentityReady(activation);
+      ensureCurrent();
+      if (!_activation.awaitsHost) {
+        _activation.receipt = await coordinator.commit(activation);
+        ensureCurrent();
+        _activation.entryPrepared = false;
+      }
 
       Log.info(
         '_setupUserSession: setting auth state to authenticated',
@@ -216,6 +318,10 @@ extension _AccountSessionSetup on AuthService {
         category: LogCategory.auth,
       );
       _setAuthState(AuthState.authenticated);
+      if (identical(freshlyGenerated?.keys, keyContainer)) {
+        _grantFreshAccountListCreationPermit(keyContainer);
+      }
+      _activation.changes.add(_committedAccountActivationReceipt);
 
       if (_preFetchFollowing != null && !hasFollowingCache) {
         unawaited(() async {
@@ -242,45 +348,35 @@ extension _AccountSessionSetup on AuthService {
         }());
       }
 
-      // Register this account in the known accounts list
-      await _knownAccounts.upsert(pubkeyHex, source);
-
-      // Store identity keys for multi-account switching
-      try {
-        await _keyStorage.storeIdentityKeyContainer(
-          keyContainer.npub,
-          keyContainer,
-        );
-        Log.debug(
-          '_setupUserSession: identity keys stored for multi-account',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-      } catch (e) {
-        // Best-effort — external signers may not have local keys to store
-        Log.debug(
-          '_setupUserSession: could not store identity keys '
-          '(expected for external signers): $e',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-      }
-
       // Run discovery in background - it's not needed for the home feed to start
       // loading. Discovery results (relay list, blossom servers) are only used
       // when editing profile or publishing content.
+      ensureCurrent();
       unawaited(_performDiscovery());
     } on UserDataCleanupException {
-      _resetTentativeSessionAfterCleanupFailure();
+      if (identical(tentativeIdentity, _currentIdentity)) {
+        _retireAccountActivation();
+        _resetTentativeSessionAfterCleanupFailure();
+      }
+      rethrow;
+    } on AccountActivationRetiredException {
       rethrow;
     } catch (e) {
+      if (!identical(tentativeIdentity, _currentIdentity) ||
+          !identical(keyContainer, _currentKeyContainer)) {
+        throw const AccountActivationRetiredException();
+      }
+      _retireAccountActivation();
       Log.warning(
         'error in _setupUserSession: $e',
         name: 'AuthService',
         category: LogCategory.auth,
       );
-      // Default to awaiting TOS if we can't check
-      _setAuthState(AuthState.awaitingTosAcceptance);
+      _resetTentativeSessionAfterCleanupFailure();
+      throw UserDataCleanupException(
+        'Could not establish the account safely',
+        e,
+      );
     }
 
     _profileController.add(_currentProfile);

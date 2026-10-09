@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -33,6 +34,19 @@ class _CleanupBackend extends InMemorySharedPreferencesStore {
   Completer<void>? readEntered;
   Completer<void>? resumeRead;
   Object? readFailure;
+  final refusedKeys = <String>{};
+  final lyingKeys = <String>{};
+
+  @override
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (refusedKeys.any(key.endsWith)) {
+      return false;
+    }
+    if (lyingKeys.any(key.endsWith)) {
+      return true;
+    }
+    return super.setValue(type, key, value);
+  }
 
   void pauseRead() {
     readEntered = Completer<void>();
@@ -46,9 +60,13 @@ class _CleanupBackend extends InMemorySharedPreferencesStore {
     readEntered = null;
     resumeRead = null;
     entered?.complete();
-    if (resume != null) await resume.future;
+    if (resume != null) {
+      await resume.future;
+    }
     final failure = readFailure;
-    if (failure != null) throw failure;
+    if (failure != null) {
+      throw failure;
+    }
     return super.getAll();
   }
 }
@@ -113,7 +131,9 @@ void main() {
             destructive: deleteUserData,
             preserveSession: preserveActiveSession,
           ));
-          if (refuseDatabase) throw StateError('Database cleanup refused');
+          if (refuseDatabase) {
+            throw StateError('Database cleanup refused');
+          }
         };
 
     keys = _Keys();
@@ -137,14 +157,38 @@ void main() {
     );
     when(keys.getKeyContainer).thenAnswer((_) async => container);
     when(() => keys.switchToIdentity(any())).thenAnswer((_) async => true);
-    when(() => keys.storeIdentityKeyContainer(any(), any()))
-        .thenAnswer((_) async {});
+    when(
+      () => keys.storeIdentityKeyContainer(any(), any()),
+    ).thenAnswer((_) async {});
   }
 
   void stubNetworkFreeDiscovery() {
+    when(() => discovery.clearCache(any())).thenAnswer((_) async {});
     when(() => discovery.discoverRelays(any())).thenAnswer(
       (_) async => RelayDiscoveryResult.failure('No relay discovery in test'),
     );
+  }
+
+  void stubGeneratedPrimary(SecureKeyContainer generated) {
+    var primary = container;
+    when(keys.getKeyContainer).thenAnswer((_) async => primary);
+    when(() => keys.importFromNsec(any())).thenAnswer((_) async {
+      primary = container;
+      return container;
+    });
+    when(
+      () => keys.generateAndStoreKeys(
+        primaryWriteGuard: any(named: 'primaryWriteGuard'),
+      ),
+    ).thenAnswer((invocation) async {
+      final guard =
+          invocation.namedArguments[#primaryWriteGuard]
+              as PrimaryKeyPersistenceGuard;
+      await guard(generated.publicKeyHex, () async {
+        primary = generated;
+      });
+      return generated;
+    });
   }
 
   tearDown(() async {
@@ -197,6 +241,256 @@ void main() {
     expect(preferences.get(PendingAccountCleanup.storageKey), marker);
   }
 
+  group('prepared native signer entry', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+
+    test(
+      'a queued import cannot borrow or disable suspended signer authority',
+      () async {
+        secureStorage = const FlutterSecureStorage();
+        auth = createAuth();
+        final archiveKey = 'keycast_session_${container.publicKeyHex}';
+        final globalWrites = <String>[];
+        final data = <String, String>{};
+        final readEntered = Completer<void>();
+        final resumeRead = Completer<void>();
+        var pauseArchive = false;
+        overrideSharedChannel(
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (call) async {
+            final key = call.arguments['key'] as String?;
+            switch (call.method) {
+              case 'read':
+                if (key == archiveKey && pauseArchive) {
+                  pauseArchive = false;
+                  readEntered.complete();
+                  await resumeRead.future;
+                }
+                return data[key];
+              case 'write':
+                globalWrites.add(key!);
+                data[key] = call.arguments['value'] as String;
+              case 'delete':
+                globalWrites.add(key!);
+                data.remove(key);
+            }
+            return null;
+          },
+        );
+        await establishLive();
+        final originalIdentity = auth.currentIdentity;
+        final archiveRaw = jsonEncode(oauthSession().toJson());
+        data[archiveKey] = archiveRaw;
+        pauseArchive = true;
+        globalWrites.clear();
+        final oldAttempt = expectLater(
+          auth.signInForAccount(
+            container.publicKeyHex,
+            AuthenticationSource.divineOAuth,
+          ),
+          throwsA(isA<AccountActivationRetiredException>()),
+        );
+        Future<void>? nextChecked;
+        try {
+          await readEntered.future;
+          final nextBegun = AccountActivationCoordinator.forPreferences(
+            preferences,
+          ).changes.first;
+          // Import intent retires the signer, but its PRIMARY write waits for
+          // the old native lease before changing a tentative identity.
+          final nextImport = auth.importFromNsec(nsec);
+          nextChecked = expectLater(
+            nextImport,
+            completion(
+              isA<AuthResult>().having(
+                (result) => result.success,
+                'success',
+                isFalse,
+              ),
+            ),
+          );
+          await nextBegun;
+          expect(auth.currentIdentity, same(originalIdentity));
+          expect(auth.committedAccountActivationReceipt, isNull);
+          auth.retireAccountSwitchActivation();
+        } finally {
+          if (!resumeRead.isCompleted) {
+            resumeRead.complete();
+          }
+          await oldAttempt;
+          if (nextChecked != null) {
+            await nextChecked;
+          }
+        }
+        expect(
+          globalWrites,
+          isEmpty,
+          reason: 'Retired native proof cannot write session or signer slots',
+        );
+        expect(preferences.getString('authentication_source'), 'imported_keys');
+        expect(auth.committedAccountActivationReceipt, isNull);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        expect(data[archiveKey], archiveRaw);
+      },
+    );
+  });
+
+  group('activation publication boundary', () {
+    setUp(() {
+      secureStorage = null;
+      stubKeyLifecycle();
+      stubLocalAndStoredKeys();
+      stubNetworkFreeDiscovery();
+      auth = createAuth();
+    });
+
+    for (final key in [
+      'current_user_pubkey_hex',
+      'authentication_source',
+      'last_used_npub',
+      'known_accounts',
+    ]) {
+      for (final failure in ['refused', 'lying']) {
+        test('$failure $key cannot emit an authenticated activation', () async {
+          // Different pre-existing values make a lying acknowledgement visible
+          // to native readback instead of accidentally satisfying the assertion.
+          await preferences.remove(key);
+          if (failure == 'refused') backend.refusedKeys.add(key);
+          if (failure == 'lying') backend.lyingKeys.add(key);
+          final emitted = <AuthState>[];
+          final subscription = auth.authStateStream.listen(emitted.add);
+          final result = await auth.importFromNsec(nsec);
+          await pumpEventQueue();
+          expect(result.success, isFalse);
+          expect(auth.authState, AuthState.unauthenticated);
+          expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+          expect(auth.currentIdentity, isNull);
+          expect(auth.currentPublicKeyHex, isNull);
+          expect(emitted, isNot(contains(AuthState.authenticated)));
+          expect(auth.committedAccountOwnerPubkey, isNull);
+          expect(auth.committedAccountActivationReceipt, isNull);
+          expect(auth.takeFreshAccountListCreationPermit(), isNull);
+          expect(
+            AccountActivationCoordinator.forPreferences(
+              preferences,
+            ).hasUnresolvedActivation,
+            isTrue,
+          );
+          await subscription.cancel();
+        });
+      }
+    }
+
+    test('unreadable known accounts retain their exact evidence', () async {
+      await preferences.setString('known_accounts', '{damaged');
+      final result = await auth.importFromNsec(nsec);
+      expect(result.success, isFalse);
+      expect(preferences.getString('known_accounts'), '{damaged');
+      expect(auth.committedAccountOwnerPubkey, isNull);
+    });
+
+    test(
+      'imported and restored identities cannot obtain creation permission',
+      () async {
+        await establishLive();
+        final importedReceipt = auth.committedAccountActivationReceipt!;
+        expect(importedReceipt.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        await reenter();
+        expect(importedReceipt.isCurrent, isFalse);
+        expect(auth.committedAccountActivationReceipt!.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        verifyNever(
+          () => keys.generateAndStoreKeys(
+            primaryWriteGuard: any(named: 'primaryWriteGuard'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'only real generation creates a revocable one-use permission',
+      () async {
+        final generated = await SecureKeyContainer.generate();
+        stubGeneratedPrimary(generated);
+        final result = await auth.createNewIdentity();
+        expect(result.success, isTrue);
+        final permit = auth.takeFreshAccountListCreationPermit()!;
+        expect(permit.ownerPubkey, generated.publicKeyHex);
+        expect(permit.consumeFor(otherOwner), isFalse);
+        expect(permit.consumeFor(generated.publicKeyHex), isTrue);
+        expect(permit.consumeFor(generated.publicKeyHex), isFalse);
+        expect(permit.isCurrentFor(generated.publicKeyHex), isTrue);
+        await auth.importFromNsec(nsec);
+        expect(permit.isCurrentFor(generated.publicKeyHex), isFalse);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        verify(
+          () => keys.generateAndStoreKeys(
+            primaryWriteGuard: any(named: 'primaryWriteGuard'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'normal verified logout can restore its account without a creation grant',
+      () async {
+        await establishLive();
+        final before = auth.committedAccountActivationReceipt!;
+        final owner = container.publicKeyHex;
+        final originalKeys = container;
+        await auth.signOut();
+        expect(auth.authState, AuthState.unauthenticated);
+        expect(before.isCurrent, isFalse);
+        expect(auth.committedAccountActivationReceipt, isNull);
+        expect(
+          AccountActivationCoordinator.forPreferences(
+            preferences,
+          ).hasUnresolvedActivation,
+          isFalse,
+        );
+        expect(
+          () => originalKeys.publicKeyHex,
+          throwsA(isA<SecureKeyException>()),
+        );
+        // Native restore creates a fresh key object; the old auth object is
+        // intentionally disposed by logout and cannot be reused by this mock.
+        container = SecureKeyContainer.fromNsec(nsec);
+        expect(container.publicKeyHex, owner);
+        await reenter();
+        expect(auth.authState, AuthState.authenticated);
+        expect(auth.committedAccountOwnerPubkey, owner);
+        expect(auth.committedAccountActivationReceipt!.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+      },
+    );
+
+    test(
+      'terminal event carries proof after assignment and fresh permission',
+      () async {
+        final generated = await SecureKeyContainer.generate();
+        stubGeneratedPrimary(generated);
+        final delivered = <bool>[];
+        final subscription = auth.accountActivationChanges.listen((receipt) {
+          if (receipt != null) {
+            delivered.add(
+              identical(receipt, auth.committedAccountActivationReceipt) &&
+                  auth.isAuthenticated &&
+                  receipt.isCurrent &&
+                  auth.takeFreshAccountListCreationPermit() != null,
+            );
+          }
+        });
+        expect((await auth.createNewIdentity()).success, isTrue);
+        await pumpEventQueue();
+        expect(delivered, [true]);
+        await subscription.cancel();
+      },
+    );
+  });
+
   group('signInForAccount pending cleanup', () {
     setUp(stubKeyLifecycle);
     setUp(stubLocalAndStoredKeys);
@@ -209,8 +503,9 @@ void main() {
       'same live owner preserves its marker, list lease and authentication',
       () async {
         await establishLive();
-        final lease = CuratedListSessionCoordinator.forPreferences(preferences)
-            .acquire();
+        final lease = CuratedListSessionCoordinator.forPreferences(
+          preferences,
+        ).acquire();
         await recordPending();
         final marker = preferences.getString(PendingAccountCleanup.storageKey);
         // An unavailable cleanup backend cannot disconnect this continuing owner.
@@ -253,8 +548,9 @@ void main() {
                 ));
               };
         auth = createAuth();
-        final lease = CuratedListSessionCoordinator.forPreferences(preferences)
-            .acquire();
+        final lease = CuratedListSessionCoordinator.forPreferences(
+          preferences,
+        ).acquire();
         await reenter();
         expect(sweeps.single.owner, owner);
         expect(lease.isCurrent, isFalse);
@@ -299,8 +595,13 @@ void main() {
           'current_user_pubkey_hex',
           incoming.publicKeyHex,
         );
-        when(() => keys.getIdentityKeyContainer(incoming.npub))
-            .thenAnswer((_) async => incoming);
+        when(
+          () => keys.getIdentityKeyContainer(incoming.npub),
+        ).thenAnswer((_) async => incoming);
+        when(() => keys.switchToIdentity(incoming.npub)).thenAnswer((_) async {
+          when(keys.getKeyContainer).thenAnswer((_) async => incoming);
+          return true;
+        });
         refuseDatabase = true;
         await expectLater(
           auth.signInForAccount(
@@ -393,8 +694,9 @@ void main() {
         await establishLive();
         await recordPending();
         final marker = preferences.getString(PendingAccountCleanup.storageKey);
-        final lease = CuratedListSessionCoordinator.forPreferences(preferences)
-            .acquire();
+        final lease = CuratedListSessionCoordinator.forPreferences(
+          preferences,
+        ).acquire();
         refuseDatabase = true;
         await auth.signInWithDivineOAuth(oauthSession());
         expect(sweeps, isEmpty);
@@ -457,9 +759,11 @@ void main() {
     );
 
     for (final originallyLive in [true, false]) {
-      test('OAuth with originally live=$originallyLive cannot borrow a newly '
-          'authenticated same-owner session', () async {
-        if (originallyLive) await establishLive();
+      test('retired OAuth with originally live=$originallyLive cannot alter a '
+          'newly authenticated same-owner session', () async {
+        if (originallyLive) {
+          await establishLive();
+        }
         final originalIdentity = auth.currentIdentity;
         final lookupEntered = Completer<void>();
         final resumeLookup = Completer<void>();
@@ -476,7 +780,7 @@ void main() {
         final attempt = auth.signInWithDivineOAuth(oauthSession());
         final failed = expectLater(
           attempt,
-          throwsA(isA<UserDataCleanupException>()),
+          throwsA(isA<AccountActivationRetiredException>()),
         );
         await lookupEntered.future;
         // Finish another real setup while the OAuth entry is awaiting keys. Its
@@ -484,14 +788,23 @@ void main() {
         await reenter();
         expect(auth.authState, AuthState.authenticated);
         expect(auth.currentIdentity, isNot(same(originalIdentity)));
+        final replacementIdentity = auth.currentIdentity;
+        final replacementReceipt = auth.committedAccountActivationReceipt;
         expect(sweeps, isEmpty);
         await recordPending();
         final marker = preferences.getString(PendingAccountCleanup.storageKey);
         refuseDatabase = true;
         resumeLookup.complete();
         await failed;
-        expect(sweeps.single.owner, container.publicKeyHex);
-        expect(auth.authState, AuthState.unauthenticated);
+        expect(sweeps, isEmpty);
+        expect(auth.authState, AuthState.authenticated);
+        expect(auth.currentIdentity, same(replacementIdentity));
+        expect(
+          auth.committedAccountActivationReceipt,
+          same(replacementReceipt),
+        );
+        expect(replacementReceipt!.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
         expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
       });
     }
@@ -510,7 +823,9 @@ void main() {
         'stored-key entry with originally live=$originallyLive cannot borrow '
         'a newly authenticated same-owner session',
         () async {
-          if (originallyLive) await establishLive();
+          if (originallyLive) {
+            await establishLive();
+          }
           final originalIdentity = auth.currentIdentity;
           final lookupEntered = Completer<void>();
           final resumeLookup = Completer<void>();
@@ -525,12 +840,14 @@ void main() {
           });
           final failed = expectLater(
             reenter(),
-            throwsA(isA<UserDataCleanupException>()),
+            throwsA(isA<AccountActivationRetiredException>()),
           );
           await lookupEntered.future;
           await reenter();
           expect(auth.authState, AuthState.authenticated);
           expect(auth.currentIdentity, isNot(same(originalIdentity)));
+          final replacementIdentity = auth.currentIdentity;
+          final replacementReceipt = auth.committedAccountActivationReceipt;
           await recordPending();
           final marker = preferences.getString(
             PendingAccountCleanup.storageKey,
@@ -538,8 +855,15 @@ void main() {
           refuseDatabase = true;
           resumeLookup.complete();
           await failed;
-          expect(sweeps.single.owner, container.publicKeyHex);
-          expect(auth.authState, AuthState.unauthenticated);
+          expect(sweeps, isEmpty);
+          expect(auth.authState, AuthState.authenticated);
+          expect(auth.currentIdentity, same(replacementIdentity));
+          expect(
+            auth.committedAccountActivationReceipt,
+            same(replacementReceipt),
+          );
+          expect(replacementReceipt!.isCurrent, isTrue);
+          expect(auth.takeFreshAccountListCreationPermit(), isNull);
           expect(
             preferences.getString(PendingAccountCleanup.storageKey),
             marker,
@@ -547,17 +871,19 @@ void main() {
         },
       );
 
-      test('stored OAuth with originally live=$originallyLive cannot recapture '
-          'a newly authenticated same-owner session', () async {
+      test('retired stored OAuth with originally live=$originallyLive cannot '
+          'write through the next same-owner session', () async {
         await auth.dispose();
         secureStorage = const FlutterSecureStorage();
         auth = createAuth();
-        if (originallyLive) await establishLive();
+        if (originallyLive) {
+          await establishLive();
+        }
         final originalIdentity = auth.currentIdentity;
         final archiveKey = 'keycast_session_${container.publicKeyHex}';
-        final data = <String, String>{
-          archiveKey: jsonEncode(oauthSession().toJson()),
-        };
+        final archiveRaw = jsonEncode(oauthSession().toJson());
+        final data = <String, String>{archiveKey: archiveRaw};
+        final signerWrites = <String>[];
         final readEntered = Completer<void>();
         final resumeRead = Completer<void>();
         var pauseArchive = true;
@@ -574,7 +900,8 @@ void main() {
                 }
                 return data[key];
               case 'write':
-                data[key!] = call.arguments['value'] as String;
+                signerWrites.add(key!);
+                data[key] = call.arguments['value'] as String;
               case 'delete':
                 data.remove(key);
             }
@@ -586,20 +913,58 @@ void main() {
             container.publicKeyHex,
             AuthenticationSource.divineOAuth,
           ),
-          throwsA(isA<UserDataCleanupException>()),
+          throwsA(isA<AccountActivationRetiredException>()),
         );
-        await readEntered.future;
-        await reenter();
+        Future<void>? nextChecked;
+        var nextCompleted = false;
+        try {
+          await readEntered.future;
+          final oldRecord = preferences.getString(
+            AccountActivationCoordinator.storageKey,
+          );
+          final nextBegun = AccountActivationCoordinator.forPreferences(
+            preferences,
+          ).changes.first;
+          final nextOperation = reenter().whenComplete(() {
+            nextCompleted = true;
+          });
+          nextChecked = expectLater(nextOperation, completes);
+          await nextBegun;
+          expect(nextCompleted, isFalse);
+          expect(auth.currentIdentity, same(originalIdentity));
+          expect(auth.committedAccountActivationReceipt, isNull);
+          expect(sweeps, isEmpty);
+          expect(signerWrites, isEmpty);
+          expect(
+            preferences.getString(AccountActivationCoordinator.storageKey),
+            oldRecord,
+          );
+        } finally {
+          if (!resumeRead.isCompleted) {
+            resumeRead.complete();
+          }
+          await failed;
+          if (nextChecked != null) {
+            await nextChecked;
+          }
+        }
+        expect(nextCompleted, isTrue);
         expect(auth.authState, AuthState.authenticated);
         expect(auth.currentIdentity, isNot(same(originalIdentity)));
-        await recordPending();
-        final marker = preferences.getString(PendingAccountCleanup.storageKey);
-        refuseDatabase = true;
-        resumeRead.complete();
-        await failed;
-        expect(sweeps.single.owner, container.publicKeyHex);
-        expect(auth.authState, AuthState.unauthenticated);
-        expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+        expect(auth.committedAccountActivationReceipt!.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        expect(sweeps, isEmpty);
+        expect(data[archiveKey], archiveRaw);
+        expect(
+          signerWrites,
+          isNot(
+            anyOf(
+              contains('keycast_session'),
+              contains('keycast_refresh_token'),
+              contains('keycast_auth_handle'),
+            ),
+          ),
+        );
       });
     }
   });
@@ -613,7 +978,7 @@ void main() {
     });
 
     test(
-      'explicit key import cannot borrow a concurrently established session',
+      'a retired native import cannot alter the replacement session',
       () async {
         final importEntered = Completer<void>();
         final resumeImport = Completer<void>();
@@ -623,18 +988,58 @@ void main() {
           return container;
         });
         final attempt = auth.importFromNsec(nsec);
-        await importEntered.future;
-        await reenter();
-        expect(auth.isAuthenticated, isTrue);
+        await importEntered.future.timeout(const Duration(seconds: 5));
+        final coordinator = AccountActivationCoordinator.forPreferences(
+          preferences,
+        );
+        final nextBegun = coordinator.changes.first;
+        var nextSettled = false;
+        final next = reenter().whenComplete(() => nextSettled = true);
+        final nextChecked = expectLater(next, completes);
+        late AuthResult result;
+        try {
+          await nextBegun.timeout(const Duration(seconds: 5));
+          expect(nextSettled, isFalse);
+          expect(auth.currentIdentity, isNull);
+          expect(auth.committedAccountActivationReceipt, isNull);
+          expect(sweeps, isEmpty);
+        } finally {
+          resumeImport.complete();
+          result = await attempt;
+          await nextChecked;
+        }
+        expect(result.success, isFalse);
+        expect(
+          result.errorMessage,
+          contains('AccountActivationRetiredException'),
+        );
+        expect(auth.authState, AuthState.authenticated);
+        expect(auth.currentPublicKeyHex, container.publicKeyHex);
+        expect(auth.committedAccountActivationReceipt!.isCurrent, isTrue);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
+        expect(sweeps, isEmpty);
+        await recordPending();
+        final marker = preferences.getString(PendingAccountCleanup.storageKey);
+        await pumpEventQueue();
+        expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+      },
+    );
+
+    test(
+      'a current explicit import cannot borrow the live cleanup exception',
+      () async {
+        await establishLive();
         await recordPending();
         final marker = preferences.getString(PendingAccountCleanup.storageKey);
         refuseDatabase = true;
-        resumeImport.complete();
-        final result = await attempt;
+        final result = await auth.importFromNsec(nsec);
         expect(result.success, isFalse);
         expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
         expect(sweeps.single.owner, container.publicKeyHex);
         expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+        expect(auth.authState, AuthState.unauthenticated);
+        expect(auth.committedAccountActivationReceipt, isNull);
+        expect(auth.takeFreshAccountListCreationPermit(), isNull);
       },
     );
   });
@@ -667,23 +1072,28 @@ void main() {
             throwsA(isA<UserDataCleanupException>()),
           );
           await readEntered.future;
-          final tentative = auth.currentIdentity;
-          expect(tentative, isNot(same(established)));
-          expect(tentative!.pubkey, container.publicKeyHex);
-          if (replacement == 'identity') {
-            auth.debugSetIdentity(
-              LocalNostrIdentity(
-                keyContainer: SecureKeyContainer.fromNsec(nsec),
-              ),
-            );
-            expect(auth.currentIdentity, isNot(same(tentative)));
-          } else {
-            auth.debugSetCurrentKeyContainer(SecureKeyContainer.fromNsec(nsec));
-            expect(auth.currentIdentity, same(tentative));
+          try {
+            // Activation preparation now reads preferences before setup; entry
+            // eligibility must preserve BOTH original references across it.
+            expect(auth.currentIdentity, same(established));
+            if (replacement == 'identity') {
+              auth.debugSetIdentity(
+                LocalNostrIdentity(
+                  keyContainer: SecureKeyContainer.fromNsec(nsec),
+                ),
+              );
+              expect(auth.currentIdentity, isNot(same(established)));
+            } else {
+              auth.debugSetCurrentKeyContainer(
+                SecureKeyContainer.fromNsec(nsec),
+              );
+              expect(auth.currentIdentity, same(established));
+            }
+            expect(auth.currentPublicKeyHex, container.publicKeyHex);
+            expect(auth.authState, AuthState.authenticated);
+          } finally {
+            resumeRead.complete();
           }
-          expect(auth.currentPublicKeyHex, container.publicKeyHex);
-          expect(auth.authState, AuthState.authenticated);
-          resumeRead.complete();
           await failed;
           expect(sweeps.single.owner, container.publicKeyHex);
           expect(
@@ -702,14 +1112,33 @@ void main() {
         final marker = preferences.getString(PendingAccountCleanup.storageKey);
         backend.readFailure = StateError('Unexpected preferences read failure');
         SharedPreferences.resetStatic();
-        await expectLater(
-          reenter(),
-          throwsA(isA<AccountRestoreFailedException>()),
-        );
-        expect(auth.isAuthenticated, isFalse);
-        expect(sweeps, isEmpty);
-        expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
-        backend.readFailure = null;
+        final priorReceipt = auth.committedAccountActivationReceipt!;
+        final failedAttempt = reenter();
+        expect(priorReceipt.isCurrent, isFalse);
+        expect(auth.committedAccountActivationReceipt, isNull);
+        try {
+          await expectLater(
+            failedAttempt,
+            throwsA(isA<UserDataCleanupException>()),
+          );
+          expect(auth.isAuthenticated, isFalse);
+          expect(auth.authState, AuthState.unauthenticated);
+          expect(
+            auth.lastFailureReason,
+            AuthFailureReason.accountCleanupFailed,
+          );
+          expect(auth.currentIdentity, isNull);
+          expect(auth.currentPublicKeyHex, isNull);
+          expect(auth.committedAccountActivationReceipt, isNull);
+          expect(auth.takeFreshAccountListCreationPermit(), isNull);
+          expect(sweeps, isEmpty);
+          expect(
+            preferences.getString(PendingAccountCleanup.storageKey),
+            marker,
+          );
+        } finally {
+          backend.readFailure = null;
+        }
         expect(
           (await backend
               .getAll())['flutter.${PendingAccountCleanup.storageKey}'],

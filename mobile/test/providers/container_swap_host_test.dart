@@ -116,6 +116,59 @@ void main() {
   });
 
   group('controller lifecycle', () {
+    testWidgets(
+      'receipt waits for a frame and expires at the next generation',
+      (tester) async {
+        final controller = AccountSwitchController();
+        await tester.pumpWidget(
+          ContainerSwapHost(
+            initialContainer: containerWith('A'),
+            controller: controller,
+            child: const _ValueText(),
+          ),
+        );
+        final outgoing = controller.currentCommit!;
+        var delivered = false;
+        final pending = controller.swapToAndCommit(containerWith('B')).then((
+          receipt,
+        ) {
+          delivered = true;
+          return receipt;
+        });
+        expect(delivered, isFalse);
+        expect(outgoing.isCurrent, isFalse);
+        expect(controller.currentCommit, isNull);
+        await tester.pump();
+        final receipt = await pending;
+        expect(receipt.isCurrent, isTrue);
+        expect(find.text('B'), findsOneWidget);
+        await controller.swapTo(containerWith('C'));
+        expect(receipt.isCurrent, isFalse);
+        await tester.pump();
+        expect(controller.currentCommit!.isCurrent, isTrue);
+        await tester.pumpWidget(const SizedBox());
+        expect(receipt.isCurrent, isFalse);
+      },
+    );
+
+    testWidgets('retiring the host before its frame rejects the receipt', (
+      tester,
+    ) async {
+      final controller = AccountSwitchController();
+      await tester.pumpWidget(
+        ContainerSwapHost(
+          initialContainer: containerWith('A'),
+          controller: controller,
+          child: const _ValueText(),
+        ),
+      );
+      final pending = controller.swapToAndCommit(containerWith('B'));
+      final assertion = expectLater(pending, throwsStateError);
+      await tester.pumpWidget(const SizedBox());
+      await assertion;
+      expect(controller.currentCommit, isNull);
+    });
+
     testWidgets('runExclusive rejects overlapping switches', (tester) async {
       final controller = AccountSwitchController();
       final completer = Completer<void>();
