@@ -80,6 +80,7 @@ void main() {
               index == 1,
         ),
     ];
+    when(() => _service.editableLists).thenAnswer((_) => _lists);
     final scaler = ValueNotifier<double>(1);
     addTearDown(scaler.dispose);
     await tester.binding.setSurfaceSize(
