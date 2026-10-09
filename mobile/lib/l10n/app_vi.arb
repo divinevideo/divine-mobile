@@ -2923,6 +2923,7 @@
     "dmDeleteRefusedMessage": "Không xóa được với mọi người.",
     "dmDeleteRefusedDetails": "Một số người vẫn có thể nhìn thấy tin nhắn này.",
   "dmRetiredThreadClosedTitle": "Cuộc trò chuyện này đã đóng.",
+  "dmFormerModerationAccountName": "Tài khoản kiểm duyệt cũ",
   "messageRequestModerationNoticeCannotBeRemoved": "Không thể xóa thông báo Divine Moderation này.",
   "dmRetiredThreadClosedBody": "Chúng tôi đã chuyển Divine Moderation sang một tài khoản mới. Không còn ai đọc tài khoản này nữa.",
   "dmRetiredThreadOpenSupport": "Nhắn tin cho Divine Moderation",

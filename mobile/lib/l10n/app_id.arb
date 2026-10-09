@@ -2159,6 +2159,7 @@
     "dmDeleteRefusedMessage": "Gagal menghapus untuk semua orang.",
     "dmDeleteRefusedDetails": "Beberapa orang mungkin masih dapat melihat pesan ini.",
     "dmRetiredThreadClosedTitle": "Percakapan ini sudah ditutup.",
+    "dmFormerModerationAccountName": "Akun moderasi sebelumnya",
     "messageRequestModerationNoticeCannotBeRemoved": "Pemberitahuan Divine Moderation ini tidak dapat dihapus.",
     "dmRetiredThreadClosedBody": "Kami memindahkan Divine Moderation ke akun baru. Akun ini tidak dibaca lagi.",
     "dmRetiredThreadOpenSupport": "Kirim pesan ke Divine Moderation",

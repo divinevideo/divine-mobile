@@ -5,6 +5,7 @@
 import 'package:dm_repository/dm_repository.dart'
     show DmSendPolicy, DmSendPolicyDecision;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate_impl.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -25,6 +26,37 @@ final officialAccountsServiceProvider = Provider<OfficialAccountsService>((
     prefs: ref.watch(sharedPreferencesProvider),
   );
 });
+
+/// The retired moderation key register the DM surfaces present peers against.
+///
+/// The shipped register is a compile-time const, so this never changes at
+/// runtime; it is a provider so tests can supply every custody state and
+/// exercise real widgets against them.
+final retiredModerationKeysProvider = Provider<List<RetiredModerationKey>>(
+  (ref) => kRetiredModerationKeys,
+);
+
+/// The resolver behind [moderationPresentationProvider], for code that is not a
+/// widget (a BLoC matching on the rendered name is handed this at creation).
+final moderationPresentationResolverProvider =
+    Provider<ModerationPresentationResolver>((ref) {
+      final retiredKeys = ref.watch(retiredModerationKeysProvider);
+      return (pubkeyHex) =>
+          moderationPresentationOf(pubkeyHex, retiredKeys: retiredKeys);
+    });
+
+/// How the DM surfaces present [pubkeyHex]: Divine's official name and
+/// wordmark, a neutral "former moderation account", or an ordinary account.
+///
+/// Official branding follows recorded custody (#9963). Presentation only: the
+/// safety behaviours (closed composer, withheld decline action, removal
+/// policy) read [isModerationAccount] / [isRetiredModerationAccount], which do
+/// not depend on custody.
+final ProviderFamily<ModerationPresentation, String>
+moderationPresentationProvider =
+    Provider.family<ModerationPresentation, String>((ref, pubkeyHex) {
+      return ref.watch(moderationPresentationResolverProvider)(pubkeyHex);
+    });
 
 /// The outbound-DM policy injected into [NIP17MessageService] (#176, #6416).
 ///

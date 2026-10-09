@@ -12,6 +12,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_tile.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
+import '../../../../helpers/retired_key_custody.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 
 void main() {
@@ -302,6 +303,98 @@ void main() {
     // `DmRepository.classifyPotentialRequests` routes an unfollowed thread
     // here "1:1 or group alike", so a group reaches this list and the row has
     // to name the room rather than whichever member sorts first.
+    // Official branding follows recorded custody (#9963). The closed-thread
+    // line is a safety behavior and holds for every custody.
+    group('a retired moderation key, by recorded custody (#9963)', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final retired = shippedRetiredKey;
+
+      Finder wordmarkFinder() => find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.logo,
+        description: 'bundled Divine wordmark',
+      );
+
+      Future<void> pumpTileFor(
+        WidgetTester tester,
+        RetiredKeyCustody custody,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              retiredKeyCustody(custody),
+              // The key's holder controls its kind-0, so the test gives it one
+              // that tries to look official.
+              userProfileReactiveProvider(retired).overrideWith(
+                (ref) => Stream.value(
+                  UserProfile(
+                    pubkey: retired,
+                    displayName: 'Looks Official',
+                    picture: 'https://example.invalid/looks-official.png',
+                    rawData: const {},
+                    createdAt: now,
+                    eventId: 'c' * 64,
+                  ),
+                ),
+              ),
+            ],
+            home: Scaffold(
+              body: RequestTile(
+                conversation: DmConversation(
+                  id: 'd' * 64,
+                  participantPubkeys: [currentPubkey, retired],
+                  isGroup: false,
+                  createdAt: nowUnix,
+                ),
+                currentUserPubkey: currentPubkey,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: keeps Divine's name and wordmark", (
+          tester,
+        ) async {
+          await pumpTileFor(tester, custody);
+
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+          expect(wordmarkFinder(), findsOneWidget);
+          expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark, no picture', (
+          tester,
+        ) async {
+          await pumpTileFor(tester, custody);
+
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(wordmarkFinder(), findsNothing);
+          expect(
+            tester.widget<UserAvatar>(find.byType(UserAvatar)).imageUrl,
+            isNull,
+          );
+        });
+      }
+
+      for (final custody in RetiredKeyCustody.values) {
+        testWidgets('${custody.name}: the request still reads as closed', (
+          tester,
+        ) async {
+          await pumpTileFor(tester, custody);
+
+          expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+          expect(find.text(l10n.inboxRequestTileSubtitle), findsNothing);
+        });
+      }
+    });
+
     group('group conversations', () {
       const third =
           'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';

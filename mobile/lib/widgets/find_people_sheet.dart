@@ -8,9 +8,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
-import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
@@ -355,16 +355,17 @@ class _UserResultTile extends ConsumerWidget {
     // `UserProfile.bestDisplayName`), and it is NOT a `displayNameOverride` —
     // that step outranks moderation, which would let the moderation account's
     // own kind-0 name win over the shared label.
+    final moderation = ref.watch(moderationPresentationProvider(user.pubkey));
     final displayName = dmPeerName(
       pubkeyHex: user.pubkey,
       isVanished: isVanished,
-      isModeration: isModerationAccount(user.pubkey),
+      moderation: moderation,
       labels: dmPeerLabels(context),
       profileName: user.displayName,
     );
     final avatar = dmPeerAvatar(
-      pubkeyHex: user.pubkey,
       isVanished: isVanished,
+      moderation: moderation,
       pictureUrl: user.picture,
     );
     // A vanished account's NIP-05 identifies it as surely as its name does.

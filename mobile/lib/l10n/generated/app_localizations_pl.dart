@@ -6110,6 +6110,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Ta rozmowa jest zamknięta.';
 
   @override
+  String get dmFormerModerationAccountName => 'Poprzednie konto moderacji';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Tego powiadomienia od Divine Moderation nie można usunąć.';
 

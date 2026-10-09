@@ -2162,6 +2162,7 @@
     "dmDeleteRefusedMessage": "Ștergerea pentru toată lumea nu a reușit.",
     "dmDeleteRefusedDetails": "Este posibil ca unele persoane să vadă în continuare acest mesaj.",
     "dmRetiredThreadClosedTitle": "Această conversație este închisă.",
+    "dmFormerModerationAccountName": "Fost cont de moderare",
     "messageRequestModerationNoticeCannotBeRemoved": "Această notificare de la Divine Moderation nu poate fi eliminată.",
     "dmRetiredThreadClosedBody": "Am mutat Divine Moderation pe un cont nou. Acesta nu mai este citit de nimeni.",
     "dmRetiredThreadOpenSupport": "Scrie către Divine Moderation",

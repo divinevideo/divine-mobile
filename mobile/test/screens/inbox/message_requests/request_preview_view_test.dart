@@ -6,6 +6,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -30,6 +31,7 @@ import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/finders.dart';
 import '../../../helpers/go_router.dart';
+import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockMessageRequestActionsCubit
@@ -510,7 +512,11 @@ void main() {
     // "Adjective Animal N" — moderation recognition never reached the requests
     // flow, and neither moderation key has a kind-0 the app can read.
     group('moderation identity', () {
-      Widget buildModerationSubject(String counterparty) {
+      Widget buildModerationSubject(
+        String counterparty, {
+        List<Override> extraOverrides = const [],
+        UserProfile? profile,
+      }) {
         when(() => mockPreviewCubit.state).thenReturn(
           RequestPreviewState(
             status: RequestPreviewStatus.loaded,
@@ -527,7 +533,8 @@ void main() {
             videosRepositoryProvider.overrideWithValue(mockVideosRepository),
             userProfileReactiveProvider(
               counterparty,
-            ).overrideWith((ref) => Stream.value(null)),
+            ).overrideWith((ref) => Stream.value(profile)),
+            ...extraOverrides,
           ],
           home: MockGoRouterProvider(
             goRouter: mockGoRouter,
@@ -572,6 +579,86 @@ void main() {
           ),
           findsOneWidget,
         );
+      });
+
+      // Official branding follows recorded custody (#9963). Removal and the
+      // closed notice are safety behaviors and hold for every custody.
+      group('by recorded custody (#9963)', () {
+        final retired = shippedRetiredKey;
+
+        Finder wordmarkFinder() => find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIcon && widget.icon == DivineIconName.logo,
+          description: 'bundled Divine wordmark',
+        );
+
+        Future<void> pumpPreviewFor(
+          WidgetTester tester,
+          RetiredKeyCustody custody,
+        ) async {
+          await tester.pumpWidget(
+            buildModerationSubject(
+              retired,
+              extraOverrides: [retiredKeyCustody(custody)],
+              // The key's holder controls its kind-0, so the test gives it one
+              // that tries to look official.
+              profile: UserProfile(
+                pubkey: retired,
+                displayName: 'Looks Official',
+                picture: 'https://example.invalid/looks-official.png',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: 'c' * 64,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        for (final custody in keptCustodies) {
+          testWidgets("${custody.name}: keeps Divine's name and wordmark", (
+            tester,
+          ) async {
+            await pumpPreviewFor(tester, custody);
+
+            expect(find.text(l10n.inboxSupportRowTitle), findsWidgets);
+            expect(wordmarkFinder(), findsOneWidget);
+            expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
+          });
+        }
+
+        for (final custody in withdrawnCustodies) {
+          testWidgets('${custody.name}: neutral label, no wordmark, no '
+              'picture', (tester) async {
+            await pumpPreviewFor(tester, custody);
+
+            expect(
+              find.text(l10n.dmFormerModerationAccountName),
+              findsWidgets,
+            );
+            expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+            expect(find.text('Looks Official'), findsNothing);
+            expect(wordmarkFinder(), findsNothing);
+            expect(
+              tester.widget<UserAvatar>(find.byType(UserAvatar).first).imageUrl,
+              isNull,
+            );
+          });
+        }
+
+        for (final custody in RetiredKeyCustody.values) {
+          testWidgets('${custody.name}: still closed, and still no removal', (
+            tester,
+          ) async {
+            await pumpPreviewFor(tester, custody);
+
+            expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+            expect(
+              find.text(l10n.messageRequestDeclineAndRemoveButton),
+              findsNothing,
+            );
+          });
+        }
       });
 
       testWidgets('an ordinary request is untouched', (tester) async {

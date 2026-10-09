@@ -2,6 +2,7 @@
 // ABOUTME: A send-target row must name and picture its peer exactly as the
 // ABOUTME: inbox row for the same pubkey does (#8421).
 
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+import '../../helpers/retired_key_custody.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -55,6 +57,7 @@ void main() {
       WidgetTester tester, {
       required UserProfile contact,
       bool isVanished = false,
+      List<Override> extraOverrides = const [],
     }) async {
       when(
         () => followRepository.followingPubkeys,
@@ -69,6 +72,7 @@ void main() {
             profileVanishedProvider(
               contact.pubkey,
             ).overrideWith((ref) => isVanished),
+            ...extraOverrides,
           ],
           home: NewMessageSheet(
             profileRepository: profileRepository,
@@ -143,6 +147,41 @@ void main() {
         expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
         expect(find.text('moderation-bot-v2'), findsNothing);
       });
+
+      // Official branding follows recorded custody (#9963). The picker shares
+      // the inbox row's helpers, so a withdrawn key must read the same here.
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: Divine's name and wordmark", (
+          tester,
+        ) async {
+          await pumpPickerWith(
+            tester,
+            contact: profileFor(shippedRetiredKey, 'Looks Official'),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+          expect(find.byType(ModerationAvatar), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark, no photo', (
+          tester,
+        ) async {
+          await pumpPickerWith(
+            tester,
+            contact: profileFor(shippedRetiredKey, 'Looks Official'),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(find.byType(ModerationAvatar), findsNothing);
+          expect(find.byType(VineCachedImage), findsNothing);
+        });
+      }
 
       testWidgets('renders an ordinary peer under their own name', (
         tester,

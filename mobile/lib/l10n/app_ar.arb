@@ -2152,6 +2152,7 @@
     "dmDeleteRefusedMessage": "تعذّر الحذف لدى الجميع.",
     "dmDeleteRefusedDetails": "قد يظل بعض الأشخاص قادرين على رؤية هذه الرسالة.",
     "dmRetiredThreadClosedTitle": "هذه المحادثة مغلقة.",
+    "dmFormerModerationAccountName": "حساب إشراف سابق",
     "messageRequestModerationNoticeCannotBeRemoved": "لا يمكن إزالة إشعار Divine Moderation هذا.",
     "dmRetiredThreadClosedBody": "نقلنا Divine Moderation إلى حساب جديد. لم يعد أحد يقرأ هذا الحساب.",
     "dmRetiredThreadOpenSupport": "راسل Divine Moderation",

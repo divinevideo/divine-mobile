@@ -18,6 +18,7 @@ import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import '../helpers/retired_key_custody.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -621,6 +622,7 @@ void main() {
         WidgetTester tester, {
         required ShareableUser contact,
         bool isVanished = false,
+        List<Override> extraOverrides = const [],
       }) async {
         await tester.pumpWidget(
           createTestWidget(
@@ -630,6 +632,7 @@ void main() {
               profileVanishedProvider(
                 contact.pubkey,
               ).overrideWith((ref) => isVanished),
+              ...extraOverrides,
             ],
           ),
         );
@@ -682,6 +685,47 @@ void main() {
         expect(find.text('Divine Moderation'), findsOneWidget);
         expect(find.text('moderation-bot-v2'), findsNothing);
       });
+
+      // Official branding follows recorded custody (#9963). The share picker
+      // resolves a peer through the same helpers as the inbox row.
+      for (final custody in keptCustodies) {
+        testWidgets("${custody.name}: Divine's name and wordmark", (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.byType(ModerationAvatar), findsOneWidget);
+          expect(find.text('Divine Moderation'), findsOneWidget);
+        });
+      }
+
+      for (final custody in withdrawnCustodies) {
+        testWidgets('${custody.name}: neutral label, no wordmark', (
+          tester,
+        ) async {
+          await openWith(
+            tester,
+            contact: ShareableUser(
+              pubkey: shippedRetiredKey,
+              displayName: 'Looks Official',
+              picture: 'https://example.invalid/looks-official.png',
+            ),
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+
+          expect(find.text('Former moderation account'), findsOneWidget);
+          expect(find.text('Divine Moderation'), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(find.byType(ModerationAvatar), findsNothing);
+        });
+      }
 
       testWidgets('hands the resolved identity on, so the share sheet cannot '
           'name the peer differently', (tester) async {

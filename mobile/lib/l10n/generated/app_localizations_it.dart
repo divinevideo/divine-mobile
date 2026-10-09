@@ -6021,6 +6021,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Questa conversazione è chiusa.';
 
   @override
+  String get dmFormerModerationAccountName =>
+      'Account di moderazione precedente';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Questo avviso di Divine Moderation non può essere rimosso.';
 

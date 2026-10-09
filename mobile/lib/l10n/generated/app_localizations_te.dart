@@ -6141,6 +6141,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'ఈ సంభాషణ మూసివేయబడింది.';
 
   @override
+  String get dmFormerModerationAccountName => 'మునుపటి మోడరేషన్ ఖాతా';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'ఈ Divine మోడరేషన్ నోటీసు తీసివేయబడదు.';
 

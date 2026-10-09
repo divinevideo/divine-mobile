@@ -2923,6 +2923,7 @@
     "dmDeleteRefusedMessage": "سب کے لیے حذف نہیں ہو سکا۔",
     "dmDeleteRefusedDetails": "کچھ لوگ اب بھی یہ پیغام دیکھ سکتے ہیں۔",
   "dmRetiredThreadClosedTitle": "یہ گفتگو بند ہو چکی ہے۔",
+  "dmFormerModerationAccountName": "سابقہ ماڈریشن اکاؤنٹ",
   "messageRequestModerationNoticeCannotBeRemoved": "Divine Moderation کا یہ نوٹس ہٹایا نہیں جا سکتا۔",
   "dmRetiredThreadClosedBody": "ہم نے Divine Moderation کو نئے اکاؤنٹ پر منتقل کر دیا ہے۔ اسے اب کوئی نہیں پڑھتا۔",
   "dmRetiredThreadOpenSupport": "Divine Moderation کو پیغام بھیجیں",

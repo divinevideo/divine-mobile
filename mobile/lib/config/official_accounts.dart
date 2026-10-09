@@ -3,6 +3,10 @@
 // ABOUTME: the profile checkmark. Pinned accounts keep NIP-05 as a revocation
 // ABOUTME: lever; checkmark-only entries are release-gated.
 
+import 'package:openvine/models/moderation_presentation.dart';
+
+export 'package:openvine/models/moderation_presentation.dart';
+
 /// One pinned official account. `pubkeyHex` is the shipped identity; `nip05` is
 /// the canonical identifier whose live resolution must still map back to
 /// `pubkeyHex` for the account to count as reachable (revocation lever).
@@ -171,8 +175,9 @@ class RetiredModerationKey {
 /// [isRetiredModerationAccount].
 ///
 /// Never a send target — messages always go to the current pin above. Used for
-/// recognising the account ([isModerationAccount], which drives the bundled
-/// avatar and the display name), for refusing outbound sends
+/// recognising the account's thread ([isModerationAccount], the safety
+/// predicate), for choosing its name and avatar by custody
+/// ([moderationPresentationOf]), for refusing outbound sends
 /// ([isRetiredModerationAccount]), for the `ModerationLabelService`
 /// subscription migration, for the custody-aware protected-minor read
 /// (`OfficialAccountsService.isReadableByProtectedMinor`), and for refusing a
@@ -210,19 +215,48 @@ final List<String> kLegacyModerationPubkeys = List.unmodifiable([
   for (final key in kRetiredModerationKeys) key.pubkeyHex,
 ]);
 
-/// Whether [pubkeyHex] is the Divine moderation account, current or retired.
+/// Whether [pubkeyHex] is a Divine moderation account's thread, current or
+/// retired, whatever the retired key's custody.
 ///
-/// Retired keys count: a thread opened before a rotation stays keyed on the
-/// old pubkey, and it is the same team on the other end of it. Callers that
-/// need a *send target* must use [kModerationPubkeyHex] instead — this answers
-/// "is this the moderation team", not "where do replies go".
+/// This is the SAFETY question: "is this the moderation team's thread, so the
+/// destructive request action is withheld and the thread cannot be removed".
+/// It stays true for every retired key because those protections must not
+/// depend on who might hold the key. It is not a presentation question: do not
+/// use it to choose Divine's name or wordmark — [moderationPresentationOf]
+/// does that, and withdraws the official look from a key someone could still
+/// sign as (#9963).
+///
+/// Callers that need a *send target* must use [kModerationPubkeyHex] instead —
+/// this answers "is this the moderation team", not "where do replies go".
 ///
 /// Keyed on the pubkey alone, with no freshness gate: a message a retired key
-/// signs today is recognised exactly like one predating the rotation. See
+/// signs today is treated exactly like one predating the rotation. See
 /// `mobile/docs/RETIRED_MODERATION_KEYS.md`.
 bool isModerationAccount(String pubkeyHex) =>
     pubkeyHex == kModerationPubkeyHex ||
     kLegacyModerationPubkeys.contains(pubkeyHex);
+
+/// Which presentation [pubkeyHex] gets: official branding follows recorded
+/// custody (#9963).
+///
+/// [retiredKeys] defaults to the shipped register. It is a parameter so the
+/// UI can read it through a provider and tests can supply every custody state;
+/// custody is compiled into the app, so a change reaches users only with the
+/// build that lists it.
+ModerationPresentation moderationPresentationOf(
+  String pubkeyHex, {
+  List<RetiredModerationKey> retiredKeys = kRetiredModerationKeys,
+}) {
+  if (pubkeyHex == kModerationPubkeyHex) return ModerationPresentation.official;
+  for (final key in retiredKeys) {
+    if (key.pubkeyHex == pubkeyHex) {
+      return key.custody.canStillSign
+          ? ModerationPresentation.former
+          : ModerationPresentation.official;
+    }
+  }
+  return ModerationPresentation.ordinary;
+}
 
 /// Whether [pubkeyHex] is a moderation account the team has rotated away from.
 ///

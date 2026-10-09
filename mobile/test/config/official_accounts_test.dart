@@ -128,6 +128,95 @@ void main() {
       });
     });
 
+    // Official branding follows recorded custody (#9963): a retired key keeps
+    // Divine's name and wordmark only while nobody can sign as it. Synthetic
+    // full-length keys, one per custody state, so each branch is exercised
+    // regardless of what the shipped register happens to hold.
+    group('moderationPresentationOf', () {
+      final unrecoveredKey = 'a' * 64;
+      final destroyedKey = 'b' * 64;
+      final archivedKey = 'c' * 64;
+      final compromisedKey = 'd' * 64;
+      final register = [
+        RetiredModerationKey(
+          pubkeyHex: unrecoveredKey,
+          custody: RetiredKeyCustody.unrecovered,
+        ),
+        RetiredModerationKey(
+          pubkeyHex: destroyedKey,
+          custody: RetiredKeyCustody.destroyed,
+        ),
+        RetiredModerationKey(
+          pubkeyHex: archivedKey,
+          custody: RetiredKeyCustody.archived,
+        ),
+        RetiredModerationKey(
+          pubkeyHex: compromisedKey,
+          custody: RetiredKeyCustody.compromised,
+        ),
+      ];
+
+      ModerationPresentation presentationOf(String pubkey) =>
+          moderationPresentationOf(pubkey, retiredKeys: register);
+
+      test('the current key is official', () {
+        expect(
+          presentationOf(kModerationPubkeyHex),
+          ModerationPresentation.official,
+        );
+      });
+
+      test('an unrecovered retired key keeps the official look', () {
+        expect(
+          presentationOf(unrecoveredKey),
+          ModerationPresentation.official,
+        );
+      });
+
+      test('a destroyed retired key keeps the official look', () {
+        expect(presentationOf(destroyedKey), ModerationPresentation.official);
+      });
+
+      test('an archived retired key has its official look withdrawn', () {
+        expect(presentationOf(archivedKey), ModerationPresentation.former);
+      });
+
+      test('a compromised retired key has its official look withdrawn', () {
+        expect(presentationOf(compromisedKey), ModerationPresentation.former);
+      });
+
+      test('an unrelated pubkey is ordinary', () {
+        expect(
+          presentationOf(kHqAccount.pubkeyHex),
+          ModerationPresentation.ordinary,
+        );
+      });
+
+      test('defaults to the shipped register', () {
+        for (final key in kRetiredModerationKeys) {
+          expect(
+            moderationPresentationOf(key.pubkeyHex),
+            key.custody.canStillSign
+                ? ModerationPresentation.former
+                : ModerationPresentation.official,
+            reason:
+                '${key.custody.name} entry must follow its recorded custody',
+          );
+        }
+      });
+
+      // The safety predicates answer a different question ("is this the
+      // moderation team's thread, so withhold the destructive action and
+      // close the composer"), and must not follow custody: a withdrawn key's
+      // thread is still closed and still not removable.
+      test('isModerationAccount stays true whatever the custody', () {
+        for (final key in kRetiredModerationKeys) {
+          expect(isModerationAccount(key.pubkeyHex), isTrue);
+          expect(isRetiredModerationAccount(key.pubkeyHex), isTrue);
+        }
+      });
+    });
+
     group('RetiredKeyCustody.canStillSign', () {
       test('is false only when no copy of the key can exist', () {
         expect(RetiredKeyCustody.unrecovered.canStillSign, isFalse);

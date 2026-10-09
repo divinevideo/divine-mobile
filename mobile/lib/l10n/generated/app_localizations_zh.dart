@@ -5596,6 +5596,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => '此对话已关闭。';
 
   @override
+  String get dmFormerModerationAccountName => '以前的审核账号';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       '无法移除此 Divine Moderation 通知。';
 

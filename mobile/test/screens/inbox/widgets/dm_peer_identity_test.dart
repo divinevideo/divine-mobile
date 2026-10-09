@@ -33,6 +33,7 @@ void main() {
             context,
             pubkeyHex: kModerationPubkeyHex,
             isVanished: true,
+            moderation: ModerationPresentation.official,
             displayNameOverride: 'Override',
             profile: _profile(kModerationPubkeyHex, 'Profile'),
           ),
@@ -49,6 +50,7 @@ void main() {
             context,
             pubkeyHex: kModerationPubkeyHex,
             isVanished: false,
+            moderation: ModerationPresentation.official,
             displayNameOverride: 'Override',
             profile: _profile(kModerationPubkeyHex, 'Profile'),
           ),
@@ -65,12 +67,35 @@ void main() {
             context,
             pubkeyHex: kModerationPubkeyHex,
             isVanished: false,
+            moderation: ModerationPresentation.official,
             profile: _profile(kModerationPubkeyHex, 'Profile'),
           ),
         ),
       );
 
       expect(find.text('Divine Moderation'), findsOneWidget);
+    });
+
+    // Official branding follows recorded custody (#9963): a retired key
+    // someone could still sign as is named neutrally, whatever name its holder
+    // published, and never as Divine.
+    testWidgets('a former moderation key gets the neutral label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          (context) => dmPeerDisplayName(
+            context,
+            pubkeyHex: pubkey,
+            isVanished: false,
+            moderation: ModerationPresentation.former,
+            profile: _profile(pubkey, 'Divine Moderation'),
+          ),
+        ),
+      );
+
+      expect(find.text('Former moderation account'), findsOneWidget);
+      expect(find.text('Divine Moderation'), findsNothing);
     });
 
     testWidgets('profile wins over generated fallback', (tester) async {
@@ -80,6 +105,7 @@ void main() {
             context,
             pubkeyHex: pubkey,
             isVanished: false,
+            moderation: ModerationPresentation.ordinary,
             profile: _profile(pubkey, 'Profile'),
           ),
         ),
@@ -97,6 +123,7 @@ void main() {
             context,
             pubkeyHex: pubkey,
             isVanished: false,
+            moderation: ModerationPresentation.ordinary,
             profile: _profile(pubkey, ''),
             isResolving: true,
           ),
@@ -119,6 +146,7 @@ void main() {
             context,
             pubkeyHex: pubkey,
             isVanished: false,
+            moderation: ModerationPresentation.ordinary,
           ),
         ),
       );
@@ -229,14 +257,32 @@ void main() {
           (context) =>
               dmPeerNameWithoutProfile(
                 context,
-                pubkeyHex: pubkey,
                 isVanished: false,
+                moderation: ModerationPresentation.ordinary,
               ) ??
               'lookup required',
         ),
       );
 
       expect(find.text('lookup required'), findsOneWidget);
+    });
+
+    testWidgets('names a former moderation key without a profile lookup', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          (context) =>
+              dmPeerNameWithoutProfile(
+                context,
+                isVanished: false,
+                moderation: ModerationPresentation.former,
+              ) ??
+              'lookup required',
+        ),
+      );
+
+      expect(find.text('Former moderation account'), findsOneWidget);
     });
   });
 
@@ -245,8 +291,8 @@ void main() {
 
     test("keeps a live peer's picture and adds no override", () {
       final avatar = dmPeerAvatar(
-        pubkeyHex: pubkey,
         isVanished: false,
+        moderation: ModerationPresentation.ordinary,
         pictureUrl: picture,
       );
 
@@ -256,37 +302,42 @@ void main() {
 
     test("drops a vanished peer's picture", () {
       final avatar = dmPeerAvatar(
-        pubkeyHex: pubkey,
         isVanished: true,
+        moderation: ModerationPresentation.ordinary,
         pictureUrl: picture,
       );
 
       expect(avatar.imageUrl, isNull);
     });
 
-    test('substitutes the bundled wordmark for the moderation account', () {
+    test('substitutes the bundled wordmark for an official moderation key', () {
       final avatar = dmPeerAvatar(
-        pubkeyHex: kModerationPubkeyHex,
         isVanished: false,
+        moderation: ModerationPresentation.official,
         pictureUrl: picture,
       );
 
       expect(avatar.contentOverride, isA<ModerationAvatar>());
     });
 
-    test('substitutes the wordmark for a retired moderation key too', () {
+    // Neutral means neutral: no wordmark, and not whatever picture the key's
+    // holder published either, because for a compromised key that is exactly
+    // what an attacker would choose (#9963).
+    test('a former moderation key gets no wordmark and no picture', () {
       final avatar = dmPeerAvatar(
-        pubkeyHex: kLegacyModerationPubkeys.first,
         isVanished: false,
+        moderation: ModerationPresentation.former,
+        pictureUrl: picture,
       );
 
-      expect(avatar.contentOverride, isA<ModerationAvatar>());
+      expect(avatar.contentOverride, isNull);
+      expect(avatar.imageUrl, isNull);
     });
 
     test('a vanish drops the picture even for the moderation account', () {
       final avatar = dmPeerAvatar(
-        pubkeyHex: kModerationPubkeyHex,
         isVanished: true,
+        moderation: ModerationPresentation.official,
         pictureUrl: picture,
       );
 

@@ -6118,6 +6118,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Această conversație este închisă.';
 
   @override
+  String get dmFormerModerationAccountName => 'Fost cont de moderare';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Această notificare de la Divine Moderation nu poate fi eliminată.';
 

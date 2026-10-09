@@ -5628,6 +5628,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'このスレッドは終了しました。';
 
   @override
+  String get dmFormerModerationAccountName => '以前のモデレーションアカウント';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'このDivine Moderationのお知らせは削除できません。';
 

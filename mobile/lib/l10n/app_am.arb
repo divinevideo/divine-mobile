@@ -2411,6 +2411,7 @@
     "dmDeleteRefusedMessage": "ለሁሉም ሰው መሰረዝ አልተቻለም።",
     "dmDeleteRefusedDetails": "አንዳንድ ሰዎች አሁንም ይህን መልእክት ማየት ይችላሉ።",
     "dmRetiredThreadClosedTitle": "ይህ ውይይት ተዘግቷል።",
+    "dmFormerModerationAccountName": "የቀድሞ የቁጥጥር መለያ",
     "messageRequestModerationNoticeCannotBeRemoved": "ይህ የDivine Moderation ማሳወቂያ ሊወገድ አይችልም።",
     "dmRetiredThreadClosedBody": "Divine Moderation ወደ አዲስ መለያ አዛውረናል። ይህን መለያ የሚያነበው የለም።",
     "dmRetiredThreadOpenSupport": "Divine Moderation ላይ መልእክት ይላኩ",

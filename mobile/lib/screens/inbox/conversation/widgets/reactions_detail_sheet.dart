@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -171,12 +172,25 @@ class _ReactorRow extends ConsumerWidget {
       profileVanishedProvider(reaction.reactorPubkey),
     );
 
+    final moderation = ref.watch(
+      moderationPresentationProvider(reaction.reactorPubkey),
+    );
+
     final name = dmPeerDisplayName(
       context,
       pubkeyHex: reaction.reactorPubkey,
       isVanished: isVanished,
+      moderation: moderation,
       profile: profile,
       isResolving: isResolving,
+    );
+    // `watchProfile` is an ungated `select(userProfiles)`, so a row that
+    // outlived its tombstone still streams a picture; the helper drops it for a
+    // vanish and for a former moderation key alike.
+    final avatar = dmPeerAvatar(
+      isVanished: isVanished,
+      moderation: moderation,
+      pictureUrl: profile?.picture,
     );
     final isIdentityResolving = isResolving && name.isEmpty;
     final visualName = name.isEmpty
@@ -230,12 +244,11 @@ class _ReactorRow extends ConsumerWidget {
             isLoading: isIdentityResolving,
             excludeSemantics: true,
             child: UserAvatar(
-              // `watchProfile` is an ungated `select(userProfiles)`, so a row
-              // that outlived its tombstone still streams a picture here.
-              imageUrl: isVanished ? null : profile?.picture,
+              imageUrl: avatar.imageUrl,
               name: visualName,
               size: _avatarSize,
               cornerRadius: _avatarSize / 2,
+              contentOverride: avatar.contentOverride,
             ),
           ),
           title: IdentitySkeletonizer(

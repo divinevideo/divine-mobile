@@ -2923,6 +2923,7 @@
     "dmDeleteRefusedMessage": "无法对所有人删除。",
     "dmDeleteRefusedDetails": "有些人可能仍然能看到这条消息。",
   "dmRetiredThreadClosedTitle": "此对话已关闭。",
+  "dmFormerModerationAccountName": "以前的审核账号",
   "messageRequestModerationNoticeCannotBeRemoved": "无法移除此 Divine Moderation 通知。",
   "dmRetiredThreadClosedBody": "我们已把 Divine Moderation 迁移到新账号。这个账号已经没人看了。",
   "dmRetiredThreadOpenSupport": "给 Divine Moderation 发私信",

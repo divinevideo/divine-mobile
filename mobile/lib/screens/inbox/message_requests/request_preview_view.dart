@@ -16,12 +16,12 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
-import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -114,6 +114,7 @@ class RequestPreviewView extends ConsumerWidget {
     // for the state — so without this the same tap sequence showed a generated
     // handle and then "Deleted account" (#8185).
     final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
+    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
 
     // Suppressing the profile object as well as the name matches
     // [OtherProfileScreen], which nulls its own header profile on a vanish
@@ -141,6 +142,7 @@ class RequestPreviewView extends ConsumerWidget {
       context,
       pubkeyHex: otherPubkey,
       isVanished: isDeleted,
+      moderation: moderation,
       profile: visibleProfile,
       isResolving: isResolving,
     );
@@ -203,6 +205,8 @@ class RequestPreviewView extends ConsumerWidget {
                 messageCount: messageCount,
                 messages: messages,
                 isResolving: isIdentityResolving,
+                isVanished: isDeleted,
+                moderation: moderation,
               ),
             ),
             _ActionButtons(
@@ -320,6 +324,8 @@ class _ProfileContent extends StatelessWidget {
     required this.messageCount,
     required this.messages,
     required this.isResolving,
+    required this.isVanished,
+    required this.moderation,
   });
 
   final String displayName;
@@ -336,13 +342,21 @@ class _ProfileContent extends StatelessWidget {
   final int messageCount;
   final List<DmMessage> messages;
   final bool isResolving;
+  final bool isVanished;
+  final ModerationPresentation moderation;
 
   @override
   Widget build(BuildContext context) {
     final visualDisplayName = displayName.isEmpty
         ? UserProfile.defaultDisplayNameFor(otherPubkey)
         : displayName;
-    final imageUrl = profile?.picture;
+    // Resolved with the name above, so the avatar cannot present a key more
+    // officially than its name does.
+    final avatar = dmPeerAvatar(
+      isVanished: isVanished,
+      moderation: moderation,
+      pictureUrl: profile?.picture,
+    );
     final nip05 = profile?.shortDisplayNip05;
     // A zero is not data on any of the three. Funnelcake collapses a stats
     // failure into zeros behind an HTTP 200 — `get_social_stats` never
@@ -368,13 +382,11 @@ class _ProfileContent extends StatelessWidget {
                   isLoading: isResolving,
                   excludeSemantics: true,
                   child: UserAvatar(
-                    imageUrl: imageUrl,
+                    imageUrl: avatar.imageUrl,
                     name: visualDisplayName,
                     placeholderSeed: otherPubkey,
                     size: 96,
-                    contentOverride: isModerationAccount(otherPubkey)
-                        ? const ModerationAvatar()
-                        : null,
+                    contentOverride: avatar.contentOverride,
                   ),
                 ),
               ),

@@ -19,7 +19,6 @@ import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dar
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
-import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/crossposting/crossposting_analytics.dart';
 import 'package:openvine/features/crossposting/crossposting_navigation.dart';
@@ -31,6 +30,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';

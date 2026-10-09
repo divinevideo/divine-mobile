@@ -20,6 +20,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () {},
               ),
             ),
@@ -38,6 +39,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () {},
               ),
             ),
@@ -56,6 +58,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 nip05: 'bob@example.com',
                 onViewProfile: () {},
               ),
@@ -75,6 +78,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () {},
               ),
             ),
@@ -94,6 +98,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () {},
               ),
             ),
@@ -111,7 +116,11 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: EmptyConversation(displayName: 'Bob', pubkey: 'pk1'),
+              body: EmptyConversation(
+                displayName: 'Bob',
+                pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
+              ),
             ),
           ),
         );
@@ -134,6 +143,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Generated Name',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 isIdentityResolving: true,
               ),
             ),
@@ -160,6 +170,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () => wasCalled = true,
               ),
             ),
@@ -184,6 +195,7 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Bob',
                 pubkey: 'pk1',
+                moderation: ModerationPresentation.ordinary,
                 onViewProfile: () {},
               ),
             ),
@@ -212,7 +224,12 @@ void main() {
         description: 'bundled Divine wordmark',
       );
 
-      Future<void> pumpFor(WidgetTester tester, String pubkey) async {
+      Future<void> pumpFor(
+        WidgetTester tester,
+        String pubkey, {
+        required ModerationPresentation moderation,
+        String? imageUrl,
+      }) async {
         await tester.pumpWidget(
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -221,6 +238,8 @@ void main() {
               body: EmptyConversation(
                 displayName: 'Divine Moderation',
                 pubkey: pubkey,
+                moderation: moderation,
+                imageUrl: imageUrl,
                 onViewProfile: () {},
               ),
             ),
@@ -231,13 +250,22 @@ void main() {
       testWidgets('the current moderation key gets the wordmark', (
         tester,
       ) async {
-        await pumpFor(tester, kModerationPubkeyHex);
+        await pumpFor(
+          tester,
+          kModerationPubkeyHex,
+          moderation: moderationPresentationOf(kModerationPubkeyHex),
+        );
 
         expect(wordmarkFinder(), findsOneWidget);
       });
 
-      testWidgets('a retired moderation key gets it too', (tester) async {
-        await pumpFor(tester, kLegacyModerationPubkeys.first);
+      testWidgets('the shipped retired key gets it too', (tester) async {
+        final retired = kLegacyModerationPubkeys.first;
+        await pumpFor(
+          tester,
+          retired,
+          moderation: moderationPresentationOf(retired),
+        );
 
         expect(wordmarkFinder(), findsOneWidget);
       });
@@ -245,10 +273,50 @@ void main() {
       testWidgets('an ordinary account keeps the generated placeholder', (
         tester,
       ) async {
-        await pumpFor(tester, 'b' * 64);
+        await pumpFor(
+          tester,
+          'b' * 64,
+          moderation: ModerationPresentation.ordinary,
+        );
 
         expect(wordmarkFinder(), findsNothing);
       });
+
+      // Official branding follows recorded custody (#9963), and a withdrawn key
+      // also loses its own picture: its holder chooses what that shows.
+      for (final custody in RetiredKeyCustody.values) {
+        final key = 'c' * 64;
+        final presentation = moderationPresentationOf(
+          key,
+          retiredKeys: [RetiredModerationKey(pubkeyHex: key, custody: custody)],
+        );
+
+        if (custody.canStillSign) {
+          testWidgets('a ${custody.name} key gets no wordmark and no picture', (
+            tester,
+          ) async {
+            await pumpFor(
+              tester,
+              key,
+              moderation: presentation,
+              imageUrl: 'https://example.invalid/looks-official.png',
+            );
+
+            expect(wordmarkFinder(), findsNothing);
+            final avatar = tester.widget<UserAvatar>(find.byType(UserAvatar));
+            expect(avatar.imageUrl, isNull);
+            expect(avatar.contentOverride, isNull);
+          });
+        } else {
+          testWidgets('a ${custody.name} key keeps the wordmark', (
+            tester,
+          ) async {
+            await pumpFor(tester, key, moderation: presentation);
+
+            expect(wordmarkFinder(), findsOneWidget);
+          });
+        }
+      }
     });
   });
 }

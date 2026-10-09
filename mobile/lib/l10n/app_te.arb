@@ -3461,6 +3461,7 @@
     "dmDeleteRefusedMessage": "అందరి కోసం తొలగించడం సాధ్యపడలేదు.",
     "dmDeleteRefusedDetails": "కొంతమంది ఇప్పటికీ ఈ సందేశాన్ని చూడగలిగే అవకాశం ఉంది.",
   "dmRetiredThreadClosedTitle": "ఈ సంభాషణ మూసివేయబడింది.",
+  "dmFormerModerationAccountName": "మునుపటి మోడరేషన్ ఖాతా",
   "@dmRetiredThreadClosedTitle": {
     "description": "Heading of the notice that replaces the message composer in a DM thread keyed on a retired Divine Moderation account (#6416)."
   },

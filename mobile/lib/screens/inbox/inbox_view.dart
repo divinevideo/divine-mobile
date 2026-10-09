@@ -22,6 +22,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/notifications/view/inbox_notifications_page.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -1066,11 +1067,12 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     }
     if (!context.mounted) return;
 
+    final moderation = ref.read(moderationPresentationProvider(otherPubkey));
     final String peerName;
     final knownName = dmPeerNameWithoutProfile(
       context,
-      pubkeyHex: otherPubkey,
       isVanished: isVanished,
+      moderation: moderation,
       displayNameOverride: displayNameOverride,
     );
     if (knownName != null) {
@@ -1095,6 +1097,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         context,
         pubkeyHex: otherPubkey,
         isVanished: isVanished,
+        moderation: moderation,
         displayNameOverride: displayNameOverride,
         profile: profile,
       );

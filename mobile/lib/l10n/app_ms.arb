@@ -2923,6 +2923,7 @@
     "dmDeleteRefusedMessage": "Tidak dapat memadam untuk semua orang.",
     "dmDeleteRefusedDetails": "Sesetengah orang mungkin masih dapat melihat mesej ini.",
   "dmRetiredThreadClosedTitle": "Perbualan ini telah ditutup.",
+  "dmFormerModerationAccountName": "Akaun pemantauan terdahulu",
   "messageRequestModerationNoticeCannotBeRemoved": "Notis Divine Moderation ini tidak boleh dialih keluar.",
   "dmRetiredThreadClosedBody": "Kami telah memindahkan Divine Moderation ke akaun baharu. Akaun ini tidak dibaca lagi.",
   "dmRetiredThreadOpenSupport": "Hantar mesej kepada Divine Moderation",

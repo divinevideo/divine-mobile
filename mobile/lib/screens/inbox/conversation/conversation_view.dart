@@ -34,6 +34,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -138,11 +139,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       }
       if (!mounted) return;
 
+      final moderation = ref.read(moderationPresentationProvider(otherPubkey));
       final String displayName;
       final knownName = dmPeerNameWithoutProfile(
         context,
-        pubkeyHex: otherPubkey,
         isVanished: isVanished,
+        moderation: moderation,
       );
       if (knownName != null) {
         displayName = knownName;
@@ -167,6 +169,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           context,
           pubkeyHex: otherPubkey,
           isVanished: isVanished,
+          moderation: moderation,
           profile: profile,
         );
       }
@@ -274,6 +277,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final UserProfile? profile;
     final bool isResolving;
     final bool isDeleted;
+    final ModerationPresentation moderation;
     final String conversationDisplayName;
     final bool isIdentityResolving;
     final String visualDisplayName;
@@ -287,6 +291,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       profile = null;
       isResolving = false;
       isDeleted = false;
+      moderation = ModerationPresentation.ordinary;
       conversationDisplayName = '';
       isIdentityResolving = false;
       visualDisplayName = '';
@@ -299,10 +304,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       // viewer's own copy of messages a NIP-62 vanish cannot retract. Only
       // the header identity changes.
       isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
+      moderation = ref.watch(moderationPresentationProvider(otherPubkey));
       final displayName = dmPeerDisplayName(
         context,
         pubkeyHex: otherPubkey,
         isVanished: isDeleted,
+        moderation: moderation,
         profile: profile,
         isResolving: isResolving,
       );
@@ -527,6 +534,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   participantPubkeys: widget.participantPubkeys,
                                   blockedPubkeys: blockedReactors,
                                   displayName: conversationDisplayName,
+                                  moderation: moderation,
                                   isResolving: isIdentityResolving,
                                   isUnresolved: isUnresolved,
                                   reactionsEnabled:
@@ -1256,6 +1264,7 @@ class _ConversationContent extends StatelessWidget {
     required this.participantPubkeys,
     required this.blockedPubkeys,
     required this.displayName,
+    required this.moderation,
     required this.isResolving,
     required this.isUnresolved,
     required this.reactionsEnabled,
@@ -1273,6 +1282,10 @@ class _ConversationContent extends StatelessWidget {
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
   final String displayName;
+
+  /// How the counterparty is presented; the empty state's artwork follows it
+  /// so it cannot present a key more officially than [displayName] does.
+  final ModerationPresentation moderation;
   final bool isResolving;
 
   /// Whether the thread's participants could not be resolved (#8664, #8677).
@@ -1325,6 +1338,7 @@ class _ConversationContent extends StatelessWidget {
                               ? UserProfile.defaultDisplayNameFor(otherPubkey)
                               : displayName,
                           pubkey: otherPubkey,
+                          moderation: moderation,
                           imageUrl: imageUrl,
                           nip05: nip05,
                           onViewProfile: onViewProfile,

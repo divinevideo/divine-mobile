@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -91,11 +92,13 @@ class _FollowingUserButton extends ConsumerWidget {
     // A vanish cannot rewrite the viewer's own contact list, so the account
     // stays in this bar. Show it as deleted rather than under a stale name.
     final isDeleted = ref.watch(profileVanishedProvider(pubkey));
+    final moderation = ref.watch(moderationPresentationProvider(pubkey));
 
     final displayName = dmPeerDisplayName(
       context,
       pubkeyHex: pubkey,
       isVanished: isDeleted,
+      moderation: moderation,
       profile: profileAsync.asData?.value,
       isResolving: isResolving,
     );
@@ -104,12 +107,18 @@ class _FollowingUserButton extends ConsumerWidget {
         ? UserProfile.defaultDisplayNameFor(pubkey)
         : displayName;
 
-    final imageUrl = isDeleted
-        ? null
-        : profileAsync.maybeWhen(
-            data: (profile) => profile?.picture,
-            orElse: () => null,
-          );
+    // The name above and the artwork here resolve through the same pair of
+    // helpers. Before #9963 this strip named an official moderation key but
+    // pictured it with a generic placeholder, which the helper's own docs call
+    // out as reading like an impersonator.
+    final avatar = dmPeerAvatar(
+      isVanished: isDeleted,
+      moderation: moderation,
+      pictureUrl: profileAsync.maybeWhen(
+        data: (profile) => profile?.picture,
+        orElse: () => null,
+      ),
+    );
 
     return Semantics(
       button: true,
@@ -126,10 +135,11 @@ class _FollowingUserButton extends ConsumerWidget {
                 isLoading: isIdentityResolving,
                 excludeSemantics: true,
                 child: UserAvatar(
-                  imageUrl: imageUrl,
+                  imageUrl: avatar.imageUrl,
                   name: visualDisplayName,
                   placeholderSeed: pubkey,
                   size: 48,
+                  contentOverride: avatar.contentOverride,
                 ),
               ),
               IdentitySkeletonizer(

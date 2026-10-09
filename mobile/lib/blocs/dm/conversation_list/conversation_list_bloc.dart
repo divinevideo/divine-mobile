@@ -17,11 +17,17 @@ import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.d
 import 'package:openvine/blocs/dm/dm_peer_account_predicate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/models/moderation_presentation.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
 
 part 'conversation_list_event.dart';
 part 'conversation_list_state.dart';
+
+/// The permissive default: no peer is a moderation key, so a caller with no
+/// policy to inject (notably a test fixture) names every peer as before.
+ModerationPresentation _ordinaryModerationPresentation(String _) =>
+    ModerationPresentation.ordinary;
 
 class ConversationListBloc
     extends Bloc<ConversationListEvent, ConversationListState> {
@@ -33,7 +39,8 @@ class ConversationListBloc
     ProtectedMinorInboxGate? protectedMinorInboxGate,
     Duration recomputeDebounce = _defaultRecomputeDebounce,
     String? supportRowPubkey,
-    DmPeerAccountPredicate moderationAccount = neverDmPeerAccount,
+    ModerationPresentationResolver moderationPresentation =
+        _ordinaryModerationPresentation,
     DmPeerAccountPredicate retiredModerationAccount = neverDmPeerAccount,
   }) : _dmRepository = dmRepository,
        _followRepository = followRepository,
@@ -42,7 +49,7 @@ class ConversationListBloc
        _protectedMinorInboxGate = protectedMinorInboxGate,
        _recomputeDebounce = recomputeDebounce,
        _supportRowPubkey = supportRowPubkey,
-       _moderationAccount = moderationAccount,
+       _moderationPresentation = moderationPresentation,
        _retiredModerationAccount = retiredModerationAccount,
        super(const ConversationListState()) {
     on<ConversationListStarted>(_onStarted, transformer: restartable());
@@ -99,9 +106,13 @@ class ConversationListBloc
   /// imported so this bloc stays free of app-layer config (#6283).
   final String? _supportRowPubkey;
 
-  /// App-configured identity predicates, injected so this bloc does not import
+  /// App-configured identity policy, injected so this bloc does not import
   /// release-pinned account configuration directly (#6283).
-  final DmPeerAccountPredicate _moderationAccount;
+  ///
+  /// [_moderationPresentation] only chooses the NAME the search index matches
+  /// on, so it follows custody (#9963); [_retiredModerationAccount] is a safety
+  /// predicate (the closed preview line) and does not.
+  final ModerationPresentationResolver _moderationPresentation;
   final DmPeerAccountPredicate _retiredModerationAccount;
 
   /// Window over which bursty conversation writes are coalesced before the
@@ -841,7 +852,7 @@ class ConversationListBloc
     return dmPeerName(
       pubkeyHex: pubkey,
       isVanished: vanishedPubkeys.contains(pubkey),
-      isModeration: _moderationAccount(pubkey),
+      moderation: _moderationPresentation(pubkey),
       labels: peerLabels,
       profileName: profileName,
     );

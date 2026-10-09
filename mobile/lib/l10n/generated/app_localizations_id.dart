@@ -5879,6 +5879,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Percakapan ini sudah ditutup.';
 
   @override
+  String get dmFormerModerationAccountName => 'Akun moderasi sebelumnya';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Pemberitahuan Divine Moderation ini tidak dapat dihapus.';
 

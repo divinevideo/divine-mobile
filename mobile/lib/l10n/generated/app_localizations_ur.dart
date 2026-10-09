@@ -5962,6 +5962,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'یہ گفتگو بند ہو چکی ہے۔';
 
   @override
+  String get dmFormerModerationAccountName => 'سابقہ ماڈریشن اکاؤنٹ';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Divine Moderation کا یہ نوٹس ہٹایا نہیں جا سکتا۔';
 

@@ -1698,6 +1698,7 @@
     "dmDeleteRefusedMessage": "모두에게서 삭제하지 못했어요.",
     "dmDeleteRefusedDetails": "일부 사람에게는 이 메시지가 아직 보일 수 있어요.",
     "dmRetiredThreadClosedTitle": "이 대화는 종료되었습니다.",
+    "dmFormerModerationAccountName": "이전 검수 계정",
     "messageRequestModerationNoticeCannotBeRemoved": "이 Divine Moderation 알림은 삭제할 수 없습니다.",
     "dmRetiredThreadClosedBody": "Divine Moderation을 새 계정으로 옮겼습니다. 이 계정은 더 이상 아무도 읽지 않습니다.",
     "dmRetiredThreadOpenSupport": "Divine Moderation에 메시지 보내기",

@@ -2162,6 +2162,7 @@
     "dmDeleteRefusedMessage": "Det gick inte att radera för alla.",
     "dmDeleteRefusedDetails": "Vissa personer kan fortfarande se det här meddelandet.",
     "dmRetiredThreadClosedTitle": "Den här konversationen är stängd.",
+    "dmFormerModerationAccountName": "Tidigare modereringskonto",
     "messageRequestModerationNoticeCannotBeRemoved": "Det här meddelandet från Divine Moderation kan inte tas bort.",
     "dmRetiredThreadClosedBody": "Vi har flyttat Divine Moderation till ett nytt konto. Det här kontot läser ingen längre.",
     "dmRetiredThreadOpenSupport": "Skriv till Divine Moderation",

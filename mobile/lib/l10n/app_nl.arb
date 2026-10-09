@@ -2162,6 +2162,7 @@
     "dmDeleteRefusedMessage": "Verwijderen voor iedereen is niet gelukt.",
     "dmDeleteRefusedDetails": "Sommige mensen kunnen dit bericht mogelijk nog zien.",
     "dmRetiredThreadClosedTitle": "Dit gesprek is gesloten.",
+    "dmFormerModerationAccountName": "Voormalig moderatieaccount",
     "messageRequestModerationNoticeCannotBeRemoved": "Deze melding van Divine Moderation kan niet worden verwijderd.",
     "dmRetiredThreadClosedBody": "We hebben Divine Moderation naar een nieuw account verplaatst. Dit account leest niemand meer.",
     "dmRetiredThreadOpenSupport": "Bericht sturen naar Divine Moderation",

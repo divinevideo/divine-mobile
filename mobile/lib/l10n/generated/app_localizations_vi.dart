@@ -5920,6 +5920,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get dmRetiredThreadClosedTitle => 'Cuộc trò chuyện này đã đóng.';
 
   @override
+  String get dmFormerModerationAccountName => 'Tài khoản kiểm duyệt cũ';
+
+  @override
   String get messageRequestModerationNoticeCannotBeRemoved =>
       'Không thể xóa thông báo Divine Moderation này.';
 

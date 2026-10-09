@@ -20,14 +20,18 @@ import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 ///
 /// Returns null when only the profile can name the peer, which is the caller's
 /// signal that a lookup is worth paying for.
+///
+/// [moderation] is how the peer's key is presented (official branding follows
+/// recorded custody, #9963). Callers read it from
+/// `moderationPresentationProvider`, the way they read the vanish flag.
 String? dmPeerNameWithoutProfile(
   BuildContext context, {
-  required String pubkeyHex,
   required bool isVanished,
+  required ModerationPresentation moderation,
   String? displayNameOverride,
 }) => dmPeerSubstituteName(
   isVanished: isVanished,
-  isModeration: isModerationAccount(pubkeyHex),
+  moderation: moderation,
   labels: dmPeerLabels(context),
   displayNameOverride: displayNameOverride,
 );
@@ -40,6 +44,7 @@ String? dmPeerNameWithoutProfile(
 DmPeerLabels dmPeerLabels(BuildContext context) => DmPeerLabels(
   deletedAccount: context.l10n.profileDeletedAccountName,
   moderation: context.l10n.inboxSupportRowTitle,
+  formerModeration: context.l10n.dmFormerModerationAccountName,
   retiredConversationClosed: context.l10n.dmRetiredThreadClosedTitle,
 );
 
@@ -79,20 +84,22 @@ String dmConversationDisplayTitle(
 /// Thin `BuildContext` wrapper over [dmPeerName]; the precedence itself lives
 /// there so a non-widget caller can share it (#8204).
 ///
-/// [isVanished] is required rather than defaulted so every caller has to decide
-/// what to pass. Reactive widgets read it from `profileVanishedProvider`, with
+/// [isVanished] and [moderation] are required rather than defaulted so every
+/// caller has to decide what to pass. Reactive widgets read them from
+/// `profileVanishedProvider` and `moderationPresentationProvider`, with
 /// `ConversationTile` as the reference call site.
 String dmPeerDisplayName(
   BuildContext context, {
   required String pubkeyHex,
   required bool isVanished,
+  required ModerationPresentation moderation,
   UserProfile? profile,
   String? displayNameOverride,
   bool isResolving = false,
 }) => dmPeerName(
   pubkeyHex: pubkeyHex,
   isVanished: isVanished,
-  isModeration: isModerationAccount(pubkeyHex),
+  moderation: moderation,
   labels: dmPeerLabels(context),
   profileName: switch (profile) {
     UserProfile(displayName: final name?) when name.isNotEmpty =>
@@ -121,15 +128,22 @@ String dmPeerDisplayName(
 /// account's kind-0 `picture` is a hosted SVG whose `<style>` block
 /// `vector_graphics_compiler` discards — see [ModerationAvatar]. Pass the
 /// record straight into [UserAvatar]'s matching parameters.
+///
+/// A [ModerationPresentation.former] key gets neither the wordmark nor its own
+/// picture: the avatar falls back to the default placeholder. Its holder
+/// chooses what a kind-0 `picture` shows, and for a compromised key that is
+/// exactly what an attacker would set to look official (#9963).
 ({String? imageUrl, Widget? contentOverride}) dmPeerAvatar({
-  required String pubkeyHex,
   required bool isVanished,
+  required ModerationPresentation moderation,
   String? pictureUrl,
 }) => (
   // A vanish is the one branch that must also drop the artwork: the name
   // substitution alone would leave the account recognisable by its face.
-  imageUrl: isVanished ? null : pictureUrl,
-  contentOverride: isModerationAccount(pubkeyHex)
+  imageUrl: isVanished || moderation == ModerationPresentation.former
+      ? null
+      : pictureUrl,
+  contentOverride: moderation == ModerationPresentation.official
       ? const ModerationAvatar()
       : null,
 );
