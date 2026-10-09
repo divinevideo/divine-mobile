@@ -182,8 +182,8 @@ class _VerifyContent extends StatelessWidget {
     final verifiedKeys = context.select(
       (VerifyCubit cubit) => cubit.state.verifiedKeys,
     );
-    final verifierReachable = context.select(
-      (VerifyCubit cubit) => cubit.state.verifierReachable,
+    final showsUncheckedNote = context.select(
+      (VerifyCubit cubit) => cubit.state.showsUncheckedNote,
     );
     final removingKey = context.select(
       (VerifyCubit cubit) => cubit.state.removingKey,
@@ -204,7 +204,7 @@ class _VerifyContent extends StatelessWidget {
         const SizedBox(height: 24),
         if (claims.isNotEmpty) ...[
           _SectionLabel(l10n.verifyLinkedSectionTitle),
-          if (!verifierReachable)
+          if (showsUncheckedNote)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(

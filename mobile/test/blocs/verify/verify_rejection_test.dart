@@ -38,6 +38,16 @@ void main() {
       );
     });
 
+    test('asks the user to try again when the claim could not be '
+        'checked', () {
+      // Not a rejection: the claim could not be checked, so the proof may be
+      // fine. "Try again" is the right next step, not "fix your post".
+      expect(
+        verifyErrorForCode('temporarily_unavailable'),
+        VerifyConnectError.verifierUnreachable,
+      );
+    });
+
     test('falls back when the verifier sends no code', () {
       // Every deployment older than the codes, and every platform that has not
       // adopted them, answers without one.

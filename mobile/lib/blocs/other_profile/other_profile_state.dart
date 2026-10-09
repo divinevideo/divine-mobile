@@ -56,10 +56,11 @@ final class OtherProfileLoaded extends OtherProfileState {
   /// or loaded from cache (false).
   final bool isFresh;
 
-  /// Verifier-confirmed NIP-39 identity claims for this profile. Carried
-  /// over from the previous state while [VerifiedClaimsRequested]
-  /// revalidates; kept at last-known-good when the verifier fails or
-  /// rate-limits, and cleared only by a confirmed negative resolve.
+  /// Verifier-confirmed NIP-39 identity claims for this profile. Carried over
+  /// from the previous state while [VerifiedClaimsRequested] revalidates; kept
+  /// at last-known-good when the verifier fails, rate-limits or can't check the
+  /// platform, and cleared only by a confirmed negative resolve or the claim's
+  /// removal.
   final List<IdentityClaim> verifiedClaims;
 
   /// Returns a copy of this state with the given fields replaced.

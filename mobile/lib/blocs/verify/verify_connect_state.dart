@@ -54,7 +54,7 @@ enum VerifyConnectError {
   /// misconfiguration rather than anything the user did.
   discordContentUnavailable,
 
-  /// The verifier could not be reached.
+  /// The verifier was unreachable, or could not check the claim right now.
   verifierUnreachable,
 
   /// The OAuth round trip ended without a usable confirmation.
