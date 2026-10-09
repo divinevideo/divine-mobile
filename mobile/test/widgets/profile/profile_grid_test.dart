@@ -242,7 +242,10 @@ void main() {
       CuratedListService? curatedListService,
       BookmarksRepository? bookmarksRepository,
       Locale? locale,
+      List<VideoEvent> videos = const [],
+      ScrollController? scrollController,
       List<Override> additionalOverrides = const [],
+      String viewedUserHex = userIdHex,
     }) {
       final grid = MultiBlocProvider(
         providers: [
@@ -251,10 +254,11 @@ void main() {
         ],
         child: ProfileGridView(
           key: const ValueKey('profile-grid'),
-          userIdHex: userIdHex,
+          userIdHex: viewedUserHex,
           isOwnProfile: isOwnProfile,
-          videos: const [],
+          videos: videos,
           isLoadingVideos: isLoadingVideos,
+          scrollController: scrollController,
         ),
       );
 
@@ -1191,6 +1195,339 @@ void main() {
       expect(find.byType(Tab), findsNWidgets(5));
       // The viewer's own list is not opened while looking at someone else.
       verifyNever(bookmarksRepository.watchGlobalBookmarks);
+    });
+
+    List<VideoEvent> videos(int count) => [
+      for (var i = 0; i < count; i++)
+        VideoEvent(
+          id: i.toRadixString(16).padLeft(64, '0'),
+          pubkey: userIdHex,
+          createdAt: 1704067200 - i,
+          content: '',
+          timestamp: DateTime.utc(2024),
+          videoUrl: 'https://example.com/$i.mp4',
+          thumbnailUrl: 'https://example.com/$i.jpg',
+        ),
+    ];
+
+    Future<void> scrollAllTheWayUp(WidgetTester tester) async {
+      for (var i = 0; i < 6; i++) {
+        await tester.drag(
+          find.byType(NestedScrollView),
+          const Offset(0, -800),
+        );
+        await tester.pumpAndSettle();
+      }
+    }
+
+    testWidgets("stops once a short tab's last row reaches the bottom", (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(3),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final lastRowBottom = tester
+          .getBottomLeft(
+            find.bySemanticsIdentifier(SemanticIds.videoThumbnail(2)),
+          )
+          .dy;
+      final screenBottom = tester
+          .getBottomLeft(find.byType(NestedScrollView))
+          .dy;
+      expect(lastRowBottom, moreOrLessEquals(screenBottom, epsilon: 1));
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
+    });
+
+    testWidgets("a fling stops at the short tab's last row too", (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(3),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The drag stops short of the limit, so the fling has to cover the rest.
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -60),
+        1500,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .getBottomLeft(
+              find.bySemanticsIdentifier(SemanticIds.videoThumbnail(2)),
+            )
+            .dy,
+        moreOrLessEquals(
+          tester.getBottomLeft(find.byType(NestedScrollView)).dy,
+          epsilon: 1,
+        ),
+      );
+    });
+
+    testWidgets('starts at the top when the profile changes in place', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      expect(scrollController.offset, greaterThan(0));
+
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+          viewedUserHex: 'b' * 64,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, equals(0));
+    });
+
+    testWidgets('flings toward the end under a status bar without errors', (
+      tester,
+    ) async {
+      const statusBar = 47.0;
+      final topInset = FakeViewPadding(
+        top: statusBar * tester.view.devicePixelRatio,
+      );
+      tester.view
+        ..padding = topInset
+        ..viewPadding = topInset;
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -300),
+        1000,
+      );
+      // The pinned tab bar's inset grows as the header leaves, so the scroll
+      // range changes frame by frame while the fling runs.
+      for (var frame = 0; frame < 120; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, greaterThan(0));
+    });
+
+    testWidgets('keeps an empty tab and its message on screen', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final screenBottom = tester
+          .getBottomLeft(find.byType(NestedScrollView))
+          .dy;
+      expect(
+        tester.getBottomLeft(find.text(l10n.profileNoVideosTitle)).dy,
+        lessThan(screenBottom),
+      );
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
+    });
+
+    testWidgets('leaves an empty tab one row and the safe area of room', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      const bottomSafeArea = 34.0;
+      tester.view.viewPadding = FakeViewPadding(
+        bottom: bottomSafeArea * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetViewPadding);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      final screen = tester.getRect(find.byType(NestedScrollView));
+      final rowHeight = (screen.width - 2 * 4) / 3;
+      final tabsBottom = tester.getBottomLeft(find.byType(TabBar)).dy;
+      expect(
+        screen.bottom - tabsBottom,
+        greaterThanOrEqualTo(rowHeight + bottomSafeArea),
+      );
+    });
+
+    testWidgets('still scrolls the header fully away on a long tab', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await scrollAllTheWayUp(tester);
+
+      expect(
+        scrollController.offset,
+        equals(scrollController.position.maxScrollExtent),
+      );
+    });
+
+    testWidgets('brings the header down on a switch to a shorter tab', (
+      tester,
+    ) async {
+      when(
+        likesRepository.getOrderedLikedEventIds,
+      ).thenAnswer((_) async => const <String>[]);
+      when(
+        likesRepository.syncUserReactions,
+      ).thenAnswer((_) async => const LikesSyncResult.empty());
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      final collapsedOffset = scrollController.offset;
+      expect(collapsedOffset, greaterThan(0));
+
+      await tester.tap(find.bySemanticsIdentifier(SemanticIds.profileLikedTab));
+      await tester.pumpAndSettle();
+
+      expect(scrollController.offset, lessThan(collapsedOffset));
+    });
+
+    testWidgets('waits for a loading tab before bringing the header down', (
+      tester,
+    ) async {
+      final likes = Completer<LikesSyncResult>();
+      addTearDown(() {
+        if (!likes.isCompleted) likes.complete(const LikesSyncResult.empty());
+      });
+      when(
+        likesRepository.getOrderedLikedEventIds,
+      ).thenAnswer((_) async => const <String>[]);
+      when(likesRepository.syncUserReactions).thenAnswer((_) => likes.future);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+      final collapsedOffset = scrollController.offset;
+
+      await tester.tap(find.bySemanticsIdentifier(SemanticIds.profileLikedTab));
+      // The loading indicator never settles, so pump past the tab switch.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(scrollController.offset, equals(collapsedOffset));
+
+      likes.complete(const LikesSyncResult.empty());
+      await tester.pumpAndSettle();
+      expect(scrollController.offset, lessThan(collapsedOffset));
+    });
+
+    testWidgets('flings back down from under a status bar without errors', (
+      tester,
+    ) async {
+      const statusBar = 47.0;
+      final topInset = FakeViewPadding(
+        top: statusBar * tester.view.devicePixelRatio,
+      );
+      tester.view
+        ..padding = topInset
+        ..viewPadding = topInset;
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(9),
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollAllTheWayUp(tester);
+
+      await tester.fling(find.byType(TabBar), const Offset(0, 200), 3000);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

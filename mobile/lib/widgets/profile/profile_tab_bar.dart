@@ -22,6 +22,7 @@ class ProfileTabBar extends StatefulWidget {
     required this.tabs,
     required this.headerKey,
     required this.isRefreshing,
+    this.barKey,
     super.key,
   });
 
@@ -39,6 +40,10 @@ class ProfileTabBar extends StatefulWidget {
 
   /// Whether to show the sticky cache-revalidation bar under the tabs.
   final bool isRefreshing;
+
+  /// Attached to the tabs and divider, excluding the status-bar inset, so a
+  /// parent can measure the bar's resting height.
+  final GlobalKey? barKey;
 
   @override
   State<ProfileTabBar> createState() => _ProfileTabBarState();
@@ -124,6 +129,7 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
       delegate: _SliverAppBarDelegate(
         topInset: _tabBarTopInset,
         isRefreshing: widget.isRefreshing,
+        barKey: widget.barKey,
         TabBar(
           controller: widget.controller,
           isScrollable: scrollable,
@@ -206,6 +212,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     this._tabBar, {
     required this.topInset,
     required this.isRefreshing,
+    this.barKey,
   });
 
   final PreferredSizeWidget _tabBar;
@@ -213,6 +220,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   /// Whether to overlay the sticky cache-revalidation bar at the bottom edge.
   final bool isRefreshing;
+
+  final GlobalKey? barKey;
 
   /// Height of the divider line painted between the tab bar and the tile
   /// grid.
@@ -237,20 +246,21 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     child: Stack(
       clipBehavior: .none,
       children: [
-        Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(top: topInset),
-              child: _tabBar,
-            ),
-            ColoredBox(
-              color: context.vineColors.outlineMuted,
-              child: const SizedBox(
-                height: _dividerHeight,
-                width: double.infinity,
+        Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: Column(
+            key: barKey,
+            children: [
+              _tabBar,
+              ColoredBox(
+                color: context.vineColors.outlineMuted,
+                child: const SizedBox(
+                  height: _dividerHeight,
+                  width: double.infinity,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         // Overlaid on the bottom edge so showing/hiding it never changes the
         // header extent — the grid below does not jump.
@@ -269,5 +279,6 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) =>
       topInset != oldDelegate.topInset ||
       _tabBar != oldDelegate._tabBar ||
-      isRefreshing != oldDelegate.isRefreshing;
+      isRefreshing != oldDelegate.isRefreshing ||
+      barKey != oldDelegate.barKey;
 }
