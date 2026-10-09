@@ -1168,7 +1168,7 @@ void main() {
           initialState: PeopleListsState(
             status: PeopleListsStatus.ready,
             ownerPubkey: _ownerPubkey,
-            lists: [if (list.isEditable) list],
+            lists: [if (ownerPubkey == null) list],
           ),
         );
         await tester.pumpWidget(
@@ -1210,8 +1210,17 @@ void main() {
           ownerPubkey: _otherOwnerPubkey,
         );
 
+        expect(
+          find.byWidgetPredicate((widget) => widget is PopupMenuButton),
+          findsOneWidget,
+        );
+        expect(find.byType(FollowListButton), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsAddPeopleTooltip), findsNothing);
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listDeleteAction), findsNothing);
         await tester.tap(find.text(l10n.listReportAction));
         await tester.pumpAndSettle();
 
@@ -1227,10 +1236,48 @@ void main() {
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
 
+        expect(
+          find.byWidgetPredicate((widget) => widget is PopupMenuButton),
+          findsNothing,
+        );
+        expect(find.text(l10n.peopleListsAddPeopleTooltip), findsOneWidget);
+        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
         // The owner's own actions are there; reporting is not.
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
         expect(find.text(l10n.listReportAction), findsNothing);
       });
+      testWidgets('a foreign list without an event keeps Follow and Share', (
+        tester,
+      ) async {
+        await pumpList(
+          tester,
+          list: _buildList(id: 'crew', isEditable: false),
+          ownerPubkey: _otherOwnerPubkey,
+        );
+        expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+        expect(find.byType(FollowListButton), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
+      });
+
+      testWidgets(
+        'an ownerless read-only list exposes no report or owner menu',
+        (
+          tester,
+        ) async {
+          await pumpList(
+            tester,
+            list: _buildList(
+              id: 'crew',
+              isEditable: false,
+              nostrEventId: 'e' * 64,
+            ),
+          );
+          expect(find.text('Close Friends'), findsWidgets);
+          expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+          expect(find.byType(FollowListButton), findsNothing);
+          expect(find.byType(ShareListButton), findsNothing);
+        },
+      );
     });
 
     group('View all', () {

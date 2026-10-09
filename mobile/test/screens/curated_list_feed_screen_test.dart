@@ -38,6 +38,19 @@ class _TestCuratedListsState extends CuratedListsState {
   Future<List<CuratedList>> build() async => [_list];
 }
 
+class _DeferredCuratedListsState extends CuratedListsState {
+  _DeferredCuratedListsState(this._service, this._read);
+
+  final CuratedListService _service;
+  final Future<List<CuratedList>> _read;
+
+  @override
+  CuratedListService get service => _service;
+
+  @override
+  Future<List<CuratedList>> build() => _read;
+}
+
 VideoEvent _videoEvent({String id = 'video-one'}) => VideoEvent(
   id: id,
   pubkey: 'b' * 64,
@@ -83,6 +96,7 @@ void main() {
       bool overrideVideoEvents = true,
       List<VideoEvent> videoEvents = const [],
       CuratedList? discoveredList,
+      CuratedListsState Function()? curatedListsState,
     }) {
       final list = CuratedList(
         id: listId,
@@ -106,7 +120,8 @@ void main() {
         overrides: [
           ...getStandardTestOverrides(),
           curatedListsStateProvider.overrideWith(
-            () => _TestCuratedListsState(() => mockService, list),
+            curatedListsState ??
+                () => _TestCuratedListsState(() => mockService, list),
           ),
           // Keep the real subscribed-list cache out of the tile chain, as
           // the grid's own tests do: its sync would hit unstubbed service
@@ -326,14 +341,14 @@ void main() {
         expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
       });
 
-      testWidgets("reports someone else's list from its menu", (
+      testWidgets('waits for owner state before offering a report', (
         tester,
       ) async {
         when(() => mockService.isOwnedList('$listAuthor:external-list'))
             .thenReturn(false);
         when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
             .thenReturn(false);
-
+        final read = Completer<List<CuratedList>>();
         final auth = createMockAuthService(
           authState: AuthState.authenticated,
           currentPublicKeyHex: 'a' * 64,
@@ -342,18 +357,112 @@ void main() {
           buildSubject(
             authorPubkey: listAuthor,
             discoveredList: reportableList(),
-            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+            curatedListsState: () =>
+                _DeferredCuratedListsState(mockService, read.future),
+            extraOverrides: [
+              authServiceProvider.overrideWithValue(auth),
+            ],
           ),
         );
         await tester.pump();
         await tester.pump();
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
 
-        await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listReportAction));
-        await tester.pumpAndSettle();
+        read.complete([]);
+        await tester.pump();
+        await tester.pump();
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+      });
 
-        expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+      testWidgets('does not offer a report without a known author', (
+        tester,
+      ) async {
+        final list = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+          nostrEventId: listEventId,
+        );
+        await tester.pumpWidget(buildSubject(discoveredList: list));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets('does not offer a report without a resolved event', (
+        tester,
+      ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+        final list = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          videoEventIds: const [],
+          pubkey: listAuthor,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: list,
+            extraOverrides: [
+              publicCuratedListProvider(
+                authorPubkey: listAuthor,
+                listId: list.id,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets("reports someone else's list from its menu", (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          when(() => mockService.isOwnedList('$listAuthor:external-list'))
+              .thenReturn(false);
+          when(
+            () => mockService.isSubscribedToList('$listAuthor:external-list'),
+          ).thenReturn(false);
+
+          final auth = createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: 'a' * 64,
+          );
+          await tester.pumpWidget(
+            buildSubject(
+              authorPubkey: listAuthor,
+              discoveredList: reportableList(),
+              extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+          await tester.pumpAndSettle();
+          tester.semantics.tap(
+            find.semantics.byPredicate(
+              (node) => node.identifier == 'list_report_option',
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
       });
 
       testWidgets(
