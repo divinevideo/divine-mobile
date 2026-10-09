@@ -2,8 +2,6 @@
 // ABOUTME: Verifies signInWithDivineOAuth does not pre-write the new
 // ABOUTME: current_user_pubkey_hex before the identity-change check runs.
 
-import 'dart:async';
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
@@ -11,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,25 +68,16 @@ class _FakeFlutterSecureStorage extends Fake implements FlutterSecureStorage {
   }
 }
 
-/// Runs [body] while silencing unhandled async errors from downstream work
-/// that is not under test (relay discovery, signer warmup, etc.).
-Future<T> _ignoringDownstreamErrors<T>(Future<T> Function() body) async {
-  final completer = Completer<T>();
-  await runZonedGuarded(
-    () async {
-      try {
-        final result = await body();
-        completer.complete(result);
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    },
-    (error, stack) {
-      // Silently absorb async errors from async work after the unit
-      // under test (shouldClearDataForUser ordering) has already run.
-    },
+class _MockRelayDiscoveryService extends Mock
+    implements RelayDiscoveryService {}
+
+RelayDiscoveryService _networkFreeDiscovery() {
+  final discovery = _MockRelayDiscoveryService();
+  when(() => discovery.discoverRelays(any())).thenAnswer(
+    (_) async => RelayDiscoveryResult.failure('No network in ordering tests'),
   );
-  return completer.future;
+  when(() => discovery.clearCache(any())).thenAnswer((_) async {});
+  return discovery;
 }
 
 void main() {
@@ -118,40 +108,6 @@ void main() {
     mockCleanupService = _MockUserDataCleanupService();
     mockOAuthClient = _MockKeycastOAuth();
     fakeSecureStorage = _FakeFlutterSecureStorage();
-
-    when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
-    when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
-    when(() => mockKeyStorage.clearCache()).thenReturn(null);
-    when(() => mockKeyStorage.dispose()).thenReturn(null);
-    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.deleteIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async {});
-    when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
-    when(
-      () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.getIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async => null);
-    when(
-      () => mockKeyStorage.switchToIdentity(
-        any(),
-      ),
-    ).thenAnswer((_) async => true);
-
-    when(
-      () => mockCleanupService.clearUserSpecificData(
-        reason: any(named: 'reason'),
-        isIdentityChange: any(named: 'isIdentityChange'),
-      ),
-    ).thenAnswer((_) async => 0);
-
-    when(() => mockOAuthClient.close()).thenReturn(null);
   });
 
   tearDown(() async {
@@ -160,6 +116,8 @@ void main() {
 
   AuthService createAuthService() {
     return AuthService(
+      relayDiscoveryService: _networkFreeDiscovery(),
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
       backgroundActivityManager: BackgroundActivityManager(),
       userDataCleanupService: mockCleanupService,
       keyStorage: mockKeyStorage,
@@ -172,6 +130,46 @@ void main() {
     test(
       'shouldClearDataForUser sees previous user pubkey not the new one',
       () async {
+        when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
+        when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
+        when(() => mockKeyStorage.clearCache()).thenReturn(null);
+        when(() => mockKeyStorage.dispose()).thenReturn(null);
+        when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
+        when(
+          () => mockKeyStorage.deleteIdentityKeyContainer(
+            any(),
+          ),
+        ).thenAnswer((_) async {});
+        when(() => mockKeyStorage.getKeyContainer())
+            .thenAnswer((_) async => null);
+        when(
+          () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockKeyStorage.getIdentityKeyContainer(
+            any(),
+          ),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockKeyStorage.switchToIdentity(
+            any(),
+          ),
+        ).thenAnswer((_) async => true);
+
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+          ),
+        ).thenAnswer((_) async => 0);
+
+        when(() => mockCleanupService.claimLegacyRows(any()))
+            .thenAnswer((_) async {});
+        when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
+            .thenAnswer((_) async {});
+
+        when(() => mockOAuthClient.close()).thenReturn(null);
+
         // Simulate prior state: user A was signed in and had user data.
         SharedPreferences.setMockInitialValues({
           'current_user_pubkey_hex': previousUserPubkey,
@@ -209,9 +207,15 @@ void main() {
           userPubkey: newUserPubkey,
         );
 
-        await _ignoringDownstreamErrors(
-          () => authService.signInWithDivineOAuth(sessionB),
+        await authService.signInWithDivineOAuth(sessionB);
+
+        expect(authService.isAuthenticated, isTrue);
+        expect(authService.currentPublicKeyHex, newUserPubkey);
+        expect(
+          authService.committedAccountActivationReceipt!.isCurrent,
+          isTrue,
         );
+        expect(prefs.getString('current_user_pubkey_hex'), newUserPubkey);
 
         expect(
           capturedStoredPubkey,
