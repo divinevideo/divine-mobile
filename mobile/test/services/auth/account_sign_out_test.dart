@@ -31,6 +31,40 @@ class _RemoteSigner extends Mock implements NostrRemoteSigner {}
 
 class _OAuth extends Mock implements KeycastOAuth {}
 
+class _SlotLinuxOptions extends LinuxOptions {
+  const _SlotLinuxOptions(this.slot);
+
+  final String slot;
+
+  @override
+  Map<String, String> toMap() => {'fixtureStorageSlot': slot};
+}
+
+class _SlotWindowsOptions extends WindowsOptions {
+  const _SlotWindowsOptions(this.slot);
+
+  final String slot;
+
+  @override
+  Map<String, String> toMap() => {'fixtureStorageSlot': slot};
+}
+
+FlutterSecureStorage _slotStorage(String slot) => FlutterSecureStorage(
+  aOptions: AndroidOptions(preferencesKeyPrefix: slot),
+  iOptions: IOSOptions(
+    accessibility: slot == 'current'
+        ? KeychainAccessibility.first_unlock
+        : KeychainAccessibility.first_unlock_this_device,
+  ),
+  mOptions: MacOsOptions(
+    accessibility: slot == 'current'
+        ? KeychainAccessibility.first_unlock
+        : KeychainAccessibility.first_unlock_this_device,
+  ),
+  lOptions: _SlotLinuxOptions(slot),
+  wOptions: _SlotWindowsOptions(slot),
+);
+
 void main() {
   setupTestEnvironment();
   const primaryKey = 'nostr_primary_key';
@@ -47,6 +81,7 @@ void main() {
   String? failedReadAfterDelete;
   bool cleanupAttempted = false;
   late List<({String method, String? key})> nativeMutations;
+  late List<({String slot, String? key})> nativeReads;
   String? heldDelete;
   Completer<void>? deleteEntered;
   Completer<void>? resumeDelete;
@@ -62,6 +97,7 @@ void main() {
     failedReadAfterDelete = null;
     cleanupAttempted = false;
     nativeMutations = [];
+    nativeReads = [];
     heldDelete = null;
     deleteEntered = null;
     resumeDelete = null;
@@ -69,11 +105,15 @@ void main() {
       final args = call.arguments as Map<dynamic, dynamic>? ?? {};
       final key = args['key'] as String?;
       final options = args['options'] as Map<dynamic, dynamic>? ?? {};
-      final target = options['accessibility'] == 'first_unlock_this_device'
-          ? legacyNative
-          : native;
+      final slot =
+          options['fixtureStorageSlot'] ?? options['preferencesKeyPrefix'];
+      final isLegacy =
+          slot == 'legacy' ||
+          options['accessibility'] == 'first_unlock_this_device';
+      final target = isLegacy ? legacyNative : native;
       switch (call.method) {
         case 'read':
+          nativeReads.add((slot: isLegacy ? 'legacy' : 'current', key: key));
           if (key == failedRead ||
               (cleanupAttempted && key == failedReadAfterDelete)) {
             throw PlatformException(code: 'controlled_native_read_refusal');
@@ -108,7 +148,14 @@ void main() {
       }
       return null;
     });
-    storage = SecureKeyStorage(securityConfig: SecurityConfig.desktop);
+    storage = SecureKeyStorage(
+      securityConfig: SecurityConfig.desktop,
+      platformStorage: PlatformSecureStorage.forPlatform(
+        TargetPlatform.iOS,
+        fallbackStorage: _slotStorage('current'),
+        legacyStorage: _slotStorage('legacy'),
+      ),
+    );
     await storage.initialize();
     discovery = _Discovery();
     when(() => discovery.discoverRelays(any())).thenAnswer(
@@ -463,14 +510,13 @@ void main() {
     test(
       'ownerless native legacy PRIMARY is retained without migration',
       () async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-        addTearDown(() => debugDefaultTargetPlatformOverride = null);
         final auth = subject();
         legacyNative[primaryKey] = '{retained_legacy_primary';
         final beforePrefs = preferencesSnapshot();
         final beforeNative = Map<String, String>.of(native);
         final beforeLegacy = Map<String, String>.of(legacyNative);
         final beforeMutations = List.of(nativeMutations);
+        nativeReads.clear();
         await expectLater(
           auth.signOut(deleteKeys: true),
           throwsA(isA<UserDataCleanupException>()),
@@ -478,6 +524,13 @@ void main() {
         expect(preferencesSnapshot(), beforePrefs);
         expect(native, beforeNative);
         expect(legacyNative, beforeLegacy);
+        expect(
+          nativeReads.where((read) => read.key == primaryKey),
+          containsAll([
+            (slot: 'current', key: primaryKey),
+            (slot: 'legacy', key: primaryKey),
+          ]),
+        );
         expect(nativeMutations, beforeMutations);
         expect(auth.committedAccountActivationReceipt, isNull);
       },
