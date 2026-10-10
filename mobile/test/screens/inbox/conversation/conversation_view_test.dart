@@ -2478,6 +2478,68 @@ void main() {
         expect(find.text(l10n.dmMessageActionRetrySend), findsNothing);
         expect(find.text(l10n.dmMessageActionCancelSend), findsNothing);
       });
+
+      /// What a screen reader is told while [state] replaces [previous].
+      Future<List<Object?>> announcementsFor(
+        WidgetTester tester, {
+        required ConversationState previous,
+        required ConversationState state,
+      }) async {
+        final announced = <Object?>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (Object? message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  announced.add((message['data'] as Map?)?['message']);
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [otherPubkey, secondPeer],
+            previousState: previous,
+            state: state,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        return announced;
+      }
+
+      // The line under the bubble changes with no toast, so the announcement
+      // is the only signal assistive tech gets.
+      testWidgets('tells a screen reader when that delivery is stopped', (
+        tester,
+      ) async {
+        final announced = await announcementsFor(
+          tester,
+          previous: threadWith(OutgoingWrapStatus.failed),
+          state: threadWith(OutgoingWrapStatus.cancelled),
+        );
+
+        expect(announced, contains(l10n.dmStatusNotSentToEveryone));
+      });
+
+      testWidgets('tells a screen reader nothing when the thread opens on a '
+          'delivery that was already stopped', (tester) async {
+        final announced = await announcementsFor(
+          tester,
+          previous: const ConversationState(),
+          state: threadWith(OutgoingWrapStatus.cancelled),
+        );
+
+        expect(find.text(l10n.dmStatusNotSentToEveryone), findsOneWidget);
+        expect(announced, isNot(contains(l10n.dmStatusNotSentToEveryone)));
+      });
     });
 
     group('refused retraction', () {

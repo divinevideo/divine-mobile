@@ -600,6 +600,128 @@ void main() {
       });
     });
 
+    group('stoppedDeliverySince', () {
+      const recipientD =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      /// The stored group bubble, with one queue row per listed member.
+      ConversationState thread(Map<String, OutgoingWrapStatus> members) =>
+          ConversationState(
+            messages: [_message(id: 'rumor-b')],
+            pendingOutgoing: [
+              for (final MapEntry(key: recipient, value: wrap)
+                  in members.entries)
+                _outgoingDm(
+                  id: 'row-$recipient',
+                  rumorId: 'rumor-b',
+                  recipientPubkey: recipient,
+                  recipientWrap: wrap,
+                  selfWrap: wrap,
+                ),
+            ],
+          );
+
+      test('reports a failing delivery the sender stopped', () {
+        final before = thread({_recipientC: OutgoingWrapStatus.failed});
+        final after = thread({_recipientC: OutgoingWrapStatus.cancelled});
+
+        expect(after.stoppedDeliverySince(before), isTrue);
+      });
+
+      test('reports nothing when a thread loads with a stopped delivery', () {
+        final before = ConversationState(messages: [_message(id: 'rumor-b')]);
+        final after = thread({_recipientC: OutgoingWrapStatus.cancelled});
+
+        expect(after.stoppedDeliverySince(before), isFalse);
+      });
+
+      // Stop trying cancels one member per event, so a bubble failing for two
+      // members passes through "one stopped, one still failing" on the way.
+      test('reports nothing while another member is still failing', () {
+        final before = thread({
+          _recipientC: OutgoingWrapStatus.failed,
+          recipientD: OutgoingWrapStatus.failed,
+        });
+        final after = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+          recipientD: OutgoingWrapStatus.failed,
+        });
+
+        expect(after.stoppedDeliverySince(before), isFalse);
+      });
+
+      test('reports the stop of the last failing member', () {
+        final before = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+          recipientD: OutgoingWrapStatus.failed,
+        });
+        final after = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+          recipientD: OutgoingWrapStatus.cancelled,
+        });
+
+        expect(after.stoppedDeliverySince(before), isTrue);
+      });
+
+      test('reports nothing when the bubble already said so', () {
+        final before = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+          recipientD: OutgoingWrapStatus.pending,
+        });
+        final after = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+          recipientD: OutgoingWrapStatus.cancelled,
+        });
+
+        expect(after.stoppedDeliverySince(before), isFalse);
+      });
+
+      // One member out of reach leaves a stopped bubble per message, so the
+      // next stop happens beside ones that already say so.
+      test('reports a bubble stopped beside one that was stopped before', () {
+        ConversationState twoBubbles(OutgoingWrapStatus second) =>
+            ConversationState(
+              messages: [
+                _message(id: 'rumor-a', sendBatchId: 'batch-a'),
+                _message(id: 'rumor-b', sendBatchId: 'batch-b'),
+              ],
+              pendingOutgoing: [
+                _outgoingDm(
+                  id: 'row-a',
+                  rumorId: 'rumor-a',
+                  recipientPubkey: _recipientC,
+                  recipientWrap: OutgoingWrapStatus.cancelled,
+                  selfWrap: OutgoingWrapStatus.cancelled,
+                  sendBatchId: 'batch-a',
+                ),
+                _outgoingDm(
+                  id: 'row-b',
+                  rumorId: 'rumor-b',
+                  recipientPubkey: _recipientC,
+                  recipientWrap: second,
+                  selfWrap: second,
+                  sendBatchId: 'batch-b',
+                ),
+              ],
+            );
+        final before = twoBubbles(OutgoingWrapStatus.failed);
+        final after = twoBubbles(OutgoingWrapStatus.cancelled);
+
+        expect(after.stoppedDeliverySince(before), isTrue);
+      });
+
+      test('reports nothing for a bubble being deleted for everyone', () {
+        final before = thread({
+          _recipientC: OutgoingWrapStatus.failed,
+        }).copyWith(awaitingRetraction: {'rumor-b'});
+        final after = thread({
+          _recipientC: OutgoingWrapStatus.cancelled,
+        }).copyWith(awaitingRetraction: {'rumor-b'});
+
+        expect(after.stoppedDeliverySince(before), isFalse);
+      });
+    });
+
     group('distinct sendBatchId keeps identical group sends independent', () {
       // The exact regression the durable batch key fixes: the same group,
       // same text, same second, sent twice. Both fan-outs share

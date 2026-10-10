@@ -227,6 +227,19 @@ void main() {
       (m) => m.id == messageId && m.retractionStatus == status,
     );
 
+    /// Counts, from [bloc]'s current state on, the state changes the thread
+    /// view announces as "Not sent to everyone".
+    int Function() countStopReportsFrom(ConversationBloc bloc) {
+      var previous = bloc.state;
+      var reports = 0;
+      final subscription = bloc.stream.listen((current) {
+        if (current.stoppedDeliverySince(previous)) reports++;
+        previous = current;
+      });
+      addTearDown(subscription.cancel);
+      return () => reports;
+    }
+
     /// A group message that reached A and that the relay refused for B, with
     /// its thread open and showing the failed bubble.
     Future<({ConversationBloc bloc, String messageId, String conversationId})>
@@ -435,6 +448,90 @@ void main() {
           ),
           isEmpty,
         );
+      });
+
+      // The view announces a bubble that starts reading "Not sent to
+      // everyone". How often it hears that depends on the order the real
+      // queue and message streams tick in, which a typed state cannot show.
+      group('the report a screen reader hears', () {
+        bool saysNotSentToEveryone(ConversationState state, String id) =>
+            state.statusFor(id) == DmDeliveryStatus.notSentToEveryone;
+
+        test('comes once when Stop trying lands', () async {
+          final thread = await openGroupThatReachedOnlyA();
+          final bloc = thread.bloc;
+          final reports = countStopReportsFrom(bloc);
+
+          for (final id in bloc.state.undeliveredSiblingRumorIdsFor(
+            thread.messageId,
+          )) {
+            bloc.add(ConversationOutgoingSendCancelled(rumorId: id));
+          }
+          await until(
+            bloc,
+            (s) => saysNotSentToEveryone(s, thread.messageId),
+            what: 'the stop to show on the bubble',
+          );
+          await pumpEventQueue();
+
+          expect(reports(), equals(1));
+        });
+
+        // Heard right after Delete for everyone it would sound like the
+        // delete not reaching everyone. The bloc marks the bubble as being
+        // deleted before it stops the queue rows, which is what keeps it out.
+        test(
+          'does not come when a delete for everyone stops the delivery',
+          () async {
+            final thread = await openGroupThatReachedOnlyA();
+            final bloc = thread.bloc;
+            final reports = countStopReportsFrom(bloc);
+            deletionWrap = unconfirmed;
+
+            bloc.add(ConversationMessageDeleted(rumorId: thread.messageId));
+            await until(
+              bloc,
+              (s) =>
+                  saysNotSentToEveryone(s, thread.messageId) &&
+                  retractionIs(s, thread.messageId, DmRetractionStatus.pending),
+              what: 'the stopped bubble with its pending retraction',
+            );
+            await pumpEventQueue();
+
+            expect(reports(), equals(0));
+          },
+        );
+
+        test('does not come again when the thread is reopened', () async {
+          final thread = await openGroupThatReachedOnlyA();
+          for (final id in thread.bloc.state.undeliveredSiblingRumorIdsFor(
+            thread.messageId,
+          )) {
+            thread.bloc.add(ConversationOutgoingSendCancelled(rumorId: id));
+          }
+          await until(
+            thread.bloc,
+            (s) => saysNotSentToEveryone(s, thread.messageId),
+            what: 'the stop to show on the bubble',
+          );
+          await thread.bloc.close();
+
+          final reopened = ConversationBloc(
+            dmRepository: repository,
+            conversationId: thread.conversationId,
+          );
+          addTearDown(reopened.close);
+          final reports = countStopReportsFrom(reopened);
+          reopened.add(const ConversationStarted());
+          await until(
+            reopened,
+            (s) => saysNotSentToEveryone(s, thread.messageId),
+            what: 'the reopened thread to show the stopped bubble',
+          );
+          await pumpEventQueue();
+
+          expect(reports(), equals(0));
+        });
       });
     });
 

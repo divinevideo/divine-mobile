@@ -311,6 +311,34 @@ class ConversationState extends Equatable {
     return DmDeliveryStatus.delivered;
   }
 
+  /// Whether a bubble started reading [DmDeliveryStatus.notSentToEveryone]
+  /// between [previous] and this state, which is when a screen reader has to
+  /// be told: the line under the bubble changes without a toast.
+  ///
+  /// Only a bubble that was still being delivered in [previous] counts. A
+  /// delivery stopped before the thread loaded has no such row there, so
+  /// opening a thread reports nothing.
+  ///
+  /// A bubble being deleted for everyone is left out. Its line changes too,
+  /// but spoken right after that action it would be heard as the delete not
+  /// reaching everyone.
+  bool stoppedDeliverySince(ConversationState previous) {
+    if (identical(pendingOutgoing, previous.pendingOutgoing)) return false;
+    // Stopped records stay as long as their message, so only the rows that
+    // were still in flight get a status lookup.
+    final liveBefore = {
+      for (final q in previous.pendingOutgoing)
+        if (q.recipientWrapStatus != OutgoingWrapStatus.cancelled) q.id,
+    };
+    return pendingOutgoing.any(
+      (q) =>
+          liveBefore.contains(q.id) &&
+          !awaitingRetraction.contains(q.rumorId) &&
+          statusFor(q.id) == DmDeliveryStatus.notSentToEveryone &&
+          previous.statusFor(q.id) != DmDeliveryStatus.notSentToEveryone,
+    );
+  }
+
   /// Merged user-visible message list: in-flight queue rows projected
   /// as [DmMessage] bubbles on top of persisted ones from [messages],
   /// sorted newest first.
