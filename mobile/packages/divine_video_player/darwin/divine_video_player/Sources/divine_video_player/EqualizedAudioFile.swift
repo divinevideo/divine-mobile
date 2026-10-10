@@ -14,26 +14,70 @@ import Foundation
 /// export's chain.
 enum EqualizedAudioFile {
 
+    /// The most of a remote sound downloaded, the cap the export's fetch and
+    /// the sound clip player put on the same sounds. A sound is a few
+    /// megabytes, and a published one decides how much its server sends.
+    static let maxDownloadBytes = 50 * 1024 * 1024
+
     /// A local file holding [source]: the file itself, or a download of a
-    /// remote one into the temporary directory. Nil when the download fails.
+    /// remote one into the temporary directory. Nil when the download fails
+    /// or passes [maxDownloadBytes].
     static func localCopy(of source: URL) async -> URL? {
         if source.isFileURL { return source }
+        var target: URL?
         do {
-            let (downloaded, response) = try await URLSession.shared.download(from: source)
+            let (bytes, response) = try await URLSession.shared.bytes(from: source)
             if let status = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(status) {
-                try? FileManager.default.removeItem(at: downloaded)
+                bytes.task.cancel()
+                return nil
+            }
+            if response.expectedContentLength > maxDownloadBytes {
+                bytes.task.cancel()
                 return nil
             }
             // AVFoundation tells a local file's format by its extension.
             let fileExtension = source.pathExtension.isEmpty
                 ? fileExtension(forMimeType: response.mimeType)
                 : source.pathExtension
-            let target = temporaryURL(fileExtension: fileExtension)
-            try FileManager.default.moveItem(at: downloaded, to: target)
-            return target
+            let file = temporaryURL(fileExtension: fileExtension)
+            target = file
+            guard try await write(bytes, limit: maxDownloadBytes, to: file) else {
+                bytes.task.cancel()
+                try? FileManager.default.removeItem(at: file)
+                return nil
+            }
+            return file
         } catch {
+            target.map { try? FileManager.default.removeItem(at: $0) }
             return nil
         }
+    }
+
+    /// Writes [bytes] to [target] as they arrive; false, with the write
+    /// abandoned, once more than [limit] of them have.
+    static func write<Bytes: AsyncSequence>(
+        _ bytes: Bytes, limit: Int, to target: URL
+    ) async throws -> Bool where Bytes.Element == UInt8 {
+        guard FileManager.default.createFile(atPath: target.path, contents: nil) else {
+            return false
+        }
+        let handle = try FileHandle(forWritingTo: target)
+        defer { try? handle.close() }
+        let chunk = 64 * 1024
+        var pending = Data()
+        pending.reserveCapacity(chunk)
+        var count = 0
+        for try await byte in bytes {
+            count += 1
+            if count > limit { return false }
+            pending.append(byte)
+            if pending.count == chunk {
+                try handle.write(contentsOf: pending)
+                pending.removeAll(keepingCapacity: true)
+            }
+        }
+        try handle.write(contentsOf: pending)
+        return true
     }
 
     /// Renders [startSec] to [endSec] of the local file [source] through

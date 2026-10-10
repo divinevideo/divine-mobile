@@ -15,6 +15,8 @@ enum EqualizedAudioFileTests {
         await aCancelledRenderRendersNothing()
         await aRenderCancelledPartWayStopsReading()
         await aHighRateSourceIsCopiedAt48kHz()
+        await aDownloadPastItsCapIsDropped()
+        await aDownloadWithinItsCapIsWrittenWhole()
         copiesListsTheCopiesAndNothingElse()
         print("Equalized audio file tests passed")
     }
@@ -156,6 +158,37 @@ enum EqualizedAudioFileTests {
         // The resampler can end a few frames short of the second.
         let frames = read(copy.url).frames
         precondition(abs(frames - 48_000) <= 16, "\(frames)")
+    }
+
+    /// A remote sound is written as it arrives and dropped once it passes
+    /// its cap: a published sound decides how much its server sends.
+    static func aDownloadPastItsCapIsDropped() async {
+        let target = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("eq_download_\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: target) }
+        let written = try! await EqualizedAudioFile.write(
+            bytes(count: 100_001), limit: 100_000, to: target)
+        precondition(!written)
+    }
+
+    /// A download at its cap is kept, every byte of it.
+    static func aDownloadWithinItsCapIsWrittenWhole() async {
+        let target = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("eq_download_\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: target) }
+        let written = try! await EqualizedAudioFile.write(
+            bytes(count: 100_000), limit: 100_000, to: target)
+        precondition(written)
+        let data = try! Data(contentsOf: target)
+        precondition(data.count == 100_000, "\(data.count)")
+        precondition(data == Data((0..<100_000).map { UInt8(truncatingIfNeeded: $0) }))
+    }
+
+    static func bytes(count: Int) -> AsyncStream<UInt8> {
+        AsyncStream { continuation in
+            for index in 0..<count { continuation.yield(UInt8(truncatingIfNeeded: index)) }
+            continuation.finish()
+        }
     }
 
     /// The copies and downloads are listed by their name; other files in the
