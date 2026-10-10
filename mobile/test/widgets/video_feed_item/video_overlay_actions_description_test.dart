@@ -215,6 +215,21 @@ void main() {
       );
     });
 
+    testWidgets('shows a description link without its scheme or query', (
+      tester,
+    ) async {
+      testVideo = testVideo.copyWith(
+        content: 'Follow https://youtube.com/@icyvault_official?si=_RmdS-TxTBR',
+      );
+
+      await pumpOverlay(tester);
+
+      expect(
+        find.text('Follow youtube.com/@icyvault_official'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('caps the description at two lines', (tester) async {
       Future<double> descriptionHeight(String content) async {
         testVideo = testVideo.copyWith(content: content);
