@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -121,6 +123,8 @@ class ConversationTile extends ConsumerWidget {
         orElse: () => null,
       ),
     );
+
+    final senderPrefix = _lastSenderPrefix(context, ref);
 
     final relativeTime = conversation.lastMessageTimestamp != null
         ? LocalizedTimeFormatter.formatConversationTimestamp(
@@ -258,6 +262,7 @@ class ConversationTile extends ConsumerWidget {
                             conversation.lastMessageContent!,
                           ),
                           emphasized: !conversation.isRead,
+                          senderPrefix: senderPrefix,
                         ),
                       ],
                     ],
@@ -269,6 +274,25 @@ class ConversationTile extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// The "Name: " that leads a group row's preview when someone other than the
+  /// viewer wrote the last message, or null when the preview needs no author.
+  ///
+  /// A group row is titled for the room, so without it the preview reads as if
+  /// the room said it. While the author's identity resolves it is null rather
+  /// than a generated name, which would present a placeholder as the person.
+  String? _lastSenderPrefix(BuildContext context, WidgetRef ref) {
+    final sender = conversation.lastMessageSenderPubkey;
+    if (!conversation.isGroup ||
+        sender == null ||
+        sender.isEmpty ||
+        pubkeysEqual(sender, currentUserPubkey)) {
+      return null;
+    }
+    final author = watchDmPeerName(context, ref, sender);
+    if (author.isResolving) return null;
+    return context.l10n.inboxConversationPreviewSenderPrefix(author.name);
   }
 }
 
@@ -330,6 +354,7 @@ class _ConversationPreviewText extends StatelessWidget {
   const _ConversationPreviewText({
     required this.payload,
     required this.emphasized,
+    this.senderPrefix,
   });
 
   final _PreviewPayload payload;
@@ -338,6 +363,9 @@ class _ConversationPreviewText extends StatelessWidget {
   /// so unread rows stand out beyond the small dot alone.
   final bool emphasized;
 
+  /// Names who wrote the message, ahead of everything else in the preview.
+  final String? senderPrefix;
+
   @override
   Widget build(BuildContext context) {
     final style = emphasized
@@ -345,7 +373,7 @@ class _ConversationPreviewText extends StatelessWidget {
         : VineTheme.bodyMediumFont(color: context.vineColors.onSurfaceVariant);
     if (!payload.isDivineVideoShare) {
       return DivineHeartText(
-        payload.text,
+        '${senderPrefix ?? ''}${payload.text}',
         style: style,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
@@ -357,6 +385,7 @@ class _ConversationPreviewText extends StatelessWidget {
     return Text.rich(
       TextSpan(
         children: [
+          if (senderPrefix != null) TextSpan(text: senderPrefix),
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Padding(

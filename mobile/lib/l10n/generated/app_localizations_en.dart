@@ -6013,6 +6013,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Collaborator invite';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'You were invited to collaborate on $title: $url\n\nOpen Divine to review and accept.';
   }

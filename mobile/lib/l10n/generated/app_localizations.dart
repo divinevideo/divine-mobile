@@ -10141,6 +10141,12 @@ abstract class AppLocalizations {
   /// **'Collaborator invite'**
   String get inboxConversationCollabInvitePreview;
 
+  /// Leads the last-message preview of a group conversation in the inbox list when someone other than the viewer wrote that message, so the preview does not read as if the room said it. The message text follows this string directly, so keep the separator, and any space after it, at the end.
+  ///
+  /// In en, this message translates to:
+  /// **'{sender}: '**
+  String inboxConversationPreviewSenderPrefix(String sender);
+
   /// Plaintext body of the encrypted DM that invites someone to collaborate on a video. Includes a clickable web link so non-Divine Nostr clients can preview the video. The trailing 'Open Divine to review and accept.' sentence MUST stay verbatim — Divine uses it as a marker to suppress legacy plaintext invites in conversation views.
   ///
   /// In en, this message translates to:

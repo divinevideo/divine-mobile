@@ -5573,6 +5573,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => '合作邀请';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return '你受邀参与合作制作 $title：$url\n\n打开 Divine 查看并接受。';
   }

@@ -1424,5 +1424,183 @@ void main() {
         expect(find.text('hi'), findsOneWidget);
       });
     });
+
+    // #8428. A group row is titled for the room, so a preview that does not
+    // say who wrote the last message reads as if the room said it.
+    group('group preview sender (#8428)', () {
+      const memberPubkey =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      DmConversation conversationWith({
+        required String? lastSender,
+        String? content = 'see you at 8',
+        bool isGroup = true,
+      }) => DmConversation(
+        id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        participantPubkeys: isGroup
+            ? const [currentPubkey, otherPubkey, memberPubkey]
+            : const [currentPubkey, otherPubkey],
+        isGroup: isGroup,
+        createdAt: nowUnix,
+        lastMessageContent: content,
+        lastMessageTimestamp: nowUnix,
+        lastMessageSenderPubkey: lastSender,
+      );
+
+      UserProfile memberProfile(String name) => UserProfile(
+        pubkey: memberPubkey,
+        displayName: name,
+        rawData: const {},
+        createdAt: now,
+        eventId: 'c' * 64,
+      );
+
+      Future<void> pumpRow(
+        WidgetTester tester,
+        DmConversation conversation, {
+        bool memberVanished = false,
+        bool memberResolving = false,
+        bool memberHasProfile = true,
+      }) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith(
+                (ref) async => createTestProfile(displayName: 'Alice'),
+              ),
+              fetchUserProfileProvider(
+                memberPubkey,
+              ).overrideWith(
+                (ref) async => memberHasProfile ? memberProfile('Bob') : null,
+              ),
+              profileVanishedProvider(
+                memberPubkey,
+              ).overrideWith((ref) => memberVanished),
+              profileIdentityResolvingProvider(
+                memberPubkey,
+              ).overrideWithValue(memberResolving),
+            ],
+            home: Scaffold(
+              body: ConversationTile(
+                conversation: conversation,
+                currentUserPubkey: currentPubkey,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      String prefixFor(String name) =>
+          l10n.inboxConversationPreviewSenderPrefix(name);
+
+      testWidgets('leads the preview with the member who wrote it', (
+        tester,
+      ) async {
+        await pumpRow(tester, conversationWith(lastSender: memberPubkey));
+
+        expect(find.text('${prefixFor('Bob')}see you at 8'), findsOneWidget);
+        // The room keeps its own title; the sender is not the row's name.
+        expect(find.text('Bob'), findsNothing);
+      });
+
+      testWidgets('leaves the preview alone when the viewer wrote it', (
+        tester,
+      ) async {
+        await pumpRow(tester, conversationWith(lastSender: currentPubkey));
+
+        expect(find.text('see you at 8'), findsOneWidget);
+      });
+
+      testWidgets('recognises the viewer whatever case the key is stored in', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: currentPubkey.toUpperCase()),
+        );
+
+        expect(find.text('see you at 8'), findsOneWidget);
+      });
+
+      testWidgets('leaves a one-to-one preview alone', (tester) async {
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: otherPubkey, isGroup: false),
+        );
+
+        expect(find.text('see you at 8'), findsOneWidget);
+        expect(find.textContaining(prefixFor('Alice')), findsNothing);
+      });
+
+      testWidgets('leaves a preview alone when the row never recorded who '
+          'wrote it', (tester) async {
+        await pumpRow(tester, conversationWith(lastSender: null));
+
+        expect(find.text('see you at 8'), findsOneWidget);
+      });
+
+      testWidgets('leads a shared-video preview too, ahead of its camera '
+          'icon', (tester) async {
+        await pumpRow(
+          tester,
+          conversationWith(
+            lastSender: memberPubkey,
+            content: '"Skate loop"\n\nhttps://divine.video/video/abc123',
+          ),
+        );
+
+        final preview = tester.widget<Text>(
+          find.textContaining('"Skate loop"'),
+        );
+        expect(preview.textSpan!.toPlainText(), startsWith(prefixFor('Bob')));
+        expect(find.textContaining('https://divine.video'), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.cameraRetro,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('names a deleted account as one, not by its last name', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: memberPubkey),
+          memberVanished: true,
+        );
+
+        expect(
+          find.text(
+            '${prefixFor(l10n.profileDeletedAccountName)}see you at 8',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('shows the bare preview while the writer is still being '
+          'resolved, never a generated name', (tester) async {
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: memberPubkey),
+          memberResolving: true,
+          memberHasProfile: false,
+        );
+
+        expect(find.text('see you at 8'), findsOneWidget);
+        expect(
+          find.textContaining(UserProfile.defaultDisplayNameFor(memberPubkey)),
+          findsNothing,
+        );
+      });
+    });
   });
 }

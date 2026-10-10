@@ -6114,6 +6114,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'సహకారి ఆహ్వానం';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'మీరు సహకరించడానికి ఆహ్వానించబడ్డారు $title: $url\n\nని సమీక్షించడానికి మరియు ఆమోదించడానికి Divineని తెరవండి.';
   }
