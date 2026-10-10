@@ -6229,6 +6229,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get dmStatusFailed => 'Échec de l’envoi';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Actions de la conversation';
 
   @override

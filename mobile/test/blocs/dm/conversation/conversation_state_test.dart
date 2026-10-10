@@ -158,6 +158,23 @@ void main() {
         expect(state.failedSiblingRumorIdsFor('blocked-rumor'), isEmpty);
       });
 
+      test('a stopped row whose message has left the thread builds no '
+          'bubble', () {
+        // The row is only a record for a stored bubble. Once that bubble is
+        // gone (a confirmed delete for everyone), projecting the row would
+        // put the deleted message back on screen.
+        final stopped = _outgoingDm(
+          id: 'queue-handle-c',
+          rumorId: 'rumor-gone',
+          recipientPubkey: _recipientC,
+          recipientWrap: OutgoingWrapStatus.cancelled,
+          selfWrap: OutgoingWrapStatus.cancelled,
+        );
+        final state = ConversationState(pendingOutgoing: [stopped]);
+
+        expect(state.displayedMessages, isEmpty);
+      });
+
       test(
         'partial group delivery renders exactly ONE bubble with the '
         'combined status — the persisted winner suppresses the surviving '
@@ -342,6 +359,70 @@ void main() {
         expect(state.statusFor('rumor-b'), equals(DmDeliveryStatus.pending));
       });
 
+      test('a sibling the sender stopped: notSentToEveryone', () {
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+          ],
+        );
+        expect(
+          state.statusFor('rumor-b'),
+          equals(DmDeliveryStatus.notSentToEveryone),
+        );
+      });
+
+      test('a hard-failed sibling outranks a stopped one: failed', () {
+        // Failed is the one status with something to do about it (Resend),
+        // so it has to stay reachable while any sibling is still failing.
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+            _outgoingDm(
+              id: 'rumor-d',
+              recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+              recipientWrap: OutgoingWrapStatus.failed,
+            ),
+          ],
+        );
+        expect(state.statusFor('rumor-b'), equals(DmDeliveryStatus.failed));
+      });
+
+      test('a stopped sibling outranks a still-pending one', () {
+        // Whatever happens to the pending member, one member is already
+        // known not to get it.
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+            _outgoingDm(
+              id: 'rumor-d',
+              recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+            ),
+          ],
+        );
+        expect(
+          state.statusFor('rumor-b'),
+          equals(DmDeliveryStatus.notSentToEveryone),
+        );
+      });
+
       test(
         'all recipients delivered but a self-wrap missing: '
         'deliveredSelfFailed',
@@ -439,6 +520,32 @@ void main() {
         expect(
           state.undeliveredSiblingRumorIdsFor('rumor-1'),
           equals(['rumor-1']),
+        );
+      });
+
+      test('a stopped sibling is in neither the Resend set nor the '
+          'cancel-send set', () {
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+            _outgoingDm(
+              id: 'rumor-d',
+              recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+              recipientWrap: OutgoingWrapStatus.failed,
+            ),
+          ],
+        );
+
+        expect(state.failedSiblingRumorIdsFor('rumor-b'), equals(['rumor-d']));
+        expect(
+          state.undeliveredSiblingRumorIdsFor('rumor-b'),
+          equals(['rumor-d']),
         );
       });
     });

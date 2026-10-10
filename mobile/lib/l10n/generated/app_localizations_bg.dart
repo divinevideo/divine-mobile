@@ -6202,6 +6202,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmStatusFailed => 'Изпращането не успя';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Действия за разговора';
 
   @override

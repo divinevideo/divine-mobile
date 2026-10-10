@@ -6071,6 +6071,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get dmStatusFailed => 'Gagal mengirim';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Tindakan percakapan';
 
   @override

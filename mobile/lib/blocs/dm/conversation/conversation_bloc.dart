@@ -645,8 +645,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     Emitter<ConversationState> emit,
   ) async {
     try {
-      // Drop the durable row; the failed bubble leaves `pendingOutgoing` on
-      // the next watch tick. No status emit — the removal speaks for itself.
+      // Stop the durable row. The next watch tick either drops the failed
+      // bubble or, for a stored group message, re-labels it as not sent to
+      // everyone. No status emit — the bubble's own change speaks for itself.
       await _dmRepository.cancelOutgoingSend(rumorId: event.rumorId);
     } on Object catch (e, stackTrace) {
       // A foreign-owner row surfaces as ArgumentError — terminal and expected,

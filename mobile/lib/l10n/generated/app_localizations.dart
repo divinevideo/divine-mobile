@@ -10501,6 +10501,12 @@ abstract class AppLocalizations {
   /// **'Failed to send'**
   String get dmStatusFailed;
 
+  /// Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Placeholder copy pending a product decision.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent to everyone'**
+  String get dmStatusNotSentToEveryone;
+
   /// Accessibility label announced by screen readers when the long-press actions bottom sheet for a conversation row opens.
   ///
   /// In en, this message translates to:

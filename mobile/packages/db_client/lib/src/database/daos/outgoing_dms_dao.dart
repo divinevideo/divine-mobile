@@ -44,6 +44,11 @@ enum OutgoingWrapStatus {
   /// A terminal policy refusal. The row remains visible as the sender's only
   /// durable copy, but retry queries must never re-drive it.
   blocked,
+
+  /// The sender stopped this delivery. Terminal: retry queries never re-drive
+  /// it. The row is kept only as the record that this recipient was not
+  /// reached, for as long as the message it belongs to is still shown.
+  cancelled,
 }
 
 /// Thrown when [OutgoingDmsDao] reads a row whose persisted wrap-status
@@ -396,6 +401,22 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
             selfWrapStatus: Value(OutgoingWrapStatus.blocked.name),
             recipientWrapLastError: Value(lastError),
             lastAttemptAt: Value(DateTime.now()),
+          ),
+        );
+    return rows > 0;
+  }
+
+  /// Retain [id] as a delivery the sender stopped.
+  ///
+  /// Both wraps leave `pending` and `failed`, for the same reason as
+  /// [markRecipientBlocked]: the retry and recovery queries select a row when
+  /// either wrap is in one of those states. The last error is left as it was.
+  Future<bool> markRecipientCancelled(String id) async {
+    final rows = await (update(outgoingDms)..where((t) => t.id.equals(id)))
+        .write(
+          OutgoingDmsCompanion(
+            recipientWrapStatus: Value(OutgoingWrapStatus.cancelled.name),
+            selfWrapStatus: Value(OutgoingWrapStatus.cancelled.name),
           ),
         );
     return rows > 0;

@@ -576,6 +576,9 @@ const _knownUntranslatedDebt = <String>{
   // colon in Japanese and Chinese), so it waits for the human translation pass
   // rather than shipping a guess.
   'inboxConversationPreviewSenderPrefix',
+  // A group DM that did not reach every member (#8180). English placeholder
+  // until product settles the wording.
+  'dmStatusNotSentToEveryone',
 
   // Reporting a list (#9896).
   'listReportAction',

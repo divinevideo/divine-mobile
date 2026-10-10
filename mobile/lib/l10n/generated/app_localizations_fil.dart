@@ -6185,6 +6185,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get dmStatusFailed => 'Nabigong ipadala';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Mga aksyon sa usapan';
 
   @override

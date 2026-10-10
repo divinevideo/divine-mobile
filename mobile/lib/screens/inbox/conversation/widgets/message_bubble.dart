@@ -411,6 +411,8 @@ class _MessageBubbleState extends State<MessageBubble> {
     final isFailedOwnSend = isSent && deliveryStatus == DmDeliveryStatus.failed;
     final isBlockedOwnSend =
         isSent && deliveryStatus == DmDeliveryStatus.blocked;
+    final isNotSentToEveryone =
+        isSent && deliveryStatus == DmDeliveryStatus.notSentToEveryone;
     final hasUnconfirmedRetraction =
         isSent && retractionStatus != DmRetractionStatus.none;
 
@@ -646,6 +648,17 @@ class _MessageBubbleState extends State<MessageBubble> {
                           padding: const EdgeInsets.only(top: 4),
                           child: _DeliveryStatusLine(
                             label: context.l10n.dmSendBlockedRetiredMessage,
+                            maxWidth: bubbleMaxWidth,
+                          ),
+                        ),
+                      // A group message some members never got, after the
+                      // sender stopped trying to reach them. There is nothing
+                      // to retry, so unlike the failed line it adds no tap.
+                      if (isNotSentToEveryone)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _DeliveryStatusLine(
+                            label: context.l10n.dmStatusNotSentToEveryone,
                             maxWidth: bubbleMaxWidth,
                           ),
                         ),

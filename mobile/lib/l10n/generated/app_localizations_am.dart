@@ -6007,6 +6007,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmStatusFailed => 'መላክ አልተሳካም';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'የውይይት እርምጃዎች';
 
   @override

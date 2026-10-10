@@ -6230,6 +6230,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dmStatusFailed => 'Failed to send';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Conversation actions';
 
   @override

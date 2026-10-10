@@ -220,7 +220,7 @@ void main() {
       test('ignores an unrelated row with a corrupt wrap status', () async {
         await dao.enqueue(makeDm(id: 'corrupt-row'));
         await database.customStatement(
-          "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+          "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
           "WHERE id = 'corrupt-row'",
         );
         await dao.enqueue(
@@ -403,6 +403,45 @@ void main() {
           isEmpty,
         );
         expect(await dao.getStillPendingForOwner(ownerA), isEmpty);
+      });
+
+      test('a cancelled delivery keeps its row but is neither retryable nor '
+          'pending', () async {
+        await dao.enqueue(
+          makeDm(
+            id: 'aaaa',
+            recipientStatus: OutgoingWrapStatus.failed,
+            selfStatus: OutgoingWrapStatus.failed,
+          ),
+        );
+        expect(
+          await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+          hasLength(1),
+          reason: 'the row is retryable until the sender stops it',
+        );
+
+        final ok = await dao.markRecipientCancelled('aaaa');
+
+        expect(ok, isTrue);
+        final fetched = await dao.getById('aaaa');
+        expect(
+          fetched,
+          isNotNull,
+          reason: 'the row is the record, so it stays',
+        );
+        expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+        expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+        expect(fetched.hasRetryableFailure, isFalse);
+        expect(fetched.isFullyDelivered, isFalse);
+        expect(
+          await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+          isEmpty,
+        );
+        expect(await dao.getStillPendingForOwner(ownerA), isEmpty);
+      });
+
+      test('cancelling a missing row reports false', () async {
+        expect(await dao.markRecipientCancelled('missing'), isFalse);
       });
 
       test('returns false when the row does not exist', () async {
@@ -976,10 +1015,10 @@ void main() {
         'carries an unrecognised recipient_wrap_status',
         () async {
           await dao.enqueue(makeDm(id: 'aaaa'));
-          // Simulate a newer client persisting `cancelled`, or a corrupt
+          // Simulate a newer client persisting `superseded`, or a corrupt
           // write — bypass the DAO and write a raw value directly.
           await database.customStatement(
-            "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+            "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
             "WHERE id = 'aaaa'",
           );
 
@@ -989,7 +1028,7 @@ void main() {
               isA<UnknownOutgoingWrapStatusException>().having(
                 (e) => e.rawValue,
                 'rawValue',
-                'cancelled',
+                'superseded',
               ),
             ),
           );
@@ -1025,7 +1064,7 @@ void main() {
         () async {
           await dao.enqueue(makeDm(id: 'aaaa'));
           await database.customStatement(
-            "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+            "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
             "WHERE id = 'aaaa'",
           );
 
