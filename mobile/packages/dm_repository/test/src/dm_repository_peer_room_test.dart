@@ -39,8 +39,9 @@ final String _roomId = DmRepository.computeConversationId([
 
 const _sentAt = 1700000000;
 
-/// NIP-17's bound on a chat room (17.md:106), restated rather than read from
-/// the repository so a changed production constant fails these tests.
+/// The receive path's room cap, the size above which NIP-17 advises another
+/// messaging scheme. Restated rather than read from the repository so a
+/// changed production constant fails these tests.
 const _roomCap = 10;
 
 /// Watchdog for a wrap the receive path never settles; nothing waits this

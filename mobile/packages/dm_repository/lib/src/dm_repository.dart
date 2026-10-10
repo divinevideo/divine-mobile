@@ -779,10 +779,10 @@ class DmRepository {
   static const int maxLoggedDeferredDeletions = 64;
 
   /// Most participants, sender included, a received rumor may name and still be
-  /// filed as a room. NIP-17 bounds a chat room at 10 (17.md:106); beyond it a
-  /// rumor costs the stored participant list, the reply fan-out and one new
-  /// request row per set a hostile sender varies, so it stays in the 1:1 with
-  /// its sender (#7338).
+  /// filed as a room. NIP-17 advises another messaging scheme for a group of
+  /// more than 10; beyond it a rumor costs the stored participant list, the
+  /// reply fan-out and one new request row per set a hostile sender varies,
+  /// so it stays in the 1:1 with its sender (#7338).
   static const int maxRoomParticipants = 10;
 
   /// Durable queue handle for one recipient of a group send.
