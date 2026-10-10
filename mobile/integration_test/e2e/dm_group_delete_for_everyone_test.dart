@@ -374,14 +374,9 @@ void main() {
               3,
         );
 
-        // The reactor opens the room first, so it already holds the group row
-        // when the author's message arrives and files that message under it.
+        // The reactor has never written to this room. It files the author's
+        // message under the room because the rumor names all three (#7338).
         final groupId = DmRepository.computeConversationId([pubA, pubB, pubC]);
-        final opened = await reactor.repository.sendGroupMessage(
-          recipientPubkeys: [author.pubkey, bystander.pubkey],
-          content: 'opening the room',
-        );
-        expect(opened.where((r) => r.success), hasLength(2));
 
         final sent = await author.repository.sendGroupMessage(
           recipientPubkeys: [reactor.pubkey, bystander.pubkey],
