@@ -370,8 +370,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
   /// Picks the snackbar line for a finished collaborator-invite retry.
   ///
-  /// Transient failures (still queued) take priority; a confirmed #176 policy
-  /// block is terminal and reported apart from "still needs to send"; otherwise
+  /// Transient failures (still queued) take priority; a blocked invite (a
+  /// confirmed #176 policy block, or one addressed to its own creator, #8363)
+  /// is terminal and reported apart from "still needs to send"; otherwise
   /// every invite was delivered.
   @visibleForTesting
   String collaboratorInviteRetryResultMessage(
