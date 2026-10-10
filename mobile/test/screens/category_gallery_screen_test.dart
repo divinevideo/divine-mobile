@@ -15,7 +15,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
-import 'package:openvine/widgets/composable_video_grid.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -374,10 +373,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final grid = tester.widget<ComposableVideoGrid>(
-        find.byType(ComposableVideoGrid),
-      );
-      grid.onVideoTap([blockedVideo, allowedVideo], 1);
+      await tester.tap(find.text('Allowed Video'));
       await tester.pumpAndSettle();
 
       expect(
