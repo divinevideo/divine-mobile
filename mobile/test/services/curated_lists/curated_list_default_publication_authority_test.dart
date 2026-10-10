@@ -22,6 +22,8 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/signed_curated_list.dart';
+
 class _Client extends Mock implements NostrClient {}
 
 class _Auth extends Mock implements AuthService {}
@@ -542,6 +544,29 @@ void main() {
         expect(await h.service.addVideoToList(_defaultId, _video), isTrue);
         expect(h.signed.single.isSigned, isTrue);
         expect(h.service.getDefaultList()!.videoEventIds, [_video]);
+      },
+    );
+    test(
+      'a public default without a description stays editable once its own relay revision is read back',
+      () async {
+        final row = _cached(owner, items: [_video]).copyWith(isPublic: true);
+        final revision = await signedCuratedListFixture(row, signer);
+        h.close();
+        SharedPreferences.setMockInitialValues({
+          CuratedListService.listsStorageKey: jsonEncode([
+            row.copyWith(nostrEventId: revision.id).toJson(),
+          ]),
+        });
+        h = await _makeHarness(
+          await SharedPreferences.getInstance(),
+          owner,
+          signer,
+          relayTimeout: const Duration(seconds: 1),
+        );
+        h.relay = () => Stream.value(revision);
+        await h.settle();
+        expect(h.service.getDefaultList()!.description, isNull);
+        expect(await h.service.addVideoToList(_defaultId, 'c' * 64), isTrue);
       },
     );
     test(
