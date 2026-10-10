@@ -6786,5 +6786,7 @@
   "ideasTitleFive": "无需太多解释",
   "ideasDescriptionFive": "只是想分享。",
   "ideasTitleSix": "今天的一小段",
-  "ideasDescriptionSix": "把这个留在这里。"
+  "ideasDescriptionSix": "把这个留在这里。",
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交",
+  "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。"
 }

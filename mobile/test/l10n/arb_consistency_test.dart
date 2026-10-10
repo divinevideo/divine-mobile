@@ -789,6 +789,30 @@ const _knownUntranslatedDebt = <String>{
   'soundsImportUnsupportedFormat',
   'soundsImportUnreadable',
   'soundsImportAccountChanged',
+  // In-app parent-consent capture copy. Load-bearing age and moderation
+  // instructions that a parent has to follow exactly, so non-English locales
+  // fall back to English until a human translation pass rather than being
+  // machine-translated.
+  'minorAccountReviewRecordConsentTitle',
+  'minorAccountReviewRecordConsentBody',
+  'minorAccountReviewRecordConsentPromptTitle',
+  'minorAccountReviewRecordConsentRecordCta',
+  'minorAccountReviewRecordConsentStopCta',
+  'minorAccountReviewRecordConsentPreviewLabel',
+  'minorAccountReviewRecordConsentReviewTitle',
+  'minorAccountReviewRecordConsentReviewBody',
+  'minorAccountReviewRecordConsentRetakeCta',
+  'minorAccountReviewRecordConsentUseVideoCta',
+  'minorAccountReviewRecordConsentDeniedTitle',
+  'minorAccountReviewRecordConsentDeniedBody',
+  'minorAccountReviewRecordConsentEmailInsteadCta',
+  'minorAccountReviewRecordConsentErrorTitle',
+  'minorAccountReviewRecordConsentErrorBody',
+  'minorAccountReviewRecordConsentTryAgainCta',
+  'minorAccountReviewRecordConsentConfirmEmailTitle',
+  'minorAccountReviewRecordConsentSubmitCta',
+  'minorAccountReviewRecordConsentSubmitError',
+  'minorAccountReviewParentConsentRecordCta',
   // The four social-proof keys and searchUserVideoCount left this list when
   // this branch translated them into every locale.
   // Crossposting CTA copy. Every locale except Amharic and Telugu received a

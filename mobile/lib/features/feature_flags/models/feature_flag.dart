@@ -91,6 +91,14 @@ enum FeatureFlag {
     'Start a message with several people from the New message sheet. '
         'Stays off until receiving a group works too (#7338).',
     audience: FeatureFlagAudience.internal,
+  ),
+  minorConsentInAppRecording(
+    'In-App Parent Consent Recording',
+    'Let a parent record and submit a consent video in the app for a '
+        'Divine Greenlight account review. Off by default until the '
+        'relay-manager parent-consent route and its request-signing '
+        'contract ship.',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(
