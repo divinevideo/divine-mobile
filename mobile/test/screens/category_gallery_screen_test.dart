@@ -3,8 +3,10 @@
 
 import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -13,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -329,6 +332,127 @@ void main() {
       expect(find.text('Allowed Video'), findsOneWidget);
       verify(
         () => blocklistRepository.filterContent<VideoEvent>(any(), any()),
+      ).called(1);
+    });
+
+    Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(
+      WidgetTester tester,
+    ) async {
+      Uri? pushedUri;
+      PooledFullscreenVideoFeedArgs? pushedArgs;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const Scaffold(body: CategoryGalleryScreen(category: category)),
+          ),
+          GoRoute(
+            path: PooledFullscreenVideoFeedScreen.path,
+            builder: (context, state) {
+              pushedUri = state.uri;
+              pushedArgs = state.extra! as PooledFullscreenVideoFeedArgs;
+              return const Scaffold(body: SizedBox());
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Allowed Video'));
+      await tester.pumpAndSettle();
+
+      expect(
+        pushedArgs,
+        isNotNull,
+        reason: 'tapping the tile should open the fullscreen route',
+      );
+      return (uri: pushedUri!, args: pushedArgs!);
+    }
+
+    testWidgets('tapping a video opens its fullscreen route', (tester) async {
+      final (:uri, :args) = await tapAllowedVideo(tester);
+
+      expect(
+        uri.queryParameters[PooledFullscreenVideoFeedScreen
+            .videoQueryParameter],
+        equals('allowed-id'),
+      );
+      expect(args.initialVideoId, equals('allowed-id'));
+      expect(args.initialIndex, equals(1));
+      expect(
+        args.contextTitle,
+        equals(lookupAppLocalizations(const Locale('en')).categoryAnimals),
+      );
+      expect(args.source, equals(const CategoryViewSource('animals')));
+    });
+
+    testWidgets('seeds the fullscreen feed with the videos the gallery shows', (
+      tester,
+    ) async {
+      final (:args, uri: _) = await tapAllowedVideo(tester);
+
+      final seededVideos = <List<VideoEvent>>[];
+      final seededHasMore = <bool>[];
+      final videosSubscription = args.feedRepository
+          .watchView(args.source)
+          .listen(seededVideos.add);
+      final hasMoreSubscription = args.feedRepository
+          .watchHasMore(args.source)
+          .listen(seededHasMore.add);
+      addTearDown(videosSubscription.cancel);
+      addTearDown(hasMoreSubscription.cancel);
+      await tester.pump();
+
+      expect(seededVideos, isNotEmpty);
+      expect(
+        seededVideos.first.map((video) => video.id),
+        equals(['blocked-id', 'allowed-id']),
+      );
+      expect(seededHasMore, equals([false]));
+    });
+
+    testWidgets('loading more in the fullscreen feed loads the next page', (
+      tester,
+    ) async {
+      when(
+        () => categoriesRepository.getVideosForCategory(
+          category: 'animals',
+          before: any(named: 'before'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+        ),
+      ).thenAnswer(
+        (_) async => CategoryVideosPage(
+          videos: [blockedVideo, allowedVideo],
+          hasMore: true,
+        ),
+      );
+      final (:args, uri: _) = await tapAllowedVideo(tester);
+      clearInteractions(categoriesRepository);
+
+      await args.feedRepository.loadMore(args.source);
+      await tester.pumpAndSettle();
+
+      verify(
+        () => categoriesRepository.getVideosForCategory(
+          category: 'animals',
+          before: any(named: 'before'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+        ),
       ).called(1);
     });
   });

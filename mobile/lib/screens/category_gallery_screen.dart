@@ -17,6 +17,7 @@ import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
@@ -53,7 +54,12 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
 
   @override
   void dispose() {
-    _bloc.close();
+    runDetached(
+      _bloc.close(),
+      'close category gallery BLoC',
+      logName: 'CategoryGalleryScreen',
+      category: LogCategory.ui,
+    );
     super.dispose();
   }
 
@@ -94,29 +100,34 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
               );
             },
             onVideoTap: (videos, index) {
-              context.push(
-                PooledFullscreenVideoFeedScreen.pathForVideoId(
-                  videos[index].id,
-                ),
-                extra: PooledFullscreenVideoFeedArgs(
-                  source: CategoryViewSource(widget.category.name),
-                  feedRepository: StreamFeedRepository(
-                    videos: _bloc.stream
-                        .map((state) => state.videos)
-                        .startWith(videos),
-                    hasMore: _bloc.stream
-                        .map((state) => state.hasMoreVideos)
-                        .startWith(state.hasMoreVideos),
-                    onLoadMore: () async =>
-                        _bloc.add(const CategoryVideosLoadMore()),
+              runDetached(
+                context.push<void>(
+                  PooledFullscreenVideoFeedScreen.pathForVideoId(
+                    videos[index].id,
                   ),
-                  initialIndex: index,
-                  initialVideoId: videos[index].id,
-                  contextTitle: localizedCategoryName(
-                    context.l10n,
-                    widget.category.name,
+                  extra: PooledFullscreenVideoFeedArgs(
+                    source: CategoryViewSource(widget.category.name),
+                    feedRepository: StreamFeedRepository(
+                      videos: _bloc.stream
+                          .map((state) => state.videos)
+                          .startWith(videos),
+                      hasMore: _bloc.stream
+                          .map((state) => state.hasMoreVideos)
+                          .startWith(state.hasMoreVideos),
+                      onLoadMore: () async =>
+                          _bloc.add(const CategoryVideosLoadMore()),
+                    ),
+                    initialIndex: index,
+                    initialVideoId: videos[index].id,
+                    contextTitle: localizedCategoryName(
+                      context.l10n,
+                      widget.category.name,
+                    ),
                   ),
                 ),
+                'open category video',
+                logName: 'CategoryGalleryScreen',
+                category: LogCategory.ui,
               );
             },
           );
