@@ -246,9 +246,8 @@ void main() {
     // primary key therefore collapses only the first sibling's self-wrap
     // echo; the rest must be caught by the batch token.
     //
-    // Recreates the conversation the send path leaves behind. Without it the
-    // echoes resolve to a degenerate [self, self] pair and are discarded
-    // before any dedup runs.
+    // Recreates the conversation the send path leaves behind on the sending
+    // device.
     Future<void> seedGroupSend() async {
       final participants = [_owner, _peer, _peer2]..sort();
       await conversationsDao.upsertConversation(

@@ -722,6 +722,38 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
         );
   }
 
+  /// Move the received reactions on [targetMessageId] into
+  /// [toConversationId], the conversation that message was just stored in.
+  ///
+  /// A reaction names its target and the target's author, never the room, so
+  /// one that arrives before its message is filed under a 1:1 inferred from
+  /// those two. Chips render by `(conversation_id, target_message_id)`, so
+  /// it would never show on a message that then lands in a group (#8271).
+  ///
+  /// Only rows with no `publish_status` move: the ones [upsertIncoming]
+  /// wrote. The account's own queued, sent, blocked and removal rows stay
+  /// where they are with their stored recipients, which a retry replays
+  /// (#7880). That is why this is not [reassignForTargetMessages], which
+  /// moves every row and clears that set.
+  ///
+  /// Returns the number of rows moved.
+  Future<int> adoptReceivedForTargetMessage({
+    required String targetMessageId,
+    required String toConversationId,
+    required String ownerPubkey,
+  }) {
+    return (update(dmMessageReactions)..where(
+          (t) =>
+              t.targetMessageId.equals(targetMessageId) &
+              t.ownerPubkey.equals(ownerPubkey) &
+              t.publishStatus.isNull() &
+              t.conversationId.equals(toConversationId).not(),
+        ))
+        .write(
+          DmMessageReactionsCompanion(conversationId: Value(toConversationId)),
+        );
+  }
+
   /// Delete everything owned by [ownerPubkey]. Sign-out cleanup.
   Future<int> deleteAllForOwner(String ownerPubkey) async {
     return (delete(
