@@ -143,7 +143,7 @@ class LinkifiedTextSpanBuilder {
   final bool compactUrls;
 
   /// Returns [url] without its leading scheme and its query string.
-  static String compactUrlLabel(String url) {
+  static String _compactUrlLabel(String url) {
     final withoutScheme = url.replaceFirst(_leadingScheme, '');
     final queryStart = withoutScheme.indexOf('?');
     return queryStart < 0
@@ -244,7 +244,7 @@ class LinkifiedTextSpanBuilder {
     final trailingText = matchedUrl.substring(linkText.length);
     return [
       TextSpan(
-        text: compactUrls ? compactUrlLabel(linkText) : linkText,
+        text: compactUrls ? _compactUrlLabel(linkText) : linkText,
         style: linkStyle,
         recognizer: TapGestureRecognizer()
           ..onTap = () {

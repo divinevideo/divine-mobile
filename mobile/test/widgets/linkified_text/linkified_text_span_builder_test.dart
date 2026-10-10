@@ -653,6 +653,7 @@ void main() {
         expect(spans.map((span) => span.text).join(), equals('hi 😀 there'));
       });
     });
+
     group('compactUrls', () {
       test('shows a link without scheme or query and taps the full URL', () {
         final tappedUrls = <String>[];
