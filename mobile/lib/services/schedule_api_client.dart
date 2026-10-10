@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/nip98_http_client.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Why the relay refused to hold a post. Mirrors the intake rules of
@@ -167,7 +168,12 @@ class ScheduleApiClient {
     required Nip98AuthService nip98AuthService,
     required String Function() apiBaseUrl,
     Duration timeout = const Duration(seconds: 15),
-  }) : _httpClient = httpClient,
+  }) : _httpClient = Nip98HttpClient(
+         inner: httpClient,
+         authService: nip98AuthService,
+         trustedOrigin: Uri.parse(apiBaseUrl()),
+         retryBudget: timeout,
+       ),
        _nip98 = nip98AuthService,
        _apiBaseUrl = apiBaseUrl,
        _timeout = timeout;

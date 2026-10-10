@@ -21,6 +21,7 @@ void _stubSignEvent(MockAuthService mock) {
       kind: any(named: 'kind'),
       content: any(named: 'content'),
       tags: any(named: 'tags'),
+      createdAt: any(named: 'createdAt'),
     ),
   ).thenAnswer((invocation) async {
     final tags = invocation.namedArguments[#tags] as List<List<String>>? ?? [];
@@ -61,6 +62,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -92,6 +94,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -121,6 +124,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -146,6 +150,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -177,6 +182,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -203,6 +209,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -225,6 +232,7 @@ void main() {
             kind: 27235,
             content: '',
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
       });
@@ -271,6 +279,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
       });
@@ -284,6 +293,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) async {
           callCount++;
@@ -313,6 +323,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(2);
       });
@@ -333,6 +344,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((invocation) async {
             callCount++;
@@ -360,6 +372,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).called(2);
         },
@@ -374,6 +387,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) async {
           callCount++;
@@ -420,6 +434,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(2);
       });
@@ -435,6 +450,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((invocation) async {
             callCount++;
@@ -467,6 +483,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).called(2);
         },
@@ -490,6 +507,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -517,6 +535,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;
@@ -540,6 +559,7 @@ void main() {
                     kind: any(named: 'kind'),
                     content: any(named: 'content'),
                     tags: captureAny(named: 'tags'),
+                    createdAt: any(named: 'createdAt'),
                   ),
                 ).captured.last
                 as List<List<String>>;

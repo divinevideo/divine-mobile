@@ -272,6 +272,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) async {
           final tags = invocation.namedArguments[#tags] as List<List<String>>;

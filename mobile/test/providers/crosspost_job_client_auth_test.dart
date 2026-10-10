@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -27,7 +28,8 @@ void main() {
 
   group('crosspostingApiClientProvider', () {
     late _MockAuthService auth;
-    late _MockHttpClient httpClient;
+    late http.Client httpClient;
+    late List<http.Request> requests;
     late bool signerAvailable;
 
     const ownerPubkey =
@@ -38,7 +40,11 @@ void main() {
 
     setUp(() {
       auth = _MockAuthService();
-      httpClient = _MockHttpClient();
+      requests = [];
+      httpClient = MockClient((request) async {
+        requests.add(request);
+        return http.Response(jsonEncode({'jobs': []}), 200);
+      });
       signerAvailable = true;
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(ownerPubkey);
@@ -47,6 +53,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((invocation) async {
         if (!signerAvailable) return null;
@@ -54,15 +61,12 @@ void main() {
           'id': 'ab' * 32,
           'kind': 27235,
           'pubkey': ownerPubkey,
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'created_at': invocation.namedArguments[#createdAt] as int,
           'content': '',
           'tags': invocation.namedArguments[#tags] as List<List<String>>,
           'sig': 'cd' * 64,
         });
       });
-      when(
-        () => httpClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer((_) async => http.Response(jsonEncode({'jobs': []}), 200));
     });
 
     ProviderContainer buildContainer() {
@@ -88,14 +92,7 @@ void main() {
         await client.getCrossposts(eventId: eventId);
 
         verifyNever(auth.getBoundDivineAccessToken);
-        final headers =
-            verify(
-                  () => httpClient.get(
-                    any(),
-                    headers: captureAny(named: 'headers'),
-                  ),
-                ).captured.single
-                as Map<String, String>;
+        final headers = requests.single.headers;
         final authorization = headers['Authorization']!;
         expect(authorization, startsWith('Nostr '));
         final event = jsonDecode(
@@ -121,7 +118,7 @@ void main() {
               .having((e) => e.code, 'code', 'unauthorized'),
         ),
       );
-      verifyNever(() => httpClient.get(any(), headers: any(named: 'headers')));
+      expect(requests, isEmpty);
     });
   });
 
