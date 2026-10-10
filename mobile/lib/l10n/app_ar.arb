@@ -4975,7 +4975,7 @@
     "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
     "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
     "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن.",
-    "authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. حاول مرة أخرى.",
+    "authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.",
     "listPrivateConversionTooLarge": "هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.",
     "@peopleListsAddPersonSemanticLabel": {
         "placeholders": {

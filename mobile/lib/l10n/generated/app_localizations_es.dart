@@ -13282,7 +13282,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed =>
-      'No se han podido borrar los datos de la cuenta anterior. Inténtalo de nuevo.';
+      'No se pudieron borrar los datos de la cuenta anterior. Probá de nuevo.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Buscar personas';

@@ -12802,7 +12802,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed =>
-      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።';
+      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';

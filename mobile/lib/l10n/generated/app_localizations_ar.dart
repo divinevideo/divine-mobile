@@ -13093,7 +13093,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed =>
-      'تعذّر مسح بيانات الحساب السابق. حاول مرة أخرى.';
+      'تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';

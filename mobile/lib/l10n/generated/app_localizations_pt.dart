@@ -13244,7 +13244,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed =>
-      'Não foi possível limpar os dados da conta anterior. Tenta novamente.';
+      'Não foi possível limpar os dados da conta anterior. Tente novamente.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Pesquisar pessoas';

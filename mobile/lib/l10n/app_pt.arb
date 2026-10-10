@@ -4975,7 +4975,7 @@
     "listsDiscoveryLoadingLabel": "Carregando listas",
     "listSearchPeopleUnavailable": "As listas de pessoas estão indisponíveis no momento.",
     "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento.",
-    "authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tenta novamente.",
+    "authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tente novamente.",
     "listPrivateConversionTooLarge": "Esta lista é grande demais para se tornar privada. Remova alguns vídeos primeiro. Suas alterações continuam aqui e ainda não foram salvas.",
     "@peopleListsAddPersonSemanticLabel": {
         "placeholders": {
