@@ -314,6 +314,34 @@ void main() {
 
         expect(await outgoingDao.getById(rowId), isNull);
       });
+
+      test('removes a 1:1 row even when its message is stored', () async {
+        // A 1:1 message can be stored while its row is still failed: the
+        // sender's own copy comes back from the relay before the recipient
+        // is confirmed (#10012). There is one recipient, so "not sent to
+        // everyone" does not describe it, and the row goes as before.
+        messageWrap = refusedByRelay;
+        final result = await repository.sendMessage(
+          recipientPubkey: _memberA,
+          content: 'see you at eight',
+        );
+        final rowId = result.queuedRumorId!;
+        final row = await outgoingDao.getById(rowId);
+        await messagesDao.insertMessage(
+          id: row!.rumorId,
+          conversationId: row.conversationId,
+          senderPubkey: _owner,
+          content: row.content,
+          createdAt: row.createdAt,
+          giftWrapId: _hex(0xecc2),
+          ownerPubkey: _owner,
+          sendBatchId: row.sendBatchId,
+        );
+
+        await repository.cancelOutgoingSend(rumorId: rowId);
+
+        expect(await outgoingDao.getById(rowId), isNull);
+      });
     });
 
     group('cancelOutgoingBatch', () {
