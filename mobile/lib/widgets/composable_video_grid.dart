@@ -152,7 +152,7 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     _scrollController.dispose();
     runDetached(
       _ownerVideoActionsCubit.close(),
-      'close owner video actions BLoC',
+      'close owner video actions cubit',
       logName: 'ComposableVideoGrid',
       category: LogCategory.ui,
     );
