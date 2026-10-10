@@ -2175,6 +2175,7 @@
     "dmSendFailedRetry": "Coba Lagi",
     "dmSendPartialMessage": "Terkirim, tapi tidak tersinkron ke perangkat lainmu",
     "dmStatusFailed": "Gagal mengirim",
+    "dmStatusNotSentToEveryone": "Tidak terkirim ke semua orang",
     "dmConversationLoadError": "Pesan tidak dapat dimuat",
     "dmMessageInputHint": "Tulis sesuatu…",
     "dmMessageSendLabel": "Kirim pesan",

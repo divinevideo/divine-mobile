@@ -2232,6 +2232,7 @@
     "dmSendFailedRetry": "Опитай пак",
     "dmSendPartialMessage": "Изпратено, но не се синхронизира с другите ти устройства",
     "dmStatusFailed": "Изпращането не успя",
+    "dmStatusNotSentToEveryone": "Не е изпратено до всички",
     "dmConversationLoadError": "Съобщенията не се заредиха",
     "dmMessageInputHint": "Кажи нещо…",
     "dmMessageSendLabel": "Изпрати съобщение",

@@ -56,7 +56,9 @@ enum SendStatus {
 /// success, [pending] → [deliveredSelfFailed] on a partial delivery,
 /// [pending] → [failed] on a retryable recipient-side publish failure, or
 /// [pending] → [blocked] on a terminal refusal whose local record is retained.
-/// Persisted rows with no queue row remaining are always [delivered].
+/// Persisted rows with no queue row remaining are always [delivered], which is
+/// why a delivery the sender stops keeps its row: a stored group bubble with a
+/// stopped sibling is [notSentToEveryone] (#8180).
 enum DmDeliveryStatus {
   /// Neither wrap has landed yet. Renders as a plain sent bubble — sends are
   /// optimistic, so there is no in-flight indicator (only [failed] is shown).
@@ -81,6 +83,12 @@ enum DmDeliveryStatus {
   /// Recipient delivery is permanently blocked. The bubble stays visible as
   /// the sender's record, shows closed-thread copy, and cannot be retried.
   blocked,
+
+  /// At least one member of a group message was not reached and the sender
+  /// stopped trying (Stop trying, or a delete for everyone that has not gone
+  /// through). The bubble stays for the members who have the message and says
+  /// so; there is nothing to retry.
+  notSentToEveryone,
 }
 
 /// Snapshot of the rumor ids whose recipient publish landed but whose
@@ -153,6 +161,11 @@ class ConversationState extends Equatable {
   /// - the retry policy gives up after exhausting retries (terminal
   ///   failure) — surfaced via [failed] status; the queue row stays
   ///   until the user explicitly cancels.
+  ///
+  /// One kind of row is neither in flight nor leaving: a member of a stored
+  /// group message whose delivery the sender stopped. The repository keeps
+  /// it, marked [OutgoingWrapStatus.cancelled], as the record behind
+  /// [DmDeliveryStatus.notSentToEveryone].
   final List<OutgoingDm> pendingOutgoing;
 
   /// Lookup by either the durable queue handle or the wire rumor id.
@@ -241,10 +254,13 @@ class ConversationState extends Equatable {
   /// cancelling their rows would only break the sender's own cross-device
   /// sync for a message that is being kept. (Deleting the message for
   /// everyone goes through `DmRepository.cancelOutgoingBatch` instead,
-  /// which drops the whole batch.)
+  /// which stops the whole batch.) A sibling that was already stopped is not
+  /// in the set either: there is nothing left to cancel.
   List<String> undeliveredSiblingRumorIdsFor(String id) => [
     for (final q in _siblingRowsFor(id))
-      if (q.recipientWrapStatus != OutgoingWrapStatus.sent) q.id,
+      if (q.recipientWrapStatus != OutgoingWrapStatus.sent &&
+          q.recipientWrapStatus != OutgoingWrapStatus.cancelled)
+        q.id,
   ];
 
   /// Delivery status for the bubble with rumor id (or persisted message
@@ -254,13 +270,17 @@ class ConversationState extends Equatable {
   ///
   /// Group bubbles aggregate their whole fan-out batch, worst first:
   /// any sibling blocked → [DmDeliveryStatus.blocked]; else any sibling
-  /// hard-failed → [DmDeliveryStatus.failed]; else any still pending →
+  /// hard-failed → [DmDeliveryStatus.failed]; else any sibling the sender
+  /// stopped → [DmDeliveryStatus.notSentToEveryone]; else any still pending →
   /// [DmDeliveryStatus.pending]; else any self-wrap failure →
-  /// [DmDeliveryStatus.deliveredSelfFailed]. This also lets the PERSISTED
+  /// [DmDeliveryStatus.deliveredSelfFailed]. Failed outranks stopped because
+  /// it is the one status the user can still act on, and stopped outranks
+  /// pending because one member is already known not to get the message
+  /// whatever the pending one does. This also lets the PERSISTED
   /// group bubble (inserted when the first recipient confirmed) surface a
   /// remaining sibling's failure as the red tap-to-resend affordance.
   DmDeliveryStatus statusFor(String id) {
-    // Hot path: with no in-flight queue rows every bubble is delivered, so
+    // Hot path: with no queue rows at all every bubble is delivered, so
     // short-circuit before building any lookup (statusFor is called per
     // bubble via a BlocSelector).
     if (pendingOutgoing.isEmpty) return DmDeliveryStatus.delivered;
@@ -268,6 +288,7 @@ class ConversationState extends Equatable {
     if (rows.isEmpty) return DmDeliveryStatus.delivered;
     var anyPending = false;
     var anySelfFailed = false;
+    var anyStopped = false;
     for (final q in rows) {
       if (q.recipientWrapStatus == OutgoingWrapStatus.blocked) {
         return DmDeliveryStatus.blocked;
@@ -275,24 +296,57 @@ class ConversationState extends Equatable {
       if (q.recipientWrapStatus == OutgoingWrapStatus.failed) {
         return DmDeliveryStatus.failed;
       }
-      if (q.recipientWrapStatus == OutgoingWrapStatus.pending) {
+      if (q.recipientWrapStatus == OutgoingWrapStatus.cancelled) {
+        anyStopped = true;
+      } else if (q.recipientWrapStatus == OutgoingWrapStatus.pending) {
         anyPending = true;
       } else if (q.selfWrapStatus == OutgoingWrapStatus.failed) {
         // recipient sent; self-wrap drives the rest of the truth table.
         anySelfFailed = true;
       }
     }
+    if (anyStopped) return DmDeliveryStatus.notSentToEveryone;
     if (anyPending) return DmDeliveryStatus.pending;
     if (anySelfFailed) return DmDeliveryStatus.deliveredSelfFailed;
     return DmDeliveryStatus.delivered;
+  }
+
+  /// Whether a bubble started reading [DmDeliveryStatus.notSentToEveryone]
+  /// between [previous] and this state, which is when a screen reader has to
+  /// be told: the line under the bubble changes without a toast.
+  ///
+  /// Only a bubble that was still being delivered in [previous] counts. A
+  /// delivery stopped before the thread loaded has no such row there, so
+  /// opening a thread reports nothing.
+  ///
+  /// A bubble being deleted for everyone is left out. Its line changes too,
+  /// but spoken right after that action it would be heard as the delete not
+  /// reaching everyone.
+  bool stoppedDeliverySince(ConversationState previous) {
+    if (identical(pendingOutgoing, previous.pendingOutgoing)) return false;
+    // Stopped records stay as long as their message, so only the rows that
+    // were still in flight get a status lookup.
+    final liveBefore = {
+      for (final q in previous.pendingOutgoing)
+        if (q.recipientWrapStatus != OutgoingWrapStatus.cancelled) q.id,
+    };
+    return pendingOutgoing.any(
+      (q) =>
+          liveBefore.contains(q.id) &&
+          !awaitingRetraction.contains(q.rumorId) &&
+          statusFor(q.id) == DmDeliveryStatus.notSentToEveryone &&
+          previous.statusFor(q.id) != DmDeliveryStatus.notSentToEveryone,
+    );
   }
 
   /// Merged user-visible message list: in-flight queue rows projected
   /// as [DmMessage] bubbles on top of persisted ones from [messages],
   /// sorted newest first.
   ///
-  /// Returns [messages] unchanged when [pendingOutgoing] is empty (the
-  /// hot path — every conversation that isn't actively mid-send).
+  /// Returns [messages] unchanged when [pendingOutgoing] holds no delivery
+  /// in progress: it is empty (the hot path — every conversation that isn't
+  /// actively mid-send), or holds only the records of stopped deliveries,
+  /// which outlive their send and never project a bubble.
   /// Defends against the brief tick window where a queue row and its
   /// matching persisted row appear together by letting the persisted
   /// row win on rumor-id collision. A fan-out batch (group send: one row
@@ -304,7 +358,11 @@ class ConversationState extends Equatable {
   /// ids; [statusFor] then surfaces remaining sibling failures on the
   /// persisted bubble.
   List<DmMessage> get displayedMessages {
-    if (pendingOutgoing.isEmpty) return messages;
+    if (pendingOutgoing.every(
+      (q) => q.recipientWrapStatus == OutgoingWrapStatus.cancelled,
+    )) {
+      return messages;
+    }
     final persistedIds = messages.map((m) => m.id).toSet();
     final persistedBatchKeys = <String>{
       for (final m in messages) _batchKeyOfMessage(m),
@@ -313,6 +371,10 @@ class ConversationState extends Equatable {
     final grouped = <String, List<OutgoingDm>>{};
     final pendingBubbles = <DmMessage>[];
     for (final q in pendingOutgoing) {
+      // A stopped row is a record for a stored bubble, never a bubble of its
+      // own: once that bubble has left the thread (a confirmed delete for
+      // everyone) projecting the row would put the message back on screen.
+      if (q.recipientWrapStatus == OutgoingWrapStatus.cancelled) continue;
       if (persistedIds.contains(q.rumorId)) continue;
       if (_isGroupRow(q)) {
         grouped.putIfAbsent(_batchKeyOf(q), () => []).add(q);

@@ -290,6 +290,22 @@ void main() {
       );
     });
 
+    test('an invite the sender stopped does not ask for recovery', () {
+      // Recovery refuses a stopped row, so offering it would retry forever.
+      final stopped = PendingCollaboratorInvite(
+        rumorId: 'stopped-a',
+        collaboratorPubkey: _collaboratorA,
+        creatorPubkey: _ownerPubkey,
+        videoAddress: _videoAddress,
+        recipientWrapStatus: OutgoingWrapStatus.cancelled,
+        selfWrapStatus: OutgoingWrapStatus.cancelled,
+        retryCount: 2,
+        queuedAt: DateTime.utc(2026, 5),
+      );
+
+      expect(stopped.requiresRecipientRecovery, isFalse);
+    });
+
     test('pending invite group exposes collaborators and equality', () {
       final inviteA = _toPendingInvite(
         _inviteRow(

@@ -2385,6 +2385,163 @@ void main() {
       );
     });
 
+    group('a group bubble one member did not get', () {
+      const secondPeer =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const groupConversationId =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const batchId =
+          '9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f';
+      const messageId =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      const wrapId =
+          'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd';
+      const body = 'dinner at eight';
+      final createdAt = DateTime(2026).millisecondsSinceEpoch ~/ 1000;
+
+      /// The stored message, and the queue row of the member it did not
+      /// reach in [memberRow].
+      ConversationState threadWith(OutgoingWrapStatus memberRow) =>
+          ConversationState(
+            status: ConversationStatus.loaded,
+            messages: [
+              DmMessage(
+                id: messageId,
+                conversationId: groupConversationId,
+                senderPubkey: currentPubkey,
+                content: body,
+                createdAt: createdAt,
+                giftWrapId: wrapId,
+                sendBatchId: batchId,
+              ),
+            ],
+            pendingOutgoing: [
+              OutgoingDm(
+                id: 'queue-handle-for-second-peer',
+                conversationId: groupConversationId,
+                recipientPubkey: secondPeer,
+                content: body,
+                createdAt: createdAt,
+                rumorEventJson: '{"id":"$messageId"}',
+                recipientWrapStatus: memberRow,
+                selfWrapStatus: memberRow,
+                queuedAt: DateTime(2026),
+                ownerPubkey: currentPubkey,
+                sendBatchId: batchId,
+              ),
+            ],
+          );
+
+      /// Pumps the thread and taps the line under the bubble. The text of a
+      /// bubble that is not failing handles its own taps, so the line is the
+      /// part where a tap reaches the bubble in both states.
+      Future<void> pumpAndTapStatusLine(
+        WidgetTester tester,
+        ConversationState state,
+        String statusLine,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [otherPubkey, secondPeer],
+            state: state,
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(statusLine));
+        // A bubble that takes double taps holds a single tap until the
+        // double-tap window closes. Wait it out, or "nothing opened" would
+        // pass on a tap that has not been delivered yet.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('offers Resend and Stop trying while that member is still '
+          'failing', (tester) async {
+        await pumpAndTapStatusLine(
+          tester,
+          threadWith(OutgoingWrapStatus.failed),
+          l10n.dmStatusFailed,
+        );
+
+        expect(find.text(l10n.dmMessageActionRetrySend), findsOneWidget);
+        expect(find.text(l10n.dmMessageActionCancelSend), findsOneWidget);
+      });
+
+      testWidgets('says so and offers nothing once that delivery was '
+          'stopped', (tester) async {
+        await pumpAndTapStatusLine(
+          tester,
+          threadWith(OutgoingWrapStatus.cancelled),
+          l10n.dmStatusNotSentToEveryone,
+        );
+
+        expect(find.text(l10n.dmMessageActionRetrySend), findsNothing);
+        expect(find.text(l10n.dmMessageActionCancelSend), findsNothing);
+      });
+
+      /// What a screen reader is told while [state] replaces [previous].
+      Future<List<Object?>> announcementsFor(
+        WidgetTester tester, {
+        required ConversationState previous,
+        required ConversationState state,
+      }) async {
+        final announced = <Object?>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (Object? message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  announced.add((message['data'] as Map?)?['message']);
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [otherPubkey, secondPeer],
+            previousState: previous,
+            state: state,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        return announced;
+      }
+
+      // The line under the bubble changes with no toast, so the announcement
+      // is the only signal assistive tech gets.
+      testWidgets('tells a screen reader when that delivery is stopped', (
+        tester,
+      ) async {
+        final announced = await announcementsFor(
+          tester,
+          previous: threadWith(OutgoingWrapStatus.failed),
+          state: threadWith(OutgoingWrapStatus.cancelled),
+        );
+
+        expect(announced, contains(l10n.dmStatusNotSentToEveryone));
+      });
+
+      testWidgets('tells a screen reader nothing when the thread opens on a '
+          'delivery that was already stopped', (tester) async {
+        final announced = await announcementsFor(
+          tester,
+          previous: const ConversationState(),
+          state: threadWith(OutgoingWrapStatus.cancelled),
+        );
+
+        expect(find.text(l10n.dmStatusNotSentToEveryone), findsOneWidget);
+        expect(announced, isNot(contains(l10n.dmStatusNotSentToEveryone)));
+      });
+    });
+
     group('refused retraction', () {
       // #8201. The warning icon is the durable status; the toast is only the
       // immediate announcement and must not remain on screen indefinitely.

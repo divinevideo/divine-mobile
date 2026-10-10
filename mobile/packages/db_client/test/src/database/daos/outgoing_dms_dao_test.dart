@@ -220,7 +220,7 @@ void main() {
       test('ignores an unrelated row with a corrupt wrap status', () async {
         await dao.enqueue(makeDm(id: 'corrupt-row'));
         await database.customStatement(
-          "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+          "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
           "WHERE id = 'corrupt-row'",
         );
         await dao.enqueue(
@@ -404,6 +404,114 @@ void main() {
         );
         expect(await dao.getStillPendingForOwner(ownerA), isEmpty);
       });
+
+      test('a cancelled delivery keeps its row but is neither retryable nor '
+          'pending', () async {
+        await dao.enqueue(
+          makeDm(
+            id: 'aaaa',
+            recipientStatus: OutgoingWrapStatus.failed,
+            selfStatus: OutgoingWrapStatus.failed,
+          ),
+        );
+        expect(
+          await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+          hasLength(1),
+          reason: 'the row is retryable until the sender stops it',
+        );
+
+        final ok = await dao.markRecipientCancelled('aaaa');
+
+        expect(ok, isTrue);
+        final fetched = await dao.getById('aaaa');
+        expect(
+          fetched,
+          isNotNull,
+          reason: 'the row is the record, so it stays',
+        );
+        expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+        expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+        expect(fetched.hasRetryableFailure, isFalse);
+        expect(fetched.isFullyDelivered, isFalse);
+        expect(
+          await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+          isEmpty,
+        );
+        expect(await dao.getStillPendingForOwner(ownerA), isEmpty);
+      });
+
+      test('cancelling a missing row reports false', () async {
+        expect(await dao.markRecipientCancelled('missing'), isFalse);
+      });
+
+      // A publish that was in flight when the sender stopped the delivery
+      // reports back afterwards, and the retry service terminalizes rows from
+      // a snapshot it read earlier. Neither may reopen the row.
+      for (final MapEntry(key: name, value: lateWrite)
+          in <String, Future<bool> Function(OutgoingDmsDao)>{
+            'a recipient-wrap status': (dao) => dao.markRecipientWrapStatus(
+              id: 'aaaa',
+              status: OutgoingWrapStatus.failed,
+              lastError: 'relay refused the wrap',
+            ),
+            'a self-wrap status': (dao) => dao.markSelfWrapStatus(
+              id: 'aaaa',
+              status: OutgoingWrapStatus.failed,
+              lastError: 'relay refused the wrap',
+            ),
+            'a policy block': (dao) => dao.markRecipientBlocked(
+              id: 'aaaa',
+              lastError: 'recipient retired',
+            ),
+          }.entries) {
+        test('a cancelled delivery is not reopened by $name written '
+            'afterwards', () async {
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+          expect(await dao.markRecipientCancelled('aaaa'), isTrue);
+
+          final written = await lateWrite(dao);
+
+          expect(written, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(
+            await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+            isEmpty,
+          );
+        });
+      }
+
+      for (final status in [
+        OutgoingWrapStatus.sent,
+        OutgoingWrapStatus.blocked,
+      ]) {
+        test('a ${status.name} recipient wrap is not put on record as '
+            'stopped', () async {
+          // Only a delivery still in progress can be stopped. A member the
+          // wrap already reached, or a policy refusal, keeps what it says.
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: status,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+
+          final ok = await dao.markRecipientCancelled('aaaa');
+
+          expect(ok, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, status);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.failed);
+        });
+      }
 
       test('returns false when the row does not exist', () async {
         final ok = await dao.markRecipientWrapStatus(
@@ -976,10 +1084,10 @@ void main() {
         'carries an unrecognised recipient_wrap_status',
         () async {
           await dao.enqueue(makeDm(id: 'aaaa'));
-          // Simulate a newer client persisting `cancelled`, or a corrupt
+          // Simulate a newer client persisting `superseded`, or a corrupt
           // write — bypass the DAO and write a raw value directly.
           await database.customStatement(
-            "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+            "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
             "WHERE id = 'aaaa'",
           );
 
@@ -989,7 +1097,7 @@ void main() {
               isA<UnknownOutgoingWrapStatusException>().having(
                 (e) => e.rawValue,
                 'rawValue',
-                'cancelled',
+                'superseded',
               ),
             ),
           );
@@ -1025,7 +1133,7 @@ void main() {
         () async {
           await dao.enqueue(makeDm(id: 'aaaa'));
           await database.customStatement(
-            "UPDATE outgoing_dms SET recipient_wrap_status = 'cancelled' "
+            "UPDATE outgoing_dms SET recipient_wrap_status = 'superseded' "
             "WHERE id = 'aaaa'",
           );
 

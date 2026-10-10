@@ -6139,6 +6139,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get dmStatusFailed => 'Kunde inte skicka';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Inte skickat till alla';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Konversationsåtgärder';
 
   @override

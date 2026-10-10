@@ -2168,6 +2168,7 @@
     "dmSendFailedRetry": "もう一回",
     "dmSendPartialMessage": "送信したけど、ほかのデバイスには同期できなかった",
     "dmStatusFailed": "送信できなかった",
+    "dmStatusNotSentToEveryone": "全員には送信されていません",
     "dmConversationLoadError": "メッセージを読み込めなかった",
     "dmMessageInputHint": "何か書いてみましょう…",
     "dmMessageSendLabel": "メッセージを送信",

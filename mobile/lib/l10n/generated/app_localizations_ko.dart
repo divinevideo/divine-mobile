@@ -5837,6 +5837,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dmStatusFailed => '보내지 못했어요';
 
   @override
+  String get dmStatusNotSentToEveryone => '모두에게 보내지는 못했어요';
+
+  @override
   String get inboxConversationActionsSheetLabel => '대화 작업';
 
   @override

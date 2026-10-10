@@ -2421,6 +2421,7 @@
     "dmSendFailedRetry": "እንደገና ይሞክሩ",
     "dmSendPartialMessage": "ተልኳል፣ ግን ወደ ሌሎች መሣሪያዎች አልተመሳሰለም",
     "dmStatusFailed": "መላክ አልተሳካም",
+    "dmStatusNotSentToEveryone": "ለሁሉም ሰው አልተላከም",
     "dmConversationLoadError": "መልዕክቶችን መጫን አልተቻለም",
     "dmMessageInputHint": "አንድ ነገር በል…",
     "dmMessageSendLabel": "መልእክት ላክ",

@@ -2178,6 +2178,7 @@
     "dmSendFailedRetry": "Försök igen",
     "dmSendPartialMessage": "Skickat, men inte synkat till dina andra enheter",
     "dmStatusFailed": "Kunde inte skicka",
+    "dmStatusNotSentToEveryone": "Inte skickat till alla",
     "dmConversationLoadError": "Det gick inte att läsa in meddelandena",
     "dmMessageInputHint": "Säg något…",
     "dmMessageSendLabel": "Skicka meddelande",

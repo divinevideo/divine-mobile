@@ -257,14 +257,16 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       ),
     );
 
-    // Drop every durable queue row of the bubble's batch first, whether the
+    // Stop every durable queue row of the bubble's batch first, whether the
     // bubble is queue-only (optimistic/failed — no persisted row yet, so the
     // kind-5 path below would no-op and the "deleted" bubble would keep
     // re-sending via the sweep) or persisted with sibling retry rows still
     // alive. A group bubble carries the persisted winner's rumor id whose
     // own row is already gone — cancelling just that id would leave the
     // pending and failed siblings for the sweep to re-publish, so the
-    // repository resolves and cancels the WHOLE batch.
+    // repository resolves and cancels the WHOLE batch. An unreached member
+    // of a stored message stays on record as stopped instead of being
+    // dropped, so the bubble keeps saying so until the delete is confirmed.
     var cancelledQueueRow = false;
     try {
       cancelledQueueRow =
@@ -645,8 +647,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     Emitter<ConversationState> emit,
   ) async {
     try {
-      // Drop the durable row; the failed bubble leaves `pendingOutgoing` on
-      // the next watch tick. No status emit — the removal speaks for itself.
+      // Stop the durable row. The next watch tick either drops the failed
+      // bubble or, for a stored group message, re-labels it as not sent to
+      // everyone. No status emit — the bubble's own change speaks for itself.
       await _dmRepository.cancelOutgoingSend(rumorId: event.rumorId);
     } on Object catch (e, stackTrace) {
       // A foreign-owner row surfaces as ArgumentError — terminal and expected,

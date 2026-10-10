@@ -2178,6 +2178,7 @@
     "dmSendFailedRetry": "Opnieuw",
     "dmSendPartialMessage": "Verzonden, maar niet gesynchroniseerd met je andere apparaten",
     "dmStatusFailed": "Versturen mislukt",
+    "dmStatusNotSentToEveryone": "Niet naar iedereen verstuurd",
     "dmConversationLoadError": "Berichten konden niet worden geladen",
     "dmMessageInputHint": "Zeg iets…",
     "dmMessageSendLabel": "Bericht versturen",

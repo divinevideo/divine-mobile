@@ -1714,6 +1714,7 @@
     "dmSendFailedRetry": "다시 시도",
     "dmSendPartialMessage": "보냈지만 다른 기기에 동기화되지 않았어요",
     "dmStatusFailed": "보내지 못했어요",
+    "dmStatusNotSentToEveryone": "모두에게 보내지는 못했어요",
     "dmConversationLoadError": "메시지를 불러오지 못했어요",
     "dmMessageInputHint": "한마디 남겨보세요…",
     "dmMessageSendLabel": "메시지 보내기",

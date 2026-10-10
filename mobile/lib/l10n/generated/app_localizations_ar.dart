@@ -6118,6 +6118,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dmStatusFailed => 'فشل الإرسال';
 
   @override
+  String get dmStatusNotSentToEveryone => 'لم يتم الإرسال إلى الجميع';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'إجراءات المحادثة';
 
   @override

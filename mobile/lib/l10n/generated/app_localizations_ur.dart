@@ -6153,6 +6153,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get dmStatusFailed => 'نہیں بھیجا جا سکا';
 
   @override
+  String get dmStatusNotSentToEveryone => 'سب کو نہیں بھیجا گیا';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'گفتگو کارروائیاں';
 
   @override

@@ -6081,6 +6081,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dmStatusFailed => 'Gönderilemedi';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Herkese gönderilmedi';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Sohbet işlemleri';
 
   @override

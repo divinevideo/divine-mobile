@@ -411,6 +411,8 @@ class _MessageBubbleState extends State<MessageBubble> {
     final isFailedOwnSend = isSent && deliveryStatus == DmDeliveryStatus.failed;
     final isBlockedOwnSend =
         isSent && deliveryStatus == DmDeliveryStatus.blocked;
+    final isNotSentToEveryone =
+        isSent && deliveryStatus == DmDeliveryStatus.notSentToEveryone;
     final hasUnconfirmedRetraction =
         isSent && retractionStatus != DmRetractionStatus.none;
 
@@ -646,6 +648,17 @@ class _MessageBubbleState extends State<MessageBubble> {
                           padding: const EdgeInsets.only(top: 4),
                           child: _DeliveryStatusLine(
                             label: context.l10n.dmSendBlockedRetiredMessage,
+                            maxWidth: bubbleMaxWidth,
+                          ),
+                        ),
+                      // A group message some members never got, after the
+                      // sender stopped trying to reach them. There is nothing
+                      // to retry, so unlike the failed line it adds no tap.
+                      if (isNotSentToEveryone)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _DeliveryStatusLine(
+                            label: context.l10n.dmStatusNotSentToEveryone,
                             maxWidth: bubbleMaxWidth,
                           ),
                         ),
@@ -1661,7 +1674,8 @@ class _VideoCard extends ConsumerWidget {
   }
 }
 
-/// The status line under a hard-failed or terminally blocked own send.
+/// The status line under an own send that hard-failed, was terminally
+/// blocked, or was stopped before it reached every member.
 ///
 /// Sits under the bubble rather than inside it: red text on the sent
 /// bubble's fixed green fill measured 1.16:1, far under the 4.5:1 floor.
@@ -1669,7 +1683,8 @@ class _VideoCard extends ConsumerWidget {
 /// Sends are optimistic, so ordinary pending, delivered, and self-wrap-failed
 /// states render as a plain sent message and never reach this widget. A
 /// failed bubble stays tappable to resend or delete; a blocked one carries
-/// the longer retired-thread explanation instead.
+/// the longer retired-thread explanation instead; a stopped one has nothing
+/// left to retry and is not tappable.
 class _DeliveryStatusLine extends StatelessWidget {
   const _DeliveryStatusLine({required this.label, required this.maxWidth});
 

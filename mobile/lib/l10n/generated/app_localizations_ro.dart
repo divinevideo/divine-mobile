@@ -6308,6 +6308,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get dmStatusFailed => 'N-am putut trimite';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Nu a fost trimis tuturor';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Acțiuni pentru conversație';
 
   @override

@@ -44,6 +44,11 @@ enum OutgoingWrapStatus {
   /// A terminal policy refusal. The row remains visible as the sender's only
   /// durable copy, but retry queries must never re-drive it.
   blocked,
+
+  /// The sender stopped this delivery. Terminal: retry queries never re-drive
+  /// it. The row is kept only as the record that this recipient was not
+  /// reached, for as long as the message it belongs to is still shown.
+  cancelled,
 }
 
 /// Thrown when [OutgoingDmsDao] reads a row whose persisted wrap-status
@@ -353,18 +358,31 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
     ).insert(_modelToCompanion(dm), mode: InsertMode.insertOrIgnore);
   }
 
+  /// The row [id], unless the sender stopped that delivery.
+  ///
+  /// [OutgoingWrapStatus.cancelled] is terminal. A publish that was in flight
+  /// when the delivery was stopped reports back afterwards, and the retry
+  /// service terminalizes rows from a snapshot it read earlier. Their status
+  /// writes must find nothing to update, as they did while a stop deleted the
+  /// row (#8180).
+  Expression<bool> _unstopped($OutgoingDmsTable t, String id) =>
+      t.id.equals(id) &
+      t.recipientWrapStatus.equals(OutgoingWrapStatus.cancelled.name).not();
+
   /// Update the recipient gift-wrap status for [id]. Pass [eventId] when
   /// transitioning to [OutgoingWrapStatus.sent] so the published id is
   /// recorded for downstream debugging. Pass [lastError] when transitioning
   /// to [OutgoingWrapStatus.failed]; it lands in `recipient_wrap_last_error`
   /// so the self-wrap's own error history is never overwritten.
+  ///
+  /// Changes nothing and returns `false` for a delivery the sender stopped.
   Future<bool> markRecipientWrapStatus({
     required String id,
     required OutgoingWrapStatus status,
     String? eventId,
     String? lastError,
   }) async {
-    final rows = await (update(outgoingDms)..where((t) => t.id.equals(id)))
+    final rows = await (update(outgoingDms)..where((t) => _unstopped(t, id)))
         .write(
           OutgoingDmsCompanion(
             recipientWrapStatus: Value(status.name),
@@ -385,11 +403,13 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Both wraps must leave `pending`: the pending-row recovery query selects a
   /// row when either wrap is pending, and a recipient refusal means the
   /// self-wrap was never attempted.
+  ///
+  /// Changes nothing and returns `false` for a delivery the sender stopped.
   Future<bool> markRecipientBlocked({
     required String id,
     required String lastError,
   }) async {
-    final rows = await (update(outgoingDms)..where((t) => t.id.equals(id)))
+    final rows = await (update(outgoingDms)..where((t) => _unstopped(t, id)))
         .write(
           OutgoingDmsCompanion(
             recipientWrapStatus: Value(OutgoingWrapStatus.blocked.name),
@@ -401,16 +421,45 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
     return rows > 0;
   }
 
+  /// Retain [id] as a delivery the sender stopped.
+  ///
+  /// Both wraps leave `pending` and `failed`, for the same reason as
+  /// [markRecipientBlocked]: the retry and recovery queries select a row when
+  /// either wrap is in one of those states. The last error is left as it was.
+  ///
+  /// Only a delivery still in progress can be stopped: the write applies while
+  /// the recipient wrap is `pending` or `failed`, and returns `false` for a
+  /// member the wrap already reached and for a policy refusal.
+  Future<bool> markRecipientCancelled(String id) async {
+    final rows =
+        await (update(outgoingDms)..where(
+              (t) =>
+                  t.id.equals(id) &
+                  t.recipientWrapStatus.isIn([
+                    OutgoingWrapStatus.pending.name,
+                    OutgoingWrapStatus.failed.name,
+                  ]),
+            ))
+            .write(
+              OutgoingDmsCompanion(
+                recipientWrapStatus: Value(OutgoingWrapStatus.cancelled.name),
+                selfWrapStatus: Value(OutgoingWrapStatus.cancelled.name),
+              ),
+            );
+    return rows > 0;
+  }
+
   /// Update the self-addressed gift-wrap status for [id]. Same per-wrap
   /// error semantics as [markRecipientWrapStatus] — [lastError] writes to
-  /// `self_wrap_last_error` only.
+  /// `self_wrap_last_error` only, and a delivery the sender stopped is left
+  /// as it is.
   Future<bool> markSelfWrapStatus({
     required String id,
     required OutgoingWrapStatus status,
     String? eventId,
     String? lastError,
   }) async {
-    final rows = await (update(outgoingDms)..where((t) => t.id.equals(id)))
+    final rows = await (update(outgoingDms)..where((t) => _unstopped(t, id)))
         .write(
           OutgoingDmsCompanion(
             selfWrapStatus: Value(status.name),
