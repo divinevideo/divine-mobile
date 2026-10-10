@@ -4103,11 +4103,10 @@ void main() {
       });
 
       test(
-        'defaults extra p-tags to 1:1 when no existing conversation',
+        'files extra p-tags as a room when no existing conversation',
         () async {
-          // When a message has 3+ participants but no existing group or
-          // 1:1 conversation exists, defaults to 1:1 to prevent phantom
-          // groups from non-compliant clients.
+          // A peer rumor naming 3+ participants is the room its pubkey + p
+          // tags name, even before this install holds a row for it (#7338).
           final giftWrap = createGiftWrapEvent();
           final rumor = createRumorEvent(
             tags: [
@@ -4139,11 +4138,16 @@ void main() {
           controller.add(giftWrap);
           await Future<void>.delayed(Duration.zero);
 
+          final roomParticipants = [
+            _validPubkeyA,
+            _validPubkeyB,
+            _validPubkeyC,
+          ]..sort();
           verify(
             () => mockConversationsDao.upsertConversation(
-              id: any(named: 'id'),
-              participantPubkeys: any(named: 'participantPubkeys'),
-              isGroup: false,
+              id: DmRepository.computeConversationId(roomParticipants),
+              participantPubkeys: jsonEncode(roomParticipants),
+              isGroup: true,
               createdAt: any(named: 'createdAt'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
@@ -18555,14 +18559,17 @@ void main() {
       }
 
       test(
-        'routes message with extra p-tags to existing 1:1 conversation',
+        'routes a reply mentioning a third member to the existing 1:1',
         () async {
-          // Rumor from B with extra p-tag for C (e.g., reply mention).
+          // Rumor from B replying to a message in the A <-> B 1:1, with an
+          // extra p-tag for C: a NIP-10 reply mention, not a room (#2740).
+          const parentMessageId = 'f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1';
           final giftWrap = createGiftWrapEvent();
           final rumor = createRumorEvent(
             tags: [
               ['p', _validPubkeyA],
               ['p', _validPubkeyC],
+              ['e', parentMessageId],
             ],
           );
 
@@ -18652,6 +18659,26 @@ void main() {
               createdAt: 1699999999,
             ),
           );
+          // Stub: the message being replied to is stored in that 1:1.
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              parentMessageId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => DirectMessageRow(
+              id: parentMessageId,
+              conversationId: canonicalId,
+              senderPubkey: _validPubkeyB,
+              content: 'Previous msg',
+              createdAt: 1699999999,
+              giftWrapId: 'previous-gift-wrap',
+              messageKind: EventKind.privateDirectMessage,
+              ownerPubkey: _validPubkeyA,
+              isDeleted: false,
+              twinCollapsed: false,
+            ),
+          );
 
           final controller = StreamController<Event>();
           when(
@@ -18679,6 +18706,7 @@ void main() {
               content: 'Hello from B!',
               createdAt: 1700000000,
               giftWrapId: _giftWrapEventId,
+              replyToId: parentMessageId,
               fileType: any(named: 'fileType'),
               encryptionAlgorithm: any(named: 'encryptionAlgorithm'),
               decryptionKey: any(named: 'decryptionKey'),
@@ -18718,9 +18746,11 @@ void main() {
       );
 
       test(
-        'defaults to 1:1 when extra p-tags and no existing conversation',
+        'files a room when extra p-tags and no existing conversation',
         () async {
-          // Rumor from B with extra p-tag for C — no prior conversation.
+          // Rumor from B with extra p-tag for C — no prior conversation. A
+          // peer's rumor naming 3+ participants is the room its pubkey + p
+          // tags name (#7338).
           final giftWrap = createGiftWrapEvent();
           final rumor = createRumorEvent(
             tags: [
@@ -18807,14 +18837,18 @@ void main() {
           controller.add(giftWrap);
           await Future<void>.delayed(Duration.zero);
 
-          // Should default to canonical 1:1 (A <-> B), not a 3-party group.
-          final canonical1to1 = [_validPubkeyA, _validPubkeyB]..sort();
-          final canonicalId = DmRepository.computeConversationId(canonical1to1);
+          // Should be filed under the 3-party room, not the A <-> B 1:1.
+          final roomParticipants = [
+            _validPubkeyA,
+            _validPubkeyB,
+            _validPubkeyC,
+          ]..sort();
+          final roomId = DmRepository.computeConversationId(roomParticipants);
 
           verify(
             () => mockDirectMessagesDao.insertMessage(
               id: _rumorEventId,
-              conversationId: canonicalId,
+              conversationId: roomId,
               senderPubkey: _validPubkeyB,
               content: 'Hello from B!',
               createdAt: 1700000000,
@@ -18835,12 +18869,12 @@ void main() {
             ),
           ).called(1);
 
-          // Conversation should be upserted as 1:1 (not group).
+          // Conversation should be upserted as a group of all three.
           verify(
             () => mockConversationsDao.upsertConversation(
-              id: canonicalId,
-              participantPubkeys: jsonEncode(canonical1to1),
-              isGroup: false,
+              id: roomId,
+              participantPubkeys: jsonEncode(roomParticipants),
+              isGroup: true,
               createdAt: any(named: 'createdAt'),
               lastMessageContent: 'Hello from B!',
               lastMessageTimestamp: 1700000000,

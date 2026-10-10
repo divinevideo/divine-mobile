@@ -152,9 +152,18 @@ bool _repliesIntoASmallerRoom(
   if (parentId == null) return false;
   final parentRoom = roomsByMessageId[parentId];
   if (parentRoom == null) return false;
-  return parentRoom.length < message.participants.length &&
-      parentRoom.every(message.participants.contains);
+  return isMentionOfWiderRoom(parentRoom, message.participants);
 }
+
+/// Whether a reply naming [room] answers a message held in [parentRoom], a
+/// strictly smaller room that [room] fully contains.
+///
+/// That is the shape of a NIP-10 reply mention (#2740): the reply widens the
+/// conversation it answers by tagging a third party, and does not start a
+/// room. Shared by the receive path and the recovery pass so the two cannot
+/// disagree about what a mention is.
+bool isMentionOfWiderRoom(Set<String> parentRoom, Set<String> room) =>
+    parentRoom.length < room.length && parentRoom.every(room.contains);
 
 /// The newest `subject` in [bucket], or null if none carries one.
 ///

@@ -374,28 +374,5 @@ void main() {
         expect(await reactionIdsIn(oneToOne), equals([reaction.id]));
       });
     });
-
-    group('authored by a peer', () {
-      test('is still filed under the 1:1 with that peer', () async {
-        // The phantom-group guard: an extra p tag on a peer's rumor does not
-        // open a group this install has never seen (#2740).
-        final rumor = roomMessage(author: _alice, pTags: [_owner, _bob]);
-        final oneToOne = DmRepository.computeConversationId([_owner, _alice]);
-
-        await deliver(rumor, authorSecret: _aliceSecret);
-
-        final stored = await conversations();
-        expect(
-          stored.map((conversation) => conversation.id),
-          equals([oneToOne]),
-        );
-        expect(stored.single.isGroup, isFalse);
-        expect(
-          jsonDecode(stored.single.participantPubkeys),
-          unorderedEquals([_owner, _alice]),
-        );
-        expect(await messageIdsIn(oneToOne), equals([rumor.id]));
-      });
-    });
   });
 }
