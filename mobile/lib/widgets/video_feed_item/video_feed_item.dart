@@ -309,6 +309,7 @@ class VideoOverlayActions extends ConsumerWidget {
                 ).copyWith(shadows: VineTheme.buttonShadows),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                compactUrls: true,
               ),
             ),
           ),

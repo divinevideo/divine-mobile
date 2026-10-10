@@ -43,6 +43,7 @@ class LinkifiedTextSpanBuilder {
     this.videoLabel,
     this.allowWidgetSpans = true,
     this.initialHeartBudget = kDivineHeartMaxPainted,
+    this.compactUrls = false,
   });
 
   /// Token precedence: URL/email, hashtag, bech32, bare hex, then `@mention`.
@@ -58,6 +59,20 @@ class LinkifiedTextSpanBuilder {
   );
 
   static const _trailingUrlPunctuation = '.!,?:;';
+
+  static final _leadingScheme = RegExp(
+    r'^[a-z][a-z0-9+.\-]*://',
+    caseSensitive: false,
+  );
+
+  static final _trailingScheme = RegExp(
+    r'(?<![a-z0-9+.\-])[a-z][a-z0-9+.\-]*://$',
+    caseSensitive: false,
+  );
+
+  /// `?` plus the URL characters after it. The URL pattern also swallows what
+  /// follows a link (a closing bracket, an unspaced word), which must stay.
+  static final _query = RegExp(r'\?[A-Za-z0-9\-._~%&=+/:;,@!$?]*');
 
   /// Length of a fixed-payload bech32 reference (`npub` / `note`), which is
   /// always `hrp` + 58 data characters.
@@ -123,6 +138,18 @@ class LinkifiedTextSpanBuilder {
   /// rather than each fragment.
   final int initialHeartBudget;
 
+  /// Whether URLs are shown without their scheme and query string, so
+  /// `https://example.com/a?b=c` reads `example.com/a`.
+  ///
+  /// Only the label shrinks: a tap still receives the full matched URL. A
+  /// scheme the URL pattern does not cover, such as `wss://`, sits in the
+  /// plain run before the match and is dropped from there.
+  final bool compactUrls;
+
+  /// Returns [url] without its leading scheme and its query string.
+  static String _compactUrlLabel(String url) =>
+      url.replaceFirst(_leadingScheme, '').replaceFirst(_query, '');
+
   /// Builds spans preserving the token precedence from [LinkifiedText].
   ///
   /// Unpaired UTF-16 surrogates are normalized here rather than at each
@@ -142,16 +169,19 @@ class LinkifiedTextSpanBuilder {
     var heartBudget = initialHeartBudget;
 
     for (final match in _combinedRegex.allMatches(safeText)) {
+      final matchedUrl = match.group(1);
       if (match.start > lastEnd) {
-        final run = _plainSpans(
-          safeText.substring(lastEnd, match.start),
-          heartBudget,
-        );
-        heartBudget -= run.whereType<WidgetSpan>().length;
-        spans.addAll(run);
+        var plain = safeText.substring(lastEnd, match.start);
+        if (compactUrls && matchedUrl != null) {
+          plain = plain.replaceFirst(_trailingScheme, '');
+        }
+        if (plain.isNotEmpty) {
+          final run = _plainSpans(plain, heartBudget);
+          heartBudget -= run.whereType<WidgetSpan>().length;
+          spans.addAll(run);
+        }
       }
 
-      final matchedUrl = match.group(1);
       final hashtag = match.group(2);
       final nostrId = match.group(3);
       final hexReference = match.group(4);
@@ -213,7 +243,7 @@ class LinkifiedTextSpanBuilder {
     final trailingText = matchedUrl.substring(linkText.length);
     return [
       TextSpan(
-        text: linkText,
+        text: compactUrls ? _compactUrlLabel(linkText) : linkText,
         style: linkStyle,
         recognizer: TapGestureRecognizer()
           ..onTap = () {
