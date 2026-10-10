@@ -619,7 +619,11 @@ void main() {
 
             expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
             expect(find.text(l10n.shareSheetCrosspost), findsNothing);
-            expect(sink.events, isEmpty);
+            expect(sink.events.map((event) => event.name), ['share_tapped']);
+            expect(sink.events.single.parameters, {
+              'target_video_id': testVideo.id,
+              'target_pubkey': testVideo.pubkey,
+            });
           },
         );
 
@@ -642,13 +646,13 @@ void main() {
                 crosspostingApiClientProvider.overrideWithValue(client),
               ],
             );
-            expect(sink.events, isEmpty);
+            expect(sink.events.map((event) => event.name), ['share_tapped']);
             final actions = find.byType(ListView).last;
             await tester.drag(actions, const Offset(-500, 0));
             await tester.pumpAndSettle();
-            expect(sink.events, hasLength(1));
-            expect(sink.events.single.name, 'crosspost_cta_shown');
-            expect(sink.events.single.parameters, {
+            expect(sink.events, hasLength(2));
+            expect(sink.events.last.name, 'crosspost_cta_shown');
+            expect(sink.events.last.parameters, {
               'surface': 'share_sheet',
               'cta': 'crosspost_row',
             });
@@ -656,7 +660,7 @@ void main() {
             await tester.pumpAndSettle();
             await tester.drag(actions, const Offset(-500, 0));
             await tester.pumpAndSettle();
-            expect(sink.events, hasLength(1));
+            expect(sink.events, hasLength(2));
             verifyNever(client.getConnections);
           },
         );
@@ -685,6 +689,7 @@ void main() {
             await tester.tap(find.text(l10n.shareSheetCrosspost));
             await tester.pump();
             expect(sink.events.map((event) => event.name), [
+              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
@@ -706,13 +711,16 @@ void main() {
               () => goRouter.push<void>(any(), extra: any(named: 'extra')),
             );
             expect(sink.events.map((event) => event.name), [
+              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
             expect(
-              sink.events.every(
-                (event) => event.parameters['cta'] == 'crosspost_row',
-              ),
+              sink.events
+                  .skip(1)
+                  .every(
+                    (event) => event.parameters['cta'] == 'crosspost_row',
+                  ),
               isTrue,
             );
           },
@@ -772,10 +780,11 @@ void main() {
                 crosspostingApiClientProvider.overrideWithValue(client),
               ],
             );
-            expect(sink.events, isEmpty);
+            expect(sink.events.map((event) => event.name), ['share_tapped']);
             await tester.tap(find.text(l10n.shareSheetCrosspost));
             await tester.pumpAndSettle();
             expect(sink.events.map((event) => event.name), [
+              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
@@ -810,10 +819,10 @@ void main() {
             ],
           );
 
-          expect(sink.events, hasLength(1));
-          expect(sink.events.single.name, 'crosspost_cta_shown');
+          expect(sink.events, hasLength(2));
+          expect(sink.events.last.name, 'crosspost_cta_shown');
           expect(
-            sink.events.single.parameters,
+            sink.events.last.parameters,
             {'surface': 'share_sheet', 'cta': 'crosspost_row'},
           );
           verifyNever(client.getConnections);
@@ -873,13 +882,16 @@ void main() {
               () => goRouter.push<void>(RoutePaths.crosspostingSettings),
             ).called(1);
             expect(sink.events.map((event) => event.name), [
+              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
             expect(
-              sink.events.every(
-                (event) => event.parameters['cta'] == 'crosspost_row',
-              ),
+              sink.events
+                  .skip(1)
+                  .every(
+                    (event) => event.parameters['cta'] == 'crosspost_row',
+                  ),
               isTrue,
             );
           },
