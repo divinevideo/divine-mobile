@@ -123,6 +123,35 @@ class VideoEditorConstants {
   /// Maximum recording duration for videos.
   static const maxDuration = Duration(seconds: 6, milliseconds: 300);
 
+  /// How far the playhead may be from a layer keyframe for the editor to
+  /// treat it as on that keyframe: one frame at 30 fps.
+  ///
+  /// A seek lands on the frame the player delivers, a few milliseconds off the
+  /// time asked for; without the slack, moving a layer right after jumping to
+  /// a keyframe would add a second keyframe next to it instead of changing it.
+  static const keyframeTolerance = Duration(microseconds: 33334);
+
+  /// One cycle of a looping wiggle, a hop and a pulse when first picked: a
+  /// wiggle swings like a pendulum, a hop lands and takes off again, a pulse
+  /// breathes slower than either.
+  static const loopWiggleCycle = Duration(milliseconds: 600);
+  static const loopBounceCycle = Duration(milliseconds: 700);
+  static const loopPulseCycle = Duration(seconds: 1);
+
+  /// How far a looping pulse shrinks a layer when first picked: to 80 %
+  /// rather than to nothing.
+  static const loopPulseScaleFrom = 0.8;
+
+  /// Bounds of the wiggle tilt slider, in whole degrees.
+  static const minWiggleDegrees = 2;
+  static const maxWiggleDegrees = 30;
+
+  /// Bounds and snap step of the bounce height slider, in percent of the
+  /// layer's height.
+  static const minBouncePercent = 10;
+  static const maxBouncePercent = 200;
+  static const bounceStepPercent = 10;
+
   /// How long a single export may run before it is treated as never returning.
   ///
   /// A liveness bound, not a performance budget: a real export of the

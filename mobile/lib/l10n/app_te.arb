@@ -5667,7 +5667,7 @@
   "videoEditorChromaKeyCloseSemanticLabel": "రంగు మాస్క్ మార్పులను విస్మరించండి",
   "videoEditorChromaKeyDoneSemanticLabel": "రంగు మాస్క్‌ను వర్తింపజేయండి",
   "videoEditorOpacityLabel": "అపారదర్శకత",
-  "videoEditorOpacitySemanticLabel": "ఎంచుకున్న క్లిప్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి",
+  "videoEditorOpacitySemanticLabel": "ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి",
   "videoEditorChromaKeyAutoDetect": "ఆటో-డిటెక్ట్",
   "videoEditorChromaKeyPresetGreen": "ఆకుపచ్చ",
   "videoEditorChromaKeyPresetBlue": "నీలం",
@@ -5989,6 +5989,14 @@
     "description": "Label for the control that opens the enter/leave animation picker for a text/sticker/drawing layer, and the picker's title."
   },
   "videoEditorLayerAnimationButtonSemanticLabel": "లేయర్ యానిమేషన్‌ను సవరించండి",
+  "videoEditorKeyframeAdd": "కీఫ్రేమ్‌ను జోడించండి",
+  "videoEditorKeyframeRemove": "కీఫ్రేమ్‌ను తీసివేయండి",
+  "videoEditorKeyframeMarkerSemanticLabel": "{time} వద్ద ఉన్న కీఫ్రేమ్‌కు వెళ్ళండి",
+  "videoEditorKeyframesLabel": "కీఫ్రేమ్‌లు",
+  "videoEditorKeyframesButtonSemanticLabel": "లేయర్ కీఫ్రేమ్‌లను సవరించండి",
+  "videoEditorKeyframesHint": "కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై లేయర్‌ను కదిలించండి, పరిమాణం మార్చండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.",
+  "videoEditorKeyframeEffect": "ఎఫెక్ట్",
+  "videoEditorKeyframeCurveSegment": "కీఫ్రేమ్ {from} నుండి {to} వరకు కదలిక",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
     "description": "Accessibility label for the button that opens the layer enter/leave animation picker."
   },

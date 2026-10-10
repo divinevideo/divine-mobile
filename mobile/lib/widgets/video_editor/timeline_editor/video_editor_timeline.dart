@@ -10,6 +10,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -856,11 +857,21 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
       case .layer:
         final layers = editor.activeLayers;
         final layerIdx = layers.indexWhere((l) => l.id == item.id);
+        final layer = layerIdx < 0 ? null : layers[layerIdx];
 
         editor.setLayerTimeline(
           index: layerIdx,
           startTime: startTime,
           endTime: endTime,
+          // A trimmed start leaves the motion where it is on the video;
+          // keyframes count from the start, so they are rebased onto it.
+          keyframes:
+              isStart &&
+                  layer != null &&
+                  layer.hasKeyframes &&
+                  layer.keepsMotionOnStartTrim
+              ? layer.keyframesFrom(startTime)
+              : null,
           skipUpdateHistory: true,
         );
       case .filter:

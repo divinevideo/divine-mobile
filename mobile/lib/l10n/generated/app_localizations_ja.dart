@@ -8961,7 +8961,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpacityLabel => '不透明度';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '選択したクリップの透け具合を設定';
+  String get videoEditorOpacitySemanticLabel => '選択したレイヤーの透け具合を設定';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
@@ -9386,6 +9386,35 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'レイヤーアニメーションを編集';
+
+  @override
+  String get videoEditorKeyframeAdd => 'キーフレームを追加';
+
+  @override
+  String get videoEditorKeyframeRemove => 'キーフレームを削除';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$timeのキーフレームへ移動';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'キーフレーム';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => 'レイヤーのキーフレームを編集';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'キーフレームを追加し、再生ヘッドを動かしてから、レイヤーを移動・拡大縮小・回転します。レイヤーはキーフレームからキーフレームへなめらかに動きます。';
+
+  @override
+  String get videoEditorKeyframeEffect => 'エフェクト';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'キーフレーム$fromから$toへの動き';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'イン';

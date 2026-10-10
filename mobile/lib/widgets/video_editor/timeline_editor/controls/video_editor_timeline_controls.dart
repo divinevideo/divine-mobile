@@ -24,6 +24,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onBackdrop,
     this.isChangingBackdrop = false,
     this.onAnimate,
+    this.onKeyframes,
+    this.hasKeyframes = false,
+    this.isOnKeyframe = false,
     this.onStyles,
     this.onSpeed,
     this.onTransform,
@@ -113,6 +116,18 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Opens the layer enter/leave animation picker. Layer overlays only.
   final VoidCallback? onAnimate;
 
+  /// Opens the keyframe sheet of the selected layer. Layer overlays that
+  /// keyframes can move only.
+  final VoidCallback? onKeyframes;
+
+  /// Whether the layer already has keyframes, which highlights the action the
+  /// way [hasChromaKey] does.
+  final bool hasKeyframes;
+
+  /// Whether the playhead is on one of the layer's keyframes, which fills the
+  /// action's diamond in, as the keyframe's own diamond on the timeline is.
+  final bool isOnKeyframe;
+
   /// Opens the saved title styles sheet. Text overlays only.
   final VoidCallback? onStyles;
   final VoidCallback? onSpeed;
@@ -134,10 +149,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// highlights the action so the effect is visible from the timeline.
   final bool hasChromaKey;
 
-  /// Opens the opacity slider for a detached clip.
+  /// Opens the opacity slider for a layer.
   final VoidCallback? onOpacity;
 
-  /// Whether the detached clip is already see-through, which highlights the
+  /// Whether the layer is already see-through somewhere, which highlights the
   /// action the way [hasChromaKey] does.
   final bool hasOpacity;
 
@@ -267,6 +282,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel:
                 context.l10n.videoEditorLayerAnimationButtonSemanticLabel,
             onPressed: onAnimate,
+          ),
+        if (onKeyframes != null)
+          TimelineActionButton(
+            icon: isOnKeyframe ? .diamondFill : .diamond,
+            label: context.l10n.videoEditorKeyframesLabel,
+            semanticLabel: context.l10n.videoEditorKeyframesButtonSemanticLabel,
+            onPressed: onKeyframes,
+            type: hasKeyframes ? .primary : .secondary,
           ),
         if (onStyles != null)
           TimelineActionButton(

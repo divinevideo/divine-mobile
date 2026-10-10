@@ -9418,7 +9418,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'منتخب کلپ کتنا شفاف ہو، یہ طے کریں';
+      'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
@@ -9873,6 +9873,36 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'لیئر اینیمیشن میں ترمیم کریں';
+
+  @override
+  String get videoEditorKeyframeAdd => 'کی فریم شامل کریں';
+
+  @override
+  String get videoEditorKeyframeRemove => 'کی فریم ہٹائیں';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time پر موجود کی فریم پر جائیں';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'کی فریمز';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'لیئر کے کی فریمز میں ترمیم کریں';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ایفیکٹ';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'کی فریم $from سے $to تک حرکت';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'آنا';

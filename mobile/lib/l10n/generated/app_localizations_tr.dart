@@ -9340,7 +9340,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Seçili klibin ne kadar saydam olacağını ayarla';
+      'Seçili katmanın ne kadar saydam olacağını ayarla';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
@@ -9791,6 +9791,36 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Katman animasyonunu düzenle';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Ana kare ekle';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Ana kareyi kaldır';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time konumundaki ana kareye git';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Ana kareler';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Katmanın ana karelerini düzenle';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Bir ana kare ekle, oynatma kafasını kaydır, sonra katmanı taşı, boyutlandır ya da döndür. Katman ana kareden ana kareye kayar.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return '$from. ana kareden $to. ana kareye hareket';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Giriş';

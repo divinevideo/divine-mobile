@@ -9493,7 +9493,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'I-set kung gaano ka-transparent ang napiling clip';
+      'I-set kung gaano ka-transparent ang napiling layer';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
@@ -9951,6 +9951,36 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'I-edit ang animation ng layer';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Magdagdag ng keyframe';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Alisin ang keyframe';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Pumunta sa keyframe sa $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframes';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'I-edit ang mga keyframe ng layer';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Magdagdag ng keyframe, ilipat ang playhead, tapos ilipat, i-resize o i-rotate ang layer. Dadausdos ito mula keyframe hanggang keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Galaw mula keyframe $from hanggang $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Pasok';

@@ -9631,7 +9631,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Setează cât de transparent e clipul selectat';
+      'Setează cât de transparent e stratul selectat';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
@@ -10086,6 +10086,36 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editează animația stratului';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Adaugă cadru cheie';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Elimină cadrul cheie';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Mergi la cadrul cheie de la $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Cadre cheie';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Editează cadrele cheie ale stratului';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Adaugă un cadru cheie, mută capul de redare, apoi mută, redimensionează sau rotește stratul. Stratul alunecă de la un cadru cheie la altul.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Mișcarea de la cadrul cheie $from la $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Intrare';

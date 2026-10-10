@@ -7,6 +7,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -20,7 +21,6 @@ import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
-import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
@@ -32,6 +32,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframe_actions.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart';
@@ -103,61 +105,70 @@ class _LayerOverlayControls extends StatelessWidget {
     final canMultiSelect =
         isMergeableDrawLayer(layer) && mergeableDrawLayerCount >= 2;
 
-    return VideoEditorTimelineControls(
-      onDelete: () => _removeLayer(context: context),
-      onEdit: isTextLayer ? () => _editTextLayer(context: context) : null,
-      onDuplicated: () => _duplicateLayer(context: context),
-      onMultiSelect: canMultiSelect
-          ? () => _startLayerMultiSelect(context: context)
-          : null,
-      multiSelectSemanticLabel:
-          context.l10n.videoEditorLayerMultiSelectSemanticLabel,
-      onSplit: () => _splitLayer(context: context),
-      // The way back from Detach, for a detached clip only.
-      onReattach: isDetachedClip
-          ? () => _reattachLayer(context: context)
-          : null,
-      // Crop / rotate / flip, for a detached clip only. Every other layer is
-      // already whatever shape it was drawn or typed at; a detached clip
-      // carries a video file that can genuinely be re-rendered.
-      onTransform: isDetachedClip
-          ? () => _transformLayer(context: context)
-          : null,
-      // Green screen, for a detached clip only — and, unlike the timeline's,
-      // never baked: the export composites the layer over the track, so the
-      // removed area can be left genuinely see-through.
-      onChromaKey: isDetachedClip
-          ? () => _editChromaKey(context: context)
-          : null,
-      hasChromaKey:
-          isDetachedClip &&
-          DetachedClipLayerData.hasChromaKey(
-            DetachedClipLayerData.metaOf(layer),
-          ),
-      // Opacity, for a detached clip only: the export composites it as a
-      // `VideoLayer` of its own, which fades it over the track underneath.
-      onOpacity: isDetachedClip ? () => _editOpacity(context: context) : null,
-      hasOpacity:
-          isDetachedClip &&
-          DetachedClipLayerData.opacityOf(DetachedClipLayerData.metaOf(layer)) <
-              1,
-      // Animations are off for a detached clip: the export composites it as a
-      // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
-      // an `animations` field the way a rasterized `ImageLayer` does. Offering
-      // the action would animate the layer in the editor and drop it silently
-      // from the file.
-      //
-      // They are off for a hidden area (blur, pixelate) too: it hides what is
-      // beneath it the moment it shows, and an area that slid or faded in
-      // would show that for a moment first.
-      onAnimate: layer == null || isDetachedClip || isCensorLayer(layer)
-          ? null
-          : () => _animateLayer(context: context),
-      // Saved title styles, for text only. A burned-in caption cue is a text
-      // layer too, but it never reaches this bar: the timeline partitions it
-      // into the captions strip, whose look the caption track owns.
-      onStyles: isTextLayer ? () => _openTitleStyles(context: context) : null,
-      onDone: () => TimelineOverlayControls._deselect(context),
+    // Rebuilt as the playhead reaches or leaves a keyframe, which fills the
+    // keyframes action in.
+    return PlayheadOnKeyframeBuilder(
+      times: [for (final time in item.keyframeTimes) item.startTime + time],
+      builder: (context, isOnKeyframe) => VideoEditorTimelineControls(
+        onDelete: () => _removeLayer(context: context),
+        onEdit: isTextLayer ? () => _editTextLayer(context: context) : null,
+        onDuplicated: () => _duplicateLayer(context: context),
+        onMultiSelect: canMultiSelect
+            ? () => _startLayerMultiSelect(context: context)
+            : null,
+        multiSelectSemanticLabel:
+            context.l10n.videoEditorLayerMultiSelectSemanticLabel,
+        onSplit: () => _splitLayer(context: context),
+        // The way back from Detach, for a detached clip only.
+        onReattach: isDetachedClip
+            ? () => _reattachLayer(context: context)
+            : null,
+        // Crop / rotate / flip, for a detached clip only. Every other layer is
+        // already whatever shape it was drawn or typed at; a detached clip
+        // carries a video file that can genuinely be re-rendered.
+        onTransform: isDetachedClip
+            ? () => _transformLayer(context: context)
+            : null,
+        // Green screen, for a detached clip only — and, unlike the timeline's,
+        // never baked: the export composites the layer over the track, so the
+        // removed area can be left genuinely see-through.
+        onChromaKey: isDetachedClip
+            ? () => _editChromaKey(context: context)
+            : null,
+        hasChromaKey:
+            isDetachedClip &&
+            DetachedClipLayerData.hasChromaKey(
+              DetachedClipLayerData.metaOf(layer),
+            ),
+        // Opacity, for every layer but a hidden area, whose whole purpose is to
+        // hide what is beneath it.
+        onOpacity: layer == null || isCensorLayer(layer)
+            ? null
+            : () => _editOpacity(context: context),
+        hasOpacity: layer != null && _isSeeThrough(layer),
+        onKeyframes: canKeyframeLayer(layer)
+            ? () => _editKeyframes(context: context)
+            : null,
+        hasKeyframes: layer?.hasKeyframes ?? false,
+        isOnKeyframe: isOnKeyframe,
+        // Animations are off for a detached clip: the export composites it as a
+        // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
+        // an `animations` field the way a rasterized `ImageLayer` does. Offering
+        // the action would animate the layer in the editor and drop it silently
+        // from the file.
+        //
+        // They are off for a hidden area (blur, pixelate) too: it hides what is
+        // beneath it the moment it shows, and an area that slid or faded in
+        // would show that for a moment first.
+        onAnimate: layer == null || isDetachedClip || isCensorLayer(layer)
+            ? null
+            : () => _animateLayer(context: context),
+        // Saved title styles, for text only. A burned-in caption cue is a text
+        // layer too, but it never reaches this bar: the timeline partitions it
+        // into the captions strip, whose look the caption track owns.
+        onStyles: isTextLayer ? () => _openTitleStyles(context: context) : null,
+        onDone: () => TimelineOverlayControls._deselect(context),
+      ),
     );
   }
 
@@ -204,8 +215,21 @@ class _LayerOverlayControls extends StatelessWidget {
   Future<void> _editOpacity({required BuildContext context}) async {
     final layer = _liveLayer(context);
     if (layer == null) return;
-    await editDetachedClipOpacity(context, layer, item: item);
+    await editLayerOpacity(context, layer, item: item);
   }
+
+  Future<void> _editKeyframes({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editLayerKeyframes(context, layer, item: item);
+  }
+
+  /// Whether [layer] is see-through anywhere: in a keyframe, or on its own.
+  static bool _isSeeThrough(Layer layer) => layer.hasKeyframes
+      ? layer.keyframes.any((k) => k.opacity < 1)
+      : DetachedClipLayerData.isDetachedClipLayer(layer)
+      ? DetachedClipLayerData.opacityOf(DetachedClipLayerData.metaOf(layer)) < 1
+      : layer.opacity < 1;
 
   Future<void> _animateLayer({required BuildContext context}) async {
     final layer = _liveLayer(context);
@@ -276,8 +300,18 @@ class _LayerOverlayControls extends StatelessWidget {
     if (layerIdx < 0) return;
 
     final copyId = _copyId(layer.id);
+    const nudge = Offset(24, 24);
     final copy = _reownDetachedClip(
-      layer.copyWith(id: copyId, offset: layer.offset + const Offset(24, 24)),
+      layer.copyWith(
+        id: copyId,
+        offset: layer.offset + nudge,
+        // The copy travels the same path, nudged like the layer itself so it
+        // does not hide the original.
+        keyframes: [
+          for (final keyframe in layer.keyframes)
+            keyframe.copyWith(offset: keyframe.offset + nudge),
+        ],
+      ),
       layerId: copyId,
     );
 
@@ -309,17 +343,23 @@ class _LayerOverlayControls extends StatelessWidget {
           DetachedClipLayerData.metaOf(layer),
         ) ??
         Duration.zero;
+    // Each part keeps the keyframes that move it, so both go on exactly as
+    // the whole layer did.
     final second = _reownDetachedClip(
       layer.copyWith(
         id: secondId,
         startTime: splitAt,
         endTime: item.endTime,
+        keyframes: layer.keyframesForPart(splitAt, item.endTime),
       ),
       layerId: secondId,
       sourceOffset: headOffset + (splitAt - item.startTime),
     );
 
-    layers[layerIdx] = layer.copyWith(endTime: splitAt);
+    layers[layerIdx] = layer.copyWith(
+      endTime: splitAt,
+      keyframes: layer.keyframesForPart(item.startTime, splitAt),
+    );
     layers.insert(layerIdx + 1, second);
     editor.addHistory(layers: layers);
     context.read<TimelineOverlayBloc>().add(

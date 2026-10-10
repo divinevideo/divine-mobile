@@ -8877,7 +8877,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacityLabel => '不透明度';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '设置所选片段的透明程度';
+  String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
@@ -9292,6 +9292,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => '编辑图层动画';
+
+  @override
+  String get videoEditorKeyframeAdd => '添加关键帧';
+
+  @override
+  String get videoEditorKeyframeRemove => '移除关键帧';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '跳到 $time 的关键帧';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => '关键帧';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => '编辑图层关键帧';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      '添加关键帧，移动播放头，然后移动、缩放或旋转图层。图层会在关键帧之间平滑移动。';
+
+  @override
+  String get videoEditorKeyframeEffect => '效果';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return '从关键帧 $from 到 $to 的运动';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => '入场';

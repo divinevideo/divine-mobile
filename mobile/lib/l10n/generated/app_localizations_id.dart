@@ -9333,7 +9333,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Atur seberapa transparan klip yang dipilih';
+      'Atur seberapa transparan lapisan yang dipilih';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
@@ -9786,6 +9786,35 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Edit animasi lapisan';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Tambah keyframe';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Hapus keyframe';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Buka keyframe di $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframe';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => 'Edit keyframe lapisan';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Tambahkan keyframe, geser playhead, lalu pindahkan, ubah ukuran, atau putar lapisan. Lapisan akan meluncur dari keyframe ke keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efek';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Gerakan dari keyframe $from ke $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Masuk';

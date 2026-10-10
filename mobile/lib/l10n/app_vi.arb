@@ -4837,7 +4837,7 @@
   "videoEditorChromaKeyCloseSemanticLabel": "Bỏ các thay đổi mặt nạ màu",
   "videoEditorChromaKeyDoneSemanticLabel": "Áp dụng mặt nạ màu",
   "videoEditorOpacityLabel": "Độ mờ",
-  "videoEditorOpacitySemanticLabel": "Đặt mức trong suốt cho clip đã chọn",
+  "videoEditorOpacitySemanticLabel": "Đặt mức trong suốt cho lớp đã chọn",
   "videoEditorChromaKeyAutoDetect": "Tự động nhận diện",
   "videoEditorChromaKeyPresetGreen": "Xanh lá",
   "videoEditorChromaKeyPresetBlue": "Xanh dương",
@@ -5150,6 +5150,14 @@
     "description": "Label for the control that opens the enter/leave animation picker for a text/sticker/drawing layer, and the picker's title."
   },
   "videoEditorLayerAnimationButtonSemanticLabel": "Sửa hiệu ứng lớp",
+  "videoEditorKeyframeAdd": "Thêm khung hình chính",
+  "videoEditorKeyframeRemove": "Xóa khung hình chính",
+  "videoEditorKeyframeMarkerSemanticLabel": "Đến khung hình chính tại {time}",
+  "videoEditorKeyframesLabel": "Khung hình chính",
+  "videoEditorKeyframesButtonSemanticLabel": "Chỉnh sửa khung hình chính của lớp",
+  "videoEditorKeyframesHint": "Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.",
+  "videoEditorKeyframeEffect": "Hiệu ứng",
+  "videoEditorKeyframeCurveSegment": "Chuyển động từ khung hình chính {from} đến {to}",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
     "description": "Accessibility label for the button that opens the layer enter/leave animation picker."
   },

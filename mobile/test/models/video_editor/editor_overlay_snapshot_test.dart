@@ -210,6 +210,39 @@ void main() {
       });
     });
 
+    group('windowedTo keyframes', () {
+      test('keep a layer moving as it did on the timeline', () {
+        final layer = Layer(
+          startTime: const Duration(seconds: 2),
+          endTime: const Duration(seconds: 5),
+          keyframes: const [
+            LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+            LayerKeyframe(time: Duration(seconds: 2), offset: Offset(40, 0)),
+          ],
+        );
+
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [
+            ExportedLayer(
+              layer: layer,
+              bytes: Uint8List.fromList([0]),
+              logicalSize: const Size(10, 10),
+            ),
+          ],
+        ).windowedTo(start: _s3, end: _s6);
+
+        // The clip starts at 3 s, 1 s into the layer's motion.
+        final windowed = result.capturedLayers.single.layer;
+        expect(windowed.startTime, Duration.zero);
+        for (var ms = 0; ms <= 2000; ms += 250) {
+          expect(
+            windowed.keyframePlacementAt(Duration(milliseconds: ms)),
+            layer.keyframePlacementAt(_s3 + Duration(milliseconds: ms)),
+          );
+        }
+      });
+    });
+
     group('windowedTo word highlights', () {
       // "one" is lit for the layer's first second, "two" for its second.
       ExportedLayer karaoke() => ExportedLayer(

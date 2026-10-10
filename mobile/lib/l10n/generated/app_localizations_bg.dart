@@ -9504,7 +9504,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Задай колко прозрачен да е избраният клип';
+      'Задай колко прозрачен да е избраният слой';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
@@ -9961,6 +9961,36 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Редактиране на анимация на слоя';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Добави ключов кадър';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Премахни ключовия кадър';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Към ключовия кадър на $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Ключови кадри';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Редактирай ключовите кадри на слоя';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Добави ключов кадър, премести главата за възпроизвеждане, после премести, оразмери или завърти слоя. Той се плъзга от ключов кадър към ключов кадър.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Ефект';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Движение от ключов кадър $from до $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Вход';

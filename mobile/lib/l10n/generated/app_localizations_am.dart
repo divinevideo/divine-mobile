@@ -9206,7 +9206,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'የተመረጠው ቅንጥብ ምን ያህል እንደሚታይ ማዘጋጀት';
+      'የተመረጠው ንብርብር ምን ያህል እንደሚታይ ማዘጋጀት';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
@@ -9643,6 +9643,36 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'የንብርብር እነማ አርትዕ';
+
+  @override
+  String get videoEditorKeyframeAdd => 'ቁልፍ ፍሬም አክል';
+
+  @override
+  String get videoEditorKeyframeRemove => 'ቁልፍ ፍሬም አስወግድ';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'በ$time ወዳለው ቁልፍ ፍሬም ሂድ';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'ቁልፍ ፍሬሞች';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'የንብርብሩን ቁልፍ ፍሬሞች ማስተካከያ';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ንብርብሩን ያንቀሳቅሱ፣ መጠኑን ይቀይሩ ወይም ያሽከርክሩ። ንብርብሩ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ውጤት';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'እንቅስቃሴ ከቁልፍ ፍሬም $from እስከ $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'መግቢያ';

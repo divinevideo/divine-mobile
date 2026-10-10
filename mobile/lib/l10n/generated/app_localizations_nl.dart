@@ -9460,7 +9460,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Instellen hoe doorzichtig de geselecteerde clip is';
+      'Instellen hoe doorzichtig de geselecteerde laag is';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';
@@ -9917,6 +9917,36 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Laaganimatie bewerken';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Keyframe toevoegen';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Keyframe verwijderen';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Naar keyframe op $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframes';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Keyframes van de laag bewerken';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Voeg een keyframe toe, verplaats de afspeelkop en verschuif, schaal of draai dan de laag. Die glijdt van keyframe naar keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Beweging van keyframe $from naar $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Ingang';

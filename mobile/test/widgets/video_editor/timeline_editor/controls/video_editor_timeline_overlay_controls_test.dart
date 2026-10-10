@@ -107,6 +107,7 @@ void main() {
       VideoEditorEffectsCubit? effectsCubit,
       List<Override> overrides = const [],
       bool routed = false,
+      ValueNotifier<Duration>? playTime,
     }) {
       final scaffold = Scaffold(
         body: MultiBlocProvider(
@@ -124,7 +125,7 @@ void main() {
             originalClipAspectRatio: 9 / 16,
             bodySizeNotifier: ValueNotifier(const Size(400, 600)),
             zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-            playTimeNotifier: ValueNotifier(Duration.zero),
+            playTimeNotifier: playTime ?? ValueNotifier(Duration.zero),
             playheadAdvancingNotifier: ValueNotifier<bool>(false),
             fromLibrary: false,
             onOpenCamera: () {},
@@ -162,6 +163,10 @@ void main() {
     }
 
     Widget build(TimelineOverlayItem item) {
+      // The editor screen provides the main bloc above the whole timeline;
+      // the layer bar reads the playhead from it.
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -184,8 +189,11 @@ void main() {
               onOpenVoiceOver: () {},
               onOpenCaptions: () {},
               onOpenEffects: () {},
-              child: BlocProvider<TimelineOverlayBloc>.value(
-                value: overlayBloc,
+              child: MultiBlocProvider(
+                providers: [
+                  BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+                  BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+                ],
                 child: TimelineOverlayControls(item: item),
               ),
             ),
@@ -248,6 +256,7 @@ void main() {
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorKeyframesLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorReattachLabel), findsOneWidget);
       // A detached clip is composited as a VideoLayer, which carries no
       // animations field — offering the action would animate it in the editor
@@ -283,9 +292,13 @@ void main() {
       await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
 
       // It hides what is beneath it the moment it shows; sliding or fading
-      // in would show that for a moment first.
+      // in would show that for a moment first, and a see-through one would
+      // show it all along.
       expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
+      expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
+      // A drifting hidden area would uncover what it hides.
+      expect(find.text(l10n.videoEditorKeyframesLabel), findsNothing);
     });
 
     testWidgets('offers saved styles for a text layer only', (tester) async {
@@ -332,8 +345,120 @@ void main() {
       // Only a detached clip carries footage a key can be applied to, or a
       // clip that could go back onto the timeline.
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsNothing);
-      expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
       expect(find.text(l10n.videoEditorReattachLabel), findsNothing);
+      // Every layer can be made see-through, not only a detached clip.
+      expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
+    });
+
+    group('keyframes', () {
+      const item = TimelineOverlayItem(
+        id: 'text-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+
+      Future<void> pumpWith(
+        WidgetTester tester,
+        Layer layer, {
+        TimelineOverlayItem selected = item,
+        ValueNotifier<Duration>? playTime,
+      }) async {
+        final editor = _MockProImageEditorState();
+        final mainBloc = _MockVideoEditorMainBloc();
+        when(() => editor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        await tester.pumpWidget(
+          buildWithEditor(selected, editor, mainBloc, playTime: playTime),
+        );
+      }
+
+      TimelineActionButton keyframesButton(WidgetTester tester) =>
+          tester.widget<TimelineActionButton>(
+            find.ancestor(
+              of: find.text(l10n.videoEditorKeyframesLabel),
+              matching: find.byType(TimelineActionButton),
+            ),
+          );
+
+      testWidgets('offers keyframes and highlights them once there is one', (
+        tester,
+      ) async {
+        await pumpWith(tester, TextLayer(id: item.id, text: 'hi'));
+        expect(
+          keyframesButton(tester).type,
+          TimelineActionButtonType.secondary,
+        );
+
+        await pumpWith(
+          tester,
+          TextLayer(
+            id: item.id,
+            text: 'hi',
+            keyframes: const [
+              LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+            ],
+          ),
+        );
+        expect(keyframesButton(tester).type, TimelineActionButtonType.primary);
+      });
+
+      testWidgets('fills the keyframes diamond while the playhead is on one', (
+        tester,
+      ) async {
+        final layer = TextLayer(
+          id: item.id,
+          text: 'hi',
+          keyframes: const [
+            LayerKeyframe(time: Duration(seconds: 1), offset: Offset.zero),
+          ],
+        );
+        final keyframed = item.copyWith(
+          keyframeTimes: const [Duration(seconds: 1)],
+        );
+
+        // The canvas play time, which follows a scrub at once.
+        final playTime = ValueNotifier(Duration.zero);
+        addTearDown(playTime.dispose);
+        await pumpWith(tester, layer, selected: keyframed, playTime: playTime);
+        expect(keyframesButton(tester).icon, DivineIconName.diamond);
+
+        playTime.value = const Duration(seconds: 1);
+        await tester.pump();
+        expect(keyframesButton(tester).icon, DivineIconName.diamondFill);
+
+        playTime.value = const Duration(seconds: 2);
+        await tester.pump();
+        expect(keyframesButton(tester).icon, DivineIconName.diamond);
+      });
+
+      testWidgets('highlights the opacity once a keyframe fades the layer', (
+        tester,
+      ) async {
+        await pumpWith(
+          tester,
+          TextLayer(
+            id: item.id,
+            text: 'hi',
+            keyframes: const [
+              LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+              LayerKeyframe(
+                time: Duration(seconds: 1),
+                offset: Offset.zero,
+                opacity: 0.4,
+              ),
+            ],
+          ),
+        );
+
+        final opacity = tester.widget<TimelineActionButton>(
+          find.ancestor(
+            of: find.text(l10n.videoEditorOpacityLabel),
+            matching: find.byType(TimelineActionButton),
+          ),
+        );
+        expect(opacity.type, TimelineActionButtonType.primary);
+      });
     });
 
     testWidgets('highlights the green screen once the layer carries one', (
@@ -965,6 +1090,92 @@ void main() {
           ),
           const Duration(seconds: 2),
         );
+      });
+
+      group('a layer with keyframes', () {
+        const item = TimelineOverlayItem(
+          id: 'text-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 6),
+        );
+
+        TextLayer movingText() => TextLayer(
+          id: 'text-1',
+          text: 'hi',
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 6),
+          keyframes: const [
+            LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+            LayerKeyframe(time: Duration(seconds: 1), offset: Offset(100, 0)),
+            LayerKeyframe(time: Duration(seconds: 3), offset: Offset(100, 200)),
+            LayerKeyframe(time: Duration(seconds: 5), offset: Offset.zero),
+          ],
+        );
+
+        List<Layer> written() =>
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                  ),
+                ).captured.last
+                as List<Layer>;
+
+        testWidgets('splitting keeps both parts on the path of the whole', (
+          tester,
+        ) async {
+          final layer = movingText();
+          when(() => mockEditor.activeLayers).thenReturn([layer]);
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(currentPosition: Duration(seconds: 2)),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final [head, tail] = written();
+          for (final ms in [500, 1500, 1999]) {
+            final time = Duration(milliseconds: ms);
+            expect(
+              head.keyframePlacementAt(time),
+              layer.keyframePlacementAt(time),
+            );
+          }
+          for (final ms in [2000, 2500, 4000, 5500]) {
+            final time = Duration(milliseconds: ms);
+            expect(
+              tail.keyframePlacementAt(time),
+              layer.keyframePlacementAt(time),
+            );
+          }
+        });
+
+        testWidgets('duplicating moves the copy along a nudged path', (
+          tester,
+        ) async {
+          final layer = movingText();
+          when(() => mockEditor.activeLayers).thenReturn([layer]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final copy = written().last;
+          // Not on top of the original, which it would otherwise hide.
+          const time = Duration(seconds: 2);
+          expect(
+            copy.keyframePlacementAt(time)!.offset,
+            layer.keyframePlacementAt(time)!.offset + const Offset(24, 24),
+          );
+        });
       });
 
       testWidgets(

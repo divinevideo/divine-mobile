@@ -9611,7 +9611,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ustaw, jak bardzo przezroczysty ma być wybrany klip';
+      'Ustaw, jak bardzo przezroczysta ma być wybrana warstwa';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
@@ -10069,6 +10069,36 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Edytuj animację warstwy';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Dodaj klatkę kluczową';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Usuń klatkę kluczową';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Przejdź do klatki kluczowej w $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Klatki kluczowe';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Edytuj klatki kluczowe warstwy';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem przesuń, przeskaluj lub obróć warstwę. Warstwa płynnie przechodzi między klatkami kluczowymi.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Ruch od klatki kluczowej $from do $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Wejście';

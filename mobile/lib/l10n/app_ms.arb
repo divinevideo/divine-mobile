@@ -4837,7 +4837,7 @@
   "videoEditorChromaKeyCloseSemanticLabel": "Buang perubahan topeng warna",
   "videoEditorChromaKeyDoneSemanticLabel": "Gunakan topeng warna",
   "videoEditorOpacityLabel": "Kelegapan",
-  "videoEditorOpacitySemanticLabel": "Tetapkan tahap lutsinar klip yang dipilih",
+  "videoEditorOpacitySemanticLabel": "Tetapkan tahap lutsinar lapisan yang dipilih",
   "videoEditorChromaKeyAutoDetect": "Kesan automatik",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",
@@ -5150,6 +5150,14 @@
     "description": "Label for the control that opens the enter/leave animation picker for a text/sticker/drawing layer, and the picker's title."
   },
   "videoEditorLayerAnimationButtonSemanticLabel": "Sunting animasi lapisan",
+  "videoEditorKeyframeAdd": "Tambah bingkai kunci",
+  "videoEditorKeyframeRemove": "Buang bingkai kunci",
+  "videoEditorKeyframeMarkerSemanticLabel": "Pergi ke bingkai kunci pada {time}",
+  "videoEditorKeyframesLabel": "Bingkai kunci",
+  "videoEditorKeyframesButtonSemanticLabel": "Edit bingkai kunci lapisan",
+  "videoEditorKeyframesHint": "Tambah bingkai kunci, alihkan kepala main, kemudian alihkan, ubah saiz atau putar lapisan. Lapisan meluncur dari bingkai kunci ke bingkai kunci.",
+  "videoEditorKeyframeEffect": "Kesan",
+  "videoEditorKeyframeCurveSegment": "Gerakan dari bingkai kunci {from} ke {to}",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
     "description": "Accessibility label for the button that opens the layer enter/leave animation picker."
   },

@@ -149,7 +149,7 @@ void main() {
     ) async {
       await tester.tap(
         find.descendant(
-          of: find.byType(DetachedClipOpacitySheet),
+          of: find.byType(LayerOpacitySheet),
           matching: find.byWidgetPredicate(
             (w) => w is DivineIconButton && w.icon == icon,
           ),
@@ -254,7 +254,7 @@ void main() {
       await tester.tapAt(const Offset(200, 40));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DetachedClipOpacitySheet), findsNothing);
+      expect(find.byType(LayerOpacitySheet), findsNothing);
       expect(
         DetachedClipLayerData.opacityOf(
           DetachedClipLayerData.metaOf(written()),

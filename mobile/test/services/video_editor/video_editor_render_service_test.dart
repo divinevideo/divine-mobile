@@ -31,11 +31,15 @@ import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
+        AnimationPhase,
         ChromaKey,
         ClipTransition,
         ClipTransitionType,
         EditorLayerImage,
         EditorVideo,
+        ImageLayer,
+        KeyframeClockPoint,
+        LayerAnimationType,
         NativeFailureDetails,
         ProVideoEditor,
         ProgressModel,
@@ -106,6 +110,282 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test(
+      'times a keyframed layer on the editor timeline through its clock',
+      () {
+        final keyframed = pie.ExportedLayer(
+          layer: pie.Layer(
+            startTime: const Duration(seconds: 1),
+            scale: 2,
+            keyframes: const [
+              pie.LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+              pie.LayerKeyframe(
+                // 3.0 s on the editor timeline, past the 400 ms dissolve.
+                time: Duration(seconds: 2),
+                offset: Offset(10, 0),
+                scale: 3,
+                opacity: 0.5,
+              ),
+            ],
+          ),
+          bytes: Uint8List.fromList(const [1, 2, 3]),
+          logicalSize: const Size(10, 20),
+        );
+
+        final exported = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [keyframed],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+        )!.single;
+
+        expect(exported.keyframes.map((k) => k.time), [
+          const Duration(seconds: 1),
+          const Duration(seconds: 3),
+        ]);
+        // The editor shows the dissolve from 1.6 s to 2.4 s; the output plays
+        // it from 1.6 s to 2.0 s.
+        expect(exported.keyframeClock, const [
+          KeyframeClockPoint(
+            output: Duration(milliseconds: 1600),
+            keyframe: Duration(milliseconds: 1600),
+          ),
+          KeyframeClockPoint(
+            output: Duration(milliseconds: 2000),
+            keyframe: Duration(milliseconds: 2400),
+          ),
+        ]);
+        // Three times the editor's 100 px wide body.
+        expect(exported.keyframes.last.offset.dx - exported.offset!.dx, 30);
+        expect(exported.keyframes.last.scale, 1.5);
+        expect(exported.keyframes.last.opacity, 0.5);
+      },
+    );
+
+    /// The time [output] is at on [exported]'s keyframe clock, the way both
+    /// renderers read it: linear between two points, and as fast as the
+    /// output before the first and after the last.
+    Duration clockTime(ImageLayer exported, Duration output) {
+      final points = exported.keyframeClock;
+      if (points.isEmpty) return output;
+      if (output <= points.first.output) {
+        return points.first.keyframe + (output - points.first.output);
+      }
+      for (var i = 1; i < points.length; i++) {
+        final to = points[i];
+        if (output > to.output) continue;
+        final from = points[i - 1];
+        final share =
+            (output - from.output).inMicroseconds /
+            (to.output - from.output).inMicroseconds;
+        return from.keyframe +
+            Duration(
+              microseconds:
+                  (share * (to.keyframe - from.keyframe).inMicroseconds)
+                      .round(),
+            );
+      }
+      return points.last.keyframe + (output - points.last.output);
+    }
+
+    /// The placement the renderer draws at [output], from the exported
+    /// keyframes read on their clock: both packages interpolate keyframes
+    /// alike.
+    pie.LayerPlacement renderedAt(ImageLayer exported, Duration output) =>
+        pie.Layer(
+          keyframes: [
+            for (final keyframe in exported.keyframes)
+              pie.LayerKeyframe(
+                time: keyframe.time,
+                offset: keyframe.offset,
+                scale: keyframe.scale,
+                rotation: keyframe.rotation,
+                opacity: keyframe.opacity,
+                curve: pie.AnimationCurve.values.byName(keyframe.curve.name),
+              ),
+          ],
+        ).keyframePlacementAt(clockTime(exported, output))!;
+
+    ImageLayer exportOverOverlap(pie.Layer layer) =>
+        VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: layer,
+              bytes: Uint8List.fromList(const [1, 2, 3]),
+              logicalSize: const Size(10, 20),
+            ),
+          ],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+        )!.single;
+
+    test('preserves linear placement across an overlap transition', () {
+      final source = pie.Layer(
+        keyframes: const [
+          pie.LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+          pie.LayerKeyframe(
+            time: Duration(seconds: 4),
+            offset: Offset(100, 0),
+            scale: 3,
+            rotation: 0.6,
+            opacity: 0.2,
+          ),
+        ],
+      );
+      final timelineMap = TransitionTimelineMap.fromClips(overlapClips);
+
+      final exported = exportOverOverlap(source);
+
+      expect(
+        source.keyframePlacementAt(const Duration(seconds: 1))!.offset.dx,
+        25,
+      );
+      for (final milliseconds in [
+        0,
+        1000,
+        1600,
+        1800,
+        2000,
+        2400,
+        2800,
+        4000,
+      ]) {
+        final editorTime = Duration(milliseconds: milliseconds);
+        final preview = source.keyframePlacementAt(editorTime)!;
+        final rendered = renderedAt(
+          exported,
+          timelineMap.editorToOutput(editorTime),
+        );
+        expect(
+          rendered.offset.dx - exported.keyframes.first.offset.dx,
+          closeTo(preview.offset.dx * 3, 1e-9),
+          reason: 'editor time $milliseconds ms',
+        );
+        expect(rendered.scale, closeTo(preview.scale, 1e-9));
+        expect(rendered.rotation, closeTo(preview.rotation, 1e-9));
+        expect(rendered.opacity, closeTo(preview.opacity, 1e-9));
+      }
+    });
+
+    // Stretches on the editor timeline over an edge of the 400 ms dissolve,
+    // which the editor shows at 1.6–2.4 s and the export plays in half the
+    // time: 40 ms over its start, 200 ms over its end, 1 s and 3 s over both.
+    for (final (startMs, endMs) in [
+      (1580, 1620),
+      (2300, 2500),
+      (1500, 2500),
+      (500, 3500),
+    ]) {
+      for (final curve in pie.AnimationCurve.values) {
+        test('follows a ${curve.name} motion from $startMs to $endMs ms '
+            'across an overlap transition', () {
+          final source = pie.Layer(
+            startTime: Duration(milliseconds: startMs),
+            keyframes: [
+              pie.LayerKeyframe(
+                time: Duration.zero,
+                offset: Offset.zero,
+                curve: curve,
+              ),
+              pie.LayerKeyframe(
+                time: Duration(milliseconds: endMs - startMs),
+                offset: const Offset(100, -60),
+                scale: 3,
+                rotation: 1.2,
+                opacity: 0.2,
+              ),
+            ],
+          );
+          final timelineMap = TransitionTimelineMap.fromClips(overlapClips);
+
+          final exported = exportOverOverlap(source);
+
+          final rest = exported.keyframes.first.offset;
+          final fromUs = timelineMap
+              .editorToOutput(Duration(milliseconds: startMs))
+              .inMicroseconds;
+          final toUs = timelineMap
+              .editorToOutput(Duration(milliseconds: endMs))
+              .inMicroseconds;
+          for (var us = fromUs; us <= toUs; us += 250) {
+            final output = Duration(microseconds: us);
+            final preview = source.keyframePlacementAt(
+              timelineMap.outputToEditor(output),
+            )!;
+            final rendered = renderedAt(exported, output);
+            // The export draws in three times the editor's 100 px wide body.
+            expect(
+              (rendered.offset - rest - preview.offset * 3).distance,
+              lessThan(1e-9),
+              reason: 'output time $output',
+            );
+            expect(rendered.scale, closeTo(preview.scale, 1e-12));
+            expect(rendered.rotation, closeTo(preview.rotation, 1e-12));
+            expect(rendered.opacity, closeTo(preview.opacity, 1e-12));
+          }
+        });
+      }
+    }
+
+    test('keeps a keyframe effect in step across an overlap transition', () {
+      const bounce = pie.LayerAnimation(
+        type: pie.LayerAnimationType.bounce,
+        phase: pie.AnimationPhase.loop,
+        duration: Duration(milliseconds: 700),
+      );
+      // From 1.0 s to 3.0 s on the editor timeline, over the 400 ms dissolve
+      // at 1.6–2.4 s, which the export plays in half the time.
+      final source = pie.Layer(
+        startTime: const Duration(seconds: 1),
+        keyframes: const [
+          pie.LayerKeyframe(
+            time: Duration.zero,
+            offset: Offset.zero,
+            effects: [bounce],
+          ),
+          pie.LayerKeyframe(time: Duration(seconds: 2), offset: Offset.zero),
+        ],
+      );
+      final timelineMap = TransitionTimelineMap.fromClips(overlapClips);
+      // The editor fits three 667 ms hops into the 2 s stretch.
+      final effect = source.keyframeEffects.single;
+
+      final loops = exportOverOverlap(source).animations;
+
+      // Before, through and after the dissolve.
+      expect(loops, hasLength(3));
+      expect(loops.first.loopStart, const Duration(seconds: 1));
+      expect(loops.last.loopEnd, const Duration(milliseconds: 2600));
+      for (final loop in loops) {
+        expect(loop.type, LayerAnimationType.bounce);
+        expect(loop.phase, AnimationPhase.loop);
+      }
+
+      /// How far a loop is through its hop at [elapsedUs] into a [cycleUs]
+      /// cycle: 1 at rest, 0 at the top, as both renderers count it.
+      double hop(int elapsedUs, int cycleUs) =>
+          (1 - 2 * (elapsedUs % cycleUs) / cycleUs).abs();
+
+      final cycleUs = effect.animation.duration.inMicroseconds;
+      for (var us = 1000000; us < 2600000; us += 1000) {
+        final output = Duration(microseconds: us);
+        final editor = timelineMap.outputToEditor(output);
+        final preview = hop((editor - effect.start).inMicroseconds, cycleUs);
+        final loop = loops.singleWhere(
+          (l) => l.loopStart! <= output && output < l.loopEnd!,
+        );
+        final rendered = hop(
+          (output - loop.loopStart!).inMicroseconds +
+              (loop.loopPhase ?? Duration.zero).inMicroseconds,
+          loop.duration.inMicroseconds,
+        );
+        expect(rendered, closeTo(preview, 1e-4), reason: 'output $output');
+      }
     });
 
     test('skips a detached clip, which the composition pass renders', () {

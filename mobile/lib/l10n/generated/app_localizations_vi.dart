@@ -9381,7 +9381,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Đặt mức trong suốt cho clip đã chọn';
+      'Đặt mức trong suốt cho lớp đã chọn';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
@@ -9830,6 +9830,36 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'Sửa hiệu ứng lớp';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Thêm khung hình chính';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Xóa khung hình chính';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Đến khung hình chính tại $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Khung hình chính';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Chỉnh sửa khung hình chính của lớp';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Hiệu ứng';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Chuyển động từ khung hình chính $from đến $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Xuất hiện';

@@ -8975,7 +8975,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpacityLabel => '불투명도';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '선택한 클립이 비쳐 보이는 정도 설정';
+  String get videoEditorOpacitySemanticLabel => '선택한 레이어가 비쳐 보이는 정도 설정';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
@@ -9403,6 +9403,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => '레이어 애니메이션 편집';
+
+  @override
+  String get videoEditorKeyframeAdd => '키프레임 추가';
+
+  @override
+  String get videoEditorKeyframeRemove => '키프레임 삭제';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time의 키프레임으로 이동';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => '키프레임';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => '레이어 키프레임 편집';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      '키프레임을 추가하고 재생 헤드를 옮긴 다음 레이어를 이동하거나 크기를 조절하거나 회전하세요. 레이어가 키프레임 사이를 부드럽게 움직여요.';
+
+  @override
+  String get videoEditorKeyframeEffect => '효과';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return '키프레임 $from에서 $to까지의 움직임';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => '등장';

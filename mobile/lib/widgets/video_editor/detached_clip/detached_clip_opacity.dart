@@ -55,7 +55,7 @@ Future<void> editDetachedClipOpacity(
     scrollable: false,
     isScrollControlled: true,
     barrierColor: VineTheme.transparent,
-    body: DetachedClipOpacitySheet(
+    body: LayerOpacitySheet(
       initialOpacity: DetachedClipLayerData.opacityOf(meta),
       onChanged: (opacity) {
         chosen = opacity;
@@ -107,10 +107,12 @@ void _writeOpacity(VideoEditorScope scope, String layerId, double opacity) {
 
 /// The opacity sheet: a slider from invisible to solid, in whole percent.
 ///
+/// Shared by every layer; see also `editLayerOpacity`.
+///
 /// Reports every step through [onChanged] so the canvas can follow it, and
 /// pops `false` from its cancel button and `true` from its done button.
-class DetachedClipOpacitySheet extends StatefulWidget {
-  const DetachedClipOpacitySheet({
+class LayerOpacitySheet extends StatefulWidget {
+  const LayerOpacitySheet({
     required this.initialOpacity,
     required this.onChanged,
     super.key,
@@ -123,11 +125,10 @@ class DetachedClipOpacitySheet extends StatefulWidget {
   final ValueChanged<double> onChanged;
 
   @override
-  State<DetachedClipOpacitySheet> createState() =>
-      _DetachedClipOpacitySheetState();
+  State<LayerOpacitySheet> createState() => _LayerOpacitySheetState();
 }
 
-class _DetachedClipOpacitySheetState extends State<DetachedClipOpacitySheet> {
+class _LayerOpacitySheetState extends State<LayerOpacitySheet> {
   /// One slider step: a whole percent.
   static const int _steps = 100;
 

@@ -9427,7 +9427,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Tetapkan tahap lutsinar klip yang dipilih';
+      'Tetapkan tahap lutsinar lapisan yang dipilih';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Kesan automatik';
@@ -9881,6 +9881,36 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Sunting animasi lapisan';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Tambah bingkai kunci';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Buang bingkai kunci';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Pergi ke bingkai kunci pada $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Bingkai kunci';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Edit bingkai kunci lapisan';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Tambah bingkai kunci, alihkan kepala main, kemudian alihkan, ubah saiz atau putar lapisan. Lapisan meluncur dari bingkai kunci ke bingkai kunci.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Kesan';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Gerakan dari bingkai kunci $from ke $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Masuk';

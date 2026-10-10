@@ -16001,16 +16001,16 @@ abstract class AppLocalizations {
   /// **'Apply the color mask'**
   String get videoEditorChromaKeyDoneSemanticLabel;
 
-  /// Caption of the button in the timeline controls of a clip that was detached onto the canvas, and title of the sheet it opens, for how see-through the clip is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls.
+  /// Caption of the button in the timeline controls of a layer (a text, sticker, drawing or a clip detached onto the canvas), and title of the sheet it opens, for how see-through the layer is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls.
   ///
   /// In en, this message translates to:
   /// **'Opacity'**
   String get videoEditorOpacityLabel;
 
-  /// Accessibility label for the Opacity button in the timeline controls of a clip that was detached onto the canvas.
+  /// Accessibility label for the Opacity button in the timeline controls of a layer: a text, sticker, drawing or a clip detached onto the canvas.
   ///
   /// In en, this message translates to:
-  /// **'Set how see-through the selected clip is'**
+  /// **'Set how see-through the selected layer is'**
   String get videoEditorOpacitySemanticLabel;
 
   /// No description provided for @videoEditorChromaKeyAutoDetect.
@@ -16774,6 +16774,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit layer animation'**
   String get videoEditorLayerAnimationButtonSemanticLabel;
+
+  /// Button in the keyframe sheet of a layer in the video editor that pins the layer's position, size, rotation and opacity at the playhead as a keyframe. The layer then moves between its keyframes while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Add keyframe'**
+  String get videoEditorKeyframeAdd;
+
+  /// The same button in the keyframe sheet when the playhead sits on one of the layer's keyframes, which it then removes.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove keyframe'**
+  String get videoEditorKeyframeRemove;
+
+  /// Accessibility label for a keyframe marker on the selected layer in the video editor timeline. Tapping it moves the playhead onto that keyframe.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to keyframe at {time}'**
+  String videoEditorKeyframeMarkerSemanticLabel(String time);
+
+  /// Label of the button in the bottom bar of a selected layer in the video editor timeline that opens its keyframe sheet, and title of that sheet. Keyframes pin the layer's position, size, rotation and opacity at points in time; the layer moves between them while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyframes'**
+  String get videoEditorKeyframesLabel;
+
+  /// Accessibility label for the Keyframes button in the bottom bar of a selected layer in the video editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit layer keyframes'**
+  String get videoEditorKeyframesButtonSemanticLabel;
+
+  /// One-line explanation at the top of the keyframe sheet of a layer in the video editor. The playhead is the vertical line marking the current time on the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.'**
+  String get videoEditorKeyframesHint;
+
+  /// Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect'**
+  String get videoEditorKeyframeEffect;
+
+  /// Heading above the effect and the easing curves in the keyframe sheet of a layer. They set how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe. The numbers name keyframes, like a page number, and are not a quantity, so the text takes no plural.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion from keyframe {from} to {to}'**
+  String videoEditorKeyframeCurveSegment(String from, String to);
 
   /// Tab/segment label for the animation a layer plays when it appears.
   ///

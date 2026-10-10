@@ -3087,6 +3087,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             ),
             videoEditor: VideoEditorConfigs(
               showControls: false,
+              // A gesture on a keyframed layer changes the keyframe the
+              // timeline shows under the playhead.
+              layerTimeline: const LayerTimelineConfigs(
+                keyframeTolerance: VideoEditorConstants.keyframeTolerance,
+              ),
               widgets: VideoEditorWidgets(
                 videoSetupLoadingIndicator: VideoEditorSetupLoadingIndicator(
                   renderSize: widget.renderSize,

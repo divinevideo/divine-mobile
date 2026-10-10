@@ -9494,7 +9494,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ajustar a transparência do clipe selecionado';
+      'Ajustar a transparência da camada selecionada';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
@@ -9950,6 +9950,36 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editar animação da camada';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Adicionar quadro-chave';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Remover quadro-chave';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Ir para o quadro-chave em $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Quadros-chave';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Editar quadros-chave da camada';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Adicione um quadro-chave, mova a cabeça de reprodução e depois mova, redimensione ou gire a camada. Ela desliza de um quadro-chave para o outro.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efeito';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Movimento do quadro-chave $from ao $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Entrada';

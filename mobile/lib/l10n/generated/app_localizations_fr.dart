@@ -9565,7 +9565,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Régler la transparence du clip sélectionné';
+      'Régler la transparence du calque sélectionné';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Détection auto';
@@ -10025,6 +10025,36 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Modifier l\'animation du calque';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Ajouter une image clé';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Supprimer l\'image clé';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Aller à l\'image clé à $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Images clés';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Modifier les images clés du calque';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Ajoute une image clé, déplace la tête de lecture, puis déplace, redimensionne ou fais pivoter le calque. Il glisse d\'une image clé à l\'autre.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effet';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Mouvement de l\'image clé $from à $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Entrée';

@@ -12,14 +12,15 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Mirrors `pro_image_editor`'s `PaintLayerMergeManager.isMergeable`: a censor
 /// layer, a layer scheduled to a video-timeline window ([Layer.startTime] /
-/// [Layer.endTime]), or one carrying enter/leave animations cannot be baked
-/// into a single static merged layer.
+/// [Layer.endTime]), or one carrying enter/leave animations or keyframes
+/// cannot be baked into a single static merged layer.
 bool isMergeableDrawLayer(Layer? layer) =>
     layer is PaintLayer &&
     !layer.isCensor &&
     layer.startTime == null &&
     layer.endTime == null &&
-    layer.animations.isEmpty;
+    layer.animations.isEmpty &&
+    !layer.hasKeyframes;
 
 /// The type of overlay on the timeline.
 enum TimelineOverlayType {
@@ -75,6 +76,7 @@ class TimelineOverlayItem extends Equatable {
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.effectType,
+    this.keyframeTimes = const [],
     this.effectOnBeat = false,
   });
 
@@ -145,6 +147,16 @@ class TimelineOverlayItem extends Equatable {
   /// `null` for non-effect items.
   final EditorEffectType? effectType;
 
+  /// When a layer item's keyframes sit, measured from [startTime] and in
+  /// order. Empty for any other item and a layer without keyframes.
+  ///
+  /// A snapshot rather than a read of [layer]: the editor changes a layer's
+  /// keyframes in place while it is dragged on the canvas, and only a copy
+  /// taken when the item is built tells the timeline that they changed. Times
+  /// before 0 or past [duration] belong to keyframes outside the layer's own
+  /// range, which still shape its motion but are not shown.
+  final List<Duration> keyframeTimes;
+
   /// Whether an effect item fires on the beat of the music, which its tile
   /// says next to the effect's name.
   final bool effectOnBeat;
@@ -175,6 +187,7 @@ class TimelineOverlayItem extends Equatable {
     Duration? fadeIn,
     Duration? fadeOut,
     EditorEffectType? effectType,
+    List<Duration>? keyframeTimes,
     bool? effectOnBeat,
   }) {
     return TimelineOverlayItem(
@@ -194,6 +207,7 @@ class TimelineOverlayItem extends Equatable {
       fadeIn: fadeIn ?? this.fadeIn,
       fadeOut: fadeOut ?? this.fadeOut,
       effectType: effectType ?? this.effectType,
+      keyframeTimes: keyframeTimes ?? this.keyframeTimes,
       effectOnBeat: effectOnBeat ?? this.effectOnBeat,
     );
   }
@@ -216,6 +230,7 @@ class TimelineOverlayItem extends Equatable {
     fadeIn,
     fadeOut,
     effectType,
+    keyframeTimes,
     effectOnBeat,
   ];
 }

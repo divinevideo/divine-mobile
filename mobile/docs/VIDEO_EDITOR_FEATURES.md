@@ -66,7 +66,7 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
+- A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), moved with keyframes, and color-masked. It has no enter or leave animation.
 - Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Color mask (chroma key, formerly "Green screen"):
@@ -94,7 +94,7 @@ Timeline:
 
 ## Overlay layers
 
-Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted.
+Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted. Text, stickers and drawings can also be made see-through (opacity 0–100 %).
 
 - **Text:** 128 fonts (`VideoEditorConstants.textFontCatalogue`) grouped by style in the picker, left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, an outline and a drop shadow (each with its own color and a strength slider, off at the far left). Size is set by pinching the text on the canvas, and lines wrap at the visible edges of the video instead of running off them. Saved title styles keep font, colors, background, alignment, outline, shadow and animations, but not the pinch scale, position or rotation of the layer it came from (a style saved before the text size slider was removed in #9779 can still carry a font size); names are up to 40 characters.
 - **Drawing:** pencil, marker, arrow and eraser, each with a fixed width. Undo and redo inside the tool. Several drawing layers can be merged into one.
@@ -108,7 +108,17 @@ Enter, leave and loop animations, per layer:
 - Enter and leave: fade, slide, scale, bounce and wiggle, combinable within each phase. Text layers can also type themselves out letter by letter (typewriter) or word by word, and take themselves away the same way; spaces take no step, and the text's background grows with the revealed part.
 - Loop, repeated for as long as the layer is visible: wiggle, bounce (a hop) and pulse.
 - Duration 10–2000 ms in 10 ms steps, one loop cycle 200–2000 ms; the 13 easing curves. Wiggle tilts 2–30°, bounce lifts by 10–200 % of the layer's height, pulse shrinks to 0–100 % of its size.
-- Slide from any edge or from a custom point tapped on the canvas. The layer moves in a straight line; there are no multi-point paths or keyframes.
+- Slide from any edge or from a custom point tapped on the canvas. The layer moves in a straight line; a path through several points is made with keyframes.
+
+Keyframes, per layer (text, sticker, drawing and detached clip):
+
+- The Keyframes button in a selected layer's bar opens a sheet with a one-line explanation and a button that adds a keyframe at the playhead, holding the layer where the canvas shows it, or removes the one there. The sheet's changes show on the canvas right away and are one undo step: the check mark or swiping the sheet away keeps them, the cross takes them back. The button's diamond fills in while the playhead is on a keyframe.
+- Once a layer has a keyframe, moving, resizing or rotating it on the canvas sets a keyframe at the playhead: it changes the one there, or adds one.
+- On a keyframe, the sheet sets the layer's opacity there, so it fades from one keyframe to the next.
+- Between two keyframes the layer moves along one of the 13 easing curves, linear by default, and can play a wiggle, a hop or a pulse on the way, with its strength; the sheet edits the stretch the playhead is in and names its two keyframes. The effect's cycle is fitted so the layer rests on both keyframes. A detached clip offers no effect, as it has no animations. Before the first keyframe and after the last one the layer holds still.
+- A layer's timeline bar shows its keyframes on its bottom edge: as yellow diamonds while it is selected, the one at the playhead filled in, and tapping one moves the playhead onto it; as small marks otherwise.
+- Trimming the layer's start, splitting it or duplicating it keeps the motion where it was on the video. A detached clip's footage moves along when its start is trimmed, and its motion goes with the footage. Removing the last keyframe leaves the layer where it showed at the playhead.
+- Enter, leave and loop animations play on top of the keyframed motion, and the export moves the layer as the canvas does, through clip transitions too.
 
 ## Captions
 
@@ -149,7 +159,7 @@ Open feature requests for things the editor does not do yet:
 - Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
 - Clips: a ping-pong (boomerang) loop ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
 - Effects: an echo trail effect ([#9708](https://github.com/divinevideo/divine-mobile/issues/9708)), effects that fire on the beat of the music ([#9710](https://github.com/divinevideo/divine-mobile/issues/9710)).
-- Layers: keyframes for position, size and rotation ([#9845](https://github.com/divinevideo/divine-mobile/issues/9845)), masks that show a clip or layer in a shape or gradient ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)).
+- Layers: masks that show a clip or layer in a shape or gradient ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)).
 - Motion analysis (touches the no-ML decision in [#8543](https://github.com/divinevideo/divine-mobile/issues/8543)): video stabilization ([#9847](https://github.com/divinevideo/divine-mobile/issues/9847)), text and stickers that follow a moving object ([#9848](https://github.com/divinevideo/divine-mobile/issues/9848)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).

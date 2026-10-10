@@ -9541,7 +9541,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Festlegen, wie durchsichtig der ausgewählte Clip ist';
+      'Festlegen, wie durchsichtig die ausgewählte Ebene ist';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch erkennen';
@@ -9999,6 +9999,36 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Ebenen-Animation bearbeiten';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Keyframe hinzufügen';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Keyframe entfernen';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Zum Keyframe bei $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframes';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Keyframes der Ebene bearbeiten';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Füge einen Keyframe hinzu, versetz den Abspielkopf und verschieb, skalier oder dreh dann die Ebene. Sie gleitet von Keyframe zu Keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Bewegung von Keyframe $from zu $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Eingang';

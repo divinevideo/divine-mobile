@@ -160,9 +160,10 @@ class EditorOverlaySnapshot {
   /// [Layer.exitDuration]) is dropped. A loop is kept and starts over with the
   /// clip, the way a video effect's animation does.
   ///
-  /// [TextLayer.highlights] count from the layer's start, so when that start
-  /// moves relative to the words — a caption that began before the clip —
-  /// they are moved back by the same amount to stay on their words.
+  /// [TextLayer.highlights] and [Layer.keyframes] count from the layer's
+  /// start, so when that start moves relative to them — a caption that began
+  /// before the clip — they are moved back by the same amount to stay on
+  /// their words and their places on the clip.
   static Layer _windowedLayer(
     Layer layer,
     _OverlayWindow w, {
@@ -176,18 +177,26 @@ class EditorOverlaySnapshot {
               if (!_isClampedAway(a.phase, w)) a,
           ];
 
+    // How much later the layer starts on the clip than it did on the
+    // timeline, measured on the timeline.
+    final startShift =
+        w.start + windowStart - (layer.startTime ?? Duration.zero);
     final windowed = layer.copyWith(
       startTime: w.start,
       endTime: w.end,
       animations: animations,
+      // Keyframes count from the layer's start, so they move back with it to
+      // stay where they are on the clip.
+      keyframes: [
+        for (final keyframe in layer.keyframes)
+          keyframe.copyWith(time: keyframe.time - startShift),
+      ],
     );
     // copyWith can't null a Duration field (it null-coalesces to the old
     // value), so clear the legacy fade convenience on the fresh copy directly.
     if (w.startClamped) windowed.enterDuration = null;
     if (w.endClamped) windowed.exitDuration = null;
 
-    final startShift =
-        w.start + windowStart - (layer.startTime ?? Duration.zero);
     if (windowed is TextLayer && startShift != Duration.zero) {
       windowed.highlights = [
         for (final highlight in windowed.highlights)

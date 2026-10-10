@@ -9418,7 +9418,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ställ in hur genomskinligt det valda klippet är';
+      'Ställ in hur genomskinligt det valda lagret är';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
@@ -9871,6 +9871,36 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Redigera lageranimering';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Lägg till nyckelbildruta';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Ta bort nyckelbildruta';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Gå till nyckelbildrutan vid $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Nyckelbildrutor';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Redigera lagrets nyckelbildrutor';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och flytta, skala eller vrid sedan lagret. Det glider från nyckelbildruta till nyckelbildruta.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Rörelse från nyckelbildruta $from till $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'In';

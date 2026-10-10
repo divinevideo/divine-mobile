@@ -7,6 +7,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_apply.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -42,16 +43,6 @@ const _loopMs = 2400;
 
 const _previewWidth = 56.0;
 const _previewHeight = 72.0;
-
-/// Bounds (and snap step) of the wiggle tilt slider, in degrees.
-const _minWiggleDegrees = 2;
-const _maxWiggleDegrees = 30;
-
-/// Bounds (and snap step) of the bounce height slider, in percent of the
-/// layer's height.
-const _minBouncePercent = 10;
-const _maxBouncePercent = 200;
-const _bounceStepPercent = 10;
 
 /// Directions offered for a slide animation, mapped onto [SlideDirection].
 const _slideDirections = <SlideDirection>[
@@ -597,11 +588,18 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                             const SizedBox(height: 8),
                             DivineSlider(
                               value: _wiggleDegrees(active.wiggleAngle)
-                                  .clamp(_minWiggleDegrees, _maxWiggleDegrees)
+                                  .clamp(
+                                    VideoEditorConstants.minWiggleDegrees,
+                                    VideoEditorConstants.maxWiggleDegrees,
+                                  )
                                   .toDouble(),
-                              min: _minWiggleDegrees.toDouble(),
-                              max: _maxWiggleDegrees.toDouble(),
-                              divisions: _maxWiggleDegrees - _minWiggleDegrees,
+                              min: VideoEditorConstants.minWiggleDegrees
+                                  .toDouble(),
+                              max: VideoEditorConstants.maxWiggleDegrees
+                                  .toDouble(),
+                              divisions:
+                                  VideoEditorConstants.maxWiggleDegrees -
+                                  VideoEditorConstants.minWiggleDegrees,
                               onChanged: (value) => _updateActive(
                                 (c) => c.copyWith(
                                   wiggleAngle: value * math.pi / 180,
@@ -630,14 +628,19 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                             const SizedBox(height: 8),
                             DivineSlider(
                               value: (active.bounceHeight * 100).clamp(
-                                _minBouncePercent.toDouble(),
-                                _maxBouncePercent.toDouble(),
+                                VideoEditorConstants.minBouncePercent
+                                    .toDouble(),
+                                VideoEditorConstants.maxBouncePercent
+                                    .toDouble(),
                               ),
-                              min: _minBouncePercent.toDouble(),
-                              max: _maxBouncePercent.toDouble(),
+                              min: VideoEditorConstants.minBouncePercent
+                                  .toDouble(),
+                              max: VideoEditorConstants.maxBouncePercent
+                                  .toDouble(),
                               divisions:
-                                  (_maxBouncePercent - _minBouncePercent) ~/
-                                  _bounceStepPercent,
+                                  (VideoEditorConstants.maxBouncePercent -
+                                      VideoEditorConstants.minBouncePercent) ~/
+                                  VideoEditorConstants.bounceStepPercent,
                               onChanged: (value) => _updateActive(
                                 (c) => c.copyWith(bounceHeight: value / 100),
                               ),
@@ -778,15 +781,13 @@ class _PhaseConfig {
       duration: duration ?? _defaultDuration,
       curve: curve ?? AnimationCurve.easeOut,
       direction: direction ?? SlideDirection.left,
-      scaleFrom: scaleFrom ?? (loop ? _loopScaleFrom : 0.0),
+      scaleFrom:
+          scaleFrom ?? (loop ? VideoEditorConstants.loopPulseScaleFrom : 0.0),
       wiggleAngle: wiggleAngle ?? LayerAnimation.defaultWiggleAngle,
       bounceHeight: bounceHeight ?? LayerAnimation.defaultBounceHeight,
       slideFrom: slideFrom,
     );
   }
-
-  /// How far a pulse shrinks the layer by default.
-  static const _loopScaleFrom = 0.8;
 
   final Set<LayerAnimationType> types;
   final Duration duration;
@@ -846,15 +847,15 @@ class _PhaseConfig {
       return switch (type) {
         // Fastest at rest and slowest at the turning point: a pendulum, a hop.
         LayerAnimationType.wiggle => (
-          duration: const Duration(milliseconds: 600),
+          duration: VideoEditorConstants.loopWiggleCycle,
           curve: AnimationCurve.easeIn,
         ),
         LayerAnimationType.bounce => (
-          duration: const Duration(milliseconds: 700),
+          duration: VideoEditorConstants.loopBounceCycle,
           curve: AnimationCurve.easeIn,
         ),
         _ => (
-          duration: const Duration(milliseconds: 1000),
+          duration: VideoEditorConstants.loopPulseCycle,
           curve: AnimationCurve.easeInOut,
         ),
       };

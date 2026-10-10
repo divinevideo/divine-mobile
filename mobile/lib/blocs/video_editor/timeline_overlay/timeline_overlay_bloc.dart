@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_row_layout.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
@@ -190,6 +191,7 @@ class TimelineOverlayBloc
             ),
             label: _labelForLayer(layer),
             layer: layer,
+            keyframeTimes: [for (final k in layer.keyframes) k.time],
             // A detached clip is real footage of a fixed length; stretching its
             // bar past that would promise frames the file does not have. Every
             // other layer is a drawing that can be held for as long as the user
@@ -460,6 +462,18 @@ class TimelineOverlayBloc
       endTime: newEnd,
       startOffset: newStartOffset,
       maxDuration: newMaxDuration,
+      // A trimmed start leaves keyframes where they are on the video (see
+      // `LayerKeyframeTimeline.keyframesFrom`), so they move against the new
+      // start until the item is rebuilt from the editor on release. The end
+      // handle leaves them alone even when it pushes a capped bar along, and
+      // so does a detached clip's start, as in the editor.
+      keyframeTimes:
+          event.isStart && (item.layer?.keepsMotionOnStartTrim ?? true)
+          ? [
+              for (final time in item.keyframeTimes)
+                time - (newStart - item.startTime),
+            ]
+          : null,
     );
 
     // Only re-assign rows for the changed type; other types are unaffected.

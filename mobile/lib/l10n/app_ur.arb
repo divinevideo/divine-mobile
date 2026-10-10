@@ -4837,7 +4837,7 @@
   "videoEditorChromaKeyCloseSemanticLabel": "کلر ماسک کی تبدیلیاں رد کریں",
   "videoEditorChromaKeyDoneSemanticLabel": "کلر ماسک لاگو کریں",
   "videoEditorOpacityLabel": "غیر شفافیت",
-  "videoEditorOpacitySemanticLabel": "منتخب کلپ کتنا شفاف ہو، یہ طے کریں",
+  "videoEditorOpacitySemanticLabel": "منتخب لیئر کتنی شفاف ہو، یہ طے کریں",
   "videoEditorChromaKeyAutoDetect": "خودکار شناخت",
   "videoEditorChromaKeyPresetGreen": "سبز",
   "videoEditorChromaKeyPresetBlue": "نیلا",
@@ -5150,6 +5150,14 @@
     "description": "Label for the control that opens the enter/leave animation picker for a text/sticker/drawing layer, and the picker's title."
   },
   "videoEditorLayerAnimationButtonSemanticLabel": "لیئر اینیمیشن میں ترمیم کریں",
+  "videoEditorKeyframeAdd": "کی فریم شامل کریں",
+  "videoEditorKeyframeRemove": "کی فریم ہٹائیں",
+  "videoEditorKeyframeMarkerSemanticLabel": "{time} پر موجود کی فریم پر جائیں",
+  "videoEditorKeyframesLabel": "کی فریمز",
+  "videoEditorKeyframesButtonSemanticLabel": "لیئر کے کی فریمز میں ترمیم کریں",
+  "videoEditorKeyframesHint": "کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔",
+  "videoEditorKeyframeEffect": "ایفیکٹ",
+  "videoEditorKeyframeCurveSegment": "کی فریم {from} سے {to} تک حرکت",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
     "description": "Accessibility label for the button that opens the layer enter/leave animation picker."
   },

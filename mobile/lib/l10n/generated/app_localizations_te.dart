@@ -9683,7 +9683,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'ఎంచుకున్న క్లిప్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
+      'ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
@@ -10149,6 +10149,36 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'లేయర్ యానిమేషన్‌ను సవరించండి';
+
+  @override
+  String get videoEditorKeyframeAdd => 'కీఫ్రేమ్‌ను జోడించండి';
+
+  @override
+  String get videoEditorKeyframeRemove => 'కీఫ్రేమ్‌ను తీసివేయండి';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time వద్ద ఉన్న కీఫ్రేమ్‌కు వెళ్ళండి';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'కీఫ్రేమ్‌లు';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'లేయర్ కీఫ్రేమ్‌లను సవరించండి';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై లేయర్‌ను కదిలించండి, పరిమాణం మార్చండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'కీఫ్రేమ్ $from నుండి $to వరకు కదలిక';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'నమోదు చేయండి';
