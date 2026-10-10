@@ -9766,6 +9766,8 @@ class DmRepository {
   /// these keeps it in the canonical 1:1 with the sender:
   ///
   /// * it names more than [maxRoomParticipants], sender included.
+  /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
+  ///   holding it could never be replied to.
   /// * its p tags omit the current user, so it is not a room we are in.
   /// * it is a mention: [replyToId] is a stored message in a strictly smaller
   ///   conversation that the rumor fully contains, the NIP-10 reply-mention
@@ -9798,6 +9800,10 @@ class DmRepository {
     if (existingFull != null) return extractedParticipants;
 
     if (extractedParticipants.length > maxRoomParticipants) {
+      return canonical1to1;
+    }
+
+    if (!extractedParticipants.every(NostrHexUtils.isValidPubkey)) {
       return canonical1to1;
     }
 

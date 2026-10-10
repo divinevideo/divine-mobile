@@ -522,6 +522,27 @@ void main() {
       });
     });
 
+    group('that names something other than a pubkey', () {
+      // A group send validates every recipient, so a room holding a member
+      // that is not a key would refuse every reply the user writes in it.
+      for (final (description, notAPubkey) in [
+        ('a word', 'not-a-pubkey'),
+        ('a truncated key', 'a' * 63),
+        ('an empty string', ''),
+      ]) {
+        test(
+          'stays in the one-to-one with its sender for $description',
+          () async {
+            final rumor = message(author: _alice, pTags: [_owner, notAPubkey]);
+
+            await deliver(rumor, authorSecret: _aliceSecret);
+
+            await expectOnlyTheOneToOneHolding(_alice, [rumor.id]);
+          },
+        );
+      }
+    });
+
     group('that spells the user key in other letter case', () {
       test('is filed as a room, since the key is the same', () async {
         final rumor = message(
