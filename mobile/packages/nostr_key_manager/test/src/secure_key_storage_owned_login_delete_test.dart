@@ -29,11 +29,11 @@ void main() {
   late Map<String, Map<String, Object?>> nativeRecords;
   late List<String> deletes;
   late Map<String, int> readCounts;
+  late Map<(String, int), String> rewriteOnRead;
   late SecureKeyStorage storage;
   String? failingRead;
   String? failingDelete;
   String? silentlyRetained;
-  String? mutateBeforeDelete;
   Completer<void>? heldRead;
   Completer<void>? readStarted;
   var retired = false;
@@ -84,10 +84,10 @@ void main() {
     nativeRecords = {};
     deletes = [];
     readCounts = {};
+    rewriteOnRead = {};
     failingRead = null;
     failingDelete = null;
     silentlyRetained = null;
-    mutateBeforeDelete = null;
     heldRead = null;
     readStarted = null;
     retired = false;
@@ -123,8 +123,8 @@ void main() {
             if (failingRead == id) {
               throw PlatformException(code: 'fixture_read_unavailable');
             }
-            if (mutateBeforeDelete == id && readCounts[id] == 3) {
-              fallbackRecords[id] = rawRecord(bob);
+            if (rewriteOnRead[(id, readCounts[id]!)] case final raw?) {
+              fallbackRecords[id] = raw;
             }
             return fallbackRecords[id];
           case 'delete':
@@ -412,13 +412,55 @@ void main() {
     test('a record replaced before deletion is preserved', () async {
       final id = fallbackId(current, primary);
       fallbackRecords[id] = rawRecord(alice);
-      mutateBeforeDelete = id;
+      // Reads 1 and 2 inspect the slot; read 3 guards its deletion.
+      rewriteOnRead[(id, 3)] = rawRecord(bob);
       await expectLater(
         removeAlice(),
         throwsA(isA<PlatformSecureStorageException>()),
       );
       expect(fallbackRecords[id] == rawRecord(bob), isTrue);
       expect(deletes, isEmpty);
+    });
+
+    test('a foreign record replaced during removal is reported', () async {
+      final carol = SecureKeyContainer.fromPrivateKeyHex(
+        '0000000000000000000000000000000000000000000000000000000000000003',
+      );
+      addTearDown(carol.dispose);
+      final foreignId = fallbackId(current, primary);
+      fallbackRecords[foreignId] = rawRecord(bob);
+      fallbackRecords[fallbackId(legacy, primary)] = rawRecord(alice);
+      // A foreign slot is never deleted, so its third read is the final pass.
+      rewriteOnRead[(foreignId, 3)] = rawRecord(carol);
+      await expectLater(
+        removeAlice(),
+        throwsA(
+          isA<PlatformSecureStorageException>().having(
+            (error) => error.code,
+            'code',
+            'key_record_changed',
+          ),
+        ),
+      );
+      expect(deletes, [fallbackId(legacy, primary)]);
+    });
+
+    test('an owned record restored during removal is reported', () async {
+      final id = fallbackId(current, primary);
+      fallbackRecords[id] = rawRecord(alice);
+      // Reads 3 and 4 guard and verify the deletion; read 5 is the final pass.
+      rewriteOnRead[(id, 5)] = rawRecord(alice);
+      await expectLater(
+        removeAlice(),
+        throwsA(
+          isA<PlatformSecureStorageException>().having(
+            (error) => error.code,
+            'code',
+            'key_deletion_unverified',
+          ),
+        ),
+      );
+      expect(deletes, [id]);
     });
 
     for (final slot in [current, legacy]) {
