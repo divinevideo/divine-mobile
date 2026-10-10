@@ -1,6 +1,8 @@
 // ABOUTME: A group bubble that reached some members keeps saying it did not
 // ABOUTME: reach everyone after Stop trying or a delete for everyone (#8180).
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
@@ -32,7 +34,10 @@ const _wait = Duration(seconds: 5);
 
 String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
-typedef _WrapOutcome = NIP17SendResult Function(Event rumor, String recipient);
+typedef _WrapOutcome = FutureOr<NIP17SendResult> Function(
+  Event rumor,
+  String recipient,
+);
 
 void main() {
   // The real bloc over the real repository and real DAOs. The label under
@@ -293,6 +298,87 @@ void main() {
           ),
           isEmpty,
           reason: 'and the sweep must not pick the stopped delivery up again',
+        );
+      });
+
+      test('still says so when a delete for everyone that is not confirmed '
+          'follows Stop trying', () async {
+        final thread = await openGroupThatReachedOnlyA();
+        final bloc = thread.bloc;
+        for (final id in bloc.state.undeliveredSiblingRumorIdsFor(
+          thread.messageId,
+        )) {
+          bloc.add(ConversationOutgoingSendCancelled(rumorId: id));
+        }
+        await until(
+          bloc,
+          (s) =>
+              s.statusFor(thread.messageId) ==
+              DmDeliveryStatus.notSentToEveryone,
+          what: 'the stop to show on the bubble',
+        );
+        deletionWrap = unconfirmed;
+
+        bloc.add(ConversationMessageDeleted(rumorId: thread.messageId));
+        await until(
+          bloc,
+          (s) => retractionIs(s, thread.messageId, DmRetractionStatus.pending),
+          what: 'the pending retraction on the bubble',
+        );
+        await pumpEventQueue();
+
+        expect(
+          bloc.state.statusFor(thread.messageId),
+          equals(DmDeliveryStatus.notSentToEveryone),
+          reason: 'the delete must not take the record of the stop with it',
+        );
+      });
+
+      test('still says so when a resend already on the wire is refused '
+          'after Stop trying', () async {
+        final thread = await openGroupThatReachedOnlyA();
+        final bloc = thread.bloc;
+        final failed = bloc.state.failedSiblingRumorIdsFor(thread.messageId);
+        expect(failed, hasLength(1));
+        // The resend stays on the wire until the test lets the relay answer.
+        final onTheWire = Completer<void>();
+        final relayAnswers = Completer<void>();
+        messageWrap = (rumor, recipient) async {
+          onTheWire.complete();
+          await relayAnswers.future;
+          return const NIP17SendResult.failure('relay refused the wrap');
+        };
+        bloc.add(ConversationFullSendRecoveryRequested(rumorIds: failed));
+        await onTheWire.future.timeout(_wait);
+
+        bloc.add(ConversationOutgoingSendCancelled(rumorId: failed.single));
+        await until(
+          bloc,
+          (s) =>
+              s.statusFor(thread.messageId) ==
+              DmDeliveryStatus.notSentToEveryone,
+          what: 'the stop to show while the resend is on the wire',
+        );
+        relayAnswers.complete();
+        await until(
+          bloc,
+          (s) => s.sendStatus == SendStatus.resendFailed,
+          what: 'the refused resend to be reported',
+        );
+        await pumpEventQueue();
+
+        expect(
+          bloc.state.statusFor(thread.messageId),
+          equals(DmDeliveryStatus.notSentToEveryone),
+          reason: 'the refusal answers an attempt the sender had stopped',
+        );
+        expect(
+          await outgoingDao.getRetryableForOwner(
+            ownerPubkey: _owner,
+            maxRetries: 5,
+          ),
+          isEmpty,
+          reason: 'and the sweep must not pick the member up again',
         );
       });
 

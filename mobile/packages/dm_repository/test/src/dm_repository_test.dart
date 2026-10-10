@@ -29622,8 +29622,12 @@ void main() {
         when(
           () => mockOutgoingDmsDao.deleteById(any()),
         ).thenAnswer((_) async => 1);
-        // Nothing is stored under these rows' own rumor ids, so a stopped
-        // row has no bubble of its own to keep a record for (#8180).
+        // These fixtures have the shape a batch had before its siblings
+        // shared one rumor id: each row carries its own, so none finds the
+        // stored winner and every sibling is dropped, as before #8180. A
+        // batch that does share its rumor id keeps its unreached members on
+        // record; dm_stopped_delivery_test.dart covers that against a real
+        // database.
         when(
           () => mockDirectMessagesDao.getMessageById(
             any(),

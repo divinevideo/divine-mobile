@@ -5903,16 +5903,7 @@ class DmRepository {
       return _dropSelfAddressedRow(dao: dao, row: row);
     }
 
-    // The sender stopped this delivery, and the row is kept only as a record
-    // of that (see [cancelOutgoingSend]). Refused the way a missing row is,
-    // which is how every caller already reads a cancelled send.
-    if (row.recipientWrapStatus == OutgoingWrapStatus.cancelled) {
-      throw ArgumentError.value(
-        rumorId,
-        'rumorId',
-        'the sender stopped this delivery',
-      );
-    }
+    _refuseStoppedDelivery(row, rumorId);
 
     // Idempotent re-tap. Reached when a prior recovery attempt's publish
     // already landed: either a concurrent recovery for this rumor, or
@@ -6186,16 +6177,7 @@ class DmRepository {
       return _dropSelfAddressedRow(dao: dao, row: row);
     }
 
-    // The sender stopped this delivery, and the row is kept only as a record
-    // of that (see [cancelOutgoingSend]). Refused the way a missing row is,
-    // which is how every caller already reads a cancelled send.
-    if (row.recipientWrapStatus == OutgoingWrapStatus.cancelled) {
-      throw ArgumentError.value(
-        rumorId,
-        'rumorId',
-        'the sender stopped this delivery',
-      );
-    }
+    _refuseStoppedDelivery(row, rumorId);
 
     // Idempotent guard: if a concurrent recovery (or the original
     // send's partial-success path) already promoted the recipient
@@ -6298,12 +6280,24 @@ class DmRepository {
           // "give up", and for a concurrent recovery the winner has already
           // persisted the message.
           final liveRow = await dao.getById(rumorId);
-          if (liveRow == null ||
-              liveRow.recipientWrapStatus == OutgoingWrapStatus.cancelled) {
+          if (liveRow == null) {
             Log.info(
               'Recovered publish for $rumorId landed after the queue row '
               'was already removed (cancelled, or finalized by a concurrent '
               'recovery); skipping local persist.',
+              category: LogCategory.system,
+            );
+            return;
+          }
+          if (!_isLiveDelivery(liveRow)) {
+            // The sender stopped this delivery while the publish was on the
+            // wire, and it landed anyway. This member has the message now, so
+            // the record saying otherwise goes; the message it described is
+            // already stored, which is why the row was kept at all.
+            await dao.deleteById(rumorId);
+            Log.info(
+              'Recovered publish for $rumorId landed after the sender '
+              'stopped that delivery; dropped its stopped-delivery record.',
               category: LogCategory.system,
             );
             return;
@@ -6644,12 +6638,14 @@ class DmRepository {
   /// member does not. It is marked [OutgoingWrapStatus.cancelled], which the
   /// sweep and both recovery paths refuse (#8180).
   ///
-  /// Idempotent — a missing row (already delivered, already cancelled, or
-  /// swept away) is a no-op returning `false`; returns `true` when a row
-  /// was actually dropped. A replay already in flight for this row
-  /// re-checks the row inside its success transaction ([recoverFullSend]),
-  /// so a cancel that lands mid-publish does not resurrect the message
-  /// locally. Throws [StateError] if the queue DAO is not wired in, and
+  /// Idempotent: a missing row (already delivered, already dropped, or swept
+  /// away) and a row already on record as stopped are both a no-op returning
+  /// `false`; returns `true` when this call dropped the row or put it on
+  /// record. A replay already in flight for the row settles in its own
+  /// transaction ([recoverFullSend]): if it lands, a dropped row does not
+  /// resurrect the message locally and a stopped record is removed, because
+  /// that member now has the message; if it fails, the record stays as it is.
+  /// Throws [StateError] if the queue DAO is not wired in, and
   /// [ArgumentError] if the row belongs to a different account (never
   /// delete another identity's queued send).
   Future<bool> cancelOutgoingSend({required String rumorId}) async {
@@ -6661,21 +6657,29 @@ class DmRepository {
         'wire OutgoingDmsDao into DmRepository before calling.',
       );
     }
-    final row = await dao.getById(rumorId);
-    if (row == null) return false;
-    if (row.ownerPubkey != _userPubkey) {
-      throw ArgumentError.value(
-        rumorId,
-        'rumorId',
-        'queue row belongs to a different account',
-      );
-    }
-    if (await _stoppedRowKeepsItsRecord(row)) {
-      await dao.markRecipientCancelled(rumorId);
-    } else {
-      await dao.deleteById(rumorId);
-    }
-    return true;
+    var stopped = false;
+    // One transaction, so the row cannot change between the read that decides
+    // what happens to it and the write.
+    await _conversationsDao.runInTransaction<void>(() async {
+      final row = await dao.getById(rumorId);
+      if (row == null) return;
+      if (row.ownerPubkey != _userPubkey) {
+        throw ArgumentError.value(
+          rumorId,
+          'rumorId',
+          'queue row belongs to a different account',
+        );
+      }
+      // Already on record as stopped: a second stop must not remove it.
+      if (!_isLiveDelivery(row)) return;
+      if (await _stoppedRowKeepsItsRecord(row)) {
+        await dao.markRecipientCancelled(rumorId);
+      } else {
+        await dao.deleteById(rumorId);
+      }
+      stopped = true;
+    });
+    return stopped;
   }
 
   /// Cancel every queued row of the send batch containing [rumorId] — the
@@ -6772,27 +6776,29 @@ class DmRepository {
       }
     }
 
-    final rows = await dao.getForConversation(
-      conversationId: conversationId,
-      ownerPubkey: _userPubkey,
-    );
     var cancelled = 0;
-    for (final sibling in rows) {
-      final isSibling = batchId != null
-          ? sibling.sendBatchId == batchId
-          : sibling.createdAt == createdAt && sibling.content == content;
-      if (!isSibling) continue;
-      // Already on record as stopped by an earlier cancel.
-      if (sibling.recipientWrapStatus == OutgoingWrapStatus.cancelled) {
-        continue;
+    // One transaction for the whole batch, for the same reason as
+    // [cancelOutgoingSend].
+    await _conversationsDao.runInTransaction<void>(() async {
+      final rows = await dao.getForConversation(
+        conversationId: conversationId,
+        ownerPubkey: _userPubkey,
+      );
+      for (final sibling in rows) {
+        final isSibling = batchId != null
+            ? sibling.sendBatchId == batchId
+            : sibling.createdAt == createdAt && sibling.content == content;
+        if (!isSibling) continue;
+        // Already on record as stopped by an earlier cancel.
+        if (!_isLiveDelivery(sibling)) continue;
+        if (await _stoppedRowKeepsItsRecord(sibling)) {
+          await dao.markRecipientCancelled(sibling.id);
+        } else {
+          await dao.deleteById(sibling.id);
+        }
+        cancelled++;
       }
-      if (await _stoppedRowKeepsItsRecord(sibling)) {
-        await dao.markRecipientCancelled(sibling.id);
-      } else {
-        await dao.deleteById(sibling.id);
-      }
-      cancelled++;
-    }
+    });
     return cancelled;
   }
 
@@ -6806,6 +6812,11 @@ class DmRepository {
   /// is unreached; for a group batch nobody has received, for the same
   /// reason; for a member who has the message and only lacks the sender's own
   /// copy; and for a policy-blocked row, which keeps its existing handling.
+  ///
+  /// The message is found by the row's rumor id, which every sibling of a
+  /// batch has shared since the fix for #8188. A batch queued before that,
+  /// where each sibling carries its own rumor and the stored message the
+  /// first confirmed one's, is not matched and is dropped as before.
   Future<bool> _stoppedRowKeepsItsRecord(OutgoingDm row) async {
     if (row.recipientWrapStatus != OutgoingWrapStatus.pending &&
         row.recipientWrapStatus != OutgoingWrapStatus.failed) {
@@ -6828,11 +6839,24 @@ class DmRepository {
   /// Whether [row] is still a delivery in progress: present, and not one the
   /// sender stopped.
   ///
-  /// A stopped row is kept only as a record (see [cancelOutgoingSend]), so
-  /// every re-read that asks "was this cancelled while I was publishing?" has
-  /// to treat it exactly like a row that is gone.
+  /// A stopped row is kept only as a record (see [cancelOutgoingSend]), so a
+  /// re-read that asks "is this delivery still mine to finish?" gets the same
+  /// answer for it as for a row that is gone.
   static bool _isLiveDelivery(OutgoingDm? row) =>
       row != null && row.recipientWrapStatus != OutgoingWrapStatus.cancelled;
+
+  /// Refuses to recover a delivery the sender stopped.
+  ///
+  /// Refused the way a missing row is, which is how every caller already
+  /// reads a cancelled send.
+  static void _refuseStoppedDelivery(OutgoingDm row, String rumorId) {
+    if (_isLiveDelivery(row)) return;
+    throw ArgumentError.value(
+      rumorId,
+      'rumorId',
+      'the sender stopped this delivery',
+    );
+  }
 
   /// Drops the records of stopped deliveries for the message [rumorId], once
   /// its bubble has left the thread and they have nothing left to describe.
@@ -6900,6 +6924,9 @@ class DmRepository {
   /// publish. Shared between [sendMessage] and [sendGroupMessage] so
   /// both call sites keep recipient/self wrap failure bookkeeping in
   /// lockstep.
+  ///
+  /// A delivery the sender stopped while this attempt was on the wire is left
+  /// as it is: the queue's status writes do not reopen a stopped row.
   Future<void> _finalizeAfterRecipientFailure({
     required OutgoingDmsDao outgoingDao,
     required String rumorId,
@@ -6946,6 +6973,10 @@ class DmRepository {
   /// non-retryable `blocked` state because the row is the sender's only copy.
   /// Non-rethrowing to match the failure path: the caller still receives the
   /// blocked result when the durable transition fails.
+  ///
+  /// A delivery the sender had already stopped keeps its record on `retain`
+  /// (the status write leaves a stopped row alone) and loses it on `discard`,
+  /// because the refused intent must not stay visible in any form.
   Future<void> _finalizeAfterRecipientBlocked({
     required OutgoingDmsDao outgoingDao,
     required String rumorId,
@@ -7419,10 +7450,11 @@ class DmRepository {
     // all-or-nothing gate above already guarantees EVERY recipient is approved,
     // so a partial send can only ever reach approved recipients, never a
     // blocked one.
-    // Siblings whose queue row was deleted (cancelOutgoingBatch, reachable
-    // via long-press delete on the pending bubble) before this loop reached
-    // them. Recorded so the finalize below skips them too — a cancelled
-    // index must never resurrect a queue transition or a thread.
+    // Siblings whose queue row was deleted or put on record as stopped
+    // (cancelOutgoingBatch, reachable via long-press delete on the pending
+    // bubble) before this loop reached them. Recorded so the finalize below
+    // skips them too — a cancelled index must never resurrect a queue
+    // transition or a thread.
     final cancelledBeforePublish = <int>{};
     // Siblings whose outcome came from a recovery another caller already
     // owned — the sweep's recoverFullSend registered `full:<queueId>` before
@@ -7437,11 +7469,11 @@ class DmRepository {
       // Cancel interlock, mirroring _recoverFullSendLocked's pre-publish row
       // re-read: each publish can take up to the OK-confirm timeout, a long
       // window in which the user may delete the whole batch. Re-read the
-      // sibling row immediately before publishing; if it is gone, record a
-      // non-success and skip the publish entirely. Otherwise this rumor would
-      // reach the recipient after the sender cancelled — invisible to the
-      // sender and unretractable, since no local row survives to build a
-      // kind-5 from. The currently-publishing sibling's inherent TOCTOU is
+      // sibling row immediately before publishing; if it is gone or stopped,
+      // record a non-success and skip the publish entirely. Otherwise this
+      // rumor would reach the recipient after the sender cancelled — invisible
+      // to the sender and unretractable, since no local row survives to build
+      // a kind-5 from. The currently-publishing sibling's inherent TOCTOU is
       // accepted, the same trade-off as recoverFullSend.
       if (outgoingDao != null &&
           !_isLiveDelivery(await outgoingDao.getById(queueIds[i]))) {
@@ -7534,21 +7566,29 @@ class DmRepository {
         // not be persisted or finalized; if none survive, persist nothing —
         // the wire copies are out, receiver dedup keeps them single, but the
         // local message must not resurrect.
+        //
+        // A successful tuple whose row was stopped mid-flight (kept as a
+        // record, because the message is already stored) is not finalized
+        // either, and its record goes: that member has the message now.
         final liveSuccessIndexes = <int>[];
         for (var i = 0; i < results.length; i++) {
           if (!results[i].success) continue;
-          if (outgoingDao != null &&
-              !_isLiveDelivery(await outgoingDao.getById(queueIds[i]))) {
-            continue;
+          if (outgoingDao != null) {
+            final liveRow = await outgoingDao.getById(queueIds[i]);
+            if (liveRow == null) continue;
+            if (!_isLiveDelivery(liveRow)) {
+              await outgoingDao.deleteById(queueIds[i]);
+              continue;
+            }
           }
           liveSuccessIndexes.add(i);
         }
         if (liveSuccessIndexes.isEmpty) {
           Log.info(
             'Group publish landed after every successful sibling row was '
-            'already removed (cancelled mid-flight, or finalized by a '
-            'concurrent recovery); skipping local persist for conversation '
-            '$conversationId.',
+            'already removed or stopped (cancelled mid-flight, or finalized '
+            'by a concurrent recovery); skipping local persist for '
+            'conversation $conversationId.',
             category: LogCategory.system,
           );
           return;
@@ -7640,11 +7680,10 @@ class DmRepository {
     // retry.
     if (outgoingDao != null) {
       for (var i = 0; i < queueIds.length; i++) {
-        // A sibling skipped for cancellation has no live row to transition.
-        // The skip is load-bearing: a stopped member of a stored message
-        // keeps its row as a record, and an update-by-id here would flip
-        // that record back to failed and hand it to the sweep again (#8180).
-        // It also keeps such an index from resurrecting a thread.
+        // A sibling skipped for cancellation has nothing to transition: its
+        // row is gone, or kept as a stopped record that the queue's status
+        // writes leave alone. The skip also keeps such an index from
+        // resurrecting a thread.
         if (cancelledBeforePublish.contains(i)) {
           continue;
         }

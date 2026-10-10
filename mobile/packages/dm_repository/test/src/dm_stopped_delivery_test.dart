@@ -210,12 +210,13 @@ void main() {
     /// member; a member that is not named is delivered.
     Future<({String messageId, String conversationId})> sendToAAndB({
       Map<String, _WrapOutcome> outcomes = const {},
+      String content = 'dinner at eight',
     }) async {
       messageWrap = (rumor, recipient) =>
           (outcomes[recipient] ?? delivered)(rumor, recipient);
       final results = await repository.sendGroupMessage(
         recipientPubkeys: [_memberA, _memberB],
-        content: 'dinner at eight',
+        content: content,
       );
       // The wire rumor is shared by the batch, so every result that carries
       // an id carries the same one; a failure carries none, so read it from
@@ -228,16 +229,24 @@ void main() {
       final rows = await queueRows(conversationId);
       final messageId =
           results.map((r) => r.rumorEventId).whereType<String>().firstOrNull ??
-          rows.first.rumorId;
+          rows.firstWhere((row) => row.content == content).rumorId;
       return (messageId: messageId, conversationId: conversationId);
     }
 
     /// The shape #8180 is about: the message reached A and is stored, and
     /// the relay refused B, so one hard-failed row is left behind for B.
     Future<({String messageId, String conversationId, String rowForB})>
-    sendReachingOnlyA() async {
-      final sent = await sendToAAndB(outcomes: {_memberB: refusedByRelay});
-      final forB = await rowFor(sent.conversationId, _memberB);
+    sendReachingOnlyA({String content = 'dinner at eight'}) async {
+      final sent = await sendToAAndB(
+        outcomes: {_memberB: refusedByRelay},
+        content: content,
+      );
+      OutgoingDm? forB;
+      for (final row in await queueRows(sent.conversationId)) {
+        if (row.recipientPubkey == _memberB && row.content == content) {
+          forB = row;
+        }
+      }
       expect(forB, isNotNull, reason: 'the refused member keeps a queue row');
       expect(forB!.recipientWrapStatus, equals(OutgoingWrapStatus.failed));
       expect(
@@ -249,6 +258,21 @@ void main() {
         messageId: sent.messageId,
         conversationId: sent.conversationId,
         rowForB: forB.id,
+      );
+    }
+
+    Future<DirectMessageRow?> stored(String messageId) =>
+        messagesDao.getMessageById(messageId, ownerPubkey: _owner);
+
+    /// Stops B and pins that the stop is on record, so a later "still
+    /// cancelled" cannot pass on a row that never was.
+    Future<void> stopB(String rowId) async {
+      await repository.cancelOutgoingSend(rumorId: rowId);
+      final row = await outgoingDao.getById(rowId);
+      expect(
+        row?.recipientWrapStatus,
+        equals(OutgoingWrapStatus.cancelled),
+        reason: 'the stop landed',
       );
     }
 
@@ -342,6 +366,161 @@ void main() {
 
         expect(await outgoingDao.getById(rowId), isNull);
       });
+
+      test('changes nothing on a delivery already stopped', () async {
+        final sent = await sendReachingOnlyA();
+        await stopB(sent.rowForB);
+
+        final again = await repository.cancelOutgoingSend(
+          rumorId: sent.rowForB,
+        );
+
+        expect(again, isFalse);
+        final row = await outgoingDao.getById(sent.rowForB);
+        expect(
+          row?.recipientWrapStatus,
+          equals(OutgoingWrapStatus.cancelled),
+          reason: 'a second stop must not remove the record the first left',
+        );
+      });
+
+      // A delete for everyone that is unconfirmed or was refused keeps the
+      // bubble on screen, so the record is still needed. In the app the batch
+      // is cancelled before the retraction starts; these reach the same state
+      // without it, as a retraction started elsewhere does.
+      test('keeps a record while a delete for everyone is '
+          'unconfirmed', () async {
+        final sent = await sendReachingOnlyA();
+        deletionWrap = (rumor, recipient) async => recipient == _memberB
+            ? const NIP17SendResult.failure('no relay confirmed the wrap')
+            : await delivered(rumor, recipient);
+        await repository.deleteMessageForEveryone(sent.messageId);
+        await pumpEventQueue();
+        final message = await stored(sent.messageId);
+        expect(message?.isDeleted, isTrue);
+        expect(
+          message?.deletionPublishStatus,
+          equals(DirectMessagesDao.deletionPending),
+        );
+
+        await stopB(sent.rowForB);
+      });
+
+      test('keeps a record after a delete for everyone was refused', () async {
+        final sent = await sendReachingOnlyA();
+        deletionWrap = (rumor, recipient) async =>
+            const NIP17SendResult.blocked(
+              'blocked: recipient not permitted by send policy',
+            );
+        await repository.deleteMessageForEveryone(sent.messageId);
+        await pumpEventQueue();
+        final message = await stored(sent.messageId);
+        expect(
+          message?.isDeleted,
+          isFalse,
+          reason: 'a refused retraction puts the bubble back',
+        );
+        expect(
+          message?.deletionPublishStatus,
+          equals(DirectMessagesDao.deletionBlocked),
+        );
+
+        await stopB(sent.rowForB);
+      });
+
+      test('keeps a record for a refused delete for everyone that is still '
+          'stored as deleted', () async {
+        // The thread query shows this shape too, so the bubble is on screen.
+        final sent = await sendReachingOnlyA();
+        await messagesDao.markMessageDeletionBlocked(
+          sent.messageId,
+          restoreToThread: false,
+          ownerPubkey: _owner,
+        );
+        final message = await stored(sent.messageId);
+        expect(message?.isDeleted, isTrue);
+        expect(
+          message?.deletionPublishStatus,
+          equals(DirectMessagesDao.deletionBlocked),
+        );
+
+        await stopB(sent.rowForB);
+      });
+
+      test('removes the row once a delete for everyone is confirmed', () async {
+        final sent = await sendReachingOnlyA();
+        deletionWrap = delivered;
+        await repository.deleteMessageForEveryone(sent.messageId);
+        await pumpEventQueue();
+        final message = await stored(sent.messageId);
+        expect(message?.isDeleted, isTrue);
+        expect(
+          message?.deletionPublishStatus,
+          isNot(
+            anyOf(
+              DirectMessagesDao.deletionPending,
+              DirectMessagesDao.deletionBlocked,
+            ),
+          ),
+          reason: 'the retraction is settled, so the bubble has left',
+        );
+        expect(
+          await outgoingDao.getById(sent.rowForB),
+          isNotNull,
+          reason: 'nothing cancelled the batch, so the failed row is live',
+        );
+
+        await repository.cancelOutgoingSend(rumorId: sent.rowForB);
+
+        expect(
+          await outgoingDao.getById(sent.rowForB),
+          isNull,
+          reason: 'no bubble is left for a record to describe',
+        );
+      });
+
+      test('removes the row of a batch queued before its siblings shared '
+          'one rumor id', () async {
+        // Until the fix for #8188 each sibling carried its own rumor, and the
+        // stored message carries the first confirmed one's. The row cannot
+        // be matched to its message by rumor id, so it is dropped as before.
+        final conversationId = DmRepository.computeConversationId([
+          _owner,
+          _memberA,
+          _memberB,
+        ]);
+        await messagesDao.insertMessage(
+          id: _hex(0xa1),
+          conversationId: conversationId,
+          senderPubkey: _owner,
+          content: 'dinner at eight',
+          createdAt: 1700000000,
+          giftWrapId: _hex(0xa2),
+          ownerPubkey: _owner,
+          sendBatchId: 'batch-before-8188',
+        );
+        final rowId = _hex(0xb1);
+        await outgoingDao.enqueue(
+          OutgoingDm(
+            id: rowId,
+            conversationId: conversationId,
+            recipientPubkey: _memberB,
+            content: 'dinner at eight',
+            createdAt: 1700000000,
+            rumorEventJson: jsonEncode({'id': rowId, 'kind': 14}),
+            recipientWrapStatus: OutgoingWrapStatus.failed,
+            selfWrapStatus: OutgoingWrapStatus.failed,
+            queuedAt: DateTime.utc(2026, 8),
+            ownerPubkey: _owner,
+            sendBatchId: 'batch-before-8188',
+          ),
+        );
+
+        final cancelled = await repository.cancelOutgoingSend(rumorId: rowId);
+
+        expect(cancelled, isTrue);
+        expect(await outgoingDao.getById(rowId), isNull);
+      });
     });
 
     group('cancelOutgoingBatch', () {
@@ -402,6 +581,19 @@ void main() {
         expect(cancelled, equals(2));
         expect(await queueRows(sent.conversationId), isEmpty);
       });
+
+      test('leaves a member already stopped on record', () async {
+        final sent = await sendReachingOnlyA();
+        await stopB(sent.rowForB);
+
+        final cancelled = await repository.cancelOutgoingBatch(
+          rumorId: sent.messageId,
+        );
+
+        expect(cancelled, equals(0));
+        final row = await outgoingDao.getById(sent.rowForB);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
     });
 
     group('deleteMessageForEveryone after the batch was cancelled', () {
@@ -459,6 +651,26 @@ void main() {
         final row = await outgoingDao.getById(sent.rowForB);
         expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
       });
+
+      test('drops only the records of the retracted message', () async {
+        final first = await sendReachingOnlyA();
+        final second = await sendReachingOnlyA(content: 'bring dessert');
+        expect(second.messageId, isNot(equals(first.messageId)));
+        await stopB(first.rowForB);
+        await stopB(second.rowForB);
+        deletionWrap = delivered;
+
+        await repository.deleteMessageForEveryone(first.messageId);
+        await pumpEventQueue();
+
+        expect(await outgoingDao.getById(first.rowForB), isNull);
+        final other = await outgoingDao.getById(second.rowForB);
+        expect(
+          other?.recipientWrapStatus,
+          equals(OutgoingWrapStatus.cancelled),
+          reason: 'the other message is still shown and still missed B',
+        );
+      });
     });
 
     group('recovery of a stopped row', () {
@@ -508,41 +720,110 @@ void main() {
     });
 
     group('a stop that lands while the wrap is in flight', () {
-      test('recoverFullSend leaves the record alone when its publish '
-          'lands afterwards', () async {
-        final sent = await sendReachingOnlyA();
-        // The retry is on the wire when the user stops B.
-        messageWrap = (rumor, recipient) async {
-          await repository.cancelOutgoingSend(rumorId: sent.rowForB);
-          return delivered(rumor, recipient);
-        };
+      /// What a publish that outlives the stop can come back with, other
+      /// than a delivery. None of them reached the member.
+      final notDelivered = <String, NIP17SendResult>{
+        'is refused': const NIP17SendResult.failure('relay refused the wrap'),
+        'gets no answer': const NIP17SendResult.failure(
+          'no OK within the window',
+          retryablePending: true,
+        ),
+        'is blocked and the row would be retained':
+            const NIP17SendResult.blocked(
+              'blocked: recipient retired',
+              disposition: NIP17BlockedSendDisposition.retain,
+            ),
+      };
 
-        final result = await repository.recoverFullSend(
-          rumorId: sent.rowForB,
-        );
-
-        expect(result.success, isTrue, reason: 'the wrap did land');
-        final row = await outgoingDao.getById(sent.rowForB);
+      Future<void> expectStillStoppedAndIdle(String rowId) async {
+        final row = await outgoingDao.getById(rowId);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+        expect(row?.selfWrapStatus, equals(OutgoingWrapStatus.cancelled));
         expect(
-          row?.recipientWrapStatus,
-          equals(OutgoingWrapStatus.cancelled),
-          reason:
-              'finalizing the landed publish would drop the row and the '
-              'bubble would read as delivered again',
+          await outgoingDao.getRetryableForOwner(
+            ownerPubkey: _owner,
+            maxRetries: 5,
+          ),
+          isEmpty,
+          reason: 'the sweep must not pick the member up again',
         );
+        expect(await outgoingDao.getStillPendingForOwner(_owner), isEmpty);
+      }
+
+      group('recoverFullSend', () {
+        test('drops the record when its publish lands', () async {
+          final sent = await sendReachingOnlyA();
+          // The retry is on the wire when the user stops B.
+          messageWrap = (rumor, recipient) async {
+            await stopB(sent.rowForB);
+            return delivered(rumor, recipient);
+          };
+
+          final result = await repository.recoverFullSend(
+            rumorId: sent.rowForB,
+          );
+
+          expect(result.success, isTrue, reason: 'the wrap did land');
+          expect(
+            await outgoingDao.getById(sent.rowForB),
+            isNull,
+            reason: 'B has the message, so nothing stays on record against B',
+          );
+          expect(await stored(sent.messageId), isNotNull);
+        });
+
+        for (final MapEntry(key: name, value: outcome)
+            in notDelivered.entries) {
+          test('leaves the record alone when its publish $name', () async {
+            final sent = await sendReachingOnlyA();
+            messageWrap = (rumor, recipient) async {
+              await stopB(sent.rowForB);
+              return outcome;
+            };
+
+            final result = await repository.recoverFullSend(
+              rumorId: sent.rowForB,
+            );
+
+            expect(result.success, isFalse);
+            await expectStillStoppedAndIdle(sent.rowForB);
+          });
+        }
+
+        test('removes the record when its publish is blocked and the '
+            'refused intent must not stay visible', () async {
+          final sent = await sendReachingOnlyA();
+          messageWrap = (rumor, recipient) async {
+            await stopB(sent.rowForB);
+            return const NIP17SendResult.blocked(
+              'blocked: recipient not permitted by send policy',
+              disposition: NIP17BlockedSendDisposition.discard,
+            );
+          };
+
+          final result = await repository.recoverFullSend(
+            rumorId: sent.rowForB,
+          );
+
+          expect(result.blocked, isTrue);
+          expect(await outgoingDao.getById(sent.rowForB), isNull);
+        });
       });
 
-      test('sendGroupMessage leaves the record alone when the publish to '
-          'that member lands afterwards', () async {
+      group('sendGroupMessage', () {
         final conversationId = DmRepository.computeConversationId([
           _owner,
           _memberA,
           _memberB,
         ]);
-        // B is stopped while B's own wrap is in flight, after the message
-        // was stored through A.
-        messageWrap = (rumor, recipient) async {
-          if (recipient == _memberB) {
+
+        /// B is stopped while B's own wrap is in flight, after the message
+        /// was stored through A; the relay then answers B with [outcome].
+        Future<List<NIP17SendResult>> sendStoppingBMidFlight(
+          _WrapOutcome outcome,
+        ) {
+          messageWrap = (rumor, recipient) async {
+            if (recipient != _memberB) return delivered(rumor, recipient);
             final forB = await rowFor(conversationId, _memberB);
             await messagesDao.insertMessage(
               id: rumor.id,
@@ -555,19 +836,41 @@ void main() {
               ownerPubkey: _owner,
               sendBatchId: forB!.sendBatchId,
             );
-            await repository.cancelOutgoingSend(rumorId: forB.id);
-          }
-          return delivered(rumor, recipient);
-        };
+            await stopB(forB.id);
+            return outcome(rumor, recipient);
+          };
+          return repository.sendGroupMessage(
+            recipientPubkeys: [_memberA, _memberB],
+            content: 'dinner at eight',
+          );
+        }
 
-        final results = await repository.sendGroupMessage(
-          recipientPubkeys: [_memberA, _memberB],
-          content: 'dinner at eight',
-        );
+        test('drops the record when the publish to that member '
+            'lands', () async {
+          final results = await sendStoppingBMidFlight(delivered);
 
-        expect(results.map((r) => r.success), equals([true, true]));
-        final forB = await rowFor(conversationId, _memberB);
-        expect(forB?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+          expect(results.map((r) => r.success), equals([true, true]));
+          expect(
+            await rowFor(conversationId, _memberB),
+            isNull,
+            reason: 'B has the message, so nothing stays on record against B',
+          );
+        });
+
+        for (final MapEntry(key: name, value: outcome)
+            in notDelivered.entries) {
+          test('leaves the record alone when the publish to that member '
+              '$name', () async {
+            final results = await sendStoppingBMidFlight(
+              (rumor, recipient) async => outcome,
+            );
+
+            expect(results.map((r) => r.success), equals([true, false]));
+            final forB = await rowFor(conversationId, _memberB);
+            expect(forB, isNotNull);
+            await expectStillStoppedAndIdle(forB!.id);
+          });
+        }
       });
     });
 
