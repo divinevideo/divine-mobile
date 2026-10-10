@@ -106,10 +106,7 @@ class DmSyncState {
   /// Bump only to force the pass to re-run for every account — e.g. when the
   /// attestation rule is widened and rooms it previously skipped become
   /// recoverable. The pass is additive and idempotent, so a re-run is safe.
-  ///
-  /// 2 re-runs it for rooms a peer started, which the receive path used to
-  /// file as one-to-ones with each speaker (#7338).
-  static const int currentGroupRecoveryVersion = 2;
+  static const int currentGroupRecoveryVersion = 1;
 
   /// Lower bound for a plausible Nostr `created_at` (2020-01-01T00:00:00Z).
   ///

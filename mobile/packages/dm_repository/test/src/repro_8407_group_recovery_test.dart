@@ -1143,9 +1143,9 @@ void main() {
       );
     });
 
-    // #7338: a room a peer started was filed as one-to-ones until the receive
-    // path changed, so accounts that already recorded the pass as done must
-    // run it again to reunite what that left behind.
+    // The recorded version is the cost guard for the full scan: the same
+    // attestable split is restored while an older version is recorded, and
+    // left alone once the current one is.
     group('recorded recovery version', () {
       /// The one-to-one with Alice holds two senders' messages for the same
       /// wider room, the shape the pass can attest.
@@ -1175,10 +1175,11 @@ void main() {
         return syncState;
       }
 
-      test('runs the pass again when it was recorded before #7338', () async {
+      test('runs the pass while an older version is recorded', () async {
         final roomId = await seedSplitRoom();
-        // The version that shipped before the receive path filed peer rooms.
-        final syncState = await syncStateRecording(1);
+        final syncState = await syncStateRecording(
+          DmSyncState.currentGroupRecoveryVersion - 1,
+        );
 
         await recoverViaSetCredentials(syncState: syncState);
 
