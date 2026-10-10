@@ -71,16 +71,14 @@ sign without one.
   the fact. While such a recording is still unsigned, an edit of it is left
   unsigned too, and the editor offers to retry signing.
 
-  This only works while the clip still carries the hash, which is not always
-  the case yet. The hash is set when the capture proof comes back, which can be
-  after the take was saved to the clip library, and the library entry is not
-  updated then. An edit made before the proof came back copies its sources
-  without the hash, and a recording used as a chroma-key backdrop is named
-  without one, as is the footage under a key when the clip had no recorded
-  sources before it was keyed. When the recording is still unsigned, a clip
-  loaded from such a library entry, or edited from such a source, therefore
-  cannot have it signed late, and cannot be sent as a clip. Fixing this is
-  tracked in #9982.
+  A clip does not always carry the hash itself. The capture proof can come
+  back after the take was saved to the clip library, so the library entry is
+  given the hash then (`ClipLibraryService.rememberRecordingHash`), and later
+  saves of the entry from an older copy keep it. An edit made before the proof
+  came back names its sources without it, and so do a recording used as a
+  chroma-key backdrop and the footage under a key. Signing therefore also
+  looks the hash up by file name in the account's clip library
+  (`ClipLibraryService.recordingHashesByFileName`), which covers all of them.
 
 ## The C2PA check
 

@@ -3,15 +3,18 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as models show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:path/path.dart' as p;
@@ -718,6 +721,167 @@ void main() {
         );
 
         expect(await service.getClipById('corrupt_clip'), isNull);
+      });
+    });
+
+    group('recording hashes', () {
+      final recordingHash = 'a' * 64;
+      final keyedTakeHash = 'b' * 64;
+      final editSourceHash = 'c' * 64;
+      const key = ClipChromaKey(
+        key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
+      );
+
+      DivineVideoClip take(String id, String file) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/tmp/$file'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      test('notes the hash on the library entry and keeps the rest', () async {
+        await service.saveClip(
+          take('take', 'take.mp4').copyWith(libraryTitle: 'Beach'),
+        );
+
+        final updated = await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'take.mp4',
+          sha256: recordingHash,
+        );
+
+        expect(updated, isTrue);
+        final entry = await service.getClipById('take');
+        expect(entry?.recordingSha256, recordingHash);
+        expect(entry?.libraryTitle, 'Beach');
+      });
+
+      test('notes the hash on an entry whose key was baked first', () async {
+        await service.saveClip(
+          take('take', 'keyed.mp4').copyWith(
+            chromaKey: key,
+            chromaKeySourcePath: '/tmp/raw.mp4',
+          ),
+        );
+
+        final updated = await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'raw.mp4',
+          sha256: recordingHash,
+        );
+
+        expect(updated, isTrue);
+        expect(
+          (await service.getClipById('take'))?.recordingSha256,
+          recordingHash,
+        );
+      });
+
+      test('keeps the hash when a copy read before it is saved', () async {
+        await service.saveClip(take('take', 'take.mp4'));
+        // Read while the capture proof is still out, as asset recovery does
+        // when the library opens right after a take.
+        final stale = (await service.getClipById('take'))!;
+        await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'take.mp4',
+          sha256: recordingHash,
+        );
+
+        await service.saveClip(stale.copyWith(thumbnailPath: '/tmp/take.jpg'));
+
+        final entry = await service.getClipById('take');
+        expect(entry?.thumbnailPath, endsWith('take.jpg'));
+        expect(entry?.recordingSha256, recordingHash);
+      });
+
+      // The recorder's second save, a chroma-key bake and asset recovery can
+      // all be saving a copy read earlier at the moment the proof comes back.
+      for (final noteFirst in [false, true]) {
+        test('keeps a hash noted while a save of an older copy is in flight '
+            '(${noteFirst ? 'noted' : 'saved'} first)', () async {
+          await service.saveClip(take('take', 'take.mp4'));
+          final stale = (await service.getClipById('take'))!;
+
+          Future<void> save() =>
+              service.saveClip(stale.copyWith(thumbnailPath: '/tmp/take.jpg'));
+          Future<bool> note() => service.rememberRecordingHash(
+            clipId: 'take',
+            fileName: 'take.mp4',
+            sha256: recordingHash,
+          );
+          await Future.wait<Object?>(
+            noteFirst ? [note(), save()] : [save(), note()],
+          );
+
+          final entry = await service.getClipById('take');
+          expect(entry?.thumbnailPath, endsWith('take.jpg'));
+          expect(entry?.recordingSha256, recordingHash);
+        });
+      }
+
+      test('keeps a trashed entry in the trash', () async {
+        await service.saveClip(take('take', 'take.mp4'));
+        await service.softDelete('take');
+
+        await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'take.mp4',
+          sha256: recordingHash,
+        );
+
+        expect(await service.getAllClips(), isEmpty);
+        expect(
+          (await service.getTrashedClips()).single.recordingSha256,
+          recordingHash,
+        );
+      });
+
+      test('does not bring back a deleted clip', () async {
+        final updated = await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'take.mp4',
+          sha256: recordingHash,
+        );
+
+        expect(updated, isFalse);
+        expect(await service.getClipById('take'), isNull);
+      });
+
+      test('maps every file a stored hash describes to it', () async {
+        await service.saveClip(
+          take(
+            'recording',
+            'take.mp4',
+          ).copyWith(recordingSha256: recordingHash),
+        );
+        await service.saveClip(
+          take('keyed', 'keyed.mp4').copyWith(
+            chromaKey: key,
+            chromaKeySourcePath: '/tmp/raw.mp4',
+            recordingSha256: keyedTakeHash,
+          ),
+        );
+        await service.saveClip(
+          take('freeze', 'freeze.mp4').copyWith(
+            derivedFrom: [
+              C2paEditSource(
+                path: '/tmp/source.mp4',
+                recordingSha256: editSourceHash,
+              ),
+            ],
+          ),
+        );
+        await service.saveClip(take('imported', 'imported.mp4'));
+
+        expect(await service.recordingHashesByFileName(), {
+          'take.mp4': {recordingHash},
+          'keyed.mp4': {keyedTakeHash},
+          'raw.mp4': {keyedTakeHash},
+          'source.mp4': {editSourceHash},
+        });
       });
     });
 

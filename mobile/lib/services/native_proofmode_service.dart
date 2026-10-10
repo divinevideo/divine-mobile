@@ -13,6 +13,7 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
+import 'package:path/path.dart' as p;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service for generating cryptographic proof using native ProofMode libraries
@@ -47,6 +48,16 @@ class NativeProofModeService {
   /// without a binding.
   static Future<NostrCreatorBindingAssertion?> Function(String filePath)?
   creatorBindingFactory;
+
+  /// Looks up the hashes the camera wrote the signed-in account's own
+  /// recordings with, by file name, for [signOwnRecordings].
+  ///
+  /// A clip does not always carry the hash of the recording it was made from:
+  /// one loaded from the clip library, edited before its capture proof came
+  /// back, or used as a chroma-key backdrop names the file without it. Startup
+  /// assigns this alongside [creatorBindingFactory]. Unset, only the hashes
+  /// the clips carry are used.
+  static Future<Map<String, Set<String>>> Function()? recordingHashLookup;
 
   /// Generate native ProofMode proof for a video file.
   ///
@@ -346,7 +357,7 @@ class NativeProofModeService {
     final recordingsLeftUnsigned = await signOwnRecordings([
       ...clips,
       ...layerClips,
-    ]);
+    ], otherSources: otherSources);
     onRecordingsSigned?.call();
     final proof = await proofFile(
       output,
@@ -389,56 +400,94 @@ class NativeProofModeService {
     }.toList();
   }
 
-  /// Signs the app's own recordings among [clips]' sources as camera
-  /// captures when their signing at record time did not happen, for example
-  /// because the device was offline.
+  /// Signs the app's own recordings among [clips]' sources and
+  /// [otherSources] as camera captures when their signing at record time did
+  /// not happen, for example because the device was offline.
   ///
-  /// Only a source that still hashes to its
-  /// [C2paEditSource.recordingSha256] qualifies: anything edited, imported or
+  /// Only a file that still hashes to a hash the camera wrote it with
+  /// qualifies: its [C2paEditSource.recordingSha256], or else one
+  /// [recordingHashLookup] knows for its name. Anything edited, imported or
   /// received since is never signed as a capture. Returns whether such a
   /// recording is still unsigned afterwards. A failure on one recording is
   /// logged and does not stop the others or the edit they are part of.
-  static Future<bool> signOwnRecordings(Iterable<DivineVideoClip> clips) async {
+  static Future<bool> signOwnRecordings(
+    Iterable<DivineVideoClip> clips, {
+    Iterable<C2paEditSource> otherSources = const [],
+  }) async {
+    // Split halves and edits of one recording name the same file, and not
+    // every one of them carries its hash.
+    final carriedHashes = <String, Set<String>>{};
+    for (final source in [
+      for (final clip in clips) ...?clip.signingSources,
+      ...otherSources,
+    ]) {
+      if (source.kind != C2paSourceKind.video) continue;
+      final hashes = carriedHashes[source.path] ??= {};
+      if (source.recordingSha256 case final hash?) {
+        hashes.add(hash.toLowerCase());
+      }
+    }
+
     C2paSigningService? signingService;
-    final checked = <String>{};
+    Map<String, Set<String>>? knownHashes;
     var leftUnsigned = false;
-    for (final clip in clips) {
-      for (final source in clip.signingSources ?? const <C2paEditSource>[]) {
-        final recordingHash = source.recordingSha256;
-        if (recordingHash == null || source.kind != C2paSourceKind.video) {
-          continue;
+    for (final MapEntry(key: path, value: carried) in carriedHashes.entries) {
+      try {
+        final file = File(path);
+        if (!file.existsSync()) continue;
+        var recordingHashes = carried;
+        if (recordingHashes.isEmpty) {
+          knownHashes ??= await _lookUpRecordingHashes();
+          recordingHashes = knownHashes[p.basename(path)] ?? const {};
         }
-        // Split halves and edits of one recording name the same file.
-        if (!checked.add(source.path)) continue;
-        try {
-          final file = File(source.path);
-          if (!file.existsSync()) continue;
-          signingService ??=
-              c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
-          final manifest = await signingService.readManifest(source.path);
-          if (manifest?.activeManifest != null) continue;
-          final hash = await generateSha256FileHash(source.path);
-          if (hash.toLowerCase() != recordingHash.toLowerCase()) continue;
-          Log.info(
-            '🔐 Signing recording ${clip.id} that was left unsigned',
-            name: 'NativeProofModeService',
-            category: LogCategory.video,
-          );
-          final proof = await proofFile(file);
-          if (proof?.c2paManifestId == null) leftUnsigned = true;
-        } on Exception catch (error, stackTrace) {
-          Log.warning(
-            'Could not sign recording "${source.path}" late: $error',
-            name: 'NativeProofModeService',
-            category: LogCategory.video,
-            error: error,
-            stackTrace: stackTrace,
-          );
-          leftUnsigned = true;
-        }
+        if (recordingHashes.isEmpty) continue;
+        signingService ??=
+            c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
+        final manifest = await signingService.readManifest(path);
+        if (manifest?.activeManifest != null) continue;
+        final hash = await generateSha256FileHash(path);
+        if (!recordingHashes.contains(hash.toLowerCase())) continue;
+        Log.info(
+          '🔐 Signing recording "$path" that was left unsigned',
+          name: 'NativeProofModeService',
+          category: LogCategory.video,
+        );
+        final proof = await proofFile(file);
+        if (proof?.c2paManifestId == null) leftUnsigned = true;
+      } on Exception catch (error, stackTrace) {
+        Log.warning(
+          'Could not sign recording "$path" late: $error',
+          name: 'NativeProofModeService',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        leftUnsigned = true;
       }
     }
     return leftUnsigned;
+  }
+
+  /// The hashes [recordingHashLookup] knows, lower-cased, or none when it is
+  /// unset or fails.
+  static Future<Map<String, Set<String>>> _lookUpRecordingHashes() async {
+    final lookup = recordingHashLookup;
+    if (lookup == null) return const {};
+    try {
+      return {
+        for (final MapEntry(:key, :value) in (await lookup()).entries)
+          key: {for (final hash in value) hash.toLowerCase()},
+      };
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not look up the hashes of recordings: $error',
+        name: 'NativeProofModeService',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const {};
+    }
   }
 
   /// Generate proof for a media file using native ProofMode library

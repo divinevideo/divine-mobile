@@ -109,6 +109,9 @@ class ClipLibraryService {
   }
 
   /// Save a clip to the library. Updates existing clip if ID matches.
+  ///
+  /// A recording hash the entry holds for a file [clip] still plays is kept
+  /// when [clip] carries none (see [rememberRecordingHash]).
   Future<void> saveClip(DivineVideoClip clip) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
@@ -116,40 +119,49 @@ class ClipLibraryService {
       category: LogCategory.video,
     );
 
-    final existingLibraryRow = await _clipsDao.getClipById(clip.id);
-    final existingAutosaveRow = existingLibraryRow == null
-        ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
-        : null;
+    // One transaction from read to write: the capture proof can note the
+    // recording hash (see [rememberRecordingHash]) while a copy read before
+    // it is being saved, and the save must not land on top of it.
+    await _clipsDao.transaction(() async {
+      final existingLibraryRow = await _clipsDao.getClipById(clip.id);
+      final existingAutosaveRow = existingLibraryRow == null
+          ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
+          : null;
+      final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
+      final saved = keptHash == null
+          ? clip
+          : clip.copyWith(recordingSha256: keptHash);
 
-    await _clipsDao.upsertClip(
-      id: clip.id,
-      orderIndex: 0,
-      durationMs: clip.duration.inMilliseconds,
-      recordedAt: clip.recordedAt,
-      data: json.encode(clip.toJson()),
-      filePath: clip.video?.file?.path != null
-          ? p.basename(clip.video!.file!.path)
-          : null,
-      thumbnailPath: clip.thumbnailPath != null
-          ? p.basename(clip.thumbnailPath!)
-          : null,
-      ownerPubkey: ownerPubkey,
-    );
+      await _clipsDao.upsertClip(
+        id: clip.id,
+        orderIndex: 0,
+        durationMs: clip.duration.inMilliseconds,
+        recordedAt: clip.recordedAt,
+        data: json.encode(saved.toJson()),
+        filePath: clip.video?.file?.path != null
+            ? p.basename(clip.video!.file!.path)
+            : null,
+        thumbnailPath: clip.thumbnailPath != null
+            ? p.basename(clip.thumbnailPath!)
+            : null,
+        ownerPubkey: ownerPubkey,
+      );
 
-    if (existingLibraryRow == null && existingAutosaveRow != null) {
-      if (existingAutosaveRow.categoryId != null) {
-        await _clipsDao.setClipCategory(
-          id: clip.id,
-          categoryId: existingAutosaveRow.categoryId,
-        );
+      if (existingLibraryRow == null && existingAutosaveRow != null) {
+        if (existingAutosaveRow.categoryId != null) {
+          await _clipsDao.setClipCategory(
+            id: clip.id,
+            categoryId: existingAutosaveRow.categoryId,
+          );
+        }
+        if (existingAutosaveRow.archivedAt != null) {
+          await _clipsDao.setClipArchived(
+            id: clip.id,
+            archivedAt: existingAutosaveRow.archivedAt,
+          );
+        }
       }
-      if (existingAutosaveRow.archivedAt != null) {
-        await _clipsDao.setClipArchived(
-          id: clip.id,
-          archivedAt: existingAutosaveRow.archivedAt,
-        );
-      }
-    }
+    });
   }
 
   /// Get all clips from the library, sorted by creation date (newest first).
@@ -244,6 +256,123 @@ class ClipLibraryService {
     final documentsPath = await getDocumentsPath();
     return _tryParseClipRow(row, documentsPath, label: 'clip');
   }
+
+  /// Notes [sha256] as the hash the camera wrote the recording [fileName]
+  /// with on the library entry of the clip [clipId], so the recording can
+  /// still be signed later (see `DivineVideoClip.recordingSha256`).
+  ///
+  /// The capture proof comes back after the recorder saved the take, so the
+  /// entry is written then. Only an entry that still plays [fileName], or
+  /// keeps it as the footage under its chroma key, is touched; a clip deleted
+  /// since is not brought back, and a trashed one keeps the hash for a
+  /// restore.
+  ///
+  /// Returns whether the entry was updated. Never throws.
+  Future<bool> rememberRecordingHash({
+    required String clipId,
+    required String fileName,
+    required String sha256,
+  }) async {
+    try {
+      final documentsPath = await getDocumentsPath();
+      return await _clipsDao.rewriteClipData(
+        id: clipId,
+        rewrite: (data) {
+          final clip = DivineVideoClip.fromJson(
+            json.decode(data) as Map<String, dynamic>,
+            documentsPath,
+          );
+          if (clip.recordingSha256 == sha256 ||
+              !_recordingFileNames(clip).contains(fileName)) {
+            return null;
+          }
+          return json.encode(clip.copyWith(recordingSha256: sha256).toJson());
+        },
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to note the recording hash on library clip $clipId',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// The hashes the camera wrote this account's own recordings with, by file
+  /// name, from every clip that names one: library, draft and trashed clips
+  /// alike, and the sources of clips edited from them.
+  ///
+  /// Lets a recording whose capture signing failed be signed later even when
+  /// the clip at hand lost its copy of the hash, such as a library video used
+  /// as a chroma-key backdrop. A name may map to a hash its file no longer
+  /// has; signing checks the file against the hash before trusting it.
+  Future<Map<String, Set<String>>> recordingHashesByFileName() async {
+    final rows = await _clipsDao.getClipDataWithRecordingHashes(
+      ownerPubkey: ownerPubkey,
+    );
+    final documentsPath = await getDocumentsPath();
+    final hashes = <String, Set<String>>{};
+    void add(String path, String hash) =>
+        (hashes[p.basename(path)] ??= {}).add(hash);
+    for (final data in rows) {
+      final DivineVideoClip clip;
+      try {
+        clip = DivineVideoClip.fromJson(
+          json.decode(data) as Map<String, dynamic>,
+          documentsPath,
+        );
+      } catch (_) {
+        // A corrupt row names no recording; the others still count.
+        continue;
+      }
+      if (clip.recordingSha256 case final hash?) {
+        for (final name in _recordingFileNames(clip)) {
+          add(name, hash);
+        }
+      }
+      for (final source in [...?clip.derivedFrom]) {
+        if (source.recordingSha256 case final hash?) add(source.path, hash);
+      }
+    }
+    return hashes;
+  }
+
+  /// The recording hash [row] holds for a file [clip] still plays, when
+  /// [clip] carries none itself.
+  ///
+  /// [clip] can be a copy read before [rememberRecordingHash] noted the hash,
+  /// such as one asset recovery or a chroma-key bake saves back. Saving it as
+  /// it is would drop the hash again.
+  Future<String?> _recordingHashKeptFor(
+    DivineVideoClip clip,
+    ClipRow? row,
+  ) async {
+    if (row == null || clip.recordingSha256 != null) return null;
+    final DivineVideoClip stored;
+    try {
+      stored = DivineVideoClip.fromJson(
+        json.decode(row.data) as Map<String, dynamic>,
+        await getDocumentsPath(),
+      );
+    } catch (_) {
+      // A corrupt row has no hash to keep; the save replaces it.
+      return null;
+    }
+    final hash = stored.recordingSha256;
+    if (hash == null) return null;
+    final files = _recordingFileNames(stored);
+    return _recordingFileNames(clip).any(files.contains) ? hash : null;
+  }
+
+  /// The files [clip]'s recording hash can describe: its video, or the raw
+  /// take under its chroma key once that key is baked in.
+  static Set<String> _recordingFileNames(DivineVideoClip clip) => {
+    if (clip.video?.file?.path case final path?) p.basename(path),
+    if (clip.chromaKeySourcePath case final path?) p.basename(path),
+  };
 
   /// Move a clip to the trash. The clip is hidden from active queries
   /// but its files remain on disk until [purgeExpiredTrash] sweeps them

@@ -8,6 +8,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -757,6 +758,136 @@ void main() {
     });
 
     group('addClip proof generation', () {
+      group('when the recording could not be signed', () {
+        const recordingHash = 'abc123';
+
+        setUp(() {
+          NativeProofModeService.proofFileOverride = (
+            _, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async => const NativeProofData(videoHash: recordingHash);
+          when(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: any(named: 'clipId'),
+              fileName: any(named: 'fileName'),
+              sha256: any(named: 'sha256'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        tearDown(() => NativeProofModeService.proofFileOverride = null);
+
+        test('notes the recording hash on its library entry', () async {
+          final backgroundWork = container.read(editorBackgroundWorkProvider);
+          final notifier = container.read(clipManagerProvider.notifier);
+
+          final clip = notifier.addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/documents/take.mp4'),
+            duration: const Duration(seconds: 2),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          await backgroundWork.settle();
+
+          verify(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: clip.id,
+              fileName: 'take.mp4',
+              sha256: recordingHash,
+            ),
+          ).called(1);
+        });
+
+        // The take can be picked from the library long after it left the
+        // working set, so the entry is written even when the proof comes back
+        // after that.
+        test('notes the hash after the clip left the working set', () async {
+          final started = Completer<void>();
+          final proof = Completer<NativeProofData?>();
+          NativeProofModeService.proofFileOverride =
+              (
+                _, {
+                required enableAdvancedCawgEmbedding,
+                creatorBindingAssertion,
+                cawgIdentityAssertion,
+                verifiedIdentityBundle,
+                clips,
+                editorStateHistory,
+                derivedFrom,
+              }) {
+                started.complete();
+                return proof.future;
+              };
+          final backgroundWork = container.read(editorBackgroundWorkProvider);
+          final notifier = container.read(clipManagerProvider.notifier);
+
+          final clip = notifier.addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/documents/take.mp4'),
+            duration: const Duration(seconds: 2),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          await started.future;
+          notifier.clearClips();
+          proof.complete(const NativeProofData(videoHash: recordingHash));
+          await backgroundWork.settle();
+
+          verify(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: clip.id,
+              fileName: 'take.mp4',
+              sha256: recordingHash,
+            ),
+          ).called(1);
+        });
+      });
+
+      test('leaves the library entry alone for a signed recording', () async {
+        NativeProofModeService.proofFileOverride =
+            (
+              _, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) async => const NativeProofData(
+              videoHash: 'abc123',
+              c2paManifestId: 'urn:c2pa:signed',
+            );
+        addTearDown(() => NativeProofModeService.proofFileOverride = null);
+        final backgroundWork = container.read(editorBackgroundWorkProvider);
+
+        container
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/documents/take.mp4'),
+              duration: const Duration(seconds: 2),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            );
+        await backgroundWork.settle();
+
+        verifyNever(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: any(named: 'clipId'),
+            fileName: any(named: 'fileName'),
+            sha256: any(named: 'sha256'),
+          ),
+        );
+      });
+
       test('newly added clip has no proofManifestJson initially', () {
         final notifier = container.read(clipManagerProvider.notifier);
 

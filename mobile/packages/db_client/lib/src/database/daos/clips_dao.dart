@@ -149,6 +149,52 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// Serialized prefix of a set `ghostFramePath` inside a clip's `data` blob.
   static const _ghostFramePathJsonPrefix = '"ghostFramePath":"';
 
+  /// The `data` blobs of every clip of [ownerPubkey] (plus legacy clips with
+  /// no owner) that carry a recording hash, trashed and draft clips included.
+  ///
+  /// Like [getClipsWithGhostFrames], the filter depends on the encoding
+  /// `DivineVideoClip.toJson` produces, which the app layer pins against the
+  /// real model in `clip_library_service_test.dart`.
+  Future<List<String>> getClipDataWithRecordingHashes({String? ownerPubkey}) {
+    final query = selectOnly(clips)
+      ..addColumns([clips.data])
+      ..where(
+        clips.data.like('%$_recordingSha256JsonPrefix%') &
+            _ownedOrLegacy(clips.ownerPubkey, ownerPubkey),
+      );
+    return query.map((row) => row.read(clips.data)!).get();
+  }
+
+  /// Serialized prefix of a set `recordingSha256` inside a clip's `data` blob,
+  /// on the clip itself or on one of its sources.
+  static const _recordingSha256JsonPrefix = '"recordingSha256":"';
+
+  /// Replaces the `data` blob of the clip [id] with what [rewrite] returns
+  /// for the current one, in one transaction so no other write lands between.
+  ///
+  /// Never inserts: a clip that is gone stays gone. [rewrite] returns `null`
+  /// to leave the row as it is.
+  ///
+  /// Returns true if the row was rewritten.
+  Future<bool> rewriteClipData({
+    required String id,
+    required String? Function(String data) rewrite,
+  }) {
+    return transaction(() async {
+      final row = await getClipById(id);
+      if (row == null) return false;
+      final data = rewrite(row.data);
+      if (data == null || data == row.data) return false;
+      final rowsAffected =
+          await (update(
+            clips,
+          )..where((t) => t.id.equals(id))).write(
+            ClipsCompanion(data: Value(data)),
+          );
+      return rowsAffected > 0;
+    });
+  }
+
   /// Update the order index of a clip
   Future<bool> updateOrderIndex({
     required String id,

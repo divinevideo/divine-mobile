@@ -70,11 +70,15 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Static signing utility: its creator-binding seam needs the container, so
-  // it is assigned here rather than with the reporter seams in bootstrap.
+  // Static signing utility: its creator-binding and recording-hash seams need
+  // the container, so they are assigned here rather than with the reporter
+  // seams in bootstrap. The clip library is read per call: it follows the
+  // signed-in account.
   NativeProofModeService.creatorBindingFactory = container
       .read(c2paCreatorBindingFactoryProvider)
       .create;
+  NativeProofModeService.recordingHashLookup = () =>
+      container.read(clipLibraryServiceProvider).recordingHashesByFileName();
 
   await restorePendingEmailVerificationOnStartup(container);
 
