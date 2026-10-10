@@ -10355,6 +10355,19 @@ class AppLocalizationsId extends AppLocalizations {
   String get badgesTitle => 'Badge';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Ikuti lencana';
+
+  @override
+  String get badgeSubscribedAction => 'Diikuti';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+
+  @override
   String get badgesLoadError => 'Gagal memuat badge';
 
   @override

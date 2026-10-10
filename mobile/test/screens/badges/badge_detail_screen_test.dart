@@ -3,15 +3,22 @@
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -19,6 +26,10 @@ class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockBadgeVideoPager extends Mock implements BadgeVideoPager {}
 
 void main() {
   group('BadgeDetailScreen', () {
@@ -34,6 +45,9 @@ void main() {
     setUp(() {
       repository = _MockBadgeRepository();
       contentBlocklistRepository = _MockContentBlocklistRepository();
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => <String>{});
     });
 
     /// Pumps the screen behind a real [GoRouter].
@@ -41,7 +55,10 @@ void main() {
     /// The screen pops itself once a deletion lands, and `context.pop` is a
     /// GoRouter extension — a bare `MaterialApp` would throw there instead of
     /// exercising the flow.
-    Widget buildSubject() {
+    Widget buildSubject({
+      VideosRepository? videosRepository,
+      List<Override> overrides = const [],
+    }) {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
@@ -66,6 +83,9 @@ void main() {
           contentBlocklistRepositoryProvider.overrideWithValue(
             contentBlocklistRepository,
           ),
+          if (videosRepository != null)
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+          ...overrides,
         ],
         child: MaterialApp.router(
           localizationsDelegates: appLocalizationsDelegates,
@@ -77,11 +97,13 @@ void main() {
 
     /// Scrolls the awardee list into view and opens the revoke sheet.
     ///
-    /// The badge hero fills the default test viewport, so a recipient row is
-    /// built into the sliver's cache extent but never laid out — which keeps
-    /// it out of the semantics tree, where `bySemanticsLabel` reads from.
+    /// Management rows follow the holder video feed and are built lazily.
     Future<void> tapRevoke(WidgetTester tester) async {
-      await tester.ensureVisible(find.byType(BadgeRecipientRow));
+      await tester.scrollUntilVisible(
+        find.byType(BadgeRecipientRow),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel(l10n.badgeDetailRevokeAction));
       await tester.pumpAndSettle();
@@ -454,9 +476,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(BadgeRecipientRow));
-      await tester.pumpAndSettle();
-
+      expect(find.byType(BadgeRecipientRow), findsNothing);
       expect(find.bySemanticsLabel(l10n.badgeDetailRevokeAction), findsNothing);
     });
 
@@ -482,6 +502,165 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.badgeDetailMissing), findsOneWidget);
+    });
+
+    testWidgets('lists accepted holders with a follow control', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is UserProfileTile && widget.pubkey == _pubkey(3),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('labels each holder video for screen readers', (
+      tester,
+    ) async {
+      final videosRepository = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+      when(
+        () => videosRepository.createBadgeVideoPager(any()),
+      ).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+
+      await tester.pumpWidget(buildSubject(videosRepository: videosRepository));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('reloads holder videos when the videos repository is rebuilt', (
+      tester,
+    ) async {
+      final first = _MockVideosRepository();
+      final second = _MockVideosRepository();
+      final firstPager = _MockBadgeVideoPager();
+      final secondPager = _MockBadgeVideoPager();
+      final activeRepository = StateProvider<VideosRepository>((_) => first);
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+      when(() => first.createBadgeVideoPager(any())).thenReturn(firstPager);
+      when(firstPager.loadMore).thenAnswer((_) async => []);
+      when(() => firstPager.hasMore).thenReturn(false);
+      when(() => second.createBadgeVideoPager(any())).thenReturn(secondPager);
+      when(secondPager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => secondPager.hasMore).thenReturn(false);
+
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            videosRepositoryProvider.overrideWith(
+              (ref) => ref.watch(activeRepository),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      ProviderScope.containerOf(
+        tester.element(find.byType(BadgeDetailScreen)),
+      ).read(activeRepository.notifier).state = second;
+      await tester.pumpAndSettle();
+
+      verify(() => first.createBadgeVideoPager({_pubkey(3)})).called(1);
+      verify(() => second.createBadgeVideoPager({_pubkey(3)})).called(1);
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('reloads visible holders and videos after a block', (
+      tester,
+    ) async {
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      var blocked = false;
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) async => blocked ? <String>{} : {_pubkey(3)});
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+      await tester.pumpWidget(buildSubject(videosRepository: videos));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byType(VideoThumbnailWidget),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      blocked = true;
+      ProviderScope.containerOf(tester.element(find.byType(BadgeDetailScreen)))
+          .read(blocklistVersionProvider.notifier)
+          .increment();
+      await tester.pumpAndSettle();
+      verify(() => repository.loadAcceptedHolders(any())).called(2);
+      expect(find.byType(VideoThumbnailWidget), findsNothing);
+    });
+
+    testWidgets('discloses public subscriptions beside the subscribe action', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadSubscriptions()).thenAnswer(
+        (_) async => <BadgeCoordinate>{},
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: _pubkey(1)),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(l10n.badgeSubscribeAction),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(l10n.badgeSubscriptionsPublicNotice), findsOneWidget);
     });
 
     testWidgets('offers a retry when the lookup fails', (tester) async {
@@ -557,3 +736,12 @@ Event _event({required int kind}) {
 }
 
 String _pubkey(int seed) => (seed + 100).toRadixString(16).padLeft(64, '0');
+
+VideoEvent _video() => VideoEvent(
+  id: 'a'.padLeft(64, '0'),
+  pubkey: _pubkey(3),
+  createdAt: 1000,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
+  videoUrl: 'https://example.com/a.mp4',
+);

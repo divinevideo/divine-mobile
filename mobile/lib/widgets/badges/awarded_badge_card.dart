@@ -92,7 +92,7 @@ class BadgePanel extends StatelessWidget {
   }
 }
 
-/// Circular badge artwork, falling back to a lettermark.
+/// Circular badge artwork, falling back to the Divine sparkle.
 class BadgeMedallion extends StatelessWidget {
   /// Creates a medallion for [imageUrl].
   const BadgeMedallion({required this.imageUrl, super.key});
@@ -102,15 +102,15 @@ class BadgeMedallion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = DecoratedBox(
-      decoration: const BoxDecoration(
+    const fallback = DecoratedBox(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: VineTheme.vineGreen,
       ),
       child: Center(
-        child: Text(
-          'B',
-          style: VineTheme.titleMediumFont(color: VineTheme.primaryDarkGreen),
+        child: DivineIcon(
+          icon: DivineIconName.sparkle,
+          color: VineTheme.primaryDarkGreen,
         ),
       ),
     );

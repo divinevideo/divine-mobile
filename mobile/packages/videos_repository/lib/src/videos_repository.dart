@@ -13,6 +13,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/author_feed_result.dart';
+import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
@@ -289,6 +290,23 @@ class VideosRepository {
     }
   }
 
+  /// A snapshot pager for videos by all currently accepted badge holders.
+  BadgeVideoPager createBadgeVideoPager(Iterable<String> authors) {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final unique = authors.toSet().toList()..sort();
+    return BadgeVideoPager(
+      client: client,
+      authors: unique,
+      transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
+      isVisible: (video) =>
+          !(_blockFilter?.call(video.pubkey) ?? false) &&
+          !(_deletedFilter?.call(video) ?? false),
+    );
+  }
+
   /// Fetches videos from followed users for the home feed, optionally
   /// merging in videos from subscribed curated lists.
   ///
@@ -315,9 +333,9 @@ class VideosRepository {
   ///
   /// Returns a [HomeFeedResult] containing videos sorted by creation time
   /// (newest first) plus attribution metadata mapping videos to their
-  /// source curated lists. Returns empty result if both [authors] is empty
-  /// and [userPubkey] is null. When [userPubkey] is provided, the Funnelcake
-  /// API is attempted even with an empty [authors] list (fast-path startup).
+  /// source curated lists. Returns empty when [authors] is empty and
+  /// [userPubkey] is null. When [userPubkey] is provided, Funnelcake is
+  /// attempted even with no followed authors.
   Future<HomeFeedResult> getHomeFeedVideos({
     required List<String> authors,
     Map<String, List<String>> videoRefs = const {},

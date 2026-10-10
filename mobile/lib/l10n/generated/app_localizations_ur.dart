@@ -10442,6 +10442,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get badgesTitle => 'بیجز';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'بیج سبسکرائب کریں';
+
+  @override
+  String get badgeSubscribedAction => 'سبسکرائب کر لیا';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'بیج قبول کرنے والے';
+
+  @override
   String get badgesLoadError => 'بیجز لوڈ نہیں ہو سکے';
 
   @override

@@ -10524,6 +10524,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get badgesTitle => 'Badges';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Seguir emblema';
+
+  @override
+  String get badgeSubscribedAction => 'A seguir';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Pessoas que aceitaram o emblema';
+
+  @override
   String get badgesLoadError => 'Não foi possível carregar as badges';
 
   @override

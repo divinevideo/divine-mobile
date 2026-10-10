@@ -10566,6 +10566,20 @@ class AppLocalizationsIt extends AppLocalizations {
   String get badgesTitle => 'Badge';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Iscriviti al badge';
+
+  @override
+  String get badgeSubscribedAction => 'Iscritto';
+
+  @override
+  String get badgeAcceptedHoldersTitle =>
+      'Persone che hanno accettato il badge';
+
+  @override
   String get badgesLoadError => 'Impossibile caricare i badge';
 
   @override

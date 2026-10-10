@@ -7,6 +7,7 @@
 library;
 
 export 'src/author_feed_result.dart';
+export 'src/badge_video_pager.dart';
 export 'src/db_video_local_storage.dart';
 export 'src/home_feed_result.dart';
 export 'src/in_memory_feed_cache.dart';

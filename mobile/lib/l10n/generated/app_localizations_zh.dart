@@ -9817,6 +9817,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get badgesTitle => '徽章';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => '订阅徽章';
+
+  @override
+  String get badgeSubscribedAction => '已订阅';
+
+  @override
+  String get badgeAcceptedHoldersTitle => '已接受徽章的人';
+
+  @override
   String get badgesLoadError => '徽章加载失败';
 
   @override

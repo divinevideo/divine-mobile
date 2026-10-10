@@ -10665,6 +10665,19 @@ class AppLocalizationsRo extends AppLocalizations {
   String get badgesTitle => 'Insigne';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Abonează-te la insignă';
+
+  @override
+  String get badgeSubscribedAction => 'Abonat';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Persoane care au acceptat insigna';
+
+  @override
   String get badgesLoadError => 'N-am putut încărca insignele';
 
   @override

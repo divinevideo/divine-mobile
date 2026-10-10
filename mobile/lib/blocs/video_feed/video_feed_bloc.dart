@@ -59,6 +59,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     HomeFeedCache? homeFeedCache,
     EnrichVideos? enrichVideos,
     FeedTuningRepository? feedTuningRepository,
+    Future<Iterable<String>> Function()? badgeAuthors,
+    Stream<void>? badgeSubscriptionChanges,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -71,6 +73,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
        _feedTracker = feedTracker,
        _enrichVideos = enrichVideos,
        _feedTuningRepository = feedTuningRepository,
+       _badgeAuthors = badgeAuthors,
+       _badgeSubscriptionChanges = badgeSubscriptionChanges,
        _resumeManager = HomeFeedResumeManager(
          cache: homeFeedCache ?? const HomeFeedCache(),
          videosRepository: videosRepository,
@@ -93,6 +97,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
     on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
+    on<VideoFeedBadgeSubscriptionsChanged>(_onBadgeSubscriptionsChanged);
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -112,6 +117,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final FeedPerformanceTracker? _feedTracker;
   final EnrichVideos? _enrichVideos;
   final FeedTuningRepository? _feedTuningRepository;
+  final Future<Iterable<String>> Function()? _badgeAuthors;
+  final Stream<void>? _badgeSubscriptionChanges;
+  StreamSubscription<void>? _badgeSubscriptionsSubscription;
+  bool _hasBadgeAuthors = false;
+  List<String>? _cachedBadgeAuthors;
+  BadgeVideoPager? _badgeVideoPager;
 
   /// Owns the cross-restart cache serve / splice / resume-persist logic.
   final HomeFeedResumeManager _resumeManager;
@@ -274,7 +285,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (state.source == source &&
         source.type == VideoFeedSourceType.following) {
       final currentFollowing = _followRepository.followingPubkeys;
-      if (currentFollowing.isEmpty && state.videos.isEmpty) {
+      if (currentFollowing.isEmpty &&
+          !_hasBadgeAuthors &&
+          state.videos.isEmpty &&
+          state.status == VideoFeedStatus.success) {
         emit(
           state.copyWith(
             status: VideoFeedStatus.success,
@@ -292,6 +306,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _badgeSubscriptionsSubscription?.cancel();
 
     // Subscribe to following list changes.
     //
@@ -323,6 +338,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         .listen((lists) {
           addIfOpen(VideoFeedCuratedListsChanged(lists));
         });
+
+    // Subscribe to this account's badge subscription changes.
+    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
+      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
+    );
   }
 
   @override
@@ -332,8 +352,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     _resumeManager.dispose();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _badgeSubscriptionsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
+    _badgeSubscriptionsSubscription = null;
     return super.close();
   }
 
@@ -671,7 +693,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (state.status == VideoFeedStatus.loading) return;
 
     // Empty follow list → show "follow someone" CTA.
-    if (event.followingPubkeys.isEmpty) {
+    if (event.followingPubkeys.isEmpty && !_hasBadgeAuthors) {
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -686,6 +708,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     // Silent refresh — keep current videos visible, replace when done.
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+  }
+
+  /// Reloads Following after the account changes its badge subscriptions.
+  ///
+  /// A silent refresh like [_onFollowingListChanged]: the first page
+  /// re-resolves the subscribed holders and starts a new merged pager.
+  Future<void> _onBadgeSubscriptionsChanged(
+    VideoFeedBadgeSubscriptionsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    if (state.source.type != VideoFeedSourceType.following) return;
+    if (state.status == VideoFeedStatus.loading) return;
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -1093,11 +1132,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    VideoFeedSourceType.following => _videosRepository.getHomeFeedVideos(
-      authors: _followRepository.followingPubkeys,
-      userPubkey: _userPubkey,
-      until: until,
-    ),
+    VideoFeedSourceType.following => _fetchFollowingWithBadges(until: until),
     VideoFeedSourceType.subscribedList =>
       _videosRepository
           .getVideosForList(
@@ -1125,6 +1160,66 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       skipCache: skipCache,
     ),
   };
+
+  Future<HomeFeedResult> _fetchFollowingWithBadges({int? until}) async {
+    final badgeAuthors = until != null && _cachedBadgeAuthors != null
+        ? _cachedBadgeAuthors!
+        : await _loadBadgeAuthors();
+    _cachedBadgeAuthors = badgeAuthors;
+    _hasBadgeAuthors = badgeAuthors.isNotEmpty;
+    if (badgeAuthors.isNotEmpty) {
+      try {
+        if (until == null || _badgeVideoPager == null) {
+          _badgeVideoPager = _videosRepository.createBadgeVideoPager([
+            ..._followRepository.followingPubkeys,
+            ...badgeAuthors,
+          ]);
+        }
+        final pager = _badgeVideoPager!;
+        final videos = await pager.loadMore(limit: 5);
+        return HomeFeedResult(videos: videos, hasMore: pager.hasMore);
+      } catch (error, stackTrace) {
+        // A later page keeps the merged feed's ordering; only the first page
+        // may fall back without mixing two orderings in one list.
+        if (until != null || _followRepository.followingPubkeys.isEmpty) {
+          rethrow;
+        }
+        Log.warning(
+          'VideoFeedBloc: badge holder videos unavailable, showing follows',
+          name: 'VideoFeedBloc',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _cachedBadgeAuthors = const [];
+        _hasBadgeAuthors = false;
+      }
+    }
+    _badgeVideoPager = null;
+    return _videosRepository.getHomeFeedVideos(
+      authors: _followRepository.followingPubkeys,
+      userPubkey: _userPubkey,
+      until: until,
+    );
+  }
+
+  /// Subscribed badge holders, falling back only when direct follows exist.
+  /// Without direct follows, preserve failures so the feed offers a retry.
+  Future<List<String>> _loadBadgeAuthors() async {
+    try {
+      return (await _badgeAuthors?.call())?.toList() ?? const <String>[];
+    } catch (error, stackTrace) {
+      if (_followRepository.followingPubkeys.isEmpty) rethrow;
+      Log.warning(
+        'VideoFeedBloc: badge subscriptions unavailable, showing follows',
+        name: 'VideoFeedBloc',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const <String>[];
+    }
+  }
 
   void _scheduleNostrEnrichment({
     required VideoFeedSource source,
