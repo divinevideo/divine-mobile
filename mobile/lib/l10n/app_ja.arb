@@ -3432,6 +3432,16 @@
     "newMessageFindPeople": "人を探す",
     "newMessageNoContacts": "連絡先が見つからなかった。\n人をフォローするとここに出るよ。",
     "newMessageNoUsersFound": "ユーザーが見つからなかった",
+    "newMessageNewGroup": "新しいグループ",
+    "newMessageStartChat": "チャットを開始",
+    "newMessageGroupFull": "{count, plural, other{あなたを含めて {count} 人が上限です。}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "アカウントは利用できないよ",
     "userNotAvailableBody": "このアカウントは今は利用できないよ。",
     "blossomValidServerUrl": "有効なサーバー URL を入力してね (例: https://blossom.band)",

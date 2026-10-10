@@ -7859,6 +7859,23 @@ class AppLocalizationsNl extends AppLocalizations {
   String get newMessageNoUsersFound => 'Geen gebruikers gevonden';
 
   @override
+  String get newMessageNewGroup => 'Nieuwe groep';
+
+  @override
+  String get newMessageStartChat => 'Chat starten';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Dat is het maximum: $count mensen, jij meegerekend.',
+      one: 'Dat is het maximum: $count persoon, jij meegerekend.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Account niet beschikbaar';
 
   @override

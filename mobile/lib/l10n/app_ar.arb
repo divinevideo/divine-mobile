@@ -3432,6 +3432,16 @@
     "newMessageFindPeople": "ابحث عن أشخاص",
     "newMessageNoContacts": "لا جهات اتصال.\nتابع الناس لتراهم هنا.",
     "newMessageNoUsersFound": "لم يُعثر على مستخدمين",
+    "newMessageNewGroup": "مجموعة جديدة",
+    "newMessageStartChat": "بدء المحادثة",
+    "newMessageGroupFull": "{count, plural, zero{هذا هو الحد الأقصى: {count} شخص، بمن فيهم أنت.} one{هذا هو الحد الأقصى: شخص واحد، وهو أنت.} two{هذا هو الحد الأقصى: شخصان، أحدهما أنت.} few{هذا هو الحد الأقصى: {count} أشخاص، بمن فيهم أنت.} many{هذا هو الحد الأقصى: {count} شخصًا، بمن فيهم أنت.} other{هذا هو الحد الأقصى: {count} شخص، بمن فيهم أنت.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "الحساب غير متاح",
     "userNotAvailableBody": "هذا الحساب غير متاح في الوقت الحالي.",
     "blossomValidServerUrl": "أدخل رابط خادم صالحًا (مثال: https://blossom.band)",

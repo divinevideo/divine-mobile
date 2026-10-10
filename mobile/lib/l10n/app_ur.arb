@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "لوگ تلاش کریں",
   "newMessageNoContacts": "کوئی رابطہ نہیں ملا۔\nلوگوں کو یہاں دیکھنے کے لیے انہیں فالو کریں۔",
   "newMessageNoUsersFound": "کوئی صارف نہیں ملا",
+  "newMessageNewGroup": "نیا گروپ",
+  "newMessageStartChat": "چیٹ شروع کریں",
+  "newMessageGroupFull": "{count, plural, one{یہی حد ہے: آپ سمیت {count} شخص۔} other{یہی حد ہے: آپ سمیت {count} لوگ۔}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "اکاؤنٹ دستیاب نہیں",
   "userNotAvailableBody": "یہ اکاؤنٹ ابھی دستیاب نہیں ہے۔",
   "classicVinersTitle": "OG Viners",

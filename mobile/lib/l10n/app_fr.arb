@@ -3432,6 +3432,16 @@
     "newMessageFindPeople": "Trouver des gens",
     "newMessageNoContacts": "Aucun contact trouvé.\nSuis des gens pour les voir ici.",
     "newMessageNoUsersFound": "Aucun utilisateur trouvé",
+    "newMessageNewGroup": "Nouveau groupe",
+    "newMessageStartChat": "Démarrer la conversation",
+    "newMessageGroupFull": "{count, plural, one{C'est le maximum : {count} personne, y compris toi.} many{C'est le maximum : {count} personnes, y compris toi.} other{C'est le maximum : {count} personnes, y compris toi.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Compte indisponible",
     "userNotAvailableBody": "Ce compte n'est pas disponible pour le moment.",
     "blossomValidServerUrl": "Entre une URL de serveur valide (ex. : https://blossom.band)",

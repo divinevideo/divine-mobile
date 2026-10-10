@@ -7879,6 +7879,23 @@ class AppLocalizationsFil extends AppLocalizations {
   String get newMessageNoUsersFound => 'Walang nakitang user';
 
   @override
+  String get newMessageNewGroup => 'Bagong group';
+
+  @override
+  String get newMessageStartChat => 'Simulan ang chat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hanggang diyan lang: $count tao, kasama ka.',
+      one: 'Hanggang diyan lang: $count tao, kasama ka.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Hindi available ang account';
 
   @override

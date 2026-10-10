@@ -80,6 +80,12 @@ enum FeatureFlag {
     'Show the View and Share confirmation to its assigned group. Turn off '
         'while checking that both identical groups measure the same.',
     audience: FeatureFlagAudience.internal,
+  ),
+  groupMessages(
+    'Group Messages',
+    'Start a message with several people from the New message sheet. '
+        'Stays off until receiving a group works too (#7338).',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(

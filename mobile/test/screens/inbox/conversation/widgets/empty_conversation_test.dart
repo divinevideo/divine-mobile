@@ -5,6 +5,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/empty_conversation.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -317,6 +318,124 @@ void main() {
           });
         }
       }
+    });
+
+    // A group thread is titled for the room, and `pubkey` is then whichever
+    // member sorted first — so the card must not put that member's face,
+    // NIP-05 or profile link under the room's name.
+    group('group conversations', () {
+      const firstMember =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const firstMemberNip05 = 'first@example.com';
+
+      Finder groupAvatarFinder() => find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.users,
+        description: 'group avatar',
+      );
+
+      Future<void> pumpCard(WidgetTester tester, EmptyConversation card) {
+        return tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: card),
+          ),
+        );
+      }
+
+      testWidgets('shows the group avatar under the room name', (
+        tester,
+      ) async {
+        await pumpCard(
+          tester,
+          const EmptyConversation(
+            displayName: 'Weekend trip',
+            pubkey: firstMember,
+            moderation: ModerationPresentation.ordinary,
+            isGroup: true,
+          ),
+        );
+
+        expect(
+          find.descendant(
+            of: find.byType(UserAvatar),
+            matching: groupAvatarFinder(),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Weekend trip'), findsOneWidget);
+      });
+
+      testWidgets('keeps the group avatar when the first member is the '
+          'moderation account', (tester) async {
+        await pumpCard(
+          tester,
+          const EmptyConversation(
+            displayName: 'Weekend trip',
+            pubkey: kModerationPubkeyHex,
+            // What a one-to-one with this key gets the wordmark for.
+            moderation: ModerationPresentation.official,
+            isGroup: true,
+          ),
+        );
+
+        expect(groupAvatarFinder(), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.logo,
+          ),
+          findsNothing,
+        );
+      });
+
+      // The conversation view threads the first counterparty's details for
+      // every thread, so leaving them off a room's card is the card's job.
+      testWidgets('shows nothing of a single member, even when handed their '
+          'details', (tester) async {
+        await pumpCard(
+          tester,
+          EmptyConversation(
+            displayName: 'Weekend trip',
+            pubkey: firstMember,
+            moderation: ModerationPresentation.ordinary,
+            isGroup: true,
+            imageUrl: 'https://example.com/first-member.jpg',
+            nip05: firstMemberNip05,
+            onViewProfile: () {},
+          ),
+        );
+
+        expect(groupAvatarFinder(), findsOneWidget);
+        expect(find.text(firstMemberNip05), findsNothing);
+        expect(
+          find.text(l10n.inboxConversationViewProfileButton),
+          findsNothing,
+        );
+        // Their photo would load through this.
+        expect(find.byType(VineCachedImage), findsNothing);
+      });
+
+      testWidgets('a one-to-one card shows the NIP-05 and profile link it is '
+          'handed', (tester) async {
+        await pumpCard(
+          tester,
+          EmptyConversation(
+            displayName: 'Bob',
+            pubkey: firstMember,
+            moderation: ModerationPresentation.ordinary,
+            nip05: firstMemberNip05,
+            onViewProfile: () {},
+          ),
+        );
+
+        expect(groupAvatarFinder(), findsNothing);
+        expect(find.text(firstMemberNip05), findsOneWidget);
+        expect(
+          find.text(l10n.inboxConversationViewProfileButton),
+          findsOneWidget,
+        );
+      });
     });
   });
 }

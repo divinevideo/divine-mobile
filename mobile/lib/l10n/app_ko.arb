@@ -2978,6 +2978,16 @@
     "newMessageFindPeople": "사람 찾기",
     "newMessageNoContacts": "연락처가 없어요.\n사람들을 팔로우하면 여기서 볼 수 있어요.",
     "newMessageNoUsersFound": "사용자를 찾지 못했어요",
+    "newMessageNewGroup": "새 그룹",
+    "newMessageStartChat": "대화 시작",
+    "newMessageGroupFull": "{count, plural, other{나를 포함해 최대 {count}명까지예요.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "계정을 사용할 수 없어요",
     "userNotAvailableBody": "이 계정은 지금 사용할 수 없어요.",
     "blossomValidServerUrl": "올바른 서버 URL을 입력해주세요 (예: https://blossom.band)",

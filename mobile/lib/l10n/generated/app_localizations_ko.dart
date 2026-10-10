@@ -7443,6 +7443,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newMessageNoUsersFound => '사용자를 찾지 못했어요';
 
   @override
+  String get newMessageNewGroup => '새 그룹';
+
+  @override
+  String get newMessageStartChat => '대화 시작';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '나를 포함해 최대 $count명까지예요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => '계정을 사용할 수 없어요';
 
   @override

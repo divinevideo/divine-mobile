@@ -7744,6 +7744,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get newMessageNoUsersFound => 'Pengguna tidak ditemukan';
 
   @override
+  String get newMessageNewGroup => 'Grup baru';
+
+  @override
+  String get newMessageStartChat => 'Mulai chat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Itu batasnya: $count orang, termasuk kamu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Akun tidak tersedia';
 
   @override

@@ -7648,6 +7648,23 @@ class AppLocalizationsAm extends AppLocalizations {
   String get newMessageNoUsersFound => 'ምንም ተጠቃሚዎች አልተገኙም';
 
   @override
+  String get newMessageNewGroup => 'አዲስ ቡድን';
+
+  @override
+  String get newMessageStartChat => 'ውይይት ይጀምሩ';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ $count ሰዎች።',
+      one: 'ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ $count ሰው።',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'መለያው አይገኝም';
 
   @override

@@ -7355,6 +7355,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newMessageNoUsersFound => '没有找到用户';
 
   @override
+  String get newMessageNewGroup => '新建群聊';
+
+  @override
+  String get newMessageStartChat => '开始聊天';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已达上限：算上你最多 $count 人。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => '账号不可用';
 
   @override

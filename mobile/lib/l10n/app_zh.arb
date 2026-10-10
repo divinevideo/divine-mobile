@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "找人",
   "newMessageNoContacts": "没有找到联系人。\n关注一些人，他们就会出现在这里。",
   "newMessageNoUsersFound": "没有找到用户",
+  "newMessageNewGroup": "新建群聊",
+  "newMessageStartChat": "开始聊天",
+  "newMessageGroupFull": "{count, plural, other{已达上限：算上你最多 {count} 人。}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "账号不可用",
   "userNotAvailableBody": "该账号暂时不可用。",
   "classicVinersTitle": "OG Viners",

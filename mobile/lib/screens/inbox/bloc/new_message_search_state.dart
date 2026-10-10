@@ -3,6 +3,20 @@
 
 part of 'new_message_search_bloc.dart';
 
+/// The most people one group conversation holds, the sender included.
+///
+/// NIP-17: "Group chats with more than 10 participants should find a more
+/// suitable messaging scheme" — every message costs one gift wrap per member.
+const int dmGroupMaxParticipants = 10;
+
+/// The most recipients the picker lets one group hold: every member of a
+/// full group except the sender.
+const int dmGroupMaxRecipients = dmGroupMaxParticipants - 1;
+
+/// The fewest recipients that make a group. One recipient is a one-to-one
+/// conversation, which the picker starts with a single tap instead.
+const int dmGroupMinRecipients = 2;
+
 /// Status of the new message search screen.
 enum NewMessageSearchStatus {
   /// Contacts are being loaded from the follow list.
@@ -31,6 +45,8 @@ final class NewMessageSearchState extends Equatable {
     this.networkResults = const [],
     this.vanishedPubkeys = const {},
     this.peerLabels,
+    this.isGroupMode = false,
+    this.selectedRecipients = const [],
   });
 
   /// Current status of the search flow.
@@ -66,8 +82,30 @@ final class NewMessageSearchState extends Equatable {
   /// match on before it arrives.
   final DmPeerLabels? peerLabels;
 
+  /// Whether the picker is choosing several people for a group rather than
+  /// one person for a one-to-one conversation.
+  final bool isGroupMode;
+
+  /// The people picked for the group, in the order they were picked and
+  /// unique by pubkey. Always empty outside [isGroupMode].
+  final List<UserProfile> selectedRecipients;
+
   /// Whether a search query is active.
   bool get isSearchActive => query.isNotEmpty;
+
+  /// Whether enough people are picked to start a group.
+  bool get canStartGroup => selectedRecipients.length >= dmGroupMinRecipients;
+
+  /// Whether the group has no room for another recipient.
+  bool get isGroupFull => selectedRecipients.length >= dmGroupMaxRecipients;
+
+  /// Whether [pubkey] is one of [selectedRecipients].
+  ///
+  /// Case-insensitive, like every other identity check in this picker: a
+  /// pubkey that reaches Divine from another client may be upper-case hex.
+  bool isSelected(String pubkey) => selectedRecipients.any(
+    (recipient) => pubkeysEqual(recipient.pubkey, pubkey),
+  );
 
   NewMessageSearchState copyWith({
     NewMessageSearchStatus? status,
@@ -77,6 +115,8 @@ final class NewMessageSearchState extends Equatable {
     List<UserProfile>? networkResults,
     Set<String>? vanishedPubkeys,
     DmPeerLabels? peerLabels,
+    bool? isGroupMode,
+    List<UserProfile>? selectedRecipients,
   }) {
     return NewMessageSearchState(
       status: status ?? this.status,
@@ -86,6 +126,8 @@ final class NewMessageSearchState extends Equatable {
       networkResults: networkResults ?? this.networkResults,
       vanishedPubkeys: vanishedPubkeys ?? this.vanishedPubkeys,
       peerLabels: peerLabels ?? this.peerLabels,
+      isGroupMode: isGroupMode ?? this.isGroupMode,
+      selectedRecipients: selectedRecipients ?? this.selectedRecipients,
     );
   }
 
@@ -98,5 +140,7 @@ final class NewMessageSearchState extends Equatable {
     networkResults,
     vanishedPubkeys,
     peerLabels,
+    isGroupMode,
+    selectedRecipients,
   ];
 }

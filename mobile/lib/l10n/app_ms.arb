@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "Cari orang",
   "newMessageNoContacts": "Tiada kenalan ditemui.\nIkut orang untuk melihat mereka di sini.",
   "newMessageNoUsersFound": "Tiada pengguna ditemui",
+  "newMessageNewGroup": "Kumpulan baharu",
+  "newMessageStartChat": "Mulakan sembang",
+  "newMessageGroupFull": "{count, plural, other{Itu hadnya: {count} orang, termasuk anda.}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "Akaun tidak tersedia",
   "userNotAvailableBody": "Akaun ini tidak tersedia sekarang.",
   "classicVinersTitle": "OG Viners",

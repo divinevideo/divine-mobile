@@ -5131,6 +5131,24 @@
   "newMessageFindPeople": "Find people",
   "newMessageNoContacts": "No contacts found.\nFollow people to see them here.",
   "newMessageNoUsersFound": "No users found",
+  "newMessageNewGroup": "New group",
+  "@newMessageNewGroup": {
+    "description": "Row in the New message sheet that switches the people picker to multi-select, and the sheet's title while it is in that mode. A group is a direct-message conversation with two or more other people."
+  },
+  "newMessageStartChat": "Start chat",
+  "@newMessageStartChat": {
+    "description": "Primary button pinned at the bottom of the New message sheet in group mode. Opens the conversation with everyone selected; disabled until two people are picked."
+  },
+  "newMessageGroupFull": "{count, plural, one{That's the max: {count} person, you included.} other{That's the max: {count} people, you included.}}",
+  "@newMessageGroupFull": {
+    "description": "Inline notice under the selected-people chips in the New message sheet once the group is full. {count} is the size limit of a group, counting the person creating it. The app passes a fixed limit (10 today), so only the arm for that number is ever shown.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
   "userNotAvailableTitle": "Account not available",
   "userNotAvailableBody": "This account isn't available right now.",
   "classicVinersTitle": "OG Viners",

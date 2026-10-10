@@ -8009,6 +8009,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get newMessageNoUsersFound => 'Niciun utilizator găsit';
 
   @override
+  String get newMessageNewGroup => 'Grup nou';
+
+  @override
+  String get newMessageStartChat => 'Începe conversația';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Acesta e maximul: $count de persoane, cu tot cu tine.',
+      few: 'Acesta e maximul: $count persoane, cu tot cu tine.',
+      one: 'Acesta e maximul: $count persoană, cu tot cu tine.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Cont indisponibil';
 
   @override

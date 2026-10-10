@@ -3432,6 +3432,16 @@
     "newMessageFindPeople": "Hitta personer",
     "newMessageNoContacts": "Inga kontakter hittades.\nFölj personer för att se dem här.",
     "newMessageNoUsersFound": "Inga användare hittades",
+    "newMessageNewGroup": "Ny grupp",
+    "newMessageStartChat": "Starta chatt",
+    "newMessageGroupFull": "{count, plural, one{Det är max: {count} person, inklusive dig.} other{Det är max: {count} personer, inklusive dig.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Konto ej tillgängligt",
     "userNotAvailableBody": "Det här kontot är inte tillgängligt just nu.",
     "blossomValidServerUrl": "Ange en giltig server-URL (t.ex. https://blossom.band)",

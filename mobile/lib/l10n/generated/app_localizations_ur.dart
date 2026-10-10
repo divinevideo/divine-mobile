@@ -7829,6 +7829,23 @@ class AppLocalizationsUr extends AppLocalizations {
   String get newMessageNoUsersFound => 'کوئی صارف نہیں ملا';
 
   @override
+  String get newMessageNewGroup => 'نیا گروپ';
+
+  @override
+  String get newMessageStartChat => 'چیٹ شروع کریں';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'یہی حد ہے: آپ سمیت $count لوگ۔',
+      one: 'یہی حد ہے: آپ سمیت $count شخص۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'اکاؤنٹ دستیاب نہیں';
 
   @override

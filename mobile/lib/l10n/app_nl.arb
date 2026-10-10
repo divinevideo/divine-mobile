@@ -3432,6 +3432,16 @@
     "newMessageFindPeople": "Mensen zoeken",
     "newMessageNoContacts": "Geen contacten gevonden.\nVolg mensen om ze hier te zien.",
     "newMessageNoUsersFound": "Geen gebruikers gevonden",
+    "newMessageNewGroup": "Nieuwe groep",
+    "newMessageStartChat": "Chat starten",
+    "newMessageGroupFull": "{count, plural, one{Dat is het maximum: {count} persoon, jij meegerekend.} other{Dat is het maximum: {count} mensen, jij meegerekend.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Account niet beschikbaar",
     "userNotAvailableBody": "Dit account is op dit moment niet beschikbaar.",
     "blossomValidServerUrl": "Voer een geldige server-URL in (bijv. https://blossom.band)",

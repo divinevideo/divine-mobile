@@ -260,6 +260,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final blockedReactors = blocklistRepository.dmHiddenPubkeys;
 
     final otherPubkey = _otherPubkey;
+    // A group is titled for the room, and `otherPubkey` is then whichever
+    // member sorted first — so the title, the line under it and the empty
+    // state must not describe or link to that one member. (`_onOptions`
+    // documents why its sheet still may.)
+    final isGroup = widget.participantPubkeys.length > 1;
     // A thread reached from the Blocked chip is readable but not writable:
     // the block stays in force, so the composer and the reaction affordance
     // both go. Reading and screenshotting is the point (#7025); replying
@@ -274,7 +279,8 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
         threadWritability == DmThreadWritability.closedRetired;
     final isUnresolved = threadWritability == DmThreadWritability.unresolved;
 
-    // The other participant's identity, for the app bar and the empty state.
+    // The other participant's identity, or the room's for a group, for the
+    // app bar and the empty state.
     final UserProfile? profile;
     final bool isResolving;
     final bool isDeleted;
@@ -316,7 +322,6 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
         profile: profile,
         isResolving: isResolving,
       );
-      final isGroup = widget.participantPubkeys.length > 1;
       conversationDisplayName = dmConversationDisplayTitle(
         context,
         participantPubkeys: [currentPubkey, ...widget.participantPubkeys],
@@ -332,53 +337,62 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       visualDisplayName = conversationDisplayName.isEmpty
           ? UserProfile.defaultDisplayNameFor(otherPubkey)
           : conversationDisplayName;
-      claimedNip05 = dmPeerHandle(
-        isVanished: isDeleted,
-        moderation: moderation,
-        handle: profile?.shortDisplayNip05,
-      );
-      final verificationStatus = claimedNip05 != null && claimedNip05.isNotEmpty
-          ? ref
-                .watch(nip05VerificationProvider(otherPubkey))
-                .whenOrNull(data: (status) => status)
-          : null;
-      // Counts live in the `profile_statistics` store, not on the profile.
-      // `UserProfile.restFollowerCount` reads `rawData['follower_count']`,
-      // which only the people-search shape ever writes and which is never
-      // persisted to the cache this screen reads — so it was permanently
-      // null here and the social-proof fallback never fired (#8403). The
-      // repository routes `GET /api/users/{pubkey}`'s `social` block into
-      // `profile_statistics` instead. A vanished account takes the branch
-      // below and never reaches the resolver; `fetchFreshProfile`
-      // short-circuits for it in any case.
-      final followerCount = ref
-          .watch(userProfileStatsReactiveProvider(otherPubkey))
-          .asData
-          ?.value
-          ?.followers;
+      if (isGroup) {
+        // No identity line under a room's name, and none of the per-member
+        // lookups that feed one. The profile above is still needed: an
+        // untitled room is named for its first member.
+        claimedNip05 = null;
+        handle = '';
+      } else {
+        claimedNip05 = dmPeerHandle(
+          isVanished: isDeleted,
+          moderation: moderation,
+          handle: profile?.shortDisplayNip05,
+        );
+        final verificationStatus =
+            claimedNip05 != null && claimedNip05.isNotEmpty
+            ? ref
+                  .watch(nip05VerificationProvider(otherPubkey))
+                  .whenOrNull(data: (status) => status)
+            : null;
+        // Counts live in the `profile_statistics` store, not on the profile.
+        // `UserProfile.restFollowerCount` reads `rawData['follower_count']`,
+        // which only the people-search shape ever writes and which is never
+        // persisted to the cache this screen reads — so it was permanently
+        // null here and the social-proof fallback never fired (#8403). The
+        // repository routes `GET /api/users/{pubkey}`'s `social` block into
+        // `profile_statistics` instead. A vanished account takes the branch
+        // below and never reaches the resolver; `fetchFreshProfile`
+        // short-circuits for it in any case.
+        final followerCount = ref
+            .watch(userProfileStatsReactiveProvider(otherPubkey))
+            .asData
+            ?.value
+            ?.followers;
 
-      // Prefer the profile's NIP-05 / divine handle when set, otherwise the
-      // follow relationship — which tells the viewer which of several
-      // same-named people they are messaging, as a truncated npub never did.
-      // A former moderation key gets neither: social proof would vouch for a
-      // key someone outside the team may hold (#9963).
-      handle = isDeleted
-          ? context.l10n.inboxConversationDeletedAccountSubtitle
-          : moderation == ModerationPresentation.former
-          ? ''
-          : resolveUserIdentifierLine(
-                  l10n: context.l10n,
-                  locale: Localizations.localeOf(context).toLanguageTag(),
-                  handle: claimedNip05,
-                  verificationStatus: verificationStatus,
-                  relationship:
-                      ref
-                          .watch(followRelationshipProvider(otherPubkey))
-                          .value ??
-                      FollowRelationship.none,
-                  followerCount: followerCount,
-                ) ??
-                '';
+        // Prefer the profile's NIP-05 / divine handle when set, otherwise the
+        // follow relationship — which tells the viewer which of several
+        // same-named people they are messaging, as a truncated npub never
+        // did. A former moderation key gets neither: social proof would vouch
+        // for a key someone outside the team may hold (#9963).
+        handle = isDeleted
+            ? context.l10n.inboxConversationDeletedAccountSubtitle
+            : moderation == ModerationPresentation.former
+            ? ''
+            : resolveUserIdentifierLine(
+                    l10n: context.l10n,
+                    locale: Localizations.localeOf(context).toLanguageTag(),
+                    handle: claimedNip05,
+                    verificationStatus: verificationStatus,
+                    relationship:
+                        ref
+                            .watch(followRelationshipProvider(otherPubkey))
+                            .value ??
+                        FollowRelationship.none,
+                    followerCount: followerCount,
+                  ) ??
+                  '';
+      }
     }
 
     return MultiBlocProvider(
@@ -500,9 +514,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                 //
                 // `Listener` catches pointer-downs without entering the
                 // gesture arena, so descendant tap/long-press recognizers
-                // (MessageBubble.onLongPress, ConversationAppBar's three
-                // buttons) still resolve normally afterwards. Matches the
-                // pattern shipped in `comments_list.dart`.
+                // (MessageBubble.onLongPress, ConversationAppBar's buttons)
+                // still resolve normally afterwards. Matches the pattern
+                // shipped in `comments_list.dart`.
                 Expanded(
                   child: Listener(
                     behavior: HitTestBehavior.translucent,
@@ -516,7 +530,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                           loadingDisplayName: visualDisplayName,
                           handle: handle,
                           onBack: () => context.pop(),
-                          onTitleTap: otherPubkey.isNotEmpty
+                          onTitleTap: otherPubkey.isNotEmpty && !isGroup
                               ? () => context.push(
                                   '${OtherProfileScreen.path}/${NostrKeyUtils.encodePubKey(otherPubkey)}',
                                 )
@@ -548,6 +562,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   moderation: moderation,
                                   isResolving: isIdentityResolving,
                                   isUnresolved: isUnresolved,
+                                  isGroup: isGroup,
                                   reactionsEnabled:
                                       threadWritability ==
                                       DmThreadWritability.writable,
@@ -1279,6 +1294,7 @@ class _ConversationContent extends StatelessWidget {
     required this.moderation,
     required this.isResolving,
     required this.isUnresolved,
+    required this.isGroup,
     required this.reactionsEnabled,
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
@@ -1306,6 +1322,11 @@ class _ConversationContent extends StatelessWidget {
   /// the empty pubkey — [_UnresolvedThreadNotice] in the composer slot is the
   /// only explanation shown.
   final bool isUnresolved;
+
+  /// Whether the thread is a group, whose empty state is the room's card:
+  /// the first member's [imageUrl], [nip05] and [onViewProfile] are not shown
+  /// on it.
+  final bool isGroup;
   final bool reactionsEnabled;
 
   /// Whether the viewer may retract something already delivered here.
@@ -1354,6 +1375,7 @@ class _ConversationContent extends StatelessWidget {
                           imageUrl: imageUrl,
                           nip05: nip05,
                           onViewProfile: onViewProfile,
+                          isGroup: isGroup,
                           isIdentityResolving: isResolving,
                           mayBeIncomplete: context
                               .select<DmRestoreStatusCubit, bool>(

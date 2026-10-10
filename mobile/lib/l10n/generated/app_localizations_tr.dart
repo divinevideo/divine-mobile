@@ -7749,6 +7749,23 @@ class AppLocalizationsTr extends AppLocalizations {
   String get newMessageNoUsersFound => 'Kullanıcı bulunamadı';
 
   @override
+  String get newMessageNewGroup => 'Yeni grup';
+
+  @override
+  String get newMessageStartChat => 'Sohbeti başlat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sınır bu: sen dahil $count kişi.',
+      one: 'Sınır bu: sen dahil $count kişi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Hesap kullanılamıyor';
 
   @override

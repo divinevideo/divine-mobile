@@ -7831,6 +7831,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String get newMessageNoUsersFound => 'Tiada pengguna ditemui';
 
   @override
+  String get newMessageNewGroup => 'Kumpulan baharu';
+
+  @override
+  String get newMessageStartChat => 'Mulakan sembang';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Itu hadnya: $count orang, termasuk anda.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Akaun tidak tersedia';
 
   @override

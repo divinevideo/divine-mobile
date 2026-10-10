@@ -1,6 +1,6 @@
 // ABOUTME: Empty conversation state showing participant profile card.
 // ABOUTME: Matches Figma "new message" component with avatar, name, NIP-05,
-// ABOUTME: and "View profile" button.
+// ABOUTME: and "View profile" button. A group shows the room's card instead.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,7 +12,8 @@ import 'package:openvine/widgets/user_avatar.dart';
 /// Profile card shown when a conversation has no messages yet.
 ///
 /// Displays a large avatar, display name, optional NIP-05 identifier,
-/// and a "View profile" button.
+/// and a "View profile" button. A group thread ([isGroup]) gets the room's
+/// card instead: the group avatar over the room's name.
 class EmptyConversation extends StatelessWidget {
   const EmptyConversation({
     required this.displayName,
@@ -21,6 +22,7 @@ class EmptyConversation extends StatelessWidget {
     this.imageUrl,
     this.nip05,
     this.onViewProfile,
+    this.isGroup = false,
     this.mayBeIncomplete = false,
     this.isIdentityResolving = false,
     super.key,
@@ -36,6 +38,14 @@ class EmptyConversation extends StatelessWidget {
   final String? imageUrl;
   final String? nip05;
   final VoidCallback? onViewProfile;
+
+  /// Whether the thread is a group, which is named for the room.
+  ///
+  /// [pubkey] is then whichever member sorted first, so the card describes
+  /// the room instead of that one member: it shows the group avatar the inbox
+  /// row uses, and [imageUrl], [nip05] and [onViewProfile] are not shown even
+  /// when passed.
+  final bool isGroup;
 
   /// Whether DM history recovery might still owe this thread messages.
   ///
@@ -72,7 +82,15 @@ class EmptyConversation extends StatelessWidget {
                 name: displayName,
                 placeholderSeed: pubkey,
                 size: 96,
-                contentOverride: avatar.contentOverride,
+                // Same artwork and precedence as the inbox row, so the card
+                // matches the row it was opened from. An override also stands
+                // in for the picture, so the first member's is never loaded.
+                contentOverride: isGroup
+                    ? DivineIcon(
+                        icon: DivineIconName.users,
+                        color: context.vineColors.primaryText,
+                      )
+                    : avatar.contentOverride,
               ),
             ),
           ),
@@ -91,7 +109,7 @@ class EmptyConversation extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (nip05 != null && nip05!.isNotEmpty) ...[
+          if (!isGroup && nip05 != null && nip05!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               nip05!,
@@ -103,9 +121,11 @@ class EmptyConversation extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          const SizedBox(height: 16),
-          // View profile button
-          _ViewProfileButton(onTap: onViewProfile),
+          if (!isGroup) ...[
+            const SizedBox(height: 16),
+            // View profile button
+            _ViewProfileButton(onTap: onViewProfile),
+          ],
           if (mayBeIncomplete) ...[
             const SizedBox(height: 24),
             Text(
