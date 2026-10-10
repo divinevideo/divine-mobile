@@ -39,6 +39,10 @@ final String _roomId = DmRepository.computeConversationId([
 
 const _sentAt = 1700000000;
 
+/// NIP-17's bound on a chat room (17.md:106), restated rather than read from
+/// the repository so a changed production constant fails these tests.
+const _roomCap = 10;
+
 /// Watchdog for a wrap the receive path never settles; nothing waits this
 /// long on a passing run.
 const _settleTimeout = Duration(seconds: 20);
@@ -429,6 +433,81 @@ void main() {
         final parentId = await storeParentIn('gone');
 
         await deliverReplyToAndExpectRoom(parentId);
+      });
+    });
+
+    group('that names as many people as the room cap allows', () {
+      /// [count] distinct pubkeys that are neither the user nor Alice.
+      List<String> others(int count) => [
+        for (var i = 0; i < count; i++)
+          getPublicKey((i + 5).toRadixString(16).padLeft(64, '0')),
+      ];
+
+      /// The room of [others] plus the user and Alice, so [others] is the
+      /// number of participants minus two.
+      String roomOf(List<String> others) =>
+          DmRepository.computeConversationId([_owner, _alice, ...others]);
+
+      test('is filed as a room at exactly the cap', () async {
+        final members = others(_roomCap - 2);
+        final rumor = message(author: _alice, pTags: [_owner, ...members]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        final stored = await conversations();
+        expect(stored.map((conversation) => conversation.id), [
+          roomOf(members),
+        ]);
+        expect(stored.single.isGroup, isTrue);
+        expect(
+          participantsOf(stored.single),
+          hasLength(_roomCap),
+        );
+        expect(await messageIdsIn(roomOf(members)), equals([rumor.id]));
+      });
+
+      test('stays in the one-to-one with its sender above the cap', () async {
+        final members = others(_roomCap - 1);
+        final rumor = message(author: _alice, pTags: [_owner, ...members]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        await expectOnlyTheOneToOneHolding(_alice, [rumor.id]);
+      });
+
+      test('is stored in an existing room above the cap', () async {
+        final members = others(_roomCap - 1);
+        final roomId = roomOf(members);
+        await conversationsDao.upsertConversation(
+          id: roomId,
+          participantPubkeys: jsonEncode([_owner, _alice, ...members]..sort()),
+          isGroup: true,
+          createdAt: _sentAt - 10,
+          ownerPubkey: _owner,
+          dmProtocol: 'nip17',
+        );
+        final rumor = message(author: _alice, pTags: [_owner, ...members]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        expect(await messageIdsIn(roomId), equals([rumor.id]));
+        expect(await conversations(), hasLength(1));
+      });
+
+      test('is filed as a room above the cap when the user wrote it', () async {
+        final members = [
+          _alice,
+          ...others(_roomCap - 1),
+        ];
+        final rumor = message(author: _owner, pTags: members);
+        final roomId = DmRepository.computeConversationId([_owner, ...members]);
+
+        await deliver(rumor, authorSecret: _ownerSecret);
+
+        final stored = await conversations();
+        expect(stored.map((conversation) => conversation.id), [roomId]);
+        expect(stored.single.isGroup, isTrue);
+        expect(await messageIdsIn(roomId), equals([rumor.id]));
       });
     });
 

@@ -778,6 +778,13 @@ class DmRepository {
   /// ids, so a flood of unresolvable retractions must not be able to fill it.
   static const int maxLoggedDeferredDeletions = 64;
 
+  /// Most participants, sender included, a received rumor may name and still be
+  /// filed as a room. NIP-17 bounds a chat room at 10 (17.md:106); beyond it a
+  /// rumor costs the stored participant list, the reply fan-out and one new
+  /// request row per set a hostile sender varies, so it stays in the 1:1 with
+  /// its sender (#7338).
+  static const int maxRoomParticipants = 10;
+
   /// Durable queue handle for one recipient of a group send.
   ///
   /// A group send wraps ONE shared rumor for every recipient (#8188), so the
@@ -9758,12 +9765,13 @@ class DmRepository {
   /// of the room on this install (#8271), and for a peer's rumor unless one of
   /// these keeps it in the canonical 1:1 with the sender:
   ///
+  /// * it names more than [maxRoomParticipants], sender included.
   /// * its p tags omit the current user, so it is not a room we are in.
   /// * it is a mention: [replyToId] is a stored message in a strictly smaller
   ///   conversation that the rumor fully contains, the NIP-10 reply-mention
   ///   shape that made clients widen 1:1s (#2740).
   ///
-  /// A room this install already holds wins before either is asked. A client
+  /// A room this install already holds wins before any is asked. A client
   /// that widens a 1:1 with extra p tags and no reply looks exactly like a
   /// room and is filed as one (#7338). Waiting for a row to exist made a
   /// room's first message collapse into a 1:1 with its speaker, so where it
@@ -9788,6 +9796,10 @@ class DmRepository {
       ownerPubkey: _ownerPubkey,
     );
     if (existingFull != null) return extractedParticipants;
+
+    if (extractedParticipants.length > maxRoomParticipants) {
+      return canonical1to1;
+    }
 
     final namesCurrentUser = extractedParticipants.any(
       (pubkey) => pubkeysEqual(pubkey, _userPubkey),
