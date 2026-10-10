@@ -376,6 +376,58 @@ void main() {
 
         await expectOnlyTheOneToOneHolding(_alice, [first.id, mention.id]);
       });
+
+      test('stays in the room it mentions a fourth person from', () async {
+        final first = message(author: _alice, pTags: [_owner, _bob]);
+        await deliver(first, authorSecret: _aliceSecret);
+        final mention = message(
+          author: _bob,
+          pTags: [_owner, _alice, _carol],
+          content: 'cc carol',
+          createdAt: _sentAt + 1,
+          extraTags: [
+            ['e', first.id],
+          ],
+        );
+
+        await deliver(mention, authorSecret: _bobSecret);
+
+        await expectOnlyTheRoomHolding([first.id, mention.id]);
+      });
+
+      test('stays out of a one-to-one its sender is not part of', () async {
+        final first = message(
+          author: _alice,
+          pTags: [_owner],
+          content: 'just the two of us',
+        );
+        await deliver(first, authorSecret: _aliceSecret);
+        final fromOutside = message(
+          author: _bob,
+          pTags: [_owner, _alice],
+          content: 'answering a thread I am not in',
+          createdAt: _sentAt + 1,
+          extraTags: [
+            ['e', first.id],
+          ],
+        );
+
+        await deliver(fromOutside, authorSecret: _bobSecret);
+
+        expect(
+          await messageIdsIn(
+            DmRepository.computeConversationId([_owner, _alice]),
+          ),
+          equals([first.id]),
+          reason: 'only the two people in a one-to-one can write in it',
+        );
+        expect(
+          await messageIdsIn(
+            DmRepository.computeConversationId([_owner, _bob]),
+          ),
+          equals([fromOutside.id]),
+        );
+      });
     });
 
     group('that replies to a message in a conversation it cannot read', () {

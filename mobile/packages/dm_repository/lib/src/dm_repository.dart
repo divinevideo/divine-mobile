@@ -9769,9 +9769,12 @@ class DmRepository {
   /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
   ///   holding it could never be replied to.
   /// * its p tags omit the current user, so it is not a room we are in.
-  /// * it is a mention: [replyToId] is a stored message in a strictly smaller
-  ///   conversation that the rumor fully contains, the NIP-10 reply-mention
-  ///   shape that made clients widen 1:1s (#2740).
+  ///
+  /// A mention is filed under the conversation it answers instead: a reply
+  /// ([replyToId]) to a stored message in a strictly smaller conversation that
+  /// the rumor fully contains, the NIP-10 reply-mention shape that made
+  /// clients widen 1:1s (#2740). Only someone in that conversation can add to
+  /// it, so a mention from anyone else stays in the 1:1 with its sender.
   ///
   /// A room this install already holds wins before any is asked. A client
   /// that widens a 1:1 with extra p tags and no reply looks exactly like a
@@ -9818,16 +9821,25 @@ class DmRepository {
     );
     if (!namesCurrentUser) return canonical1to1;
 
-    if (replyToId != null &&
-        await _repliesIntoSmallerConversation(replyToId, room.toSet())) {
-      return canonical1to1;
+    if (replyToId != null) {
+      final answered = await _smallerConversationAnsweredBy(
+        replyToId,
+        room.toSet(),
+      );
+      if (answered != null) {
+        final senderIsMember = answered.any(
+          (pubkey) => pubkeysEqual(pubkey, senderPubkey),
+        );
+        return senderIsMember ? answered : canonical1to1;
+      }
     }
     return room;
   }
 
-  /// Whether [replyToId] is a stored message in a conversation that [room]
-  /// strictly widens, which makes a reply naming [room] a mention.
-  Future<bool> _repliesIntoSmallerConversation(
+  /// The participants of the conversation holding the stored message
+  /// [replyToId], when [room] strictly widens it, which makes a reply naming
+  /// [room] a mention. Null when the reply is not one.
+  Future<List<String>?> _smallerConversationAnsweredBy(
     String replyToId,
     Set<String> room,
   ) async {
@@ -9835,22 +9847,23 @@ class DmRepository {
       replyToId,
       ownerPubkey: _ownerPubkey,
     );
-    if (parent == null) return false;
+    if (parent == null) return null;
     final parentConversation = await _conversationsDao.getConversation(
       parent.conversationId,
       ownerPubkey: _ownerPubkey,
     );
-    if (parentConversation == null) return false;
+    if (parentConversation == null) return null;
     final Object? decoded;
     try {
       decoded = jsonDecode(parentConversation.participantPubkeys);
     } on FormatException {
-      return false;
+      return null;
     }
     if (decoded is! List || decoded.any((value) => value is! String)) {
-      return false;
+      return null;
     }
-    return isMentionOfWiderRoom(decoded.cast<String>().toSet(), room);
+    final answered = decoded.cast<String>();
+    return isMentionOfWiderRoom(answered.toSet(), room) ? answered : null;
   }
 
   /// Extracts Kind 15 file metadata from event tags.
