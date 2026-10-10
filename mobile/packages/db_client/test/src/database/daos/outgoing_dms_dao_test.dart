@@ -444,6 +444,75 @@ void main() {
         expect(await dao.markRecipientCancelled('missing'), isFalse);
       });
 
+      // A publish that was in flight when the sender stopped the delivery
+      // reports back afterwards, and the retry service terminalizes rows from
+      // a snapshot it read earlier. Neither may reopen the row.
+      for (final MapEntry(key: name, value: lateWrite)
+          in <String, Future<bool> Function(OutgoingDmsDao)>{
+            'a recipient-wrap status': (dao) => dao.markRecipientWrapStatus(
+              id: 'aaaa',
+              status: OutgoingWrapStatus.failed,
+              lastError: 'relay refused the wrap',
+            ),
+            'a self-wrap status': (dao) => dao.markSelfWrapStatus(
+              id: 'aaaa',
+              status: OutgoingWrapStatus.failed,
+              lastError: 'relay refused the wrap',
+            ),
+            'a policy block': (dao) => dao.markRecipientBlocked(
+              id: 'aaaa',
+              lastError: 'recipient retired',
+            ),
+          }.entries) {
+        test('a cancelled delivery is not reopened by $name written '
+            'afterwards', () async {
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+          expect(await dao.markRecipientCancelled('aaaa'), isTrue);
+
+          final written = await lateWrite(dao);
+
+          expect(written, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(
+            await dao.getRetryableForOwner(ownerPubkey: ownerA, maxRetries: 5),
+            isEmpty,
+          );
+        });
+      }
+
+      for (final status in [
+        OutgoingWrapStatus.sent,
+        OutgoingWrapStatus.blocked,
+      ]) {
+        test('a ${status.name} recipient wrap is not put on record as '
+            'stopped', () async {
+          // Only a delivery still in progress can be stopped. A member the
+          // wrap already reached, or a policy refusal, keeps what it says.
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: status,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+
+          final ok = await dao.markRecipientCancelled('aaaa');
+
+          expect(ok, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, status);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.failed);
+        });
+      }
+
       test('returns false when the row does not exist', () async {
         final ok = await dao.markRecipientWrapStatus(
           id: 'missing',
