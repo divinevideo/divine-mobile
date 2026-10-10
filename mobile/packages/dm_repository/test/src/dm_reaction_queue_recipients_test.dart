@@ -808,9 +808,9 @@ void main() {
       );
 
       group('and the reacted message is stored again', () {
-        /// The history sync files a group message under the 1:1 with its
-        /// sender when the group is not known locally (#7338); the rumor's
-        /// `p` tags still name the rest of the room.
+        /// An install that synced a group message before #7338 was fixed
+        /// still holds it under the 1:1 with its sender; the rumor's `p` tags
+        /// still name the rest of the room.
         Future<void> syncBackPeerMessage({required List<String> pTags}) async {
           final direct = await seedConversation([_owner, _peer]);
           await messagesDao.insertMessage(

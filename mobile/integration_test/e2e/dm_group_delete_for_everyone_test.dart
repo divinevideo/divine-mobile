@@ -374,8 +374,8 @@ void main() {
               3,
         );
 
-        // The reactor opens the room first, so it holds the group row and
-        // files the author's message under it rather than under a 1:1 (#7338).
+        // The reactor opens the room first, so it already holds the group row
+        // when the author's message arrives and files that message under it.
         final groupId = DmRepository.computeConversationId([pubA, pubB, pubC]);
         final opened = await reactor.repository.sendGroupMessage(
           recipientPubkeys: [author.pubkey, bystander.pubkey],
