@@ -5,7 +5,9 @@ import 'dart:io';
 import 'dart:ui' show Size;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart'
+    as model
+    show AspectRatio, EqualizerSettings;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
@@ -163,6 +165,53 @@ void main() {
       );
       expect(result.segments.last.startTime, const Duration(milliseconds: 500));
     });
+
+    test("plays each clip's equalizer, baked into a re-encoded clip", () async {
+      const equalizer = model.EqualizerSettings([
+        0,
+        -6,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      ]);
+      final result = await normalize([
+        clipFor('wide', landscape).copyWith(equalizer: equalizer),
+        clipFor('tall', vertical).copyWith(equalizer: equalizer),
+      ]);
+
+      final rendered = plugin.renders.single.videoSegments!.single;
+      expect(
+        rendered.equalizer?.bands.map((band) => band.gain),
+        [0, -6, 0, 4, 0, 0, 0, 0, 0, 0],
+      );
+      // Applied once: the re-encoded file already carries it.
+      expect(result.segments.first.equalizer, isNull);
+      expect(result.segments.last.equalizer, rendered.equalizer);
+    });
+
+    test(
+      "plays each clip's own equalizer when no clip is re-encoded",
+      () async {
+        final result = await normalize([
+          clipFor('a', vertical).copyWith(
+            equalizer: model.EqualizerSettings.none.withGain(3, 4),
+          ),
+          clipFor('b', vertical),
+        ]);
+
+        expect(plugin.renders, isEmpty);
+        expect(
+          result.segments.first.equalizer?.bands.map((band) => band.gain),
+          [0, 0, 0, 4, 0, 0, 0, 0, 0, 0],
+        );
+        expect(result.segments.last.equalizer, isNull);
+      },
+    );
 
     test('stops at the next clip when the export is cancelled', () async {
       // Neither clip needs cropping, so this pass renders nothing and its own

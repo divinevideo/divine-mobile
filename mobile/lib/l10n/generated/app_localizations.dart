@@ -16553,6 +16553,90 @@ abstract class AppLocalizations {
   /// **'Couldn\'t change the voice. Try again.'**
   String get videoEditorVoiceEffectFailed;
 
+  /// Label of the timeline action that raises or lowers ten octave bands, from the deep bass to the treble, of the selected clip or sound. "EQ" is short for equalizer.
+  ///
+  /// In en, this message translates to:
+  /// **'EQ'**
+  String get videoEditorEqualizerLabel;
+
+  /// Screen-reader label of the timeline action that opens the equalizer for the selected video clip's own audio.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the bass, mids and treble of the selected clip'**
+  String get videoEditorEqualizerClipSemanticLabel;
+
+  /// Screen-reader label of the timeline action that opens the equalizer for the selected sound — a voice-over, music or any other track.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the bass, mids and treble of the selected sound'**
+  String get videoEditorEqualizerSoundSemanticLabel;
+
+  /// Title of the bottom sheet that raises or lowers ten octave bands, from the deep bass to the treble, of a clip or sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get videoEditorEqualizerSheetTitle;
+
+  /// Equalizer preset that makes speech clearer: less rumble and boom, more presence. Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear voice'**
+  String get videoEditorEqualizerVoice;
+
+  /// Equalizer preset that raises the bass. Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Bassy'**
+  String get videoEditorEqualizerBassy;
+
+  /// Equalizer preset that raises the high frequencies (the treble). Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Bright'**
+  String get videoEditorEqualizerBright;
+
+  /// How far an equalizer band is raised or lowered, in decibels, e.g. "+6 dB" or "-3 dB". The gain arrives already signed.
+  ///
+  /// In en, this message translates to:
+  /// **'{gain} dB'**
+  String videoEditorEqualizerGainValue(String gain);
+
+  /// The frequency of an equalizer band under 1000 hertz, e.g. "250 Hz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency} Hz'**
+  String videoEditorEqualizerHertz(String frequency);
+
+  /// The frequency of an equalizer band in kilohertz, e.g. "4 kHz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency} kHz'**
+  String videoEditorEqualizerKilohertz(String frequency);
+
+  /// A frequency in kilohertz written as short as possible, e.g. "4k", under a point of the equalizer curve where ten of them share the width of a phone.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency}k'**
+  String videoEditorEqualizerKilohertzShort(String frequency);
+
+  /// Shown above the equalizer curve until a point is touched: each point is dragged up to raise its frequencies or down to lower them.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a point up or down'**
+  String get videoEditorEqualizerCurveHint;
+
+  /// Screen-reader label of the button beside the equalizer readout that lowers the selected band by one decibel, e.g. "Lower 250 Hz".
+  ///
+  /// In en, this message translates to:
+  /// **'Lower {frequency}'**
+  String videoEditorEqualizerLowerBand(String frequency);
+
+  /// Screen-reader label of the button beside the equalizer readout that raises the selected band by one decibel, e.g. "Raise 250 Hz".
+  ///
+  /// In en, this message translates to:
+  /// **'Raise {frequency}'**
+  String videoEditorEqualizerRaiseBand(String frequency);
+
   /// Title of the bottom sheet for choosing the transition between two adjacent clips.
   ///
   /// In en, this message translates to:

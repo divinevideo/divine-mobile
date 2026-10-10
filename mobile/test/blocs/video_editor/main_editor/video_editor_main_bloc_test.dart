@@ -613,6 +613,198 @@ void main() {
         ],
       );
     });
+
+    group(VideoEditorAuditionStarted, () {
+      const start = Duration(seconds: 3);
+      const end = Duration(seconds: 6);
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'seeks to the start of the stretch, then starts paused playback',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          currentPosition: Duration(seconds: 1),
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoEditorAuditionStarted(start: start, end: end)),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'audition', (start: start, end: end))
+              .having((s) => s.seekPosition, 'seekPosition', start)
+              .having((s) => s.seekCounter, 'seekCounter', 1)
+              .having((s) => s.playbackToggleCounter, 'toggles', 0)
+              .having((s) => s.pausesAfterAudition, 'pausesAfter', isTrue),
+          isA<VideoEditorMainState>().having(
+            (s) => s.playbackToggleCounter,
+            'toggles',
+            1,
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'leaves playback inside the stretch where it is',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          currentPosition: Duration(seconds: 4),
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoEditorAuditionStarted(start: start, end: end)),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'audition', (start: start, end: end))
+              .having((s) => s.seekCounter, 'seekCounter', 0)
+              .having((s) => s.playbackToggleCounter, 'toggles', 0)
+              .having((s) => s.pausesAfterAudition, 'pausesAfter', isFalse),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'ignores an empty stretch',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorAuditionStarted(start: end, end: end)),
+        expect: () => <VideoEditorMainState>[],
+      );
+    });
+
+    group('$VideoEditorPositionChanged during an audition', () {
+      const audition = (start: Duration(seconds: 3), end: Duration(seconds: 6));
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'sends playback past the end back to the start once until it lands',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: audition,
+          currentPosition: Duration(milliseconds: 5900),
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 6)));
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 7)));
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 3)));
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration.zero));
+        },
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.currentPosition,
+                'position',
+                const Duration(seconds: 7),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having((s) => s.isAuditionSeekPending, 'pending', isFalse)
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 2),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'sends playback back again when the player dropped the seek',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: audition,
+          currentPosition: Duration(milliseconds: 5800),
+        ),
+        act: (bloc) async {
+          // The stretch ends where the video does: the seek goes out as the
+          // player's loop starts its next lap, and playback comes round from
+          // the start of the video instead.
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 6)));
+          await pumpEventQueue();
+          bloc.add(
+            const VideoEditorPositionChanged(Duration(milliseconds: 965)),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoEditorPositionChanged(Duration(milliseconds: 1009)),
+          );
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 3)));
+        },
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having((s) => s.seekPosition, 'seekPosition', audition.start)
+              .having((s) => s.seekCounter, 'seekCounter', 2)
+              .having((s) => s.isAuditionSeekPending, 'pending', isTrue),
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.currentPosition,
+                'position',
+                const Duration(milliseconds: 1009),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 2),
+          isA<VideoEditorMainState>()
+              .having((s) => s.isAuditionSeekPending, 'pending', isFalse)
+              .having((s) => s.seekCounter, 'seekCounter', 2),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'leaves a paused playhead where it is',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(audition: audition),
+        act: (bloc) =>
+            bloc.add(const VideoEditorPositionChanged(Duration(seconds: 1))),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.currentPosition,
+                'position',
+                const Duration(seconds: 1),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 0),
+        ],
+      );
+    });
+
+    group(VideoEditorAuditionEnded, () {
+      const audition = (start: Duration(seconds: 3), end: Duration(seconds: 6));
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'pauses playback the audition started',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: audition,
+          pausesAfterAudition: true,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorAuditionEnded()),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'audition', isNull)
+              .having((s) => s.playbackToggleCounter, 'toggles', 1),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'keeps playback running that was running before',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: audition,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorAuditionEnded()),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'audition', isNull)
+              .having((s) => s.playbackToggleCounter, 'toggles', 0),
+        ],
+      );
+    });
   });
 
   group('$VideoEditorMainState', () {

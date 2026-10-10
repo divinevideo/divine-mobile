@@ -28,6 +28,8 @@ class VideoEditorMainBloc
     on<VideoEditorPlaybackRestartRequested>(_onPlaybackRestartRequested);
     on<VideoEditorPlaybackToggleRequested>(_onPlaybackToggleRequested);
     on<VideoEditorSeekRequested>(_onSeekRequested);
+    on<VideoEditorAuditionStarted>(_onAuditionStarted);
+    on<VideoEditorAuditionEnded>(_onAuditionEnded);
     on<VideoEditorPositionChanged>(
       _onPositionChanged,
       transformer: restartable(),
@@ -150,11 +152,92 @@ class VideoEditorMainBloc
     );
   }
 
+  void _onAuditionStarted(
+    VideoEditorAuditionStarted event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    if (event.end <= event.start) return;
+    final position = state.currentPosition;
+    final isInside = position >= event.start && position < event.end;
+    final startsPlayback = !state.isPlaying;
+    // The seek goes out before the play, so the player starts where the
+    // audition does rather than sounding a moment of where it was.
+    emit(
+      state.copyWith(
+        audition: (start: event.start, end: event.end),
+        pausesAfterAudition: startsPlayback,
+        isAuditionSeekPending: !isInside,
+        seekPosition: isInside ? null : event.start,
+        seekCounter: isInside ? null : state.seekCounter + 1,
+      ),
+    );
+    if (!startsPlayback) return;
+    emit(
+      state.copyWith(
+        playbackToggleCounter: state.playbackToggleCounter + 1,
+        isExternalPauseRequested: false,
+      ),
+    );
+  }
+
+  void _onAuditionEnded(
+    VideoEditorAuditionEnded event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    if (state.audition == null) return;
+    final pauses = state.pausesAfterAudition && state.isPlaying;
+    emit(
+      state.copyWith(
+        clearAudition: true,
+        pausesAfterAudition: false,
+        isAuditionSeekPending: false,
+        playbackToggleCounter: pauses ? state.playbackToggleCounter + 1 : null,
+      ),
+    );
+  }
+
+  /// Takes the player's position and, during an audition, sends playback
+  /// that has left the auditioned stretch back to its start — once per
+  /// departure, as the player reports the old position until the seek lands.
+  ///
+  /// A seek can also be dropped: on iOS one sent as the player's loop moves
+  /// on to its next lap, which an audition ending where the video ends always
+  /// is. Playback then comes round from the start of the video, before the
+  /// stretch, and is sent back again.
   void _onPositionChanged(
     VideoEditorPositionChanged event,
     Emitter<VideoEditorMainState> emit,
   ) {
-    emit(state.copyWith(currentPosition: event.position));
+    final audition = state.audition;
+    final position = event.position;
+    if (audition == null) {
+      emit(state.copyWith(currentPosition: position));
+      return;
+    }
+    final isInside = position >= audition.start && position < audition.end;
+    final isSeekLost =
+        state.isAuditionSeekPending &&
+        position < audition.start &&
+        position < state.currentPosition;
+    if (isInside ||
+        (state.isAuditionSeekPending && !isSeekLost) ||
+        !state.isPlaying) {
+      emit(
+        state.copyWith(
+          currentPosition: position,
+          isAuditionSeekPending: isInside ? false : null,
+        ),
+      );
+      return;
+    }
+    emit(
+      state.copyWith(
+        currentPosition: position,
+        isAuditionSeekPending: true,
+        seekPosition: audition.start,
+        seekCounter: state.seekCounter + 1,
+      ),
+    );
   }
 
   void _onDurationChanged(

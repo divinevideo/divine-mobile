@@ -465,6 +465,31 @@ void main() {
       expect(service.cached(muted, clipB, dissolve), isNull);
     });
 
+    test('changing a clip equalizer invalidates the seam', () {
+      // The equalizer is baked into the rendered seam audio like the volume,
+      // so a seam rendered before a change must miss the cache.
+      final flat = clip('a', transition: dissolve);
+      final equalized = flat.copyWith(
+        equalizer: model.EqualizerSettings.none.withGain(3, 6),
+      );
+      final clipB = clip('b');
+      final service = TransitionSeamRenderService()
+        ..cacheSeamForTest(
+          flat,
+          clipB,
+          dissolve,
+          const TransitionSeam(
+            path: '/tmp/seam.mp4',
+            duration: Duration(milliseconds: 1500),
+            tailConsumed: Duration(milliseconds: 1000),
+            headConsumed: Duration(milliseconds: 1000),
+          ),
+        );
+
+      expect(service.cached(flat, clipB, dissolve), isNotNull);
+      expect(service.cached(equalized, clipB, dissolve), isNull);
+    });
+
     test('changing a clip duration invalidates the seam', () {
       // `duration` can be trimmed independently of the file (clip_manager caps
       // a clip on add) and `_tailClip`/`_headClip` read it, so it must be part

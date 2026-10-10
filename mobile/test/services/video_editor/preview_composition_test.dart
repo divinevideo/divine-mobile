@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:divine_video_player/divine_video_player.dart'
+    show AudioEqualizer, AudioEqualizerBand, AudioEqualizerBandType;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
@@ -29,6 +31,7 @@ DivineVideoClip _clip(
   String id, {
   editor.ClipTransition? transition,
   double? playbackSpeed,
+  model.EqualizerSettings equalizer = model.EqualizerSettings.none,
 }) => DivineVideoClip(
   id: id,
   video: editor.EditorVideo.file(File('/tmp/$id.mp4')),
@@ -38,6 +41,7 @@ DivineVideoClip _clip(
   originalAspectRatio: 1,
   transition: transition,
   playbackSpeed: playbackSpeed,
+  equalizer: equalizer,
 );
 
 /// Seam service whose renders complete only when the test releases them.
@@ -321,6 +325,56 @@ void main() {
         composition.buildPlayerClips(clips);
 
         expect(composition.clipVolumesWith('gone', 2.5), isNull);
+      });
+    });
+
+    group('clipEqualizersWith', () {
+      test('sets every part of the changed clip and keeps the seam flat', () {
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip(
+          'b',
+          equalizer: const model.EqualizerSettings([
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+          ]),
+        );
+        clips = [a, b];
+        seams.cacheSeamForTest(a, b, _dissolve, _seam);
+        final playerClips = composition.buildPlayerClips(clips);
+        const bass = AudioEqualizer(
+          bands: [
+            AudioEqualizerBand(
+              type: AudioEqualizerBandType.lowShelf,
+              frequency: 60,
+              gain: 6,
+            ),
+          ],
+        );
+
+        expect(
+          playerClips.last.equalizer?.bands.map((band) => band.gain),
+          [0, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+        );
+        expect(composition.clipEqualizersWith('a', bass), [
+          bass,
+          null,
+          playerClips.last.equalizer,
+        ]);
+      });
+
+      test('returns null for a clip the built composition does not play', () {
+        clips = [_clip('a')];
+        composition.buildPlayerClips(clips);
+
+        expect(composition.clipEqualizersWith('gone', null), isNull);
       });
     });
 

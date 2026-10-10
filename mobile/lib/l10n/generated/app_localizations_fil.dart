@@ -9819,6 +9819,63 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi mabago ang boses. Subukan ulit.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Baguhin ang bass, mids at treble ng napiling clip';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Baguhin ang bass, mids at treble ng napiling sound';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Malinaw na boses';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mas bass';
+
+  @override
+  String get videoEditorEqualizerBright => 'Mas matinis';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'I-drag ang isang punto pataas o pababa';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Ibaba ang $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Itaas ang $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
 
   @override

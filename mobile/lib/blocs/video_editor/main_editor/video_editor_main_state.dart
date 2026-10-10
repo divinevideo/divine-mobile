@@ -4,6 +4,10 @@ part of 'video_editor_main_bloc.dart';
 /// before it is written to the editor history.
 typedef DetachedClipOpacityPreview = ({String layerId, double opacity});
 
+/// A stretch of the timeline that playback loops over while a sheet plays
+/// it; see [VideoEditorAuditionStarted].
+typedef PlaybackAudition = ({Duration start, Duration end});
+
 /// State for the video editor main screen.
 class VideoEditorMainState extends Equatable {
   const VideoEditorMainState({
@@ -28,6 +32,9 @@ class VideoEditorMainState extends Equatable {
     this.isMarkerMode = false,
     this.isPlacingSlidePoint = false,
     this.detachedClipOpacityPreview,
+    this.audition,
+    this.pausesAfterAudition = false,
+    this.isAuditionSeekPending = false,
   });
 
   /// Whether the undo action is available.
@@ -113,6 +120,17 @@ class VideoEditorMainState extends Equatable {
   /// steps, and cancelling has to put the layer back exactly as it was.
   final DetachedClipOpacityPreview? detachedClipOpacityPreview;
 
+  /// The stretch playback loops over while a sheet plays it, or `null`.
+  final PlaybackAudition? audition;
+
+  /// Whether playback was paused when the [audition] started, and pauses
+  /// again when it ends.
+  final bool pausesAfterAudition;
+
+  /// Whether the [audition] has asked for a seek back to its start that the
+  /// player has not reported yet, so it is not asked for again meanwhile.
+  final bool isAuditionSeekPending;
+
   /// Whether the voice-over recorder is open over the editor.
   ///
   /// The preview keeps playing beneath its translucent route so the take can
@@ -127,8 +145,9 @@ class VideoEditorMainState extends Equatable {
 
   /// Creates a copy with the given fields replaced.
   ///
-  /// Use [clearOpenSubEditor] to explicitly close the sub-editor and
-  /// [clearDetachedClipOpacityPreview] to end an opacity preview.
+  /// Use [clearOpenSubEditor] to explicitly close the sub-editor,
+  /// [clearDetachedClipOpacityPreview] to end an opacity preview and
+  /// [clearAudition] to end an audition.
   VideoEditorMainState copyWith({
     bool? canUndo,
     bool? canRedo,
@@ -153,6 +172,10 @@ class VideoEditorMainState extends Equatable {
     bool? isPlacingSlidePoint,
     DetachedClipOpacityPreview? detachedClipOpacityPreview,
     bool clearDetachedClipOpacityPreview = false,
+    PlaybackAudition? audition,
+    bool clearAudition = false,
+    bool? pausesAfterAudition,
+    bool? isAuditionSeekPending,
   }) {
     return VideoEditorMainState(
       canUndo: canUndo ?? this.canUndo,
@@ -186,6 +209,10 @@ class VideoEditorMainState extends Equatable {
       detachedClipOpacityPreview: clearDetachedClipOpacityPreview
           ? null
           : (detachedClipOpacityPreview ?? this.detachedClipOpacityPreview),
+      audition: clearAudition ? null : (audition ?? this.audition),
+      pausesAfterAudition: pausesAfterAudition ?? this.pausesAfterAudition,
+      isAuditionSeekPending:
+          isAuditionSeekPending ?? this.isAuditionSeekPending,
     );
   }
 
@@ -212,5 +239,8 @@ class VideoEditorMainState extends Equatable {
     isMarkerMode,
     isPlacingSlidePoint,
     detachedClipOpacityPreview,
+    audition,
+    pausesAfterAudition,
+    isAuditionSeekPending,
   ];
 }

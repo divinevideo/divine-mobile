@@ -13,9 +13,9 @@ class VideoEditorMergeService {
   /// Concatenates [clips] (already in timeline order) into one rendered file
   /// and returns it as a fresh [DivineVideoClip].
   ///
-  /// Each clip's trim/speed/volume/reverse is baked into the output by the
-  /// underlying [VideoEditorRenderService.renderVideo] pipeline, so the merged
-  /// clip carries no residual trim or speed. The merged duration is the full
+  /// Each clip's trim/speed/volume/equalizer/reverse is baked into the output
+  /// by the underlying [VideoEditorRenderService.renderVideo] pipeline, so the
+  /// merged clip carries no residual trim, speed or equalizer. The merged duration is the full
   /// sum of the inputs' [DivineVideoClip.playbackDuration] — the render is
   /// uncapped (`maxOutputDuration: null`) because the merged clip is an
   /// intermediate editor clip the user can still trim, not the final export

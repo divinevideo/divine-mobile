@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:divine_video_player/src/audio_equalizer.dart';
 import 'package:divine_video_player/src/video_buffer_profile.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,6 +25,7 @@ class VideoClip {
     this.playbackSpeed = 1.0,
     this.httpHeaders = const {},
     this.trimToCommonTrackEnd = false,
+    this.equalizer,
   });
 
   /// Creates a [VideoClip] from a local file path.
@@ -35,6 +37,7 @@ class VideoClip {
     this.playbackSpeed = 1.0,
     this.httpHeaders = const {},
     this.trimToCommonTrackEnd = false,
+    this.equalizer,
   }) : uri = path;
 
   /// Creates a [VideoClip] from a network URL.
@@ -46,6 +49,7 @@ class VideoClip {
     this.playbackSpeed = 1.0,
     this.httpHeaders = const {},
     this.trimToCommonTrackEnd = false,
+    this.equalizer,
   }) : uri = url;
 
   /// Creates a [VideoClip] from a Flutter asset.
@@ -171,6 +175,13 @@ class VideoClip {
   ///   from. An HLS clip plays unclamped on both.
   final bool trimToCommonTrackEnd;
 
+  /// The equalizer this clip's audio plays through, ahead of its [volume];
+  /// `null` plays it unchanged.
+  ///
+  /// Only players created with [VideoBufferProfile.full] apply it, on Android,
+  /// iOS and macOS.
+  final AudioEqualizer? equalizer;
+
   /// Serializes this clip for platform channel transport.
   Map<String, dynamic> toMap() {
     return {
@@ -181,6 +192,8 @@ class VideoClip {
       'playbackSpeed': playbackSpeed,
       if (httpHeaders.isNotEmpty) 'httpHeaders': httpHeaders,
       if (trimToCommonTrackEnd) 'trimToCommonTrackEnd': true,
+      if (equalizer case final equalizer? when !equalizer.isFlat)
+        'equalizer': equalizer.toMap(),
     };
   }
 }

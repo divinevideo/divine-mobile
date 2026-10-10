@@ -85,6 +85,30 @@ void main() {
     });
 
     group('toMap', () {
+      test('serializes an equalizer and leaves out a flat one', () {
+        const treble = AudioEqualizer(
+          bands: [
+            AudioEqualizerBand(
+              type: AudioEqualizerBandType.highShelf,
+              frequency: 3000,
+              gain: 3,
+            ),
+          ],
+        );
+
+        expect(
+          const VideoClip(uri: 'a.mp4', equalizer: treble).toMap()['equalizer'],
+          treble.toMap(),
+        );
+        expect(
+          const VideoClip(
+            uri: 'a.mp4',
+            equalizer: AudioEqualizer(),
+          ).toMap().containsKey('equalizer'),
+          isFalse,
+        );
+      });
+
       test('serializes without end', () {
         const clip = VideoClip(
           uri: '/path/video.mp4',

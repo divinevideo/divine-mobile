@@ -9660,6 +9660,63 @@ class AppLocalizationsTr extends AppLocalizations {
       'Ses değiştirilemedi. Tekrar dene.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Seçili klibin bas, orta ve tizini değiştir';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Seçili sesin bas, orta ve tizini değiştir';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Ekolayzer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Net ses';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Daha çok bas';
+
+  @override
+  String get videoEditorEqualizerBright => 'Daha parlak';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Bir noktayı yukarı veya aşağı sürükle';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency düşür';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency yükselt';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Geçiş';
 
   @override

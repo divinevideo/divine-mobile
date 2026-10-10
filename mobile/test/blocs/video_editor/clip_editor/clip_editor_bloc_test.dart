@@ -9,6 +9,7 @@ import 'dart:ui';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
@@ -3590,6 +3591,47 @@ void main() {
             ),
           ).called(1);
         },
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'gives the extracted sound the equalizer the clip played with',
+        build: () {
+          when(
+            () => mockService.extractAudioForDraft(
+              videoPath: any(named: 'videoPath'),
+              speed: any(named: 'speed'),
+            ),
+          ).thenAnswer(
+            (_) async => const AudioExtractionResult(
+              audioFilePath: '/tmp/audio.m4a',
+              duration: 5,
+              fileSize: 12345,
+              sha256Hash: 'abc123',
+              mimeType: 'audio/mp4',
+            ),
+          );
+          return buildBloc(audioExtractionService: mockService);
+        },
+        seed: () => ClipEditorState(
+          clips: [
+            _createClipWithFile().copyWith(
+              equalizer: EqualizerSettings.none.withGain(3, 6),
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorAudioExtractionRequested(clipTitle: 'Test'),
+        ),
+        skip: 1,
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => (s.lastAudioExtraction! as ClipAudioExtractionSuccess)
+                .audioEvent
+                .equalizer,
+            'extracted equalizer',
+            EqualizerSettings.none.withGain(3, 6),
+          ),
+        ],
       );
 
       // A queued extraction must hit the clip captured at dispatch, not

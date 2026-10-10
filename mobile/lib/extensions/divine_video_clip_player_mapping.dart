@@ -1,8 +1,9 @@
 import 'package:divine_video_player/divine_video_player.dart' as player;
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 
 /// Maps an editor [DivineVideoClip] onto the native preview player's
-/// [player.VideoClip], carrying the clip's trim, volume and speed.
+/// [player.VideoClip], carrying the clip's trim, volume, equalizer and speed.
 ///
 /// Transitions are not passed to the player: the preview composites them by
 /// playing a pre-rendered seam clip between the (trimmed) neighbours rather
@@ -18,6 +19,7 @@ extension DivineVideoClipPlayerMapping on DivineVideoClip {
       start: start ?? trimStart,
       end: end ?? (duration - trimEnd),
       volume: volume,
+      equalizer: equalizer.toPlayerEqualizer(),
       playbackSpeed: playbackSpeed ?? 1.0,
     );
   }

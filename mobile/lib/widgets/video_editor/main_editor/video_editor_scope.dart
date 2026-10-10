@@ -2,6 +2,7 @@
 // ABOUTME: Allows child widgets to call editor methods directly without callbacks.
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -40,6 +41,7 @@ class VideoEditorScope extends InheritedWidget {
     this.awaitPushCoverTransition,
     this.liveVolumeNotifier,
     this.cancelLiveVolumePreview,
+    this.liveEqualizerNotifier,
     super.child = const SizedBox.shrink(),
     super.key,
   }) : assert(
@@ -130,6 +132,10 @@ class VideoEditorScope extends InheritedWidget {
   /// Cancels the expected preview and restores its current committed gain.
   /// The notifier owner guards its lifetime and rejects stale requests.
   final bool Function(LiveVolume expected)? cancelLiveVolumePreview;
+
+  /// The equalizer being changed in the equalizer sheet, null while none is.
+  /// The canvas plays it before it is committed on confirm.
+  final ValueNotifier<LiveEqualizer?>? liveEqualizerNotifier;
 
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
@@ -260,5 +266,6 @@ class VideoEditorScope extends InheritedWidget {
       canvasBodyKey != oldWidget.canvasBodyKey ||
       zoomMatrixNotifier != oldWidget.zoomMatrixNotifier ||
       liveVolumeNotifier != oldWidget.liveVolumeNotifier ||
-      cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview;
+      cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview ||
+      liveEqualizerNotifier != oldWidget.liveEqualizerNotifier;
 }

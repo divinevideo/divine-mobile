@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart';
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -67,6 +68,7 @@ class DetachedClipPlayer {
           start: clip.trimStart,
           end: clip.trimStart + clip.trimmedDuration,
           volume: clip.volume,
+          equalizer: clip.equalizer.toPlayerEqualizer(),
           playbackSpeed: clip.playbackSpeed ?? 1.0,
         ),
       );

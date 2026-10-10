@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -238,10 +239,11 @@ List<AudioTrack> buildRenderAudioTracks({
 /// When [videoDuration] is set, each track's composition window is clamped to
 /// it (see [clampAudioWindowToVideo]) so audio cannot outlast the video track.
 ///
-/// Each track takes its fade from the [audioEvents] entry with its id. The
-/// render [AudioTrack] cannot carry one, so the editor's timeline events are
-/// the source. The fade out ends where the clamped window does, so a track
-/// cut short by the end of the video still fades out rather than stopping.
+/// Each track takes its fade and its equalizer from the [audioEvents] entry
+/// with its id. The render [AudioTrack] cannot carry either, so the editor's
+/// timeline events are the source. The fade out ends where the clamped window
+/// does, so a track cut short by the end of the video still fades out rather
+/// than stopping.
 Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioTrack> customTracks, {
   required String logName,
@@ -311,6 +313,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       volume: track.volume,
       fadeInDuration: event?.fadeInDuration ?? Duration.zero,
       fadeOutDuration: event?.fadeOutDuration ?? Duration.zero,
+      equalizer: event?.equalizer.toRenderEqualizer(),
     );
     audioTracks.add(resolvedTrack);
     Log.warning(

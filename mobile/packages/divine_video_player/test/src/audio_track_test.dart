@@ -131,6 +131,31 @@ void main() {
         expect(map['trackStartMs'], isZero);
         expect(map['fadeInMs'], isZero);
         expect(map['fadeOutMs'], isZero);
+        expect(map.containsKey('equalizer'), isFalse);
+      });
+
+      test('serializes an equalizer and leaves out a flat one', () {
+        const bass = AudioEqualizer(
+          bands: [
+            AudioEqualizerBand(
+              type: AudioEqualizerBandType.lowShelf,
+              frequency: 200,
+              gain: 6,
+            ),
+          ],
+        );
+
+        expect(
+          const AudioTrack(uri: '/a.mp3', equalizer: bass).toMap()['equalizer'],
+          bass.toMap(),
+        );
+        expect(
+          const AudioTrack(
+            uri: '/a.mp3',
+            equalizer: AudioEqualizer(),
+          ).toMap().containsKey('equalizer'),
+          isFalse,
+        );
       });
     });
 

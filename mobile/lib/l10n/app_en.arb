@@ -6642,6 +6642,98 @@
   "@videoEditorVoiceEffectFailed": {
     "description": "Shown, and announced, when the voice effect could not be applied to the sound."
   },
+  "videoEditorEqualizerLabel": "EQ",
+  "@videoEditorEqualizerLabel": {
+    "description": "Label of the timeline action that raises or lowers ten octave bands, from the deep bass to the treble, of the selected clip or sound. \"EQ\" is short for equalizer."
+  },
+  "videoEditorEqualizerClipSemanticLabel": "Change the bass, mids and treble of the selected clip",
+  "@videoEditorEqualizerClipSemanticLabel": {
+    "description": "Screen-reader label of the timeline action that opens the equalizer for the selected video clip's own audio."
+  },
+  "videoEditorEqualizerSoundSemanticLabel": "Change the bass, mids and treble of the selected sound",
+  "@videoEditorEqualizerSoundSemanticLabel": {
+    "description": "Screen-reader label of the timeline action that opens the equalizer for the selected sound — a voice-over, music or any other track."
+  },
+  "videoEditorEqualizerSheetTitle": "Equalizer",
+  "@videoEditorEqualizerSheetTitle": {
+    "description": "Title of the bottom sheet that raises or lowers ten octave bands, from the deep bass to the treble, of a clip or sound."
+  },
+  "videoEditorEqualizerVoice": "Clear voice",
+  "@videoEditorEqualizerVoice": {
+    "description": "Equalizer preset that makes speech clearer: less rumble and boom, more presence. Keep it short; it is a chip label."
+  },
+  "videoEditorEqualizerBassy": "Bassy",
+  "@videoEditorEqualizerBassy": {
+    "description": "Equalizer preset that raises the bass. Keep it short; it is a chip label."
+  },
+  "videoEditorEqualizerBright": "Bright",
+  "@videoEditorEqualizerBright": {
+    "description": "Equalizer preset that raises the high frequencies (the treble). Keep it short; it is a chip label."
+  },
+  "videoEditorEqualizerGainValue": "{gain} dB",
+  "@videoEditorEqualizerGainValue": {
+    "description": "How far an equalizer band is raised or lowered, in decibels, e.g. \"+6 dB\" or \"-3 dB\". The gain arrives already signed.",
+    "placeholders": {
+      "gain": {
+        "type": "String",
+        "example": "+6"
+      }
+    }
+  },
+  "videoEditorEqualizerHertz": "{frequency} Hz",
+  "@videoEditorEqualizerHertz": {
+    "description": "The frequency of an equalizer band under 1000 hertz, e.g. \"250 Hz\". Shown above the equalizer curve while its point is picked, and read out as the name of that point.",
+    "placeholders": {
+      "frequency": {
+        "type": "String",
+        "example": "250"
+      }
+    }
+  },
+  "videoEditorEqualizerKilohertz": "{frequency} kHz",
+  "@videoEditorEqualizerKilohertz": {
+    "description": "The frequency of an equalizer band in kilohertz, e.g. \"4 kHz\". Shown above the equalizer curve while its point is picked, and read out as the name of that point.",
+    "placeholders": {
+      "frequency": {
+        "type": "String",
+        "example": "4"
+      }
+    }
+  },
+  "videoEditorEqualizerKilohertzShort": "{frequency}k",
+  "@videoEditorEqualizerKilohertzShort": {
+    "description": "A frequency in kilohertz written as short as possible, e.g. \"4k\", under a point of the equalizer curve where ten of them share the width of a phone.",
+    "placeholders": {
+      "frequency": {
+        "type": "String",
+        "example": "4"
+      }
+    }
+  },
+  "videoEditorEqualizerCurveHint": "Drag a point up or down",
+  "@videoEditorEqualizerCurveHint": {
+    "description": "Shown above the equalizer curve until a point is touched: each point is dragged up to raise its frequencies or down to lower them."
+  },
+  "videoEditorEqualizerLowerBand": "Lower {frequency}",
+  "@videoEditorEqualizerLowerBand": {
+    "description": "Screen-reader label of the button beside the equalizer readout that lowers the selected band by one decibel, e.g. \"Lower 250 Hz\".",
+    "placeholders": {
+      "frequency": {
+        "type": "String",
+        "example": "250 Hz"
+      }
+    }
+  },
+  "videoEditorEqualizerRaiseBand": "Raise {frequency}",
+  "@videoEditorEqualizerRaiseBand": {
+    "description": "Screen-reader label of the button beside the equalizer readout that raises the selected band by one decibel, e.g. \"Raise 250 Hz\".",
+    "placeholders": {
+      "frequency": {
+        "type": "String",
+        "example": "250 Hz"
+      }
+    }
+  },
   "videoEditorTransitionSheetTitle": "Transition",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

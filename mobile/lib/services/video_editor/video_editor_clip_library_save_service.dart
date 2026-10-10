@@ -24,10 +24,10 @@ class VideoEditorClipLibrarySaveService {
   /// shared source file), a library clip must outlive the editing session that
   /// produced it and be insertable into an unrelated project. So this re-encodes
   /// rather than carrying a trim window: the output holds *only* the selected
-  /// section, and the returned clip carries no residual trim/speed/volume — the
-  /// [VideoEditorRenderService.renderVideo] pipeline bakes all three in. That is
-  /// what lets the user reuse a moment from a long video without dragging the
-  /// whole source along (#5322).
+  /// section, and the returned clip carries no residual
+  /// trim/speed/volume/equalizer — the [VideoEditorRenderService.renderVideo]
+  /// pipeline bakes them all in. That is what lets the user reuse a moment
+  /// from a long video without dragging the whole source along (#5322).
   ///
   /// `reversed` is deliberately dropped rather than copied: a reversed clip's
   /// `video` already points at reversed content, so the flattened file is

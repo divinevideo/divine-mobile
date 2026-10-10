@@ -183,6 +183,61 @@ void main() {
     });
   });
 
+  group('DivineVideoClip.equalizer', () {
+    test('round-trips through JSON and is absent while flat', () {
+      final flat = clip('/videos/clip.mp4');
+      final equalized = flat.copyWith(
+        equalizer: const model.EqualizerSettings([
+          0,
+          -6,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+        ]),
+      );
+
+      expect(flat.toJson(), isNot(contains('equalizer')));
+      expect(
+        DivineVideoClip.fromJson(equalized.toJson(), '/videos').equalizer,
+        const model.EqualizerSettings([0, -6, 0, 4, 0, 0, 0, 0, 0, 0]),
+      );
+      expect(
+        DivineVideoClip.fromJson(flat.toJson(), '/videos').equalizer,
+        model.EqualizerSettings.none,
+      );
+    });
+
+    test('survives an unrelated copyWith, such as a split', () {
+      final equalized =
+          clip(
+            '/videos/clip.mp4',
+          ).copyWith(
+            equalizer: const model.EqualizerSettings([
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+            ]),
+          );
+
+      expect(
+        equalized.copyWith(trimStart: const Duration(seconds: 1)).equalizer,
+        const model.EqualizerSettings([0, 0, 0, 2, 0, 0, 0, 0, 0, 0]),
+      );
+    });
+  });
+
   group('DivineVideoClip.minTrimStart', () {
     test('defaults to zero and survives copyWith', () {
       final original = clip('/videos/clip.mp4');

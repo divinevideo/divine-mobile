@@ -147,6 +147,10 @@ internal class DivineVideoPlayerInstance(
     private var clipVolumes = listOf<Float>()
     /** Per-clip playback speed multipliers (1.0 = normal). Never zero. */
     private var clipSpeeds = listOf<Float>()
+    /** Per-clip equalizers; null entries play unchanged. See [clipEqualizer]. */
+    private var clipEqualizers = listOf<AudioEqualizer?>()
+    /** The equalizer [clipAudioLoop]'s audio was filtered with. */
+    private var clipAudioLoopEqualizer: AudioEqualizer? = null
     private var clipCount = 0
     /** The clip's audio, played outside ExoPlayer. See [ClipAudioLoopTrack]. */
     private var clipAudioLoop: ClipAudioLoopTrack? = null
@@ -274,6 +278,28 @@ internal class DivineVideoPlayerInstance(
      * renderers factory when the player is built.
      */
     private val declickProcessor = LoopDeclickAudioProcessor()
+
+    /**
+     * Plays each clip through its own equalizer, the one `pro_video_editor`
+     * renders it with. Only editing surfaces carry it: wired into the
+     * renderers factory when the player is built, like [declickProcessor].
+     */
+    private val clipEqualizer = ClipEqualizerAudioProcessor()
+
+    /**
+     * Rebuilds the clip's audio loop once its equalizer stopped changing; see
+     * [handleSetClipEqualizers].
+     */
+    private val clipAudioLoopRestart = Runnable {
+        clipAudioLoopRestartPending = false
+        startClipAudioLoop(lastClipsRaw, clipCount)
+    }
+
+    /** Whether [clipAudioLoopRestart] is waiting to run. */
+    private var clipAudioLoopRestartPending = false
+
+    /** Set while a loop decode runs on [metadataExecutor]. */
+    private var clipAudioDecoding = false
 
     /**
      * Carries the part of a clip's volume above 100 %, which the player's own
@@ -465,6 +491,9 @@ internal class DivineVideoPlayerInstance(
         // successful (if slower) decode instead of a dead surface.
         val renderersFactory =
             LoopDeclickRenderersFactory(context, declickProcessor)
+                .also {
+                    if (bufferProfile == BufferProfile.FULL) it.setClipEqualizer(clipEqualizer)
+                }
                 .setEnableDecoderFallback(true)
         // The player's own extractor records each source's track lengths as it
         // parses the container, and a clip tagged for it is clipped to where
@@ -586,12 +615,14 @@ internal class DivineVideoPlayerInstance(
             "seekTo" -> handleSeekTo(call, result)
             "setVolume" -> handleSetVolume(call, result)
             "setClipVolumes" -> handleSetClipVolumes(call, result)
+            "setClipEqualizers" -> handleSetClipEqualizers(call, result)
             "setPlaybackSpeed" -> handleSetPlaybackSpeed(call, result)
             "setLooping" -> handleSetLooping(call, result)
             "jumpToClip" -> handleJumpToClip(call, result)
             "setAudioTracks" -> handleSetAudioTracks(call, result)
             "removeAllAudioTracks" -> handleRemoveAllAudioTracks(result)
             "setAudioTrackVolume" -> handleSetAudioTrackVolume(call, result)
+            "setAudioTrackEqualizer" -> handleSetAudioTrackEqualizer(call, result)
             "setFrameEffects" -> handleSetFrameEffects(call, result)
             else -> result.notImplemented()
         }
@@ -633,6 +664,7 @@ internal class DivineVideoPlayerInstance(
         val offsets = mutableListOf<Long>()
         val volumes = mutableListOf<Float>()
         val speeds = mutableListOf<Float>()
+        val equalizers = mutableListOf<AudioEqualizer?>()
         val headersByUri = mutableMapOf<String, Map<String, String>>()
         val headersByHash = mutableMapOf<String, Map<String, String>>()
         var accumulated = 0L
@@ -684,6 +716,7 @@ internal class DivineVideoPlayerInstance(
             offsets.add(accumulated)
             volumes.add(clipVol)
             speeds.add(clipSpeed)
+            equalizers.add(AudioEqualizer.fromMap(map["equalizer"] as? Map<*, *>))
 
             // If endMs is unknown, we'll recalculate after prepare.
             // Offsets accumulate in playback time so the global timeline
@@ -697,6 +730,10 @@ internal class DivineVideoPlayerInstance(
         clipOffsets = offsets
         clipVolumes = volumes
         clipSpeeds = speeds
+        clipEqualizers = equalizers
+        // Published before the playlist swap below, like the declick settings,
+        // so the first stream of the new clips already finds its equalizer.
+        clipEqualizer.equalizers = equalizers
         clipCount = mediaItems.size
         httpHeadersByUri = headersByUri
         httpHeadersByHash = headersByHash
@@ -980,8 +1017,13 @@ internal class DivineVideoPlayerInstance(
         }
         clipAudioAwaitingLoad = false
         val remoteSourceFactory = extractorDataSourceFactory(headers)
+        // The loop plays decoded PCM outside the player's audio sink, so its
+        // equalizer is applied to that PCM instead.
+        val equalizer = clipEqualizers.getOrNull(0)
+        clipAudioLoopEqualizer = equalizer
 
         if (metadataExecutor.isShutdown) return
+        clipAudioDecoding = true
         runCatching {
             metadataExecutor.execute {
                 val loop = ClipAudioLoopTrack.create(
@@ -990,12 +1032,14 @@ internal class DivineVideoPlayerInstance(
                     loopUs,
                     clipStartUs,
                     remoteSourceFactory,
+                    equalizer,
                 )
                 mainHandler.post {
                     if (generation != clipAudioGeneration) {
                         loop?.release()
                         return@post
                     }
+                    clipAudioDecoding = false
                     // Nothing decoded — a clip with no audio, an unreachable
                     // source, a codec that refused. The renderer still has
                     // the audio, so the video keeps its sound.
@@ -1215,6 +1259,9 @@ internal class DivineVideoPlayerInstance(
 
     /** Releases the private audio path and lets ExoPlayer see audio again. */
     private fun releaseClipAudioLoop() {
+        mainHandler.removeCallbacks(clipAudioLoopRestart)
+        clipAudioLoopRestartPending = false
+        clipAudioDecoding = false
         clipAudioGeneration++
         clipAudioPending = false
         clipAudioAwaitingLoad = false
@@ -1369,6 +1416,43 @@ internal class DivineVideoPlayerInstance(
             it.setBoost(AudioSessionBoost.boostOf(clipVolume(0)))
         }
         result.success(null)
+    }
+
+    /**
+     * Replaces the loaded clips' equalizers without reloading them, so an
+     * equalizer control can be followed while it is dragged. The player's
+     * audio picks a change up from its next buffer. A list that does not match
+     * the loaded clips belongs to another composition and is ignored.
+     *
+     * A looping single clip plays its audio from PCM filtered when the loop
+     * was built, which cannot follow a drag. Its sound goes back to the player
+     * on the first change, and the loop is rebuilt with the new equalizer once
+     * [EQUALIZER_SETTLE_MS] pass without another.
+     */
+    private fun handleSetClipEqualizers(call: MethodCall, result: MethodChannel.Result) {
+        val raw = call.argument<List<Any?>>("equalizers")
+        if (raw == null || raw.size != clipCount) {
+            result.success(null)
+            return
+        }
+        clipEqualizers = raw.map { AudioEqualizer.fromMap(it as? Map<*, *>) }
+        clipEqualizer.equalizers = clipEqualizers
+        val hasLoop = clipAudioLoop != null || clipAudioDecoding ||
+            clipAudioPending || clipAudioAwaitingLoad
+        if (hasLoop && clipEqualizers.getOrNull(0) != clipAudioLoopEqualizer) {
+            releaseClipAudioLoop()
+            scheduleClipAudioLoopRestart()
+        } else if (clipAudioLoopRestartPending) {
+            // Still changing: wait for the control to come to rest again.
+            scheduleClipAudioLoopRestart()
+        }
+        result.success(null)
+    }
+
+    private fun scheduleClipAudioLoopRestart() {
+        mainHandler.removeCallbacks(clipAudioLoopRestart)
+        clipAudioLoopRestartPending = true
+        mainHandler.postDelayed(clipAudioLoopRestart, EQUALIZER_SETTLE_MS)
     }
 
     private fun handleSetPlaybackSpeed(call: MethodCall, result: MethodChannel.Result) {
@@ -1922,6 +2006,13 @@ internal class DivineVideoPlayerInstance(
         val index = (call.argument<Number>("index"))?.toInt() ?: -1
         val vol = (call.argument<Number>("volume"))?.toFloat() ?: 1.0f
         audioOverlayManager.setTrackVolume(index, vol)
+        result.success(null)
+    }
+
+    private fun handleSetAudioTrackEqualizer(call: MethodCall, result: MethodChannel.Result) {
+        val index = (call.argument<Number>("index"))?.toInt() ?: -1
+        val equalizer = AudioEqualizer.fromMap(call.argument<Map<String, Any?>>("equalizer"))
+        audioOverlayManager.setTrackEqualizer(index, equalizer)
         result.success(null)
     }
 
@@ -2697,6 +2788,14 @@ internal class DivineVideoPlayerInstance(
          */
         private const val TAKEOVER_ALIGN_TIMEOUT_NS = 500_000_000L
         private const val SET_CLIPS_TIMEOUT_MS = 10_000L
+
+        /**
+         * How long a looping clip's equalizer has to stay unchanged before its
+         * audio loop is rebuilt with it. Each rebuild decodes the clip again,
+         * so not on every step of a drag; long enough to bridge the gaps
+         * between them, short enough that the loop is back by the next lap.
+         */
+        private const val EQUALIZER_SETTLE_MS = 500L
 
         /**
          * Video and audio track lengths in microseconds, keyed by source.

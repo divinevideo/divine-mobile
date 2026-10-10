@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
@@ -70,6 +71,7 @@ abstract final class ClipNormalizationRender {
                 startTime: c.trimStart == .zero ? null : c.trimStart,
                 endTime: c.trimStart + c.trimmedDuration,
                 volume: c.volume,
+                equalizer: c.equalizer.toRenderEqualizer(),
                 playbackSpeed: c.playbackSpeed,
                 transition: clampedTransitions[c.id],
               ),
@@ -113,6 +115,7 @@ abstract final class ClipNormalizationRender {
                 : entry.clip.trimStart,
             endTime: entry.clip.trimStart + entry.clip.trimmedDuration,
             volume: entry.clip.volume,
+            equalizer: entry.clip.equalizer.toRenderEqualizer(),
             playbackSpeed: entry.clip.playbackSpeed,
             transition: clampedTransitions[entry.clip.id],
           ),
@@ -186,6 +189,7 @@ abstract final class ClipNormalizationRender {
           startTime: clip.trimStart == .zero ? null : clip.trimStart,
           endTime: clip.trimStart + clip.trimmedDuration,
           volume: clip.volume,
+          equalizer: clip.equalizer.toRenderEqualizer(),
           playbackSpeed: clip.playbackSpeed,
         ),
       ],

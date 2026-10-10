@@ -115,6 +115,25 @@ class VideoEditorSeekRequested extends VideoEditorMainEvent {
   List<Object?> get props => [position];
 }
 
+/// Plays [start] to [end] on the timeline in a loop until
+/// [VideoEditorAuditionEnded], starting playback if it was paused: a sheet
+/// that changes how that stretch sounds plays it while it is open.
+class VideoEditorAuditionStarted extends VideoEditorMainEvent {
+  const VideoEditorAuditionStarted({required this.start, required this.end});
+
+  final Duration start;
+  final Duration end;
+
+  @override
+  List<Object?> get props => [start, end];
+}
+
+/// Ends the audition started by [VideoEditorAuditionStarted], pausing
+/// playback again if the audition started it.
+class VideoEditorAuditionEnded extends VideoEditorMainEvent {
+  const VideoEditorAuditionEnded();
+}
+
 /// Triggered when the video player reports a new playback position.
 class VideoEditorPositionChanged extends VideoEditorMainEvent {
   const VideoEditorPositionChanged(this.position);

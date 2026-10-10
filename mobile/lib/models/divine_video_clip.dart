@@ -6,7 +6,9 @@ import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart'
     show CameraLensMetadata, DivineCameraLens;
-import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:models/models.dart'
+    as model
+    show AspectRatio, ClipSourceCredit, EqualizerSettings;
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -37,6 +39,7 @@ class DivineVideoClip {
     this.sourceStartOffset = Duration.zero,
     this.minTrimStart = Duration.zero,
     this.volume = 1,
+    this.equalizer = model.EqualizerSettings.none,
     this.playbackSpeed,
     this.reversed = false,
     this.isPlaceholder = false,
@@ -137,6 +140,12 @@ class DivineVideoClip {
 
   /// Playback volume for this clip, between 0 (muted) and 1 (full volume).
   final double volume;
+
+  /// How this clip's audio is raised or lowered in each frequency band.
+  ///
+  /// Applied by the preview player and the export ahead of [volume], never
+  /// baked into [video].
+  final model.EqualizerSettings equalizer;
 
   /// Playback speed multiplier for this clip (e.g. 0.5 = half speed, 2.0 = double speed).
   /// Null means normal speed (1.0).
@@ -558,6 +567,7 @@ class DivineVideoClip {
     Duration? sourceStartOffset,
     Duration? minTrimStart,
     double? volume,
+    model.EqualizerSettings? equalizer,
     double? playbackSpeed,
     bool clearPlaybackSpeed = false,
     bool? reversed,
@@ -620,6 +630,7 @@ class DivineVideoClip {
       sourceStartOffset: sourceStartOffset ?? this.sourceStartOffset,
       minTrimStart: minTrimStart ?? this.minTrimStart,
       volume: volume ?? this.volume,
+      equalizer: equalizer ?? this.equalizer,
       playbackSpeed: clearPlaybackSpeed
           ? null
           : (playbackSpeed ?? this.playbackSpeed),
@@ -696,6 +707,7 @@ class DivineVideoClip {
       if (minTrimStart > Duration.zero)
         'minTrimStartMs': minTrimStart.inMilliseconds,
       'volume': volume,
+      if (!equalizer.isNone) 'equalizer': equalizer.toJson(),
       if (playbackSpeed != null) 'playbackSpeed': playbackSpeed,
       if (reversed) 'reversed': true,
       if (isPlaceholder) 'isPlaceholder': true,
@@ -825,6 +837,13 @@ class DivineVideoClip {
         milliseconds: (json['minTrimStartMs'] as int?) ?? 0,
       ),
       volume: (json['volume'] as num?)?.toDouble() ?? 1,
+      equalizer: switch (json['equalizer']) {
+        final Map<dynamic, dynamic> equalizer =>
+          model.EqualizerSettings.fromJson(
+            Map<String, dynamic>.from(equalizer),
+          ),
+        _ => model.EqualizerSettings.none,
+      },
       playbackSpeed: (json['playbackSpeed'] as num?)?.toDouble(),
       reversed: (json['reversed'] as bool?) ?? false,
       isPlaceholder: (json['isPlaceholder'] as bool?) ?? false,

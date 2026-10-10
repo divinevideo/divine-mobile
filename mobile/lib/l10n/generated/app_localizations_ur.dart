@@ -9741,6 +9741,63 @@ class AppLocalizationsUr extends AppLocalizations {
       'آواز تبدیل نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'منتخب کلپ کا باس، مڈ اور ٹریبل بدلیں';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'منتخب آواز کا باس، مڈ اور ٹریبل بدلیں';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'ایکولائزر';
+
+  @override
+  String get videoEditorEqualizerVoice => 'صاف آواز';
+
+  @override
+  String get videoEditorEqualizerBassy => 'زیادہ باس';
+
+  @override
+  String get videoEditorEqualizerBright => 'زیادہ روشن';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'کسی نقطے کو اوپر یا نیچے گھسیٹیں';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency کم کریں';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency بڑھائیں';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
 
   @override

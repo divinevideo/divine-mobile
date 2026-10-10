@@ -373,6 +373,47 @@ void main() {
       expect(result.single.endTime, equals(const Duration(seconds: 2)));
     });
 
+    group('equalizer', () {
+      test(
+        "takes each track's equalizer from the timeline event with its id",
+        () async {
+          final result = await resolveRenderAudioTracks(
+            [
+              _fileTrack(id: 'eq', path: '/tmp/eq.mp3'),
+              _fileTrack(id: 'plain', path: '/tmp/plain.mp3'),
+            ],
+            logName: 'test',
+            audioEvents: [
+              AudioEvent(id: 'plain', pubkey: 'pubkey', createdAt: 0),
+              AudioEvent(
+                id: 'eq',
+                pubkey: 'pubkey',
+                createdAt: 0,
+                equalizer: const EqualizerSettings([
+                  0,
+                  -6,
+                  0,
+                  4,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                ]),
+              ),
+            ],
+          );
+
+          expect(
+            result[0].equalizer?.bands.map((band) => band.gain),
+            [0, -6, 0, 4, 0, 0, 0, 0, 0, 0],
+          );
+          expect(result[1].equalizer, isNull);
+        },
+      );
+    });
+
     group('fade', () {
       AudioEvent event(String id, {Duration fadeIn = .zero, Duration? out}) =>
           AudioEvent(

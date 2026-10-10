@@ -6,6 +6,7 @@ import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 
 /**
@@ -19,7 +20,11 @@ import androidx.media3.exoplayer.ExoPlayer
  * [FADE_TICK_MS] from the overlay's own position while it plays. The 200 ms
  * position sync is far too coarse for a ramp, and ExoPlayer has no volume
  * ramp of its own; at this rate each step is too small to hear as one.
+ *
+ * Each track plays through its own [TrackEqualizerAudioProcessor], ahead of
+ * its volume and fade, as the export applies it.
  */
+@UnstableApi
 internal class AudioOverlayManager(
     private val context: Context,
     private val handler: Handler = Handler(Looper.getMainLooper()),
@@ -57,7 +62,13 @@ internal class AudioOverlayManager(
             val trackStartMs = (map["trackStartMs"] as? Number)?.toLong() ?: 0L
             val trackEndMs = (map["trackEndMs"] as? Number)?.toLong()
 
-            val overlay = ExoPlayer.Builder(context).build()
+            val equalizer = TrackEqualizerAudioProcessor().apply {
+                this.equalizer = AudioEqualizer.fromMap(map["equalizer"] as? Map<*, *>)
+            }
+            val overlay = ExoPlayer.Builder(
+                context,
+                TrackEqualizerRenderersFactory(context, equalizer),
+            ).build()
             overlay.setMediaItem(MediaItem.fromUri(uri))
             overlay.prepare()
             overlay.setPlaybackSpeed(currentPlaybackSpeed)
@@ -70,6 +81,7 @@ internal class AudioOverlayManager(
                 trackEndMs = trackEndMs,
                 baseVolume = vol,
                 fade = AudioOverlayFade.fromMap(map),
+                equalizer = equalizer,
             )
             // media3 generates the session off the main thread, so it can
             // arrive after the first volume was applied.
@@ -90,6 +102,14 @@ internal class AudioOverlayManager(
             entry.baseVolume = volume
             applyFadeGain(entry, entry.player.currentPosition)
         }
+    }
+
+    /**
+     * Sets the equalizer of the overlay at [index]; null plays it unchanged.
+     * Heard from the track's next buffer on, without reloading it.
+     */
+    fun setTrackEqualizer(index: Int, equalizer: AudioEqualizer?) {
+        overlays.getOrNull(index)?.equalizer?.equalizer = equalizer
     }
 
     /** Updates playback speed on all overlay players. */
@@ -244,6 +264,7 @@ internal class AudioOverlayManager(
 }
 
 /** Holds one audio overlay player and its scheduling metadata. */
+@UnstableApi
 internal class AudioOverlayEntry(
     val player: ExoPlayer,
     val videoStartMs: Long,
@@ -256,6 +277,8 @@ internal class AudioOverlayEntry(
     var isActive: Boolean = false,
     /** Carries [baseVolume] above 100 %; see [AudioSessionBoost]. */
     val boost: AudioSessionBoost = AudioSessionBoost(),
+    /** The track's equalizer, in its player's audio sink. */
+    val equalizer: TrackEqualizerAudioProcessor? = null,
 ) {
     /** Whether this track is sounding with a fade that needs stepping. */
     val isFading: Boolean

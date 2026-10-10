@@ -9829,6 +9829,63 @@ class AppLocalizationsBg extends AppLocalizations {
       'Гласът не можа да се промени. Опитай отново.';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Промени басите, средните и високите на избрания клип';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Промени басите, средните и високите на избрания звук';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Еквалайзер';
+
+  @override
+  String get videoEditorEqualizerVoice => 'По-ясен глас';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Повече бас';
+
+  @override
+  String get videoEditorEqualizerBright => 'По-ярко';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Плъзнете точка нагоре или надолу';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Намали $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Увеличи $frequency';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Преход';
 
   @override

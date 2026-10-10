@@ -31,6 +31,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -179,6 +180,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   /// The volume being dragged in the timeline, which the canvas previews.
   final _liveVolumeNotifier = ValueNotifier<LiveVolume?>(null);
+  final _liveEqualizerNotifier = ValueNotifier<LiveEqualizer?>(null);
 
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
@@ -405,6 +407,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _playTimeNotifier.dispose();
     _playheadAdvancingNotifier.dispose();
     _liveVolumeNotifier.dispose();
+    _liveEqualizerNotifier.dispose();
     super.dispose();
   }
 
@@ -1141,6 +1144,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               playheadAdvancingNotifier: _playheadAdvancingNotifier,
               liveVolumeNotifier: _liveVolumeNotifier,
               cancelLiveVolumePreview: _cancelLiveVolumePreview,
+              liveEqualizerNotifier: _liveEqualizerNotifier,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

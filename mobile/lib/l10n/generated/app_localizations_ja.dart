@@ -9260,6 +9260,60 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorVoiceEffectFailed => '声を変更できませんでした。もう一度お試しください。';
 
   @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel => '選択したクリップの低音・中音・高音を変更';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel => '選択したサウンドの低音・中音・高音を変更';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'イコライザー';
+
+  @override
+  String get videoEditorEqualizerVoice => '声をクリアに';
+
+  @override
+  String get videoEditorEqualizerBassy => '低音強め';
+
+  @override
+  String get videoEditorEqualizerBright => '明るく';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'ポイントを上下にドラッグ';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequencyを下げる';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequencyを上げる';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'トランジション';
 
   @override
