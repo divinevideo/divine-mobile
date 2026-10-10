@@ -392,7 +392,10 @@ void main() {
       );
       expect(args.initialVideoId, equals('allowed-id'));
       expect(args.initialIndex, equals(1));
-      expect(args.contextTitle, equals('Animals'));
+      expect(
+        args.contextTitle,
+        equals(lookupAppLocalizations(const Locale('en')).categoryAnimals),
+      );
       expect(args.source, equals(const CategoryViewSource('animals')));
     });
 
