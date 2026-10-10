@@ -13180,4 +13180,93 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Makine çevirisi';
+
+  @override
+  String get ideasNeedIdeas => 'Fikir mi lazım?';
+
+  @override
+  String get ideasHide => 'Fikirleri gizle';
+
+  @override
+  String get ideasFromVideo => 'Videomdan';
+
+  @override
+  String get ideasSurprise => 'Beni şaşırt';
+
+  @override
+  String get ideasPrepare => 'Cihazdaki önerileri hazırla';
+
+  @override
+  String get ideasUnavailable =>
+      'Video fikirleri şu an kullanılamıyor. Beni şaşırt seçeneğini dene.';
+
+  @override
+  String get ideasSourceVideo => 'Videona dayanıyor';
+
+  @override
+  String get ideasSourceTranscript => 'Konuşma dökümüne dayanıyor';
+
+  @override
+  String get ideasSourcePremade => 'Biraz ilham';
+
+  @override
+  String get ideasUseBoth => 'İkisini de kullan';
+
+  @override
+  String get ideasMore => 'Daha fazla fikir';
+
+  @override
+  String get ideasGenerateTranscript => 'Döküm oluştur';
+
+  @override
+  String get ideasEditTranscript => 'Dökümü düzenle';
+
+  @override
+  String get ideasTranscript => 'Fikirler için döküm';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Döküm için Divine hizmeti, yedek olarak da cihaz kullanılır. Metin önerileri telefonunda kalır. Bu işlem gönderine altyazı eklemez.';
+
+  @override
+  String get ideasApplied => 'Fikir eklendi. Kendi dokunuşunu kat.';
+
+  @override
+  String get ideasUndo => 'Geri al';
+
+  @override
+  String get ideasTitleOne => 'Küçük bir an';
+
+  @override
+  String get ideasDescriptionOne => 'Bunu paylaşmak istedim.';
+
+  @override
+  String get ideasTitleTwo => 'İşte geliyor';
+
+  @override
+  String get ideasDescriptionTwo => 'Günümden küçük bir parça.';
+
+  @override
+  String get ideasTitleThree => 'Döngüye değer';
+
+  @override
+  String get ideasDescriptionThree => 'Saklamaya değer bir an.';
+
+  @override
+  String get ideasTitleFour => 'Bunu ben yaptım';
+
+  @override
+  String get ideasDescriptionFour => 'Benden küçük bir şey.';
+
+  @override
+  String get ideasTitleFive => 'Uzun açıklama yok';
+
+  @override
+  String get ideasDescriptionFive => 'Sadece paylaşmak istedim.';
+
+  @override
+  String get ideasTitleSix => 'Bugünden bir parça';
+
+  @override
+  String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
 }

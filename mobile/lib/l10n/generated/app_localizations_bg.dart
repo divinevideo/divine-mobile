@@ -13382,4 +13382,93 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Машинен превод';
+
+  @override
+  String get ideasNeedIdeas => 'Трябват ти идеи?';
+
+  @override
+  String get ideasHide => 'Скрий идеите';
+
+  @override
+  String get ideasFromVideo => 'От моето видео';
+
+  @override
+  String get ideasSurprise => 'Изненадай ме';
+
+  @override
+  String get ideasPrepare => 'Подготви предложения на устройството';
+
+  @override
+  String get ideasUnavailable =>
+      'Идеите от видеото сега не са налични. Пробвай Изненадай ме.';
+
+  @override
+  String get ideasSourceVideo => 'Въз основа на видеото ти';
+
+  @override
+  String get ideasSourceTranscript => 'Въз основа на транскрипцията ти';
+
+  @override
+  String get ideasSourcePremade => 'Малко вдъхновение';
+
+  @override
+  String get ideasUseBoth => 'Използвай и двете';
+
+  @override
+  String get ideasMore => 'Още идеи';
+
+  @override
+  String get ideasGenerateTranscript => 'Създай транскрипция';
+
+  @override
+  String get ideasEditTranscript => 'Редактирай транскрипцията';
+
+  @override
+  String get ideasTranscript => 'Транскрипция за идеи';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Транскрипцията използва услугата на Divine, с обработка на устройството като резервен вариант. Предложенията за текст остават на телефона ти. Това не добавя субтитри към публикацията.';
+
+  @override
+  String get ideasApplied => 'Идеята е добавена. Направи я своя.';
+
+  @override
+  String get ideasUndo => 'Отмени';
+
+  @override
+  String get ideasTitleOne => 'Малък момент';
+
+  @override
+  String get ideasDescriptionOne => 'Искаше ми се да споделя това.';
+
+  @override
+  String get ideasTitleTwo => 'Ето го';
+
+  @override
+  String get ideasDescriptionTwo => 'Малка част от деня ми.';
+
+  @override
+  String get ideasTitleThree => 'За повторение';
+
+  @override
+  String get ideasDescriptionThree => 'Момент, който си струва да запазя.';
+
+  @override
+  String get ideasTitleFour => 'Мое дело';
+
+  @override
+  String get ideasDescriptionFour => 'Нещо малко от мен.';
+
+  @override
+  String get ideasTitleFive => 'Без много обяснения';
+
+  @override
+  String get ideasDescriptionFive => 'Просто исках да споделя.';
+
+  @override
+  String get ideasTitleSix => 'Малко от днес';
+
+  @override
+  String get ideasDescriptionSix => 'Оставям това тук.';
 }

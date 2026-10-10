@@ -13418,4 +13418,93 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Maschinell übersetzt';
+
+  @override
+  String get ideasNeedIdeas => 'Brauchst du Ideen?';
+
+  @override
+  String get ideasHide => 'Ideen ausblenden';
+
+  @override
+  String get ideasFromVideo => 'Aus meinem Video';
+
+  @override
+  String get ideasSurprise => 'Überrasch mich';
+
+  @override
+  String get ideasPrepare => 'Vorschläge auf dem Gerät vorbereiten';
+
+  @override
+  String get ideasUnavailable =>
+      'Videoideen sind gerade nicht verfügbar. Versuch Überrasch mich.';
+
+  @override
+  String get ideasSourceVideo => 'Basierend auf deinem Video';
+
+  @override
+  String get ideasSourceTranscript => 'Basierend auf deinem Transkript';
+
+  @override
+  String get ideasSourcePremade => 'Ein bisschen Inspiration';
+
+  @override
+  String get ideasUseBoth => 'Beides verwenden';
+
+  @override
+  String get ideasMore => 'Mehr Ideen';
+
+  @override
+  String get ideasGenerateTranscript => 'Transkript erstellen';
+
+  @override
+  String get ideasEditTranscript => 'Transkript bearbeiten';
+
+  @override
+  String get ideasTranscript => 'Transkript für Ideen';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Die Transkription nutzt den Divine-Dienst und ersatzweise dein Gerät. Textvorschläge bleiben auf deinem Handy. Deinem Beitrag werden dadurch keine Untertitel hinzugefügt.';
+
+  @override
+  String get ideasApplied => 'Idee eingefügt. Mach sie zu deiner.';
+
+  @override
+  String get ideasUndo => 'Rückgängig';
+
+  @override
+  String get ideasTitleOne => 'Ein kleiner Moment';
+
+  @override
+  String get ideasDescriptionOne => 'Das wollte ich teilen.';
+
+  @override
+  String get ideasTitleTwo => 'Los geht’s';
+
+  @override
+  String get ideasDescriptionTwo => 'Ein kleines Stück aus meinem Tag.';
+
+  @override
+  String get ideasTitleThree => 'Für die Schleife';
+
+  @override
+  String get ideasDescriptionThree => 'Ein Moment zum Festhalten.';
+
+  @override
+  String get ideasTitleFour => 'Selbst gemacht';
+
+  @override
+  String get ideasDescriptionFour => 'Eine Kleinigkeit von mir.';
+
+  @override
+  String get ideasTitleFive => 'Ohne große Erklärung';
+
+  @override
+  String get ideasDescriptionFive => 'Wollte ich einfach teilen.';
+
+  @override
+  String get ideasTitleSix => 'Ein bisschen Heute';
+
+  @override
+  String get ideasDescriptionSix => 'Das lasse ich hier.';
 }

@@ -73,6 +73,7 @@ workspace:
   - packages/nostr_key_manager
   - packages/people_lists_repository
   - packages/permissions_service
+  - packages/publishing_suggestions
   - packages/profile_repository
   - packages/reposts_repository
   - packages/sound_service
@@ -94,6 +95,8 @@ workspace:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  publishing_suggestions:
+    path: packages/publishing_suggestions
   flutter:
     sdk: flutter
 

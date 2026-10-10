@@ -1,0 +1,76 @@
+name: Publishing Suggestions CI
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/publishing_suggestions/**"
+      - ".github/workflows/publishing_suggestions.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/publishing_suggestions/**"
+      - ".github/workflows/publishing_suggestions.yaml"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/publishing_suggestions"
+      flutter_version: "3.47.2"
+
+  android-tests:
+    name: Android Native Tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14.3"
+          cache-provider: basic
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Test publishing_suggestions Android plugin
+        working-directory: mobile/packages/publishing_suggestions/android
+        run: gradle testDebugUnitTest
+
+  darwin-tests:
+    name: Apple Native Tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select Xcode 26
+        run: |
+          xcode="$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"
+          if [ ! -d "$xcode" ]; then
+            echo "::error::No Xcode 26 on this runner image"
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: Cache Apple engine frameworks
+        run: flutter precache --ios --macos
+      - name: Test publishing_suggestions Apple plugin
+        run: bash mobile/packages/publishing_suggestions/darwin/test_suggestions.sh

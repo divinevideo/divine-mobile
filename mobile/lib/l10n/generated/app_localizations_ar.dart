@@ -13217,4 +13217,92 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'ترجمة آلية';
+
+  @override
+  String get ideasNeedIdeas => 'تحتاج أفكارًا؟';
+
+  @override
+  String get ideasHide => 'إخفاء الأفكار';
+
+  @override
+  String get ideasFromVideo => 'من الفيديو الخاص بي';
+
+  @override
+  String get ideasSurprise => 'فاجئني';
+
+  @override
+  String get ideasPrepare => 'تجهيز الاقتراحات على الجهاز';
+
+  @override
+  String get ideasUnavailable => 'أفكار الفيديو غير متاحة الآن. جرّب فاجئني.';
+
+  @override
+  String get ideasSourceVideo => 'بناءً على الفيديو الخاص بك';
+
+  @override
+  String get ideasSourceTranscript => 'بناءً على النص المفرّغ';
+
+  @override
+  String get ideasSourcePremade => 'القليل من الإلهام';
+
+  @override
+  String get ideasUseBoth => 'استخدام الاثنين';
+
+  @override
+  String get ideasMore => 'المزيد من الأفكار';
+
+  @override
+  String get ideasGenerateTranscript => 'إنشاء نص مفرّغ';
+
+  @override
+  String get ideasEditTranscript => 'تعديل النص المفرّغ';
+
+  @override
+  String get ideasTranscript => 'نص مفرّغ للأفكار';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'يستخدم التفريغ خدمة Divine، مع المعالجة على الجهاز كبديل. تبقى اقتراحات الصياغة على هاتفك. لن يضيف هذا ترجمات إلى منشورك.';
+
+  @override
+  String get ideasApplied => 'أُضيفت الفكرة. أضف لمستك.';
+
+  @override
+  String get ideasUndo => 'تراجع';
+
+  @override
+  String get ideasTitleOne => 'لحظة صغيرة';
+
+  @override
+  String get ideasDescriptionOne => 'أحببت مشاركة هذا.';
+
+  @override
+  String get ideasTitleTwo => 'ها نحن';
+
+  @override
+  String get ideasDescriptionTwo => 'جزء صغير من يومي.';
+
+  @override
+  String get ideasTitleThree => 'للمشاهدة المتكررة';
+
+  @override
+  String get ideasDescriptionThree => 'لحظة تستحق الاحتفاظ بها.';
+
+  @override
+  String get ideasTitleFour => 'صنعت هذا';
+
+  @override
+  String get ideasDescriptionFour => 'شيء بسيط مني.';
+
+  @override
+  String get ideasTitleFive => 'بلا شرح طويل';
+
+  @override
+  String get ideasDescriptionFive => 'أردت المشاركة فقط.';
+
+  @override
+  String get ideasTitleSix => 'القليل من اليوم';
+
+  @override
+  String get ideasDescriptionSix => 'أترك هذا هنا.';
 }

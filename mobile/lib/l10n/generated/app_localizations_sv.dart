@@ -13259,4 +13259,93 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Maskinöversatt';
+
+  @override
+  String get ideasNeedIdeas => 'Behöver du idéer?';
+
+  @override
+  String get ideasHide => 'Dölj idéer';
+
+  @override
+  String get ideasFromVideo => 'Från min video';
+
+  @override
+  String get ideasSurprise => 'Överraska mig';
+
+  @override
+  String get ideasPrepare => 'Förbered förslag på enheten';
+
+  @override
+  String get ideasUnavailable =>
+      'Videoidéer är inte tillgängliga just nu. Prova Överraska mig.';
+
+  @override
+  String get ideasSourceVideo => 'Baserat på din video';
+
+  @override
+  String get ideasSourceTranscript => 'Baserat på din transkription';
+
+  @override
+  String get ideasSourcePremade => 'Lite inspiration';
+
+  @override
+  String get ideasUseBoth => 'Använd båda';
+
+  @override
+  String get ideasMore => 'Fler idéer';
+
+  @override
+  String get ideasGenerateTranscript => 'Skapa transkription';
+
+  @override
+  String get ideasEditTranscript => 'Redigera transkription';
+
+  @override
+  String get ideasTranscript => 'Transkription för idéer';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transkriptionen använder Divines tjänst, med enheten som reserv. Textförslag stannar på din telefon. Detta lägger inte till undertexter i ditt inlägg.';
+
+  @override
+  String get ideasApplied => 'Idé tillagd. Gör den till din.';
+
+  @override
+  String get ideasUndo => 'Ångra';
+
+  @override
+  String get ideasTitleOne => 'Ett litet ögonblick';
+
+  @override
+  String get ideasDescriptionOne => 'Kände för att dela det här.';
+
+  @override
+  String get ideasTitleTwo => 'Nu kör vi';
+
+  @override
+  String get ideasDescriptionTwo => 'En liten bit av min dag.';
+
+  @override
+  String get ideasTitleThree => 'För loopen';
+
+  @override
+  String get ideasDescriptionThree => 'Ett ögonblick att spara.';
+
+  @override
+  String get ideasTitleFour => 'Jag gjorde det här';
+
+  @override
+  String get ideasDescriptionFour => 'En liten grej från mig.';
+
+  @override
+  String get ideasTitleFive => 'Ingen stor förklaring';
+
+  @override
+  String get ideasDescriptionFive => 'Ville bara dela.';
+
+  @override
+  String get ideasTitleSix => 'Lite av idag';
+
+  @override
+  String get ideasDescriptionSix => 'Lämnar det här.';
 }

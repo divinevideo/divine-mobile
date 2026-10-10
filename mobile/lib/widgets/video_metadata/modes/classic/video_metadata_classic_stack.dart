@@ -32,7 +32,7 @@ class VideoMetadataClassicStack extends StatelessWidget {
                   ),
                   Padding(
                     padding: EdgeInsets.only(top: 16),
-                    child: VideoMetadataFormFields(),
+                    child: VideoMetadataFormFields(enableIdeas: true),
                   ),
                 ],
               ),

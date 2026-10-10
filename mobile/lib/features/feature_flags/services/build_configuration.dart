@@ -9,6 +9,8 @@ class BuildConfiguration {
   /// Get the default value for a feature flag from environment variables
   bool getDefault(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.publishingIdeas:
+        return const bool.fromEnvironment('FF_PUBLISHING_IDEAS');
       case FeatureFlag.enhancedAnalytics:
         return const bool.fromEnvironment('FF_ENHANCED_ANALYTICS');
       case FeatureFlag.debugTools:
@@ -79,6 +81,8 @@ class BuildConfiguration {
   /// Get the environment variable key for a flag
   String getEnvironmentKey(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.publishingIdeas:
+        return 'FF_PUBLISHING_IDEAS';
       case FeatureFlag.enhancedAnalytics:
         return 'FF_ENHANCED_ANALYTICS';
       case FeatureFlag.debugTools:

@@ -36,7 +36,7 @@ class VideoMetadataCaptureStack extends StatelessWidget {
                   ),
 
                   // Form fields
-                  VideoMetadataFormFields(),
+                  VideoMetadataFormFields(enableIdeas: true),
                 ],
               ),
             ),

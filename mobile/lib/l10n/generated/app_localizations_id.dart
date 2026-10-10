@@ -13159,4 +13159,93 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Terjemahan mesin';
+
+  @override
+  String get ideasNeedIdeas => 'Butuh ide?';
+
+  @override
+  String get ideasHide => 'Sembunyikan ide';
+
+  @override
+  String get ideasFromVideo => 'Dari video saya';
+
+  @override
+  String get ideasSurprise => 'Kejutkan saya';
+
+  @override
+  String get ideasPrepare => 'Siapkan saran di perangkat';
+
+  @override
+  String get ideasUnavailable =>
+      'Ide dari video belum tersedia. Coba Kejutkan saya.';
+
+  @override
+  String get ideasSourceVideo => 'Berdasarkan videomu';
+
+  @override
+  String get ideasSourceTranscript => 'Berdasarkan transkripmu';
+
+  @override
+  String get ideasSourcePremade => 'Sedikit inspirasi';
+
+  @override
+  String get ideasUseBoth => 'Gunakan keduanya';
+
+  @override
+  String get ideasMore => 'Ide lainnya';
+
+  @override
+  String get ideasGenerateTranscript => 'Buat transkrip';
+
+  @override
+  String get ideasEditTranscript => 'Edit transkrip';
+
+  @override
+  String get ideasTranscript => 'Transkrip untuk ide';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transkripsi menggunakan layanan Divine, dengan perangkat sebagai cadangan. Saran tulisan tetap di ponselmu. Ini tidak menambahkan subtitel ke postingan.';
+
+  @override
+  String get ideasApplied => 'Ide ditambahkan. Beri sentuhanmu.';
+
+  @override
+  String get ideasUndo => 'Urungkan';
+
+  @override
+  String get ideasTitleOne => 'Momen kecil';
+
+  @override
+  String get ideasDescriptionOne => 'Ingin berbagi ini.';
+
+  @override
+  String get ideasTitleTwo => 'Ini dia';
+
+  @override
+  String get ideasDescriptionTwo => 'Sedikit bagian dari hariku.';
+
+  @override
+  String get ideasTitleThree => 'Untuk diputar berulang';
+
+  @override
+  String get ideasDescriptionThree => 'Momen yang layak disimpan.';
+
+  @override
+  String get ideasTitleFour => 'Buatan saya';
+
+  @override
+  String get ideasDescriptionFour => 'Sedikit sesuatu dariku.';
+
+  @override
+  String get ideasTitleFive => 'Tanpa banyak penjelasan';
+
+  @override
+  String get ideasDescriptionFive => 'Cuma ingin berbagi.';
+
+  @override
+  String get ideasTitleSix => 'Sedikit tentang hari ini';
+
+  @override
+  String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
 }

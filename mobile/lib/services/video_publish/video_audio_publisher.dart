@@ -673,12 +673,6 @@ class VideoAudioPublisher {
           ? attribution!.creatorName.trim()
           : creatorName;
 
-      Log.debug(
-        'Audio title: $audioTitle',
-        name: _logName,
-        category: LogCategory.video,
-      );
-
       Log.info(
         'Step 3: Creating Kind 1063 audio event',
         name: _logName,

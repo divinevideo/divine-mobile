@@ -22154,6 +22154,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Machine-translated'**
   String get subtitleMachineTranslated;
+
+  /// Inline publishing ideas: NeedIdeas
+  ///
+  /// In en, this message translates to:
+  /// **'Need ideas?'**
+  String get ideasNeedIdeas;
+
+  /// Inline publishing ideas: Hide
+  ///
+  /// In en, this message translates to:
+  /// **'Hide ideas'**
+  String get ideasHide;
+
+  /// Inline publishing ideas: FromVideo
+  ///
+  /// In en, this message translates to:
+  /// **'From my video'**
+  String get ideasFromVideo;
+
+  /// Inline publishing ideas: Surprise
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise me'**
+  String get ideasSurprise;
+
+  /// Inline publishing ideas: Prepare
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare on-device suggestions'**
+  String get ideasPrepare;
+
+  /// Inline publishing ideas: Unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Video ideas aren’t available right now. Try Surprise me.'**
+  String get ideasUnavailable;
+
+  /// Inline publishing ideas: SourceVideo
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your video'**
+  String get ideasSourceVideo;
+
+  /// Inline publishing ideas: SourceTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your transcript'**
+  String get ideasSourceTranscript;
+
+  /// Inline publishing ideas: SourcePremade
+  ///
+  /// In en, this message translates to:
+  /// **'A little inspiration'**
+  String get ideasSourcePremade;
+
+  /// Inline publishing ideas: UseBoth
+  ///
+  /// In en, this message translates to:
+  /// **'Use both'**
+  String get ideasUseBoth;
+
+  /// Inline publishing ideas: More
+  ///
+  /// In en, this message translates to:
+  /// **'More ideas'**
+  String get ideasMore;
+
+  /// Inline publishing ideas: GenerateTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Generate transcript'**
+  String get ideasGenerateTranscript;
+
+  /// Inline publishing ideas: EditTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Edit transcript'**
+  String get ideasEditTranscript;
+
+  /// Inline publishing ideas: Transcript
+  ///
+  /// In en, this message translates to:
+  /// **'Transcript for ideas'**
+  String get ideasTranscript;
+
+  /// Inline publishing ideas: TranscriptionNotice
+  ///
+  /// In en, this message translates to:
+  /// **'Transcription uses Divine’s service, with an on-device fallback. Suggested wording stays on your phone. This won’t add subtitles to your post.'**
+  String get ideasTranscriptionNotice;
+
+  /// Inline publishing ideas: Applied
+  ///
+  /// In en, this message translates to:
+  /// **'Idea added. Make it yours.'**
+  String get ideasApplied;
+
+  /// Inline publishing ideas: Undo
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get ideasUndo;
+
+  /// Inline publishing ideas: TitleOne
+  ///
+  /// In en, this message translates to:
+  /// **'A small moment'**
+  String get ideasTitleOne;
+
+  /// Inline publishing ideas: DescriptionOne
+  ///
+  /// In en, this message translates to:
+  /// **'Felt like sharing this.'**
+  String get ideasDescriptionOne;
+
+  /// Inline publishing ideas: TitleTwo
+  ///
+  /// In en, this message translates to:
+  /// **'Here goes'**
+  String get ideasTitleTwo;
+
+  /// Inline publishing ideas: DescriptionTwo
+  ///
+  /// In en, this message translates to:
+  /// **'Putting this little bit of my day out there.'**
+  String get ideasDescriptionTwo;
+
+  /// Inline publishing ideas: TitleThree
+  ///
+  /// In en, this message translates to:
+  /// **'One for the loop'**
+  String get ideasTitleThree;
+
+  /// Inline publishing ideas: DescriptionThree
+  ///
+  /// In en, this message translates to:
+  /// **'A moment worth keeping.'**
+  String get ideasDescriptionThree;
+
+  /// Inline publishing ideas: TitleFour
+  ///
+  /// In en, this message translates to:
+  /// **'Made this'**
+  String get ideasTitleFour;
+
+  /// Inline publishing ideas: DescriptionFour
+  ///
+  /// In en, this message translates to:
+  /// **'A little something from me.'**
+  String get ideasDescriptionFour;
+
+  /// Inline publishing ideas: TitleFive
+  ///
+  /// In en, this message translates to:
+  /// **'No big explanation'**
+  String get ideasTitleFive;
+
+  /// Inline publishing ideas: DescriptionFive
+  ///
+  /// In en, this message translates to:
+  /// **'Just wanted to share.'**
+  String get ideasDescriptionFive;
+
+  /// Inline publishing ideas: TitleSix
+  ///
+  /// In en, this message translates to:
+  /// **'A little bit of today'**
+  String get ideasTitleSix;
+
+  /// Inline publishing ideas: DescriptionSix
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving this here.'**
+  String get ideasDescriptionSix;
 }
 
 class _AppLocalizationsDelegate

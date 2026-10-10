@@ -30,6 +30,7 @@ media_cache # plugin+api: wraps flutter_cache_manager, uses dart:ui + painting
 nostr_key_manager # plugin: wraps flutter_secure_storage for signing material
 nostr_sdk # api: Android NIP-55 external signer (flutter/services MethodChannel)
 permissions_service # plugin: wraps permission_handler + device_info_plus
+publishing_suggestions # plugin: own Android/Darwin flutter: plugin: block for local models (MethodChannel)
 sound_service # api: kIsWeb (flutter/foundation); wraps just_audio + audio_session
 tv_static_effect # ui: exports the static-effect widget
 unified_logger # api: kDebugMode/kIsWeb/debugPrint (flutter/foundation)
