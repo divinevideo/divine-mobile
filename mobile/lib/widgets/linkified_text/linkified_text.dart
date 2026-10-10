@@ -23,6 +23,7 @@ class LinkifiedText extends ConsumerStatefulWidget {
     this.onUrlTap,
     this.mentionProfilePubkeys = const [],
     this.dismissModalBeforeNavigation = false,
+    this.compactUrls = false,
   });
 
   final String text;
@@ -35,6 +36,9 @@ class LinkifiedText extends ConsumerStatefulWidget {
   final Future<void> Function(String rawUrl)? onUrlTap;
   final List<String> mentionProfilePubkeys;
   final bool dismissModalBeforeNavigation;
+
+  /// Shows URLs without scheme or query string; taps still open the full URL.
+  final bool compactUrls;
 
   @override
   ConsumerState<LinkifiedText> createState() => _LinkifiedTextState();
@@ -81,6 +85,7 @@ class _LinkifiedTextState extends ConsumerState<LinkifiedText> {
       onVideoTap: (routeReference) => _navigateToVideo(context, routeReference),
       onMentionTap: (username) => _navigateToMention(context, username),
       onUrlTap: _handleUrlTap,
+      compactUrls: widget.compactUrls,
     ).build();
 
     if (!_hasClickableOrStylableToken(spans, defaultStyle)) {

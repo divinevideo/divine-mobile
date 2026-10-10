@@ -653,6 +653,60 @@ void main() {
         expect(spans.map((span) => span.text).join(), equals('hi 😀 there'));
       });
     });
+    group('compactUrls', () {
+      test('shows a link without scheme or query and taps the full URL', () {
+        final tappedUrls = <String>[];
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'Follow https://youtube.com/@icyvault_official?si=_RmdS-TxTBR now',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          onUrlTap: (rawUrl) async => tappedUrls.add(rawUrl),
+          compactUrls: true,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('Follow youtube.com/@icyvault_official now'),
+        );
+
+        spans.tappableSpans.single.tap();
+        expect(
+          tappedUrls,
+          equals(['https://youtube.com/@icyvault_official?si=_RmdS-TxTBR']),
+        );
+      });
+
+      test('drops a scheme the URL pattern does not match', () {
+        final spans = const LinkifiedTextSpanBuilder(
+          text: 'Relay: wss://relay.divine.video/feed?x=1',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          compactUrls: true,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('Relay: relay.divine.video/feed'),
+        );
+        expect(
+          spans.tappableSpans.single.text,
+          equals('relay.divine.video/feed'),
+        );
+      });
+
+      test('leaves links untouched when disabled', () {
+        final spans = const LinkifiedTextSpanBuilder(
+          text: 'wss://relay.divine.video and https://a.com/b?c=d',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('wss://relay.divine.video and https://a.com/b?c=d'),
+        );
+      });
+    });
   });
 }
 
