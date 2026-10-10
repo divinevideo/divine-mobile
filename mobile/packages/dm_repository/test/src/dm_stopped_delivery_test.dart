@@ -479,6 +479,70 @@ void main() {
       });
     });
 
+    group('a stop that lands while the wrap is in flight', () {
+      test('recoverFullSend leaves the record alone when its publish '
+          'lands afterwards', () async {
+        final sent = await sendReachingOnlyA();
+        // The retry is on the wire when the user stops B.
+        messageWrap = (rumor, recipient) async {
+          await repository.cancelOutgoingSend(rumorId: sent.rowForB);
+          return delivered(rumor, recipient);
+        };
+
+        final result = await repository.recoverFullSend(
+          rumorId: sent.rowForB,
+        );
+
+        expect(result.success, isTrue, reason: 'the wrap did land');
+        final row = await outgoingDao.getById(sent.rowForB);
+        expect(
+          row?.recipientWrapStatus,
+          equals(OutgoingWrapStatus.cancelled),
+          reason:
+              'finalizing the landed publish would drop the row and the '
+              'bubble would read as delivered again',
+        );
+      });
+
+      test('sendGroupMessage leaves the record alone when the publish to '
+          'that member lands afterwards', () async {
+        final conversationId = DmRepository.computeConversationId([
+          _owner,
+          _memberA,
+          _memberB,
+        ]);
+        // B is stopped while B's own wrap is in flight, after the message
+        // was stored through A.
+        messageWrap = (rumor, recipient) async {
+          if (recipient == _memberB) {
+            final forB = await rowFor(conversationId, _memberB);
+            await messagesDao.insertMessage(
+              id: rumor.id,
+              conversationId: conversationId,
+              senderPubkey: _owner,
+              content: rumor.content,
+              createdAt: rumor.createdAt,
+              giftWrapId: _hex(0xecc1),
+              tagsJson: jsonEncode(rumor.tags),
+              ownerPubkey: _owner,
+              sendBatchId: forB!.sendBatchId,
+            );
+            await repository.cancelOutgoingSend(rumorId: forB.id);
+          }
+          return delivered(rumor, recipient);
+        };
+
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [_memberA, _memberB],
+          content: 'dinner at eight',
+        );
+
+        expect(results.map((r) => r.success), equals([true, true]));
+        final forB = await rowFor(conversationId, _memberB);
+        expect(forB?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
+    });
+
     group('sendGroupMessage', () {
       test('does not publish to a member stopped while the batch was still '
           'sending', () async {
