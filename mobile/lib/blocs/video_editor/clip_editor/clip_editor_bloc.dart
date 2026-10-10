@@ -1693,6 +1693,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       startOffset: clip.trimStart,
       startTime: startTime,
       endTime: startTime + span,
+      // The sound plays as the clip did.
+      equalizer: clip.equalizer,
     );
   }
 
@@ -3303,6 +3305,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // Anchor the extracted audio to its source clip so it follows the
         // clip's trims (J-Cut) until the user manually moves it.
         anchorClipId: currentClip.id,
+        // The extracted sound keeps the tone the clip played with.
+        equalizer: currentClip.equalizer,
       );
 
       // Mute the source clip now that its audio has been extracted.

@@ -1836,6 +1836,48 @@ void main() {
       });
     });
 
+    group('equalizer', () {
+      final equalized = AudioEvent(
+        id: 'eq-id-1234567890123456789012345678901234567890123456789012345',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        equalizer: const EqualizerSettings([0, -6, 0, 4, 0, 0, 0, 0, 0, 0]),
+      );
+
+      test('defaults to none and is left out of json', () {
+        final plain = AudioEvent(
+          id: 'plain-id-1234567890123456789012345678901234567890123456789012',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+        );
+
+        expect(plain.equalizer, EqualizerSettings.none);
+        expect(plain.toJson(), isNot(contains('equalizer')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        expect(
+          AudioEvent.fromJson(equalized.toJson()).equalizer,
+          const EqualizerSettings([0, -6, 0, 4, 0, 0, 0, 0, 0, 0]),
+        );
+      });
+
+      test('is part of equality, so an equalizer-only edit is a change', () {
+        expect(
+          equalized.copyWith(equalizer: EqualizerSettings.none),
+          isNot(equalized),
+        );
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        expect(
+          equalized.toTags(),
+          equalized.copyWith(equalizer: EqualizerSettings.none).toTags(),
+        );
+      });
+    });
+
     group('voice processing', () {
       final processed = AudioEvent(
         id: '${AudioEvent.localImportMarker}_voice_over_1',

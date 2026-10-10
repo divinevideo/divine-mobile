@@ -79,6 +79,9 @@ class SubtitleRepository {
   /// Generates VTT from [cues], uploads it to Blossom, publishes a 39307
   /// subtitle event, then republishes the video referencing both.
   ///
+  /// [lang] defaults to the language the subtitles are already tagged with,
+  /// so an edit keeps it; untagged subtitles are published as English.
+  ///
   /// Throws:
   ///
   /// * [SubtitleEditException] when the user is not authenticated.
@@ -89,7 +92,7 @@ class SubtitleRepository {
   Future<VideoEvent> publishEditedSubtitles({
     required VideoEvent video,
     required List<SubtitleCue> cues,
-    String lang = 'en',
+    String? lang,
   }) async {
     if (_authService.currentPublicKeyHex == null) {
       throw SubtitleEditException('Not authenticated');
@@ -99,6 +102,7 @@ class SubtitleRepository {
       throw SubtitleEditException('Video has no addressable identifier');
     }
 
+    final trackLang = lang ?? video.textTrackLang ?? 'en';
     final vtt = SubtitleService.generateVtt(cues);
     final bytes = Uint8List.fromList(utf8.encode(vtt));
 
@@ -112,7 +116,7 @@ class SubtitleRepository {
       video: video,
       vttContent: vtt,
       blossomUrl: blossomUrl,
-      lang: lang,
+      lang: trackLang,
     );
     if (coordsRef == null) {
       throw SubtitleEditException('Subtitle event publish failed');
@@ -122,7 +126,7 @@ class SubtitleRepository {
       existingEvent: video,
       textTrackRef: blossomUrl,
       extraTextTrackRefs: [coordsRef],
-      textTrackLang: lang,
+      textTrackLang: trackLang,
     );
     if (updatedVideo == null) {
       throw SubtitleEditException('Video republish failed');

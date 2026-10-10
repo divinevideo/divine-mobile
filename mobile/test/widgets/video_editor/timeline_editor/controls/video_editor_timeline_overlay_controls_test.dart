@@ -665,6 +665,56 @@ void main() {
       });
     });
 
+    testWidgets('offers the equalizer and highlights it once one is set', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'sound-1',
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 4),
+      );
+      TimelineActionButton equalizerButton() =>
+          tester.widget<TimelineActionButton>(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is TimelineActionButton &&
+                  w.semanticLabel ==
+                      l10n.videoEditorEqualizerSoundSemanticLabel,
+            ),
+          );
+      final sound = AudioEvent(id: item.id, pubkey: 'pub', createdAt: 0);
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(TimelineOverlayState(audioTracks: [sound]));
+
+      await tester.pumpWidget(build(item));
+      expect(equalizerButton().type, TimelineActionButtonType.secondary);
+
+      when(() => overlayBloc.state).thenReturn(
+        TimelineOverlayState(
+          audioTracks: [
+            sound.copyWith(
+              equalizer: const EqualizerSettings([
+                0,
+                6,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+              ]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(build(item.copyWith(label: 'rebuilt')));
+      expect(equalizerButton().type, TimelineActionButtonType.primary);
+    });
+
     testWidgets('renders delete/edit/duplicate/split/done for tune', (
       tester,
     ) async {
@@ -748,6 +798,49 @@ void main() {
           exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
         );
       }
+
+      testWidgets('loops the sound while its equalizer is open', (
+        tester,
+      ) async {
+        const item = TimelineOverlayItem(
+          id: 'sound-1',
+          type: TimelineOverlayType.sound,
+          startTime: Duration(seconds: 2),
+          endTime: Duration(seconds: 5),
+        );
+        final sound = AudioEvent(id: item.id, pubkey: 'pub', createdAt: 0);
+        when(() => mockStateManager.activeMeta).thenReturn({
+          VideoEditorConstants.audioStateHistoryKey: [sound.toJson()],
+        });
+        when(
+          () => overlayBloc.state,
+        ).thenReturn(TimelineOverlayState(audioTracks: [sound]));
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+        await tester.pumpWidget(
+          buildWithEditor(item, mockEditor, mainBloc, routed: true),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorEqualizerSoundSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mainBloc.add(
+            const VideoEditorAuditionStarted(
+              start: Duration(seconds: 2),
+              end: Duration(seconds: 5),
+            ),
+          ),
+        ).called(1);
+        verifyNever(() => mainBloc.add(const VideoEditorAuditionEnded()));
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonCancel));
+        await tester.pumpAndSettle();
+
+        verify(() => mainBloc.add(const VideoEditorAuditionEnded())).called(1);
+      });
 
       testWidgets('duplicating a detached clip re-points its meta', (
         tester,

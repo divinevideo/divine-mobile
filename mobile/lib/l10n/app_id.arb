@@ -2701,6 +2701,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Menghapus desis, suara kipas, dan bising ruangan",
     "videoEditorVoiceEffectApplying": "Menerapkan efek vokal",
     "videoEditorVoiceEffectFailed": "Gagal mengubah suara. Coba lagi.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Ubah bass, mid, dan treble klip yang dipilih",
+    "videoEditorEqualizerSoundSemanticLabel": "Ubah bass, mid, dan treble suara yang dipilih",
+    "videoEditorEqualizerSheetTitle": "Equalizer",
+    "videoEditorEqualizerVoice": "Suara jernih",
+    "videoEditorEqualizerBassy": "Bass lebih",
+    "videoEditorEqualizerBright": "Lebih cerah",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Seret titik ke atas atau ke bawah",
+    "videoEditorEqualizerLowerBand": "Turunkan {frequency}",
+    "videoEditorEqualizerRaiseBand": "Naikkan {frequency}",
     "videoEditorTransitionSheetTitle": "Transisi",
     "videoEditorTransitionNone": "Tidak ada",
     "videoEditorTransitionDissolve": "Larut",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Cari orang",
     "newMessageNoContacts": "Tidak ada kontak ditemukan.\nIkuti orang untuk melihat mereka di sini.",
     "newMessageNoUsersFound": "Pengguna tidak ditemukan",
+    "newMessageNewGroup": "Grup baru",
+    "newMessageStartChat": "Mulai chat",
+    "newMessageGroupFull": "{count, plural, other{Itu batasnya: {count} orang, termasuk kamu.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Akun tidak tersedia",
     "userNotAvailableBody": "Akun ini tidak tersedia saat ini.",
     "blossomValidServerUrl": "Masukkan URL server yang valid (contoh: https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Hubungkan ulang {platforms} di pengaturan crossposting untuk tetap bisa memposting.} other{Hubungkan ulang akun-akun ini di pengaturan crossposting untuk tetap bisa memposting: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Hubungkan ulang {platforms} di pengaturan crossposting untuk tetap bisa memposting.} other{Hubungkan ulang akun-akun ini di pengaturan crossposting untuk tetap bisa memposting: {platforms}.}}",
+  "subtitleMachineTranslated": "Terjemahan mesin"
 }

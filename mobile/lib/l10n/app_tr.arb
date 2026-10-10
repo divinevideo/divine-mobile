@@ -2701,6 +2701,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Cızırtıyı, fanları ve oda gürültüsünü giderir",
     "videoEditorVoiceEffectApplying": "Ses efekti uygulanıyor",
     "videoEditorVoiceEffectFailed": "Ses değiştirilemedi. Tekrar dene.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Seçili klibin bas, orta ve tizini değiştir",
+    "videoEditorEqualizerSoundSemanticLabel": "Seçili sesin bas, orta ve tizini değiştir",
+    "videoEditorEqualizerSheetTitle": "Ekolayzer",
+    "videoEditorEqualizerVoice": "Net ses",
+    "videoEditorEqualizerBassy": "Daha çok bas",
+    "videoEditorEqualizerBright": "Daha parlak",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Bir noktayı yukarı veya aşağı sürükle",
+    "videoEditorEqualizerLowerBand": "{frequency} düşür",
+    "videoEditorEqualizerRaiseBand": "{frequency} yükselt",
     "videoEditorTransitionSheetTitle": "Geçiş",
     "videoEditorTransitionNone": "Yok",
     "videoEditorTransitionDissolve": "Erime",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "İnsan bul",
     "newMessageNoContacts": "Kişi bulunamadı.\nBurada görmek için insanları takip et.",
     "newMessageNoUsersFound": "Kullanıcı bulunamadı",
+    "newMessageNewGroup": "Yeni grup",
+    "newMessageStartChat": "Sohbeti başlat",
+    "newMessageGroupFull": "{count, plural, one{Sınır bu: sen dahil {count} kişi.} other{Sınır bu: sen dahil {count} kişi.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Hesap kullanılamıyor",
     "userNotAvailableBody": "Bu hesap şu anda kullanılamıyor.",
     "blossomValidServerUrl": "Lütfen geçerli bir sunucu URL'si gir (örn. https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından {platforms} hesabını yeniden bağla.} other{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından {platforms} hesabını yeniden bağla.} other{Paylaşmaya devam etmek için çapraz paylaşım ayarlarından şu hesapları yeniden bağla: {platforms}.}}",
+  "subtitleMachineTranslated": "Makine çevirisi"
 }

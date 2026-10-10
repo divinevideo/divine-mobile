@@ -6,12 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
+import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
@@ -21,6 +23,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -118,6 +121,13 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       );
     });
     final isLastClip = clipCount <= 1;
+    final hasEqualizer = context.select((ClipEditorBloc bloc) {
+      final state = bloc.state;
+      final index = state.currentClipIndex;
+      return index >= 0 &&
+          index < state.clips.length &&
+          !state.clips[index].equalizer.isNone;
+    });
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
@@ -161,6 +171,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       onDetach: () => _detachClip(context),
       isDetaching: isDetachingCurrentClip,
       onSpeed: () => _setPlaybackSpeed(context),
+      onEqualizer: () => _equalizeClip(context),
+      hasEqualizer: hasEqualizer,
+      equalizerSemanticLabel:
+          context.l10n.videoEditorEqualizerClipSemanticLabel,
       isSplitting: isSplittingCurrentClip,
       onTransform: () => _transformClip(context),
       onChromaKey: () => _editChromaKey(context),
@@ -469,6 +483,66 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       clips: newClips,
       timelineMarkers: rebasedMarkers,
     );
+  }
+
+  /// Opens the equalizer of the selected clip. The preview loops the clip and
+  /// plays every change while the sheet is open; a confirmed one becomes one
+  /// undo step, and a dismissed one puts the committed equalizer back on the
+  /// preview.
+  Future<void> _equalizeClip(BuildContext context) async {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    final clip = state.clips[state.currentClipIndex];
+    final editor = _editorOrNull(context);
+    if (editor == null) return;
+    final live = VideoEditorScope.of(context).liveEqualizerNotifier;
+    final mainBloc = context.read<VideoEditorMainBloc>();
+    var clipStart = Duration.zero;
+    for (final previous in state.clips.take(state.currentClipIndex)) {
+      clipStart += previous.playbackDuration;
+    }
+
+    mainBloc.add(
+      VideoEditorAuditionStarted(
+        start: clipStart,
+        end: clipStart + clip.playbackDuration,
+      ),
+    );
+    final result = await VideoEditorEqualizerSheet.show(
+      context: context,
+      initial: clip.equalizer,
+      onChanged: (settings) =>
+          live?.value = LiveEqualizer.clip(clip.id, settings),
+    );
+    mainBloc.add(const VideoEditorAuditionEnded());
+
+    // Re-read state after the async gap, as the speed sheet does: the clip
+    // list may have changed while the sheet was open.
+    final currentClips = bloc.state.clips;
+    final index = currentClips.indexWhere((c) => c.id == clip.id);
+    if (result == null ||
+        index == -1 ||
+        !mounted ||
+        result == currentClips[index].equalizer) {
+      if (index != -1) {
+        live?.value = LiveEqualizer.clip(
+          clip.id,
+          currentClips[index].equalizer,
+        );
+      }
+      live?.value = null;
+      return;
+    }
+
+    final updated = currentClips[index].copyWith(equalizer: result);
+    final newClips = List.of(currentClips)..[index] = updated;
+    bloc.add(ClipEditorClipUpdated(clipId: clip.id, clip: updated));
+    editor.setClipState(newClips);
+    live?.value = null;
   }
 
   void _requestExtractAudio(BuildContext context) {

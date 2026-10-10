@@ -4722,6 +4722,16 @@
   "newMessageFindPeople": "వ్యక్తులను కనుగొనండి",
   "newMessageNoContacts": "పరిచయాలు ఏవీ కనుగొనబడలేదు.\nవ్యక్తులను ఇక్కడ చూడటానికి వారిని అనుసరించండి.",
   "newMessageNoUsersFound": "వినియోగదారులు ఎవరూ కనుగొనబడలేదు",
+  "newMessageNewGroup": "కొత్త గ్రూప్",
+  "newMessageStartChat": "చాట్ ప్రారంభించండి",
+  "newMessageGroupFull": "{count, plural, one{ఇదే గరిష్ఠం: మీతో సహా {count} వ్యక్తి.} other{ఇదే గరిష్ఠం: మీతో సహా {count} మంది.}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "ఖాతా అందుబాటులో లేదు",
   "userNotAvailableBody": "ఈ ఖాతా ప్రస్తుతం అందుబాటులో లేదు.",
   "classicVinersTitle": "OG Viners",
@@ -5875,6 +5885,20 @@
   "videoEditorVoiceEffectNoiseReductionSubtitle": "హిస్, ఫ్యాన్‌లు, గది శబ్దాన్ని తొలగిస్తుంది",
   "videoEditorVoiceEffectApplying": "వాయిస్ ఎఫెక్ట్ వర్తింపజేస్తోంది",
   "videoEditorVoiceEffectFailed": "వాయిస్‌ను మార్చడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorEqualizerLabel": "EQ",
+  "videoEditorEqualizerClipSemanticLabel": "ఎంచుకున్న క్లిప్ బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి",
+  "videoEditorEqualizerSoundSemanticLabel": "ఎంచుకున్న ధ్వని బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి",
+  "videoEditorEqualizerSheetTitle": "ఈక్వలైజర్",
+  "videoEditorEqualizerVoice": "స్పష్టమైన స్వరం",
+  "videoEditorEqualizerBassy": "ఎక్కువ బాస్",
+  "videoEditorEqualizerBright": "ప్రకాశవంతం",
+  "videoEditorEqualizerGainValue": "{gain} dB",
+  "videoEditorEqualizerHertz": "{frequency} Hz",
+  "videoEditorEqualizerKilohertz": "{frequency} kHz",
+  "videoEditorEqualizerKilohertzShort": "{frequency}k",
+  "videoEditorEqualizerCurveHint": "ఒక బిందువును పైకి లేదా కిందికి లాగండి",
+  "videoEditorEqualizerLowerBand": "{frequency} తగ్గించండి",
+  "videoEditorEqualizerRaiseBand": "{frequency} పెంచండి",
   "videoEditorTransitionSheetTitle": "పరివర్తన",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -8470,5 +8494,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో {platforms}ను మళ్లీ కనెక్ట్ చేయండి.} other{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో {platforms}ను మళ్లీ కనెక్ట్ చేయండి.} other{పోస్ట్ చేయడం కొనసాగించడానికి క్రాస్‌పోస్టింగ్ సెట్టింగ్‌లలో ఈ ఖాతాలను మళ్లీ కనెక్ట్ చేయండి: {platforms}.}}",
+  "subtitleMachineTranslated": "యంత్ర అనువాదం"
 }

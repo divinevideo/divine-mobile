@@ -398,6 +398,20 @@ class AppLocalizationsFil extends AppLocalizations {
       'Gamitin ang wika ng device (default)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Gawing magagamit ng iba ang audio ko';
 
@@ -7865,6 +7879,23 @@ class AppLocalizationsFil extends AppLocalizations {
   String get newMessageNoUsersFound => 'Walang nakitang user';
 
   @override
+  String get newMessageNewGroup => 'Bagong group';
+
+  @override
+  String get newMessageStartChat => 'Simulan ang chat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hanggang diyan lang: $count tao, kasama ka.',
+      one: 'Hanggang diyan lang: $count tao, kasama ka.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Hindi available ang account';
 
   @override
@@ -9786,6 +9817,63 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'Hindi mabago ang boses. Subukan ulit.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Baguhin ang bass, mids at treble ng napiling clip';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Baguhin ang bass, mids at treble ng napiling sound';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Malinaw na boses';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mas bass';
+
+  @override
+  String get videoEditorEqualizerBright => 'Mas matinis';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'I-drag ang isang punto pataas o pababa';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Ibaba ang $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Itaas ang $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
@@ -13274,4 +13362,7 @@ class AppLocalizationsFil extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Awtomatikong isinalin';
 }

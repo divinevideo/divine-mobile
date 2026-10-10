@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -259,7 +260,9 @@ void main() {
 
           bloc.add(
             ClipEditorLibraryClipsImportRequested([
-              _videoClip('footage'),
+              _videoClip(
+                'footage',
+              ).copyWith(equalizer: EqualizerSettings.none.withGain(0, -6)),
             ], audioTitle: 'Clip Audio'),
           );
           final states = await bloc.stream.take(2).toList();
@@ -305,6 +308,8 @@ void main() {
                 StopMotionFrameOps.framesPerImageToDuration(3) * 20,
           );
           expect(audio.startOffset, Duration.zero);
+          // And plays as the footage did.
+          expect(audio.equalizer, EqualizerSettings.none.withGain(0, -6));
         },
       );
 

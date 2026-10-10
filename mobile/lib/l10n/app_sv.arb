@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Tar bort brus, fläktar och rumsljud",
     "videoEditorVoiceEffectApplying": "Lägger på rösteffekt",
     "videoEditorVoiceEffectFailed": "Det gick inte att ändra rösten. Försök igen.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Ändra bas, mellanregister och diskant för det valda klippet",
+    "videoEditorEqualizerSoundSemanticLabel": "Ändra bas, mellanregister och diskant för det valda ljudet",
+    "videoEditorEqualizerSheetTitle": "Equalizer",
+    "videoEditorEqualizerVoice": "Tydlig röst",
+    "videoEditorEqualizerBassy": "Mer bas",
+    "videoEditorEqualizerBright": "Ljusare",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Dra en punkt uppåt eller nedåt",
+    "videoEditorEqualizerLowerBand": "Sänk {frequency}",
+    "videoEditorEqualizerRaiseBand": "Höj {frequency}",
     "videoEditorTransitionSheetTitle": "Övergång",
     "videoEditorTransitionNone": "Ingen",
     "videoEditorTransitionDissolve": "Övertoning",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Hitta personer",
     "newMessageNoContacts": "Inga kontakter hittades.\nFölj personer för att se dem här.",
     "newMessageNoUsersFound": "Inga användare hittades",
+    "newMessageNewGroup": "Ny grupp",
+    "newMessageStartChat": "Starta chatt",
+    "newMessageGroupFull": "{count, plural, one{Det är max: {count} person, inklusive dig.} other{Det är max: {count} personer, inklusive dig.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Konto ej tillgängligt",
     "userNotAvailableBody": "Det här kontot är inte tillgängligt just nu.",
     "blossomValidServerUrl": "Ange en giltig server-URL (t.ex. https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Återanslut {platforms} i korspostningsinställningarna för att fortsätta publicera.} other{Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Återanslut {platforms} i korspostningsinställningarna för att fortsätta publicera.} other{Återanslut dessa konton i korspostningsinställningarna för att fortsätta publicera: {platforms}.}}",
+  "subtitleMachineTranslated": "Maskinöversatt"
 }

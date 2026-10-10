@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Retire le souffle, les ventilateurs et le bruit de la pièce",
     "videoEditorVoiceEffectApplying": "Application de l'effet de voix",
     "videoEditorVoiceEffectFailed": "Impossible de changer la voix. Réessaie.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Modifier les graves, médiums et aigus du clip sélectionné",
+    "videoEditorEqualizerSoundSemanticLabel": "Modifier les graves, médiums et aigus du son sélectionné",
+    "videoEditorEqualizerSheetTitle": "Égaliseur",
+    "videoEditorEqualizerVoice": "Voix claire",
+    "videoEditorEqualizerBassy": "Plus de basses",
+    "videoEditorEqualizerBright": "Plus brillant",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Faites glisser un point vers le haut ou le bas",
+    "videoEditorEqualizerLowerBand": "Baisser {frequency}",
+    "videoEditorEqualizerRaiseBand": "Augmenter {frequency}",
     "videoEditorTransitionSheetTitle": "Transition",
     "videoEditorTransitionNone": "Aucune",
     "videoEditorTransitionDissolve": "Fondu enchaîné",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Trouver des gens",
     "newMessageNoContacts": "Aucun contact trouvé.\nSuis des gens pour les voir ici.",
     "newMessageNoUsersFound": "Aucun utilisateur trouvé",
+    "newMessageNewGroup": "Nouveau groupe",
+    "newMessageStartChat": "Démarrer la conversation",
+    "newMessageGroupFull": "{count, plural, one{C'est le maximum : {count} personne, y compris toi.} many{C'est le maximum : {count} personnes, y compris toi.} other{C'est le maximum : {count} personnes, y compris toi.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Compte indisponible",
     "userNotAvailableBody": "Ce compte n'est pas disponible pour le moment.",
     "blossomValidServerUrl": "Entre une URL de serveur valide (ex. : https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Reconnecte {platforms} dans les réglages de crosspost pour continuer à publier.} many{Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : {platforms}.} other{Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconnecte {platforms} dans les réglages de crosspost pour continuer à publier.} many{Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : {platforms}.} other{Reconnecte ces comptes dans les réglages de crosspost pour continuer à publier : {platforms}.}}",
+  "subtitleMachineTranslated": "Traduction automatique"
 }

@@ -389,6 +389,33 @@ class DmReactionsRepository {
     );
   }
 
+  /// Bring the received reactions on [messageId] into [conversationId], the
+  /// conversation that message was just stored in.
+  ///
+  /// A reaction processed before its message cannot know the room (see
+  /// [_resolveConversationIdForReaction]) and is filed under a 1:1, where it
+  /// never shows on a message that then lands in a group (#8271). Called by
+  /// `DmRepository` inside the transaction that stores a room message; a
+  /// one-to-one message has nothing to move.
+  ///
+  /// The account's own queued and sent rows are left alone; see
+  /// [DmReactionsDao.adoptReceivedForTargetMessage].
+  ///
+  /// [ownerPubkey] is supplied by the caller rather than read from this
+  /// repository's mutable credentials, so an account transition cannot change
+  /// the owner midway through the enclosing transaction.
+  Future<int> adoptReceivedForStoredMessage({
+    required String messageId,
+    required String conversationId,
+    required String ownerPubkey,
+  }) {
+    return _reactionsDao.adoptReceivedForTargetMessage(
+      targetMessageId: messageId,
+      toConversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+
   /// Reactive stream of every live reaction in [conversationId] for the
   /// current account, collapsed to at most one reaction per reactor per
   /// target message (the cap-at-one invariant — see [_collapsePerReactor]).
@@ -1841,6 +1868,8 @@ class DmReactionsRepository {
   /// (e.g. a group reaction arriving before the reel message synced — a
   /// narrow window since the reel is persisted at send time), falls back to
   /// 1:1 inference, dropping group reactions rather than mis-attributing them.
+  /// A reaction filed by that fallback is moved once its message is stored in
+  /// a room; see [adoptReceivedForStoredMessage].
   Future<String?> _resolveConversationIdForReaction({
     required String reactorPubkey,
     required String targetAuthor,

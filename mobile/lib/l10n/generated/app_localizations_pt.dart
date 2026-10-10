@@ -431,6 +431,20 @@ class AppLocalizationsPt extends AppLocalizations {
       'Usar idioma do dispositivo (padrão)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Liberar meu áudio para reutilização';
 
@@ -7873,6 +7887,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get newMessageNoUsersFound => 'Nenhum usuário encontrado';
 
   @override
+  String get newMessageNewGroup => 'Novo grupo';
+
+  @override
+  String get newMessageStartChat => 'Iniciar conversa';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Esse é o máximo: $count pessoas, contando com você.',
+      many: 'Esse é o máximo: $count pessoas, contando com você.',
+      one: 'Esse é o máximo: $count pessoa, contando com você.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Conta indisponível';
 
   @override
@@ -9785,6 +9817,63 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'Não foi possível mudar a voz. Tente de novo.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Altere os graves, médios e agudos do clipe selecionado';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Altere os graves, médios e agudos do som selecionado';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizador';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Voz nítida';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mais graves';
+
+  @override
+  String get videoEditorEqualizerBright => 'Mais brilho';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Arraste um ponto para cima ou para baixo';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Diminuir $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Aumentar $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transição';
@@ -13265,4 +13354,7 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Tradução automática';
 }

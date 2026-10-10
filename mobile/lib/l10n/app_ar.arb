@@ -2694,6 +2694,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "يزيل الطنين وصوت المراوح وضوضاء الغرفة",
     "videoEditorVoiceEffectApplying": "جارٍ تطبيق المؤثر الصوتي",
     "videoEditorVoiceEffectFailed": "تعذّر تغيير الصوت. يُرجى المحاولة مرة أخرى.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "غيّر الجهير والترددات المتوسطة والحدة للمقطع المحدد",
+    "videoEditorEqualizerSoundSemanticLabel": "غيّر الجهير والترددات المتوسطة والحدة للصوت المحدد",
+    "videoEditorEqualizerSheetTitle": "معادل الصوت",
+    "videoEditorEqualizerVoice": "صوت أوضح",
+    "videoEditorEqualizerBassy": "جهير أكثر",
+    "videoEditorEqualizerBright": "أكثر إشراقًا",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "اسحب نقطة لأعلى أو لأسفل",
+    "videoEditorEqualizerLowerBand": "خفّض {frequency}",
+    "videoEditorEqualizerRaiseBand": "ارفع {frequency}",
     "videoEditorTransitionSheetTitle": "انتقال",
     "videoEditorTransitionNone": "بلا",
     "videoEditorTransitionDissolve": "إذابة",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "ابحث عن أشخاص",
     "newMessageNoContacts": "لا جهات اتصال.\nتابع الناس لتراهم هنا.",
     "newMessageNoUsersFound": "لم يُعثر على مستخدمين",
+    "newMessageNewGroup": "مجموعة جديدة",
+    "newMessageStartChat": "بدء المحادثة",
+    "newMessageGroupFull": "{count, plural, zero{هذا هو الحد الأقصى: {count} شخص، بمن فيهم أنت.} one{هذا هو الحد الأقصى: شخص واحد، وهو أنت.} two{هذا هو الحد الأقصى: شخصان، أحدهما أنت.} few{هذا هو الحد الأقصى: {count} أشخاص، بمن فيهم أنت.} many{هذا هو الحد الأقصى: {count} شخصًا، بمن فيهم أنت.} other{هذا هو الحد الأقصى: {count} شخص، بمن فيهم أنت.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "الحساب غير متاح",
     "userNotAvailableBody": "هذا الحساب غير متاح في الوقت الحالي.",
     "blossomValidServerUrl": "أدخل رابط خادم صالحًا (مثال: https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{إعادة ربط {platforms} في إعدادات النشر المتقاطع لمواصلة النشر.} zero{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} two{إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} few{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} many{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} other{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{إعادة ربط {platforms} في إعدادات النشر المتقاطع لمواصلة النشر.} zero{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} two{إعادة ربط هذين الحسابين في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} few{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} many{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.} other{إعادة ربط هذه الحسابات في إعدادات النشر المتقاطع لمواصلة النشر: {platforms}.}}",
+  "subtitleMachineTranslated": "ترجمة آلية"
 }

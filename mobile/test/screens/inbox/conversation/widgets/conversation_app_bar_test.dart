@@ -11,6 +11,7 @@ void main() {
       String handle = '@alice',
       VoidCallback? onBack,
       VoidCallback? onOptions,
+      VoidCallback? onTitleTap,
       bool isResolving = false,
     }) {
       return MaterialApp(
@@ -22,6 +23,7 @@ void main() {
             handle: handle,
             onBack: onBack ?? () {},
             onOptions: onOptions,
+            onTitleTap: onTitleTap,
             isResolving: isResolving,
             loadingDisplayName: 'Generated Name',
           ),
@@ -96,6 +98,17 @@ void main() {
         expect(onBackCalled, isTrue);
       });
 
+      testWidgets('calls onTitleTap when the title is tapped', (tester) async {
+        var titleTaps = 0;
+
+        await tester.pumpWidget(buildSubject(onTitleTap: () => titleTaps++));
+
+        await tester.tap(find.text('Alice'));
+        await tester.pump();
+
+        expect(titleTaps, equals(1));
+      });
+
       /* TODO(meylis1998): Uncomment the test below once it has a function.
       testWidgets('calls onOptions when options button is tapped', (
         tester,
@@ -112,6 +125,35 @@ void main() {
 
         expect(onOptionsCalled, isTrue);
       });*/
+    });
+
+    // A group thread passes no `onTitleTap`: its title names the room, and
+    // there is no single profile for it to open.
+    group('accessibility', () {
+      testWidgets('offers the name and handle as one tap target when '
+          'onTitleTap is set', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(buildSubject(onTitleTap: () {}));
+
+        expect(
+          tester.getSemantics(find.text('Alice')),
+          isSemantics(label: 'Alice\n@alice', hasTapAction: true),
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('exposes the title as plain text when onTitleTap is null', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(buildSubject(handle: ''));
+
+        expect(
+          tester.getSemantics(find.text('Alice')),
+          isSemantics(label: 'Alice', hasTapAction: false, isButton: false),
+        );
+        semantics.dispose();
+      });
     });
   });
 }

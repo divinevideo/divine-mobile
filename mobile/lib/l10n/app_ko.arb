@@ -2240,6 +2240,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "히스 노이즈, 팬 소리, 실내 소음을 없애요",
     "videoEditorVoiceEffectApplying": "음성 효과 적용 중",
     "videoEditorVoiceEffectFailed": "목소리를 바꾸지 못했어요. 다시 시도해 주세요.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "선택한 클립의 저음, 중음, 고음 변경",
+    "videoEditorEqualizerSoundSemanticLabel": "선택한 사운드의 저음, 중음, 고음 변경",
+    "videoEditorEqualizerSheetTitle": "이퀄라이저",
+    "videoEditorEqualizerVoice": "선명한 목소리",
+    "videoEditorEqualizerBassy": "저음 강조",
+    "videoEditorEqualizerBright": "밝게",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "점을 위아래로 드래그하세요",
+    "videoEditorEqualizerLowerBand": "{frequency} 낮추기",
+    "videoEditorEqualizerRaiseBand": "{frequency} 높이기",
     "videoEditorTransitionSheetTitle": "전환",
     "videoEditorTransitionNone": "없음",
     "videoEditorTransitionDissolve": "디졸브",
@@ -2986,6 +3000,16 @@
     "newMessageFindPeople": "사람 찾기",
     "newMessageNoContacts": "연락처가 없어요.\n사람들을 팔로우하면 여기서 볼 수 있어요.",
     "newMessageNoUsersFound": "사용자를 찾지 못했어요",
+    "newMessageNewGroup": "새 그룹",
+    "newMessageStartChat": "대화 시작",
+    "newMessageGroupFull": "{count, plural, other{나를 포함해 최대 {count}명까지예요.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "계정을 사용할 수 없어요",
     "userNotAvailableBody": "이 계정은 지금 사용할 수 없어요.",
     "blossomValidServerUrl": "올바른 서버 URL을 입력해주세요 (예: https://blossom.band)",
@@ -4511,5 +4535,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{계속 게시하려면 크로스 포스팅 설정에서 {platforms} 계정을 다시 연결해주세요.} other{계속 게시하려면 크로스 포스팅 설정에서 다음 계정을 다시 연결해주세요: {platforms}.}}",
+  "subtitleMachineTranslated": "기계 번역"
 }

@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Elimina fruscio, ventole e rumore della stanza",
     "videoEditorVoiceEffectApplying": "Applicazione dell'effetto voce",
     "videoEditorVoiceEffectFailed": "Impossibile cambiare la voce. Riprova.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Cambia bassi, medi e alti della clip selezionata",
+    "videoEditorEqualizerSoundSemanticLabel": "Cambia bassi, medi e alti del suono selezionato",
+    "videoEditorEqualizerSheetTitle": "Equalizzatore",
+    "videoEditorEqualizerVoice": "Voce chiara",
+    "videoEditorEqualizerBassy": "Più bassi",
+    "videoEditorEqualizerBright": "Più brillante",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Trascina un punto in alto o in basso",
+    "videoEditorEqualizerLowerBand": "Abbassa {frequency}",
+    "videoEditorEqualizerRaiseBand": "Alza {frequency}",
     "videoEditorTransitionSheetTitle": "Transizione",
     "videoEditorTransitionNone": "Nessuna",
     "videoEditorTransitionDissolve": "Dissolvenza incrociata",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Trova persone",
     "newMessageNoContacts": "Nessun contatto trovato.\nSegui delle persone per vederle qui.",
     "newMessageNoUsersFound": "Nessun utente trovato",
+    "newMessageNewGroup": "Nuovo gruppo",
+    "newMessageStartChat": "Avvia chat",
+    "newMessageGroupFull": "{count, plural, one{È il massimo: {count} persona, contando anche te.} many{È il massimo: {count} persone, contando anche te.} other{È il massimo: {count} persone, contando anche te.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Account non disponibile",
     "userNotAvailableBody": "Questo account non è disponibile al momento.",
     "blossomValidServerUrl": "Inserisci un URL server valido (es. https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Ricollega {platforms} nelle impostazioni di crosspost per continuare a pubblicare.} many{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.} other{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Ricollega {platforms} nelle impostazioni di crosspost per continuare a pubblicare.} many{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.} other{Ricollega questi account nelle impostazioni di crosspost per continuare a pubblicare: {platforms}.}}",
+  "subtitleMachineTranslated": "Traduzione automatica"
 }

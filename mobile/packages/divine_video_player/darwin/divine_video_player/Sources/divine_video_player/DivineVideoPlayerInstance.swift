@@ -63,8 +63,48 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// The loaded clips' volumes, one per clip, above 1 when boosted.
     private var loadedClipVolumes: [Float] = []
 
-    /// The level the loop plays at: Dart's volume times the single clip's.
-    private var clipLoopVolume: Float { Float(volume) * (loadedClipVolumes.first ?? 1) }
+    /// The loaded clips' equalizers, one per clip; nil plays a clip unchanged.
+    private var loadedClipEqualizers: [AudioEqualizer?] = []
+
+    /// The composition an equalized timeline's loop decodes; see
+    /// [startClipAudioLoop].
+    private var compositionLoopSource: ClipAudioLoop.Source?
+
+    /// Whether [clipAudioLoop] plays each clip's volume itself, as a
+    /// composition loop does, rather than leaving the single clip's to its
+    /// node.
+    private var clipAudioLoopShapesVolumes = false
+
+    /// Set while a loop decode runs, so a change made meanwhile is applied
+    /// once it lands rather than starting the decode over.
+    private var clipAudioDecoding = false
+
+    /// The level the loop plays at: Dart's volume, times the single clip's
+    /// where the loop does not carry the clips' volumes itself.
+    private var clipLoopVolume: Float {
+        Float(volume) * (clipAudioLoopShapesVolumes ? 1 : (loadedClipVolumes.first ?? 1))
+    }
+
+    /// Each clip's volume and equalizer as the loop applies them: per clip on
+    /// a composition loop, and only the equalizer on a single clip's, whose
+    /// volume stays on its node.
+    private func clipLoopShaping(shapesVolumes: Bool) -> ClipAudioShaping {
+        if !shapesVolumes {
+            return ClipAudioShaping(segments: [
+                .init(start: -.infinity, volume: 1, equalizer: loadedClipEqualizers.first ?? nil)
+            ])
+        }
+        return ClipAudioShaping(
+            segments: clipOffsets.indices.map { index in
+                .init(
+                    start: clipOffsets[index],
+                    volume: index < loadedClipVolumes.count ? loadedClipVolumes[index] : 1,
+                    equalizer: index < loadedClipEqualizers.count
+                        ? loadedClipEqualizers[index] : nil
+                )
+            }
+        )
+    }
     /// Bumped at the start of each `setClips` call, before that call awaits.
     /// A call that resumes after a newer one has started must not install —
     /// publishing its mix earlier would let prewarm stamp that mix onto the
@@ -113,6 +153,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var streamedLoop: StreamedLoop?
         var volumeMixSource: ClipVolumeMixSource?
         var clipVolumes: [Float] = []
+        var clipEqualizers: [AudioEqualizer?] = []
+        /// The item's composition as a loop source, for a timeline that has
+        /// to be played equalized; see [ClipAudioLoop].
+        var compositionLoopSource: ClipAudioLoop.Source?
     }
 
     /// What the loaded item's audio mix is rebuilt from when
@@ -328,6 +372,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             self?.handle(call, result: result)
         }
         eventChannel.setStreamHandler(self)
+        audioOverlayManager.onNeedsSync = { [weak self] in self?.syncAudioOverlays() }
     }
 
     /// Enables texture-based rendering for this player.
@@ -394,6 +439,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             handleSetVolume(call, result: result)
         case "setClipVolumes":
             handleSetClipVolumes(call, result: result)
+        case "setClipEqualizers":
+            handleSetClipEqualizers(call, result: result)
         case "setPlaybackSpeed":
             handleSetPlaybackSpeed(call, result: result)
         case "setLooping":
@@ -406,6 +453,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             handleRemoveAllAudioTracks(result: result)
         case "setAudioTrackVolume":
             handleSetAudioTrackVolume(call, result: result)
+        case "setAudioTrackEqualizer":
+            let args = call.arguments as? [String: Any]
+            if let index = args?["index"] as? Int {
+                audioOverlayManager.setTrackEqualizer(
+                    at: index, equalizer: AudioEqualizer.from(args?["equalizer"]))
+            }
+            result(nil)
         case "setFrameEffects":
             let args = call.arguments as? [String: Any]
             textureOutput?.setFrameEffects(args?["effects"] as? [[String: Any]] ?? [])
@@ -523,6 +577,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.loopAudioMix = playerItem.audioMix
                 self.clipVolumeMixSource = built.volumeMixSource
                 self.loadedClipVolumes = built.clipVolumes
+                self.loadedClipEqualizers = built.clipEqualizers
+                self.compositionLoopSource = built.compositionLoopSource
                 self.loopTimeRange = built.loopTimeRange
                 self.firstFrameStart = built.firstFrameStart
                 self.clipLoopSource = built.loopSource
@@ -886,6 +942,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var built = BuiltItem(item: playerItem, offsets: [0], durations: [loopEnd.seconds])
         // The direct path only takes a clip at its original volume.
         built.clipVolumes = [1]
+        built.clipEqualizers = [AudioEqualizer.from(clipMap["equalizer"])]
         built.volumeMixSource = audioTrack.map {
             .direct(track: $0, loopStart: loopStart, loopEnd: loopEnd)
         }
@@ -942,6 +999,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var built = BuiltItem(item: playerItem, offsets: build.offsets, durations: build.durations)
         built.volumeMixSource = build.volumeMixSource
         built.clipVolumes = build.clipVolumes
+        built.clipEqualizers = build.clipEqualizers
+        built.compositionLoopSource = ClipAudioLoop.Source(
+            composition: composition,
+            duration: composition.duration
+        )
         // A first clip cut past its empty edit shows a frame at zero.
         if CMTimeCompare(build.firstClipFileStart, .zero) > 0 { built.firstFrameStart = .zero }
         if let loader = build.loader {
@@ -998,6 +1060,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         /// What [audioMix] is rebuilt from for new clip volumes.
         let volumeMixSource: ClipVolumeMixSource?
         let clipVolumes: [Float]
+        let clipEqualizers: [AudioEqualizer?]
         /// Where in its file the first clip starts.
         let firstClipFileStart: CMTime
         /// The download a single streamed looping clip loads through.
@@ -1038,6 +1101,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var videoComposition: AVMutableVideoComposition?
         var layerInstruction: AVMutableVideoCompositionLayerInstruction?
         var clipVolumes: [Float] = []
+        var clipEqualizers: [AudioEqualizer?] = []
         var firstClipFileStart = CMTime.zero
 
         for clipMap in clipsRaw {
@@ -1228,6 +1292,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             durations.append(CMTimeGetSeconds(scaledDuration))
             scaledDurations.append(scaledDuration)
             clipVolumes.append(clipVol)
+            clipEqualizers.append(AudioEqualizer.from(clipMap["equalizer"]))
             insertTime = CMTimeAdd(insertTime, scaledDuration)
         }
 
@@ -1275,6 +1340,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 .composition(track: $0, scaledDurations: scaledDurations)
             },
             clipVolumes: clipVolumes,
+            clipEqualizers: clipEqualizers,
             firstClipFileStart: firstClipFileStart,
             loader: loader
         )
@@ -1482,6 +1548,32 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         if clipAudioTakeover != nil { finishClipAudioTakeover() }
         clipAudioLoop?.volume = clipLoopVolume
+        if clipAudioLoopShapesVolumes { reshapeClipAudioLoop() }
+    }
+
+    /// Replaces the loaded clips' equalizers without reloading them, so an
+    /// equalizer control can be followed while it is dragged. A list that
+    /// does not match the loaded clips belongs to another composition and is
+    /// ignored.
+    ///
+    /// The equalized sound comes from [clipAudioLoop]: a running loop is
+    /// shaped anew, and a timeline that gains its first equalizer starts one.
+    private func handleSetClipEqualizers(
+        _ call: FlutterMethodCall, result: @escaping FlutterResult
+    ) {
+        defer { result(nil) }
+        guard let args = call.arguments as? [String: Any],
+            let raw = args["equalizers"] as? [Any],
+            raw.count == clipCount
+        else { return }
+        let equalizers = raw.map { AudioEqualizer.from($0) }
+        guard equalizers != loadedClipEqualizers else { return }
+        loadedClipEqualizers = equalizers
+        if clipAudioLoop != nil {
+            reshapeClipAudioLoop()
+        } else if !clipAudioDecoding {
+            startClipAudioLoop()
+        }
     }
 
     private func handleSetPlaybackSpeed(_ call: FlutterMethodCall, result: @escaping FlutterResult)
@@ -1545,6 +1637,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             self.textureOutput?.forceRefresh(for: targetTime)
             self.syncAudioOverlays()
+            // As after handleSeekTo: the loop's sound runs on its own clock.
+            self.realignClipAudioLoop(force: true)
             // Same stuck-frame guard as handleSeekTo: a paused player
             // landing on a clip boundary keeps returning the pre-seek
             // buffer until preroll primes the output pipeline.
@@ -1573,6 +1667,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         templateItem = nil
         clipVolumeMixSource = nil
         loadedClipVolumes = []
+        loadedClipEqualizers = []
+        compositionLoopSource = nil
         player?.removeAllItems()
         clipOffsets = []
         clipDurations = []
@@ -1652,25 +1748,59 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     // MARK: - Loop audio
 
-    /// Decodes the direct clip's audio into a loop that replaces the
-    /// player's own sound, when there is one to decode and it can follow the
-    /// player: a single looping local clip at normal speed.
+    /// Decodes the audio into a loop that replaces the player's own sound,
+    /// when there is one to decode and it can follow the player at normal
+    /// speed: a single looping local clip, played through its equalizer, or a
+    /// looping timeline that has an equalizer to play at all.
+    ///
+    /// An equalized timeline cannot be played by the player itself: an audio
+    /// mix only equalizes through a processing tap, and `AVPlayerLooper`
+    /// stalls with one on every item. Its loop decodes the whole composition
+    /// and plays each clip's volume and equalizer itself.
     private func startClipAudioLoop() {
         releaseClipAudioLoop()
         let generation = clipAudioGeneration
-        guard isLooping, speed == 1.0, clipCount == 1, let source = clipLoopSource else {
+        guard isLooping, speed == 1.0 else { return }
+        let source: ClipAudioLoop.Source
+        let shapesVolumes: Bool
+        if clipCount == 1, let direct = clipLoopSource {
+            source = direct
+            shapesVolumes = false
+        } else if let composition = compositionLoopSource,
+            loadedClipEqualizers.contains(where: { $0 != nil })
+        {
+            source = composition
+            shapesVolumes = true
+        } else {
             return
         }
+        clipAudioDecoding = true
+        let shaping = clipLoopShaping(shapesVolumes: shapesVolumes)
         // make is nonisolated, so the decode runs off the main actor.
         Task { @MainActor [weak self] in
-            let loop = await ClipAudioLoop.make(source: source)
+            let loop = await ClipAudioLoop.make(source: source, shaping: shaping)
             guard let self, generation == self.clipAudioGeneration,
-                !self.diagnosticDisposed, let loop
+                !self.diagnosticDisposed
             else {
                 loop?.release()
                 return
             }
+            // Cleared on a failed decode too, so the next equalizer change
+            // tries again rather than waiting for a decode that is over.
+            self.clipAudioDecoding = false
+            guard let loop else { return }
+            self.clipAudioLoopShapesVolumes = shapesVolumes
             self.adoptClipAudioLoop(loop)
+            // Volumes or equalizers changed while it decoded.
+            self.reshapeClipAudioLoop()
+        }
+    }
+
+    /// Hands [clipAudioLoop] the clips' current volumes and equalizers.
+    private func reshapeClipAudioLoop() {
+        guard let loop = clipAudioLoop else { return }
+        loop.reshape(clipLoopShaping(shapesVolumes: clipAudioLoopShapesVolumes)) {
+            [weak self] in self?.player?.currentItem
         }
     }
 
@@ -1825,6 +1955,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// running.
     private func releaseClipAudioLoop() {
         clipAudioGeneration += 1
+        clipAudioDecoding = false
+        clipAudioLoopShapesVolumes = false
         clipAudioSyncTimer?.invalidate()
         clipAudioSyncTimer = nil
         clipAudioStartRetry?.cancel()

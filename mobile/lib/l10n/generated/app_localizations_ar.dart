@@ -417,6 +417,20 @@ class AppLocalizationsAr extends AppLocalizations {
       'استخدام لغة الجهاز (افتراضي)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => 'إتاحة صوتي للاستخدام';
 
   @override
@@ -7781,6 +7795,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newMessageNoUsersFound => 'لم يُعثر على مستخدمين';
 
   @override
+  String get newMessageNewGroup => 'مجموعة جديدة';
+
+  @override
+  String get newMessageStartChat => 'بدء المحادثة';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'هذا هو الحد الأقصى: $count شخص، بمن فيهم أنت.',
+      many: 'هذا هو الحد الأقصى: $count شخصًا، بمن فيهم أنت.',
+      few: 'هذا هو الحد الأقصى: $count أشخاص، بمن فيهم أنت.',
+      two: 'هذا هو الحد الأقصى: شخصان، أحدهما أنت.',
+      one: 'هذا هو الحد الأقصى: شخص واحد، وهو أنت.',
+      zero: 'هذا هو الحد الأقصى: $count شخص، بمن فيهم أنت.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'الحساب غير متاح';
 
   @override
@@ -9671,6 +9706,62 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'تعذّر تغيير الصوت. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'غيّر الجهير والترددات المتوسطة والحدة للمقطع المحدد';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'غيّر الجهير والترددات المتوسطة والحدة للصوت المحدد';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'معادل الصوت';
+
+  @override
+  String get videoEditorEqualizerVoice => 'صوت أوضح';
+
+  @override
+  String get videoEditorEqualizerBassy => 'جهير أكثر';
+
+  @override
+  String get videoEditorEqualizerBright => 'أكثر إشراقًا';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'اسحب نقطة لأعلى أو لأسفل';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'خفّض $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'ارفع $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'انتقال';
@@ -13118,4 +13209,7 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'ترجمة آلية';
 }

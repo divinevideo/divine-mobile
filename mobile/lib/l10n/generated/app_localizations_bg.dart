@@ -433,6 +433,20 @@ class AppLocalizationsBg extends AppLocalizations {
       'Използвай езика на устройството (по подразбиране)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Позволи моето аудио да се използва отново';
 
@@ -7887,6 +7901,23 @@ class AppLocalizationsBg extends AppLocalizations {
   String get newMessageNoUsersFound => 'Не са намерени потребители';
 
   @override
+  String get newMessageNewGroup => 'Нова група';
+
+  @override
+  String get newMessageStartChat => 'Започни чат';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Това е максимумът: $count души заедно с теб.',
+      one: 'Това е максимумът: $count човек заедно с теб.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Акаунтът не е наличен';
 
   @override
@@ -9796,6 +9827,63 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'Гласът не можа да се промени. Опитай отново.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Промени басите, средните и високите на избрания клип';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Промени басите, средните и високите на избрания звук';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Еквалайзер';
+
+  @override
+  String get videoEditorEqualizerVoice => 'По-ясен глас';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Повече бас';
+
+  @override
+  String get videoEditorEqualizerBright => 'По-ярко';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Плъзнете точка нагоре или надолу';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Намали $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Увеличи $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Преход';
@@ -13286,4 +13374,7 @@ class AppLocalizationsBg extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Машинен превод';
 }

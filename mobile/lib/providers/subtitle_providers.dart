@@ -3,10 +3,13 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/l10n/current_app_l10n.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
+import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -24,15 +27,79 @@ final subtitlePollDelayProvider = Provider<SubtitlePollDelay>(
   (_) => Future<void>.delayed,
 );
 
-/// Fetches subtitle cues for a video, using ordered fallback.
-///
-/// 1. If [textTrackContent] is present (REST API embedded the VTT), parse it
-///    directly — zero network cost.
-/// 2. For each ref in [textTrackRefs] (or [textTrackRef] for back-compat),
-///    try HTTP fetch or relay query in order.
-/// 3. If [sha256] is present, fetch from Blossom at
-///    `https://media.divine.video/{sha256}/vtt`.
-/// 4. Otherwise returns an empty list (no subtitles available).
+/// Owns the viewer's subtitle translation preferences.
+final subtitleLanguagePreferenceServiceProvider =
+    Provider<SubtitleLanguagePreferenceService>(
+      (_) => SubtitleLanguagePreferenceService(),
+    );
+
+/// Publishes preference changes without recreating the service listener.
+final subtitleLanguagePreferenceVersionProvider =
+    NotifierProvider<SubtitleLanguagePreferenceVersion, int>(
+      SubtitleLanguagePreferenceVersion.new,
+    );
+
+class SubtitleLanguagePreferenceVersion extends Notifier<int> {
+  @override
+  int build() {
+    final service = ref.watch(subtitleLanguagePreferenceServiceProvider);
+    listenForProviderLifetime(ref, service, increment);
+    return 0;
+  }
+
+  void increment() => state++;
+}
+
+/// Fetches the track and its verified machine-translation attribution.
+@riverpod
+Future<SubtitleFetchResult> subtitleTrack(
+  Ref ref, {
+  required String videoId,
+  String? textTrackRef,
+  List<String> textTrackRefs = const [],
+  String? textTrackContent,
+  String? sha256,
+  String? sourceLang,
+  String? appLocaleCode,
+}) async {
+  ref.watch(subtitleLanguagePreferenceVersionProvider);
+  final service = ref.watch(subtitleLanguagePreferenceServiceProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+  await service.initialize();
+  if (!ref.mounted) {
+    return const SubtitleFetchResult(SubtitleFetchStatus.unavailable);
+  }
+  final effectiveAppLocale =
+      appLocaleCode ?? currentAppUiLocale(prefs).languageCode;
+  final wantsTranslation = service.shouldTranslate(
+    sourceLanguage: sourceLang,
+    appLocaleCode: effectiveAppLocale,
+  );
+  final lang = wantsTranslation
+      ? service.effectiveTargetLanguage(effectiveAppLocale)
+      : null;
+
+  if (!wantsTranslation &&
+      textTrackContent != null &&
+      textTrackContent.isNotEmpty) {
+    final embedded = SubtitleFetchResult.fromBody(textTrackContent);
+    if (embedded?.status == SubtitleFetchStatus.available) return embedded!;
+  }
+  final refs = textTrackRefs.isNotEmpty
+      ? textTrackRefs
+      : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef];
+  return fetchSubtitleCues(
+    httpClient: ref.read(subtitleHttpClientProvider),
+    nostrClient: ref.read(nostrServiceProvider),
+    delay: ref.read(subtitlePollDelayProvider),
+    textTrackContent: textTrackContent,
+    textTrackRefs: refs,
+    sha256: sha256,
+    lang: lang,
+  );
+}
+
+/// Cue-only view for callers that do not render track attribution.
 @riverpod
 Future<List<SubtitleCue>> subtitleCues(
   Ref ref, {
@@ -41,21 +108,17 @@ Future<List<SubtitleCue>> subtitleCues(
   List<String> textTrackRefs = const [],
   String? textTrackContent,
   String? sha256,
+  String? sourceLang,
 }) async {
-  if (textTrackContent != null && textTrackContent.isNotEmpty) {
-    return SubtitleService.parseVtt(textTrackContent);
-  }
-
-  final refs = textTrackRefs.isNotEmpty
-      ? textTrackRefs
-      : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef];
-  final result = await fetchSubtitleCues(
-    httpClient: ref.read(subtitleHttpClientProvider),
-    nostrClient: ref.read(nostrServiceProvider),
-    delay: ref.read(subtitlePollDelayProvider),
-    textTrackContent: textTrackContent,
-    textTrackRefs: refs,
-    sha256: sha256,
+  final result = await ref.watch(
+    subtitleTrackProvider(
+      videoId: videoId,
+      textTrackRef: textTrackRef,
+      textTrackRefs: textTrackRefs,
+      textTrackContent: textTrackContent,
+      sha256: sha256,
+      sourceLang: sourceLang,
+    ).future,
   );
   return result.cues;
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:divine_video_player/src/audio_equalizer.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -33,6 +34,7 @@ class AudioTrack {
     this.trackEnd,
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
+    this.equalizer,
   });
 
   /// Creates an [AudioTrack] from a local file path.
@@ -45,6 +47,7 @@ class AudioTrack {
     this.trackEnd,
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
+    this.equalizer,
   }) : uri = path;
 
   /// Creates an [AudioTrack] from a network URL.
@@ -57,6 +60,7 @@ class AudioTrack {
     this.trackEnd,
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
+    this.equalizer,
   }) : uri = url;
 
   /// Creates an [AudioTrack] from a Flutter asset.
@@ -72,6 +76,7 @@ class AudioTrack {
     Duration? trackEnd,
     Duration fadeInDuration = Duration.zero,
     Duration fadeOutDuration = Duration.zero,
+    AudioEqualizer? equalizer,
     AssetBundle? bundle,
   }) async {
     final (data, dir) = await (
@@ -91,6 +96,7 @@ class AudioTrack {
       trackEnd: trackEnd,
       fadeInDuration: fadeInDuration,
       fadeOutDuration: fadeOutDuration,
+      equalizer: equalizer,
     );
   }
 
@@ -108,6 +114,7 @@ class AudioTrack {
     Duration? trackEnd,
     Duration fadeInDuration = Duration.zero,
     Duration fadeOutDuration = Duration.zero,
+    AudioEqualizer? equalizer,
   }) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/divine_player_audio_memory/$fileName');
@@ -122,6 +129,7 @@ class AudioTrack {
       trackEnd: trackEnd,
       fadeInDuration: fadeInDuration,
       fadeOutDuration: fadeOutDuration,
+      equalizer: equalizer,
     );
   }
 
@@ -164,6 +172,10 @@ class AudioTrack {
   /// quieter of the two wins.
   final Duration fadeOutDuration;
 
+  /// The equalizer the track plays through, ahead of its [volume] and fades;
+  /// `null` plays it unchanged. Android, iOS and macOS only.
+  final AudioEqualizer? equalizer;
+
   /// Serializes this track for platform channel transport.
   Map<String, dynamic> toMap() {
     return {
@@ -175,6 +187,8 @@ class AudioTrack {
       'trackEndMs': trackEnd?.inMilliseconds,
       'fadeInMs': fadeInDuration.inMilliseconds,
       'fadeOutMs': fadeOutDuration.inMilliseconds,
+      if (equalizer case final equalizer? when !equalizer.isFlat)
+        'equalizer': equalizer.toMap(),
     };
   }
 }

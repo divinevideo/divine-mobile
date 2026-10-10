@@ -134,6 +134,13 @@ void main() {
           ['title', 'Enriched Video'],
           ['d', 'v1'],
           ['proof', 'c2pa-hash'],
+          [
+            'text-track',
+            'https://example.com/captions.vtt',
+            '',
+            'captions',
+            'ja',
+          ],
         ],
         'Test content',
         createdAt: 1704067200,
@@ -161,6 +168,7 @@ void main() {
 
       expect(enriched.length, 1);
       expect(enriched.first.rawTags, isNotEmpty);
+      expect(enriched.first.textTrackLang, 'ja');
     });
 
     test('copies content warning labels from enriched Nostr tags', () async {

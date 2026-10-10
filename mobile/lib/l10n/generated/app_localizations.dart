@@ -739,6 +739,30 @@ abstract class AppLocalizations {
   /// **'Use device language (default)'**
   String get contentPreferencesUseDeviceLanguage;
 
+  /// No description provided for @contentPreferencesSubtitleLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitle language'**
+  String get contentPreferencesSubtitleLanguage;
+
+  /// No description provided for @contentPreferencesSubtitleLanguageFollowApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as app language'**
+  String get contentPreferencesSubtitleLanguageFollowApp;
+
+  /// No description provided for @contentPreferencesSubtitleKeepOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep these in the original'**
+  String get contentPreferencesSubtitleKeepOriginal;
+
+  /// No description provided for @contentPreferencesSubtitleKeepOriginalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get contentPreferencesSubtitleKeepOriginalNone;
+
   /// No description provided for @contentPreferencesAudioSharing.
   ///
   /// In en, this message translates to:
@@ -13243,6 +13267,24 @@ abstract class AppLocalizations {
   /// **'No users found'**
   String get newMessageNoUsersFound;
 
+  /// Row in the New message sheet that switches the people picker to multi-select, and the sheet's title while it is in that mode. A group is a direct-message conversation with two or more other people.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get newMessageNewGroup;
+
+  /// Primary button pinned at the bottom of the New message sheet in group mode. Opens the conversation with everyone selected; disabled until two people are picked.
+  ///
+  /// In en, this message translates to:
+  /// **'Start chat'**
+  String get newMessageStartChat;
+
+  /// Inline notice under the selected-people chips in the New message sheet once the group is full. {count} is the size limit of a group, counting the person creating it. The app passes a fixed limit (10 today), so only the arm for that number is ever shown.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{That\'s the max: {count} person, you included.} other{That\'s the max: {count} people, you included.}}'**
+  String newMessageGroupFull(int count);
+
   /// No description provided for @userNotAvailableTitle.
   ///
   /// In en, this message translates to:
@@ -16510,6 +16552,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t change the voice. Try again.'**
   String get videoEditorVoiceEffectFailed;
+
+  /// Label of the timeline action that raises or lowers ten octave bands, from the deep bass to the treble, of the selected clip or sound. "EQ" is short for equalizer.
+  ///
+  /// In en, this message translates to:
+  /// **'EQ'**
+  String get videoEditorEqualizerLabel;
+
+  /// Screen-reader label of the timeline action that opens the equalizer for the selected video clip's own audio.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the bass, mids and treble of the selected clip'**
+  String get videoEditorEqualizerClipSemanticLabel;
+
+  /// Screen-reader label of the timeline action that opens the equalizer for the selected sound — a voice-over, music or any other track.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the bass, mids and treble of the selected sound'**
+  String get videoEditorEqualizerSoundSemanticLabel;
+
+  /// Title of the bottom sheet that raises or lowers ten octave bands, from the deep bass to the treble, of a clip or sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get videoEditorEqualizerSheetTitle;
+
+  /// Equalizer preset that makes speech clearer: less rumble and boom, more presence. Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear voice'**
+  String get videoEditorEqualizerVoice;
+
+  /// Equalizer preset that raises the bass. Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Bassy'**
+  String get videoEditorEqualizerBassy;
+
+  /// Equalizer preset that raises the high frequencies (the treble). Keep it short; it is a chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'Bright'**
+  String get videoEditorEqualizerBright;
+
+  /// How far an equalizer band is raised or lowered, in decibels, e.g. "+6 dB" or "-3 dB". The gain arrives already signed.
+  ///
+  /// In en, this message translates to:
+  /// **'{gain} dB'**
+  String videoEditorEqualizerGainValue(String gain);
+
+  /// The frequency of an equalizer band under 1000 hertz, e.g. "250 Hz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency} Hz'**
+  String videoEditorEqualizerHertz(String frequency);
+
+  /// The frequency of an equalizer band in kilohertz, e.g. "4 kHz". Shown above the equalizer curve while its point is picked, and read out as the name of that point.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency} kHz'**
+  String videoEditorEqualizerKilohertz(String frequency);
+
+  /// A frequency in kilohertz written as short as possible, e.g. "4k", under a point of the equalizer curve where ten of them share the width of a phone.
+  ///
+  /// In en, this message translates to:
+  /// **'{frequency}k'**
+  String videoEditorEqualizerKilohertzShort(String frequency);
+
+  /// Shown above the equalizer curve until a point is touched: each point is dragged up to raise its frequencies or down to lower them.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a point up or down'**
+  String get videoEditorEqualizerCurveHint;
+
+  /// Screen-reader label of the button beside the equalizer readout that lowers the selected band by one decibel, e.g. "Lower 250 Hz".
+  ///
+  /// In en, this message translates to:
+  /// **'Lower {frequency}'**
+  String videoEditorEqualizerLowerBand(String frequency);
+
+  /// Screen-reader label of the button beside the equalizer readout that raises the selected band by one decibel, e.g. "Raise 250 Hz".
+  ///
+  /// In en, this message translates to:
+  /// **'Raise {frequency}'**
+  String videoEditorEqualizerRaiseBand(String frequency);
 
   /// Title of the bottom sheet for choosing the transition between two adjacent clips.
   ///
@@ -22016,6 +22142,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Reconnect {platforms} in crossposting settings to keep posting.} other{Reconnect these accounts in crossposting settings to keep posting: {platforms}.}}'**
   String postPublishCrosspostReconnect(int count, String platforms);
+
+  /// Short attribution above captions verified as a machine translation; not creator-written words.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine-translated'**
+  String get subtitleMachineTranslated;
 }
 
 class _AppLocalizationsDelegate

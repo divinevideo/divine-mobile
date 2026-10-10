@@ -13,10 +13,13 @@ import 'package:openvine/widgets/media_chrome_backdrop.dart';
 /// contrast comes from the tint alone.
 class CaptionPill extends StatelessWidget {
   /// Creates the pill with the cue [text].
-  const CaptionPill({required this.text, super.key});
+  const CaptionPill({required this.text, this.label, super.key});
 
   /// The caption text to display.
   final String text;
+
+  /// Optional track attribution, shown separately from the creator's words.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +31,26 @@ class CaptionPill extends StatelessWidget {
         color: VineTheme.scrim56,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Text(
-            text,
-            style: VineTheme.captionPillFont(color: VineTheme.whiteText)
-                .copyWith(
-                  shadows: const [
-                    Shadow(blurRadius: 4, color: VineTheme.shadow25),
-                  ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (label != null)
+                Text(
+                  label!,
+                  style: VineTheme.captionPillFont(color: VineTheme.whiteText)
+                      .copyWith(fontSize: 11),
                 ),
+              Text(
+                text,
+                style: VineTheme.captionPillFont(color: VineTheme.whiteText)
+                    .copyWith(
+                      shadows: const [
+                        Shadow(blurRadius: 4, color: VineTheme.shadow25),
+                      ],
+                    ),
+              ),
+            ],
           ),
         ),
       ),

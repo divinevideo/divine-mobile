@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Haalt geruis, ventilatoren en kamergeluid weg",
     "videoEditorVoiceEffectApplying": "Stemeffect toepassen",
     "videoEditorVoiceEffectFailed": "Stem kon niet worden veranderd. Probeer het opnieuw.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Wijzig de lage, middelste en hoge tonen van de geselecteerde clip",
+    "videoEditorEqualizerSoundSemanticLabel": "Wijzig de lage, middelste en hoge tonen van het geselecteerde geluid",
+    "videoEditorEqualizerSheetTitle": "Equalizer",
+    "videoEditorEqualizerVoice": "Heldere stem",
+    "videoEditorEqualizerBassy": "Meer bas",
+    "videoEditorEqualizerBright": "Helderder",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Sleep een punt omhoog of omlaag",
+    "videoEditorEqualizerLowerBand": "{frequency} verlagen",
+    "videoEditorEqualizerRaiseBand": "{frequency} verhogen",
     "videoEditorTransitionSheetTitle": "Overgang",
     "videoEditorTransitionNone": "Geen",
     "videoEditorTransitionDissolve": "Vervloeien",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Mensen zoeken",
     "newMessageNoContacts": "Geen contacten gevonden.\nVolg mensen om ze hier te zien.",
     "newMessageNoUsersFound": "Geen gebruikers gevonden",
+    "newMessageNewGroup": "Nieuwe groep",
+    "newMessageStartChat": "Chat starten",
+    "newMessageGroupFull": "{count, plural, one{Dat is het maximum: {count} persoon, jij meegerekend.} other{Dat is het maximum: {count} mensen, jij meegerekend.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Account niet beschikbaar",
     "userNotAvailableBody": "Dit account is op dit moment niet beschikbaar.",
     "blossomValidServerUrl": "Voer een geldige server-URL in (bijv. https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Verbind {platforms} opnieuw in de crosspost-instellingen om te blijven posten.} other{Verbind deze accounts opnieuw in de crosspost-instellingen om te blijven posten: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Verbind {platforms} opnieuw in de crosspost-instellingen om te blijven posten.} other{Verbind deze accounts opnieuw in de crosspost-instellingen om te blijven posten: {platforms}.}}",
+  "subtitleMachineTranslated": "Automatisch vertaald"
 }

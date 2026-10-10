@@ -366,6 +366,20 @@ class AppLocalizationsId extends AppLocalizations {
       'Pakai bahasa perangkat (bawaan)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Jadikan audioku bisa dipakai ulang';
 
@@ -7730,6 +7744,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get newMessageNoUsersFound => 'Pengguna tidak ditemukan';
 
   @override
+  String get newMessageNewGroup => 'Grup baru';
+
+  @override
+  String get newMessageStartChat => 'Mulai chat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Itu batasnya: $count orang, termasuk kamu.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Akun tidak tersedia';
 
   @override
@@ -9623,6 +9653,63 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectFailed => 'Gagal mengubah suara. Coba lagi.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Ubah bass, mid, dan treble klip yang dipilih';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Ubah bass, mid, dan treble suara yang dipilih';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Suara jernih';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Bass lebih';
+
+  @override
+  String get videoEditorEqualizerBright => 'Lebih cerah';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Seret titik ke atas atau ke bawah';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Turunkan $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Naikkan $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transisi';
@@ -13064,4 +13151,7 @@ class AppLocalizationsId extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Terjemahan mesin';
 }

@@ -415,6 +415,20 @@ class AppLocalizationsSv extends AppLocalizations {
       'Använd enhetens språk (standard)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Gör mitt ljud tillgängligt för återanvändning';
 
@@ -7803,6 +7817,23 @@ class AppLocalizationsSv extends AppLocalizations {
   String get newMessageNoUsersFound => 'Inga användare hittades';
 
   @override
+  String get newMessageNewGroup => 'Ny grupp';
+
+  @override
+  String get newMessageStartChat => 'Starta chatt';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Det är max: $count personer, inklusive dig.',
+      one: 'Det är max: $count person, inklusive dig.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Konto ej tillgängligt';
 
   @override
@@ -9708,6 +9739,62 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'Det gick inte att ändra rösten. Försök igen.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Ändra bas, mellanregister och diskant för det valda klippet';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Ändra bas, mellanregister och diskant för det valda ljudet';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Equalizer';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Tydlig röst';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mer bas';
+
+  @override
+  String get videoEditorEqualizerBright => 'Ljusare';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'Dra en punkt uppåt eller nedåt';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Sänk $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Höj $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Övergång';
@@ -13164,4 +13251,7 @@ class AppLocalizationsSv extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Maskinöversatt';
 }

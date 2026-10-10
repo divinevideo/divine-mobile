@@ -18,11 +18,14 @@ import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/notifications/view/inbox_notifications_page.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -439,20 +442,37 @@ class _MessagesContent extends ConsumerWidget {
     final currentPubkey = ref.read(authServiceProvider).currentPublicKeyHex;
     if (currentPubkey == null) return;
 
-    final selectedUser = await NewMessageSheet.show(
+    // TODO(#8269): Remove the groupMessages flag once receiving a group
+    // (#7338), sender names (#8428) and own-message restore (#8271) have
+    // shipped.
+    final groupMessagesEnabled = ref.read(
+      isFeatureEnabledProvider(FeatureFlag.groupMessages),
+    );
+    // A protected minor is never offered a group, whatever the flag says.
+    final allowGroups =
+        groupMessagesEnabled && !ref.read(isDmRestrictedProvider);
+
+    final selected = await NewMessageSheet.show(
       context,
       profileRepository: profileRepo,
       followRepository: ref.read(followRepositoryProvider),
       currentUserPubkey: currentPubkey,
+      allowGroups: allowGroups,
     );
 
-    if (selectedUser == null || !context.mounted) return;
+    if (selected == null || selected.isEmpty || !context.mounted) return;
 
+    // One pubkey is a one-to-one, several are a group. The id is derived from
+    // the participant set, so picking the people of an existing group opens
+    // that thread rather than a second one. Sorted like the stored row: a room
+    // is titled for its first member, and the title must not change between
+    // the new thread and the same thread opened from the inbox.
+    final pubkeys = [for (final profile in selected) profile.pubkey]..sort();
     final conversationId = DmRepository.computeConversationId([
       currentPubkey,
-      selectedUser.pubkey,
+      ...pubkeys,
     ]);
-    _pushConversation(context, conversationId, [selectedUser.pubkey]);
+    _pushConversation(context, conversationId, pubkeys);
   }
 }
 

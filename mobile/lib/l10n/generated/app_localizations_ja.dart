@@ -348,6 +348,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contentPreferencesUseDeviceLanguage => 'デバイスの言語を使う (既定)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing => '自分の音声を再利用可能にする';
 
   @override
@@ -7411,6 +7425,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newMessageNoUsersFound => 'ユーザーが見つからなかった';
 
   @override
+  String get newMessageNewGroup => '新しいグループ';
+
+  @override
+  String get newMessageStartChat => 'チャットを開始';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'あなたを含めて $count 人が上限です。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'アカウントは利用できないよ';
 
   @override
@@ -9228,6 +9258,60 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectFailed => '声を変更できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel => '選択したクリップの低音・中音・高音を変更';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel => '選択したサウンドの低音・中音・高音を変更';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'イコライザー';
+
+  @override
+  String get videoEditorEqualizerVoice => '声をクリアに';
+
+  @override
+  String get videoEditorEqualizerBassy => '低音強め';
+
+  @override
+  String get videoEditorEqualizerBright => '明るく';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint => 'ポイントを上下にドラッグ';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequencyを下げる';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequencyを上げる';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'トランジション';
@@ -12512,4 +12596,7 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => '機械翻訳';
 }

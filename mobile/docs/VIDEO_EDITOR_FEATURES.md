@@ -52,6 +52,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and every sound track (music, voice-over, extracted audio) are left out, so a clip whose sound was extracted is saved silent.
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
+- **EQ:** ten octave bands of the clip's own sound (see [Audio](#audio)). Extract audio carries the setting over to the new sound track.
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
@@ -59,6 +60,7 @@ Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets
 - Duration 10–2000 ms in 10 ms steps, further limited by how long the neighbouring clips are.
 - 13 easing curves.
 - A transition from the last clip back into the first, for the loop.
+- Across a dissolve, slide, push or wipe the two clips' sounds cross-fade, each at its own volume and EQ.
 
 Detach (picture-in-picture):
 
@@ -134,6 +136,7 @@ Keyframes, per layer (text, sticker, drawing and detached clip):
 - **Several sound tracks at once.** Adding a sound adds a track rather than replacing the previous one. Each track can be moved and trimmed, and its start point inside the sound chosen.
 - **Voice-over:** records takes over the muted preview. Takes are placed one after another; the last take can be deleted.
 - **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the Android preview limits at the same ceiling; the iOS preview plays the boost without a limiter.
+- **Equalizer (EQ)** per clip and per sound track: ten octave bands whose points are dragged up or down, each from −18 to +18 dB in 1 dB steps: a low shelf at 31 Hz, octave-wide peaks at 62, 125, 250 and 500 Hz and 1, 2, 4 and 8 kHz, and a high shelf at 16 kHz, with one-tap presets (original, clear voice, bassy, bright). The line behind the points draws what the bands add up to, which is what the preview and the export play: neighbouring bands add up where they overlap, and a shelf gives half its gain at its own frequency. The point being moved shows its frequency and gain above the curve, and a double tap puts it back to zero. While the sheet is open the preview loops the clip or sound being changed and plays every change, through the same filters the export renders with, and a boost is limited at −1 dBFS in both. On iOS an equalized clip timeline plays its sound from a prepared loop instead of the player, so clips are equalized while the preview loops at normal speed, and a sound track plays an equalized copy of the stretch of its file it plays, so its change is heard once the curve has rested for half a second and that stretch is rendered. The stop-motion preview plays sound tracks without their equalizer.
 - **Fade in and out** per sound track, in 100 ms steps. The envelope is linear, and the preview plays the same one the export bakes in.
 - **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. Processing downmixes the track to mono. The track keeps the original, so the effect can be changed or removed later.
 - **Waveforms** on clips and sound tracks, and live while recording a voice-over.
@@ -152,7 +155,7 @@ Keyframes, per layer (text, sticker, drawing and detached clip):
 
 Open feature requests for things the editor does not do yet:
 
-- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an equalizer for bass and treble ([#9850](https://github.com/divinevideo/divine-mobile/issues/9850)), an audio visualizer overlay ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
+- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an audio visualizer overlay ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
 - Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
 - Clips: a ping-pong (boomerang) loop ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
 - Effects: an echo trail effect ([#9708](https://github.com/divinevideo/divine-mobile/issues/9708)), effects that fire on the beat of the music ([#9710](https://github.com/divinevideo/divine-mobile/issues/9710)).

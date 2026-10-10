@@ -239,6 +239,7 @@ class VideoEvent {
     this.textTrackRef,
     this.textTrackRefs = const [],
     this.textTrackContent,
+    this.textTrackLang,
     this.contentWarningLabels = const [],
     this.moderationLabels = const [],
     this.warnLabels = const [],
@@ -356,6 +357,7 @@ class VideoEvent {
           ? textTrackRefs
           : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef],
       textTrackContent: json['textTrackContent'] as String?,
+      textTrackLang: json['textTrackLang'] as String?,
       contentWarningLabels: stringList(json['contentWarningLabels']),
       moderationLabels: stringList(json['moderationLabels']),
       eventKind: optInt(json['eventKind']),
@@ -420,6 +422,7 @@ class VideoEvent {
     final inspiredByPubkeys = <String>[];
     final clipSourceCredits = <ClipSourceCredit>[];
     final textTrackRefsLocal = <String>[];
+    String? textTrackLangLocal;
     final contentWarningLabels = <String>[];
 
     // Parse event tags according to NIP-71
@@ -708,6 +711,14 @@ class VideoEvent {
           if (tagValue.isNotEmpty) {
             textTrackRefsLocal.add(tagValue);
           }
+          // The trailing element carries the track language; the first one
+          // wins, matching `textTrackRef` mirroring the first ref.
+          if (textTrackLangLocal == null && tag.length > 4) {
+            final rawLang = tag[4].trim();
+            if (rawLang.isNotEmpty) {
+              textTrackLangLocal = rawLang.split('-').first;
+            }
+          }
         default:
           // POSTEL'S LAW: Check if any unknown tag contains a valid video URL
           if (tagValue.isNotEmpty &&
@@ -817,6 +828,7 @@ class VideoEvent {
           ? textTrackRefsLocal.first
           : null,
       textTrackRefs: textTrackRefsLocal,
+      textTrackLang: textTrackLangLocal,
       contentWarningLabels: contentWarningLabels,
       eventKind: event.kind,
       sourceRelay: sourceRelay,
@@ -987,6 +999,14 @@ class VideoEvent {
 
   /// Embedded VTT content from funnelcake REST API (skips relay fetch).
   final String? textTrackContent;
+
+  /// Source language of the subtitle track, as the bare BCP-47 primary subtag
+  /// (`ja`, `de`) parsed from the `text-track` tag's trailing language element.
+  ///
+  /// `null` when no track carries a language. The viewer's translate decision
+  /// compares this against their target language; a missing value means "show
+  /// the original", never "translate".
+  final String? textTrackLang;
 
   /// NIP-32 content-warning self-labels on this video.
   ///
@@ -1766,6 +1786,7 @@ class VideoEvent {
     String? textTrackRef,
     List<String>? textTrackRefs,
     String? textTrackContent,
+    String? textTrackLang,
     List<String>? contentWarningLabels,
     List<String>? moderationLabels,
     List<String>? warnLabels,
@@ -1835,6 +1856,7 @@ class VideoEvent {
     nostrEventTags: nostrEventTags ?? this.nostrEventTags,
     textTrackRef: textTrackRef ?? this.textTrackRef,
     textTrackRefs: textTrackRefs ?? this.textTrackRefs,
+    textTrackLang: textTrackLang ?? this.textTrackLang,
     textTrackContent: textTrackContent ?? this.textTrackContent,
     contentWarningLabels: contentWarningLabels ?? this.contentWarningLabels,
     moderationLabels: moderationLabels ?? this.moderationLabels,
@@ -1926,6 +1948,7 @@ class VideoEvent {
     'textTrackRef': textTrackRef,
     'textTrackRefs': textTrackRefs,
     'textTrackContent': textTrackContent,
+    'textTrackLang': textTrackLang,
     'contentWarningLabels': contentWarningLabels,
     'moderationLabels': moderationLabels,
     'proofSummary': proofSummary?.toJson(),

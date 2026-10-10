@@ -49,16 +49,26 @@ void main() {
       String pubkey,
       String displayName, {
       String? nip05,
+      String? eventId,
     }) {
       return UserProfile(
         pubkey: pubkey,
         displayName: displayName,
         nip05: nip05,
         createdAt: DateTime.now(),
-        eventId: 'event-$pubkey',
+        eventId: eventId ?? 'event-$pubkey',
         rawData: {'display_name': displayName},
       );
     }
+
+    /// A full-length synthetic pubkey, distinct for every [index] below 256.
+    String pubkeyAt(int index) => index.toRadixString(16).padLeft(2, '0') * 32;
+
+    /// [count] distinct candidate recipients, none of them the viewer.
+    List<UserProfile> recipients(int count) => [
+      for (var index = 1; index <= count; index++)
+        createTestProfile(pubkeyAt(index), 'Person $index'),
+    ];
 
     test('initial state is loadingContacts', () async {
       when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
@@ -498,6 +508,53 @@ void main() {
           );
         },
       );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'keeps group mode and the selection through a search',
+        setUp: () {
+          when(
+            () => mockProfileRepo.searchUsers(
+              query: 'charlie',
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) async => [charlie]);
+        },
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+          contacts: [alice, bob, charlie],
+          isGroupMode: true,
+          selectedRecipients: [bob, alice],
+        ),
+        act: (bloc) => bloc.add(const NewMessageSearchQueryChanged('charlie')),
+        wait: debounceDuration,
+        verify: (bloc) {
+          expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+          expect(bloc.state.isGroupMode, isTrue);
+          expect(bloc.state.selectedRecipients, equals([bob, alice]));
+        },
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'keeps group mode and the selection when the query gets too short',
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.searchSuccess,
+          contacts: [alice, bob],
+          query: 'alice',
+          results: [alice],
+          isGroupMode: true,
+          selectedRecipients: [bob, alice],
+        ),
+        act: (bloc) => bloc.add(const NewMessageSearchQueryChanged('a')),
+        wait: debounceDuration,
+        verify: (bloc) {
+          expect(bloc.state.status, NewMessageSearchStatus.idle);
+          expect(bloc.state.isGroupMode, isTrue);
+          expect(bloc.state.selectedRecipients, equals([bob, alice]));
+        },
+      );
     });
 
     group('NewMessageSearchCleared', () {
@@ -517,6 +574,251 @@ void main() {
               .having((s) => s.query, 'query', isEmpty)
               .having((s) => s.results, 'results', isEmpty)
               .having((s) => s.contacts, 'contacts preserved', hasLength(1)),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'keeps group mode and the selection',
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.searchSuccess,
+          contacts: recipients(3),
+          query: 'person',
+          results: recipients(3),
+          isGroupMode: true,
+          selectedRecipients: recipients(2),
+        ),
+        act: (bloc) => bloc.add(const NewMessageSearchCleared()),
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.query, 'query', isEmpty)
+              .having((s) => s.isGroupMode, 'isGroupMode', isTrue)
+              .having(
+                (s) => s.selectedRecipients.map((p) => p.pubkey),
+                'selected pubkeys',
+                [pubkeyAt(1), pubkeyAt(2)],
+              ),
+        ],
+      );
+    });
+
+    group('NewMessageSearchGroupModeChanged', () {
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'enters group mode with nobody selected',
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+          contacts: recipients(2),
+        ),
+        act: (bloc) =>
+            bloc.add(const NewMessageSearchGroupModeChanged(enabled: true)),
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.isGroupMode, 'isGroupMode', isTrue)
+              .having((s) => s.selectedRecipients, 'selected', isEmpty)
+              .having((s) => s.contacts, 'contacts preserved', hasLength(2)),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'leaves group mode and clears the selection',
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+          isGroupMode: true,
+          selectedRecipients: recipients(2),
+        ),
+        act: (bloc) =>
+            bloc.add(const NewMessageSearchGroupModeChanged(enabled: false)),
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.isGroupMode, 'isGroupMode', isFalse)
+              .having((s) => s.selectedRecipients, 'selected', isEmpty),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'keeps the selection when asked to enter the mode it is already in',
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+          isGroupMode: true,
+          selectedRecipients: recipients(2),
+        ),
+        act: (bloc) =>
+            bloc.add(const NewMessageSearchGroupModeChanged(enabled: true)),
+        expect: () => const <NewMessageSearchState>[],
+        verify: (bloc) {
+          expect(bloc.state.isGroupMode, isTrue);
+          expect(bloc.state.selectedRecipients, hasLength(2));
+        },
+      );
+    });
+
+    group('NewMessageSearchRecipientToggled', () {
+      NewMessageSearchState groupModeWith(List<UserProfile> selected) =>
+          NewMessageSearchState(
+            status: NewMessageSearchStatus.idle,
+            isGroupMode: true,
+            selectedRecipients: selected,
+          );
+
+      Iterable<String> selectedPubkeys(NewMessageSearchState state) =>
+          state.selectedRecipients.map((profile) => profile.pubkey);
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'adds recipients in the order they were tapped',
+        build: createBloc,
+        seed: () => groupModeWith(const []),
+        act: (bloc) {
+          final people = recipients(2);
+          bloc
+            ..add(NewMessageSearchRecipientToggled(people[1]))
+            ..add(NewMessageSearchRecipientToggled(people[0]));
+        },
+        expect: () => [
+          isA<NewMessageSearchState>().having(selectedPubkeys, 'selected', [
+            pubkeyAt(2),
+          ]),
+          isA<NewMessageSearchState>().having(selectedPubkeys, 'selected', [
+            pubkeyAt(2),
+            pubkeyAt(1),
+          ]),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'removes a recipient who is already selected',
+        build: createBloc,
+        seed: () => groupModeWith(recipients(2)),
+        act: (bloc) =>
+            bloc.add(NewMessageSearchRecipientToggled(recipients(2).first)),
+        expect: () => [
+          isA<NewMessageSearchState>().having(selectedPubkeys, 'selected', [
+            pubkeyAt(2),
+          ]),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'never holds one pubkey twice: a second profile for a selected '
+        'pubkey deselects it',
+        build: createBloc,
+        seed: () => groupModeWith(recipients(1)),
+        // The same account reaches the list twice: once from the cached
+        // follow list, once from network search with a newer kind 0. A
+        // different event id makes the two profiles unequal, so only a
+        // comparison by pubkey can match them.
+        act: (bloc) => bloc.add(
+          NewMessageSearchRecipientToggled(
+            createTestProfile(
+              pubkeyAt(1),
+              'Person 1 from the network',
+              eventId: 'a-newer-kind-0',
+            ),
+          ),
+        ),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.selectedRecipients,
+            'selected',
+            isEmpty,
+          ),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'never holds one pubkey twice: upper-case hex is the same person',
+        build: createBloc,
+        seed: () => groupModeWith([createTestProfile('ab' * 32, 'Abby')]),
+        act: (bloc) => bloc.add(
+          NewMessageSearchRecipientToggled(
+            createTestProfile('AB' * 32, 'Abby'),
+          ),
+        ),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.selectedRecipients,
+            'selected',
+            isEmpty,
+          ),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'ignores the signed-in user',
+        build: createBloc,
+        seed: () => groupModeWith(const []),
+        act: (bloc) => bloc
+          ..add(
+            NewMessageSearchRecipientToggled(
+              createTestProfile(currentUserPubkey, 'Me'),
+            ),
+          )
+          ..add(
+            NewMessageSearchRecipientToggled(
+              createTestProfile(currentUserPubkey.toUpperCase(), 'Me'),
+            ),
+          )
+          // The control: an ordinary recipient sent through the same handler
+          // is added, so the empty selection above is the guard at work.
+          ..add(NewMessageSearchRecipientToggled(recipients(1).single)),
+        expect: () => [
+          isA<NewMessageSearchState>().having(selectedPubkeys, 'selected', [
+            pubkeyAt(1),
+          ]),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'ignores a toggle outside group mode',
+        build: createBloc,
+        seed: () => const NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+        ),
+        act: (bloc) =>
+            bloc.add(NewMessageSearchRecipientToggled(recipients(1).single)),
+        expect: () => const <NewMessageSearchState>[],
+        verify: (bloc) => expect(bloc.state.selectedRecipients, isEmpty),
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'adds the ninth recipient, which fills a ten-person group',
+        build: createBloc,
+        seed: () => groupModeWith(recipients(8)),
+        act: (bloc) =>
+            bloc.add(NewMessageSearchRecipientToggled(recipients(9).last)),
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.selectedRecipients, 'selected', hasLength(9))
+              .having((s) => s.isGroupFull, 'isGroupFull', isTrue),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'refuses a tenth recipient',
+        build: createBloc,
+        seed: () => groupModeWith(recipients(9)),
+        act: (bloc) =>
+            bloc.add(NewMessageSearchRecipientToggled(recipients(10).last)),
+        expect: () => const <NewMessageSearchState>[],
+        verify: (bloc) {
+          expect(bloc.state.selectedRecipients, hasLength(9));
+          expect(selectedPubkeys(bloc.state), isNot(contains(pubkeyAt(10))));
+        },
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'still removes a recipient from a full group',
+        build: createBloc,
+        seed: () => groupModeWith(recipients(9)),
+        act: (bloc) =>
+            bloc.add(NewMessageSearchRecipientToggled(recipients(9).first)),
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.selectedRecipients, 'selected', hasLength(8))
+              .having(selectedPubkeys, 'selected', isNot(contains(pubkeyAt(1))))
+              .having((s) => s.isGroupFull, 'isGroupFull', isFalse),
         ],
       );
     });
@@ -562,6 +864,42 @@ void main() {
       test('isSearchActive returns false when query is empty', () {
         const state = NewMessageSearchState();
         expect(state.isSearchActive, isFalse);
+      });
+
+      test('canStartGroup needs two recipients, because one is a '
+          'one-to-one conversation', () {
+        expect(
+          NewMessageSearchState(selectedRecipients: recipients(1))
+              .canStartGroup,
+          isFalse,
+        );
+        expect(
+          NewMessageSearchState(selectedRecipients: recipients(2))
+              .canStartGroup,
+          isTrue,
+        );
+      });
+
+      test('isGroupFull is reached at nine recipients, the tenth person '
+          'being the sender', () {
+        expect(
+          NewMessageSearchState(selectedRecipients: recipients(8)).isGroupFull,
+          isFalse,
+        );
+        expect(
+          NewMessageSearchState(selectedRecipients: recipients(9)).isGroupFull,
+          isTrue,
+        );
+      });
+
+      test('isSelected matches a pubkey whatever its hex case', () {
+        final state = NewMessageSearchState(
+          selectedRecipients: [createTestProfile('ab' * 32, 'Abby')],
+        );
+
+        expect(state.isSelected('ab' * 32), isTrue);
+        expect(state.isSelected('AB' * 32), isTrue);
+        expect(state.isSelected('cd' * 32), isFalse);
       });
     });
 

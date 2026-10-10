@@ -434,6 +434,20 @@ class AppLocalizationsTe extends AppLocalizations {
       'పరికర భాషను ఉపయోగించండి (డిఫాల్ట్)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'పునర్వినియోగం కోసం నా ఆడియోను అందుబాటులో ఉంచు';
 
@@ -8052,6 +8066,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String get newMessageNoUsersFound => 'వినియోగదారులు ఎవరూ కనుగొనబడలేదు';
 
   @override
+  String get newMessageNewGroup => 'కొత్త గ్రూప్';
+
+  @override
+  String get newMessageStartChat => 'చాట్ ప్రారంభించండి';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ఇదే గరిష్ఠం: మీతో సహా $count మంది.',
+      one: 'ఇదే గరిష్ఠం: మీతో సహా $count వ్యక్తి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'ఖాతా అందుబాటులో లేదు';
 
   @override
@@ -9985,6 +10016,63 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'వాయిస్‌ను మార్చడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'ఎంచుకున్న క్లిప్ బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'ఎంచుకున్న ధ్వని బాస్, మిడ్ మరియు ట్రెబుల్‌ను మార్చండి';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'ఈక్వలైజర్';
+
+  @override
+  String get videoEditorEqualizerVoice => 'స్పష్టమైన స్వరం';
+
+  @override
+  String get videoEditorEqualizerBassy => 'ఎక్కువ బాస్';
+
+  @override
+  String get videoEditorEqualizerBright => 'ప్రకాశవంతం';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'ఒక బిందువును పైకి లేదా కిందికి లాగండి';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency తగ్గించండి';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency పెంచండి';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';
@@ -13501,4 +13589,7 @@ class AppLocalizationsTe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'యంత్ర అనువాదం';
 }

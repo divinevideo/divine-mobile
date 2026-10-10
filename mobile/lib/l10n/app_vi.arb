@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "Tìm người",
   "newMessageNoContacts": "Không tìm thấy liên hệ nào.\nTheo dõi mọi người để thấy họ ở đây.",
   "newMessageNoUsersFound": "Không tìm thấy người dùng nào",
+  "newMessageNewGroup": "Nhóm mới",
+  "newMessageStartChat": "Bắt đầu trò chuyện",
+  "newMessageGroupFull": "{count, plural, other{Tối đa rồi: {count} người, tính cả bạn.}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "Tài khoản không khả dụng",
   "userNotAvailableBody": "Tài khoản này hiện không khả dụng.",
   "classicVinersTitle": "OG Viners",
@@ -5036,6 +5046,20 @@
   "videoEditorVoiceEffectNoiseReductionSubtitle": "Loại bỏ tiếng xì, tiếng quạt và tiếng ồn trong phòng",
   "videoEditorVoiceEffectApplying": "Đang áp dụng hiệu ứng giọng",
   "videoEditorVoiceEffectFailed": "Không thể đổi giọng. Hãy thử lại.",
+  "videoEditorEqualizerLabel": "EQ",
+  "videoEditorEqualizerClipSemanticLabel": "Thay đổi âm trầm, âm trung và âm cao của clip đã chọn",
+  "videoEditorEqualizerSoundSemanticLabel": "Thay đổi âm trầm, âm trung và âm cao của âm thanh đã chọn",
+  "videoEditorEqualizerSheetTitle": "Bộ chỉnh âm",
+  "videoEditorEqualizerVoice": "Giọng rõ",
+  "videoEditorEqualizerBassy": "Trầm hơn",
+  "videoEditorEqualizerBright": "Sáng hơn",
+  "videoEditorEqualizerGainValue": "{gain} dB",
+  "videoEditorEqualizerHertz": "{frequency} Hz",
+  "videoEditorEqualizerKilohertz": "{frequency} kHz",
+  "videoEditorEqualizerKilohertzShort": "{frequency}k",
+  "videoEditorEqualizerCurveHint": "Kéo một điểm lên hoặc xuống",
+  "videoEditorEqualizerLowerBand": "Giảm {frequency}",
+  "videoEditorEqualizerRaiseBand": "Tăng {frequency}",
   "videoEditorTransitionSheetTitle": "Chuyển cảnh",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -6732,5 +6756,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Kết nối lại {platforms} trong cài đặt đăng chéo để tiếp tục đăng.} other{Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Kết nối lại {platforms} trong cài đặt đăng chéo để tiếp tục đăng.} other{Kết nối lại các tài khoản này trong cài đặt đăng chéo để tiếp tục đăng: {platforms}.}}",
+  "subtitleMachineTranslated": "Bản dịch máy"
 }

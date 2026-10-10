@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Entfernt Rauschen, Lüfter- und Raumgeräusche",
     "videoEditorVoiceEffectApplying": "Stimmeffekt wird angewendet",
     "videoEditorVoiceEffectFailed": "Stimme konnte nicht geändert werden. Versuch es nochmal.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Bässe, Mitten und Höhen des ausgewählten Clips ändern",
+    "videoEditorEqualizerSoundSemanticLabel": "Bässe, Mitten und Höhen des ausgewählten Sounds ändern",
+    "videoEditorEqualizerSheetTitle": "Equalizer",
+    "videoEditorEqualizerVoice": "Klare Stimme",
+    "videoEditorEqualizerBassy": "Mehr Bass",
+    "videoEditorEqualizerBright": "Heller",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Zieh einen Punkt nach oben oder unten",
+    "videoEditorEqualizerLowerBand": "{frequency} absenken",
+    "videoEditorEqualizerRaiseBand": "{frequency} anheben",
     "videoEditorTransitionSheetTitle": "Übergang",
     "videoEditorTransitionNone": "Kein",
     "videoEditorTransitionDissolve": "Überblenden",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Leute finden",
     "newMessageNoContacts": "Keine Kontakte gefunden.\nFolg Leuten, um sie hier zu sehen.",
     "newMessageNoUsersFound": "Keine Nutzer gefunden",
+    "newMessageNewGroup": "Neue Gruppe",
+    "newMessageStartChat": "Chat starten",
+    "newMessageGroupFull": "{count, plural, one{Mehr geht nicht: {count} Person, dich eingeschlossen.} other{Mehr geht nicht: {count} Personen, dich eingeschlossen.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Konto nicht verfügbar",
     "userNotAvailableBody": "Dieses Konto ist gerade nicht verfügbar.",
     "blossomValidServerUrl": "Bitte gib eine gültige Server-URL ein (z. B. https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Verbinde {platforms} in den Crossposting-Einstellungen neu, um weiter zu posten.} other{Verbinde diese Konten in den Crossposting-Einstellungen neu, um weiter zu posten: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Verbinde {platforms} in den Crossposting-Einstellungen neu, um weiter zu posten.} other{Verbinde diese Konten in den Crossposting-Einstellungen neu, um weiter zu posten: {platforms}.}}",
+  "subtitleMachineTranslated": "Maschinell übersetzt"
 }

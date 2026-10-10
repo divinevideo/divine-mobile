@@ -96,6 +96,7 @@ VideoEvent _fullVideo() => VideoEvent(
     _subtitleEventRef,
   ],
   textTrackContent: 'WEBVTT\n\n00:00.000 --> 00:06.000\nHello',
+  textTrackLang: 'en',
   contentWarningLabels: const ['nudity'],
   moderationLabels: const ['ml-noisy-label'],
   warnLabels: const ['nudity'],
@@ -166,6 +167,7 @@ const _expectedKeys = <String>{
   'textTrackRef',
   'textTrackRefs',
   'textTrackContent',
+  'textTrackLang',
   'contentWarningLabels',
   'moderationLabels',
   'proofSummary',
@@ -395,6 +397,7 @@ void main() {
       );
       expect(restored.textTrackRef, equals(original.textTrackRef));
       expect(restored.textTrackContent, equals(original.textTrackContent));
+      expect(restored.textTrackLang, equals(original.textTrackLang));
       expect(
         restored.contentWarningLabels,
         equals(original.contentWarningLabels),

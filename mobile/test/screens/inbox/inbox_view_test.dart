@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart' show DmRepository;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,14 +20,19 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/inbox_view.dart';
 import 'package:openvine/screens/inbox/message_requests/message_requests_page.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/message_requests_banner.dart';
+import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_tile.dart';
 import 'package:openvine/screens/inbox/widgets/following_bar.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_empty_state.dart';
@@ -120,6 +126,11 @@ void main() {
       TextScaler? textScaler,
       ConversationActionsCubit? actionsCubit,
       List<Override> additionalOverrides = const [],
+      // Starting a conversation reads both repositories. Left null, the
+      // profile one resolves to "not ready" and the compose button does
+      // nothing.
+      MockProfileRepository? profileRepository,
+      MockFollowRepository? followRepository,
       // InboxView has no Scaffold of its own, and a ScaffoldMessenger with
       // no registered Scaffold silently queues SnackBars instead of showing
       // them. Opt in when the test asserts on one.
@@ -179,6 +190,8 @@ void main() {
 
       return testMaterialApp(
         mockAuthService: mockAuthService,
+        mockProfileRepository: profileRepository,
+        mockFollowRepository: followRepository,
         additionalOverrides: [
           notificationRepositoryProvider.overrideWithValue(null),
           goRouterProvider.overrideWithValue(mockGoRouter),
@@ -1429,6 +1442,177 @@ void main() {
         verify(
           () => mockBloc.add(const ConversationListNavigateToUser('user123')),
         ).called(1);
+      });
+    });
+
+    group('starting a conversation (#8269)', () {
+      const alicePubkey =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const bobPubkey =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+      late MockProfileRepository profileRepository;
+      late MockFollowRepository followRepository;
+      late AppLocalizations l10n;
+
+      UserProfile contact(String pubkey, String displayName) => UserProfile(
+        pubkey: pubkey,
+        displayName: displayName,
+        rawData: const {},
+        createdAt: DateTime(2026),
+        eventId:
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      );
+
+      setUp(() {
+        l10n = lookupAppLocalizations(const Locale('en'));
+        profileRepository = createMockProfileRepository();
+        followRepository = createMockFollowRepository(
+          followingPubkeys: [alicePubkey, bobPubkey],
+        );
+        when(
+          profileRepository.watchVanishedPubkeys,
+        ).thenAnswer((_) => const Stream<Set<String>>.empty());
+        when(
+          () => profileRepository.getCachedProfile(pubkey: alicePubkey),
+        ).thenAnswer((_) async => contact(alicePubkey, 'Alice'));
+        when(
+          () => profileRepository.getCachedProfile(pubkey: bobPubkey),
+        ).thenAnswer((_) async => contact(bobPubkey, 'Bob'));
+        when(
+          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async => null);
+      });
+
+      /// Opens the Messages tab and taps the compose button.
+      Future<void> openNewMessageSheet(
+        WidgetTester tester, {
+        required bool groupMessagesEnabled,
+        bool isDmRestricted = false,
+      }) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: const ConversationListState(
+              status: ConversationListStatus.loaded,
+              hasMore: false,
+            ),
+            profileRepository: profileRepository,
+            followRepository: followRepository,
+            additionalOverrides: [
+              isFeatureEnabledProvider(
+                FeatureFlag.groupMessages,
+              ).overrideWithValue(groupMessagesEnabled),
+              isDmRestrictedProvider.overrideWithValue(isDmRestricted),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.inboxMessagesTab));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tap(find.byType(InboxFab));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      /// Lets the sheet finish closing and the navigation it triggers run.
+      Future<void> pumpSheetClosed(WidgetTester tester) async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      Finder newGroupRow() =>
+          find.bySemanticsIdentifier(SemanticIds.newMessageNewGroupRow);
+
+      Finder personRow(String name) => find.descendant(
+        of: find.descendant(
+          of: find.byType(NewMessageSheet),
+          matching: find.byType(ListView),
+        ),
+        matching: find.text(name),
+      );
+
+      testWidgets('opens the one-to-one thread for a single pick', (
+        tester,
+      ) async {
+        await openNewMessageSheet(tester, groupMessagesEnabled: true);
+
+        await tester.tap(personRow('Alice'));
+        await pumpSheetClosed(tester);
+
+        verify(
+          () => mockGoRouter.push(
+            ConversationPage.pathForId(
+              DmRepository.computeConversationId([currentPubkey, alicePubkey]),
+            ),
+            extra: [alicePubkey],
+          ),
+        ).called(1);
+      });
+
+      testWidgets('opens the group thread for several picks, addressed to '
+          'every one of them', (tester) async {
+        await openNewMessageSheet(tester, groupMessagesEnabled: true);
+        expect(newGroupRow(), findsOneWidget);
+
+        await tester.tap(newGroupRow());
+        await tester.pump();
+        await tester.tap(personRow('Bob'));
+        await tester.pump();
+        await tester.tap(personRow('Alice'));
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.newMessageStartGroupButton),
+        );
+        await pumpSheetClosed(tester);
+
+        verify(
+          () => mockGoRouter.push(
+            ConversationPage.pathForId(
+              DmRepository.computeConversationId([
+                currentPubkey,
+                bobPubkey,
+                alicePubkey,
+              ]),
+            ),
+            // Sorted, as the stored room is, not in the order they were
+            // picked: the first of these names the room, here and on the
+            // inbox row.
+            extra: [alicePubkey, bobPubkey],
+          ),
+        ).called(1);
+      });
+
+      testWidgets('opens nothing when the sheet is dismissed', (tester) async {
+        await openNewMessageSheet(tester, groupMessagesEnabled: true);
+        expect(personRow('Alice'), findsOneWidget);
+
+        await tester.tapAt(const Offset(10, 10));
+        await pumpSheetClosed(tester);
+
+        expect(find.byType(NewMessageSheet), findsNothing);
+        verifyNever(() => mockGoRouter.push(any(), extra: any(named: 'extra')));
+      });
+
+      testWidgets('offers no group row while the flag is off', (tester) async {
+        await openNewMessageSheet(tester, groupMessagesEnabled: false);
+
+        // The control: the sheet is open and listing people.
+        expect(personRow('Alice'), findsOneWidget);
+        expect(newGroupRow(), findsNothing);
+      });
+
+      testWidgets('offers no group row to a DM-restricted account, even with '
+          'the flag on', (tester) async {
+        await openNewMessageSheet(
+          tester,
+          groupMessagesEnabled: true,
+          isDmRestricted: true,
+        );
+
+        expect(personRow('Alice'), findsOneWidget);
+        expect(newGroupRow(), findsNothing);
       });
     });
 

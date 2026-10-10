@@ -2686,6 +2686,16 @@
     "newMessageFindPeople": "ሰዎችን ይፈልጉ",
     "newMessageNoContacts": "ምንም እውቂያዎች አልተገኙም።\nሰዎችን ይከተሉ እና እዚህ ያያሉ።",
     "newMessageNoUsersFound": "ምንም ተጠቃሚዎች አልተገኙም",
+    "newMessageNewGroup": "አዲስ ቡድን",
+    "newMessageStartChat": "ውይይት ይጀምሩ",
+    "newMessageGroupFull": "{count, plural, one{ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ {count} ሰው።} other{ከፍተኛው ይህ ነው፦ እርስዎን ጨምሮ {count} ሰዎች።}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "መለያው አይገኝም",
     "userNotAvailableBody": "ይህ መለያ አሁን አይገኝም።",
     "classicVinersTitle": "OG Viners",
@@ -3330,6 +3340,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "ፉጨትን፣ የማራገቢያ እና የክፍል ጫጫታን ያስወግዳል",
     "videoEditorVoiceEffectApplying": "የድምፅ ተፅዕኖ በመተግበር ላይ",
     "videoEditorVoiceEffectFailed": "ድምፁን መቀየር አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "ለተመረጠው ቅንጥብ ባስ፣ መካከለኛና ትሬብል ይቀይሩ",
+    "videoEditorEqualizerSoundSemanticLabel": "ለተመረጠው ድምጽ ባስ፣ መካከለኛና ትሬብል ይቀይሩ",
+    "videoEditorEqualizerSheetTitle": "ኢኳላይዘር",
+    "videoEditorEqualizerVoice": "ግልጽ ድምጽ",
+    "videoEditorEqualizerBassy": "ብዙ ባስ",
+    "videoEditorEqualizerBright": "ደማቅ",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "ነጥብ ወደ ላይ ወይም ወደ ታች ይጎትቱ",
+    "videoEditorEqualizerLowerBand": "{frequency} ዝቅ አድርግ",
+    "videoEditorEqualizerRaiseBand": "{frequency} ከፍ አድርግ",
     "videoEditorTransitionSheetTitle": "ሽግግር",
     "videoEditorTransitionNone": "ምንም",
     "videoEditorTransitionDissolve": "መሟሟት",
@@ -5065,5 +5089,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{መለጠፍን ለመቀጠል {platforms}ን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።} other{መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ {platforms}።}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{መለጠፍን ለመቀጠል {platforms}ን በተሻግሮ ማተም ቅንብሮች እንደገና ይገናኙ።} other{መለጠፍን ለመቀጠል እነዚህን መለያዎች በተሻግሮ ማተም ቅንብሮች እንደገና ያገናኙ፦ {platforms}።}}",
+  "subtitleMachineTranslated": "በማሽን የተተረጎመ"
 }

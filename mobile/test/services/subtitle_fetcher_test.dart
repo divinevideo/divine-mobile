@@ -29,6 +29,132 @@ const _unicodeVtt =
 
 void main() {
   group('fetchSubtitleCues', () {
+    test(
+      'requests a verified translation before embedded content and refs',
+      () async {
+        final requests = <Uri>[];
+        final result = await fetchSubtitleCues(
+          httpClient: _FakeClient((request) async {
+            requests.add(request.url);
+            return http.Response(
+              _vtt.replaceAll('hello', 'translated'),
+              200,
+              headers: {
+                'content-language': 'es',
+                'x-divine-machine-translated': 'true',
+              },
+            );
+          }),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackContent: _vtt,
+          textTrackRefs: ['https://media.divine.video/${'a' * 64}/vtt'],
+          sha256: 'a' * 64,
+          lang: 'es',
+        );
+        expect(result.cues.single.text, 'translated');
+        expect(result.isMachineTranslated, isTrue);
+        expect(requests.single.queryParameters['lang'], 'es');
+      },
+    );
+
+    for (final status in [202, 404, 503]) {
+      test(
+        'falls back to embedded original without polling on translation $status',
+        () async {
+          final requests = <Uri>[];
+          final delays = <Duration>[];
+          final result = await fetchSubtitleCues(
+            httpClient: _FakeClient((request) async {
+              requests.add(request.url);
+              return http.Response('', status, headers: {'retry-after': '15'});
+            }),
+            nostrClient: null,
+            delay: (duration) async {
+              delays.add(duration);
+            },
+            textTrackContent: _vtt,
+            sha256: 'a' * 64,
+            lang: 'es',
+          );
+          expect(result.cues.single.text, 'hello');
+          expect(requests.single.queryParameters['lang'], 'es');
+          expect(delays, isEmpty);
+        },
+      );
+    }
+
+    for (final headers in <Map<String, String>>[
+      {},
+      {'content-language': 'es'},
+      {'content-language': 'fr', 'x-divine-machine-translated': 'true'},
+    ]) {
+      test(
+        'rejects translation without matching attribution $headers',
+        () async {
+          final result = await fetchSubtitleCues(
+            httpClient: _FakeClient(
+              (_) async => http.Response(
+                _vtt.replaceAll('hello', 'unverified'),
+                200,
+                headers: headers,
+              ),
+            ),
+            nostrClient: null,
+            delay: (_) async {},
+            textTrackContent: _vtt,
+            sha256: 'a' * 64,
+            lang: 'es',
+          );
+          expect(result.cues.single.text, 'hello');
+          expect(result.isMachineTranslated, isFalse);
+        },
+      );
+    }
+
+    test(
+      'keeps the embedded original when the translation request throws',
+      () async {
+        final result = await fetchSubtitleCues(
+          httpClient: _FakeClient(
+            (_) async => throw http.ClientException('offline'),
+          ),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackContent: _vtt,
+          sha256: 'a' * 64,
+          lang: 'es',
+        );
+        expect(result.cues.single.text, 'hello');
+        expect(result.isMachineTranslated, isFalse);
+      },
+    );
+
+    test('falls back through refs to the plain Blossom original', () async {
+      final requests = <Uri>[];
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient((request) async {
+          requests.add(request.url);
+          return request.url.hasQuery || request.url.host == 'example.com'
+              ? http.Response('', 404)
+              : http.Response(_vtt, 200);
+        }),
+        nostrClient: null,
+        delay: (_) async {},
+        textTrackRefs: const ['https://example.com/creator.vtt'],
+        sha256: 'a' * 64,
+        lang: 'es',
+      );
+      expect(result.cues.single.text, 'hello');
+      expect(result.isMachineTranslated, isFalse);
+      expect(requests.map((url) => url.queryParameters['lang']), [
+        'es',
+        null,
+        null,
+      ]);
+      expect(requests[1].host, 'example.com');
+    });
+
     test('decodes HTTP ref VTT as UTF-8 without a charset', () async {
       final result = await fetchSubtitleCues(
         httpClient: _FakeClient(
@@ -63,6 +189,46 @@ void main() {
 
       expect(result.status, SubtitleFetchStatus.available);
       expect(result.cues.map((cue) => cue.text), equals(['Göbekli', '你好 🌿']));
+    });
+
+    test('requests the Blossom transcript with the language query', () async {
+      Uri? requested;
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient((request) async {
+          requested = request.url;
+          return http.Response(
+            _vtt,
+            200,
+            headers: {
+              'content-language': 'es',
+              'x-divine-machine-translated': 'true',
+            },
+          );
+        }),
+        nostrClient: null,
+        delay: (_) async {},
+        sha256: 'abc123',
+        lang: 'es',
+      );
+
+      expect(result.status, SubtitleFetchStatus.available);
+      expect(requested?.queryParameters['lang'], equals('es'));
+    });
+
+    test('omits the language query when lang is null', () async {
+      Uri? requested;
+      await fetchSubtitleCues(
+        httpClient: _FakeClient((request) async {
+          requested = request.url;
+          return http.Response(_vtt, 200);
+        }),
+        nostrClient: null,
+        delay: (_) async {},
+        sha256: 'abc123',
+      );
+
+      expect(requested, isNotNull);
+      expect(requested!.queryParameters.containsKey('lang'), isFalse);
     });
 
     test('parses embedded textTrackContent first (no network)', () async {

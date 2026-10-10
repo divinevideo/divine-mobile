@@ -48,6 +48,7 @@ class VideoStats {
     this.rawTags = const {},
     this.contentWarningLabels = const [],
     this.textTrackRef,
+    this.textTrackLang,
     this.textTrackContent,
     this.categories = const [],
     this.collaboratorPubkeys = const [],
@@ -193,6 +194,8 @@ class VideoStats {
         statsData['text_track_ref']?.toString();
     if (textTrackRef != null && textTrackRef.isEmpty) textTrackRef = null;
 
+    String? textTrackLang;
+
     var textTrackContent =
         json['text_track_content']?.toString() ??
         eventData['text_track_content']?.toString() ??
@@ -282,8 +285,12 @@ class VideoStats {
           if (tagName == 'views' && views == null) {
             views = int.tryParse(tagValue);
           }
-          if (tagName == 'text-track' && textTrackRef == null) {
-            textTrackRef = tagValue;
+          if (tagName == 'text-track') {
+            textTrackRef ??= tagValue;
+            if (textTrackLang == null && tag.length > 4) {
+              final rawLang = tag[4].toString().trim();
+              if (rawLang.isNotEmpty) textTrackLang = rawLang.split('-').first;
+            }
           }
           if (tagName == 'content-warning' &&
               tagValue.isNotEmpty &&
@@ -448,6 +455,7 @@ class VideoStats {
       contentWarningLabels: contentWarningLabels,
       collaboratorPubkeys: collaboratorPubkeys,
       textTrackRef: textTrackRef,
+      textTrackLang: textTrackLang,
       textTrackContent: textTrackContent,
       moderationLabels: moderationLabels,
       proofSummary: proofSummary,
@@ -566,6 +574,9 @@ class VideoStats {
   /// API `text_track_ref` field).
   final String? textTrackRef;
 
+  /// Source language from the subtitle text-track tag.
+  final String? textTrackLang;
+
   /// Embedded VTT content from API (saves client a relay round-trip).
   final String? textTrackContent;
 
@@ -669,6 +680,7 @@ class VideoStats {
       altText: rawTags['alt'],
       duration: int.tryParse(rawTags['duration'] ?? ''),
       textTrackRef: textTrackRef,
+      textTrackLang: textTrackLang,
       textTrackContent: textTrackContent,
       categories: categories,
       contentWarningLabels: contentWarningLabels,

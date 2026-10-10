@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "Cari orang",
   "newMessageNoContacts": "Tiada kenalan ditemui.\nIkut orang untuk melihat mereka di sini.",
   "newMessageNoUsersFound": "Tiada pengguna ditemui",
+  "newMessageNewGroup": "Kumpulan baharu",
+  "newMessageStartChat": "Mulakan sembang",
+  "newMessageGroupFull": "{count, plural, other{Itu hadnya: {count} orang, termasuk anda.}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "Akaun tidak tersedia",
   "userNotAvailableBody": "Akaun ini tidak tersedia sekarang.",
   "classicVinersTitle": "OG Viners",
@@ -5036,6 +5046,20 @@
   "videoEditorVoiceEffectNoiseReductionSubtitle": "Membuang desisan, bunyi kipas dan bunyi bilik",
   "videoEditorVoiceEffectApplying": "Menggunakan kesan vokal",
   "videoEditorVoiceEffectFailed": "Tidak dapat menukar suara. Cuba lagi.",
+  "videoEditorEqualizerLabel": "EQ",
+  "videoEditorEqualizerClipSemanticLabel": "Tukar bes, pertengahan dan trebel klip yang dipilih",
+  "videoEditorEqualizerSoundSemanticLabel": "Tukar bes, pertengahan dan trebel bunyi yang dipilih",
+  "videoEditorEqualizerSheetTitle": "Equalizer",
+  "videoEditorEqualizerVoice": "Suara jelas",
+  "videoEditorEqualizerBassy": "Lebih bes",
+  "videoEditorEqualizerBright": "Lebih cerah",
+  "videoEditorEqualizerGainValue": "{gain} dB",
+  "videoEditorEqualizerHertz": "{frequency} Hz",
+  "videoEditorEqualizerKilohertz": "{frequency} kHz",
+  "videoEditorEqualizerKilohertzShort": "{frequency}k",
+  "videoEditorEqualizerCurveHint": "Seret titik ke atas atau ke bawah",
+  "videoEditorEqualizerLowerBand": "Turunkan {frequency}",
+  "videoEditorEqualizerRaiseBand": "Naikkan {frequency}",
   "videoEditorTransitionSheetTitle": "Peralihan",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -6732,5 +6756,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Sambung semula {platforms} dalam tetapan siaran silang untuk terus menyiarkan.} other{Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Sambung semula {platforms} dalam tetapan siaran silang untuk terus menyiarkan.} other{Sambung semula akaun ini dalam tetapan siaran silang untuk terus menyiarkan: {platforms}.}}",
+  "subtitleMachineTranslated": "Terjemahan mesin"
 }

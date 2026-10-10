@@ -2024,6 +2024,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Inaalis ang hiss, ingay ng bentilador at ingay ng kuwarto",
     "videoEditorVoiceEffectApplying": "Ina-apply ang voice effect",
     "videoEditorVoiceEffectFailed": "Hindi mabago ang boses. Subukan ulit.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Baguhin ang bass, mids at treble ng napiling clip",
+    "videoEditorEqualizerSoundSemanticLabel": "Baguhin ang bass, mids at treble ng napiling sound",
+    "videoEditorEqualizerSheetTitle": "Equalizer",
+    "videoEditorEqualizerVoice": "Malinaw na boses",
+    "videoEditorEqualizerBassy": "Mas bass",
+    "videoEditorEqualizerBright": "Mas matinis",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "I-drag ang isang punto pataas o pababa",
+    "videoEditorEqualizerLowerBand": "Ibaba ang {frequency}",
+    "videoEditorEqualizerRaiseBand": "Itaas ang {frequency}",
     "videoEditorTransitionSheetTitle": "Transisyon",
     "videoEditorTransitionNone": "Wala",
     "videoEditorTransitionDissolve": "Dissolve",
@@ -2273,6 +2287,16 @@
     "newMessageFindPeople": "Maghanap ng tao",
     "newMessageNoContacts": "Walang nakitang contact.\nMag-follow ng mga tao para makita sila dito.",
     "newMessageNoUsersFound": "Walang nakitang user",
+    "newMessageNewGroup": "Bagong group",
+    "newMessageStartChat": "Simulan ang chat",
+    "newMessageGroupFull": "{count, plural, one{Hanggang diyan lang: {count} tao, kasama ka.} other{Hanggang diyan lang: {count} tao, kasama ka.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "newMessageTitle": "Bagong message",
     "nostrAppPermissionAllow": "Payagan",
     "nostrAppPermissionCapability": "Kakayahan",
@@ -3964,5 +3988,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{I-reconnect ang {platforms} sa crossposting settings para makapag-post pa rin.} other{I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{I-reconnect ang {platforms} sa crossposting settings para makapag-post pa rin.} other{I-reconnect ang mga account na ito sa crossposting settings para makapag-post pa rin: {platforms}.}}",
+  "subtitleMachineTranslated": "Awtomatikong isinalin"
 }

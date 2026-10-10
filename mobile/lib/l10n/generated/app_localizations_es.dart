@@ -429,6 +429,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Usar el idioma del dispositivo (predeterminado)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Permitir que reutilicen mi audio';
 
@@ -7886,6 +7900,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newMessageNoUsersFound => 'No se encontraron usuarios';
 
   @override
+  String get newMessageNewGroup => 'Grupo nuevo';
+
+  @override
+  String get newMessageStartChat => 'Iniciar chat';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ese es el máximo: $count personas, contándote a vos.',
+      many: 'Ese es el máximo: $count personas, contándote a vos.',
+      one: 'Ese es el máximo: $count persona, contándote a vos.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Cuenta no disponible';
 
   @override
@@ -9803,6 +9835,63 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'No se pudo cambiar la voz. Probá de nuevo.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Cambia los graves, medios y agudos del clip seleccionado';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Cambia los graves, medios y agudos del sonido seleccionado';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Ecualizador';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Voz clara';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Más graves';
+
+  @override
+  String get videoEditorEqualizerBright => 'Más brillante';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Arrastra un punto hacia arriba o hacia abajo';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Bajar $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Subir $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transición';
@@ -13302,4 +13391,7 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Traducción automática';
 }

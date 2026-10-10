@@ -63,6 +63,10 @@ class BuildConfiguration {
           'FF_POST_PUBLISH_CONFIRMATION_TREATMENT',
           defaultValue: true,
         );
+      case FeatureFlag.groupMessages:
+        // Default OFF until receiving a group works too (#7338). Sending to
+        // one already does, so the flag only gates the picker that starts it.
+        return const bool.fromEnvironment('FF_GROUP_MESSAGES');
     }
   }
 
@@ -107,6 +111,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_EXPERIMENT';
       case FeatureFlag.postPublishConfirmationTreatment:
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
+      case FeatureFlag.groupMessages:
+        return 'FF_GROUP_MESSAGES';
     }
   }
 }

@@ -233,6 +233,18 @@ abstract class SemanticIds {
 
   static String shareContact(int index) => 'share_contact_$index';
 
+  /// New message sheet, group mode. The row switches the people picker to
+  /// multi-select, each chip is one picked recipient and removes them when
+  /// tapped, and the button opens the conversation. Chips are indexed in the
+  /// order people were picked; every label behind these is localized or a
+  /// display name, so a flow drives them by id.
+  static const String newMessageNewGroupRow = 'new_message_new_group_row';
+  static const String newMessageStartGroupButton =
+      'new_message_start_group_button';
+
+  static String newMessageRecipientChip(int index) =>
+      'new_message_recipient_chip_$index';
+
   static const String editorTimeline = 'editor_timeline';
 
   static const String videoDetailLoading = 'video_detail_loading';

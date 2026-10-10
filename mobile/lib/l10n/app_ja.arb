@@ -2694,6 +2694,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "ヒスノイズ、ファンの音、室内のノイズを除去します",
     "videoEditorVoiceEffectApplying": "ボイスエフェクトを適用中",
     "videoEditorVoiceEffectFailed": "声を変更できませんでした。もう一度お試しください。",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "選択したクリップの低音・中音・高音を変更",
+    "videoEditorEqualizerSoundSemanticLabel": "選択したサウンドの低音・中音・高音を変更",
+    "videoEditorEqualizerSheetTitle": "イコライザー",
+    "videoEditorEqualizerVoice": "声をクリアに",
+    "videoEditorEqualizerBassy": "低音強め",
+    "videoEditorEqualizerBright": "明るく",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "ポイントを上下にドラッグ",
+    "videoEditorEqualizerLowerBand": "{frequency}を下げる",
+    "videoEditorEqualizerRaiseBand": "{frequency}を上げる",
     "videoEditorTransitionSheetTitle": "トランジション",
     "videoEditorTransitionNone": "なし",
     "videoEditorTransitionDissolve": "ディゾルブ",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "人を探す",
     "newMessageNoContacts": "連絡先が見つからなかった。\n人をフォローするとここに出るよ。",
     "newMessageNoUsersFound": "ユーザーが見つからなかった",
+    "newMessageNewGroup": "新しいグループ",
+    "newMessageStartChat": "チャットを開始",
+    "newMessageGroupFull": "{count, plural, other{あなたを含めて {count} 人が上限です。}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "アカウントは利用できないよ",
     "userNotAvailableBody": "このアカウントは今は利用できないよ。",
     "blossomValidServerUrl": "有効なサーバー URL を入力してね (例: https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{投稿を続けるには、クロス投稿設定で {platforms} を再接続してください。} other{投稿を続けるには、クロス投稿設定で次のアカウントを再接続してください：{platforms}。}}",
+  "subtitleMachineTranslated": "機械翻訳"
 }

@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
@@ -449,7 +450,9 @@ class TransitionSeamRenderService {
   /// another render can carry that render's crop, filters or overlays.
   /// v7: pro_video_editor 2.14.1–2.15.0 fix an HDR color cast on iOS/macOS and
   /// a dip transition under a letterbox, so an earlier seam can carry either.
-  static const _seamCacheVersion = 7;
+  /// v8: pro_video_editor 2.32.0 plays each clip's volume and equalizer in
+  /// an overlap blend, where earlier seams played both clips as recorded.
+  static const _seamCacheVersion = 8;
 
   String _key(
     DivineVideoClip clipA,
@@ -460,15 +463,17 @@ class TransitionSeamRenderService {
     // to the physically-reversed file (and any crop/transform re-render swaps
     // it too), so this invalidates the seam even when the trims are symmetric
     // (e.g. an untrimmed clip, where reverse leaves trimStart == trimEnd).
-    // `volume` and `targetAspectRatio` are baked into the rendered seam (audio
-    // gain and crop), so changing either after caching must re-render — without
-    // them a mute/crop change would keep playing the stale seam. `duration` is
+    // `volume`, `equalizer` and `targetAspectRatio` are baked into the
+    // rendered seam (audio gain, tone and crop), so changing any of them after
+    // caching must re-render — without them a mute/crop change would keep
+    // playing the stale seam. `duration` is
     // included because `_tailClip`/`_headClip` read it and it can be trimmed
     // independently of the file (clip_manager caps a clip on add).
     String clipKey(DivineVideoClip c) =>
         '${c.id}:${c.requireVideo.file?.path}:${c.duration.inMicroseconds}:'
         '${c.trimStart.inMicroseconds}:${c.trimEnd.inMicroseconds}:'
-        '${c.playbackSpeed ?? 1.0}:${c.volume}:${c.targetAspectRatio.name}';
+        '${c.playbackSpeed ?? 1.0}:${c.volume}:'
+        '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}';
     final t =
         '${transition.type.name}:${transition.duration.inMicroseconds}:'
         '${transition.curve.name}:${transition.direction.name}';
@@ -870,7 +875,11 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
           ? speedRenders?.cached(clip)
           : null;
       final body = rendered != null
-          ? player.VideoClip.file(rendered.path, volume: clip.volume)
+          ? player.VideoClip.file(
+              rendered.path,
+              volume: clip.volume,
+              equalizer: clip.equalizer.toPlayerEqualizer(),
+            )
           : clip.toPlayerVideoClip(start: bodyStart, end: bodyEnd);
       if (body != null) {
         result.add(body);

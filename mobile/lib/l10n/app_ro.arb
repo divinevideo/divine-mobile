@@ -2752,6 +2752,20 @@
     "videoEditorVoiceEffectNoiseReductionSubtitle": "Elimină fâșâitul, ventilatoarele și zgomotul din cameră",
     "videoEditorVoiceEffectApplying": "Se aplică efectul de voce",
     "videoEditorVoiceEffectFailed": "Vocea nu a putut fi schimbată. Încearcă din nou.",
+    "videoEditorEqualizerLabel": "EQ",
+    "videoEditorEqualizerClipSemanticLabel": "Schimbă bașii, mediile și înaltele clipului selectat",
+    "videoEditorEqualizerSoundSemanticLabel": "Schimbă bașii, mediile și înaltele sunetului selectat",
+    "videoEditorEqualizerSheetTitle": "Egalizator",
+    "videoEditorEqualizerVoice": "Voce clară",
+    "videoEditorEqualizerBassy": "Mai mult bas",
+    "videoEditorEqualizerBright": "Mai luminos",
+    "videoEditorEqualizerGainValue": "{gain} dB",
+    "videoEditorEqualizerHertz": "{frequency} Hz",
+    "videoEditorEqualizerKilohertz": "{frequency} kHz",
+    "videoEditorEqualizerKilohertzShort": "{frequency}k",
+    "videoEditorEqualizerCurveHint": "Trage un punct în sus sau în jos",
+    "videoEditorEqualizerLowerBand": "Coboară {frequency}",
+    "videoEditorEqualizerRaiseBand": "Ridică {frequency}",
     "videoEditorTransitionSheetTitle": "Tranziție",
     "videoEditorTransitionNone": "Niciuna",
     "videoEditorTransitionDissolve": "Disolvare",
@@ -3440,6 +3454,16 @@
     "newMessageFindPeople": "Găsește oameni",
     "newMessageNoContacts": "Niciun contact găsit.\nUrmărește oameni ca să-i vezi aici.",
     "newMessageNoUsersFound": "Niciun utilizator găsit",
+    "newMessageNewGroup": "Grup nou",
+    "newMessageStartChat": "Începe conversația",
+    "newMessageGroupFull": "{count, plural, one{Acesta e maximul: {count} persoană, cu tot cu tine.} few{Acesta e maximul: {count} persoane, cu tot cu tine.} other{Acesta e maximul: {count} de persoane, cu tot cu tine.}}",
+    "@newMessageGroupFull": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "userNotAvailableTitle": "Cont indisponibil",
     "userNotAvailableBody": "Acest cont nu e disponibil acum.",
     "blossomValidServerUrl": "Introdu un URL valid de server (ex.: https://blossom.band)",
@@ -4965,5 +4989,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{Reconectează {platforms} în setările de crosspost ca să continui să postezi.} few{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.} other{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{Reconectează {platforms} în setările de crosspost ca să continui să postezi.} few{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.} other{Reconectează aceste conturi în setările de crosspost ca să continui să postezi: {platforms}.}}",
+  "subtitleMachineTranslated": "Traducere automată"
 }

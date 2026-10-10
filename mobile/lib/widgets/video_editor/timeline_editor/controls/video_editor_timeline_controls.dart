@@ -11,6 +11,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.hasFade = false,
     this.onVoiceEffect,
     this.hasVoiceEffect = false,
+    this.onEqualizer,
+    this.hasEqualizer = false,
+    this.equalizerSemanticLabel,
     this.onDuplicated,
     this.onSplit,
     this.onFreezeFrame,
@@ -67,6 +70,21 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the selected sound plays with an effect or noise reduction,
   /// which highlights the action so the effect is visible from the timeline.
   final bool hasVoiceEffect;
+
+  /// Opens the equalizer of the selected clip or sound.
+  ///
+  /// A sound shows it with its other sound actions, after the voice effect.
+  /// A clip, whose bar leads with the actions used most, shows it with its
+  /// other audio action, right after [onExtractAudio].
+  final VoidCallback? onEqualizer;
+
+  /// Whether the selected clip or sound already plays with an equalizer, so
+  /// the action shows as set.
+  final bool hasEqualizer;
+
+  /// What a screen reader says the equalizer action does; the one for a sound
+  /// when null.
+  final String? equalizerSemanticLabel;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
 
@@ -170,6 +188,18 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final equalizer = onEqualizer == null
+        ? null
+        : TimelineActionButton(
+            icon: .faders,
+            label: context.l10n.videoEditorEqualizerLabel,
+            semanticLabel:
+                equalizerSemanticLabel ??
+                context.l10n.videoEditorEqualizerSoundSemanticLabel,
+            onPressed: onEqualizer,
+            type: hasEqualizer ? .primary : .secondary,
+          );
+    final equalizerWithClipAudio = onExtractAudio != null;
     return TimelineActionBar(
       actions: [
         if (onDelete != null)
@@ -205,6 +235,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
             onPressed: onVoiceEffect,
             type: hasVoiceEffect ? .primary : .secondary,
           ),
+        if (equalizer != null && !equalizerWithClipAudio) equalizer,
         if (onDuplicated != null)
           TimelineActionButton(
             icon: .copy,
@@ -318,6 +349,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
             onPressed: isExtractingAudio ? null : onExtractAudio,
             isLoading: isExtractingAudio,
           ),
+        if (equalizer != null && equalizerWithClipAudio) equalizer,
         if (onFreezeFrame != null)
           TimelineActionButton(
             icon: .pauseCircle,

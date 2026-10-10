@@ -448,6 +448,20 @@ class AppLocalizationsRo extends AppLocalizations {
       'Folosește limba dispozitivului (implicit)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'Fă audio-ul meu disponibil pentru refolosire';
 
@@ -7995,6 +8009,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get newMessageNoUsersFound => 'Niciun utilizator găsit';
 
   @override
+  String get newMessageNewGroup => 'Grup nou';
+
+  @override
+  String get newMessageStartChat => 'Începe conversația';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Acesta e maximul: $count de persoane, cu tot cu tine.',
+      few: 'Acesta e maximul: $count persoane, cu tot cu tine.',
+      one: 'Acesta e maximul: $count persoană, cu tot cu tine.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'Cont indisponibil';
 
   @override
@@ -9921,6 +9953,63 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'Vocea nu a putut fi schimbată. Încearcă din nou.';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'Schimbă bașii, mediile și înaltele clipului selectat';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'Schimbă bașii, mediile și înaltele sunetului selectat';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'Egalizator';
+
+  @override
+  String get videoEditorEqualizerVoice => 'Voce clară';
+
+  @override
+  String get videoEditorEqualizerBassy => 'Mai mult bas';
+
+  @override
+  String get videoEditorEqualizerBright => 'Mai luminos';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'Trage un punct în sus sau în jos';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return 'Coboară $frequency';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return 'Ridică $frequency';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'Tranziție';
@@ -13428,4 +13517,7 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'Traducere automată';
 }

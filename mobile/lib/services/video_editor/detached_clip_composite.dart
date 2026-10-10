@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' show Size;
 
 import 'package:meta/meta.dart';
+import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping, exportedLayerTopLeft;
 import 'package:openvine/extensions/layer_keyframes.dart';
@@ -256,6 +257,7 @@ VideoLayer buildDetachedClipVideoLayer({
         startTime: trimStart == Duration.zero ? null : trimStart,
         endTime: trimStart + span,
         volume: clip.volume,
+        equalizer: clip.equalizer.toRenderEqualizer(),
         timelineStart: start == null || start == Duration.zero ? null : start,
         transform: SegmentTransform(
           offset: offset,

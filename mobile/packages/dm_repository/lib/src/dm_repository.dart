@@ -3243,6 +3243,12 @@ class DmRepository {
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
           );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: its p tags name nobody but '
+            'the sender, so it has no counterparty',
+            category: LogCategory.system,
+          );
           return;
         }
 
@@ -3252,12 +3258,18 @@ class DmRepository {
         );
 
         // Reject self-conversations (all participants are the same pubkey).
-        // Defense-in-depth: should not happen after the self-wrap fix above,
-        // but guards against any future code path producing degenerate lists.
+        // The count above compares strings exactly, so it lets through a list
+        // that only spells one key in different letter cases.
         if (!containsDistinctPubkeys(participants)) {
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
+          );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: every participant it '
+            'resolves to is the same key, so it has no counterparty',
+            category: LogCategory.system,
           );
           return;
         }
@@ -3483,6 +3495,17 @@ class DmRepository {
           // recreated above, while the tombstone is deliberately kept so
           // replayed history stamped at or before the removal stays
           // suppressed. #7804.
+
+          // An early reaction is filed under the 1:1 of its reactor and the
+          // target's author. For a one-to-one message that is this
+          // conversation, so there is nothing to move and no UPDATE to pay.
+          if (isGroup) {
+            await _reactionsRepository?.adoptReceivedForStoredMessage(
+              messageId: rumor.id,
+              conversationId: conversationId,
+              ownerPubkey: ownerPubkey,
+            );
+          }
         });
 
         if (skippedByTransactionalGiftWrapDedup) {
@@ -7649,6 +7672,23 @@ class DmRepository {
             rumorId,
             ownerPubkey: _ownerPubkey,
           );
+          // A pending retraction stays in the thread, so the refresh at
+          // delete time could still pick this message. It has only now left,
+          // which makes this the first refresh able to move past it.
+          try {
+            await _refreshConversationPreview(conversationId);
+          } on Object catch (e, stackTrace) {
+            // The durable outcome is already sent and the sweep has dropped
+            // the row. A denormalized preview failure must not relabel it
+            // unconfirmed.
+            Log.error(
+              'Failed to refresh conversation preview after confirmed '
+              'deletion of $rumorId: $e',
+              category: LogCategory.system,
+              error: e,
+              stackTrace: stackTrace,
+            );
+          }
           Log.info(
             'Deleted message $rumorId via wrapped kind 5',
             category: LogCategory.system,
@@ -7946,8 +7986,9 @@ class DmRepository {
   /// Refreshes the denormalized preview columns of [conversationId] from its
   /// actual messages (called after a deletion and after a duplicate merge).
   ///
-  /// If the last shown message was deleted, the preview falls back to the
-  /// next most recent non-deleted message.
+  /// The preview becomes the newest message still shown in the thread. The
+  /// sender's own retraction stays there until it is confirmed, so a delete
+  /// for everyone moves the preview only when this runs after confirmation.
   ///
   /// This is a preview-only operation: it forwards the conversation's current
   /// `isRead` back through the upsert so read state is never changed here.
@@ -9710,7 +9751,12 @@ class DmRepository {
 
   /// Resolves the participant list for conversation routing.
   ///
-  /// When a rumor has more p-tags than a standard 1:1 (sender + us),
+  /// A rumor the current user authored always resolves to its own pubkey +
+  /// p-tags, which is how NIP-17 defines a room. Its self-addressed copy is
+  /// the only record of that message on an install that does not hold the
+  /// room yet, so it cannot wait for a conversation row to exist (#8271).
+  ///
+  /// When a peer's rumor has more p-tags than a standard 1:1 (sender + us),
   /// determines whether to route to the full participant group (if one
   /// already exists) or to the canonical 1:1 pair.
   ///
@@ -9723,16 +9769,14 @@ class DmRepository {
     List<String> extractedParticipants,
     String senderPubkey,
   ) async {
+    // Checked first: the 1:1 fallbacks below pair the user with the sender,
+    // which for our own rumor is [self, self] and gets discarded.
+    if (_userPubkey == senderPubkey) return extractedParticipants;
+
     final canonical1to1 = [_userPubkey, senderPubkey]..sort();
 
     // Standard 1:1 message — no ambiguity.
-    if (extractedParticipants.length <= 2) {
-      // Self-wrap: sender is the current user, so canonical1to1 would be
-      // [self, self]. Use extracted participants which contain the actual
-      // recipient from the rumor's p-tags.
-      if (_userPubkey == senderPubkey) return extractedParticipants;
-      return canonical1to1;
-    }
+    if (extractedParticipants.length <= 2) return canonical1to1;
 
     // Extra p-tags present. Check if a group conversation with the
     // full participant set already exists — if so, it's a genuine group.

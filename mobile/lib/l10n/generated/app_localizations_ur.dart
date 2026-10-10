@@ -428,6 +428,20 @@ class AppLocalizationsUr extends AppLocalizations {
       'ڈیوائس کی زبان استعمال کریں (ڈیفالٹ)';
 
   @override
+  String get contentPreferencesSubtitleLanguage => 'Subtitle language';
+
+  @override
+  String get contentPreferencesSubtitleLanguageFollowApp =>
+      'Same as app language';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginal =>
+      'Keep these in the original';
+
+  @override
+  String get contentPreferencesSubtitleKeepOriginalNone => 'None';
+
+  @override
   String get contentPreferencesAudioSharing =>
       'میری آڈیو دوبارہ استعمال کے لیے دستیاب کریں';
 
@@ -7815,6 +7829,23 @@ class AppLocalizationsUr extends AppLocalizations {
   String get newMessageNoUsersFound => 'کوئی صارف نہیں ملا';
 
   @override
+  String get newMessageNewGroup => 'نیا گروپ';
+
+  @override
+  String get newMessageStartChat => 'چیٹ شروع کریں';
+
+  @override
+  String newMessageGroupFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'یہی حد ہے: آپ سمیت $count لوگ۔',
+      one: 'یہی حد ہے: آپ سمیت $count شخص۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get userNotAvailableTitle => 'اکاؤنٹ دستیاب نہیں';
 
   @override
@@ -9708,6 +9739,63 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorVoiceEffectFailed =>
       'آواز تبدیل نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorEqualizerLabel => 'EQ';
+
+  @override
+  String get videoEditorEqualizerClipSemanticLabel =>
+      'منتخب کلپ کا باس، مڈ اور ٹریبل بدلیں';
+
+  @override
+  String get videoEditorEqualizerSoundSemanticLabel =>
+      'منتخب آواز کا باس، مڈ اور ٹریبل بدلیں';
+
+  @override
+  String get videoEditorEqualizerSheetTitle => 'ایکولائزر';
+
+  @override
+  String get videoEditorEqualizerVoice => 'صاف آواز';
+
+  @override
+  String get videoEditorEqualizerBassy => 'زیادہ باس';
+
+  @override
+  String get videoEditorEqualizerBright => 'زیادہ روشن';
+
+  @override
+  String videoEditorEqualizerGainValue(String gain) {
+    return '$gain dB';
+  }
+
+  @override
+  String videoEditorEqualizerHertz(String frequency) {
+    return '$frequency Hz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertz(String frequency) {
+    return '$frequency kHz';
+  }
+
+  @override
+  String videoEditorEqualizerKilohertzShort(String frequency) {
+    return '${frequency}k';
+  }
+
+  @override
+  String get videoEditorEqualizerCurveHint =>
+      'کسی نقطے کو اوپر یا نیچے گھسیٹیں';
+
+  @override
+  String videoEditorEqualizerLowerBand(String frequency) {
+    return '$frequency کم کریں';
+  }
+
+  @override
+  String videoEditorEqualizerRaiseBand(String frequency) {
+    return '$frequency بڑھائیں';
+  }
 
   @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
@@ -13152,4 +13240,7 @@ class AppLocalizationsUr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get subtitleMachineTranslated => 'مشینی ترجمہ';
 }

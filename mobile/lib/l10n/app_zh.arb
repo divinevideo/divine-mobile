@@ -3963,6 +3963,16 @@
   "newMessageFindPeople": "找人",
   "newMessageNoContacts": "没有找到联系人。\n关注一些人，他们就会出现在这里。",
   "newMessageNoUsersFound": "没有找到用户",
+  "newMessageNewGroup": "新建群聊",
+  "newMessageStartChat": "开始聊天",
+  "newMessageGroupFull": "{count, plural, other{已达上限：算上你最多 {count} 人。}}",
+  "@newMessageGroupFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userNotAvailableTitle": "账号不可用",
   "userNotAvailableBody": "该账号暂时不可用。",
   "classicVinersTitle": "OG Viners",
@@ -5036,6 +5046,20 @@
   "videoEditorVoiceEffectNoiseReductionSubtitle": "去除嘶嘶声、风扇声和室内噪音",
   "videoEditorVoiceEffectApplying": "正在应用变声效果",
   "videoEditorVoiceEffectFailed": "无法更改声音，请重试。",
+  "videoEditorEqualizerLabel": "EQ",
+  "videoEditorEqualizerClipSemanticLabel": "调整选中片段的低音、中音和高音",
+  "videoEditorEqualizerSoundSemanticLabel": "调整选中声音的低音、中音和高音",
+  "videoEditorEqualizerSheetTitle": "均衡器",
+  "videoEditorEqualizerVoice": "人声清晰",
+  "videoEditorEqualizerBassy": "低音增强",
+  "videoEditorEqualizerBright": "明亮",
+  "videoEditorEqualizerGainValue": "{gain} dB",
+  "videoEditorEqualizerHertz": "{frequency} Hz",
+  "videoEditorEqualizerKilohertz": "{frequency} kHz",
+  "videoEditorEqualizerKilohertzShort": "{frequency}k",
+  "videoEditorEqualizerCurveHint": "上下拖动一个点",
+  "videoEditorEqualizerLowerBand": "降低 {frequency}",
+  "videoEditorEqualizerRaiseBand": "提高 {frequency}",
   "videoEditorTransitionSheetTitle": "转场",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -6732,5 +6756,6 @@
       }
     }
   },
-  "postPublishCrosspostReconnect": "{count, plural, =1{在跨平台发布设置中重新连接 {platforms}，才能继续发布。} other{在跨平台发布设置中重新连接这些账号，才能继续发布：{platforms}。}}"
+  "postPublishCrosspostReconnect": "{count, plural, =1{在跨平台发布设置中重新连接 {platforms}，才能继续发布。} other{在跨平台发布设置中重新连接这些账号，才能继续发布：{platforms}。}}",
+  "subtitleMachineTranslated": "机器翻译"
 }
