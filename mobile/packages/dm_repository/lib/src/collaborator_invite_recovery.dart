@@ -144,9 +144,12 @@ class PendingCollaboratorInvite extends Equatable {
   final String? lastError;
 
   /// Whether the collaborator-directed wrap still needs recovery.
+  ///
+  /// Only a wrap still in progress does: `sent` is done, and recovery refuses
+  /// the terminal `blocked` and `cancelled`.
   bool get requiresRecipientRecovery =>
-      recipientWrapStatus != OutgoingWrapStatus.sent &&
-      recipientWrapStatus != OutgoingWrapStatus.blocked;
+      recipientWrapStatus == OutgoingWrapStatus.pending ||
+      recipientWrapStatus == OutgoingWrapStatus.failed;
 
   @override
   List<Object?> get props => [
