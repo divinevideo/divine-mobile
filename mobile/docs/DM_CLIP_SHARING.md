@@ -73,10 +73,11 @@ sign without one.
 
   A clip does not always carry the hash itself. The capture proof can come
   back after the take was saved to the clip library, so the library entry is
-  given the hash then (`ClipLibraryService.rememberRecordingHash`). An edit
-  made before the proof came back names its sources without it, and so do a
-  recording used as a chroma-key backdrop and the footage under a key. Signing
-  therefore also looks the hash up by file name in the account's clip library
+  given the hash then (`ClipLibraryService.rememberRecordingHash`), and later
+  saves of the entry from an older copy keep it. An edit made before the proof
+  came back names its sources without it, and so do a recording used as a
+  chroma-key backdrop and the footage under a key. Signing therefore also
+  looks the hash up by file name in the account's clip library
   (`ClipLibraryService.recordingHashesByFileName`), which covers all of them.
 
 ## The C2PA check

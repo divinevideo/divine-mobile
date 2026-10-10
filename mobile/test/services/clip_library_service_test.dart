@@ -779,6 +779,24 @@ void main() {
         );
       });
 
+      test('keeps the hash when a copy read before it is saved', () async {
+        await service.saveClip(take('take', 'take.mp4'));
+        // Read while the capture proof is still out, as asset recovery does
+        // when the library opens right after a take.
+        final stale = (await service.getClipById('take'))!;
+        await service.rememberRecordingHash(
+          clipId: 'take',
+          fileName: 'take.mp4',
+          sha256: recordingHash,
+        );
+
+        await service.saveClip(stale.copyWith(thumbnailPath: '/tmp/take.jpg'));
+
+        final entry = await service.getClipById('take');
+        expect(entry?.thumbnailPath, endsWith('take.jpg'));
+        expect(entry?.recordingSha256, recordingHash);
+      });
+
       test('keeps a trashed entry in the trash', () async {
         await service.saveClip(take('take', 'take.mp4'));
         await service.softDelete('take');

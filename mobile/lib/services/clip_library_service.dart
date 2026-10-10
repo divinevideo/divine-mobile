@@ -109,6 +109,9 @@ class ClipLibraryService {
   }
 
   /// Save a clip to the library. Updates existing clip if ID matches.
+  ///
+  /// A recording hash the entry holds for a file [clip] still plays is kept
+  /// when [clip] carries none (see [rememberRecordingHash]).
   Future<void> saveClip(DivineVideoClip clip) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
@@ -120,13 +123,17 @@ class ClipLibraryService {
     final existingAutosaveRow = existingLibraryRow == null
         ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
         : null;
+    final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
+    final saved = keptHash == null
+        ? clip
+        : clip.copyWith(recordingSha256: keptHash);
 
     await _clipsDao.upsertClip(
       id: clip.id,
       orderIndex: 0,
       durationMs: clip.duration.inMilliseconds,
       recordedAt: clip.recordedAt,
-      data: json.encode(clip.toJson()),
+      data: json.encode(saved.toJson()),
       filePath: clip.video?.file?.path != null
           ? p.basename(clip.video!.file!.path)
           : null,
@@ -326,6 +333,33 @@ class ClipLibraryService {
       }
     }
     return hashes;
+  }
+
+  /// The recording hash [row] holds for a file [clip] still plays, when
+  /// [clip] carries none itself.
+  ///
+  /// [clip] can be a copy read before [rememberRecordingHash] noted the hash,
+  /// such as one asset recovery or a chroma-key bake saves back. Saving it as
+  /// it is would drop the hash again.
+  Future<String?> _recordingHashKeptFor(
+    DivineVideoClip clip,
+    ClipRow? row,
+  ) async {
+    if (row == null || clip.recordingSha256 != null) return null;
+    final DivineVideoClip stored;
+    try {
+      stored = DivineVideoClip.fromJson(
+        json.decode(row.data) as Map<String, dynamic>,
+        await getDocumentsPath(),
+      );
+    } catch (_) {
+      // A corrupt row has no hash to keep; the save replaces it.
+      return null;
+    }
+    final hash = stored.recordingSha256;
+    if (hash == null) return null;
+    final files = _recordingFileNames(stored);
+    return _recordingFileNames(clip).any(files.contains) ? hash : null;
   }
 
   /// The files [clip]'s recording hash can describe: its video, or the raw
