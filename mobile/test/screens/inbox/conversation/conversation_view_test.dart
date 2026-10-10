@@ -972,6 +972,225 @@ void main() {
       });
     });
 
+    // #8428. A group thread's title names the room, so a bubble alone never
+    // said who wrote it: every message from someone else looked the same.
+    group('group thread authorship (#8428)', () {
+      const alice = otherPubkey;
+      const bob =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const aliceName = 'Alice';
+      const bobName = 'Bob';
+      const ownName = 'Mia Myself';
+
+      UserProfile profileFor(String pubkey, String name) => UserProfile(
+        pubkey: pubkey,
+        displayName: name,
+        rawData: const {},
+        createdAt: now,
+        eventId: 'c' * 64,
+      );
+
+      // `buildSubject` already answers for the first counterparty; every other
+      // pubkey in the thread resolves through the same four providers.
+      List<Override> memberOverrides(
+        String pubkey, {
+        String? name,
+        bool resolving = false,
+      }) => [
+        fetchUserProfileProvider(pubkey).overrideWith(
+          (ref) async => name == null ? null : profileFor(pubkey, name),
+        ),
+        profileVanishedProvider(pubkey).overrideWith((ref) => false),
+        profileIdentityResolvingProvider(pubkey).overrideWithValue(resolving),
+      ];
+
+      var nextSecond = 0;
+      DmMessage messageFrom(String sender, String content) {
+        nextSecond += 1;
+        return DmMessage(
+          id: nextSecond.toRadixString(16).padLeft(64, '0'),
+          conversationId: 'c' * 64,
+          senderPubkey: sender,
+          content: content,
+          createdAt: now.millisecondsSinceEpoch ~/ 1000 + nextSecond,
+          giftWrapId: 'a' * 64,
+        );
+      }
+
+      // Oldest first, the way people read it. The bloc hands the view newest
+      // first, so the helper reverses.
+      List<DmMessage> thread(List<(String, String)> chronological) {
+        nextSecond = 0;
+        return [
+          for (final (sender, content) in chronological)
+            messageFrom(sender, content),
+        ].reversed.toList();
+      }
+
+      Widget groupThread(List<DmMessage> messages) => buildSubject(
+        counterparties: const [alice, bob],
+        otherProfile: profileFor(alice, aliceName),
+        state: ConversationState(
+          status: ConversationStatus.loaded,
+          messages: messages,
+        ),
+        extraOverrides: [
+          ...memberOverrides(bob, name: bobName),
+          ...memberOverrides(currentPubkey, name: ownName),
+        ],
+      );
+
+      Future<void> pumpThread(WidgetTester tester, Widget subject) async {
+        await tester.pumpWidget(subject);
+        await tester.pumpAndSettle();
+      }
+
+      double dy(WidgetTester tester, Finder finder) =>
+          tester.getTopLeft(finder).dy;
+
+      // Top of the screen first: the list is reversed, so the element order
+      // of a finder runs newest to oldest.
+      List<double> topDownDys(WidgetTester tester, Finder finder) => [
+        for (var i = 0; i < finder.evaluate().length; i++)
+          tester.getTopLeft(finder.at(i)).dy,
+      ]..sort();
+
+      testWidgets('names the sender above the first bubble of each run', (
+        tester,
+      ) async {
+        await pumpThread(
+          tester,
+          groupThread(
+            thread([
+              (alice, 'alice one'),
+              (alice, 'alice two'),
+              (bob, 'bob one'),
+              (currentPubkey, 'my reply'),
+              (alice, 'alice three'),
+            ]),
+          ),
+        );
+
+        // Two runs by Alice and one by Bob: a caption for the second bubble
+        // of Alice's first run would make this three.
+        expect(find.text(aliceName), findsNWidgets(2));
+        expect(find.text(bobName), findsOneWidget);
+        final aliceDys = topDownDys(tester, find.text(aliceName));
+
+        // Each name sits above the first bubble of its own run.
+        expect(
+          aliceDys.first,
+          lessThan(dy(tester, find.text('alice one'))),
+        );
+        expect(
+          dy(tester, find.text(bobName)),
+          allOf(
+            greaterThan(dy(tester, find.text('alice two'))),
+            lessThan(dy(tester, find.text('bob one'))),
+          ),
+        );
+        // Alice speaks again after Bob and the viewer, so she is named again.
+        expect(
+          aliceDys.last,
+          allOf(
+            greaterThan(dy(tester, find.text('my reply'))),
+            lessThan(dy(tester, find.text('alice three'))),
+          ),
+        );
+      });
+
+      testWidgets("names nobody above the viewer's own messages", (
+        tester,
+      ) async {
+        await pumpThread(
+          tester,
+          groupThread(
+            thread([(alice, 'alice one'), (currentPubkey, 'my reply')]),
+          ),
+        );
+
+        expect(find.text('my reply'), findsOneWidget);
+        expect(find.text(ownName), findsNothing);
+        expect(find.text(aliceName), findsOneWidget);
+      });
+
+      testWidgets('puts the sender in the screen-reader label of every '
+          'bubble, not only the first of a run', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpThread(
+          tester,
+          groupThread(
+            thread([(alice, 'alice one'), (alice, 'alice two')]),
+          ),
+        );
+
+        for (final content in ['alice one', 'alice two']) {
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp(content)),
+          );
+          expect(node.label, contains(aliceName), reason: content);
+          // Read once: the visible caption is not a second node.
+          expect(aliceName.allMatches(node.label), hasLength(1));
+        }
+
+        handle.dispose();
+      });
+
+      testWidgets('keeps a generated name out of the label while the '
+          "member's profile is still resolving", (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [alice, bob],
+            otherProfile: profileFor(alice, aliceName),
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: thread([(bob, 'bob one')]),
+            ),
+            extraOverrides: memberOverrides(bob, resolving: true),
+          ),
+        );
+        await tester.pump();
+
+        final node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('bob one')),
+        );
+        expect(node.label, isNot(contains(bobName)));
+        expect(
+          node.label,
+          isNot(contains(UserProfile.defaultDisplayNameFor(bob))),
+        );
+
+        handle.dispose();
+      });
+
+      testWidgets('a one-to-one thread shows no sender names at all', (
+        tester,
+      ) async {
+        await pumpThread(
+          tester,
+          buildSubject(
+            otherProfile: profileFor(alice, aliceName),
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: thread([
+                (alice, 'alice one'),
+                (alice, 'alice two'),
+                (currentPubkey, 'my reply'),
+                (alice, 'alice three'),
+              ]),
+            ),
+            extraOverrides: memberOverrides(currentPubkey, name: ownName),
+          ),
+        );
+
+        expect(find.text('alice three'), findsOneWidget);
+        // The only "Alice" is the thread's own title.
+        expect(find.text(aliceName), findsOneWidget);
+        expect(find.text(ownName), findsNothing);
+      });
+    });
+
     // #6416. The header resolved the peer from kind-0 only, and neither
     // moderation key has one the app can read — the current account's is not on
     // the single relay production queries, and a retired key has no events at
