@@ -188,7 +188,10 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             ),
         ],
         customActions: [
-          if (!isOwned)
+          // Not owned in the store does not mean someone else's: a link can
+          // run ahead of sync, and Search opens an unclaimed draft under the
+          // viewer's own pubkey.
+          if (!isOwned && !_isViewer(widget.authorPubkey))
             FollowListButton(
               isFollowing: isSubscribed,
               isBusy: _isTogglingSubscription,
@@ -434,6 +437,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     _exitManageMode();
   }
 
+  /// Whether [pubkey] is the signed-in viewer's.
+  bool _isViewer(String? pubkey) {
+    if (pubkey == null) return false;
+    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
+    return viewer != null && viewer.toLowerCase() == pubkey.toLowerCase();
+  }
+
   /// What a report on someone else's list names, or null when it cannot be
   /// reported yet: the viewer's own list (reporting it stays disabled, as it
   /// is for videos), or a list with no known author.
@@ -448,10 +458,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (!isOwnedKnown || author == null) return null;
     // Deep links can resolve an owned list before background sync adds it
     // to the local store; an absent entry does not mean someone else owns it.
-    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
-    if (viewer != null && viewer.toLowerCase() == author.toLowerCase()) {
-      return null;
-    }
+    if (_isViewer(author)) return null;
     final eventId =
         list?.nostrEventId ??
         ref
