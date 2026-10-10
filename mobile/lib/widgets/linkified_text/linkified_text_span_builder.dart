@@ -70,6 +70,10 @@ class LinkifiedTextSpanBuilder {
     caseSensitive: false,
   );
 
+  /// `?` plus the URL characters after it. The URL pattern also swallows what
+  /// follows a link (a closing bracket, an unspaced word), which must stay.
+  static final _query = RegExp(r'\?[A-Za-z0-9\-._~%&=+/:;,@!$?]*');
+
   /// Length of a fixed-payload bech32 reference (`npub` / `note`), which is
   /// always `hrp` + 58 data characters.
   static const _fixedBech32Length = 63;
@@ -143,13 +147,8 @@ class LinkifiedTextSpanBuilder {
   final bool compactUrls;
 
   /// Returns [url] without its leading scheme and its query string.
-  static String _compactUrlLabel(String url) {
-    final withoutScheme = url.replaceFirst(_leadingScheme, '');
-    final queryStart = withoutScheme.indexOf('?');
-    return queryStart < 0
-        ? withoutScheme
-        : withoutScheme.substring(0, queryStart);
-  }
+  static String _compactUrlLabel(String url) =>
+      url.replaceFirst(_leadingScheme, '').replaceFirst(_query, '');
 
   /// Builds spans preserving the token precedence from [LinkifiedText].
   ///

@@ -695,6 +695,45 @@ void main() {
         );
       });
 
+      test('keeps the punctuation that wraps a link', () {
+        final spans = const LinkifiedTextSpanBuilder(
+          text: '(see https://a.com/b?c=d) or “https://e.com/f?g=h”',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          compactUrls: true,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('(see a.com/b) or “e.com/f”'),
+        );
+      });
+
+      test('keeps text that follows a link without a space', () {
+        final spans = const LinkifiedTextSpanBuilder(
+          text: '詳しくはhttps://a.com/b?c=dを見てください',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          compactUrls: true,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('詳しくはa.com/bを見てください'),
+        );
+      });
+
+      test('keeps a fragment that follows the query', () {
+        final spans = const LinkifiedTextSpanBuilder(
+          text: 'https://a.com/b?c=d#top',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          compactUrls: true,
+        ).build();
+
+        expect(spans.tappableSpans.single.text, equals('a.com/b#top'));
+      });
+
       test('leaves links untouched when disabled', () {
         final spans = const LinkifiedTextSpanBuilder(
           text: 'wss://relay.divine.video and https://a.com/b?c=d',
