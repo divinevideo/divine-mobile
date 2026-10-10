@@ -70,6 +70,12 @@ void main() {
       when(() => nostrClient.connectedRelayCount).thenReturn(2);
       when(() => nostrClient.configuredRelayCount).thenReturn(2);
       when(() => outgoingDao.enqueue(any())).thenAnswer((_) async {});
+      // Setting credentials starts post-auth maintenance, which reads the
+      // queue to drop self-addressed rows (#8363). Left unstubbed, that read
+      // throws inside the pass and is swallowed there.
+      when(
+        () => outgoingDao.getAllForOwner(any()),
+      ).thenAnswer((_) async => const <OutgoingDm>[]);
       // The size guard runs after the send-policy gate and after the rumor is
       // built, but still before the enqueue — so the policy gate must permit
       // the send for the size check to be reached at all.

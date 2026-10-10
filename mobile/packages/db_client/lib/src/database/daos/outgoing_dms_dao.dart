@@ -599,6 +599,18 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
     return query.watch().map((rows) => rows.map(_rowToModel).toList());
   }
 
+  /// Fetch every row for the given account, oldest first.
+  ///
+  /// The one-shot companion to [watchAllForOwner], for a caller that needs
+  /// the queue once and must not open a stream query to get it.
+  Future<List<OutgoingDm>> getAllForOwner(String ownerPubkey) async {
+    final query = select(outgoingDms)
+      ..where((t) => t.ownerPubkey.equals(ownerPubkey))
+      ..orderBy([(t) => OrderingTerm(expression: t.queuedAt)]);
+    final rows = await query.get();
+    return rows.map(_rowToModel).toList();
+  }
+
   /// Fetch all rows for [ownerPubkey] where at least one wrap is still
   /// in [OutgoingWrapStatus.failed]. Excludes rows that have exhausted
   /// the retry budget (caller decides what to do with those, typically

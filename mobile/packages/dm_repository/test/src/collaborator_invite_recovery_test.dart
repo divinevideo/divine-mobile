@@ -145,6 +145,12 @@ void main() {
         ownerPubkey: any(named: 'ownerPubkey'),
       ),
     ).thenAnswer((_) async => 0);
+    // Setting credentials starts post-auth maintenance, which reads the queue
+    // to drop self-addressed rows (#8363). Left unstubbed, that read throws
+    // inside the pass and is swallowed there.
+    when(
+      () => outgoingDmsDao.getAllForOwner(any()),
+    ).thenAnswer((_) async => const <OutgoingDm>[]);
     reportedErrors = [];
     recoverFullSendHandler = (rumorId) async => NIP17SendResult.success(
       rumorEventId: rumorId,

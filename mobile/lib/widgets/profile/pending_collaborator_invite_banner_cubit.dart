@@ -26,9 +26,10 @@ class PendingCollaboratorInviteBannerState extends Equatable {
   /// Invites that failed transiently and remain queued for a later retry.
   final int remainingInviteCount;
 
-  /// Invites terminally dropped because the collaborator cannot receive DMs
-  /// (a confirmed #176 policy block). Their queue rows are deleted, so they
-  /// are surfaced apart from [remainingInviteCount].
+  /// Invites that will never be sent: the collaborator cannot receive DMs
+  /// (a confirmed #176 policy block), or the invite is addressed to its own
+  /// creator (#8363). They are no longer retryable, so they are surfaced
+  /// apart from [remainingInviteCount].
   final int blockedInviteCount;
 
   PendingCollaboratorInviteBannerState copyWith({

@@ -5848,6 +5848,9 @@ class DmRepository {
   /// Returns the underlying [NIP17SendResult] so callers can chain a
   /// per-rumor recovery and aggregate the result.
   ///
+  /// A one-to-one row addressed to its own sender is dropped and reported as
+  /// blocked without publishing, as in [recoverFullSend] (#8363).
+  ///
   /// Idempotent: if the row's `selfWrapStatus` is already
   /// [OutgoingWrapStatus.sent] (e.g. a concurrent recovery already
   /// landed), returns success without republishing.
@@ -5889,6 +5892,15 @@ class DmRepository {
         'rumorId',
         'queue row belongs to a different account',
       );
+    }
+
+    // The sweep reaches this path directly for a partial row, so refusing a
+    // one-to-one row addressed to its own sender in recoverFullSend alone
+    // would still publish one more wrap from here (#8363). The check is
+    // synchronous, so no other row gains a suspension point between the owner
+    // check above and the session token taken below.
+    if (_isSelfAddressedRow(row)) {
+      return _dropSelfAddressedRow(dao: dao, row: row);
     }
 
     // Idempotent re-tap. Reached when a prior recovery attempt's publish
@@ -6074,6 +6086,10 @@ class DmRepository {
   /// - Recipient failure: re-mark both wraps `failed` so the row
   ///   stays retryable.
   ///
+  /// A one-to-one row addressed to its own sender is never republished: it is
+  /// dropped and reported as blocked (#8363). [sendMessage] refuses such a
+  /// send before queuing it, so only a row queued by an older build gets here.
+  ///
   /// Idempotent: if the row's `recipientWrapStatus` is already
   /// [OutgoingWrapStatus.sent] (a concurrent recovery raced ahead or
   /// the row was already mid-recovery), defers to [recoverSelfWrap]
@@ -6151,6 +6167,12 @@ class DmRepository {
         'rumorId',
         'queue row belongs to a different account',
       );
+    }
+
+    // A one-to-one row addressed to its own sender is never republished
+    // (#8363). Checked first, so it is dropped whatever state it is in.
+    if (_isSelfAddressedRow(row)) {
+      return _dropSelfAddressedRow(dao: dao, row: row);
     }
 
     // Idempotent guard: if a concurrent recovery (or the original
@@ -6507,16 +6529,16 @@ class DmRepository {
         if (result.success) {
           success++;
         } else if (result.blocked) {
-          // A confirmed #176 policy block is terminal: recoverFullSend already
-          // deleted the row, so the invite is neither delivered nor retryable.
-          // Count it apart from transient failures so the banner does not
-          // report a dropped row as "still needs to send".
+          // A blocked result is terminal: recoverFullSend has already settled
+          // the row, for a #176 policy block or for an invite addressed to its
+          // own creator (#8363), so the invite is neither delivered nor
+          // retryable. Count it apart from transient failures so the banner
+          // does not report it as "still needs to send".
           blocked++;
           Log.warning(
-            'Collaborator invite blocked by policy for rumor '
-            '${invite.rumorId} '
+            'Collaborator invite refused for rumor ${invite.rumorId} '
             '(recipient=${pubkeyForLogs(invite.collaboratorPubkey)}, '
-            'video=${invite.videoAddress}); row dropped',
+            'video=${invite.videoAddress}): ${result.error}',
             category: LogCategory.system,
           );
         } else {
@@ -6797,7 +6819,9 @@ class DmRepository {
     }
   }
 
-  /// Apply the terminal queue-row transition for a policy-blocked recipient.
+  /// Apply the terminal queue-row transition for a blocked send: a
+  /// policy-blocked recipient, or a one-to-one row addressed to its own sender
+  /// (#8363).
   ///
   /// Protected-minor refusals discard the row because the intent must not
   /// remain visible. A retired moderation recipient retains it in the
@@ -6831,6 +6855,49 @@ class DmRepository {
         site: DmRepositoryReportableSites.finalizeAfterRecipientBlocked,
       );
     }
+  }
+
+  /// Whether [row] is a one-to-one send addressed to its own sender.
+  ///
+  /// A group sibling row can also name the sender as its recipient, beside
+  /// real members, and how a group send treats its sender is still open
+  /// (#8359). So only a row whose conversation is the sender alone counts.
+  /// The pair id is derived the way the send paths derive it, from the
+  /// recipient as stored, so an upper-case entry matches too.
+  bool _isSelfAddressedRow(OutgoingDm row) =>
+      _isSelf(row.recipientPubkey) &&
+      row.conversationId ==
+          computeConversationId([_userPubkey, row.recipientPubkey]..sort());
+
+  /// Drops [row], a queued send addressed to its own sender, and returns the
+  /// terminal refusal to report. Call only when [_isSelfAddressedRow] holds.
+  ///
+  /// [sendMessage] refuses such a send before queuing it (#8351), so only a
+  /// row queued by a build without that guard reaches a recovery path, which
+  /// would otherwise publish it again on every attempt (#8363). Reported as
+  /// blocked so that no caller retries it.
+  Future<NIP17SendResult> _dropSelfAddressedRow({
+    required OutgoingDmsDao dao,
+    required OutgoingDm row,
+  }) async {
+    const refusal = NIP17SendResult.blocked(
+      'refused: a message cannot be addressed to its own sender',
+    );
+    Log.info(
+      'Refusing to republish queued DM ${row.id}: it is addressed to its own '
+      'sender; dropping the row (recipient wrap: '
+      '${row.recipientWrapStatus.name}, event '
+      "${row.recipientWrapEventId ?? 'none'}; self wrap: "
+      '${row.selfWrapStatus.name}, event '
+      "${row.selfWrapEventId ?? 'none'}; retries: ${row.retryCount})",
+      category: LogCategory.system,
+    );
+    await _finalizeAfterRecipientBlocked(
+      outgoingDao: dao,
+      rumorId: row.id,
+      result: refusal,
+    );
+    return refusal;
   }
 
   /// Apply the queue-row transition for a soft, retryable-pending failure: an
@@ -9298,6 +9365,50 @@ class DmRepository {
     }
   }
 
+  /// Removes queued sends addressed to their own sender.
+  ///
+  /// The recovery paths refuse such a row when asked to replay it (#8363),
+  /// but nothing asks for one that has used up its retry budget, so it would
+  /// stay in the queue for good. Runs with [_cleanupSelfConversations], which
+  /// removes the thread these rows belong to.
+  ///
+  /// Idempotent — safe to call on every init.
+  Future<void> _cleanupSelfAddressedQueueRows() async {
+    final dao = _outgoingDmsDao;
+    final owner = _ownerPubkey;
+    if (dao == null || owner == null) return;
+    try {
+      // Not `watchAllForOwner(owner).first`: `first` waits for the
+      // subscription's cancel future, which a Drift query stream completes
+      // through a root-zone microtask. A widget test's fake-async zone never
+      // runs one, so everything awaiting this pass would stall there until
+      // the test body ended.
+      final rows = await dao.getAllForOwner(owner);
+      final selfAddressed = rows.where(_isSelfAddressedRow).toList();
+      if (selfAddressed.isEmpty) return;
+
+      var deleted = 0;
+      await _conversationsDao.runInTransaction(() async {
+        for (final row in selfAddressed) {
+          deleted += await dao.deleteById(row.id);
+        }
+      });
+
+      Log.info(
+        'Cleaned up $deleted self-addressed queued DM(s): '
+        "${selfAddressed.map((row) => row.id).join(', ')}",
+        category: LogCategory.system,
+      );
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to clean up self-addressed queued DMs: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   /// Whether [participantPubkeys] is exactly [pubkey], repeated or not.
   ///
   /// Requires at least one entry: an empty list is a shape this cannot
@@ -9332,6 +9443,7 @@ class DmRepository {
   /// operates on the final state of the previous one.
   Future<void> _runPostAuthMaintenance() async {
     await _cleanupSelfConversations();
+    await _cleanupSelfAddressedQueueRows();
     await _backfillCurrentUserHasSent();
     await _backfillConversationPreviews();
     await _purgeReactionsStrandedByRemoval();

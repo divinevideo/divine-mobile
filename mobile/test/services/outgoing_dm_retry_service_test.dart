@@ -16,6 +16,7 @@ import 'package:models/models.dart' show NIP17SendResult;
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:openvine/services/outgoing_dm_retry_service_reportable_sites.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -64,6 +65,12 @@ NIP17SendResult _successResult(String rumorId) => NIP17SendResult.success(
 
 NIP17SendResult _failureResult(String reason) =>
     NIP17SendResult.failure(reason);
+
+/// What the repository returns after dropping a queued row addressed to its
+/// own sender (#8363).
+const _selfAddressedRefusal = NIP17SendResult.blocked(
+  'refused: a message cannot be addressed to its own sender',
+);
 
 void main() {
   late _MockDmRepository dmRepository;
@@ -765,6 +772,136 @@ void main() {
         verify(() => dmRepository.recoverSelfWrap(rumorId: 'rumor3')).called(1);
         verify(() => dao.incrementRetry('rumor3')).called(1);
       });
+
+      // recoverSelfWrap reports a row addressed to its own sender as blocked
+      // after dropping it (#8363), so this arm has the same terminal outcome
+      // to honour as the recoverFullSend one above.
+      test(
+        'recoverSelfWrap blocked path is terminal: no incrementRetry',
+        () async {
+          final row = _row(
+            id: 'rumor3b',
+            recipient: OutgoingWrapStatus.sent,
+            self: OutgoingWrapStatus.failed,
+            retryCount: 1,
+            lastAttemptAt: DateTime.utc(2025),
+          );
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer((_) async => [row]);
+          when(
+            () => dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _selfAddressedRefusal);
+
+          await buildService().sweep();
+
+          verify(
+            () => dmRepository.recoverSelfWrap(rumorId: 'rumor3b'),
+          ).called(1);
+          // The row is already gone: a bump would charge a retry budget
+          // that nothing will ever spend.
+          verifyNever(() => dao.incrementRetry(any()));
+        },
+      );
+
+      test(
+        'recoverSelfWrap blocked path is summarised as blocked, not failed',
+        () async {
+          final logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+          addTearDown(logCapture.clearAllLogs);
+          final row = _row(
+            id: 'rumor3c',
+            recipient: OutgoingWrapStatus.sent,
+            self: OutgoingWrapStatus.failed,
+          );
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer((_) async => [row]);
+          when(
+            () => dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _selfAddressedRefusal);
+
+          await buildService().sweep();
+
+          // The line support reads to tell a queue that is draining from one
+          // that is stuck retrying. Picked by logger name too: the reaction
+          // retry service writes the same prefix into this shared capture.
+          final summary = logCapture
+              .getRecentLogs()
+              .where((entry) => entry.name == 'OutgoingDmRetryService')
+              .map((entry) => entry.message)
+              .singleWhere((message) => message.startsWith('sweep complete:'));
+          expect(summary, contains('self-wrap-failed=0 '));
+          expect(summary, contains('self-wrap-blocked=1 '));
+        },
+      );
+
+      test(
+        'a pass whose only outcome is a blocked recoverSelfWrap arms no '
+        'follow-up sweep',
+        () {
+          fakeAsync((async) {
+            final row = _row(
+              id: 'rumor3d',
+              recipient: OutgoingWrapStatus.sent,
+              self: OutgoingWrapStatus.failed,
+            );
+            // Stands in for the queue: the refusal drops the row.
+            var dropped = false;
+            when(
+              () => dao.getRetryableForOwner(
+                ownerPubkey: any(named: 'ownerPubkey'),
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            ).thenAnswer((_) async => dropped ? const [] : [row]);
+            when(
+              () =>
+                  dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
+            ).thenAnswer((_) async {
+              dropped = true;
+              return _selfAddressedRefusal;
+            });
+
+            final service = buildService();
+            unawaited(service.initialize());
+            async.flushMicrotasks();
+
+            unawaited(service.sweep());
+            async.flushMicrotasks();
+            verify(
+              () => dmRepository.recoverSelfWrap(rumorId: 'rumor3d'),
+            ).called(1);
+            verify(
+              () => dao.getRetryableForOwner(
+                ownerPubkey: _ownerPubkey,
+                maxRetries: 5,
+              ),
+            ).called(1);
+
+            // Nothing is left to drive, so the heartbeat stays disarmed. A
+            // pass that counted the row as failed runs again 30s later.
+            async
+              ..elapse(const Duration(minutes: 5))
+              ..flushMicrotasks();
+            verifyNever(
+              () => dao.getRetryableForOwner(
+                ownerPubkey: any(named: 'ownerPubkey'),
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            );
+
+            unawaited(service.dispose());
+            async.flushMicrotasks();
+          });
+        },
+      );
 
       test('multiple State A rows are processed independently', () async {
         final rows = [

@@ -231,14 +231,14 @@ class CollaboratorInviteRetrySummary extends Equatable {
   final int successCount;
 
   /// Number of invites that failed transiently and remain queued for a later
-  /// retry. Excludes [blockedCount]: a confirmed #176 policy block is terminal,
-  /// not "still needs to send".
+  /// retry. Excludes [blockedCount], which is terminal, not "still needs to
+  /// send".
   final int failureCount;
 
-  /// Number of invites terminally dropped because the recipient is not an
-  /// approved DM recipient (a confirmed #176 policy block). The queue rows are
-  /// deleted and are never retryable, so they are surfaced apart from
-  /// [failureCount].
+  /// Number of invites that will never be sent: the recipient is not an
+  /// approved DM recipient (a confirmed #176 policy block), or the invite is
+  /// addressed to its own creator (#8363). They are never retryable, so they
+  /// are surfaced apart from [failureCount].
   final int blockedCount;
 
   /// Whether every attempted recovery succeeded.
