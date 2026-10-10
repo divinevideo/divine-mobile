@@ -63,6 +63,12 @@ class _RecordingNip98AuthService implements Nip98AuthService {
   Map<String, dynamic> get cacheStats => const <String, dynamic>{};
 
   @override
+  bool isCurrentOwner(String pubkey) => pubkey == _placeholderPubkey;
+
+  @override
+  void updateServerTime(Uri uri, DateTime serverTime) {}
+
+  @override
   void clearTokenCache() {}
 
   @override
