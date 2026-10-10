@@ -119,44 +119,49 @@ class ClipLibraryService {
       category: LogCategory.video,
     );
 
-    final existingLibraryRow = await _clipsDao.getClipById(clip.id);
-    final existingAutosaveRow = existingLibraryRow == null
-        ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
-        : null;
-    final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
-    final saved = keptHash == null
-        ? clip
-        : clip.copyWith(recordingSha256: keptHash);
+    // One transaction from read to write: the capture proof can note the
+    // recording hash (see [rememberRecordingHash]) while a copy read before
+    // it is being saved, and the save must not land on top of it.
+    await _clipsDao.transaction(() async {
+      final existingLibraryRow = await _clipsDao.getClipById(clip.id);
+      final existingAutosaveRow = existingLibraryRow == null
+          ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
+          : null;
+      final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
+      final saved = keptHash == null
+          ? clip
+          : clip.copyWith(recordingSha256: keptHash);
 
-    await _clipsDao.upsertClip(
-      id: clip.id,
-      orderIndex: 0,
-      durationMs: clip.duration.inMilliseconds,
-      recordedAt: clip.recordedAt,
-      data: json.encode(saved.toJson()),
-      filePath: clip.video?.file?.path != null
-          ? p.basename(clip.video!.file!.path)
-          : null,
-      thumbnailPath: clip.thumbnailPath != null
-          ? p.basename(clip.thumbnailPath!)
-          : null,
-      ownerPubkey: ownerPubkey,
-    );
+      await _clipsDao.upsertClip(
+        id: clip.id,
+        orderIndex: 0,
+        durationMs: clip.duration.inMilliseconds,
+        recordedAt: clip.recordedAt,
+        data: json.encode(saved.toJson()),
+        filePath: clip.video?.file?.path != null
+            ? p.basename(clip.video!.file!.path)
+            : null,
+        thumbnailPath: clip.thumbnailPath != null
+            ? p.basename(clip.thumbnailPath!)
+            : null,
+        ownerPubkey: ownerPubkey,
+      );
 
-    if (existingLibraryRow == null && existingAutosaveRow != null) {
-      if (existingAutosaveRow.categoryId != null) {
-        await _clipsDao.setClipCategory(
-          id: clip.id,
-          categoryId: existingAutosaveRow.categoryId,
-        );
+      if (existingLibraryRow == null && existingAutosaveRow != null) {
+        if (existingAutosaveRow.categoryId != null) {
+          await _clipsDao.setClipCategory(
+            id: clip.id,
+            categoryId: existingAutosaveRow.categoryId,
+          );
+        }
+        if (existingAutosaveRow.archivedAt != null) {
+          await _clipsDao.setClipArchived(
+            id: clip.id,
+            archivedAt: existingAutosaveRow.archivedAt,
+          );
+        }
       }
-      if (existingAutosaveRow.archivedAt != null) {
-        await _clipsDao.setClipArchived(
-          id: clip.id,
-          archivedAt: existingAutosaveRow.archivedAt,
-        );
-      }
-    }
+    });
   }
 
   /// Get all clips from the library, sorted by creation date (newest first).

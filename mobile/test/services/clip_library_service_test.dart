@@ -797,6 +797,31 @@ void main() {
         expect(entry?.recordingSha256, recordingHash);
       });
 
+      // The recorder's second save, a chroma-key bake and asset recovery can
+      // all be saving a copy read earlier at the moment the proof comes back.
+      for (final noteFirst in [false, true]) {
+        test('keeps a hash noted while a save of an older copy is in flight '
+            '(${noteFirst ? 'noted' : 'saved'} first)', () async {
+          await service.saveClip(take('take', 'take.mp4'));
+          final stale = (await service.getClipById('take'))!;
+
+          Future<void> save() =>
+              service.saveClip(stale.copyWith(thumbnailPath: '/tmp/take.jpg'));
+          Future<bool> note() => service.rememberRecordingHash(
+            clipId: 'take',
+            fileName: 'take.mp4',
+            sha256: recordingHash,
+          );
+          await Future.wait<Object?>(
+            noteFirst ? [note(), save()] : [save(), note()],
+          );
+
+          final entry = await service.getClipById('take');
+          expect(entry?.thumbnailPath, endsWith('take.jpg'));
+          expect(entry?.recordingSha256, recordingHash);
+        });
+      }
+
       test('keeps a trashed entry in the trash', () async {
         await service.saveClip(take('take', 'take.mp4'));
         await service.softDelete('take');
