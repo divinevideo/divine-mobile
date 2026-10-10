@@ -143,7 +143,10 @@ void main() {
               body: Center(
                 child: BlocProvider<MyFollowingBloc>.value(
                   value: mockMyFollowingBloc,
-                  child: VideoFollowButtonView(pubkey: pubkey),
+                  child: VideoFollowButtonView(
+                    pubkey: pubkey,
+                    videoId: 'video-id',
+                  ),
                 ),
               ),
             ),
@@ -457,7 +460,7 @@ void main() {
                       onTap: () => reachedTheVideo = true,
                     ),
                   ),
-                  VideoFollowButton(pubkey: authorPubkey),
+                  VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
                 ],
               ),
             ),
@@ -497,7 +500,7 @@ void main() {
                     onTap: () => reachedTheVideo = true,
                   ),
                 ),
-                VideoFollowButton(pubkey: authorPubkey),
+                VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
               ],
             ),
           ),
@@ -557,7 +560,7 @@ void main() {
                       onTap: () => reachedTheVideo = true,
                     ),
                   ),
-                  VideoFollowButton(pubkey: authorPubkey),
+                  VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
                 ],
               ),
             ),

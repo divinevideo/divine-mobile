@@ -822,13 +822,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       listOnlyVideoIds: const {},
       clearPaginationCursor: true,
       currentIndex: 0,
-      feedSessionRevision: state.feedSessionRevision + 1,
     );
     final servedCache = _emitCachedFeed(
       source,
       cachedVideos,
       emit,
       baseState: selectedState,
+      feedSessionRevision: state.feedSessionRevision + 1,
       requireCurrentSource: false,
       feedLoad: feedLoad,
     );
@@ -840,6 +840,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       feedLoad: feedLoad,
       revalidate: true,
       prefetchedCachedVideos: cachedVideos,
+      startsNewFeedSession: !servedCache,
     );
   }
 
@@ -1019,7 +1020,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       ),
     );
 
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
+    await _loadVideos(
+      state.source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      startsNewFeedSession: true,
+    );
   }
 
   /// Handle auto-refresh request (dispatched by UI on app resume).
