@@ -544,18 +544,21 @@ void main() {
     });
 
     group('that spells the user key in other letter case', () {
-      test('is filed as a room, since the key is the same', () async {
-        final rumor = message(
+      test('is filed in the room the lower-case spelling names', () async {
+        final upperCase = message(
           author: _alice,
           pTags: [_owner.toUpperCase(), _bob],
         );
+        final lowerCase = message(
+          author: _bob,
+          pTags: [_owner, _alice],
+          content: 'the same room, spelled in lower case',
+        );
 
-        await deliver(rumor, authorSecret: _aliceSecret);
+        await deliver(upperCase, authorSecret: _aliceSecret);
+        await deliver(lowerCase, authorSecret: _bobSecret);
 
-        final stored = await conversations();
-        expect(stored, hasLength(1));
-        expect(stored.single.isGroup, isTrue);
-        expect(await messageIdsIn(stored.single.id), equals([rumor.id]));
+        await expectOnlyTheRoomHolding([upperCase.id, lowerCase.id]);
       });
     });
 

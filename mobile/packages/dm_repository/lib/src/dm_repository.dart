@@ -9807,19 +9807,22 @@ class DmRepository {
       return canonical1to1;
     }
 
-    final namesCurrentUser = extractedParticipants.any(
+    // Hex is case-insensitive. Keyed on the spelling a client chose, the same
+    // people written in another letter case would open a second room.
+    final room = {
+      for (final pubkey in extractedParticipants) pubkey.toLowerCase(),
+    }.toList()..sort();
+
+    final namesCurrentUser = room.any(
       (pubkey) => pubkeysEqual(pubkey, _userPubkey),
     );
     if (!namesCurrentUser) return canonical1to1;
 
     if (replyToId != null &&
-        await _repliesIntoSmallerConversation(
-          replyToId,
-          extractedParticipants.toSet(),
-        )) {
+        await _repliesIntoSmallerConversation(replyToId, room.toSet())) {
       return canonical1to1;
     }
-    return extractedParticipants;
+    return room;
   }
 
   /// Whether [replyToId] is a stored message in a conversation that [room]
