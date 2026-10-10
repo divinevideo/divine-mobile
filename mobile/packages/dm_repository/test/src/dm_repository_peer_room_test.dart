@@ -112,6 +112,7 @@ void main() {
         directMessagesDao: messagesDao,
         conversationsDao: conversationsDao,
         processedGiftWrapsDao: processedDao,
+        removedConversationsDao: RemovedConversationsDao(db),
         reactionsRepository: DmReactionsRepository(
           reactionsDao: DmReactionsDao(db),
           conversationsDao: conversationsDao,
@@ -565,6 +566,33 @@ void main() {
         await deliver(fromAlice, authorSecret: _aliceSecret);
 
         await expectOnlyTheRoomHolding([own.id, fromAlice.id]);
+      });
+    });
+
+    group('that names a room the user removed', () {
+      test('is suppressed when the history replays, not refiled as a '
+          'one-to-one', () async {
+        final before = message(author: _alice, pTags: [_owner, _bob]);
+        await deliver(before, authorSecret: _aliceSecret);
+        await expectOnlyTheRoomHolding([before.id]);
+        expect(
+          await repository.removeConversation(_roomId),
+          ConversationRemovalOutcome.removed,
+        );
+
+        final replayed = message(
+          author: _bob,
+          pTags: [_owner, _alice],
+          content: 'an older message of the same room',
+        );
+        await deliver(replayed, authorSecret: _bobSecret);
+
+        expect(
+          await conversations(),
+          isEmpty,
+          reason: 'the removal is keyed by the room id the message resolves to',
+        );
+        expect(await messageIdsIn(_roomId), isEmpty);
       });
     });
   });
