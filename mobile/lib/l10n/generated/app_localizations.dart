@@ -10345,7 +10345,7 @@ abstract class AppLocalizations {
   /// **'Add custom emoji reaction'**
   String get dmReactionAddCustomA11yLabel;
 
-  /// Hint text in the in-player reply composer when replying to a reel that {name} shared in a DM.
+  /// Hint text in the in-player reply composer when a reel was shared in a DM. {name} is the person in a one-to-one thread and the room's title in a group, because a reply goes to everyone in the thread.
   ///
   /// In en, this message translates to:
   /// **'Message {name}…'**
