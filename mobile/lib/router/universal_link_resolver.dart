@@ -216,9 +216,16 @@ String? peopleListDeepLinkToRouterPath(DeepLink deepLink) {
 /// Bare IDs and path-only in-app routes remain the legacy navigation contract.
 String? _invalidPeopleListRoute(Uri uri, DeepLink deepLink) {
   if (deepLink.type != DeepLinkType.unknown) return null;
-  final segments = uri.pathSegments;
+  final List<String> segments;
+  final bool hasOwner;
+  try {
+    segments = uri.pathSegments;
+    hasOwner = uri.queryParametersAll.containsKey('owner');
+  } on FormatException {
+    // Uri decodes on read and throws on an escape that is not valid UTF-8.
+    return null;
+  }
   if (segments.isEmpty || segments.first != 'people-lists') return null;
-  final hasOwner = uri.queryParametersAll.containsKey('owner');
   if (segments.length == 3 || (segments.length == 2 && hasOwner)) {
     final id = hasOwner ? segments[1] : segments.last;
     return RoutePaths.peopleListForId(id, ownerPubkey: '');
