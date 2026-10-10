@@ -17,6 +17,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:riverpod/misc.dart' show Override;
 
@@ -344,6 +345,49 @@ void main() {
         expect(find.text('External List'), findsWidgets);
         expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
       });
+
+      Future<void> pumpUncachedDiscoveredList(
+        WidgetTester tester, {
+        required String viewer,
+      }) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: viewer,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets(
+        'offers no follow pill on your own uncached discovered list',
+        (tester) async {
+          // Search opens an unclaimed draft under the viewer's own pubkey,
+          // and following it would cache their own list a second time.
+          await pumpUncachedDiscoveredList(tester, viewer: listAuthor);
+
+          expect(find.byType(FollowListButton), findsNothing);
+        },
+      );
+
+      testWidgets(
+        "offers the follow pill on someone else's uncached discovered list",
+        (tester) async {
+          await pumpUncachedDiscoveredList(tester, viewer: 'a' * 64);
+
+          expect(find.byType(FollowListButton), findsOneWidget);
+        },
+      );
 
       testWidgets('waits for owner state before offering a report', (
         tester,
