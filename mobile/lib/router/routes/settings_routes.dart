@@ -16,7 +16,6 @@ import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';

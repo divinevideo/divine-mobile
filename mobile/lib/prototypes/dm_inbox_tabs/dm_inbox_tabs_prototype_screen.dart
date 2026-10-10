@@ -8,7 +8,7 @@
 // the moment the wording changes. l10n happens when the shape is decided.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
