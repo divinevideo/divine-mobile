@@ -104,7 +104,8 @@ class AnalyticsService implements BackgroundAwareService {
   /// Testing flag to disable Nostr publishing in unit tests.
   final bool _disableNostrPublishing;
 
-  static const String _analyticsEnabledKey = 'analytics_enabled';
+  /// SharedPreferences key for the user's analytics consent choice.
+  static const String analyticsEnabledPreferenceKey = 'analytics_enabled';
 
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
@@ -157,7 +158,8 @@ class AnalyticsService implements BackgroundAwareService {
     try {
       // Load analytics preference from storage
       final prefs = await SharedPreferences.getInstance();
-      final storedConsent = prefs.getBool(_analyticsEnabledKey) ?? true;
+      final storedConsent =
+          prefs.getBool(analyticsEnabledPreferenceKey) ?? true;
       _isInitialized = true;
       // Stored opt-out takes the same withdrawal path a live toggle does, so
       // rows persisted before the preference loaded (or by a build that
@@ -250,7 +252,10 @@ class AnalyticsService implements BackgroundAwareService {
       final prefs = await SharedPreferences.getInstance();
       // `setBool` returns false when the platform rejected the write; that is
       // a failure the caller has to see, not a value to discard.
-      final written = await prefs.setBool(_analyticsEnabledKey, enabled);
+      final written = await prefs.setBool(
+        analyticsEnabledPreferenceKey,
+        enabled,
+      );
       if (!written) {
         Log.error(
           'Storage rejected the analytics preference write',

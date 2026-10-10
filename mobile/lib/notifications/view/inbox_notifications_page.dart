@@ -16,6 +16,7 @@ import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/notifications_view.dart';
 import 'package:openvine/notifications/view/pending_badge_awards_view.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 
@@ -269,6 +270,7 @@ class _NotificationTabState extends ConsumerState<_NotificationTab>
         notificationRepository: widget.notificationRepository,
         followRepository: widget.followRepository,
         appBadgeClearer: appBadgeClearer,
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
         filter: widget.filter,
       )..add(const NotificationFeedStarted()),
       child: _NotificationVisibilityDispatcher(

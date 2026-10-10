@@ -17,10 +17,12 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_state
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
@@ -67,6 +69,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.onActiveVideoChanged,
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
+    this.feedSessionRevision = 0,
     super.key,
   });
 
@@ -107,6 +110,12 @@ class FeedVideos extends ConsumerStatefulWidget {
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
 
+  /// Identifies one feed-depth session.
+  ///
+  /// Change this when a source or full collection reload succeeds. Pagination
+  /// keeps the same revision so unique-video depth continues across pages.
+  final int feedSessionRevision;
+
   @override
   ConsumerState<FeedVideos> createState() => FeedVideosState();
 }
@@ -139,6 +148,24 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   /// [InfiniteVideoFeed.canAutoPlay] must consult it before starting
   /// playback — a warned video must stay paused until revealed.
   final Set<String> _revealedContentWarningVideoIds = <String>{};
+  late final ConsumptionAnalyticsTracker _consumptionAnalytics;
+  final Set<String> _seenVideoIds = {};
+  int? _programmaticActivationIndex;
+
+  void _resetSeenVideos() {
+    _seenVideoIds.clear();
+    if (widget.currentIndex >= 0 &&
+        widget.currentIndex < widget.videos.length) {
+      _seenVideoIds.add(widget.videos[widget.currentIndex].id);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _consumptionAnalytics = ref.read(consumptionAnalyticsTrackerProvider);
+    _resetSeenVideos();
+  }
 
   /// Warn labels for [video] merging creator/trusted labels with any
   /// crossed-threshold community labels (#4771), so the autoplay gate and
@@ -182,8 +209,20 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   ///
   /// Used by parent screens that hold a [GlobalKey<FeedVideosState>] to
   /// programmatically skip to a specific video (e.g. after a 404 removal).
-  Future<void> animateToPage(int index) =>
-      _feedKey.currentState?.animateToPage(index) ?? Future.value();
+  Future<void> animateToPage(int index) => _animateToPage(index);
+
+  Future<void> _animateToPage(int index) async {
+    final feedState = _feedKey.currentState;
+    if (feedState == null) return;
+    _programmaticActivationIndex = index;
+    try {
+      await feedState.animateToPage(index);
+    } finally {
+      if (_programmaticActivationIndex == index) {
+        _programmaticActivationIndex = null;
+      }
+    }
+  }
 
   Future<PooledRetryOutcome> _retryPooledVideoAt(
     int index,
@@ -191,12 +230,17 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   ) => _retryFeedItem(_feedKey.currentState, index, httpHeaders);
 
   void _skipPooledVideoAt(int index) {
-    unawaited(_feedKey.currentState?.animateToPage(index + 1));
+    unawaited(_animateToPage(index + 1));
   }
 
   @override
   void didUpdateWidget(covariant FeedVideos oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.feedSessionRevision != oldWidget.feedSessionRevision ||
+        widget.trafficSource != oldWidget.trafficSource ||
+        widget.sourceDetail != oldWidget.sourceDetail) {
+      _resetSeenVideos();
+    }
     // When pagination settles (hasMore / isLoadingMore changed), flush any
     // pending auto-advance that was waiting on more content.
     if (widget.hasMore != oldWidget.hasMore ||
@@ -210,8 +254,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           hasMore: widget.hasMore,
           isLoadingMore: widget.isLoadingMore,
         ),
-        animateToPage: (index) =>
-            unawaited(_feedKey.currentState?.animateToPage(index)),
+        animateToPage: (index) => unawaited(_animateToPage(index)),
       );
     }
   }
@@ -256,8 +299,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         hasMore: widget.hasMore,
         isLoadingMore: widget.isLoadingMore,
       ),
-      animateToPage: (index) =>
-          unawaited(_feedKey.currentState?.animateToPage(index)),
+      animateToPage: (index) => unawaited(_animateToPage(index)),
       requestLoadMore: widget.onNearEnd,
     );
   }
@@ -334,6 +376,21 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
           _resumeAutoAdvanceAfterSwipe();
+          final isProgrammaticActivation =
+              index == widget.currentIndex ||
+              index == _programmaticActivationIndex;
+          if (index == _programmaticActivationIndex) {
+            _programmaticActivationIndex = null;
+          }
+          if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
+            unawaited(
+              _consumptionAnalytics.feedScrolled(
+                trafficSource: widget.trafficSource,
+                depth: _seenVideoIds.length,
+                sourceDetail: widget.sourceDetail,
+              ),
+            );
+          }
           widget.onActiveVideoChanged?.call(video, index);
         },
         // Nothing in the feed plays longer than a Vine, not even a 60s file a
@@ -402,6 +459,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             feedMode: widget.contextTitle,
             isSquare: isSquare,
             shouldPortraitExpand: widget.shouldPortraitExpand,
+            onSkip: () => _skipPooledVideoAt(index),
           );
         },
         errorBuilder: (context, index, onRetry, errorType) {
@@ -479,6 +537,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               onContentWarningRevealed: () => _revealContentWarning(video.id),
               onSuppressAutoAdvance: _suppressAutoAdvance,
               onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
+              onSkipToNextVideo: () => _skipPooledVideoAt(index),
             ),
           );
         },
@@ -497,6 +556,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.isFeedActive,
     required this.contentWarningRevealed,
     required this.onContentWarningRevealed,
+    required this.onSkipToNextVideo,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
   });
@@ -521,6 +581,8 @@ class _Overlay extends ConsumerStatefulWidget {
 
   /// Called when the user taps "View Anyway" on the content warning.
   final VoidCallback onContentWarningRevealed;
+
+  final VoidCallback onSkipToNextVideo;
 
   final VoidCallback? onSuppressAutoAdvance;
 
@@ -934,13 +996,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// Advances the feed to the next page via the cached
   /// [InfiniteVideoFeedState] reference.
   void _skipToNextVideo() {
-    final feedState = _feedState;
-    assert(
-      feedState != null,
-      'ModeratedContentOverlay must be mounted inside InfiniteVideoFeed',
-    );
-    if (feedState == null) return;
-    unawaited(feedState.animateToPage(widget.index + 1));
+    widget.onSkipToNextVideo();
   }
 
   /// Triggers age verification and retries playback with viewer auth.
@@ -1150,6 +1206,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
                     archivedLikeCount: video.originalLikes,
                     initialCommentCount: liveCommentCountSeed(video),
                     initialRepostCount: liveRepostCountSeed(video),
+                    consumptionAnalytics: ref.read(
+                      consumptionAnalyticsTrackerProvider,
+                    ),
                   )
                   ..add(const VideoInteractionsSubscriptionRequested())
                   ..add(const VideoInteractionsFetchRequested()),
@@ -1526,6 +1585,7 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.onSkip,
   });
 
   final VideoEvent video;
@@ -1533,6 +1593,7 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1555,6 +1616,7 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
         feedMode: feedMode,
         isSquare: isSquare,
         shouldPortraitExpand: shouldPortraitExpand,
+        onSkip: onSkip,
       ),
     );
   }
@@ -1567,6 +1629,7 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.onSkip,
   });
 
   final VideoEvent video;
@@ -1574,6 +1637,7 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1606,13 +1670,7 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
                   resolveSha256: VideoModerationStatusService.resolveSha256,
                   // Retry is hidden for moderation-restricted content.
                   onRetry: () {},
-                  onSkip: () {
-                    unawaited(
-                      context
-                          .findAncestorStateOfType<InfiniteVideoFeedState>()
-                          ?.animateToPage(index + 1),
-                    );
-                  },
+                  onSkip: onSkip,
                   retryPlayback: (httpHeaders) => _retryFeedItem(
                     context.findAncestorStateOfType<InfiniteVideoFeedState>(),
                     index,
@@ -1631,13 +1689,7 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
                   resolveSha256: VideoModerationStatusService.resolveSha256,
                   // Retry is hidden while age-gated playback uses Verify age.
                   onRetry: () {},
-                  onSkip: () {
-                    unawaited(
-                      context
-                          .findAncestorStateOfType<InfiniteVideoFeedState>()
-                          ?.animateToPage(index + 1),
-                    );
-                  },
+                  onSkip: onSkip,
                   retryPlayback: (httpHeaders) => _retryFeedItem(
                     context.findAncestorStateOfType<InfiniteVideoFeedState>(),
                     index,

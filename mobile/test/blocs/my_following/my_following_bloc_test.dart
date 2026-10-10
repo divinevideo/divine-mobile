@@ -3,12 +3,14 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -19,6 +21,7 @@ void main() {
   group(MyFollowingBloc, () {
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
+    late _RecordingAnalytics analytics;
 
     // Helper to create valid hex pubkeys (64 hex characters)
     String validPubkey(String suffix) {
@@ -31,6 +34,7 @@ void main() {
     setUp(() async {
       mockFollowRepository = _MockFollowRepository();
       mockBlocklistRepository = _MockContentBlocklistRepository();
+      analytics = _RecordingAnalytics();
 
       // Default: nothing is blocked
       when(() => mockBlocklistRepository.isBlocked(any())).thenReturn(false);
@@ -43,6 +47,7 @@ void main() {
     MyFollowingBloc createBloc() => MyFollowingBloc(
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,
+      consumptionAnalytics: ConsumptionAnalyticsTracker(analytics: analytics),
     );
 
     test('initial state is initial when repository cache is empty', () async {
@@ -278,12 +283,21 @@ void main() {
           ).thenAnswer((_) => const Stream.empty());
         },
         build: createBloc,
-        act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        act: (bloc) => bloc.add(
+          MyFollowingToggleRequested(
+            validPubkey('user'),
+            targetVideoId: 'video-id',
+          ),
+        ),
         verify: (_) {
           verify(
             () => mockFollowRepository.toggleFollow(validPubkey('user')),
           ).called(1);
+          expect(analytics.eventNames, ['follow_added']);
+          expect(analytics.parameters.single, {
+            'target_pubkey': validPubkey('user'),
+            'target_video_id': 'video-id',
+          });
         },
       );
 
@@ -307,6 +321,49 @@ void main() {
           // followingStream/_onRepositoryUpdated, not a watchMyFollowingCached
           // re-read.
           verifyNever(() => mockFollowRepository.watchMyFollowingCached());
+          expect(analytics.parameters.single, {
+            'target_pubkey': validPubkey('user'),
+          });
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the toggle is an unfollow',
+        setUp: () {
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([validPubkey('user')]);
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockFollowRepository.watchMyFollowingCached(),
+          ).thenAnswer((_) => const Stream.empty());
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (_) {
+          verify(
+            () => mockFollowRepository.toggleFollow(validPubkey('user')),
+          ).called(1);
+          expect(analytics.eventNames, isEmpty);
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the follow fails',
+        setUp: () {
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenThrow(Exception('Network error'));
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (bloc) {
+          expect(bloc.state.status, MyFollowingStatus.toggleFailure);
+          expect(analytics.eventNames, isEmpty);
         },
       );
 
@@ -877,4 +934,18 @@ void main() {
       });
     });
   });
+}
+
+class _RecordingAnalytics extends NoOpAnalyticsEventSink {
+  final eventNames = <String>[];
+  final parameters = <Map<String, Object>>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    eventNames.add(name);
+    this.parameters.add(parameters);
+  }
 }

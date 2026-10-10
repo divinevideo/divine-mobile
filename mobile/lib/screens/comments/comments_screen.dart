@@ -246,6 +246,9 @@ abstract final class CommentsScreen {
                     rootEventKind: NIP71VideoKinds.addressableShortVideo,
                     rootAuthorPubkey: video.pubkey,
                     rootAddressableId: video.addressableId,
+                    consumptionAnalytics: container.read(
+                      consumptionAnalyticsTrackerProvider,
+                    ),
                     profileRepository: profileRepository,
                     mentionCandidatePubkeysProvider: () => <String>[
                       // Thread participants first — restored after the split

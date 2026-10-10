@@ -8,12 +8,14 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/bloc/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -80,12 +82,14 @@ void main() {
     late _MockNotificationRepository mockNotificationRepo;
     late _MockFollowRepository mockFollowRepo;
     late _MockAppBadgeClearer mockAppBadgeClearer;
+    late _RecordingAnalytics analytics;
     late StreamController<NotificationPage> snapshotController;
 
     setUp(() {
       mockNotificationRepo = _MockNotificationRepository();
       mockFollowRepo = _MockFollowRepository();
       mockAppBadgeClearer = _MockAppBadgeClearer();
+      analytics = _RecordingAnalytics();
       snapshotController = StreamController<NotificationPage>.broadcast();
 
       when(() => mockFollowRepo.isFollowing(any())).thenReturn(false);
@@ -120,6 +124,9 @@ void main() {
           notificationRepository: mockNotificationRepo,
           followRepository: mockFollowRepo,
           appBadgeClearer: appBadgeClearer ?? mockAppBadgeClearer,
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: analytics,
+          ),
         );
 
     NotificationFeedBloc createFollowBloc({AppBadgeClearer? appBadgeClearer}) =>
@@ -127,6 +134,9 @@ void main() {
           notificationRepository: mockNotificationRepo,
           followRepository: mockFollowRepo,
           appBadgeClearer: appBadgeClearer ?? mockAppBadgeClearer,
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: analytics,
+          ),
           filter: NotificationKind.follow,
         );
 
@@ -1186,10 +1196,13 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'follows the user and re-derives follow state on existing items',
         setUp: () {
+          var isFollowing = false;
           when(
             () => mockFollowRepo.follow(_bobPubkey),
-          ).thenAnswer((_) async {});
-          when(() => mockFollowRepo.isFollowing(_bobPubkey)).thenReturn(true);
+          ).thenAnswer((_) async => isFollowing = true);
+          when(
+            () => mockFollowRepo.isFollowing(_bobPubkey),
+          ).thenAnswer((_) => isFollowing);
         },
         build: createBloc,
         seed: () => NotificationFeedState(
@@ -1210,6 +1223,84 @@ void main() {
             ],
           ),
         ],
+        verify: (_) {
+          expect(analytics.events, hasLength(1));
+          expect(analytics.events.single.name, 'follow_added');
+          expect(analytics.events.single.parameters, {
+            'target_pubkey': _bobPubkey,
+          });
+        },
+      );
+
+      blocTest<NotificationFeedBloc, NotificationFeedState>(
+        'records one follow when rapid taps queue duplicate requests',
+        setUp: () {
+          var isFollowing = false;
+          when(
+            () => mockFollowRepo.follow(_bobPubkey),
+          ).thenAnswer((_) async => isFollowing = true);
+          when(
+            () => mockFollowRepo.isFollowing(_bobPubkey),
+          ).thenAnswer((_) => isFollowing);
+        },
+        build: createBloc,
+        seed: () => NotificationFeedState(
+          notifications: [
+            _actorNotif(id: 'f1', pubkey: _bobPubkey, displayName: 'Bob'),
+          ],
+        ),
+        act: (bloc) {
+          bloc
+            ..add(NotificationFeedFollowBack(_bobPubkey))
+            ..add(NotificationFeedFollowBack(_bobPubkey));
+        },
+        expect: () => [
+          isA<NotificationFeedState>().having(
+            (state) => (state.notifications.single as ActorNotification)
+                .isFollowingBack,
+            'isFollowingBack',
+            isTrue,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockFollowRepo.follow(_bobPubkey)).called(1);
+          expect(
+            analytics.events.where((event) => event.name == 'follow_added'),
+            hasLength(1),
+          );
+        },
+      );
+
+      blocTest<NotificationFeedBloc, NotificationFeedState>(
+        'heals stale notification state without following again',
+        setUp: () {
+          when(
+            () => mockFollowRepo.isFollowing(_bobPubkey),
+          ).thenReturn(true);
+        },
+        build: createBloc,
+        seed: () => NotificationFeedState(
+          notifications: [
+            _actorNotif(id: 'f1', pubkey: _bobPubkey, displayName: 'Bob'),
+          ],
+        ),
+        act: (bloc) => bloc.add(NotificationFeedFollowBack(_bobPubkey)),
+        expect: () => [
+          NotificationFeedState(
+            notifications: [
+              _actorNotif(
+                id: 'f1',
+                pubkey: _bobPubkey,
+                displayName: 'Bob',
+                isFollowingBack: true,
+              ),
+            ],
+          ),
+        ],
+        verify: (_) {
+          verifyNever(() => mockFollowRepo.follow(_bobPubkey));
+          expect(analytics.events, isEmpty);
+        },
       );
 
       blocTest<NotificationFeedBloc, NotificationFeedState>(
@@ -1222,6 +1313,7 @@ void main() {
         build: createBloc,
         act: (bloc) => bloc.add(NotificationFeedFollowBack(_bobPubkey)),
         errors: () => [isA<Exception>()],
+        verify: (_) => expect(analytics.events, isEmpty),
       );
 
       blocTest<NotificationFeedBloc, NotificationFeedState>(
@@ -1297,4 +1389,18 @@ void main() {
       );
     });
   });
+}
+
+typedef _RecordedEvent = ({String name, Map<String, Object> parameters});
+
+class _RecordingAnalytics extends NoOpAnalyticsEventSink {
+  final events = <_RecordedEvent>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
 }

@@ -100,7 +100,12 @@ sealed class _LikeSettleOutcome extends Equatable {
 
 /// Publish succeeded; repository now agrees with the optimistic state.
 class _LikeSettleConfirmed extends _LikeSettleOutcome {
-  const _LikeSettleConfirmed();
+  const _LikeSettleConfirmed({required this.isLiked});
+
+  final bool isLiked;
+
+  @override
+  List<Object?> get props => [isLiked];
 }
 
 /// Publish succeeded but the repository ended up in a different state

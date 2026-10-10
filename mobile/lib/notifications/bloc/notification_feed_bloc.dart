@@ -11,6 +11,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/notifications/bloc/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/app_badge_service.dart';
@@ -31,10 +32,12 @@ class NotificationFeedBloc
     required NotificationRepository notificationRepository,
     required FollowRepository followRepository,
     required AppBadgeClearer appBadgeClearer,
+    required ConsumptionAnalyticsTracker consumptionAnalytics,
     NotificationKind? filter,
   }) : _notificationRepository = notificationRepository,
        _followRepository = followRepository,
        _appBadgeClearer = appBadgeClearer,
+       _consumptionAnalytics = consumptionAnalytics,
        _filter = filter,
        super(const NotificationFeedState()) {
     on<_SnapshotChanged>(_onSnapshotChanged);
@@ -58,6 +61,7 @@ class NotificationFeedBloc
   final NotificationRepository _notificationRepository;
   final FollowRepository _followRepository;
   final AppBadgeClearer _appBadgeClearer;
+  final ConsumptionAnalyticsTracker _consumptionAnalytics;
   final NotificationKind? _filter;
   late final StreamSubscription<NotificationPage> _snapshotSubscription;
   int _emptyPageContinuations = 0;
@@ -475,8 +479,14 @@ class NotificationFeedBloc
     NotificationFeedFollowBack event,
     Emitter<NotificationFeedState> emit,
   ) async {
+    final wasFollowing = _followRepository.isFollowing(event.pubkey);
     try {
-      await _followRepository.follow(event.pubkey);
+      if (!wasFollowing) {
+        await _followRepository.follow(event.pubkey);
+        unawaited(
+          _consumptionAnalytics.followAdded(targetPubkey: event.pubkey),
+        );
+      }
       emit(
         state.copyWith(notifications: _applyFollowState(state.notifications)),
       );

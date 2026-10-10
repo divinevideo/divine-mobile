@@ -126,6 +126,11 @@ class ShareActionButton extends StatelessWidget {
       labelWhenZero: context.l10n.videoActionShareLabel,
       onPressed: () {
         onInteracted?.call();
+        unawaited(
+          ProviderScope.containerOf(context, listen: false)
+              .read(consumptionAnalyticsTrackerProvider)
+              .shareTapped(targetVideoId: video.id, targetPubkey: video.pubkey),
+        );
         Log.info(
           'Share button tapped for ${video.id}',
           name: 'ShareActionButton',

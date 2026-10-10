@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -10,8 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -401,6 +404,7 @@ void main() {
     testWidgets('active to inactive after one second sends one view_end', (
       tester,
     ) async {
+      final consumptionSink = _RecordingEventSink();
       final isActive = ValueNotifier(true);
       final video = ValueNotifier(_video);
       final controller = _stubController(isPlaying: true);
@@ -414,12 +418,30 @@ void main() {
           video: video,
           isActive: isActive,
           clock: () => now,
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: consumptionSink,
+          ),
         ),
       );
 
       now = now.add(const Duration(milliseconds: 1100));
       isActive.value = false;
       await tester.pump();
+
+      expect(consumptionSink.eventNames, ['video_started', 'video_skipped']);
+
+      expect(consumptionSink.paramsFor('video_started'), {
+        'video_id': 'video_id',
+        'author_pubkey': 'creator_pubkey',
+        'feed_type': 'home',
+        'position_in_feed': 0,
+        'is_archive': 0,
+      });
+      expect(consumptionSink.paramsFor('video_skipped'), {
+        'video_id': 'video_id',
+        'watch_ms': 1100,
+        'position_in_feed': 0,
+      });
 
       final viewEndEvents = _viewEndEvents(analyticsService);
       expect(viewEndEvents, hasLength(1));
@@ -437,6 +459,60 @@ void main() {
       video.dispose();
       await controller.close();
     });
+
+    testWidgets(
+      'consumption completion falls back to the current controller duration',
+      (tester) async {
+        final consumptionSink = _RecordingEventSink();
+        final isActive = ValueNotifier(true);
+        final video = ValueNotifier(_video);
+        final controller = _stubController(
+          isPlaying: true,
+          duration: Duration.zero,
+        );
+
+        await tester.pumpWidget(
+          _buildTrackerHarness(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            video: video,
+            isActive: isActive,
+            clock: () => now,
+            consumptionAnalytics: ConsumptionAnalyticsTracker(
+              analytics: consumptionSink,
+            ),
+          ),
+        );
+
+        now = now.add(const Duration(seconds: 5));
+        controller.setStateSilently(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 5),
+            isFirstFrameRendered: true,
+          ),
+        );
+        isActive.value = false;
+        await tester.pump();
+
+        expect(consumptionSink.eventNames, [
+          'video_started',
+          'video_completed',
+        ]);
+        expect(consumptionSink.paramsFor('video_completed'), {
+          'video_id': 'video_id',
+          'watch_ms': 5000,
+          'pct_watched': 100.0,
+          'loops': 1,
+        });
+
+        isActive.dispose();
+        video.dispose();
+        await controller.close();
+      },
+    );
 
     testWidgets(
       'active to inactive under one second records a partial-loop view',
@@ -1076,12 +1152,19 @@ Widget _buildTracker({
   required DivineVideoPlayerController controller,
   required bool isActive,
   required DateTime Function() clock,
+  ConsumptionAnalyticsTracker? consumptionAnalytics,
 }) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
+      consumptionAnalyticsTrackerProvider.overrideWithValue(
+        consumptionAnalytics ??
+            ConsumptionAnalyticsTracker(
+              analytics: const NoOpAnalyticsEventSink(),
+            ),
+      ),
     ],
     child: Directionality(
       textDirection: TextDirection.ltr,
@@ -1109,12 +1192,19 @@ Widget _buildTrackerHarness({
   required ValueListenable<bool> isActive,
   required DateTime Function() clock,
   ValueListenable<bool>? isFeedVisible,
+  ConsumptionAnalyticsTracker? consumptionAnalytics,
 }) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
+      consumptionAnalyticsTrackerProvider.overrideWithValue(
+        consumptionAnalytics ??
+            ConsumptionAnalyticsTracker(
+              analytics: const NoOpAnalyticsEventSink(),
+            ),
+      ),
     ],
     child: Directionality(
       textDirection: TextDirection.ltr,
@@ -1140,6 +1230,23 @@ Widget _buildTrackerHarness({
   );
 }
 
+class _RecordingEventSink extends NoOpAnalyticsEventSink {
+  final eventNames = <String>[];
+  final _parameters = <String, Map<String, Object>>{};
+
+  /// Parameters of the most recent event named [name].
+  Map<String, Object> paramsFor(String name) => _parameters[name]!;
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    eventNames.add(name);
+    _parameters[name] = parameters;
+  }
+}
+
 List<_TrackedAnalyticsEvent> _viewEndEvents(
   _RecordingAnalyticsService analyticsService,
 ) => analyticsService.events
@@ -1149,6 +1256,7 @@ List<_TrackedAnalyticsEvent> _viewEndEvents(
 ({
   DivineVideoPlayerController controller,
   void Function(DivineVideoPlayerState state) setState,
+  void Function(DivineVideoPlayerState state) setStateSilently,
   Future<void> Function() close,
 })
 _stubController({
@@ -1173,6 +1281,7 @@ _stubController({
       state = next;
       stateController.add(next);
     },
+    setStateSilently: (DivineVideoPlayerState next) => state = next,
     close: () async {
       await stateController.close();
       state = const DivineVideoPlayerState();
