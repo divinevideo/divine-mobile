@@ -280,7 +280,7 @@ class ConversationState extends Equatable {
   /// group bubble (inserted when the first recipient confirmed) surface a
   /// remaining sibling's failure as the red tap-to-resend affordance.
   DmDeliveryStatus statusFor(String id) {
-    // Hot path: with no in-flight queue rows every bubble is delivered, so
+    // Hot path: with no queue rows at all every bubble is delivered, so
     // short-circuit before building any lookup (statusFor is called per
     // bubble via a BlocSelector).
     if (pendingOutgoing.isEmpty) return DmDeliveryStatus.delivered;
@@ -315,8 +315,10 @@ class ConversationState extends Equatable {
   /// as [DmMessage] bubbles on top of persisted ones from [messages],
   /// sorted newest first.
   ///
-  /// Returns [messages] unchanged when [pendingOutgoing] is empty (the
-  /// hot path — every conversation that isn't actively mid-send).
+  /// Returns [messages] unchanged when [pendingOutgoing] holds no delivery
+  /// in progress: it is empty (the hot path — every conversation that isn't
+  /// actively mid-send), or holds only the records of stopped deliveries,
+  /// which outlive their send and never project a bubble.
   /// Defends against the brief tick window where a queue row and its
   /// matching persisted row appear together by letting the persisted
   /// row win on rumor-id collision. A fan-out batch (group send: one row
@@ -328,7 +330,11 @@ class ConversationState extends Equatable {
   /// ids; [statusFor] then surfaces remaining sibling failures on the
   /// persisted bubble.
   List<DmMessage> get displayedMessages {
-    if (pendingOutgoing.isEmpty) return messages;
+    if (pendingOutgoing.every(
+      (q) => q.recipientWrapStatus == OutgoingWrapStatus.cancelled,
+    )) {
+      return messages;
+    }
     final persistedIds = messages.map((m) => m.id).toSet();
     final persistedBatchKeys = <String>{
       for (final m in messages) _batchKeyOfMessage(m),

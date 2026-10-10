@@ -162,7 +162,8 @@ void main() {
           'bubble', () {
         // The row is only a record for a stored bubble. Once that bubble is
         // gone (a confirmed delete for everyone), projecting the row would
-        // put the deleted message back on screen.
+        // put the deleted message back on screen. The send in progress next
+        // to it keeps the list on the path that projects queue rows.
         final stopped = _outgoingDm(
           id: 'queue-handle-c',
           rumorId: 'rumor-gone',
@@ -170,9 +171,37 @@ void main() {
           recipientWrap: OutgoingWrapStatus.cancelled,
           selfWrap: OutgoingWrapStatus.cancelled,
         );
-        final state = ConversationState(pendingOutgoing: [stopped]);
+        final sending = _outgoingDm(
+          id: 'queue-handle-d',
+          rumorId: 'rumor-sending',
+          content: 'another message',
+          createdAtSec: 1700000100,
+        );
+        final state = ConversationState(pendingOutgoing: [stopped, sending]);
 
-        expect(state.displayedMessages, isEmpty);
+        expect(
+          state.displayedMessages.map((m) => m.id),
+          equals(['rumor-sending']),
+        );
+      });
+
+      test('a queue holding only stopped rows hands back the stored list '
+          'itself', () {
+        // The record outlives its send for as long as the bubble is shown,
+        // and the thread list rebuilds whenever a different list comes back.
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+          ],
+        );
+
+        expect(state.displayedMessages, same(state.messages));
       });
 
       test(
@@ -397,6 +426,27 @@ void main() {
           ],
         );
         expect(state.statusFor('rumor-b'), equals(DmDeliveryStatus.failed));
+      });
+
+      test('a blocked sibling outranks a stopped one: blocked', () {
+        final state = ConversationState(
+          messages: [_message(id: 'rumor-b')],
+          pendingOutgoing: [
+            _outgoingDm(
+              id: 'rumor-c',
+              recipientPubkey: _recipientC,
+              recipientWrap: OutgoingWrapStatus.cancelled,
+              selfWrap: OutgoingWrapStatus.cancelled,
+            ),
+            _outgoingDm(
+              id: 'rumor-d',
+              recipientPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+              recipientWrap: OutgoingWrapStatus.blocked,
+              selfWrap: OutgoingWrapStatus.blocked,
+            ),
+          ],
+        );
+        expect(state.statusFor('rumor-b'), equals(DmDeliveryStatus.blocked));
       });
 
       test('a stopped sibling outranks a still-pending one', () {
