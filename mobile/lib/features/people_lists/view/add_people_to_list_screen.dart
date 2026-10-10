@@ -28,9 +28,10 @@ import 'package:openvine/widgets/user_profile_tile.dart';
 /// [AddPeopleToListCubit] to it. Candidates are sourced from the
 /// authenticated user's following and followers sets, not passed in. Each
 /// row carries the Following screen's add/remove button: a tap dispatches
-/// [PeopleListsPubkeyToggleRequested] and the row reads the list's
-/// membership back from the bloc, so it flips as soon as the optimistic
-/// state does and flips back if the write is rolled back.
+/// [PeopleListsPubkeyAddRequested] or [PeopleListsPubkeyRemoveRequested],
+/// whichever the button showed, and the row reads the list's membership
+/// back from the bloc, so it flips as soon as the optimistic state does and
+/// flips back if the write is rolled back.
 ///
 /// Per project rules, full Nostr pubkeys flow through the screen verbatim —
 /// they are never truncated in state, events, or navigation.
@@ -374,7 +375,7 @@ class _CandidateRow extends StatelessWidget {
   final String? openingOwnerPubkey;
   final int index;
 
-  void _toggleMembership(BuildContext context) {
+  void _toggleMembership(BuildContext context, {required bool isMember}) {
     final bloc = context.read<PeopleListsBloc>();
     final current = bloc.state;
     if (openingOwnerPubkey == null ||
@@ -387,10 +388,17 @@ class _CandidateRow extends StatelessWidget {
     // Main serializes add() mutations through submit() and its owner/session
     // fence, preserving the operation's confirmed result and rollback.
     bloc.add(
-      PeopleListsPubkeyToggleRequested(
-        listId: listId,
-        pubkey: candidate.pubkey,
-      ),
+      // Not a toggle: that is decided when the queue reaches it, so a second
+      // tap on a row that has not flipped yet would undo the first.
+      isMember
+          ? PeopleListsPubkeyRemoveRequested(
+              listId: listId,
+              pubkey: candidate.pubkey,
+            )
+          : PeopleListsPubkeyAddRequested(
+              listId: listId,
+              pubkey: candidate.pubkey,
+            ),
     );
   }
 
@@ -413,7 +421,7 @@ class _CandidateRow extends StatelessWidget {
         isMember: isMember,
         displayName:
             candidate.displayName ?? UserProfile.defaultDisplayNameFor(pubkey),
-        onPressed: () => _toggleMembership(context),
+        onPressed: () => _toggleMembership(context, isMember: isMember),
       ),
     );
   }

@@ -271,6 +271,13 @@ void main() {
         matching: _addButtons(),
       );
 
+      Finder removePerson(String pubkey) => find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) => widget is UserProfileTile && widget.pubkey == pubkey,
+        ),
+        matching: _removeButtons(),
+      );
+
       for (final failed in [false, true]) {
         testWidgets(
           'a ${failed ? 'failed' : 'confirmed'} row write keeps the picker and query open',
@@ -388,6 +395,84 @@ void main() {
             ),
           ).called(2);
           expect(find.byType(AddPeopleToListView), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a second tap on a person whose add is still queued keeps them added',
+        (tester) async {
+          const submitted = PeopleListPublishResult(
+            status: PeopleListPublishStatus.submitted,
+          );
+          final pending = Completer<PeopleListPublishResult>();
+          addTearDown(() {
+            if (!pending.isCompleted) {
+              pending.complete(
+                const PeopleListPublishResult(
+                  status: PeopleListPublishStatus.failed,
+                ),
+              );
+            }
+          });
+          when(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _candidateA,
+            ),
+          ).thenAnswer((_) => pending.future);
+          when(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _candidateB,
+            ),
+          ).thenAnswer((_) async => submitted);
+          // Never expected, but answered like the real repository so that a
+          // remove queued by mistake publishes instead of rolling back.
+          when(
+            () => repository.removePubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _candidateB,
+            ),
+          ).thenAnswer((_) async => submitted);
+          await pumpConfirmedView(tester);
+          await tester.tap(addPerson(_candidateA));
+          await tester.pumpAndSettle();
+
+          // Bob's write waits behind Alice's, so his row has not flipped and
+          // both taps land on the add button.
+          await tester.tap(addPerson(_candidateB));
+          await tester.pumpAndSettle();
+          await tester.tap(addPerson(_candidateB));
+          await tester.pumpAndSettle();
+          expect(addPerson(_candidateB), findsOneWidget);
+          expect(confirmedBloc.state.lists.single.pubkeys, [_candidateA]);
+
+          pending.complete(submitted);
+          await tester.pumpAndSettle();
+
+          expect(confirmedBloc.state.pendingMutations, isEmpty);
+          expect(confirmedBloc.state.lists.single.pubkeys, [
+            _candidateA,
+            _candidateB,
+          ]);
+          expect(removePerson(_candidateB), findsOneWidget);
+          verify(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _candidateB,
+            ),
+          ).called(1);
+          verifyNever(
+            () => repository.removePubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+              pubkey: _candidateB,
+            ),
+          );
         },
       );
 
@@ -726,7 +811,7 @@ void main() {
         },
       );
 
-      testWidgets('the add button toggles that person through the bloc', (
+      testWidgets('the add button adds that person through the bloc', (
         tester,
       ) async {
         final list = _buildList(id: 'list-1', name: 'Close Friends');
@@ -739,7 +824,7 @@ void main() {
 
         verify(
           () => bloc.add(
-            const PeopleListsPubkeyToggleRequested(
+            const PeopleListsPubkeyAddRequested(
               listId: 'list-1',
               pubkey: _candidateA,
             ),
@@ -748,7 +833,7 @@ void main() {
         expect(find.byType(DivineButton), findsNothing);
       });
 
-      testWidgets('the remove button toggles a member back out', (
+      testWidgets('the remove button takes a member back out', (
         tester,
       ) async {
         final list = _buildList(
@@ -765,7 +850,7 @@ void main() {
 
         verify(
           () => bloc.add(
-            const PeopleListsPubkeyToggleRequested(
+            const PeopleListsPubkeyRemoveRequested(
               listId: 'list-1',
               pubkey: _candidateB,
             ),
