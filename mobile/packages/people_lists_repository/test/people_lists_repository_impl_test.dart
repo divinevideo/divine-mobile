@@ -3277,30 +3277,26 @@ void main() {
         expect(emissions.single.single.ownerPubkey, _ownerPubkey);
       });
 
-      test('emits empty stream for a blank query', () async {
-        final client = _MockNostrClient();
-        final repository = buildRepository(nostrClient: client);
+      for (final (query, description) in [
+        ('', 'blank'),
+        ('   ', 'whitespace-only'),
+      ]) {
+        test('emits empty stream for a $description query', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
 
-        final emissions = await repository.searchPublicLists('').toList();
+          final emissions = await repository.searchPublicLists(query).toList();
 
-        expect(emissions, isEmpty);
-        verifyNever(
-          () => client.queryEvents(
-            any(),
-            useCache: any(named: 'useCache'),
-            timeout: any(named: 'timeout'),
-          ),
-        );
-      });
-
-      test('emits empty stream for a whitespace-only query', () async {
-        final client = _MockNostrClient();
-        final repository = buildRepository(nostrClient: client);
-
-        final emissions = await repository.searchPublicLists('   ').toList();
-
-        expect(emissions, isEmpty);
-      });
+          expect(emissions, isEmpty);
+          verifyNever(
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
+        });
+      }
 
       test('emits a single match with the owner pubkey preserved', () async {
         final client = _MockNostrClient();
@@ -3524,45 +3520,61 @@ void main() {
         );
       });
 
-      test('keeps the newest event when duplicates share an addressable '
-          'coordinate', () async {
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
+      // Relay/cache merge order is not guaranteed (queryEvents builds
+      // an EventMemBox with sortAfterAdd: false), and the cache holding
+      // the newer version while a lagging relay serves the older one
+      // produces newest-first order. Fed oldest-first only, the dedup
+      // guard can be deleted outright and the test stays green.
+      for (final newestFirst in [false, true]) {
+        test(
+          newestFirst
+              ? 'keeps the newest event when the newer one arrives first'
+              : 'keeps the newest event when duplicates share an addressable '
+                    'coordinate',
+          () async {
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
 
-        final older = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew',
-          pubkeys: const [_memberA],
-          createdAt: 1710000000,
+            final older = peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+              createdAt: 1710000000,
+            );
+            final newer = peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew Updated',
+              pubkeys: const [_memberA, _memberB],
+              createdAt: 1710000500,
+            );
+            when(
+              () => client.queryEvents(
+                any(),
+                useCache: any(named: 'useCache'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => newestFirst ? [newer, older] : [older, newer],
+            );
+
+            final repository = buildRepository(nostrClient: client);
+
+            final emissions = await repository
+                .searchPublicLists('crew')
+                .toList();
+
+            expect(emissions, hasLength(1));
+            expect(emissions.single, hasLength(1));
+            expect(emissions.single.single.list.name, equals('Crew Updated'));
+            expect(
+              emissions.single.single.list.pubkeys,
+              equals(const [_memberA, _memberB]),
+            );
+          },
         );
-        final newer = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew Updated',
-          pubkeys: const [_memberA, _memberB],
-          createdAt: 1710000500,
-        );
-        when(
-          () => client.queryEvents(
-            any(),
-            useCache: any(named: 'useCache'),
-            timeout: any(named: 'timeout'),
-          ),
-        ).thenAnswer((_) async => [older, newer]);
-
-        final repository = buildRepository(nostrClient: client);
-
-        final emissions = await repository.searchPublicLists('crew').toList();
-
-        expect(emissions, hasLength(1));
-        expect(emissions.single, hasLength(1));
-        expect(emissions.single.single.list.name, equals('Crew Updated'));
-        expect(
-          emissions.single.single.list.pubkeys,
-          equals(const [_memberA, _memberB]),
-        );
-      });
+      }
 
       test('uses the lowest event id when duplicate revisions tie', () async {
         final client = _MockNostrClient();
@@ -3605,50 +3617,6 @@ void main() {
         expect(emissions, hasLength(1));
         expect(emissions.single, hasLength(1));
         expect(emissions.single.single.list.name, equals('Crew Lower id'));
-      });
-
-      test('keeps the newest event when the newer one arrives first', () async {
-        // Relay/cache merge order is not guaranteed (queryEvents builds
-        // an EventMemBox with sortAfterAdd: false), and the cache holding
-        // the newer version while a lagging relay serves the older one
-        // produces exactly this order. Fed oldest-first only, the dedup
-        // guard can be deleted outright and the sibling test stays green.
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
-
-        final older = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew',
-          pubkeys: const [_memberA],
-          createdAt: 1710000000,
-        );
-        final newer = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew Updated',
-          pubkeys: const [_memberA, _memberB],
-          createdAt: 1710000500,
-        );
-        when(
-          () => client.queryEvents(
-            any(),
-            useCache: any(named: 'useCache'),
-            timeout: any(named: 'timeout'),
-          ),
-        ).thenAnswer((_) async => [newer, older]);
-
-        final repository = buildRepository(nostrClient: client);
-
-        final emissions = await repository.searchPublicLists('crew').toList();
-
-        expect(emissions, hasLength(1));
-        expect(emissions.single, hasLength(1));
-        expect(emissions.single.single.list.name, equals('Crew Updated'));
-        expect(
-          emissions.single.single.list.pubkeys,
-          equals(const [_memberA, _memberB]),
-        );
       });
 
       test('does not yield when no events match the query', () async {
@@ -3764,53 +3732,54 @@ void main() {
       }
 
       group('followList', () {
-        test('keeps a read-only copy under the viewer', () async {
-          final repository = buildRepository(nostrClient: _MockNostrClient());
+        for (final withOwnedRows in [false, true]) {
+          test('keeps a read-only followed copy without publishing or changing '
+              'owned lists (owned rows: $withOwnedRows)', () async {
+            final client = _MockNostrClient();
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+            final owned = {
+              viewer: listOf('viewer-owned'),
+              _ownerPubkey: listOf('owner-owned'),
+            };
+            if (withOwnedRows) {
+              for (final entry in owned.entries) {
+                await cache.putList(
+                  ownerPubkey: entry.key,
+                  list: entry.value,
+                  receivedAt: DateTime.utc(2026),
+                );
+              }
+            }
+            final repository = buildRepository(
+              nostrClient: client,
+              cache: cache,
+            );
 
-          await repository.followList(
-            viewerPubkey: viewer,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('crew'),
-          );
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
 
-          final followed = await repository.readFollowedLists(
-            viewerPubkey: viewer,
-          );
-          expect(followed, hasLength(1));
-          expect(followed.single.ownerPubkey, equals(_ownerPubkey));
-          expect(followed.single.list.id, equals('crew'));
-          expect(followed.single.list.isEditable, isFalse);
-        });
-
-        test('publishes nothing', () async {
-          final client = _MockNostrClient();
-          final repository = buildRepository(nostrClient: client);
-
-          await repository.followList(
-            viewerPubkey: viewer,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('crew'),
-          );
-
-          verifyNever(() => client.publishEvent(any()));
-        });
-
-        test("does not add the list to the owner's or the viewer's own "
-            'lists', () async {
-          final repository = buildRepository(nostrClient: _MockNostrClient());
-
-          await repository.followList(
-            viewerPubkey: viewer,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('crew'),
-          );
-
-          expect(await repository.readLists(ownerPubkey: viewer), isEmpty);
-          expect(
-            await repository.readLists(ownerPubkey: _ownerPubkey),
-            isEmpty,
-          );
-        });
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+            expect(followed, hasLength(1));
+            expect(followed.single.ownerPubkey, equals(_ownerPubkey));
+            expect(followed.single.list.id, equals('crew'));
+            expect(followed.single.list.isEditable, isFalse);
+            expect(
+              await repository.readLists(ownerPubkey: viewer),
+              withOwnedRows ? [owned[viewer]!] : isEmpty,
+            );
+            expect(
+              await repository.readLists(ownerPubkey: _ownerPubkey),
+              withOwnedRows ? [owned[_ownerPubkey]!] : isEmpty,
+            );
+            verifyNever(() => client.publishEvent(any()));
+            verifyNever(() => client.publishEventAwaitOk(any()));
+          });
+        }
 
         test(
           'lists follows oldest first, whatever their coordinates',
