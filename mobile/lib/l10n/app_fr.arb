@@ -2178,6 +2178,7 @@
     "dmSendFailedRetry": "Réessayer",
     "dmSendPartialMessage": "Envoyé, mais pas synchronisé avec tes autres appareils",
     "dmStatusFailed": "Échec de l’envoi",
+    "dmStatusNotSentToEveryone": "Non envoyé à tout le monde",
     "dmConversationLoadError": "Impossible de charger les messages",
     "dmMessageInputHint": "Dis quelque chose…",
     "dmMessageSendLabel": "Envoyer le message",

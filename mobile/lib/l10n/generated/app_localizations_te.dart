@@ -6336,7 +6336,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get dmStatusFailed => 'పంపడంలో విఫలమైంది';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'అందరికీ పంపబడలేదు';
 
   @override
   String get inboxConversationActionsSheetLabel => 'సంభాషణ చర్యలు';

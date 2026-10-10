@@ -5817,7 +5817,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmStatusFailed => '送信できなかった';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => '全員には送信されていません';
 
   @override
   String get inboxConversationActionsSheetLabel => '会話の操作';

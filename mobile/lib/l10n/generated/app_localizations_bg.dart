@@ -6202,7 +6202,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmStatusFailed => 'Изпращането не успя';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Не е изпратено до всички';
 
   @override
   String get inboxConversationActionsSheetLabel => 'Действия за разговора';

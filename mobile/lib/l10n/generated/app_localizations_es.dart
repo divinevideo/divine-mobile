@@ -6199,7 +6199,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dmStatusFailed => 'No se pudo enviar';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'No se envió a todos';
 
   @override
   String get inboxConversationActionsSheetLabel =>

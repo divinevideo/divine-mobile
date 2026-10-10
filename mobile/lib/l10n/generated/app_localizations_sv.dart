@@ -6139,7 +6139,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get dmStatusFailed => 'Kunde inte skicka';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Inte skickat till alla';
 
   @override
   String get inboxConversationActionsSheetLabel => 'Konversationsåtgärder';

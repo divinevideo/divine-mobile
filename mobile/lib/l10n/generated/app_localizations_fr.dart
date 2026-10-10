@@ -6229,7 +6229,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get dmStatusFailed => 'Échec de l’envoi';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Non envoyé à tout le monde';
 
   @override
   String get inboxConversationActionsSheetLabel => 'Actions de la conversation';

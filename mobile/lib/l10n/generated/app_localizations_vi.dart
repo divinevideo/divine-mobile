@@ -6111,7 +6111,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get dmStatusFailed => 'Gửi thất bại';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Không phải ai cũng nhận được';
 
   @override
   String get inboxConversationActionsSheetLabel =>

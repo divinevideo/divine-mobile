@@ -6150,7 +6150,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get dmStatusFailed => 'Gagal menghantar';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Tidak dihantar kepada semua orang';
 
   @override
   String get inboxConversationActionsSheetLabel => 'Tindakan perbualan';

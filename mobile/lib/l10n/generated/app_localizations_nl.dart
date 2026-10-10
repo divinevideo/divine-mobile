@@ -6172,7 +6172,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get dmStatusFailed => 'Versturen mislukt';
 
   @override
-  String get dmStatusNotSentToEveryone => 'Not sent to everyone';
+  String get dmStatusNotSentToEveryone => 'Niet naar iedereen verstuurd';
 
   @override
   String get inboxConversationActionsSheetLabel => 'Gespreksacties';

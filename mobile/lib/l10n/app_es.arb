@@ -2186,6 +2186,7 @@
     "dmSendFailedRetry": "Reintentar",
     "dmSendPartialMessage": "Enviado, pero no se sincronizó con tus otros dispositivos",
     "dmStatusFailed": "No se pudo enviar",
+    "dmStatusNotSentToEveryone": "No se envió a todos",
     "dmConversationLoadError": "No se pudieron cargar los mensajes",
     "dmMessageInputHint": "Di algo…",
     "dmMessageSendLabel": "Enviar mensaje",
