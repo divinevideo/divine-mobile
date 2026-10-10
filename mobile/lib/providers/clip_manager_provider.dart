@@ -386,24 +386,40 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       if (!ref.mounted) return;
 
       if (proofData != null) {
+        // Without a C2PA manifest the proof's hash is the recording's as the
+        // camera wrote it. It marks the file as the app's own unaltered
+        // recording, which may be signed later, for example once the device
+        // is back online.
+        final recordingSha256 = proofData.c2paManifestId == null
+            ? proofData.videoHash
+            : null;
+
         // Merge with latest clip state (thumbnail may have been updated).
         // If the clip was deleted while proof generation was in progress,
-        // skip the update entirely.
+        // it is not brought back.
         final current = getClipById(clip.id);
-        if (current == null) return;
-        refreshClip(
-          current.copyWith(
-            proofManifestJson: jsonEncode(proofData),
-            // Without a C2PA manifest the proof's hash is the recording's as
-            // the camera wrote it. It marks the file as the app's own
-            // unaltered recording, which may be signed later, for example
-            // once the device is back online.
-            recordingSha256: proofData.c2paManifestId == null
-                ? proofData.videoHash
-                : null,
-          ),
-        );
-        _triggerAutosave();
+        if (current != null) {
+          refreshClip(
+            current.copyWith(
+              proofManifestJson: jsonEncode(proofData),
+              recordingSha256: recordingSha256,
+            ),
+          );
+          _triggerAutosave();
+        }
+
+        // The recorder saved the take to the clip library before its proof
+        // came back, and the take can be picked from there long after it
+        // left this working set.
+        if (recordingSha256 != null) {
+          await ref
+              .read(clipLibraryServiceProvider)
+              .rememberRecordingHash(
+                clipId: clip.id,
+                fileName: p.basename(videoFile.path),
+                sha256: recordingSha256,
+              );
+        }
 
         Log.info(
           '✅ Proof attestation generated for clip ${clip.id}',

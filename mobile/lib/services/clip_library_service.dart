@@ -245,6 +245,96 @@ class ClipLibraryService {
     return _tryParseClipRow(row, documentsPath, label: 'clip');
   }
 
+  /// Notes [sha256] as the hash the camera wrote the recording [fileName]
+  /// with on the library entry of the clip [clipId], so the recording can
+  /// still be signed later (see `DivineVideoClip.recordingSha256`).
+  ///
+  /// The capture proof comes back after the recorder saved the take, so the
+  /// entry is written then. Only an entry that still plays [fileName], or
+  /// keeps it as the footage under its chroma key, is touched; a clip deleted
+  /// since is not brought back, and a trashed one keeps the hash for a
+  /// restore.
+  ///
+  /// Returns whether the entry was updated. Never throws.
+  Future<bool> rememberRecordingHash({
+    required String clipId,
+    required String fileName,
+    required String sha256,
+  }) async {
+    try {
+      final documentsPath = await getDocumentsPath();
+      return await _clipsDao.rewriteClipData(
+        id: clipId,
+        rewrite: (data) {
+          final clip = DivineVideoClip.fromJson(
+            json.decode(data) as Map<String, dynamic>,
+            documentsPath,
+          );
+          if (clip.recordingSha256 == sha256 ||
+              !_recordingFileNames(clip).contains(fileName)) {
+            return null;
+          }
+          return json.encode(clip.copyWith(recordingSha256: sha256).toJson());
+        },
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to note the recording hash on library clip $clipId',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// The hashes the camera wrote this account's own recordings with, by file
+  /// name, from every clip that names one: library, draft and trashed clips
+  /// alike, and the sources of clips edited from them.
+  ///
+  /// Lets a recording whose capture signing failed be signed later even when
+  /// the clip at hand lost its copy of the hash, such as a library video used
+  /// as a chroma-key backdrop. A name may map to a hash its file no longer
+  /// has; signing checks the file against the hash before trusting it.
+  Future<Map<String, Set<String>>> recordingHashesByFileName() async {
+    final rows = await _clipsDao.getClipDataWithRecordingHashes(
+      ownerPubkey: ownerPubkey,
+    );
+    final documentsPath = await getDocumentsPath();
+    final hashes = <String, Set<String>>{};
+    void add(String path, String hash) =>
+        (hashes[p.basename(path)] ??= {}).add(hash);
+    for (final data in rows) {
+      final DivineVideoClip clip;
+      try {
+        clip = DivineVideoClip.fromJson(
+          json.decode(data) as Map<String, dynamic>,
+          documentsPath,
+        );
+      } catch (_) {
+        // A corrupt row names no recording; the others still count.
+        continue;
+      }
+      if (clip.recordingSha256 case final hash?) {
+        for (final name in _recordingFileNames(clip)) {
+          add(name, hash);
+        }
+      }
+      for (final source in [...?clip.derivedFrom]) {
+        if (source.recordingSha256 case final hash?) add(source.path, hash);
+      }
+    }
+    return hashes;
+  }
+
+  /// The files [clip]'s recording hash can describe: its video, or the raw
+  /// take under its chroma key once that key is baked in.
+  static Set<String> _recordingFileNames(DivineVideoClip clip) => {
+    if (clip.video?.file?.path case final path?) p.basename(path),
+    if (clip.chromaKeySourcePath case final path?) p.basename(path),
+  };
+
   /// Move a clip to the trash. The clip is hidden from active queries
   /// but its files remain on disk until [purgeExpiredTrash] sweeps them
   /// (default 30-day retention) or [hardDelete] is called explicitly.

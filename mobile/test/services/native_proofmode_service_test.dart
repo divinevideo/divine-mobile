@@ -27,6 +27,7 @@ void main() {
 
   tearDown(() async {
     NativeProofModeService.c2paSigningServiceFactoryOverride = null;
+    NativeProofModeService.recordingHashLookup = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(proofModeChannel, null);
     await LogCaptureService().clearAllLogs();
@@ -495,6 +496,45 @@ void main() {
         ]);
 
         expect(c2paService.signVideoInPlaceCallCount, 0);
+      });
+
+      group('with hashes from the clip library', () {
+        void libraryKnows(String hash) =>
+            NativeProofModeService.recordingHashLookup = () async => {
+              'recording.mp4': {hash},
+            };
+
+        test('signs a recording whose clip lost its hash', () async {
+          libraryKnows(recordingHash);
+
+          await NativeProofModeService.signOwnRecordings([
+            clipAt(recording.path),
+          ]);
+
+          expect(c2paService.signVideoInPlaceCallCount, 1);
+        });
+
+        test('leaves a file that no longer matches the hash alone', () async {
+          libraryKnows('f' * 64);
+
+          await NativeProofModeService.signOwnRecordings([
+            clipAt(recording.path),
+          ]);
+
+          expect(c2paService.signVideoInPlaceCallCount, 0);
+        });
+
+        test('signs a recording an edit uses as a backdrop', () async {
+          libraryKnows(recordingHash);
+
+          await NativeProofModeService.proofEdit(
+            output,
+            clips: [clipAt('${directory.path}/missing.mp4')],
+            otherSources: [C2paEditSource(path: recording.path)],
+          );
+
+          expect(c2paService.signVideoInPlaceCallCount, 1);
+        });
       });
     });
   });

@@ -553,6 +553,118 @@ void main() {
       });
     });
 
+    group('getClipDataWithRecordingHashes', () {
+      Future<void> insertClip({
+        required String id,
+        required String data,
+        String? draftId,
+        String? ownerPubkey,
+      }) => dao.upsertClip(
+        id: id,
+        draftId: draftId,
+        orderIndex: 0,
+        durationMs: 3000,
+        recordedAt: DateTime(2023, 11, 14, 10),
+        filePath: null,
+        thumbnailPath: null,
+        data: data,
+        ownerPubkey: ownerPubkey,
+      );
+
+      test('returns the clips of the owner that carry a hash, '
+          'on the clip or on a source', () async {
+        await insertClip(
+          id: 'recording',
+          ownerPubkey: 'owner',
+          data: json.encode({'filePath': 'a.mp4', 'recordingSha256': 'aa'}),
+        );
+        await insertClip(
+          id: 'edit',
+          draftId: testDraftId,
+          ownerPubkey: 'owner',
+          data: json.encode({
+            'filePath': 'edit.mp4',
+            'derivedFrom': [
+              {'path': 'b.mp4', 'kind': 'video', 'recordingSha256': 'bb'},
+            ],
+          }),
+        );
+        await insertClip(
+          id: 'trashed',
+          ownerPubkey: 'owner',
+          data: json.encode({'filePath': 'c.mp4', 'recordingSha256': 'cc'}),
+        );
+        await dao.softDeleteClip(
+          id: 'trashed',
+          deletedAt: DateTime(2023, 11, 15),
+        );
+        await insertClip(
+          id: 'plain',
+          ownerPubkey: 'owner',
+          data: json.encode({'filePath': 'd.mp4'}),
+        );
+        await insertClip(
+          id: 'other_account',
+          ownerPubkey: 'other',
+          data: json.encode({'filePath': 'e.mp4', 'recordingSha256': 'ee'}),
+        );
+
+        final results = await dao.getClipDataWithRecordingHashes(
+          ownerPubkey: 'owner',
+        );
+
+        expect(results, hasLength(3));
+        expect(results, everyElement(isNot(contains('"ee"'))));
+        expect(results, everyElement(isNot(contains('d.mp4'))));
+      });
+    });
+
+    group('rewriteClipData', () {
+      Future<void> insertClip(String id, String data) => dao.upsertClip(
+        id: id,
+        orderIndex: 0,
+        durationMs: 3000,
+        recordedAt: DateTime(2023, 11, 14, 10),
+        filePath: 'video.mp4',
+        thumbnailPath: null,
+        data: data,
+      );
+
+      test('replaces the data with what the rewrite returns', () async {
+        await insertClip('clip', '{"a":1}');
+
+        final rewritten = await dao.rewriteClipData(
+          id: 'clip',
+          rewrite: (data) => data.replaceFirst('1', '2'),
+        );
+
+        expect(rewritten, isTrue);
+        expect((await dao.getClipById('clip'))!.data, equals('{"a":2}'));
+      });
+
+      test('leaves the row alone when the rewrite returns null', () async {
+        await insertClip('clip', '{"a":1}');
+
+        final rewritten = await dao.rewriteClipData(
+          id: 'clip',
+          rewrite: (_) => null,
+        );
+
+        expect(rewritten, isFalse);
+        expect((await dao.getClipById('clip'))!.data, equals('{"a":1}'));
+      });
+
+      test('never brings back a clip that is gone', () async {
+        final rewritten = await dao.rewriteClipData(
+          id: 'deleted',
+          rewrite: (_) => '{"a":2}',
+        );
+
+        expect(rewritten, isFalse);
+        expect(await dao.getClipById('deleted'), isNull);
+      });
+    });
+
     group('updateOrderIndex', () {
       test('updates order index of clip', () async {
         await dao.upsertClip(

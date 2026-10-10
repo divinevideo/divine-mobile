@@ -8,6 +8,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -757,6 +758,54 @@ void main() {
     });
 
     group('addClip proof generation', () {
+      group('when the recording could not be signed', () {
+        const recordingHash = 'abc123';
+
+        setUp(() {
+          NativeProofModeService.proofFileOverride = (
+            _, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async => const NativeProofData(videoHash: recordingHash);
+          when(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: any(named: 'clipId'),
+              fileName: any(named: 'fileName'),
+              sha256: any(named: 'sha256'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        tearDown(() => NativeProofModeService.proofFileOverride = null);
+
+        test('notes the recording hash on its library entry', () async {
+          final backgroundWork = container.read(editorBackgroundWorkProvider);
+          final notifier = container.read(clipManagerProvider.notifier);
+
+          final clip = notifier.addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/documents/take.mp4'),
+            duration: const Duration(seconds: 2),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          await backgroundWork.settle();
+
+          verify(
+            () => mockClipLibraryService.rememberRecordingHash(
+              clipId: clip.id,
+              fileName: 'take.mp4',
+              sha256: recordingHash,
+            ),
+          ).called(1);
+        });
+      });
+
       test('newly added clip has no proofManifestJson initially', () {
         final notifier = container.read(clipManagerProvider.notifier);
 
