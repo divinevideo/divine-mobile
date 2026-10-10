@@ -9,6 +9,15 @@ import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 
 void main() {
+  // Uri.parse accepts these, but each holds a percent-escape that is not
+  // valid UTF-8, so Uri.pathSegments (the first two) or Uri.queryParametersAll
+  // (the last) throws FormatException when a resolver reads it.
+  const undecodableUrls = [
+    'https://divine.video/x/%FF',
+    'https://divine.video/hashtag/caf%E9',
+    'https://divine.video/people-lists/abc?owner=%FF',
+  ];
+
   group('divineUrlToPushRoute', () {
     test('maps video links to video detail routes', () {
       expect(
@@ -65,6 +74,14 @@ void main() {
         equals('/people-lists/crew?owner=$ownerPubkey'),
       );
     });
+
+    // A throw here leaves a tapped link in a message doing nothing, where
+    // null lets the launcher open it outside the app.
+    for (final url in undecodableUrls) {
+      test('returns null for $url, which Uri cannot decode', () {
+        expect(divineUrlToPushRoute(Uri.parse(url)), isNull);
+      });
+    }
   });
 
   group('universalLinkToRouterPath', () {
@@ -295,6 +312,14 @@ void main() {
           isNull,
         );
       });
+    });
+
+    group('percent-escapes that are not valid UTF-8', () {
+      for (final url in undecodableUrls) {
+        test('returns null for $url, which Uri cannot decode', () {
+          expect(universalLinkToRouterPath(Uri.parse(url)), isNull);
+        });
+      }
     });
   });
 
