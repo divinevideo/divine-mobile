@@ -5793,6 +5793,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'የተባባሪ ግብዣ';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'በ$title ላይ እንድትተባበር ተጋብዘሃል፦ $url\n\nOpen Divine to review and accept.';
   }

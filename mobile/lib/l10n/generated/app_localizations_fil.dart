@@ -5965,6 +5965,11 @@ class AppLocalizationsFil extends AppLocalizations {
       'Imbitasyon bilang collaborator';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'In-imbita ka bilang collaborator sa $title: $url\n\nOpen Divine to review and accept.';
   }

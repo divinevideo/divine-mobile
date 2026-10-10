@@ -5929,6 +5929,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Jemputan kolaborator';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Anda dijemput untuk berkolaborasi pada $title: $url\n\nOpen Divine to review and accept.';
   }

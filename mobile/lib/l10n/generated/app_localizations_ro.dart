@@ -6088,6 +6088,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Invitație de colaborare';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Ai fost invitat(ă) să colaborezi la $title: $url\n\nOpen Divine to review and accept.';
   }

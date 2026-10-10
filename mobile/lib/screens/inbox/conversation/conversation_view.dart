@@ -42,6 +42,7 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
@@ -1742,6 +1743,26 @@ class _MessageList extends StatelessWidget {
       for (var index = 0; index < messages.length; index++)
         messages[index].id: index,
     };
+    // participantPubkeys excludes self, so a length > 1 is a group.
+    final isGroup = participantPubkeys.length > 1;
+
+    // A 1:1 thread's title is the author, so [senderDisplayName] names them.
+    // A group's title names the room, so a message from someone else resolves
+    // its own author instead.
+    Widget withAuthor(
+      DmMessage message, {
+      required bool isSent,
+      required Widget Function(DmPeerNameResolution? author) builder,
+    }) {
+      if (!isGroup || isSent || message.senderPubkey.isEmpty) {
+        return builder(null);
+      }
+      return DmPeerNameBuilder(
+        pubkey: message.senderPubkey,
+        builder: (_, author) => builder(author),
+      );
+    }
+
     return ListView.builder(
       reverse: true,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1759,10 +1780,16 @@ class _MessageList extends StatelessWidget {
         if (invite != null) {
           return KeyedSubtree(
             key: messageKey,
-            child: CollaboratorInviteCard(
-              invite: invite,
+            child: withAuthor(
+              message,
               isSent: isSent,
-              senderDisplayName: isSent ? null : senderDisplayName,
+              builder: (author) => CollaboratorInviteCard(
+                invite: invite,
+                isSent: isSent,
+                senderDisplayName: isSent
+                    ? null
+                    : author?.name ?? senderDisplayName,
+              ),
             ),
           );
         }
@@ -1792,9 +1819,6 @@ class _MessageList extends StatelessWidget {
             index == 0 ||
             messages[index - 1].senderPubkey != message.senderPubkey;
 
-        // participantPubkeys excludes self, so a length > 1 is a group.
-        final isGroup = participantPubkeys.length > 1;
-
         // Context for the in-player reply/reaction bar when this bubble's
         // shared reel is opened. Carries the reel's structured video ref so a
         // text reply can self-carry the NIP-18 `q` citation (cross-device /
@@ -1815,7 +1839,10 @@ class _MessageList extends StatelessWidget {
         final ownShareVideoRef = resolveOwnShareVideoRef(message);
         final quotedVideoRef = resolveQuotedVideoRef(message, messagesById);
 
-        Widget buildBubbleWithReactions(DmDeliveryStatus status) {
+        Widget buildBubbleWithReactions(
+          DmDeliveryStatus status, {
+          DmPeerNameResolution? author,
+        }) {
           final bubble = MessageBubble(
             message: message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
@@ -1873,6 +1900,8 @@ class _MessageList extends StatelessWidget {
             quotedVideoRef: quotedVideoRef,
             fileMetadata: message.fileMetadata,
             isClip: message.isDivineClip,
+            senderName: author?.visualName,
+            isSenderNameResolving: author?.isResolving ?? false,
             // A received (or own) encrypted video DM opens a decrypt-and-play
             // page on tap. A failed own send ignores this and keeps the outer
             // resend affordance.
@@ -1915,7 +1944,14 @@ class _MessageList extends StatelessWidget {
         if (!isSent) {
           return KeyedSubtree(
             key: messageKey,
-            child: buildBubbleWithReactions(DmDeliveryStatus.delivered),
+            child: withAuthor(
+              message,
+              isSent: isSent,
+              builder: (author) => buildBubbleWithReactions(
+                DmDeliveryStatus.delivered,
+                author: author,
+              ),
+            ),
           );
         }
         return KeyedSubtree(

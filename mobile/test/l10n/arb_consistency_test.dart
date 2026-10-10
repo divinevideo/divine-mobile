@@ -571,6 +571,12 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Group inbox preview sender prefix (#8428). The separator after the name is
+  // a per-locale convention (a space before the colon in French, a full-width
+  // colon in Japanese and Chinese), so it waits for the human translation pass
+  // rather than shipping a guess.
+  'inboxConversationPreviewSenderPrefix',
+
   // Reporting a list (#9896).
   'listReportAction',
 

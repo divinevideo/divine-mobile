@@ -3762,6 +3762,16 @@
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list. The plaintext copy ('Open Divine to review and accept') is misleading inside Divine."
   },
+  "inboxConversationPreviewSenderPrefix": "{sender}: ",
+  "@inboxConversationPreviewSenderPrefix": {
+    "description": "Leads the last-message preview of a group conversation in the inbox list when someone other than the viewer wrote that message, so the preview does not read as if the room said it. The message text follows this string directly, so keep the separator, and any space after it, at the end.",
+    "placeholders": {
+      "sender": {
+        "type": "String",
+        "example": "Alice"
+      }
+    }
+  },
   "collaboratorInviteDmBody": "You were invited to collaborate on {title}: {url}\n\nOpen Divine to review and accept.",
   "@collaboratorInviteDmBody": {
     "description": "Plaintext body of the encrypted DM that invites someone to collaborate on a video. Includes a clickable web link so non-Divine Nostr clients can preview the video. The trailing 'Open Divine to review and accept.' sentence MUST stay verbatim — Divine uses it as a marker to suppress legacy plaintext invites in conversation views.",
@@ -3916,7 +3926,7 @@
   },
   "dmReelReplyComposerHint": "Message {name}…",
   "@dmReelReplyComposerHint": {
-    "description": "Hint text in the in-player reply composer when replying to a reel that {name} shared in a DM.",
+    "description": "Hint text in the in-player reply composer when a reel was shared in a DM. {name} is the person in a one-to-one thread and the room's title in a group, because a reply goes to everyone in the thread.",
     "placeholders": {
       "name": {
         "type": "String"

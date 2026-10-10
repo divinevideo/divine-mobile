@@ -5936,6 +5936,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'شریک کار دعوت';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'آپ کو $title پر تعاون کی دعوت دی گئی: $url\n\nOpen Divine to review and accept.';
   }

@@ -5951,6 +5951,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Uitnodiging om samen te werken';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Je bent uitgenodigd om samen te werken aan $title: $url\n\nOpen Divine to review and accept.';
   }

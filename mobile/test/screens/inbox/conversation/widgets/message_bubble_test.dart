@@ -1269,6 +1269,198 @@ void main() {
       });
     });
 
+    // #8428. In a group the thread's title names the room, so the bubble has
+    // to carry its author itself.
+    group('sender attribution', () {
+      Widget attributed({
+        String message = 'Hello from the group',
+        String? senderName,
+        bool isSenderNameResolving = false,
+        bool isFirstInGroup = true,
+        ThemeData? theme,
+      }) => MaterialApp(
+        theme: theme,
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: MessageBubble(
+            message: message,
+            timestamp: '2:30 PM',
+            isSent: false,
+            isFirstInGroup: isFirstInGroup,
+            senderName: senderName,
+            isSenderNameResolving: isSenderNameResolving,
+          ),
+        ),
+      );
+
+      testWidgets('names the sender above the bubble that opens a run', (
+        tester,
+      ) async {
+        await tester.pumpWidget(attributed(senderName: 'Alice'));
+
+        expect(find.text('Alice'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('Alice')).dy,
+          lessThan(tester.getTopLeft(find.text('Hello from the group')).dy),
+        );
+        // Above the pill, not inside it: the timestamp stays the pill's
+        // first line.
+        expect(
+          tester.getTopLeft(find.text('Alice')).dy,
+          lessThan(tester.getTopLeft(find.text('2:30 PM')).dy),
+        );
+      });
+
+      testWidgets('keeps a short bubble on the left under a longer name', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          attributed(
+            message: 'Hi',
+            senderName: 'Alexandria Montgomery-Smith the Third',
+          ),
+        );
+
+        final pill = find
+            .ancestor(
+              of: find.text('2:30 PM'),
+              matching: find.byType(Container),
+            )
+            .first;
+        final nameFinder = find.text('Alexandria Montgomery-Smith the Third');
+        // A received bubble hangs from the start edge. A column that
+        // right-aligned its children would shove the narrower pill under the
+        // end of the name.
+        expect(
+          tester.getTopLeft(pill).dx,
+          lessThanOrEqualTo(tester.getTopLeft(nameFinder).dx),
+        );
+        expect(
+          tester.getSize(nameFinder).width,
+          greaterThan(tester.getSize(pill).width),
+        );
+      });
+
+      testWidgets('does not repeat the name on the rest of a run', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          attributed(senderName: 'Alice', isFirstInGroup: false),
+        );
+
+        expect(find.text('Alice'), findsNothing);
+        expect(find.text('Hello from the group'), findsOneWidget);
+      });
+
+      testWidgets('shows no name for a bubble without a sender', (
+        tester,
+      ) async {
+        await tester.pumpWidget(attributed());
+
+        expect(find.text('Alice'), findsNothing);
+      });
+
+      testWidgets('reads the sender once, first, in the bubble label', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(attributed(senderName: 'Alice'));
+
+        final node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('Hello from the group')),
+        );
+        expect('Alice'.allMatches(node.label), hasLength(1));
+        expect(node.label, startsWith('Alice'));
+
+        handle.dispose();
+      });
+
+      testWidgets('still reads the sender when the name is not drawn', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          attributed(senderName: 'Alice', isFirstInGroup: false),
+        );
+
+        final node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('Hello from the group')),
+        );
+        expect(node.label, startsWith('Alice'));
+
+        handle.dispose();
+      });
+
+      testWidgets('shimmers while the sender resolves and reads no name', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          attributed(
+            senderName: 'Adjective Animal 7',
+            isSenderNameResolving: true,
+          ),
+        );
+
+        final skeleton = tester.widget<IdentitySkeletonizer>(
+          find.byType(IdentitySkeletonizer),
+        );
+        expect(skeleton.isLoading, isTrue);
+        final node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('Hello from the group')),
+        );
+        expect(node.label, isNot(contains('Adjective Animal 7')));
+
+        handle.dispose();
+        // Let the skeleton's fallthrough timer finish before the test ends.
+        await tester.pump(const Duration(seconds: 8));
+      });
+
+      testWidgets('truncates a long name instead of widening the bubble', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          attributed(senderName: 'A very long display name ' * 12),
+        );
+
+        expect(tester.takeException(), isNull);
+        final width = tester
+            .getSize(find.text('A very long display name ' * 12))
+            .width;
+        final screen =
+            tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        expect(width, lessThanOrEqualTo(screen * 0.75));
+      });
+
+      for (final (label, theme) in [
+        ('dark', VineTheme.theme),
+        ('light', VineTheme.lightTheme),
+      ]) {
+        testWidgets('clears 4.5:1 against the thread background in $label '
+            'mode', (tester) async {
+          await tester.pumpWidget(
+            attributed(senderName: 'Alice', theme: theme),
+          );
+
+          final colors = Theme.of(
+            tester.element(find.byType(MessageBubble)),
+          ).extension<VineThemeColors>()!;
+          final textColor = tester
+              .widget<Text>(find.text('Alice'))
+              .style!
+              .color!;
+          final ratio = contrastRatio(textColor, colors.surfaceContainerHigh);
+
+          expect(
+            ratio,
+            greaterThanOrEqualTo(4.5),
+            reason: '$label measured ${ratio.toStringAsFixed(2)}:1',
+          );
+        });
+      }
+    });
+
     group('URL linkification', () {
       testWidgets('renders plain text without $RichText', (tester) async {
         await tester.pumpWidget(

@@ -197,6 +197,8 @@ class MessageBubble extends StatefulWidget {
     this.quotedVideoRef,
     this.fileMetadata,
     this.isClip = false,
+    this.senderName,
+    this.isSenderNameResolving = false,
     super.key,
   });
 
@@ -268,6 +270,19 @@ class MessageBubble extends StatefulWidget {
   /// Whether the encrypted video is a clip the sender shared from their
   /// library. Labels the [EncryptedVideoCard].
   final bool isClip;
+
+  /// Who wrote this message, for a thread where the title does not say: a
+  /// group, whose title names the room. Null for a bubble that needs no
+  /// attribution (a 1:1 thread, or the viewer's own message).
+  ///
+  /// Drawn above the first bubble of a run and read by screen readers on every
+  /// bubble, so a listener moving bubble by bubble never loses the speaker.
+  final String? senderName;
+
+  /// Whether [senderName] is still being resolved. The name then shimmers and
+  /// is left out of the screen-reader label, because it is a stand-in rather
+  /// than the sender's real name.
+  final bool isSenderNameResolving;
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -349,6 +364,7 @@ class _MessageBubbleState extends State<MessageBubble> {
     final videoKind = _content.videoTarget?.videoKind;
     final personalMessage = _content.personalMessage;
     final textAfterUrl = _content.textAfterUrl;
+    final senderName = widget.senderName;
 
     // Video shares are always rendered as standalone blocks: the
     // thumbnail is too prominent to share a tail with an adjacent text
@@ -410,6 +426,8 @@ class _MessageBubbleState extends State<MessageBubble> {
             ? AlignmentDirectional.centerEnd
             : AlignmentDirectional.centerStart,
         child: Semantics(
+          // Merged ahead of the bubble's own text, so the sender is read first.
+          label: widget.isSenderNameResolving ? null : senderName,
           hint: isSent
               ? context.l10n.dmMessageBubbleSentHint
               : context.l10n.dmMessageBubbleReceivedHint,
@@ -458,8 +476,19 @@ class _MessageBubbleState extends State<MessageBubble> {
                   // semantics instead of by contrast.
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    // Hangs from the sender's side, so a caption wider than a
+                    // short received bubble does not push the bubble away
+                    // from the start edge.
+                    crossAxisAlignment: isSent
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     children: [
+                      if (senderName != null && effectiveIsFirstInGroup)
+                        _SenderName(
+                          name: senderName,
+                          isResolving: widget.isSenderNameResolving,
+                          maxWidth: bubbleMaxWidth,
+                        ),
                       Container(
                         // Video bubbles cap their max width at the thumbnail's
                         // own width (248) plus the symmetric 16 px padding so
@@ -648,6 +677,45 @@ class _MessageBubbleState extends State<MessageBubble> {
       topRight: const Radius.circular(16),
       bottomLeft: Radius.circular(isSent ? 16 : 4),
       bottomRight: Radius.circular(isSent ? 4 : 16),
+    );
+  }
+}
+
+/// The author's name above the bubble that opens a run in a group thread.
+///
+/// Excluded from semantics because [MessageBubble] puts the same name in the
+/// bubble's own label, which covers every bubble of the run.
+class _SenderName extends StatelessWidget {
+  const _SenderName({
+    required this.name,
+    required this.isResolving,
+    required this.maxWidth,
+  });
+
+  final String name;
+  final bool isResolving;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 12, bottom: 4),
+          child: IdentitySkeletonizer(
+            isLoading: isResolving,
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: VineTheme.labelMediumFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -5625,6 +5625,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => '콜라보 초대';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return '$title 콜라보에 초대받았어요: $url\n\nOpen Divine to review and accept.';
   }

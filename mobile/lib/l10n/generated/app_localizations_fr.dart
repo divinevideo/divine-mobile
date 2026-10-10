@@ -6009,6 +6009,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Invitation à collaborer';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Tu as été invité(e) à collaborer sur $title : $url\n\nOpen Divine to review and accept.';
   }

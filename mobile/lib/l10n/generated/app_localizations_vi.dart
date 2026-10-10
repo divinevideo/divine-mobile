@@ -5894,6 +5894,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Lời mời cộng tác';
 
   @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
+
+  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Bạn được mời cộng tác vào $title: $url\n\nOpen Divine to review and accept.';
   }
