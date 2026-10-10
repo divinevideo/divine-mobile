@@ -1,5 +1,5 @@
 // ABOUTME: Tests for ComposableVideoGrid widget
-// ABOUTME: Verifies grid rendering, broken video filtering, and user interactions
+// ABOUTME: Verifies grid rendering, video filtering, interactions, and disposal
 //
 // NOTE: Tests that render video tiles are skipped because ComposableVideoGrid
 // uses UserName widget, which triggers the Nostr provider chain
@@ -23,6 +23,7 @@
 import 'dart:async';
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:bloc/bloc.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -43,6 +46,7 @@ import 'package:openvine/services/broken_video_tracker.dart' as broken_tracker;
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -75,6 +79,48 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockSubscribedListVideoCache extends Mock
     implements SubscribedListVideoCache {}
+
+/// Captures the grid's [OwnerVideoActionsCubit] and can fail its close:
+/// `close()` calls the observer's `onClose` before anything else.
+class _CubitObserver extends BlocObserver {
+  bool failOnClose = false;
+  final created = <OwnerVideoActionsCubit>[];
+
+  @override
+  void onCreate(BlocBase<dynamic> bloc) {
+    super.onCreate(bloc);
+    if (bloc is OwnerVideoActionsCubit) created.add(bloc);
+  }
+
+  @override
+  void onClose(BlocBase<dynamic> bloc) {
+    if (failOnClose && bloc is OwnerVideoActionsCubit) {
+      throw StateError('observer rejected close');
+    }
+    super.onClose(bloc);
+  }
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+  final reasons = <String?>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+    reasons.add(reason);
+  }
+}
 
 /// Provider overrides every scope in this file needs.
 ///
@@ -1413,6 +1459,65 @@ void main() {
           isFalse,
         );
         handle.dispose();
+      });
+    });
+
+    group('disposal', () {
+      late _CubitObserver observer;
+
+      setUp(() {
+        final originalObserver = Bloc.observer;
+        observer = _CubitObserver();
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = originalObserver);
+      });
+
+      Future<void> pumpGrid(WidgetTester tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _gridOverrides(mockTracker),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: ComposableVideoGrid(
+                  videos: const [],
+                  onVideoTap: (videos, index) {},
+                  emptyBuilder: () => const Text('No videos available'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      testWidgets('closes the $OwnerVideoActionsCubit', (tester) async {
+        await pumpGrid(tester);
+        final cubit = observer.created.single;
+        expect(cubit.isClosed, isFalse);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+
+        expect(cubit.isClosed, isTrue);
+      });
+
+      testWidgets('reports a failing cubit close instead of leaking it', (
+        tester,
+      ) async {
+        final originalReporter = detachedFailureReporter;
+        final reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        addTearDown(() => detachedFailureReporter = originalReporter);
+        observer.failOnClose = true;
+        await pumpGrid(tester);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(reporter.reasons.single, contains('ComposableVideoGrid'));
       });
     });
   });
