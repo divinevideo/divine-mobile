@@ -345,9 +345,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             )) {
               return;
             }
-            // Storage now contains the original unresolved preference. Retry
-            // restoration against the newer snapshot before loading a source.
-            continue;
+            if (!identical(
+              snapshot,
+              _curatedListRepository.subscriptionSnapshot,
+            )) {
+              // Storage now contains the original unresolved preference. Retry
+              // restoration against the newer snapshot before loading a source.
+              continue;
+            }
+            // This Home no longer owns the account's saved choice, so the
+            // write can never land. Use the restored source for this session.
           }
         } else {
           await _modePreferences.persist(source);

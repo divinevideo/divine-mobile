@@ -111,6 +111,26 @@ class _GatedPreferences extends InMemorySharedPreferencesStore {
       .timeout(const Duration(seconds: 5));
 }
 
+/// Bounds a retry loop that only awaits completed futures and cannot time out.
+class _RetryBoundedLists extends CuratedListRepository {
+  _RetryBoundedLists()
+    : super(nostrClient: _Nostr(), funnelcakeApiClient: _Api());
+
+  static const _maxSnapshotReads = 1000;
+  int _snapshotReads = 0;
+
+  @override
+  CuratedListSubscriptionSnapshot get subscriptionSnapshot {
+    if (++_snapshotReads > _maxSnapshotReads) {
+      throw StateError(
+        'Home read the subscription snapshot more than $_maxSnapshotReads '
+        'times: its start-up restore is retrying without end.',
+      );
+    }
+    return super.subscriptionSnapshot;
+  }
+}
+
 const _authorA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _authorB =
@@ -1635,6 +1655,67 @@ void main() {
           await preferences.reload();
           expect(current.state.source, const VideoFeedSource.forYou());
           expect(preferences.getString(_key), 'forYou');
+        },
+      );
+
+      test(
+        'an open Home replaced before it starts shows For You and keeps A saved',
+        () async {
+          final saved = _stored(_source(_list(_authorA)));
+          await preferences.setString(_key, saved);
+          final bounded = _RetryBoundedLists()
+            ..setSubscribedLists([_list(_authorB)]);
+          addTearDown(bounded.dispose);
+          final coordinator = FeedModePersistenceCoordinator(
+            sharedPreferences: preferences,
+            userPubkey: _viewer,
+          );
+          final old = bloc(coordinator: coordinator, repository: bounded);
+          addTearDown(old.close);
+          final newer = coordinator.claim();
+          addTearDown(newer.release);
+          await waitFor(
+            old,
+            (s) => s.status == VideoFeedStatus.success,
+            () => old.add(const VideoFeedStarted()),
+          );
+          await preferences.reload();
+          expect(old.state.source, const VideoFeedSource.forYou());
+          expect(preferences.getString(_key), saved);
+        },
+      );
+
+      test(
+        'an open Home replaced during its fallback write shows For You and restores A',
+        () async {
+          final saved = _stored(_source(_list(_authorA)));
+          final backend = await gatePreferences(
+            savedValue: saved,
+            blockedValue: 'forYou',
+          );
+          final bounded = _RetryBoundedLists()
+            ..setSubscribedLists([_list(_authorB)]);
+          addTearDown(bounded.dispose);
+          final coordinator = FeedModePersistenceCoordinator(
+            sharedPreferences: preferences,
+            userPubkey: _viewer,
+          );
+          final old = bloc(coordinator: coordinator, repository: bounded);
+          addTearDown(old.close);
+          old.add(const VideoFeedStarted());
+          await backend.started.future.timeout(const Duration(seconds: 5));
+          final newer = coordinator.claim();
+          addTearDown(newer.release);
+          final repaired = backend.committed(saved);
+          await waitFor(
+            old,
+            (s) => s.status == VideoFeedStatus.success,
+            backend.release.complete,
+          );
+          await repaired;
+          await preferences.reload();
+          expect(old.state.source, const VideoFeedSource.forYou());
+          expect(preferences.getString(_key), saved);
         },
       );
     });
