@@ -305,6 +305,29 @@ void main() {
     );
 
     test(
+      'an unverified removal leaves the matching live cache usable',
+      () async {
+        final id = fallbackId(current, primary);
+        fallbackRecords[id] = rawRecord(alice);
+        final cached = await storage.getKeyContainer();
+        expect(cached!.publicKeyHex, alice.publicKeyHex);
+        silentlyRetained = id;
+        await expectLater(
+          removeAlice(),
+          throwsA(
+            isA<PlatformSecureStorageException>().having(
+              (error) => error.code,
+              'code',
+              'key_deletion_unverified',
+            ),
+          ),
+        );
+        expect(cached.isDisposed, isFalse);
+        expect(await storage.getKeyContainer(), same(cached));
+      },
+    );
+
+    test(
       'foreign native bytes and the foreign live cache remain intact',
       () async {
         fallbackRecords[fallbackId(current, primary)] = rawRecord(bob);
