@@ -1743,6 +1743,26 @@ class _MessageList extends StatelessWidget {
       for (var index = 0; index < messages.length; index++)
         messages[index].id: index,
     };
+    // participantPubkeys excludes self, so a length > 1 is a group.
+    final isGroup = participantPubkeys.length > 1;
+
+    // A 1:1 thread's title is the author, so [senderDisplayName] names them.
+    // A group's title names the room, so a message from someone else resolves
+    // its own author instead.
+    Widget withAuthor(
+      DmMessage message, {
+      required bool isSent,
+      required Widget Function(DmPeerNameResolution? author) builder,
+    }) {
+      if (!isGroup || isSent || message.senderPubkey.isEmpty) {
+        return builder(null);
+      }
+      return DmPeerNameBuilder(
+        pubkey: message.senderPubkey,
+        builder: (_, author) => builder(author),
+      );
+    }
+
     return ListView.builder(
       reverse: true,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1760,10 +1780,16 @@ class _MessageList extends StatelessWidget {
         if (invite != null) {
           return KeyedSubtree(
             key: messageKey,
-            child: CollaboratorInviteCard(
-              invite: invite,
+            child: withAuthor(
+              message,
               isSent: isSent,
-              senderDisplayName: isSent ? null : senderDisplayName,
+              builder: (author) => CollaboratorInviteCard(
+                invite: invite,
+                isSent: isSent,
+                senderDisplayName: isSent
+                    ? null
+                    : author?.name ?? senderDisplayName,
+              ),
             ),
           );
         }
@@ -1792,9 +1818,6 @@ class _MessageList extends StatelessWidget {
         final isLastInGroup =
             index == 0 ||
             messages[index - 1].senderPubkey != message.senderPubkey;
-
-        // participantPubkeys excludes self, so a length > 1 is a group.
-        final isGroup = participantPubkeys.length > 1;
 
         // Context for the in-player reply/reaction bar when this bubble's
         // shared reel is opened. Carries the reel's structured video ref so a
@@ -1921,17 +1944,14 @@ class _MessageList extends StatelessWidget {
         if (!isSent) {
           return KeyedSubtree(
             key: messageKey,
-            // A group's title names the room, not who wrote each message, so
-            // every message from someone else resolves its own author.
-            child: isGroup && message.senderPubkey.isNotEmpty
-                ? DmPeerNameBuilder(
-                    pubkey: message.senderPubkey,
-                    builder: (_, author) => buildBubbleWithReactions(
-                      DmDeliveryStatus.delivered,
-                      author: author,
-                    ),
-                  )
-                : buildBubbleWithReactions(DmDeliveryStatus.delivered),
+            child: withAuthor(
+              message,
+              isSent: isSent,
+              builder: (author) => buildBubbleWithReactions(
+                DmDeliveryStatus.delivered,
+                author: author,
+              ),
+            ),
           );
         }
         return KeyedSubtree(

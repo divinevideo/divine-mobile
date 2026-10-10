@@ -1189,6 +1189,110 @@ void main() {
         expect(find.text(aliceName), findsOneWidget);
         expect(find.text(ownName), findsNothing);
       });
+
+      // One name was handed to every received row: the room's title in a
+      // group, so an invite card that must name a person named the room.
+      group('names the author, not the room', () {
+        DmMessage inviteFrom(String sender, String dTag) {
+          final message = messageFrom(
+            sender,
+            'You were invited to collaborate.',
+          );
+          return DmMessage(
+            id: message.id,
+            conversationId: message.conversationId,
+            senderPubkey: sender,
+            content: message.content,
+            createdAt: message.createdAt,
+            giftWrapId: message.giftWrapId,
+            tags: [
+              const ['divine', 'collab-invite'],
+              ['a', '34236:$sender:$dTag', 'wss://relay.divine.video'],
+              ['p', sender],
+              const ['role', 'Collaborator'],
+              ['title', dTag],
+            ],
+          );
+        }
+
+        testWidgets('titles each collaborator invite after who sent it', (
+          tester,
+        ) async {
+          // Each invite card is tall; the default surface builds only one.
+          await tester.binding.setSurfaceSize(const Size(800, 4000));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          nextSecond = 0;
+          final fromAlice = inviteFrom(alice, 'skate-loop');
+          final fromBob = inviteFrom(bob, 'surf-loop');
+
+          await pumpThread(
+            tester,
+            groupThread([fromBob, fromAlice]),
+          );
+
+          expect(
+            find.textContaining(
+              l10n.inboxCollabInvitePreviewTitleFrom(aliceName),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining(
+              l10n.inboxCollabInvitePreviewTitleFrom(bobName),
+            ),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('titles a one-to-one invite after the person it is with', (
+          tester,
+        ) async {
+          nextSecond = 0;
+          await pumpThread(
+            tester,
+            buildSubject(
+              otherProfile: profileFor(alice, aliceName),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [inviteFrom(alice, 'skate-loop')],
+              ),
+            ),
+          );
+
+          expect(
+            find.textContaining(
+              l10n.inboxCollabInvitePreviewTitleFrom(aliceName),
+            ),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('leaves an invite untitled by name while its sender '
+            'resolves, rather than naming the room', (tester) async {
+          nextSecond = 0;
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [alice, bob],
+              otherProfile: profileFor(alice, aliceName),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [inviteFrom(bob, 'surf-loop')],
+              ),
+              extraOverrides: memberOverrides(bob, resolving: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.textContaining(l10n.inboxCollabInvitePreviewTitle),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining(l10n.inboxCollabInvitePreviewTitleFrom('')),
+            findsNothing,
+          );
+        });
+      });
     });
 
     // #6416. The header resolved the peer from kind-0 only, and neither
