@@ -186,19 +186,26 @@ class CuratedDefaultPublicationAuthority {
               (_intent?.baselineEventId == _newestObserved?.id &&
                   _intent?.value == _value(list.publicationTarget))));
 
-  String _value(CuratedList list) => jsonEncode([
-    list.pubkey,
-    list.id,
-    list.isPublic,
-    if (list.isPublic)
-      CuratedListConverter.toEventTags(list)
-    else
-      CuratedListConverter.toPrivateMetadataTags(list),
-    if (list.isPublic)
-      (list.description ?? 'Curated video list: ${list.name}')
-    else
-      CuratedListConverter.toItemTags(list),
-  ]);
+  String _value(CuratedList list) {
+    // A public list without a description is published with this content, and
+    // decoding fills the missing description from that content.
+    final target = list.isPublic && list.description == null
+        ? list.copyWith(description: 'Curated video list: ${list.name}')
+        : list;
+    return jsonEncode([
+      target.pubkey,
+      target.id,
+      target.isPublic,
+      if (target.isPublic)
+        CuratedListConverter.toEventTags(target)
+      else
+        CuratedListConverter.toPrivateMetadataTags(target),
+      if (target.isPublic)
+        target.description
+      else
+        CuratedListConverter.toItemTags(target),
+    ]);
+  }
 
   /// Binds the explicit delta before its first cache/signing await.
   /// The previous row must match a verified baseline or this exact live intent.
