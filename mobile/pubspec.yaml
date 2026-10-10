@@ -391,7 +391,8 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.32.0
+  # 2.32.1: turned layers near an edge keep their place in Android exports.
+  pro_video_editor: ^2.32.1
   pro_image_editor: ^14.11.0
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
