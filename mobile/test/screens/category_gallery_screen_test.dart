@@ -3,6 +3,7 @@
 
 import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -334,7 +335,11 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('tapping a video opens its fullscreen route', (tester) async {
+    Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(
+      WidgetTester tester,
+    ) async {
+      Uri? pushedUri;
+      PooledFullscreenVideoFeedArgs? pushedArgs;
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -345,16 +350,9 @@ void main() {
           GoRoute(
             path: PooledFullscreenVideoFeedScreen.path,
             builder: (context, state) {
-              final args = state.extra! as PooledFullscreenVideoFeedArgs;
-              final videoId =
-                  state.uri.queryParameters[PooledFullscreenVideoFeedScreen
-                      .videoQueryParameter];
-              return Scaffold(
-                body: Text(
-                  'opened video $videoId at ${args.initialIndex} '
-                  'in ${args.contextTitle}',
-                ),
-              );
+              pushedUri = state.uri;
+              pushedArgs = state.extra! as PooledFullscreenVideoFeedArgs;
+              return const Scaffold(body: SizedBox());
             },
           ),
         ],
@@ -377,9 +375,82 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('opened video allowed-id at 1 in Animals'),
-        findsOneWidget,
+        pushedArgs,
+        isNotNull,
+        reason: 'tapping the tile should open the fullscreen route',
       );
+      return (uri: pushedUri!, args: pushedArgs!);
+    }
+
+    testWidgets('tapping a video opens its fullscreen route', (tester) async {
+      final (:uri, :args) = await tapAllowedVideo(tester);
+
+      expect(
+        uri.queryParameters[PooledFullscreenVideoFeedScreen
+            .videoQueryParameter],
+        equals('allowed-id'),
+      );
+      expect(args.initialVideoId, equals('allowed-id'));
+      expect(args.initialIndex, equals(1));
+      expect(args.contextTitle, equals('Animals'));
+      expect(args.source, equals(const CategoryViewSource('animals')));
+    });
+
+    testWidgets('seeds the fullscreen feed with the videos the gallery shows', (
+      tester,
+    ) async {
+      final (:args, uri: _) = await tapAllowedVideo(tester);
+
+      final seededVideos = <List<VideoEvent>>[];
+      final seededHasMore = <bool>[];
+      final videosSubscription = args.feedRepository
+          .watchView(args.source)
+          .listen(seededVideos.add);
+      final hasMoreSubscription = args.feedRepository
+          .watchHasMore(args.source)
+          .listen(seededHasMore.add);
+      addTearDown(videosSubscription.cancel);
+      addTearDown(hasMoreSubscription.cancel);
+      await tester.pump();
+
+      expect(seededVideos, isNotEmpty);
+      expect(
+        seededVideos.first.map((video) => video.id),
+        equals(['blocked-id', 'allowed-id']),
+      );
+      expect(seededHasMore, equals([false]));
+    });
+
+    testWidgets('loading more in the fullscreen feed loads the next page', (
+      tester,
+    ) async {
+      when(
+        () => categoriesRepository.getVideosForCategory(
+          category: 'animals',
+          before: any(named: 'before'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+        ),
+      ).thenAnswer(
+        (_) async => CategoryVideosPage(
+          videos: [blockedVideo, allowedVideo],
+          hasMore: true,
+        ),
+      );
+      final (:args, uri: _) = await tapAllowedVideo(tester);
+      clearInteractions(categoriesRepository);
+
+      await args.feedRepository.loadMore(args.source);
+      await tester.pumpAndSettle();
+
+      verify(
+        () => categoriesRepository.getVideosForCategory(
+          category: 'animals',
+          before: any(named: 'before'),
+          sort: any(named: 'sort'),
+          platform: any(named: 'platform'),
+        ),
+      ).called(1);
     });
   });
 }
