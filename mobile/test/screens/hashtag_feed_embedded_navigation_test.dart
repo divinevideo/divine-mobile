@@ -1,5 +1,6 @@
 // ABOUTME: Verifies the hashtag feed hands a tapped video to its embedding host,
-// ABOUTME: and pushes the anchored fullscreen route when it owns the screen.
+// ABOUTME: and pushes the anchored fullscreen route when it owns the screen,
+// ABOUTME: logging a rejected push instead of leaking it.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +15,10 @@ import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockHashtagService extends Mock implements HashtagService {}
@@ -164,6 +167,58 @@ void main() {
       expect(
         router.state.uri.toString(),
         equals(PooledFullscreenVideoFeedScreen.pathForVideoId('video-2')),
+      );
+    });
+
+    testWidgets('logs a rejected fullscreen route push instead of leaking it', (
+      tester,
+    ) async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final router = MockGoRouter();
+      when(() => router.push<void>(any(), extra: any(named: 'extra')))
+          .thenAnswer((_) => Future<void>.error(Exception('route failed')));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [...getStandardTestOverrides(), ...screenOverrides()],
+          child: MockGoRouterProvider(
+            goRouter: router,
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: HashtagFeedScreen(hashtag: 'funny'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(_tile(1));
+      await tester.pump();
+
+      verify(
+        () => router.push<void>(
+          PooledFullscreenVideoFeedScreen.pathForVideoId('video-2'),
+          extra: any(named: 'extra'),
+        ),
+      ).called(1);
+      expect(tester.takeException(), isNull);
+      final failures = logCapture
+          .getRecentLogs()
+          .where(
+            (entry) =>
+                entry.name == 'HashtagFeedScreen' &&
+                entry.level == LogLevel.error,
+          )
+          .toList();
+      expect(failures, hasLength(1));
+      expect(failures.single.category, LogCategory.video);
+      expect(
+        failures.single.message,
+        'Failed to open hashtag video: Exception: route failed',
       );
     });
   });
