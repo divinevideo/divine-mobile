@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,19 +19,23 @@ import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/library/clips_tab.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/go_router.dart';
@@ -43,6 +47,25 @@ class _FakeEditorVideo extends Fake implements EditorVideo {}
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 DivineVideoDraft _createTestDraft() => DivineVideoDraft(
   id: 'draft-1',
@@ -75,6 +98,21 @@ class _StubClipManagerNotifier extends ClipManagerNotifier {
 
   @override
   ClipManagerState build() => ClipManagerState(clips: _clips);
+}
+
+/// Holds [clearAll] open until [gate] completes, so a test can change the
+/// screen while "Create video" is still waiting on it.
+class _GatedVideoPublishNotifier extends VideoPublishNotifier {
+  _GatedVideoPublishNotifier(this.gate);
+
+  final Completer<void> gate;
+  int clearAllCalls = 0;
+
+  @override
+  Future<void> clearAll({bool keepAutosavedDraft = false}) {
+    clearAllCalls++;
+    return gate.future;
+  }
 }
 
 List<Object?> _captureAnnouncements(WidgetTester tester) {
@@ -136,7 +174,15 @@ void main() {
       LibraryTabsMode tabsMode = LibraryTabsMode.allTabs,
       List<DivineVideoClip> editorClips = const [],
       List<DivineVideoClip> sessionClips = const [],
+      ValueListenable<bool>? libraryVisible,
+      List<Override> extraOverrides = const [],
     }) {
+      final library = LibraryScreen(
+        selectionMode: selectionMode,
+        initialTabIndex: initialTabIndex,
+        tabsMode: tabsMode,
+        editorClips: editorClips,
+      );
       return ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
@@ -151,17 +197,21 @@ void main() {
             clipManagerProvider.overrideWith(
               () => _StubClipManagerNotifier(sessionClips),
             ),
+          ...extraOverrides,
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
-          home: LibraryScreen(
-            selectionMode: selectionMode,
-            initialTabIndex: initialTabIndex,
-            tabsMode: tabsMode,
-            editorClips: editorClips,
-          ),
+          home: libraryVisible == null
+              ? library
+              : Scaffold(
+                  body: ValueListenableBuilder<bool>(
+                    valueListenable: libraryVisible,
+                    builder: (context, visible, _) =>
+                        visible ? library : const SizedBox.shrink(),
+                  ),
+                ),
         ),
       );
     }
@@ -1111,6 +1161,336 @@ void main() {
           findsOneWidget,
         );
         expect(find.textContaining('boom-secret-path'), findsNothing);
+      });
+    });
+
+    group('detached failures', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+      late ValueNotifier<bool> libraryVisible;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        libraryVisible = ValueNotifier<bool>(true);
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+        libraryVisible.dispose();
+      });
+
+      // A sheet lives on the navigator, not under the library, so it outlasts
+      // the screen when an account change swaps the library out from under it.
+      testWidgets(
+        'picking a sort order after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final clipsBloc = BlocProvider.of<ClipsLibraryBloc>(
+            tester.element(find.byType(ClipsTab)),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(en.libraryDisplayOptionsLabel),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text(en.librarySortOldestCreation), findsOneWidget);
+
+          libraryVisible.value = false;
+          await tester.pump();
+          expect(clipsBloc.isClosed, isTrue);
+          expect(find.text(en.librarySortOldestCreation), findsOneWidget);
+
+          await tester.tap(find.text(en.librarySortOldestCreation));
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
+        },
+      );
+
+      testWidgets(
+        'confirming empty trash after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          final trashed = DivineVideoClip(
+            id: 'trashed',
+            video: EditorVideo.file('/test/trashed.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/test/trashed.jpg',
+            ghostFramePath: '/test/trashed_ghost.jpg',
+            deletedAt: DateTime(2026),
+          );
+          when(
+            () => mockClipLibraryService.getTrashedClips(),
+          ).thenAnswer((_) async => [trashed]);
+
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final clipsBloc = BlocProvider.of<ClipsLibraryBloc>(
+            tester.element(find.byType(ClipsTab)),
+          )..add(const ClipsLibraryFilterChanged(ClipLibraryTrashFilter()));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(en.libraryTrashEmptyAllLabel));
+          await tester.pumpAndSettle();
+          expect(find.text(en.libraryTrashEmptyConfirmTitle), findsOneWidget);
+
+          libraryVisible.value = false;
+          await tester.pump();
+          expect(clipsBloc.isClosed, isTrue);
+          expect(find.text(en.libraryTrashEmptyConfirmTitle), findsOneWidget);
+
+          await tester.tap(find.text(en.libraryDeleteConfirm));
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
+          verifyNever(() => mockClipLibraryService.hardDelete(any()));
+        },
+      );
+
+      testWidgets(
+        'creating a video after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          final clip = DivineVideoClip(
+            id: 'selected',
+            video: EditorVideo.file('/test/selected.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/test/selected.jpg',
+            ghostFramePath: '/test/selected_ghost.jpg',
+          );
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [clip]);
+          final publish = _GatedVideoPublishNotifier(Completer<void>());
+
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+              extraOverrides: [
+                videoPublishProvider.overrideWith(() => publish),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          BlocProvider.of<ClipsLibraryBloc>(
+              tester.element(find.byType(ClipsTab)),
+            )
+            ..add(const ClipsLibraryEnterSelectionMode())
+            ..add(ClipsLibraryToggleSelection(clip));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(en.libraryCreateVideo(1)));
+          await tester.pump();
+          expect(publish.clearAllCalls, equals(1));
+
+          libraryVisible.value = false;
+          await tester.pump();
+          publish.gate.complete();
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
+        },
+      );
+
+      // The category flows chain several sheets, so they are the longest-lived
+      // detached work on this screen. Whatever one of them throws must reach
+      // runDetached rather than escape as an unhandled error.
+      group('category flows', () {
+        final travel = ClipCategory(
+          id: 'cat-travel',
+          name: 'Travel',
+          createdAt: DateTime(2026),
+        );
+
+        testWidgets(
+          'deleting a category after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                  tester.element(find.byType(ClipsTab)),
+                )..add(
+                  ClipsLibraryFilterChanged(
+                    ClipLibraryCategoryFilter(travel.id),
+                  ),
+                );
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryCategoryManageSemanticLabel),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(en.libraryCategoryDeleteAction));
+            await tester.pumpAndSettle();
+            final confirmTitle = en.libraryCategoryDeleteConfirmTitle(
+              travel.name,
+            );
+            expect(find.text(confirmTitle), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(confirmTitle), findsOneWidget);
+
+            await tester.tap(find.text(en.commonDelete));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
+
+        testWidgets(
+          'renaming a category after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                  tester.element(find.byType(ClipsTab)),
+                )..add(
+                  ClipsLibraryFilterChanged(
+                    ClipLibraryCategoryFilter(travel.id),
+                  ),
+                );
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryCategoryManageSemanticLabel),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(en.libraryCategoryRenameAction));
+            await tester.pumpAndSettle();
+            expect(find.text(en.libraryCategoryRenameTitle), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(en.libraryCategoryRenameTitle), findsOneWidget);
+
+            await tester.tap(find.text(en.libraryCategoryRenameAction));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
+
+        testWidgets(
+          'archiving selected clips after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            final filed = DivineVideoClip(
+              id: 'filed',
+              video: EditorVideo.file('/test/filed.mp4'),
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: models.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+              thumbnailPath: '/test/filed.jpg',
+              ghostFramePath: '/test/filed_ghost.jpg',
+              categoryId: travel.id,
+            );
+            when(
+              () => mockClipLibraryService.getAllClips(),
+            ).thenAnswer((_) async => [filed]);
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                    tester.element(find.byType(ClipsTab)),
+                  )
+                  ..add(const ClipsLibraryEnterSelectionMode())
+                  ..add(ClipsLibraryToggleSelection(filed));
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryMoveSelectedClipsTooltip),
+            );
+            await tester.pumpAndSettle();
+            // "Archive" is also a filter chip, so scope the tap to the sheet.
+            await tester.tap(
+              find.descendant(
+                of: find.byType(VineBottomSheet),
+                matching: find.text(en.libraryArchiveAction),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final keepAction = en.libraryArchiveKeepCategoryAction(travel.name);
+            expect(find.text(keepAction), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(keepAction), findsOneWidget);
+
+            await tester.tap(find.text(keepAction));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
       });
     });
 

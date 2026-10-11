@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +23,8 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -195,6 +196,8 @@ class _LibraryView extends ConsumerStatefulWidget {
 
 class _LibraryViewState extends ConsumerState<_LibraryView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
+  static const _logName = 'LibraryScreen';
+
   late int _activeTabIndex;
 
   /// Tabs of the current mode, in bar order.
@@ -301,6 +304,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     );
   }
 
+  /// Runs [operation] without awaiting it, logging a failure under this
+  /// screen's log route.
+  void _detach(Future<void> operation, String description) => runDetached(
+    operation,
+    description,
+    logName: _logName,
+    category: LogCategory.ui,
+  );
+
   Future<void> _confirmEmptyTrash(
     BuildContext context,
     ClipsLibraryBloc clipsBloc, {
@@ -319,7 +331,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       onSecondaryPressed: () => navigator.pop(false),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
     clipsBloc.add(const ClipsLibraryEmptyTrash());
   }
 
@@ -379,9 +391,8 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       ],
     );
 
-    if (selected == null) return;
+    if (selected == null || !context.mounted) return;
     if (selected == _gridSizeMenuValue) {
-      if (!context.mounted) return;
       await _openGridSizeMenu(context, clipsBloc, currentColumns);
       return;
     }
@@ -422,14 +433,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (columns == null) return;
     if (!context.mounted) return;
     clipsBloc.add(ClipsLibraryGridColumnsChanged(columns));
-    _announceGridColumns(context, columns);
-  }
-
-  void _announceGridColumns(BuildContext context, int columns) {
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       context.l10n.libraryGridSizeColumns(columns),
-      Directionality.of(context),
+      description: 'announce library grid columns',
+      logName: _logName,
     );
   }
 
@@ -442,6 +450,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     if (!widget.selectionMode) {
       await ref.read(videoPublishProvider.notifier).clearAll();
+      if (!mounted) return;
 
       final clipManagerNotifier = ref.read(clipManagerProvider.notifier);
       // Drop unreadable stills (deleted / zero-byte captures), then collapse
@@ -679,6 +688,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
             clipsState: clipsState,
           );
 
+          void createVideo() => _detach(
+            _createVideoFromSelected(
+              context,
+              selectedClips: clipsState.selectedClips,
+              clipsBloc: clipsBloc,
+            ),
+            'create video from selected library clips',
+          );
+
           return Scaffold(
             backgroundColor: context.vineColors.surface,
             body: Stack(
@@ -706,11 +724,14 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 context.go(VideoFeedPage.pathForIndex(0));
                               }
                             },
-                            onOpenSortMenu: () => _openSortMenu(
-                              context,
-                              clipsBloc,
-                              clipsState.clipSort,
-                              clipsState.gridColumnCount,
+                            onOpenSortMenu: () => _detach(
+                              _openSortMenu(
+                                context,
+                                clipsBloc,
+                                clipsState.clipSort,
+                                clipsState.gridColumnCount,
+                              ),
+                              'open library sort menu',
                             ),
                             onEnterSelectionMode: () => clipsBloc.add(
                               const ClipsLibraryEnterSelectionMode(),
@@ -718,24 +739,33 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             isTrashFilterActive: clipsState.isShowingTrash,
                             onEmptyTrash: clipsState.trashedClips.isEmpty
                                 ? null
-                                : () => _confirmEmptyTrash(
-                                    context,
-                                    clipsBloc,
-                                    trashedCount:
-                                        clipsState.trashedClips.length,
+                                : () => _detach(
+                                    _confirmEmptyTrash(
+                                      context,
+                                      clipsBloc,
+                                      trashedCount:
+                                          clipsState.trashedClips.length,
+                                    ),
+                                    'empty library trash',
                                   ),
                             onManageActiveCategory: activeCategory == null
                                 ? null
-                                : () => ClipCategoryActions.runManageFlow(
-                                    context: context,
-                                    bloc: clipsBloc,
-                                    category: activeCategory,
+                                : () => _detach(
+                                    ClipCategoryActions.runManageFlow(
+                                      context: context,
+                                      bloc: clipsBloc,
+                                      category: activeCategory,
+                                    ),
+                                    'manage library category',
                                   ),
                             onMoveSelectedClips: hasVisibleSelection
-                                ? () => ClipCategoryActions.runMoveFlow(
-                                    context: context,
-                                    bloc: clipsBloc,
-                                    clipIds: visibleSelectedClipIds,
+                                ? () => _detach(
+                                    ClipCategoryActions.runMoveFlow(
+                                      context: context,
+                                      bloc: clipsBloc,
+                                      clipIds: visibleSelectedClipIds,
+                                    ),
+                                    'move selected library clips',
                                   )
                                 : null,
                             onDeleteSelectedClips: hasVisibleSelection
@@ -756,11 +786,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
-                            onCreateVideo: () => _createVideoFromSelected(
-                              context,
-                              selectedClips: clipsState.selectedClips,
-                              clipsBloc: clipsBloc,
-                            ),
+                            onCreateVideo: createVideo,
                           ),
                         ),
                         _CreateVideoBar(
@@ -770,11 +796,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                               isClipsTabActive &&
                               selectedCount > 0,
                           selectedCount: selectedCount,
-                          onPressed: () => _createVideoFromSelected(
-                            context,
-                            selectedClips: clipsState.selectedClips,
-                            clipsBloc: clipsBloc,
-                          ),
+                          onPressed: createVideo,
                         ),
                       ],
                     ),
@@ -924,10 +946,7 @@ class _LibraryContent extends StatelessWidget {
       borderRadius: const BorderRadius.all(
         Radius.circular(VineTheme.shellInnerCornerRadius),
       ),
-      child: Material(
-        color: tabBackgroundColor,
-        child: content,
-      ),
+      child: Material(color: tabBackgroundColor, child: content),
     );
   }
 }
