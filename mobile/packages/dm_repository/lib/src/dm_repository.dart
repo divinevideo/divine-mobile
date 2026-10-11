@@ -978,6 +978,22 @@ class DmRepository {
   /// never closed.
   Stream<void> get retryableOutgoingWork => _retryableWorkController.stream;
 
+  /// Each room [_dissolveRoomOfMentions] took apart, with the conversations
+  /// its messages went to. App-scoped like [historyRecoveryStream]; never
+  /// closed.
+  final StreamController<({String roomId, Set<String> movedTo})>
+  _refiledRoomsController =
+      StreamController<({String roomId, Set<String> movedTo})>.broadcast();
+
+  /// Emits the conversations the messages of [conversationId] went to when it
+  /// is taken apart: every message in it turned out to answer a smaller
+  /// conversation, so it was never a room (#10037). A screen showing it has
+  /// nothing left to show there.
+  Stream<Set<String>> watchRefiledFrom(String conversationId) =>
+      _refiledRoomsController.stream
+          .where((refiled) => refiled.roomId == conversationId)
+          .map((refiled) => refiled.movedTo);
+
   void _notifyRetryableWork() {
     if (!_retryableWorkController.isClosed) {
       _retryableWorkController.add(null);
@@ -3497,7 +3513,7 @@ class DmRepository {
         // putting one back under its parent ships behind the same flag.
         // TODO(realmeylisdev): Remove with the groupMessages flag (#8269).
         final refilesMentions = _receivesPeerRooms();
-        final refiledInto = <String>{};
+        final refiledRooms = <String, Set<String>>{};
         await _conversationsDao.runInTransaction(() async {
           // Re-check dedup inside transaction (TOCTOU protection). The skip is
           // logged after the transaction below; logging here too would emit one
@@ -3593,9 +3609,11 @@ class DmRepository {
               ...?_roomsAwaitingReplyTarget[rumor.id],
             }) {
               if (roomId == conversationId) continue;
-              refiledInto.addAll(
-                await _dissolveRoomOfMentions(roomId, ownerPubkey),
+              final movedTo = await _dissolveRoomOfMentions(
+                roomId,
+                ownerPubkey,
               );
+              if (movedTo.isNotEmpty) refiledRooms[roomId] = movedTo;
             }
             // And this one may be such a reply itself. A room the user has
             // written in is never taken apart, so it is not worth watching.
@@ -3656,8 +3674,19 @@ class DmRepository {
         if (refilesMentions) _roomsAwaitingReplyTarget.remove(rumor.id);
         // A soft-deleted reply can be the newest one moved; the preview has
         // to come from the newest message still shown.
-        for (final refiledConversationId in refiledInto) {
+        for (final refiledConversationId in {
+          for (final movedTo in refiledRooms.values) ...movedTo,
+        }) {
           await _refreshConversationPreview(refiledConversationId);
+        }
+        // After the commit: a listener opens the conversation it is told
+        // about, and must find the messages there.
+        for (final refiled in refiledRooms.entries) {
+          if (_refiledRoomsController.isClosed) break;
+          _refiledRoomsController.add((
+            roomId: refiled.key,
+            movedTo: refiled.value,
+          ));
         }
 
         // Advance sync boundaries in BOTH clocks, because they answer two

@@ -419,6 +419,26 @@ void main() {
       expect(oneToOne?.isRead, isFalse);
     });
 
+    test('tells whoever is showing the room where its messages went', () async {
+      final parent = hello();
+      await deliver(ccBob(parent), authorSecret: _aliceSecret);
+      final refiledInto = <Set<String>>[];
+      final subscription = repository
+          .watchRefiledFrom(wideRoomId)
+          .listen(refiledInto.add);
+      addTearDown(subscription.cancel);
+
+      await deliver(parent, authorSecret: _aliceSecret);
+      await pumpEventQueue();
+
+      expect(
+        refiledInto,
+        equals([
+          {oneToOneId},
+        ]),
+      );
+    });
+
     test('brings the reactions on it along', () async {
       final parent = hello();
       final reply = ccBob(parent);

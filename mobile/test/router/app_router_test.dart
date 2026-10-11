@@ -714,6 +714,9 @@ void main() {
         () => mockDmRepository.watchOutgoing(any()),
       ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
       when(
+        () => mockDmRepository.watchRefiledFrom(any()),
+      ).thenAnswer((_) => const Stream<Set<String>>.empty());
+      when(
         () => mockDmRepository.countMessagesInConversation(any()),
       ).thenAnswer((_) async => 0);
       when(

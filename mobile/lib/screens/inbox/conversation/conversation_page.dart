@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_participants_cubit.dart';
+import 'package:openvine/blocs/dm/conversation/conversation_refile_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -253,10 +254,35 @@ class _ConversationBlocScope extends ConsumerWidget {
             confirmationRepository: confirmationRepository,
           ),
         ),
+        // Same identity-keying as ConversationBloc, including conversationId.
+        BlocProvider<ConversationRefileCubit>(
+          key: ValueKey((
+            conversationId,
+            dmRepository,
+            currentPubkey,
+            'refile',
+          )),
+          create: (_) => ConversationRefileCubit(
+            dmRepository: dmRepository,
+            conversationId: conversationId,
+          ),
+        ),
       ],
-      child: ConversationView(
-        participantPubkeys: participantPubkeys,
-        subject: subject,
+      child: BlocListener<ConversationRefileCubit, Set<String>>(
+        // The messages on screen were moved under the conversation they
+        // answer and this one no longer exists (#10037). Left open, it is an
+        // empty thread whose composer still writes to everyone it named.
+        listener: (context, movedTo) {
+          if (movedTo.length == 1) {
+            context.pushReplacement(ConversationPage.pathForId(movedTo.single));
+          } else {
+            context.go(InboxPage.path);
+          }
+        },
+        child: ConversationView(
+          participantPubkeys: participantPubkeys,
+          subject: subject,
+        ),
       ),
     );
   }
