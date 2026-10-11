@@ -76,7 +76,9 @@ extension _AccountSignOut on AuthService {
             prefs.containsKey(PendingAccountCleanup.storageKey) ||
             prefs.containsKey(TermsAcceptanceKeys.ageVerified16Plus) ||
             prefs.containsKey(TermsAcceptanceKeys.termsAcceptedAt) ||
-            UserDataCleanupService.userSpecificKeys.any(prefs.containsKey) ||
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(
+              prefs,
+            ) ||
             prefs.get(kSessionRecoveryAnchorKey) !=
                 (!deleteKeys ? leavingNpub : null)) {
           throw const UserDataCleanupException(
@@ -172,7 +174,7 @@ extension _AccountSignOut on AuthService {
           prefs.containsKey(PendingAccountCleanup.storageKey) ||
           prefs.containsKey(TermsAcceptanceKeys.ageVerified16Plus) ||
           prefs.containsKey(TermsAcceptanceKeys.termsAcceptedAt) ||
-          UserDataCleanupService.userSpecificKeys.any(prefs.containsKey) ||
+          UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs) ||
           prefs.containsKey(kSessionRecoveryAnchorKey)) {
         throw const UserDataCleanupException(
           'Could not verify complete ownerless sign out',

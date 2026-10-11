@@ -210,6 +210,24 @@ class UserDataCleanupService {
     ...TermsAcceptanceKeys.all,
   ];
 
+  /// Checks for retained account preferences after live services have reset.
+  ///
+  /// Reloading the content filter recreates its completed-migration marker
+  /// even when cleanup removed both preference payloads. That exact empty
+  /// state is safe to settle; incomplete markers and retained settings are not.
+  /// The marker remains account-scoped and cleanup removes it before reset.
+  static bool hasRetainedUserSpecificDataAfterReset(SharedPreferences prefs) {
+    return userSpecificKeys.any((key) {
+      if (!prefs.containsKey(key)) return false;
+      return key != ContentFilterService.filterMigratedStorageKey ||
+          prefs.get(key) != true ||
+          prefs.containsKey(ContentFilterService.filterPrefsStorageKey) ||
+          prefs.containsKey(
+            ContentFilterService.legacyAdultContentPreferenceStorageKey,
+          );
+    });
+  }
+
   /// Legacy owner-scoped preference keys that contain user data but may still
   /// need to survive a same-user non-destructive logout.
   static const List<String> ownerScopedLegacyKeys = ['vine_drafts'];

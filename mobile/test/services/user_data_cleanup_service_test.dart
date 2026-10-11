@@ -128,6 +128,126 @@ void main() {
       });
     });
 
+    group('account preferences after live services reset', () {
+      test(
+        'accepts an empty account state and preserves device preferences',
+        () async {
+          await prefs.setBool('analytics_enabled', true);
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isFalse,
+          );
+          expect(prefs.getBool('analytics_enabled'), isTrue);
+        },
+      );
+
+      test('accepts only the completed empty filter migration state', () async {
+        await prefs.setBool(
+          ContentFilterService.filterMigratedStorageKey,
+          true,
+        );
+
+        expect(
+          UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+          isFalse,
+        );
+        expect(
+          prefs.get(ContentFilterService.filterMigratedStorageKey),
+          isTrue,
+        );
+        // The terminal exception must not disable the incoming-account sweep.
+        expect(service.shouldClearDataForUser('4' * 64), isTrue);
+      });
+
+      for (final marker in <({String name, Object value})>[
+        (name: 'incomplete', value: false),
+        (name: 'string', value: 'true'),
+        (name: 'integer', value: 1),
+        (name: 'list', value: <String>['true']),
+      ]) {
+        test('rejects a ${marker.name} filter migration marker', () async {
+          SharedPreferences.setMockInitialValues({
+            ContentFilterService.filterMigratedStorageKey: marker.value,
+          });
+          prefs = await SharedPreferences.getInstance();
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.get(ContentFilterService.filterMigratedStorageKey),
+            marker.value,
+          );
+        });
+      }
+
+      for (final payload in ['{}', 'unreadable filter settings']) {
+        test('rejects retained filter settings: $payload', () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setString(
+            ContentFilterService.filterPrefsStorageKey,
+            payload,
+          );
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.getString(ContentFilterService.filterPrefsStorageKey),
+            payload,
+          );
+        });
+      }
+
+      test(
+        'rejects a retained legacy adult setting with a completed marker',
+        () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setInt(
+            ContentFilterService.legacyAdultContentPreferenceStorageKey,
+            0,
+          );
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.getInt(
+              ContentFilterService.legacyAdultContentPreferenceStorageKey,
+            ),
+            0,
+          );
+        },
+      );
+
+      test(
+        'rejects other retained account preferences with an empty filter',
+        () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setString(LanguagePreferenceService.prefsKey, 'es');
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(prefs.getString(LanguagePreferenceService.prefsKey), 'es');
+        },
+      );
+    });
+
     group('clearUserSpecificData', () {
       const verificationPubkey =
           'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
