@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -333,6 +334,140 @@ void main() {
         expect(callCount, equals(2));
       },
     );
+
+    testWidgets('observes a failing initial download instead of leaking it', (
+      tester,
+    ) async {
+      when(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenThrow(Exception('download crashed'));
+
+      await pumpSheet(tester, video: _createTestVideo());
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pump();
+      await tester.pump();
+
+      verify(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).called(1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('observes a failing Open Settings instead of leaking it', (
+      tester,
+    ) async {
+      when(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) async => const WatermarkDownloadPermissionDenied());
+      when(
+        () => mockPermissions.openAppSettings(),
+      ).thenThrow(Exception('settings unavailable'));
+
+      await pumpSheet(tester, video: _createTestVideo());
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.watermarkDownloadOpenSettings));
+      await tester.pump();
+      await tester.pump();
+
+      verify(() => mockPermissions.openAppSettings()).called(1);
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(l10n.watermarkDownloadPhotosAccessNeeded),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('observes a failing restart after returning from Settings', (
+      tester,
+    ) async {
+      when(
+        () => mockPermissions.openAppSettings(),
+      ).thenAnswer((_) async => true);
+
+      var callCount = 0;
+      when(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) {
+          return const WatermarkDownloadPermissionDenied();
+        }
+        throw Exception('restart crashed');
+      });
+
+      await pumpSheet(tester, video: _createTestVideo());
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.watermarkDownloadOpenSettings));
+      await tester.pump();
+
+      tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(callCount, equals(2));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('observes a failing share instead of leaking it', (
+      tester,
+    ) async {
+      when(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) async => const WatermarkDownloadSuccess('/tmp/v.mp4'));
+
+      const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+      var shareCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(shareChannel, (call) async {
+            shareCalls++;
+            throw PlatformException(code: 'share_failed');
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(shareChannel, null),
+      );
+
+      await pumpSheet(tester, video: _createTestVideo());
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.watermarkDownloadShare));
+      await tester.pump();
+      await tester.pump();
+
+      expect(shareCalls, equals(1));
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(l10n.watermarkDownloadSavedToCameraRoll),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('Dismiss button closes the sheet', (tester) async {
       when(
