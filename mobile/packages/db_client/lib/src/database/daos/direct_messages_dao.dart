@@ -213,6 +213,45 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         );
   }
 
+  /// Replies stored in a group that answer a message [ownerPubkey] does not
+  /// hold: the missing message's id, mapped to the groups holding such a
+  /// reply.
+  ///
+  /// A reply stored before the message it answers cannot yet be told from the
+  /// first message of a room, and `reply_to_id` has no index to find it by
+  /// when that message arrives. A caller reads this once and keeps it.
+  ///
+  /// Groups the account has written in are left out: the caller only wants
+  /// rooms it may still take apart.
+  Future<Map<String, Set<String>>> groupRepliesMissingTheirTarget({
+    required String ownerPubkey,
+  }) async {
+    final rows = await customSelect(
+      '''
+      SELECT m.reply_to_id AS target_id, m.conversation_id AS conversation_id
+      FROM direct_messages m
+      INNER JOIN conversations c
+        ON c.id = m.conversation_id AND c.owner_pubkey = m.owner_pubkey
+      WHERE m.owner_pubkey = ?1
+        AND c.is_group = 1
+        AND c.current_user_has_sent = 0
+        AND m.reply_to_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM direct_messages target
+          WHERE target.id = m.reply_to_id AND target.owner_pubkey = ?1
+        )
+      ''',
+      variables: [Variable.withString(ownerPubkey)],
+    ).get();
+    final groupsByTarget = <String, Set<String>>{};
+    for (final row in rows) {
+      groupsByTarget
+          .putIfAbsent(row.read<String>('target_id'), () => <String>{})
+          .add(row.read<String>('conversation_id'));
+    }
+    return groupsByTarget;
+  }
+
   /// Get messages for a conversation, newest first.
   ///
   /// Excludes confirmed soft-deleted messages while retaining own messages
