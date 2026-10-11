@@ -540,6 +540,7 @@ class DmRepository {
     DmRepositoryErrorReporter? errorReporter,
     DmReactionsRepository? reactionsRepository,
     DmConversationRemovalPolicy? removalPolicy,
+    bool Function()? receivesPeerRooms,
     String? dmInboxRelayUrl,
     List<String> dmInboxDiscoveryRelays = const <String>[],
     List<String> dmInboxLookupRelays = const <String>[],
@@ -566,6 +567,7 @@ class DmRepository {
        _errorReporter = errorReporter,
        _reactionsRepository = reactionsRepository,
        _removalPolicy = removalPolicy ?? allowAllConversationRemoval,
+       _receivesPeerRooms = receivesPeerRooms ?? _neverReceivePeerRooms,
        _dmInboxRelayUrl = dmInboxRelayUrl,
        _dmInboxDiscoveryRelays = dmInboxDiscoveryRelays,
        _dmInboxLookupRelays = dmInboxLookupRelays,
@@ -644,6 +646,15 @@ class DmRepository {
   /// it did before the policy existed; production injects the moderation
   /// identities via `dmRepositoryProvider`.
   final DmConversationRemovalPolicy _removalPolicy;
+
+  /// Whether a peer's rumor may open a room this install does not hold yet
+  /// (#7338). Read on every rumor, so a runtime switch applies to the next
+  /// one. Off, such a rumor stays in the 1:1 with its sender, as it did before
+  /// rooms were received. Defaults to off; production passes the
+  /// `groupMessages` flag, which gates starting a room too.
+  final bool Function() _receivesPeerRooms;
+
+  static bool _neverReceivePeerRooms() => false;
 
   /// The stable relay URL advertised by the kind-10050 publish (the
   /// environment's canonical DM relay, mirroring the kind-10002 bootstrap).
@@ -777,6 +788,13 @@ class DmRepository {
   /// capture ring keeps every line whatever the level and a sender chooses the
   /// ids, so a flood of unresolvable retractions must not be able to fill it.
   static const int maxLoggedDeferredDeletions = 64;
+
+  /// Most participants, sender included, a received rumor may name and still be
+  /// filed as a room. NIP-17 advises another messaging scheme for a group of
+  /// more than 10; beyond it a rumor costs the stored participant list, the
+  /// reply fan-out and one new request row per set a hostile sender varies,
+  /// so it stays in the 1:1 with its sender (#7338).
+  static const int maxRoomParticipants = 10;
 
   /// Durable queue handle for one recipient of a group send.
   ///
@@ -3234,49 +3252,8 @@ class DmRepository {
           return;
         }
 
-        // Extract conversation participants from pubkey + p tags, then
-        // resolve against existing conversations to prevent duplicates
-        // from non-compliant clients that add extra p-tags.
-        final rawParticipants = _extractParticipants(rumor);
-        if (rawParticipants.length < 2) {
-          await _recordProcessedWrap(
-            giftWrapEvent.id,
-            ownerPubkey: ownerPubkey,
-          );
-          Log.debug(
-            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
-            'from ${pubkeyForLogs(rumor.pubkey)}: its p tags name nobody but '
-            'the sender, so it has no counterparty',
-            category: LogCategory.system,
-          );
-          return;
-        }
-
-        final participants = await _resolveConversationParticipants(
-          rawParticipants,
-          rumor.pubkey,
-        );
-
-        // Reject self-conversations (all participants are the same pubkey).
-        // The count above compares strings exactly, so it lets through a list
-        // that only spells one key in different letter cases.
-        if (!containsDistinctPubkeys(participants)) {
-          await _recordProcessedWrap(
-            giftWrapEvent.id,
-            ownerPubkey: ownerPubkey,
-          );
-          Log.debug(
-            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
-            'from ${pubkeyForLogs(rumor.pubkey)}: every participant it '
-            'resolves to is the same key, so it has no counterparty',
-            category: LogCategory.system,
-          );
-          return;
-        }
-
-        final conversationId = computeConversationId(participants);
-
-        // Extract common tags
+        // Extract common tags. Read before the participants are resolved: the
+        // reply target decides whether an extra p tag is a mention (#7338).
         String? replyToId;
         String? subject;
         String? sendBatchId;
@@ -3300,6 +3277,48 @@ class DmRepository {
             }
           }
         }
+
+        // Extract conversation participants from pubkey + p tags, then
+        // resolve them against the rooms and mentions this install knows.
+        final rawParticipants = _extractParticipants(rumor);
+        if (rawParticipants.length < 2) {
+          await _recordProcessedWrap(
+            giftWrapEvent.id,
+            ownerPubkey: ownerPubkey,
+          );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: its p tags name nobody but '
+            'the sender, so it has no counterparty',
+            category: LogCategory.system,
+          );
+          return;
+        }
+
+        final participants = await _resolveConversationParticipants(
+          rawParticipants,
+          rumor.pubkey,
+          replyToId: replyToId,
+        );
+
+        // Reject self-conversations (all participants are the same pubkey).
+        // The count above compares strings exactly, so it lets through a list
+        // that only spells one key in different letter cases.
+        if (!containsDistinctPubkeys(participants)) {
+          await _recordProcessedWrap(
+            giftWrapEvent.id,
+            ownerPubkey: ownerPubkey,
+          );
+          Log.debug(
+            'Discarding NIP-17 DM ${rumor.id} (gift wrap ${giftWrapEvent.id}) '
+            'from ${pubkeyForLogs(rumor.pubkey)}: every participant it '
+            'resolves to is the same key, so it has no counterparty',
+            category: LogCategory.system,
+          );
+          return;
+        }
+
+        final conversationId = computeConversationId(participants);
 
         // Extract file metadata for kind 15
         final fileMetadata = rumor.kind == EventKind.fileMessage
@@ -8966,6 +8985,10 @@ class DmRepository {
     }
   }
 
+  /// Whether a peer's rumor may open a room this install does not hold yet
+  /// (#7338), as the injected switch answers now.
+  bool get receivesPeerRooms => _receivesPeerRooms();
+
   /// Whether [conversation] is one the injected policy refuses to remove.
   ///
   /// Exposed so a caller can withdraw a destructive affordance before offering
@@ -9863,24 +9886,34 @@ class DmRepository {
 
   /// Resolves the participant list for conversation routing.
   ///
-  /// A rumor the current user authored always resolves to its own pubkey +
-  /// p-tags, which is how NIP-17 defines a room. Its self-addressed copy is
-  /// the only record of that message on an install that does not hold the
-  /// room yet, so it cannot wait for a conversation row to exist (#8271).
+  /// NIP-17 defines a room as the set of `pubkey` + `p` tags, so a rumor
+  /// naming more than two participants resolves to that set: always for a
+  /// rumor the user authored, whose self-addressed copy may be the only record
+  /// of the room on this install (#8271), and for a peer's rumor unless one of
+  /// these keeps it in the canonical 1:1 with the sender:
   ///
-  /// When a peer's rumor has more p-tags than a standard 1:1 (sender + us),
-  /// determines whether to route to the full participant group (if one
-  /// already exists) or to the canonical 1:1 pair.
+  /// * it names more than [maxRoomParticipants], sender included.
+  /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
+  ///   holding it could never be replied to.
+  /// * its p tags omit the current user, so it is not a room we are in.
+  /// * receiving rooms is switched off ([receivesPeerRooms]).
   ///
-  /// Priority: existing group → existing 1:1 → default to 1:1.
+  /// A mention is filed under the conversation it answers instead: a reply
+  /// ([replyToId]) to a stored message in a strictly smaller conversation that
+  /// the rumor fully contains, the NIP-10 reply-mention shape that made
+  /// clients widen 1:1s (#2740). Only someone in that conversation can add to
+  /// it, so a mention from anyone else stays in the 1:1 with its sender.
   ///
-  /// Defaulting to 1:1 when no conversation exists prevents phantom
-  /// groups caused by non-compliant clients adding extra p-tags to
-  /// what should be a 1:1 DM.
+  /// A room this install already holds wins before any is asked. A client
+  /// that widens a 1:1 with extra p tags and no reply looks exactly like a
+  /// room and is filed as one (#7338). Waiting for a row to exist made a
+  /// room's first message collapse into a 1:1 with its speaker, so where it
+  /// landed depended on who spoke first.
   Future<List<String>> _resolveConversationParticipants(
     List<String> extractedParticipants,
-    String senderPubkey,
-  ) async {
+    String senderPubkey, {
+    String? replyToId,
+  }) async {
     // Checked first: the 1:1 fallbacks below pair the user with the sender,
     // which for our own rumor is [self, self] and gets discarded.
     if (_userPubkey == senderPubkey) return extractedParticipants;
@@ -9890,8 +9923,6 @@ class DmRepository {
     // Standard 1:1 message — no ambiguity.
     if (extractedParticipants.length <= 2) return canonical1to1;
 
-    // Extra p-tags present. Check if a group conversation with the
-    // full participant set already exists — if so, it's a genuine group.
     final fullId = computeConversationId(extractedParticipants);
     final existingFull = await _conversationsDao.getConversation(
       fullId,
@@ -9899,17 +9930,68 @@ class DmRepository {
     );
     if (existingFull != null) return extractedParticipants;
 
-    // No existing group. Check if a 1:1 conversation exists.
-    final canonical1to1Id = computeConversationId(canonical1to1);
-    final existing1to1 = await _conversationsDao.getConversation(
-      canonical1to1Id,
+    if (extractedParticipants.length > maxRoomParticipants) {
+      return canonical1to1;
+    }
+
+    if (!extractedParticipants.every(NostrHexUtils.isValidPubkey)) {
+      return canonical1to1;
+    }
+
+    // Hex is case-insensitive. Keyed on the spelling a client chose, the same
+    // people written in another letter case would open a second room.
+    final room = {
+      for (final pubkey in extractedParticipants) pubkey.toLowerCase(),
+    }.toList()..sort();
+
+    final namesCurrentUser = room.any(
+      (pubkey) => pubkeysEqual(pubkey, _userPubkey),
+    );
+    if (!namesCurrentUser) return canonical1to1;
+
+    if (replyToId != null) {
+      final answered = await _smallerConversationAnsweredBy(
+        replyToId,
+        room.toSet(),
+      );
+      if (answered != null) {
+        final senderIsMember = answered.any(
+          (pubkey) => pubkeysEqual(pubkey, senderPubkey),
+        );
+        return senderIsMember ? answered : canonical1to1;
+      }
+    }
+    return _receivesPeerRooms() ? room : canonical1to1;
+  }
+
+  /// The participants of the conversation holding the stored message
+  /// [replyToId], when [room] strictly widens it, which makes a reply naming
+  /// [room] a mention. Null when the reply is not one.
+  Future<List<String>?> _smallerConversationAnsweredBy(
+    String replyToId,
+    Set<String> room,
+  ) async {
+    final parent = await _directMessagesDao.getMessageById(
+      replyToId,
       ownerPubkey: _ownerPubkey,
     );
-    if (existing1to1 != null) return canonical1to1;
-
-    // Neither exists. Default to 1:1 — prevents phantom groups from
-    // non-compliant clients that add extra p-tags to 1:1 DMs.
-    return canonical1to1;
+    if (parent == null) return null;
+    final parentConversation = await _conversationsDao.getConversation(
+      parent.conversationId,
+      ownerPubkey: _ownerPubkey,
+    );
+    if (parentConversation == null) return null;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(parentConversation.participantPubkeys);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! List || decoded.any((value) => value is! String)) {
+      return null;
+    }
+    final answered = decoded.cast<String>();
+    return isMentionOfWiderRoom(answered.toSet(), room) ? answered : null;
   }
 
   /// Extracts Kind 15 file metadata from event tags.

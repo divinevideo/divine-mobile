@@ -22,6 +22,8 @@ import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/bookmark_signer_adapter.dart';
@@ -852,6 +854,10 @@ DmRepository dmRepository(Ref ref) {
   // Advertise the environment's stable DM relay (same source as the
   // kind-10002 bootstrap), not the volatile connected-relay getter. #4974.
   final dmInboxRelayUrl = ref.read(currentEnvironmentProvider).relayUrl;
+  // Read, not watched: the service is keepAlive and stable, and the switch is
+  // sampled per rumor, so a flag flip applies without rebuilding this
+  // repository.
+  final featureFlagService = ref.read(featureFlagServiceProvider);
 
   final repository = DmRepository(
     nostrClient: nostrService,
@@ -878,6 +884,11 @@ DmRepository dmRepository(Ref ref) {
     // this repository, so putting the policy here is what stops a caller
     // inheriting nothing (#8391). Current AND retired keys, matching #8302.
     removalPolicy: isModerationAccount,
+    // TODO(#8269): Remove with the groupMessages flag. A room someone else
+    // starts reaches the group surfaces that still assume the user picked its
+    // members, so receiving one ships behind the same flag as starting one.
+    receivesPeerRooms: () =>
+        featureFlagService.isEnabled(FeatureFlag.groupMessages),
     dmInboxRelayUrl: dmInboxRelayUrl,
     dmInboxTaggedRelays: IndexerRelayConfig.dmInboxTaggedRelays,
     dmInboxDiscoveryRelays: IndexerRelayConfig.dmInboxDiscoveryRelays,

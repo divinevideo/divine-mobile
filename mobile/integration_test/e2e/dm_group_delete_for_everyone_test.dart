@@ -113,6 +113,9 @@ void main() {
       signer: signer,
       messageService: messageService,
       reactionsRepository: reactions,
+      // Production gates this on the groupMessages flag; these parties play
+      // installs that have it on, so a room a peer starts is filed as one.
+      receivesPeerRooms: () => true,
     );
     addTearDown(repository.stopListening);
     addTearDown(nostr.relayPool.removeAll);
@@ -192,12 +195,9 @@ void main() {
         // same p-tag SET in a rotated ORDER and a NIP-01 id hashes the tags
         // array — and this lookup could only ever resolve for one of them.
         //
-        // Deliberately NOT keyed on the conversation id: an inbound group DM
-        // is still filed as a 1:1 with the sender
-        // (`_resolveConversationParticipants` falls back to `canonical1to1`
-        // when no group conversation exists locally yet), which is the
-        // separate, already-open #7338. Message identity is what #8188 is
-        // about, and it is what a retraction names.
+        // Deliberately NOT keyed on the conversation id: which conversation
+        // an inbound group DM is filed under is #7338's concern. Message
+        // identity is what #8188 is about, and it is what a retraction names.
         final bothHoldIt = await waitFor(() async {
           final b = await peerB.messages.getMessageById(
             sharedId,
@@ -315,15 +315,12 @@ void main() {
         );
         expect(published.success, isTrue);
 
-        // Until #7338 lands, each recipient files an inbound group DM under
-        // its local 1:1 fallback conversation with the sender.
+        // Each recipient files the inbound group DM under the room its rumor
+        // names (#7338), so the reaction lands in that room too.
         Future<int> reactionCount(_Party party) async =>
             (await party.reactionsDao
                     .watchForConversation(
-                      conversationId: DmRepository.computeConversationId([
-                        sender.pubkey,
-                        party.pubkey,
-                      ]),
+                      conversationId: groupId,
                       ownerPubkey: party.pubkey,
                     )
                     .first)
@@ -380,14 +377,9 @@ void main() {
               3,
         );
 
-        // The reactor opens the room first, so it holds the group row and
-        // files the author's message under it rather than under a 1:1 (#7338).
+        // The reactor has never written to this room. It files the author's
+        // message under the room because the rumor names all three (#7338).
         final groupId = DmRepository.computeConversationId([pubA, pubB, pubC]);
-        final opened = await reactor.repository.sendGroupMessage(
-          recipientPubkeys: [author.pubkey, bystander.pubkey],
-          content: 'opening the room',
-        );
-        expect(opened.where((r) => r.success), hasLength(2));
 
         final sent = await author.repository.sendGroupMessage(
           recipientPubkeys: [reactor.pubkey, bystander.pubkey],

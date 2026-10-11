@@ -72,8 +72,8 @@ void main() {
         FeatureFlag.postPublishConfirmationTreatment.audience,
         FeatureFlagAudience.internal,
       );
-      // Sending to a group works before receiving one does (#7338), so the
-      // switch stays out of the user-facing list until both halves ship.
+      // Group messaging is not ready to turn on for everyone (#8269), so the
+      // switch stays out of the user-facing list until it is.
       expect(FeatureFlag.groupMessages.audience, FeatureFlagAudience.internal);
     });
 
