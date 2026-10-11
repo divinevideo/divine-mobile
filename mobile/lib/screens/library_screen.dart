@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +23,8 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -426,10 +427,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
   }
 
   void _announceGridColumns(BuildContext context, int columns) {
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       context.l10n.libraryGridSizeColumns(columns),
-      Directionality.of(context),
+      description: 'announce library grid columns',
+      logName: 'LibraryScreen',
     );
   }
 
@@ -706,11 +708,16 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 context.go(VideoFeedPage.pathForIndex(0));
                               }
                             },
-                            onOpenSortMenu: () => _openSortMenu(
-                              context,
-                              clipsBloc,
-                              clipsState.clipSort,
-                              clipsState.gridColumnCount,
+                            onOpenSortMenu: () => runDetached(
+                              _openSortMenu(
+                                context,
+                                clipsBloc,
+                                clipsState.clipSort,
+                                clipsState.gridColumnCount,
+                              ),
+                              'open library sort menu',
+                              logName: 'LibraryScreen',
+                              category: LogCategory.ui,
                             ),
                             onEnterSelectionMode: () => clipsBloc.add(
                               const ClipsLibraryEnterSelectionMode(),
@@ -718,11 +725,16 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             isTrashFilterActive: clipsState.isShowingTrash,
                             onEmptyTrash: clipsState.trashedClips.isEmpty
                                 ? null
-                                : () => _confirmEmptyTrash(
-                                    context,
-                                    clipsBloc,
-                                    trashedCount:
-                                        clipsState.trashedClips.length,
+                                : () => runDetached(
+                                    _confirmEmptyTrash(
+                                      context,
+                                      clipsBloc,
+                                      trashedCount:
+                                          clipsState.trashedClips.length,
+                                    ),
+                                    'empty library trash',
+                                    logName: 'LibraryScreen',
+                                    category: LogCategory.ui,
                                   ),
                             onManageActiveCategory: activeCategory == null
                                 ? null
@@ -756,10 +768,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
-                            onCreateVideo: () => _createVideoFromSelected(
-                              context,
-                              selectedClips: clipsState.selectedClips,
-                              clipsBloc: clipsBloc,
+                            onCreateVideo: () => runDetached(
+                              _createVideoFromSelected(
+                                context,
+                                selectedClips: clipsState.selectedClips,
+                                clipsBloc: clipsBloc,
+                              ),
+                              'create video from selected library clips',
+                              logName: 'LibraryScreen',
+                              category: LogCategory.ui,
                             ),
                           ),
                         ),
@@ -770,10 +787,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                               isClipsTabActive &&
                               selectedCount > 0,
                           selectedCount: selectedCount,
-                          onPressed: () => _createVideoFromSelected(
-                            context,
-                            selectedClips: clipsState.selectedClips,
-                            clipsBloc: clipsBloc,
+                          onPressed: () => runDetached(
+                            _createVideoFromSelected(
+                              context,
+                              selectedClips: clipsState.selectedClips,
+                              clipsBloc: clipsBloc,
+                            ),
+                            'create video from selected library clips',
+                            logName: 'LibraryScreen',
+                            category: LogCategory.ui,
                           ),
                         ),
                       ],
@@ -924,10 +946,7 @@ class _LibraryContent extends StatelessWidget {
       borderRadius: const BorderRadius.all(
         Radius.circular(VineTheme.shellInnerCornerRadius),
       ),
-      child: Material(
-        color: tabBackgroundColor,
-        child: content,
-      ),
+      child: Material(color: tabBackgroundColor, child: content),
     );
   }
 }

@@ -11,7 +11,6 @@ discarded_futures|lib/mixins/video_prefetch_mixin.dart	1
 discarded_futures|lib/nostr/transport/in_memory_transport.dart	2
 discarded_futures|lib/repositories/feed_repository_impl.dart	2
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
-discarded_futures|lib/screens/library_screen.dart	1
 discarded_futures|lib/screens/minor_account_review_screen.dart	5
 discarded_futures|lib/screens/other_profile_screen.dart	1
 discarded_futures|lib/screens/profile_screen_router.dart	1
