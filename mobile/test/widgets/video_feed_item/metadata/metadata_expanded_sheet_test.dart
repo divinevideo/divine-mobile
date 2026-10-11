@@ -957,6 +957,20 @@ void main() {
       expect(find.text('#'), findsNWidgets(2));
     });
 
+    testWidgetsWithSurfaceSize('omits hashtags over the length limit', (
+      tester,
+    ) async {
+      final pastedList = 'VineHashtagsMasterList' * 10;
+      final video = _makeVideo(hashtags: [pastedList, 'funny']);
+      await tester.pumpWidget(
+        buildSubject(child: MetadataTagsSection(video: video)),
+      );
+
+      expect(find.text('funny'), findsOneWidget);
+      expect(find.text(pastedList), findsNothing);
+      expect(find.text('#'), findsOneWidget);
+    });
+
     testWidgetsWithSurfaceSize('hides when no hashtags and not Classic', (
       tester,
     ) async {

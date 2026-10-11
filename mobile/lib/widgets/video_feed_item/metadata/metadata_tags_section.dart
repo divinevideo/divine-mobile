@@ -5,6 +5,7 @@
 // ABOUTME: surrounding container owns padding.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -32,7 +33,7 @@ class MetadataTagsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final allHashtags = video.allHashtags;
+    final allHashtags = video.displayableHashtags;
     final hasCategories = video.categories.isNotEmpty;
     final hasHashtags = allHashtags.isNotEmpty;
 
@@ -66,6 +67,16 @@ class MetadataTagsSection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Hashtags worth showing for a video.
+extension DisplayableHashtags on VideoEvent {
+  /// [VideoEvent.allHashtags] without tags over
+  /// [HashtagExtractor.maxHashtagLength]: events from older builds and other
+  /// clients can carry pasted lists thousands of characters long, which are
+  /// not useful to show or to open as a feed.
+  List<String> get displayableHashtags =>
+      allHashtags.where(HashtagExtractor.isWithinLengthLimit).toList();
 }
 
 /// A single tappable hashtag chip with green "#" prefix and bold tag name.
