@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/services/watermark_download_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/retry_after_settings_on_resume.dart';
 
@@ -51,11 +52,20 @@ class _WatermarkDownloadProgressSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => WatermarkDownloadProgressCubit(
-        service: ref.read(watermarkDownloadServiceProvider),
-        video: video,
-        watermarkText: watermarkText,
-      )..start(),
+      create: (_) {
+        final cubit = WatermarkDownloadProgressCubit(
+          service: ref.read(watermarkDownloadServiceProvider),
+          video: video,
+          watermarkText: watermarkText,
+        );
+        runDetached(
+          cubit.start(),
+          'start watermark download',
+          logName: 'WatermarkDownloadSheet',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: _WatermarkDownloadProgressView(ref: ref),
     );
   }
@@ -174,7 +184,12 @@ class _WatermarkDownloadProgressViewState
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () => _shareFile(result),
+            onPressed: () => runDetached(
+              _shareFile(result),
+              'share watermarked video',
+              logName: 'WatermarkDownloadSheet',
+              category: LogCategory.ui,
+            ),
             icon: const DivineIcon(
               icon: DivineIconName.share,
               color: VineTheme.onPrimary,
@@ -223,7 +238,12 @@ class _WatermarkDownloadProgressViewState
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: _openSettings,
+            onPressed: () => runDetached(
+              _openSettings(),
+              'open photo settings for watermark download',
+              logName: 'WatermarkDownloadSheet',
+              category: LogCategory.ui,
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: VineTheme.vineGreen,
               foregroundColor: VineTheme.onPrimary,
