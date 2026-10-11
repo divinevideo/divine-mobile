@@ -64,6 +64,38 @@ void main() {
       expect(snapshot.events.clear, throwsUnsupportedError);
     });
 
+    test('drops events a relay returns for another author', () async {
+      final foreign = Event.fromJson({
+        'id': 'd' * 64,
+        'pubkey': 'e' * 64,
+        'created_at': 1786000001,
+        'kind': 30005,
+        'tags': [
+          ['d', 'my_vine_list'],
+        ],
+        'content': '',
+        'sig': 'c' * 128,
+      });
+      final observed = <Event>[];
+      final controller = StreamController<Event>();
+      when(() => client.subscribe(any(), closeOnEose: true))
+          .thenAnswer((_) => controller.stream);
+
+      final pending = reader.read(
+        ownerPubkey: owner,
+        timeout: const Duration(seconds: 10),
+        onEventObserved: observed.add,
+      );
+      controller
+        ..add(foreign)
+        ..add(event);
+      unawaited(controller.close());
+      final snapshot = await pending;
+
+      expect(snapshot.events, [event]);
+      expect(observed, [event]);
+    });
+
     test('retains partial timeout results and cancels at the deadline', () {
       fakeAsync((async) {
         var cancellations = 0;

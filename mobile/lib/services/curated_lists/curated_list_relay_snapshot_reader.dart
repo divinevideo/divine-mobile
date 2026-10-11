@@ -89,6 +89,8 @@ final class CuratedListRelaySnapshotReader {
       });
       relaySubscription = subscription.listen(
         (event) {
+          // A relay may ignore the authors filter; only the owner's lists count.
+          if (event.pubkey != ownerPubkey) return;
           receivedEvents.add(event);
           onEventObserved?.call(event);
           Log.debug(
