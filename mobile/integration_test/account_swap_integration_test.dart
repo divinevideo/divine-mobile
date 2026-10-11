@@ -6,11 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
+import 'package:openvine/services/content_filter_service.dart';
 
 import 'helpers/native_account_test_scope.dart';
 
@@ -32,7 +35,29 @@ void main() {
       await setupAuth.createNewIdentity();
       final pubkeyA = setupAuth.currentPublicKeyHex;
 
+      // A live content filter is the production path that recreates an empty
+      // migration marker during sign-out. Exercise it with native key storage.
+      final contentFilter = setup.read(contentFilterServiceProvider);
+      await contentFilter.initialized;
+      await contentFilter.setPreference(
+        ContentLabel.spoiler,
+        ContentFilterPreference.hide,
+      );
+
       await setupAuth.signOut();
+      expect(setupAuth.currentPublicKeyHex, isNull);
+      expect(
+        contentFilter.getPreference(ContentLabel.spoiler),
+        ContentFilterPreference.warn,
+      );
+      expect(
+        scope.prefs.containsKey(ContentFilterService.filterPrefsStorageKey),
+        isFalse,
+      );
+      expect(
+        scope.prefs.get(ContentFilterService.filterMigratedStorageKey),
+        isTrue,
+      );
       await setupAuth.createNewIdentity();
       final pubkeyB = setupAuth.currentPublicKeyHex;
       setup.dispose();
