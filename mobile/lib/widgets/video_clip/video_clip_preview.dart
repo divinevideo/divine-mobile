@@ -16,6 +16,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
@@ -67,7 +68,12 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    runDetached(
+      _initializePlayer(),
+      'initialize clip preview player',
+      logName: 'VideoClipPreview',
+      category: LogCategory.video,
+    );
   }
 
   /// Initializes the video player and starts playback.
@@ -139,7 +145,12 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(controller.dispose());
+      runDetached(
+        controller.dispose(),
+        'dispose failed clip preview player',
+        logName: 'VideoClipPreview',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -157,8 +168,26 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
 
   @override
   void dispose() {
-    _stateSubscription?.cancel();
-    _controller?.dispose();
+    final stateSubscriptionCancellation = _stateSubscription?.cancel();
+    if (stateSubscriptionCancellation != null) {
+      runDetached(
+        stateSubscriptionCancellation,
+        'cancel clip preview state subscription',
+        logName: 'VideoClipPreview',
+        category: LogCategory.video,
+      );
+      _stateSubscription = null;
+    }
+    final controllerDisposal = _controller?.dispose();
+    if (controllerDisposal != null) {
+      runDetached(
+        controllerDisposal,
+        'dispose clip preview player',
+        logName: 'VideoClipPreview',
+        category: LogCategory.video,
+      );
+      _controller = null;
+    }
     super.dispose();
   }
 
