@@ -391,6 +391,45 @@ void main() {
       );
     });
 
+    testWidgets('observes a failing restart after returning from Settings', (
+      tester,
+    ) async {
+      when(
+        () => mockPermissions.openAppSettings(),
+      ).thenAnswer((_) async => true);
+
+      var callCount = 0;
+      when(
+        () => mockService.downloadWithWatermark(
+          video: any(named: 'video'),
+          watermarkText: any(named: 'watermarkText'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) {
+          return const WatermarkDownloadPermissionDenied();
+        }
+        throw Exception('restart crashed');
+      });
+
+      await pumpSheet(tester, video: _createTestVideo());
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.watermarkDownloadOpenSettings));
+      await tester.pump();
+
+      tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(callCount, equals(2));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('observes a failing share instead of leaking it', (
       tester,
     ) async {

@@ -92,7 +92,12 @@ class _WatermarkDownloadProgressViewState
       retry: () async {
         if (!mounted) return;
         cubit.reset();
-        await cubit.start();
+        runDetached(
+          cubit.start(),
+          'restart watermark download after settings',
+          logName: 'WatermarkDownloadSheet',
+          category: LogCategory.ui,
+        );
       },
     );
   }
