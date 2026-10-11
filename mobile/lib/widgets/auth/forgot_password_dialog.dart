@@ -4,10 +4,10 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -105,10 +105,11 @@ class _ForgotPasswordSheetContentState
       _isSubmitting = false;
       _sendFailed = true;
     });
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       message,
-      Directionality.of(context),
+      description: 'announce forgot password send failure',
+      logName: 'ForgotPasswordDialog',
     );
   }
 
