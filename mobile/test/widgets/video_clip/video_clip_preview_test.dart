@@ -239,6 +239,27 @@ void main() {
       expect(clip['trimToCommonTrackEnd'], isNull);
     });
 
+    testWidgets('contains a clip source that fails to resolve to a file', (
+      tester,
+    ) async {
+      installMockDivineVideoPlayer();
+
+      // Content URIs resolve only on Android, so `safeFilePath` rejects here
+      // before the player exists.
+      await tester.pumpWidget(
+        buildTestWidget(
+          clip: testClip.copyWith(
+            video: EditorVideo.content('content://media/clip.mp4'),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      verifyNever(() => mockGoRouter.pop<Object?>(any()));
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
     testWidgets('renders delete button when onDelete is provided', (
       tester,
     ) async {
@@ -287,9 +308,7 @@ void main() {
       final thumbnailFile = File('${tempDir.path}/thumbnail.jpg')
         ..writeAsBytesSync(_transparentPngBytes);
 
-      installMockDivineVideoPlayer(
-        streamHandler: _FirstFrameStreamHandler(),
-      );
+      installMockDivineVideoPlayer(streamHandler: _FirstFrameStreamHandler());
 
       final clip = testClip.copyWith(
         video: EditorVideo.file(videoFile.path),
@@ -388,9 +407,9 @@ void main() {
                     key: gridCardKey,
                     clip: clip,
                     showSelectionIndicator: false,
-                    onTap: () => Navigator.of(
-                      context,
-                    ).push(videoClipPreviewRoute(clip: clip)),
+                    onTap: () =>
+                        Navigator.of(context)
+                            .push(videoClipPreviewRoute(clip: clip)),
                   ),
                 ),
               ),
@@ -555,9 +574,8 @@ void main() {
       ) async {
         installMockDivineVideoPlayer();
 
-        when(
-          () => mockGallerySaveService.saveVideoToGallery(any()),
-        ).thenAnswer((_) async => result);
+        when(() => mockGallerySaveService.saveVideoToGallery(any()))
+            .thenAnswer((_) async => result);
 
         await tester.pumpWidget(buildTestWidget());
         await tester.pump(const Duration(milliseconds: 100));
