@@ -14,11 +14,15 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart' as nostr;
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 
 import '../helpers/keyboard_content_insertion.dart';
@@ -36,6 +40,39 @@ class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockModerationLabelService extends Mock
     implements ModerationLabelService {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
+
+/// A sheet controller that reports itself attached and fails every animation,
+/// so the dialog's sheet-resize calls reject instead of needing a real sheet.
+class _FailingSheetController extends DraggableScrollableController {
+  @override
+  bool get isAttached => true;
+
+  @override
+  Future<void> animateTo(
+    double size, {
+    required Duration duration,
+    required Curve curve,
+  }) => Future<void>.error(StateError('sheet animation failed'));
+}
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -1688,5 +1725,145 @@ void main() {
         );
       },
     );
+  });
+
+  group('$ReportContentDialog failed background work', () {
+    late MockNostrClient mockNostrClient;
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
+
+    setUp(() {
+      mockNostrClient = createMockNostrService();
+      when(() => mockNostrClient.publicKey).thenReturn('test_pubkey_hex');
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
+    });
+
+    Future<void> pumpDialog(
+      WidgetTester tester, {
+      DraggableScrollableController? sheetController,
+    }) async {
+      await setLargeSurface(tester);
+      await tester.pumpWidget(
+        testProviderScope(
+          mockNostrService: mockNostrClient,
+          additionalOverrides: [
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistRepositoryProvider.overrideWith(
+              (ref) => mockBlocklistRepository,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ReportContentDialog(
+                video: testVideo,
+                draggableController: sheetController,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    void failEveryAnnouncement(WidgetTester tester) {
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            (Object? message) async => throw StateError('announcement failed'),
+          );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+    }
+
+    void expectOneReportedStateError() {
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
+    }
+
+    testWidgets('reports a failed sheet expansion for the details field', (
+      tester,
+    ) async {
+      final controller = _FailingSheetController();
+      addTearDown(controller.dispose);
+      await pumpDialog(tester, sheetController: controller);
+
+      await tester.tap(find.text(l10n.reportReasonOther));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expectOneReportedStateError();
+    });
+
+    testWidgets('reports a failed sheet collapse after a submitted report', (
+      tester,
+    ) async {
+      final controller = _FailingSheetController();
+      addTearDown(controller.dispose);
+      await pumpDialog(tester, sheetController: controller);
+
+      await tester.tap(find.text(l10n.reportReasonSpam));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expectOneReportedStateError();
+    });
+
+    testWidgets('reports a failed announcement of a dropped attachment', (
+      tester,
+    ) async {
+      failEveryAnnouncement(tester);
+      await pumpDialog(tester);
+      await tester.tap(find.text(l10n.reportReasonOther));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'x');
+      await tester.pumpAndSettle();
+
+      await commitKeyboardImage(tester);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expectOneReportedStateError();
+    });
+
+    testWidgets('reports a failed announcement of the details length limit', (
+      tester,
+    ) async {
+      failEveryAnnouncement(tester);
+      await pumpDialog(tester);
+      await tester.tap(find.text(l10n.reportReasonOther));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        'a' * (BugReportConfig.maxFreeTextFieldLength + 1),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expectOneReportedStateError();
+    });
   });
 }

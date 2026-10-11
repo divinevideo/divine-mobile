@@ -4,7 +4,6 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,7 +14,9 @@ import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/report_content_confirmation.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 
@@ -341,10 +342,15 @@ class _ReportContentViewState extends State<_ReportContentView> {
         if (!mounted) return;
         final ctx = _otherCardKey.currentContext;
         if (ctx == null) return;
-        Scrollable.ensureVisible(
-          ctx,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
+        runDetached(
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          ),
+          'scroll report details into view',
+          logName: 'ReportContentDialog',
+          category: LogCategory.ui,
         );
       });
     }
@@ -361,10 +367,15 @@ class _ReportContentViewState extends State<_ReportContentView> {
     if (reason == ContentFilterReason.other && !wasOther) {
       final controller = widget.draggableController;
       if (controller != null && controller.isAttached) {
-        controller.animateTo(
-          0.95,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
+        runDetached(
+          controller.animateTo(
+            0.95,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          ),
+          'expand report sheet for details',
+          logName: 'ReportContentDialog',
+          category: LogCategory.ui,
         );
       }
       _scrollWhenKeyboardOpens = true;
@@ -388,10 +399,11 @@ class _ReportContentViewState extends State<_ReportContentView> {
     // appearance): each commit is a discrete action, and the spoken notice is
     // the channel that still lands when the visual one is briefly behind the
     // keyboard.
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       context.l10n.reportDetailsImageNotAttached,
-      Directionality.of(context),
+      description: 'announce dropped report attachment',
+      logName: 'ReportContentDialog',
     );
   }
 
@@ -519,10 +531,15 @@ class _ReportContentViewState extends State<_ReportContentView> {
     if (status == ReportSubmissionStatus.submitted) {
       final controller = widget.draggableController;
       if (controller != null && controller.isAttached) {
-        controller.animateTo(
-          0.65,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+        runDetached(
+          controller.animateTo(
+            0.65,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          ),
+          'collapse report sheet after submission',
+          logName: 'ReportContentDialog',
+          category: LogCategory.ui,
         );
       }
     }
@@ -837,10 +854,11 @@ class _CappedDetailsFieldState extends State<_CappedDetailsField> {
   void _onTruncated() {
     if (_truncated || !mounted) return;
     setState(() => _truncated = true);
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       context.l10n.supportFieldLimitReached,
-      Directionality.of(context),
+      description: 'announce report details field limit',
+      logName: 'ReportContentDialog',
     );
   }
 
