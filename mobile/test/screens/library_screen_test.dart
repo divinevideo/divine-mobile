@@ -1375,6 +1375,54 @@ void main() {
             await tester.pumpAndSettle();
 
             expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
+
+        testWidgets(
+          'renaming a category after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                  tester.element(find.byType(ClipsTab)),
+                )..add(
+                  ClipsLibraryFilterChanged(
+                    ClipLibraryCategoryFilter(travel.id),
+                  ),
+                );
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryCategoryManageSemanticLabel),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(en.libraryCategoryRenameAction));
+            await tester.pumpAndSettle();
+            expect(find.text(en.libraryCategoryRenameTitle), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(en.libraryCategoryRenameTitle), findsOneWidget);
+
+            await tester.tap(find.text(en.libraryCategoryRenameAction));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
           },
         );
 
@@ -1440,6 +1488,7 @@ void main() {
             await tester.pumpAndSettle();
 
             expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
           },
         );
       });
