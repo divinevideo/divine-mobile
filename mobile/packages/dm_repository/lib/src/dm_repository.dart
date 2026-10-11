@@ -1578,12 +1578,18 @@ class DmRepository {
     // re-check before persisting that the user did not switch / tear down.
     if (_ingestSessionEnded(pubkey, generation)) return null;
 
-    // Pass 2 (original page order): persist. Pre-decrypted gift wraps skip the
-    // per-event decrypt; everything else (NIP-04, deletions, remote-signer or
-    // failed wraps) routes through the unchanged per-event handler.
-    for (var i = 0; i < events.length; i++) {
+    // Pass 2: persist. Pre-decrypted gift wraps skip the per-event decrypt;
+    // everything else (NIP-04, deletions, remote-signer or failed wraps)
+    // routes through the unchanged per-event handler.
+    // With receiving rooms off, a page is stored exactly as it was before
+    // #10037.
+    // TODO(realmeylisdev): Remove with the groupMessages flag (#8269).
+    final ordered = _receivesPeerRooms()
+        ? _oldestMessageFirst(events, preDecrypted)
+        : events;
+    for (var i = 0; i < ordered.length; i++) {
       if (_ingestSessionEnded(pubkey, generation)) return null;
-      final event = events[i];
+      final event = ordered[i];
       final rumor = preDecrypted[event.id];
       if (rumor != null) {
         await _withEventLock(
@@ -1595,6 +1601,37 @@ class DmRepository {
       await _maybeYieldDuringDrain(i);
     }
     return (events: events, authoritative: authoritative);
+  }
+
+  /// [events] with the gift wraps decrypted in [rumors] rearranged among
+  /// their own positions, oldest message first.
+  ///
+  /// A relay returns a page newest wrap first, and a wrap's `created_at` is
+  /// randomised, so page order says nothing about which message came first.
+  /// Storing a reply, a reaction or a deletion before the message it names
+  /// makes each of them guess. Every other event keeps its place: its message
+  /// time is not known until it is handled.
+  List<Event> _oldestMessageFirst(
+    List<Event> events,
+    Map<String, Event> rumors,
+  ) {
+    final slots = [
+      for (var i = 0; i < events.length; i++)
+        if (rumors.containsKey(events[i].id)) i,
+    ];
+    // Index breaks ties: `List.sort` is not stable.
+    final byAge = [...slots]
+      ..sort((a, b) {
+        final byTime = rumors[events[a].id]!.createdAt.compareTo(
+          rumors[events[b].id]!.createdAt,
+        );
+        return byTime != 0 ? byTime : a.compareTo(b);
+      });
+    final ordered = [...events];
+    for (var i = 0; i < slots.length; i++) {
+      ordered[slots[i]] = events[byAge[i]];
+    }
+    return ordered;
   }
 
   /// Recovers the user's OWN outgoing NIP-04 (kind-4) messages after a wipe.

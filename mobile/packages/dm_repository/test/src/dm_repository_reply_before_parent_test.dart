@@ -15,7 +15,9 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -479,6 +481,112 @@ void main() {
         await conversations(),
         equals('1:1(alice,me)=[hello] | room(alice,bob,me)=[cc bob]'),
       );
+    });
+  });
+
+  group('one page of history', () {
+    /// Hands [page] to the history drain as the single page it will read, on a
+    /// repository that has not drained yet.
+    Future<void> drain(List<Event> page) async {
+      await repository.stopListening();
+      historyPage = page;
+      // What the drain reads once the page is stored: the account's own
+      // outgoing NIP-04, answered and empty, and the relay statuses.
+      when(
+        () => nostrClient.readEvents(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => const QueryResult(
+          events: [],
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
+        ),
+      );
+      when(() => nostrClient.relayStatuses).thenReturn(const {});
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      repository = buildRepository(
+        syncState: DmSyncState(await SharedPreferences.getInstance()),
+      );
+      await repository.startListening();
+      await repository.backfillHistoryIfNeeded();
+      for (final event in page) {
+        await settled(event.id);
+      }
+    }
+
+    Future<List<String>> contentsInStoredOrder() async {
+      final rows = await db
+          .customSelect('SELECT content FROM direct_messages ORDER BY rowid')
+          .get();
+      return [for (final row in rows) row.read<String>('content')];
+    }
+
+    test('is stored oldest message first, whatever order the relay '
+        'returned', () async {
+      final first = message(author: _alice, pTags: [_owner], content: 'one');
+      final second = message(
+        author: _alice,
+        pTags: [_owner],
+        content: 'two',
+        createdAt: _sentAt + 1,
+      );
+      final third = message(
+        author: _alice,
+        pTags: [_owner],
+        content: 'three',
+        createdAt: _sentAt + 2,
+      );
+
+      await drain([
+        await wrap(third, authorSecret: _aliceSecret),
+        await wrap(first, authorSecret: _aliceSecret),
+        await wrap(second, authorSecret: _aliceSecret),
+      ]);
+
+      expect(await contentsInStoredOrder(), equals(['one', 'two', 'three']));
+    });
+
+    test('is stored in the order the relay returned with receiving rooms '
+        'switched off', () async {
+      receivesPeerRooms = false;
+      final first = message(author: _alice, pTags: [_owner], content: 'one');
+      final second = message(
+        author: _alice,
+        pTags: [_owner],
+        content: 'two',
+        createdAt: _sentAt + 1,
+      );
+
+      await drain([
+        await wrap(second, authorSecret: _aliceSecret),
+        await wrap(first, authorSecret: _aliceSecret),
+      ]);
+
+      expect(await contentsInStoredOrder(), equals(['two', 'one']));
+    });
+
+    test('never opens the wider room for a reply listed before its '
+        'parent', () async {
+      final parent = hello();
+      final seen = <String>[];
+      final subscription = conversationsDao
+          .watchAllConversations(ownerPubkey: _owner)
+          .listen((rows) => seen.addAll([for (final row in rows) row.id]));
+      addTearDown(subscription.cancel);
+
+      await drain([
+        await wrap(ccBob(parent), authorSecret: _aliceSecret),
+        await wrap(parent, authorSecret: _aliceSecret),
+      ]);
+      await pumpEventQueue();
+
+      expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
+      expect(seen, contains(oneToOneId));
+      expect(seen, isNot(contains(wideRoomId)));
     });
   });
 }
