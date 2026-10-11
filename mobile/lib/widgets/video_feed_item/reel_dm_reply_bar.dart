@@ -13,7 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show DmReactionPublishStatus;
+import 'package:models/models.dart' show DmReaction, DmReactionPublishStatus;
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/inline_reel_reply/inline_reel_reply_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
@@ -260,9 +260,7 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
         .read<ConversationReactionsCubit>()
         .state
         .reactionsByMessageId[_ctx.sharedReelMessageId];
-    return list
-        ?.firstWhereOrNull((r) => r.reactorPubkey == widget.ownerPubkey)
-        ?.emoji;
+    return _ownActiveReaction(list, widget.ownerPubkey)?.emoji;
   }
 
   void _onEmojiTap(String emoji, {bool fromPicker = false}) {
@@ -629,14 +627,26 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   /// ring follows the persisted reaction, with the optimistic value layered on.
   String? _activeEmojiForHighlight() {
     final persisted = context.select(
-      (ConversationReactionsCubit c) => c
-          .state
-          .reactionsByMessageId[_ctx.sharedReelMessageId]
-          ?.firstWhereOrNull((r) => r.reactorPubkey == widget.ownerPubkey)
-          ?.emoji,
+      (ConversationReactionsCubit c) => _ownActiveReaction(
+        c.state.reactionsByMessageId[_ctx.sharedReelMessageId],
+        widget.ownerPubkey,
+      )?.emoji,
     );
     return _optimisticEmoji ?? persisted;
   }
+}
+
+/// The viewer's own reaction that is still in effect. A removal that was not
+/// delivered stays in the list as a warning row; it is not an active reaction.
+DmReaction? _ownActiveReaction(
+  List<DmReaction>? reactions,
+  String ownerPubkey,
+) {
+  return reactions?.firstWhereOrNull(
+    (reaction) =>
+        reaction.reactorPubkey == ownerPubkey &&
+        reaction.publishStatus != DmReactionPublishStatus.removalRefused,
+  );
 }
 
 /// Pill text field mirroring [InlineCommentComposerBar]'s composer geometry.

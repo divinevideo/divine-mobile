@@ -456,6 +456,43 @@ void main() {
       );
     });
 
+    testWidgets(
+      'a removal that was not delivered is not shown as the active reaction',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(wrap(context()));
+        await tester.pump();
+
+        DmReaction ownHeart(DmReactionPublishStatus status) => DmReaction(
+          id: 'own-heart',
+          conversationId: 'convo-id',
+          targetMessageId: _reelId,
+          targetMessageAuthor: _peer,
+          reactorPubkey: _owner,
+          emoji: '❤️',
+          createdAt: 1700000000,
+          ownerPubkey: _owner,
+          publishStatus: status,
+        );
+
+        reactionStream.add([ownHeart(DmReactionPublishStatus.sent)]);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(find.text('❤️')),
+          isSemantics(isSelected: true),
+          reason: 'a delivered reaction is the active one',
+        );
+
+        reactionStream.add([ownHeart(DmReactionPublishStatus.removalRefused)]);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(find.text('❤️')),
+          isSemantics(isSelected: false),
+        );
+        semantics.dispose();
+      },
+    );
+
     testWidgets('re-tapping the active emoji is a no-op', (tester) async {
       await tester.pumpWidget(wrap(context()));
       await tester.pump();
