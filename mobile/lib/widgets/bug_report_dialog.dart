@@ -262,7 +262,7 @@ class BugReportActions extends StatelessWidget {
         userPubkey: userPubkey,
       ),
       'submit bug report',
-      logName: 'BugReportDialog',
+      logName: 'BugReportActions',
       category: LogCategory.ui,
     );
   }
