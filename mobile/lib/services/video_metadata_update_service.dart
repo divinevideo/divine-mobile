@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show ClipSourceCredit, VideoEvent, clipSourceCreditTagMarker;
 import 'package:nostr_client/nostr_client.dart';
@@ -375,7 +376,9 @@ class VideoMetadataUpdateService {
         tags.add(['summary', summary]);
       }
 
-      for (final hashtag in editorState.tags) {
+      for (final hashtag in HashtagExtractor.normalizeVideoHashtags(
+        editorState.tags,
+      )) {
         tags.add(['t', hashtag]);
       }
 

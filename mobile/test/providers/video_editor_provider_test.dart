@@ -259,6 +259,37 @@ void main() {
         notifier.updateMetadata(title: 'My #video title');
         expect(container.read(videoEditorProvider).tags, contains('video'));
       });
+
+      test('stores caption hashtags in lowercase', () {
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        notifier.updateMetadata(description: 'meet #FunnyDivines');
+        expect(container.read(videoEditorProvider).tags, {'funnydivines'});
+      });
+
+      test('ignores a caption hashtag over the length limit', () {
+        final notifier = container.read(videoEditorProvider.notifier);
+        final pastedList = 'vine' * 20;
+
+        notifier.updateMetadata(description: '#$pastedList #ok');
+        expect(container.read(videoEditorProvider).tags, {'ok'});
+      });
+
+      test('keeps at most 10 hashtags from the caption', () {
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        notifier.updateMetadata(
+          description: [for (var i = 0; i < 12; i++) '#tag$i'].join(' '),
+        );
+        expect(container.read(videoEditorProvider).tags, hasLength(10));
+      });
+
+      test('normalizes manually edited tags', () {
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        notifier.updateMetadata(tags: {'Manual', 'x' * 51});
+        expect(container.read(videoEditorProvider).tags, {'manual'});
+      });
     });
 
     group('updateMetadata description trimming', () {
