@@ -150,8 +150,9 @@ class _UpdateDialog extends StatelessWidget {
         isUrgent
             ? context.l10n.updateUrgentTitle
             : context.l10n.updateModerateTitle,
-        style: Theme.of(context).textTheme.titleMedium
-            ?.copyWith(color: context.vineColors.primaryText),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: context.vineColors.primaryText,
+        ),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -178,8 +179,9 @@ class _UpdateDialog extends StatelessWidget {
                     Expanded(
                       child: Text(
                         highlight,
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: context.vineColors.primaryText),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.vineColors.primaryText,
+                        ),
                       ),
                     ),
                   ],
