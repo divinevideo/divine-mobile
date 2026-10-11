@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -53,7 +54,12 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return; // Safety check: don't use ref if widget is disposed
 
-      _loadHashtagVideos();
+      runDetached(
+        _loadHashtagVideos(),
+        'load hashtag videos',
+        logName: 'HashtagFeedScreen',
+        category: LogCategory.video,
+      );
     });
   }
 
@@ -212,17 +218,22 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
       'videoId=${videoList[index].id}',
       category: LogCategory.video,
     );
-    context.push(
-      PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
-      extra: PooledFullscreenVideoFeedArgs(
-        source: HashtagViewSource(widget.hashtag),
-        feedRepository: ref.read(feedRepositoryProvider),
-        initialIndex: index,
-        initialVideoId: videoList[index].id,
-        contextTitle: '#${widget.hashtag}',
-        trafficSource: ViewTrafficSource.search,
-        sourceDetail: widget.hashtag,
+    runDetached(
+      context.push<void>(
+        PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
+        extra: PooledFullscreenVideoFeedArgs(
+          source: HashtagViewSource(widget.hashtag),
+          feedRepository: ref.read(feedRepositoryProvider),
+          initialIndex: index,
+          initialVideoId: videoList[index].id,
+          contextTitle: '#${widget.hashtag}',
+          trafficSource: ViewTrafficSource.search,
+          sourceDetail: widget.hashtag,
+        ),
       ),
+      'open hashtag video',
+      logName: 'HashtagFeedScreen',
+      category: LogCategory.video,
     );
   }
 
