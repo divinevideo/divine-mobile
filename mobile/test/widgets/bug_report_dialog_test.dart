@@ -5,15 +5,20 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show BugReportData;
 import 'package:openvine/blocs/bug_report/bug_report_cubit.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/bug_report_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/support_public_submission_notice.dart';
 
@@ -22,6 +27,49 @@ import '../helpers/keyboard_content_insertion.dart';
 class _MockBugReportService extends Mock implements BugReportService {}
 
 class _FakeBugReportData extends Fake implements BugReportData {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+  final recordedReasons = <String?>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+    recordedReasons.add(reason);
+  }
+}
+
+/// A cubit whose `submit` rejects, which the real one never does after its
+/// first emit, so the view's own handling of a rejected future is reachable.
+class _RejectingBugReportCubit extends BugReportCubit {
+  _RejectingBugReportCubit()
+    : super(
+        bugReportService: _MockBugReportService(),
+        buildLogsSummary: (_) async => null,
+      );
+
+  @override
+  Future<void> submit({
+    required String subject,
+    required String description,
+    required String stepsToReproduce,
+    required String expectedBehavior,
+    required List<XFile> attachments,
+    String? currentScreen,
+    List<String> recentScreens = const [],
+    String? userPubkey,
+  }) => Future<void>.error(StateError('submit invariant'));
+}
 
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
@@ -519,6 +567,61 @@ void main() {
       await tester.pump();
 
       expect(buttonFor(tester, l10n.bugReportSendReport).onPressed, isNotNull);
+    });
+  });
+
+  group(BugReportActions, () {
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
+    late BugReportFields fields;
+
+    setUp(() {
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+      fields = BugReportFields()
+        ..subject.text = 'Subject'
+        ..description.text = 'Description';
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
+      fields.dispose();
+    });
+
+    testWidgets('reports a programming error thrown while submitting', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<BugReportCubit>(
+              create: (_) => _RejectingBugReportCubit(),
+              child: BugReportActions(fields: fields),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text(l10n.bugReportSendReport));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(reporter.recordedErrors, hasLength(1));
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
+      expect(
+        reporter.recordedReasons.single,
+        equals('runDetached BugReportActions'),
+      );
     });
   });
 }
