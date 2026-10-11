@@ -380,9 +380,8 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       ],
     );
 
-    if (selected == null) return;
+    if (selected == null || !context.mounted) return;
     if (selected == _gridSizeMenuValue) {
-      if (!context.mounted) return;
       await _openGridSizeMenu(context, clipsBloc, currentColumns);
       return;
     }

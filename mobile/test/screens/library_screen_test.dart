@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +19,7 @@ import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/library/clips_tab.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
@@ -43,6 +45,25 @@ class _FakeEditorVideo extends Fake implements EditorVideo {}
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 DivineVideoDraft _createTestDraft() => DivineVideoDraft(
   id: 'draft-1',
@@ -136,7 +157,14 @@ void main() {
       LibraryTabsMode tabsMode = LibraryTabsMode.allTabs,
       List<DivineVideoClip> editorClips = const [],
       List<DivineVideoClip> sessionClips = const [],
+      ValueListenable<bool>? libraryVisible,
     }) {
+      final library = LibraryScreen(
+        selectionMode: selectionMode,
+        initialTabIndex: initialTabIndex,
+        tabsMode: tabsMode,
+        editorClips: editorClips,
+      );
       return ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
@@ -156,12 +184,15 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
-          home: LibraryScreen(
-            selectionMode: selectionMode,
-            initialTabIndex: initialTabIndex,
-            tabsMode: tabsMode,
-            editorClips: editorClips,
-          ),
+          home: libraryVisible == null
+              ? library
+              : Scaffold(
+                  body: ValueListenableBuilder<bool>(
+                    valueListenable: libraryVisible,
+                    builder: (context, visible, _) =>
+                        visible ? library : const SizedBox.shrink(),
+                  ),
+                ),
         ),
       );
     }
@@ -1112,6 +1143,61 @@ void main() {
         );
         expect(find.textContaining('boom-secret-path'), findsNothing);
       });
+    });
+
+    group('detached failures', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+      late ValueNotifier<bool> libraryVisible;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        libraryVisible = ValueNotifier<bool>(true);
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+        libraryVisible.dispose();
+      });
+
+      // A sheet lives on the navigator, not under the library, so it outlasts
+      // the screen when an account change swaps the library out from under it.
+      testWidgets(
+        'picking a sort order after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final clipsBloc = BlocProvider.of<ClipsLibraryBloc>(
+            tester.element(find.byType(ClipsTab)),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(en.libraryDisplayOptionsLabel),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text(en.librarySortOldestCreation), findsOneWidget);
+
+          libraryVisible.value = false;
+          await tester.pump();
+          expect(clipsBloc.isClosed, isTrue);
+          expect(find.text(en.librarySortOldestCreation), findsOneWidget);
+
+          await tester.tap(find.text(en.librarySortOldestCreation));
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
+        },
+      );
     });
 
     group('web', () {
