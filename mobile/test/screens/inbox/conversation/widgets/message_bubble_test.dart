@@ -737,6 +737,28 @@ void main() {
         expect(find.text(strings.dmStatusFailed), findsOneWidget);
       });
 
+      testWidgets('renders the not-sent-to-everyone caption for a group '
+          'message that some members were not reached with', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MessageBubble(
+                message: 'Reached some',
+                timestamp: '2:30 PM',
+                isSent: true,
+                deliveryStatus: DmDeliveryStatus.notSentToEveryone,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text(strings.dmStatusNotSentToEveryone), findsOneWidget);
+        // Not the failed caption: nothing on this bubble can be resent.
+        expect(find.text(strings.dmStatusFailed), findsNothing);
+      });
+
       testWidgets('renders closed-thread copy for blocked status', (
         tester,
       ) async {

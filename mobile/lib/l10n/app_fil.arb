@@ -1469,6 +1469,7 @@
     "dmSendFailedRetry": "Subukan ulit",
     "dmSendPartialMessage": "Naipadala, pero hindi nag-sync sa iba mong device",
     "dmStatusFailed": "Nabigong ipadala",
+    "dmStatusNotSentToEveryone": "Hindi lahat nakatanggap",
     "dmConversationLoadError": "Hindi na-load ang mga message",
     "dmMessageInputHint": "Magsabi ng kahit ano…",
     "dmMessageSendLabel": "Ipadala ang mensahe",

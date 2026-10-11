@@ -26415,6 +26415,15 @@ void main() {
         'batches, and cancel independently (regression: #6046 same-second '
         'batch-identity collision)',
         () async {
+          // Nothing is stored under these rows' own rumor ids, so a stopped
+          // row has no bubble of its own to keep a record for (#8180).
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+
           // The case the seconds-apart regression could NOT reach: two group
           // sends of identical text in one Unix second. A rumor id is
           // sha256([0, pubkey, created_at(seconds), kind, tags, content]) with
@@ -27047,6 +27056,15 @@ void main() {
         'a batch cancelled while the first publish is in flight is not '
         'fanned out to the remaining recipients',
         () async {
+          // Nothing is stored under these rows' own rumor ids, so a stopped
+          // row has no bubble of its own to keep a record for (#8180).
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+
           // Model the durable queue in memory so cancelOutgoingBatch actually
           // removes the rows the pre-publish re-read then observes as gone.
           final store = <OutgoingDm>[];
@@ -29477,6 +29495,14 @@ void main() {
         when(
           () => mockOutgoingDmsDao.deleteById(any()),
         ).thenAnswer((_) async => 1);
+        // Nothing is stored under these rows' own rumor ids, so a stopped
+        // row has no bubble of its own to keep a record for (#8180).
+        when(
+          () => mockDirectMessagesDao.getMessageById(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => null);
       });
 
       test('deletes the queue row for the owner', () async {
@@ -29596,6 +29622,18 @@ void main() {
         when(
           () => mockOutgoingDmsDao.deleteById(any()),
         ).thenAnswer((_) async => 1);
+        // These fixtures have the shape a batch had before its siblings
+        // shared one rumor id: each row carries its own, so none finds the
+        // stored winner and every sibling is dropped, as before #8180. A
+        // batch that does share its rumor id keeps its unreached members on
+        // record; dm_stopped_delivery_test.dart covers that against a real
+        // database.
+        when(
+          () => mockDirectMessagesDao.getMessageById(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => null);
         when(
           () => mockOutgoingDmsDao.getForConversation(
             conversationId: any(named: 'conversationId'),

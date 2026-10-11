@@ -5784,6 +5784,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmStatusFailed => '发送失败';
 
   @override
+  String get dmStatusNotSentToEveryone => '未发送给所有人';
+
+  @override
   String get inboxConversationActionsSheetLabel => '会话操作';
 
   @override

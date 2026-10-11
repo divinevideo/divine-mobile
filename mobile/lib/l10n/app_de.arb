@@ -2178,6 +2178,7 @@
     "dmSendFailedRetry": "Erneut versuchen",
     "dmSendPartialMessage": "Gesendet, aber nicht mit deinen anderen Geräten synchronisiert",
     "dmStatusFailed": "Senden fehlgeschlagen",
+    "dmStatusNotSentToEveryone": "Nicht an alle gesendet",
     "dmConversationLoadError": "Nachrichten konnten nicht geladen werden",
     "dmMessageInputHint": "Sag was …",
     "dmMessageSendLabel": "Nachricht senden",

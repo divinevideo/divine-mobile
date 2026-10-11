@@ -2175,6 +2175,7 @@
     "dmSendFailedRetry": "Tekrar Dene",
     "dmSendPartialMessage": "Gönderildi, ama diğer cihazlarınla eşitlenmedi",
     "dmStatusFailed": "Gönderilemedi",
+    "dmStatusNotSentToEveryone": "Herkese gönderilmedi",
     "dmConversationLoadError": "Mesajlar yüklenemedi",
     "dmMessageInputHint": "Bir şeyler yaz…",
     "dmMessageSendLabel": "Mesaj gönder",

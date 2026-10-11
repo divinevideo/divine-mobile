@@ -13056,10 +13056,10 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   final String? replyToId;
 
   /// Status of the recipient gift-wrap publish: `pending` | `sent` |
-  /// `failed`. Stored as a string (rather than an int-coded enum) so a
-  /// dump of the table is human-readable. Adding a new state requires a
-  /// matching update to `OutgoingWrapStatus` in the DAO — the read
-  /// path throws on unknown values rather than silently coercing them
+  /// `failed` | `blocked` | `cancelled`. Stored as a string (rather than an
+  /// int-coded enum) so a dump of the table is human-readable. Adding a new
+  /// state requires a matching update to `OutgoingWrapStatus` in the DAO — the
+  /// read path throws on unknown values rather than silently coercing them
   /// back to `pending` (which would put corrupt or future-schema rows
   /// back into the retry service's active set and risk double-delivery).
   final String recipientWrapStatus;

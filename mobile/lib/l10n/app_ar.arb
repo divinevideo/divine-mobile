@@ -2168,6 +2168,7 @@
     "dmSendFailedRetry": "إعادة المحاولة",
     "dmSendPartialMessage": "أُرسلت، لكنّها لم تُزامَن مع أجهزتك الأخرى",
     "dmStatusFailed": "فشل الإرسال",
+    "dmStatusNotSentToEveryone": "لم يتم الإرسال إلى الجميع",
     "dmConversationLoadError": "تعذّر تحميل الرسائل",
     "dmMessageInputHint": "قل شيئًا…",
     "dmMessageSendLabel": "إرسال رسالة",

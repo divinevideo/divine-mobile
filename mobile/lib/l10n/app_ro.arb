@@ -2178,6 +2178,7 @@
     "dmSendFailedRetry": "Reîncearcă",
     "dmSendPartialMessage": "Trimis, dar nu s-a sincronizat cu celelalte dispozitive",
     "dmStatusFailed": "N-am putut trimite",
+    "dmStatusNotSentToEveryone": "Nu a fost trimis tuturor",
     "dmConversationLoadError": "Mesajele nu au putut fi încărcate",
     "dmMessageInputHint": "Spune ceva…",
     "dmMessageSendLabel": "Trimite mesajul",

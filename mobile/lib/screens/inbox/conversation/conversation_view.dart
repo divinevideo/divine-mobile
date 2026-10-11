@@ -470,6 +470,13 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                 },
                 listener: _onRetractionRefused,
               ),
+              BlocListener<ConversationBloc, ConversationState>(
+                // The line under the bubble changes with no toast, so the
+                // announcement is all a screen reader gets.
+                listenWhen: (previous, current) =>
+                    current.stoppedDeliverySince(previous),
+                listener: _onDeliveryStopped,
+              ),
               BlocListener<
                 ConversationReactionsCubit,
                 ConversationReactionsState
@@ -690,6 +697,20 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
   /// toast is only immediate feedback and dismisses on the standard timer.
   void _onRetractionRefused(BuildContext context, ConversationState state) {
     _showErrorToastAndAnnounce(context, context.l10n.dmDeleteRefusedMessage);
+  }
+
+  /// Announces that a group bubble now reads "Not sent to everyone" (#8180).
+  void _onDeliveryStopped(BuildContext context, ConversationState state) {
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        context.l10n.dmStatusNotSentToEveryone,
+        Directionality.of(context),
+      ),
+      'announce stopped DM delivery',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
+    );
   }
 
   void _onSendOutcome(BuildContext context, ConversationState state) {

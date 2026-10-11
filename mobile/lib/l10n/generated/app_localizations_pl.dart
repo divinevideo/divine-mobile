@@ -6300,6 +6300,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get dmStatusFailed => 'Nie udało się wysłać';
 
   @override
+  String get dmStatusNotSentToEveryone => 'Nie wysłano do wszystkich';
+
+  @override
   String get inboxConversationActionsSheetLabel => 'Akcje rozmowy';
 
   @override
