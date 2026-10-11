@@ -196,6 +196,8 @@ class _LibraryView extends ConsumerStatefulWidget {
 
 class _LibraryViewState extends ConsumerState<_LibraryView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
+  static const _logName = 'LibraryScreen';
+
   late int _activeTabIndex;
 
   /// Tabs of the current mode, in bar order.
@@ -301,6 +303,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       ),
     );
   }
+
+  /// Runs [operation] without awaiting it, logging a failure under this
+  /// screen's log route.
+  void _detach(Future<void> operation, String description) => runDetached(
+    operation,
+    description,
+    logName: _logName,
+    category: LogCategory.ui,
+  );
 
   Future<void> _confirmEmptyTrash(
     BuildContext context,
@@ -426,7 +437,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       context,
       context.l10n.libraryGridSizeColumns(columns),
       description: 'announce library grid columns',
-      logName: 'LibraryScreen',
+      logName: _logName,
     );
   }
 
@@ -677,6 +688,15 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
             clipsState: clipsState,
           );
 
+          void createVideo() => _detach(
+            _createVideoFromSelected(
+              context,
+              selectedClips: clipsState.selectedClips,
+              clipsBloc: clipsBloc,
+            ),
+            'create video from selected library clips',
+          );
+
           return Scaffold(
             backgroundColor: context.vineColors.surface,
             body: Stack(
@@ -704,7 +724,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 context.go(VideoFeedPage.pathForIndex(0));
                               }
                             },
-                            onOpenSortMenu: () => runDetached(
+                            onOpenSortMenu: () => _detach(
                               _openSortMenu(
                                 context,
                                 clipsBloc,
@@ -712,8 +732,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 clipsState.gridColumnCount,
                               ),
                               'open library sort menu',
-                              logName: 'LibraryScreen',
-                              category: LogCategory.ui,
                             ),
                             onEnterSelectionMode: () => clipsBloc.add(
                               const ClipsLibraryEnterSelectionMode(),
@@ -721,7 +739,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             isTrashFilterActive: clipsState.isShowingTrash,
                             onEmptyTrash: clipsState.trashedClips.isEmpty
                                 ? null
-                                : () => runDetached(
+                                : () => _detach(
                                     _confirmEmptyTrash(
                                       context,
                                       clipsBloc,
@@ -729,31 +747,25 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                           clipsState.trashedClips.length,
                                     ),
                                     'empty library trash',
-                                    logName: 'LibraryScreen',
-                                    category: LogCategory.ui,
                                   ),
                             onManageActiveCategory: activeCategory == null
                                 ? null
-                                : () => runDetached(
+                                : () => _detach(
                                     ClipCategoryActions.runManageFlow(
                                       context: context,
                                       bloc: clipsBloc,
                                       category: activeCategory,
                                     ),
                                     'manage library category',
-                                    logName: 'LibraryScreen',
-                                    category: LogCategory.ui,
                                   ),
                             onMoveSelectedClips: hasVisibleSelection
-                                ? () => runDetached(
+                                ? () => _detach(
                                     ClipCategoryActions.runMoveFlow(
                                       context: context,
                                       bloc: clipsBloc,
                                       clipIds: visibleSelectedClipIds,
                                     ),
                                     'move selected library clips',
-                                    logName: 'LibraryScreen',
-                                    category: LogCategory.ui,
                                   )
                                 : null,
                             onDeleteSelectedClips: hasVisibleSelection
@@ -774,16 +786,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             // not something that session can use (#3538).
                             showScheduledSection:
                                 widget.tabsMode == LibraryTabsMode.allTabs,
-                            onCreateVideo: () => runDetached(
-                              _createVideoFromSelected(
-                                context,
-                                selectedClips: clipsState.selectedClips,
-                                clipsBloc: clipsBloc,
-                              ),
-                              'create video from selected library clips',
-                              logName: 'LibraryScreen',
-                              category: LogCategory.ui,
-                            ),
+                            onCreateVideo: createVideo,
                           ),
                         ),
                         _CreateVideoBar(
@@ -793,16 +796,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                               isClipsTabActive &&
                               selectedCount > 0,
                           selectedCount: selectedCount,
-                          onPressed: () => runDetached(
-                            _createVideoFromSelected(
-                              context,
-                              selectedClips: clipsState.selectedClips,
-                              clipsBloc: clipsBloc,
-                            ),
-                            'create video from selected library clips',
-                            logName: 'LibraryScreen',
-                            category: LogCategory.ui,
-                          ),
+                          onPressed: createVideo,
                         ),
                       ],
                     ),
