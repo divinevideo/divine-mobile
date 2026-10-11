@@ -31,9 +31,10 @@ class _MockCubit extends MockCubit<SubtitleEditorState>
 class _MockSubtitleRepository extends Mock implements SubtitleRepository {}
 
 class _FakeVideoEventResolver implements VideoEventResolver {
-  _FakeVideoEventResolver(this.video);
+  _FakeVideoEventResolver(this.video, {this.error});
 
   final VideoEvent? video;
+  final Object? error;
   final resolvedIds = <String>[];
   final allowOwnContentBypassValues = <bool>[];
   final requireRawTagsValues = <bool>[];
@@ -48,6 +49,7 @@ class _FakeVideoEventResolver implements VideoEventResolver {
     resolvedIds.add(eventId);
     allowOwnContentBypassValues.add(allowOwnContentBypass);
     requireRawTagsValues.add(requireRawTags);
+    if (error case final error?) throw error;
     return video;
   }
 }
@@ -721,6 +723,34 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(resolver.resolvedIds, [videoId]);
       expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
+    });
+
+    testWidgets('shows route error and observes resolver failures', (
+      tester,
+    ) async {
+      const videoId =
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+      final resolver = _FakeVideoEventResolver(
+        null,
+        error: StateError('resolver failed'),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SubtitleEditorScreen(videoId: videoId),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }
