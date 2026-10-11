@@ -3739,6 +3739,9 @@
     "videoMetadataTagsPickerSearchHint": "Sök eller lägg till taggar",
     "videoMetadataTagsPickerEmptyHint": "Lägg till taggar så att andra hittar din video",
     "videoMetadataTagsPickerNoResults": "Inga matchande taggar",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtaggar kan vara upp till {max} tecken.} other{Hashtaggar kan vara upp till {max} tecken.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Du kan lägga till upp till {max} hashtagg.} other{Du kan lägga till upp till {max} hashtaggar.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} av {max} tecken} other{{count} av {max} tecken}}",
     "videoMetadataTagsPickerAddTag": "Lägg till ”#{tag}”",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

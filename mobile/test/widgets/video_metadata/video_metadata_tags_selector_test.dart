@@ -289,6 +289,170 @@ void main() {
       );
       expect(find.text('music'), findsAtLeastNWidgets(1));
     });
+
+    group('hashtag limits', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final tooLongCopy = l10n.videoMetadataTagsPickerTagTooLong(
+        HashtagExtractor.maxHashtagLength,
+      );
+
+      Future<void> openPicker(
+        WidgetTester tester, {
+        Set<String> tags = const {},
+      }) async {
+        await tester.pumpWidget(
+          _buildTestApp(
+            hashtagRepository: hashtagRepository,
+            videoEditorState: VideoEditorProviderState(tags: tags),
+          ),
+        );
+        await tester.tap(
+          find.byType(VideoMetadataSelectionTile),
+          warnIfMissed: false,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      testWidgets('a pasted multi-line list becomes separate lowercase tags', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.enterText(
+          find.byType(TextField).last,
+          'General Hashtags\n#Vines\n#vine\u00a0#FunnyVine',
+        );
+        await tester.pump();
+
+        for (final tag in ['general', 'hashtags', 'vines', 'vine']) {
+          expect(find.text(tag), findsOneWidget);
+        }
+        expect(find.text('funnyvine'), findsOneWidget);
+        expect(find.textContaining('vinesvine'), findsNothing);
+
+        await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      testWidgets('a pasted tag over the limit is rejected with a hint', (
+        tester,
+      ) async {
+        await openPicker(tester);
+        final pastedList = 'VineHashtagsMasterList' * 10;
+
+        await tester.enterText(find.byType(TextField).last, pastedList);
+        await tester.pump();
+
+        expect(find.text(tooLongCopy), findsOneWidget);
+        expect(find.text(pastedList.toLowerCase()), findsNothing);
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).last)
+              .controller
+              ?.text,
+          isEmpty,
+        );
+
+        await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      testWidgets('shows a character counter once a tag gets long', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.enterText(find.byType(TextField).last, 'a' * 39);
+        await tester.pump();
+        expect(find.text('39/50'), findsNothing);
+
+        await tester.enterText(find.byType(TextField).last, 'a' * 43);
+        await tester.pump();
+        expect(find.text('43/50'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            l10n.videoMetadataTagsPickerCharacterCount(43, 50),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text(tooLongCopy), findsNothing);
+
+        await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      testWidgets('explains the limit once a tag reaches it', (tester) async {
+        await openPicker(tester);
+
+        await tester.enterText(
+          find.byType(TextField).last,
+          'a' * HashtagExtractor.maxHashtagLength,
+        );
+        await tester.pump();
+
+        expect(find.text(tooLongCopy), findsOneWidget);
+        expect(find.text('50/50'), findsOneWidget);
+
+        await tester.pump(const Duration(milliseconds: 400));
+      });
+
+      testWidgets('explains the tag limit once a video has 10 tags', (
+        tester,
+      ) async {
+        await openPicker(
+          tester,
+          tags: {for (var i = 0; i < 10; i++) 'tag$i'},
+        );
+
+        expect(
+          find.text(
+            l10n.videoMetadataTagsPickerTagLimitReached(
+              HashtagExtractor.maxHashtagsPerVideo,
+            ),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.enterText(find.byType(TextField).last, 'eleven ');
+        await tester.pump();
+        expect(find.text('eleven'), findsNothing);
+
+        await tester.pump(const Duration(milliseconds: 400));
+      });
+    });
+  });
+
+  group(HashtagInputFormatter, () {
+    const formatter = HashtagInputFormatter();
+
+    TextEditingValue value(String text) => TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+
+    test('turns every separator into a single space', () {
+      final result = formatter.formatEditUpdate(
+        value(''),
+        value('#vines\n#vine\tfunny\u00a0comedy,meme'),
+      );
+      expect(result.text, equals(' vines vine funny comedy meme'));
+      expect(result.selection.extentOffset, equals(result.text.length));
+    });
+
+    test('drops characters a hashtag cannot contain', () {
+      final result = formatter.formatEditUpdate(value(''), value('fun!ny😀'));
+      expect(result.text, equals('funny'));
+    });
+
+    test('blocks typing past the maximum length in the current tag', () {
+      final full = 'a' * HashtagExtractor.maxHashtagLength;
+      final result = formatter.formatEditUpdate(value(full), value('${full}b'));
+      expect(result.text, equals(full));
+    });
+
+    test('lets a new tag start after a full one', () {
+      final full = 'a' * HashtagExtractor.maxHashtagLength;
+      final result = formatter.formatEditUpdate(value(full), value('$full '));
+      expect(result.text, equals('$full '));
+    });
   });
 }
 

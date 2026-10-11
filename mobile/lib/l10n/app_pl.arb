@@ -3739,6 +3739,9 @@
     "videoMetadataTagsPickerSearchHint": "Szukaj lub dodaj tagi",
     "videoMetadataTagsPickerEmptyHint": "Dodaj tagi, aby inni odkryli Twój film",
     "videoMetadataTagsPickerNoResults": "Brak pasujących tagów",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtag może mieć maksymalnie {max} znak.} few{Hashtag może mieć maksymalnie {max} znaki.} many{Hashtag może mieć maksymalnie {max} znaków.} other{Hashtag może mieć maksymalnie {max} znaku.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Możesz dodać maksymalnie {max} hashtag.} few{Możesz dodać maksymalnie {max} hashtagi.} many{Możesz dodać maksymalnie {max} hashtagów.} other{Możesz dodać maksymalnie {max} hashtaga.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} z {max} znaku} few{{count} z {max} znaków} many{{count} z {max} znaków} other{{count} z {max} znaku}}",
     "videoMetadataTagsPickerAddTag": "Dodaj „#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

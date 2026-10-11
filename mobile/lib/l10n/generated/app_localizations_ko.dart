@@ -10921,6 +10921,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => '일치하는 태그 없음';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max자까지 쓸 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max자 중 $count자',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" 추가';
   }

@@ -5849,6 +5849,9 @@
   "videoMetadataTagsPickerSearchHint": "ٹیگز تلاش یا شامل کریں",
   "videoMetadataTagsPickerEmptyHint": "لوگوں کی آپ کی ویڈیو دریافت کرنے میں مدد کے لیے ٹیگز شامل کریں",
   "videoMetadataTagsPickerNoResults": "کوئی میلتا ٹیگ نہیں",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{ہیش ٹیگ زیادہ سے زیادہ {max} حرف کے ہو سکتے ہیں۔} other{ہیش ٹیگ زیادہ سے زیادہ {max} حروف کے ہو سکتے ہیں۔}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔} other{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} میں سے {count} حرف} other{{max} میں سے {count} حروف}}",
   "videoMetadataTagsPickerAddTag": "\"#{tag}\" شامل کریں",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

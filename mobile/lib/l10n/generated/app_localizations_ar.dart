@@ -11419,6 +11419,51 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'لا توجد وسوم مطابقة';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+      many: 'يمكن أن يصل طول الوسم إلى $max حرفًا.',
+      few: 'يمكن أن يصل طول الوسم إلى $max أحرف.',
+      two: 'يمكن أن يصل طول الوسم إلى $max حرفين.',
+      one: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+      zero: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      many: 'يمكنك إضافة ما يصل إلى $max وسمًا.',
+      few: 'يمكنك إضافة ما يصل إلى $max وسوم.',
+      two: 'يمكنك إضافة ما يصل إلى $max وسمين.',
+      one: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      zero: 'يمكنك إضافة ما يصل إلى $max وسم.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count من $max حرف',
+      many: '$count من $max حرفًا',
+      few: '$count من $max أحرف',
+      two: '$count من $max حرفين',
+      one: '$count من $max حرف',
+      zero: '$count من $max حرف',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'إضافة \"#$tag\"';
   }

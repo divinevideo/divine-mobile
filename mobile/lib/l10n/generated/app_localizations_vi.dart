@@ -11430,6 +11430,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Không có thẻ phù hợp';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtag có thể dài tối đa $max ký tự.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Bạn có thể thêm tối đa $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count/$max ký tự',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Thêm \"#$tag\"';
   }

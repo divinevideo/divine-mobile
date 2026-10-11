@@ -11477,6 +11477,39 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Inga matchande taggar';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtaggar kan vara upp till $max tecken.',
+      one: 'Hashtaggar kan vara upp till $max tecken.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Du kan lägga till upp till $max hashtaggar.',
+      one: 'Du kan lägga till upp till $max hashtagg.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count av $max tecken',
+      one: '$count av $max tecken',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Lägg till ”#$tag”';
   }

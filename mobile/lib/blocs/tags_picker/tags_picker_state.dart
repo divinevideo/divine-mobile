@@ -15,6 +15,16 @@ enum TagsPickerStatus {
   success,
 }
 
+/// A one-off explanation for why the last commit did not add a tag.
+enum TagsPickerNotice {
+  /// Nothing to explain.
+  none,
+
+  /// A token was longer than [HashtagExtractor.maxHashtagLength] and was
+  /// rejected.
+  tagTooLong,
+}
+
 /// State for the tags picker sheet.
 final class TagsPickerState extends Equatable {
   const TagsPickerState({
@@ -22,6 +32,7 @@ final class TagsPickerState extends Equatable {
     this.query = '',
     this.searchResults = const <String>[],
     this.status = TagsPickerStatus.initial,
+    this.notice = TagsPickerNotice.none,
   });
 
   /// Tags the user has committed in this session.
@@ -36,25 +47,36 @@ final class TagsPickerState extends Equatable {
   /// Lifecycle of the suggestion search.
   final TagsPickerStatus status;
 
-  /// Search results minus anything that has already been selected.
+  /// Why the last commit did not add a tag, if it was rejected.
+  final TagsPickerNotice notice;
+
+  /// Whether the video already carries [HashtagExtractor.maxHashtagsPerVideo]
+  /// tags, so nothing more can be added.
+  bool get isAtTagLimit =>
+      selectedTags.length >= HashtagExtractor.maxHashtagsPerVideo;
+
+  /// Search results in the form they would be added — normalized and
+  /// deduplicated — minus anything already selected or not addable.
   List<String> get suggestions {
     if (searchResults.isEmpty) return searchResults;
-    final lowerSelected = selectedTags.map((t) => t.toLowerCase()).toSet();
     return searchResults
-        .where((s) => !lowerSelected.contains(s.toLowerCase()))
+        .map(HashtagExtractor.normalizeVideoHashtag)
+        .nonNulls
+        .toSet()
+        .where((s) => !selectedTags.contains(s))
         .toList();
   }
 
-  /// The sanitized query — i.e. what would be added if the user committed it.
-  String get sanitizedQuery => query.replaceAll(_sanitizePattern, '');
+  /// The normalized query — i.e. what would be added if the user committed
+  /// it — or an empty string when it would be rejected.
+  String get sanitizedQuery =>
+      HashtagExtractor.normalizeVideoHashtag(query) ?? '';
 
-  /// Whether the sanitized query is non-empty and not already selected
-  /// (case-insensitive).
+  /// Whether committing the query would add a new tag.
   bool get canAddQuery {
     final s = sanitizedQuery;
-    if (s.isEmpty) return false;
-    final lower = s.toLowerCase();
-    return !selectedTags.any((t) => t.toLowerCase() == lower);
+    if (s.isEmpty || isAtTagLimit) return false;
+    return !selectedTags.contains(s);
   }
 
   TagsPickerState copyWith({
@@ -62,15 +84,23 @@ final class TagsPickerState extends Equatable {
     String? query,
     List<String>? searchResults,
     TagsPickerStatus? status,
+    TagsPickerNotice? notice,
   }) {
     return TagsPickerState(
       selectedTags: selectedTags ?? this.selectedTags,
       query: query ?? this.query,
       searchResults: searchResults ?? this.searchResults,
       status: status ?? this.status,
+      notice: notice ?? this.notice,
     );
   }
 
   @override
-  List<Object?> get props => [selectedTags, query, searchResults, status];
+  List<Object?> get props => [
+    selectedTags,
+    query,
+    searchResults,
+    status,
+    notice,
+  ];
 }

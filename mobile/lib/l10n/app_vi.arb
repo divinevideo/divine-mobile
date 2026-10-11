@@ -5849,6 +5849,9 @@
   "videoMetadataTagsPickerSearchHint": "Tìm hoặc thêm thẻ",
   "videoMetadataTagsPickerEmptyHint": "Thêm thẻ để giúp mọi người khám phá video của bạn",
   "videoMetadataTagsPickerNoResults": "Không có thẻ phù hợp",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag có thể dài tối đa {max} ký tự.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Bạn có thể thêm tối đa {max} hashtag.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} ký tự}}",
   "videoMetadataTagsPickerAddTag": "Thêm \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

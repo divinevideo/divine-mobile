@@ -11574,6 +11574,39 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Walang tugmang tag';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hanggang $max character lang ang hashtag.',
+      one: 'Hanggang $max character lang ang hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+      one: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count sa $max character',
+      one: '$count sa $max character',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Idagdag ang \"#$tag\"';
   }

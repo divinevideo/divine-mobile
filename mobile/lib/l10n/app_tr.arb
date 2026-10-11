@@ -3739,6 +3739,9 @@
     "videoMetadataTagsPickerSearchHint": "Etiket ara veya ekle",
     "videoMetadataTagsPickerEmptyHint": "İnsanların videonu keşfetmesi için etiket ekle",
     "videoMetadataTagsPickerNoResults": "Eşleşen etiket yok",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtag'ler en fazla {max} karakter olabilir.} other{Hashtag'ler en fazla {max} karakter olabilir.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{En fazla {max} hashtag ekleyebilirsin.} other{En fazla {max} hashtag ekleyebilirsin.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} karakterden {count}} other{{max} karakterden {count}}}",
     "videoMetadataTagsPickerAddTag": "\"#{tag}\" ekle",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

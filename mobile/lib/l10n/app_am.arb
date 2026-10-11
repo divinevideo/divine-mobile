@@ -3851,6 +3851,9 @@
     "videoMetadataTagsPickerSearchHint": "መለያዎችን ይፈልጉ ወይም ያክሉ",
     "videoMetadataTagsPickerEmptyHint": "ሰዎች ቪዲዮዎን እንዲያገኙ መለያዎችን ያክሉ",
     "videoMetadataTagsPickerNoResults": "ተዛማጅ መለያዎች የሉም",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{ሃሽታጎች እስከ {max} ቁምፊ ሊኖራቸው ይችላሉ።} other{ሃሽታጎች እስከ {max} ቁምፊዎች ሊኖራቸው ይችላሉ።}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{እስከ {max} ሃሽታግ ማከል ይችላሉ።} other{እስከ {max} ሃሽታጎች ማከል ይችላሉ።}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{ከ{max} ቁምፊ {count}} other{ከ{max} ቁምፊዎች {count}}}",
     "videoMetadataTagsPickerAddTag": "\"#{tag}\" ያክሉ",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

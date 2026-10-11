@@ -11714,6 +11714,42 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Nicio etichetă potrivită';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtagurile pot avea până la $max de caractere.',
+      few: 'Hashtagurile pot avea până la $max caractere.',
+      one: 'Hashtagurile pot avea până la $max caracter.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Poți adăuga până la $max de hashtaguri.',
+      few: 'Poți adăuga până la $max hashtaguri.',
+      one: 'Poți adăuga până la $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count din $max de caractere',
+      few: '$count din $max caractere',
+      one: '$count din $max caracter',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adaugă „#$tag\"';
   }

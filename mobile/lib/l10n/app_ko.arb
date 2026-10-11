@@ -3285,6 +3285,9 @@
     "videoMetadataTagsPickerSearchHint": "태그 검색 또는 추가",
     "videoMetadataTagsPickerEmptyHint": "사람들이 동영상을 발견할 수 있도록 태그를 추가하세요",
     "videoMetadataTagsPickerNoResults": "일치하는 태그 없음",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, other{해시태그는 최대 {max}자까지 쓸 수 있어요.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{해시태그는 최대 {max}개까지 추가할 수 있어요.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{max}자 중 {count}자}}",
     "videoMetadataTagsPickerAddTag": "\"#{tag}\" 추가",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

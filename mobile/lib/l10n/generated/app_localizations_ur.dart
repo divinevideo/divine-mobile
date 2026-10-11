@@ -11474,6 +11474,39 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'کوئی میلتا ٹیگ نہیں';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ہیش ٹیگ زیادہ سے زیادہ $max حروف کے ہو سکتے ہیں۔',
+      one: 'ہیش ٹیگ زیادہ سے زیادہ $max حرف کے ہو سکتے ہیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+      one: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max میں سے $count حروف',
+      one: '$max میں سے $count حرف',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" شامل کریں';
   }
