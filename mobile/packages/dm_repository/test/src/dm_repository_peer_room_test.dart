@@ -66,8 +66,12 @@ void main() {
     late _MockNostrClient nostrClient;
     late StreamController<Event> relay;
     late DmRepository repository;
+    // The production switch is the groupMessages flag. On here, because every
+    // group below but one describes receiving a room.
+    late bool receivesPeerRooms;
 
     setUp(() async {
+      receivesPeerRooms = true;
       db = AppDatabase.test(NativeDatabase.memory());
       conversationsDao = ConversationsDao(db);
       messagesDao = DirectMessagesDao(db);
@@ -122,6 +126,7 @@ void main() {
         ),
         userPubkey: _owner,
         signer: LocalNostrSigner(_ownerSecret),
+        receivesPeerRooms: () => receivesPeerRooms,
       );
       await repository.startListening();
     });
@@ -236,6 +241,66 @@ void main() {
       expect(participantsOf(stored.single), unorderedEquals([_owner, peer]));
       expect(await messageIdsIn(oneToOneId), unorderedEquals(messageIds));
     }
+
+    group('while receiving rooms is switched off', () {
+      setUp(() => receivesPeerRooms = false);
+
+      test('is the default when no switch is injected', () {
+        final unwired = DmRepository(
+          nostrClient: nostrClient,
+          directMessagesDao: messagesDao,
+          conversationsDao: conversationsDao,
+          userPubkey: _owner,
+        );
+
+        expect(unwired.receivesPeerRooms, isFalse);
+        expect(repository.receivesPeerRooms, isFalse);
+      });
+
+      test('stays in the one-to-one with its sender', () async {
+        final rumor = message(author: _alice, pTags: [_owner, _bob]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        await expectOnlyTheOneToOneHolding(_alice, [rumor.id]);
+      });
+
+      test('is still stored in a room that already exists', () async {
+        await conversationsDao.upsertConversation(
+          id: _roomId,
+          participantPubkeys: jsonEncode([_owner, _alice, _bob]..sort()),
+          isGroup: true,
+          createdAt: _sentAt - 10,
+          ownerPubkey: _owner,
+          dmProtocol: 'nip17',
+        );
+        final rumor = message(author: _alice, pTags: [_owner, _bob]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        await expectOnlyTheRoomHolding([rumor.id]);
+      });
+
+      test('reads the switch for each rumor', () async {
+        final before = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'before the switch',
+        );
+        await deliver(before, authorSecret: _aliceSecret);
+        await expectOnlyTheOneToOneHolding(_alice, [before.id]);
+
+        receivesPeerRooms = true;
+        final after = message(
+          author: _bob,
+          pTags: [_owner, _alice],
+          content: 'after the switch',
+        );
+        await deliver(after, authorSecret: _bobSecret);
+
+        expect(await messageIdsIn(_roomId), equals([after.id]));
+      });
+    });
 
     group('that names the user and a third member', () {
       test('is filed as a room when no conversation exists yet', () async {

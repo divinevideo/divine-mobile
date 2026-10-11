@@ -540,6 +540,7 @@ class DmRepository {
     DmRepositoryErrorReporter? errorReporter,
     DmReactionsRepository? reactionsRepository,
     DmConversationRemovalPolicy? removalPolicy,
+    bool Function()? receivesPeerRooms,
     String? dmInboxRelayUrl,
     List<String> dmInboxDiscoveryRelays = const <String>[],
     List<String> dmInboxLookupRelays = const <String>[],
@@ -566,6 +567,7 @@ class DmRepository {
        _errorReporter = errorReporter,
        _reactionsRepository = reactionsRepository,
        _removalPolicy = removalPolicy ?? allowAllConversationRemoval,
+       _receivesPeerRooms = receivesPeerRooms ?? _neverReceivePeerRooms,
        _dmInboxRelayUrl = dmInboxRelayUrl,
        _dmInboxDiscoveryRelays = dmInboxDiscoveryRelays,
        _dmInboxLookupRelays = dmInboxLookupRelays,
@@ -644,6 +646,15 @@ class DmRepository {
   /// it did before the policy existed; production injects the moderation
   /// identities via `dmRepositoryProvider`.
   final DmConversationRemovalPolicy _removalPolicy;
+
+  /// Whether a peer's rumor may open a room this install does not hold yet
+  /// (#7338). Read on every rumor, so a runtime switch applies to the next
+  /// one. Off, such a rumor stays in the 1:1 with its sender, as it did before
+  /// rooms were received. Defaults to off; production passes the
+  /// `groupMessages` flag, which gates starting a room too.
+  final bool Function() _receivesPeerRooms;
+
+  static bool _neverReceivePeerRooms() => false;
 
   /// The stable relay URL advertised by the kind-10050 publish (the
   /// environment's canonical DM relay, mirroring the kind-10002 bootstrap).
@@ -8907,6 +8918,10 @@ class DmRepository {
     }
   }
 
+  /// Whether a peer's rumor may open a room this install does not hold yet
+  /// (#7338), as the injected switch answers now.
+  bool get receivesPeerRooms => _receivesPeerRooms();
+
   /// Whether [conversation] is one the injected policy refuses to remove.
   ///
   /// Exposed so a caller can withdraw a destructive affordance before offering
@@ -9769,6 +9784,7 @@ class DmRepository {
   /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
   ///   holding it could never be replied to.
   /// * its p tags omit the current user, so it is not a room we are in.
+  /// * receiving rooms is switched off ([receivesPeerRooms]).
   ///
   /// A mention is filed under the conversation it answers instead: a reply
   /// ([replyToId]) to a stored message in a strictly smaller conversation that
@@ -9833,7 +9849,7 @@ class DmRepository {
         return senderIsMember ? answered : canonical1to1;
       }
     }
-    return room;
+    return _receivesPeerRooms() ? room : canonical1to1;
   }
 
   /// The participants of the conversation holding the stored message

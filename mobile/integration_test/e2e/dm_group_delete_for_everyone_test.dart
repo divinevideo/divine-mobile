@@ -113,6 +113,9 @@ void main() {
       signer: signer,
       messageService: messageService,
       reactionsRepository: reactions,
+      // Production gates this on the groupMessages flag; these parties play
+      // installs that have it on, so a room a peer starts is filed as one.
+      receivesPeerRooms: () => true,
     );
     addTearDown(repository.stopListening);
     addTearDown(nostr.relayPool.removeAll);

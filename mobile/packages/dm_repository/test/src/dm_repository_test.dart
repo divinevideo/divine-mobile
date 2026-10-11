@@ -888,6 +888,7 @@ void main() {
       List<String> dmInboxTaggedRelays = const <String>[],
       Duration readMarkerDebounceDelay = const Duration(seconds: 3),
       String Function()? sendBatchIdGenerator,
+      bool Function()? receivesPeerRooms,
     }) {
       return DmRepository(
         nostrClient: mockNostrClient,
@@ -917,6 +918,7 @@ void main() {
         dmInboxLookupRelays: dmInboxLookupRelays,
         readMarkerDebounceDelay: readMarkerDebounceDelay,
         sendBatchIdGenerator: sendBatchIdGenerator,
+        receivesPeerRooms: receivesPeerRooms,
         errorReporter: (error, stackTrace, {required site}) {
           reporterCalls.add(_ReporterCall(error, stackTrace, site));
         },
@@ -4132,6 +4134,7 @@ void main() {
 
           final repository = createRepository(
             rumorDecryptor: (_, _) async => rumor,
+            receivesPeerRooms: () => true,
           );
 
           await repository.startListening();
@@ -18831,6 +18834,7 @@ void main() {
 
           final repository = createRepository(
             rumorDecryptor: (_, _) async => rumor,
+            receivesPeerRooms: () => true,
           );
 
           await repository.startListening();
