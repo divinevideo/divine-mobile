@@ -1,6 +1,8 @@
 // ABOUTME: Hard-gate screen shown when an authenticated account is restricted
 // ABOUTME: pending parental consent / minor-account review.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -395,9 +397,11 @@ class _LoadedView extends ConsumerWidget {
         reviewCase.moderationConversationId ??
         DmRepository.computeConversationId([currentPubkey, moderationPubkey]);
 
-    context.push(
-      ConversationPage.pathForId(conversationId),
-      extra: [moderationPubkey],
+    unawaited(
+      context.push(
+        ConversationPage.pathForId(conversationId),
+        extra: [moderationPubkey],
+      ),
     );
   }
 
@@ -460,18 +464,18 @@ class _LoadedView extends ConsumerWidget {
 
   void _continueToNextStep(BuildContext context, MinorReviewCase reviewCase) {
     if (reviewCase.isUnder13Path) {
-      context.push(MinorAccountReviewUnder13SupportScreen.path);
+      unawaited(context.push(MinorAccountReviewUnder13SupportScreen.path));
       return;
     }
 
     switch (reviewCase.allowedResolution) {
       case MinorReviewResolutionType.parentVideoOrEmail:
-        context.push(MinorAccountReviewParentContactScreen.path);
+        unawaited(context.push(MinorAccountReviewParentContactScreen.path));
       case MinorReviewResolutionType.supportEmailOnly:
-        context.push(MinorAccountReviewUnder13SupportScreen.path);
+        unawaited(context.push(MinorAccountReviewUnder13SupportScreen.path));
       case MinorReviewResolutionType.supportReviewOnly:
       case MinorReviewResolutionType.unknown:
-        context.push(SupportCenterScreen.path);
+        unawaited(context.push(SupportCenterScreen.path));
     }
   }
 }
