@@ -357,6 +357,33 @@ void main() {
       expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
     });
 
+    test('joins the one-to-one when a reply to it shares its second and '
+        'sorts first', () async {
+      final parent = hello();
+      final reply = ccBob(parent);
+      // Ids are hashes: pick a follow-up that sorts before the reply it
+      // answers, in the same second, so time order cannot place it.
+      final followUp = [
+        for (var i = 0; i < 64; i++)
+          message(
+            author: _alice,
+            pTags: [_owner, _bob],
+            content: 'cc bob more $i',
+            replyTo: reply.id,
+            createdAt: reply.createdAt,
+          ),
+      ].firstWhere((event) => event.id.compareTo(reply.id) < 0);
+
+      await deliver(followUp, authorSecret: _aliceSecret);
+      await deliver(reply, authorSecret: _aliceSecret);
+      await deliver(parent, authorSecret: _aliceSecret);
+
+      expect(
+        await conversations(),
+        equals('1:1(alice,me)=[cc bob; ${followUp.content}; hello]'),
+      );
+    });
+
     test('joins the one-to-one when storing its parent is rolled back and '
         'retried', () async {
       final parent = hello();

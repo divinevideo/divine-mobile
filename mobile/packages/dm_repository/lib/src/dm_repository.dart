@@ -10077,33 +10077,27 @@ class DmRepository {
     );
     if (rows.isEmpty || !everyRowIsAPeerReply) return const {};
 
+    // A reply is placed only once the parent it answers inside this room has
+    // been: sorting by time cannot promise that, since a reply and its parent
+    // can share a second and ids are hashes. Each pass places at least one
+    // row, or the room stays.
+    final inRoom = {for (final row in rows) row.id};
     final homes = <String, _Conversation>{};
-    for (final row in rows) {
-      final replyToId = row.replyToId!;
-      final named = {
-        for (final pubkey in reconstructParticipants(
-          row.tagsJson,
-          row.senderPubkey,
-        ))
-          pubkey.toLowerCase(),
-      };
-      // A parent that is itself moving is answered where it is going.
-      final parentHome = homes[replyToId];
-      final answered = parentHome == null
-          ? await _smallerConversationAnsweredBy(replyToId, named)
-          : isMentionOfWiderRoom(parentHome.participants.toSet(), named)
-          ? parentHome
-          : null;
-      if (answered == null) return const {};
-      final home = _homeOfMention(answered, row.senderPubkey);
-      // The receive path drops a message stamped at or before the removal of
-      // its conversation; moving one in would bring it back.
-      final removedAt = await _removedConversationsDao?.removedAtFor(
-        conversationId: home.id,
-        ownerPubkey: ownerPubkey,
-      );
-      if (removedAt != null && row.createdAt <= removedAt) return const {};
-      homes[row.id] = home;
+    var unplaced = rows;
+    while (unplaced.isNotEmpty) {
+      final waiting = <DirectMessageRow>[];
+      for (final row in unplaced) {
+        if (inRoom.contains(row.replyToId) &&
+            !homes.containsKey(row.replyToId)) {
+          waiting.add(row);
+          continue;
+        }
+        final home = await _homeOfRoomReply(row, homes, ownerPubkey);
+        if (home == null) return const {};
+        homes[row.id] = home;
+      }
+      if (waiting.length == unplaced.length) return const {};
+      unplaced = waiting;
     }
 
     final movedTo = <String>{};
@@ -10160,6 +10154,42 @@ class DmRepository {
       category: LogCategory.system,
     );
     return movedTo;
+  }
+
+  /// Where [row], a reply in a room being taken apart, would have been filed
+  /// had it arrived after the message it answers, given the [homes] already
+  /// found for the room's other messages. Null when it would have opened the
+  /// room anyway, or when moving it would bring back a removed message.
+  Future<_Conversation?> _homeOfRoomReply(
+    DirectMessageRow row,
+    Map<String, _Conversation> homes,
+    String ownerPubkey,
+  ) async {
+    final replyToId = row.replyToId!;
+    final named = {
+      for (final pubkey in reconstructParticipants(
+        row.tagsJson,
+        row.senderPubkey,
+      ))
+        pubkey.toLowerCase(),
+    };
+    // A parent that is itself moving is answered where it is going.
+    final parentHome = homes[replyToId];
+    final answered = parentHome == null
+        ? await _smallerConversationAnsweredBy(replyToId, named)
+        : isMentionOfWiderRoom(parentHome.participants.toSet(), named)
+        ? parentHome
+        : null;
+    if (answered == null) return null;
+    final home = _homeOfMention(answered, row.senderPubkey);
+    // The receive path drops a message stamped at or before the removal of
+    // its conversation; moving one in would bring it back.
+    final removedAt = await _removedConversationsDao?.removedAtFor(
+      conversationId: home.id,
+      ownerPubkey: ownerPubkey,
+    );
+    if (removedAt != null && row.createdAt <= removedAt) return null;
+    return home;
   }
 
   /// Extracts Kind 15 file metadata from event tags.
