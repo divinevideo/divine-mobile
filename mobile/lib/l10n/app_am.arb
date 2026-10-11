@@ -581,15 +581,8 @@
             }
         }
     },
-    "exploreDiscoverLists": "ዝርዝሮችን ያግኙ",
-    "exploreAboutLists": "ስለ ዝርዝሮች",
-    "exploreAboutListsDescription": "ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡",
     "explorePeopleLists": "የሰዎች ዝርዝሮች",
-    "explorePeopleListsDescription": "የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ",
     "exploreVideoLists": "የቪዲዮ ዝርዝሮች",
-    "exploreVideoListsDescription": "በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ",
-    "exploreMyLists": "የእኔ ዝርዝሮች",
-    "exploreSubscribedLists": "የተመዘገቡ ዝርዝሮች",
     "exploreErrorLoadingLists": "ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።",
     "exploreNewVideosCount": "{count, plural, =1{{count} አዲስ ቪዲዮ} other{{count} አዳዲስ ቪዲዮዎች}}",
     "@exploreNewVideosCount": {
@@ -1672,10 +1665,8 @@
         }
     },
     "peopleListsAddToList": "ወደ ዝርዝር ያክሉ",
-    "peopleListsSheetTitle": "ወደ ዝርዝር ያክሉ",
     "peopleListsEmptyTitle": "እስካሁን ምንም ዝርዝሮች የሉም",
     "peopleListsEmptySubtitle": "ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።",
-    "peopleListsCreateList": "ዝርዝር ይፍጠሩ",
     "peopleListsNewListTitle": "አዲስ ዝርዝር",
     "peopleListsRouteTitle": "የሰዎች ዝርዝር",
     "@peopleListsRouteTitle": {
@@ -1708,15 +1699,6 @@
     },
     "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
-    "peopleListsAddButton": "አክል",
-    "peopleListsAddButtonWithCount": "አክል {count}",
-    "@peopleListsAddButtonWithCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "peopleListsInNLists": "{count, plural, =1{በ{count} ዝርዝር ውስጥ} other{በ{count} ዝርዝሮች ውስጥ}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -2024,7 +2006,6 @@
     "reportReceivedReviewNotice": "ከበይነመረብ ጋር ስትገናኝ በራስ-ሰር እንልከዋለን። ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "ገጠመ",
-    "listAddToList": "ወደ ዝርዝር ያክሉ",
     "listVideoCount": "{count} ቪዲዮዎች",
     "@listVideoCount": {
         "placeholders": {
@@ -2033,40 +2014,13 @@
             }
         }
     },
-    "listPersonCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "በ",
-    "listNewList": "አዲስ ዝርዝር",
     "listDone": "ተከናውኗል",
     "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
-    "listRemovedFrom": "ከ{name} ተወግዷል",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "ወደ {name} ታክሏል።",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
     "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
     "listNameLabel": "የዝርዝር ስም",
     "listDescriptionLabel": "መግለጫ (አማራጭ)",
-    "listPublicList": "የህዝብ ዝርዝር",
-    "listPublicListSubtitle": "ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።",
     "listPrivateListSubtitle": "ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።",
     "listVisibilityPublic": "ይፋዊ",
     "listVisibilityPrivate": "የግል",
@@ -2100,7 +2054,6 @@
             }
         }
     },
-    "listCancel": "ሰርዝ",
     "listCreate": "ፍጠር",
     "listCreateFailed": "ዝርዝር መፍጠር አልተሳካም።",
     "keyManagementTitle": "Nostr ቁልፎች",
@@ -2452,14 +2405,6 @@
         }
     },
     "discoverListsFailedToUpdateSubscription": "የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።",
-    "discoverListsTitle": "ዝርዝሮችን ያግኙ",
-    "discoverListsFailedToLoad": "ዝርዝሮችን መጫን አልተሳካም",
-    "discoverListsLoading": "የህዝብ ዝርዝሮችን በመፈለግ ላይ...",
-    "discoverListsRelayTimeout": "ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።",
-    "discoverListsServiceUnavailable": "አገልግሎቱ አይገኝም።",
-    "discoverListsEmptyTitle": "ምንም የህዝብ ዝርዝሮች አልተገኙም",
-    "discoverListsEmptySubtitle": "ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ",
-    "discoverListsByAuthorPrefix": "በ",
     "curatedListEmptyTitle": "በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም",
     "curatedListEmptySubtitle": "ለመጀመር ቪዲዮዎችን ያክሉ",
     "curatedListLoadingVideos": "ቪዲዮዎችን በመጫን ላይ...",
@@ -5073,7 +5018,6 @@
   "peopleListsPeopleLabel": "ሰዎች",
   "peopleListsPeopleNone": "ምንም ሰዎች አልተጨመሩም",
   "peopleListsSessionChanged": "መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።",
-  "peopleListsSearchConnectionsHint": "ተከታዮችን እና የምትከተላቸውን ፈልግ",
   "listMemberNamesSeparator": "፣ ",
   "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
   "@listCardSemanticLabel": {
@@ -5119,5 +5063,43 @@
   "ideasTitleFive": "ያለ ረጅም ማብራሪያ",
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
-  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።"
+  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
+  "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
+  "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+  "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+  "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።",
+  "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+  "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+  "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
+  "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+  "listMakePublicLabel": "ይፋዊ ያድርጉ",
+  "listCollaboratorsNone": "ምንም",
+  "listAddCollaboratorTitle": "ተባባሪ ጨምር",
+  "listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
+  "listCollaboratorSearchHint": "Divine ፈልግ...",
+  "listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
+  "listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
+  "listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
+  "listRetrySync": "አሁን አመሳስል",
+  "listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
+  "listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
+  "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
+  "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
+  "listAddToLists": "ወደ ዝርዝሮች ያክሉ"
 }

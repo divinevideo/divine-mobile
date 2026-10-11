@@ -1,5 +1,5 @@
 // ABOUTME: The list thumbnail card used everywhere a list is shown in a
-// ABOUTME: gallery: the profile My Lists tab and search.
+// ABOUTME: gallery: the Explore Lists tab, profile My Lists and search.
 // ABOUTME: Two media variants (video fan, people collage) share one card.
 
 import 'package:count_formatter/count_formatter.dart';
@@ -40,8 +40,9 @@ const _largeTileFraction = 0.661;
 /// One list rendered as a gallery thumbnail card: media block on top, then
 /// a fixed-height title/description footer.
 ///
-/// The profile and search galleries share the media box, seams, badge,
-/// and footer metrics. The two variants differ only in the media block:
+/// Every surface that shows a list card instantiates this widget, so its
+/// appearance — media box, seams, badge, footer metrics — changes in one
+/// place. The two variants differ only in the media block:
 ///
 /// * [DivineListThumbnail.videos] fans out up to five video thumbnails with
 ///   a play-count badge.
@@ -66,7 +67,7 @@ class DivineListThumbnail extends StatelessWidget {
        _kind = _ListKind.videos,
        _memberPubkeys = const [],
        _resolveDescriptionMentions = true,
-       _media = _VideoFanMedia(
+       _media = DivineListMedia.videos(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
          pending: thumbnailsPending,
@@ -89,9 +90,9 @@ class DivineListThumbnail extends StatelessWidget {
        _kind = _ListKind.people,
        _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
        _resolveDescriptionMentions = showMemberIdentities,
-       _media = _PeopleCollageMedia(
-         memberPubkeys: showMemberIdentities ? userList.pubkeys : const [],
-         memberCount: userList.pubkeys.length,
+       _media = DivineListMedia.people(
+         memberPubkeys: userList.pubkeys,
+         showMemberIdentities: showMemberIdentities,
        );
 
   final String name;
@@ -148,6 +149,9 @@ class DivineListThumbnail extends StatelessWidget {
       excludeSemantics: true,
       onTap: onTap,
       child: GestureDetector(
+        // Skeleton bones and an empty description box do not hit-test, so
+        // the card claims taps across its whole area.
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,6 +175,71 @@ class DivineListThumbnail extends StatelessWidget {
 
 enum _ListKind { videos, people }
 
+/// A list card's media block on its own: the video fan or the people
+/// collage, at whatever width its parent gives it, 177:120.
+///
+/// The card renders it above its footer; the list pickers render it small
+/// at the start of a row, without the count badge, since the row's own
+/// line carries the count.
+class DivineListMedia extends StatelessWidget {
+  /// The fan of up to five video thumbnails.
+  ///
+  /// [pending] says the thumbnails are still being resolved, so empty slots
+  /// a video could still fill shimmer instead of sitting flat.
+  const DivineListMedia.videos({
+    required List<String> thumbnailUrls,
+    required int videoCount,
+    bool pending = false,
+    this.showCount = true,
+    super.key,
+  }) : _thumbnailUrls = thumbnailUrls,
+       _count = videoCount,
+       _pending = pending,
+       _memberPubkeys = const [],
+       _kind = _ListKind.videos;
+
+  /// The collage of up to three member avatars.
+  ///
+  /// Set [showMemberIdentities] false for public previews that keep identities
+  /// unresolved while preserving the actual member count.
+  const DivineListMedia.people({
+    required List<String> memberPubkeys,
+    bool showMemberIdentities = true,
+    this.showCount = true,
+    super.key,
+  }) : _thumbnailUrls = const [],
+       _count = memberPubkeys.length,
+       _pending = false,
+       _memberPubkeys = showMemberIdentities ? memberPubkeys : const [],
+       _kind = _ListKind.people;
+
+  /// Whether the count badge sits in the bottom-left corner.
+  final bool showCount;
+
+  final List<String> _thumbnailUrls;
+  final int _count;
+  final bool _pending;
+  final List<String> _memberPubkeys;
+  final _ListKind _kind;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (_kind) {
+      _ListKind.videos => _VideoFanMedia(
+        thumbnailUrls: _thumbnailUrls,
+        videoCount: _count,
+        pending: _pending,
+        showCount: showCount,
+      ),
+      _ListKind.people => _PeopleCollageMedia(
+        memberPubkeys: _memberPubkeys,
+        memberCount: _count,
+        showCount: showCount,
+      ),
+    };
+  }
+}
+
 /// Overlapping portrait cards arranged left-to-right.
 ///
 /// Renders [_fanSlotCount] cards where the leftmost card has the highest
@@ -181,10 +250,12 @@ class _VideoFanMedia extends StatelessWidget {
     required this.thumbnailUrls,
     required this.videoCount,
     required this.pending,
+    required this.showCount,
   });
 
   final List<String> thumbnailUrls;
   final int videoCount;
+  final bool showCount;
 
   /// The resolver has not returned yet: empty slots that a video could
   /// still fill shimmer as bones.
@@ -205,7 +276,9 @@ class _VideoFanMedia extends StatelessWidget {
           }
           return Skeleton.keep(child: _FanSlot(imageUrl: url));
         },
-        badge: _CountBadge(icon: DivineIconName.play, count: videoCount),
+        badge: showCount
+            ? _CountBadge(icon: DivineIconName.play, count: videoCount)
+            : null,
       ),
     );
   }
@@ -312,10 +385,12 @@ class _PeopleCollageMedia extends ConsumerWidget {
   const _PeopleCollageMedia({
     required this.memberPubkeys,
     required this.memberCount,
+    required this.showCount,
   });
 
   final List<String> memberPubkeys;
   final int memberCount;
+  final bool showCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -354,7 +429,9 @@ class _PeopleCollageMedia extends ConsumerWidget {
             ),
           );
         },
-        badge: _CountBadge(icon: DivineIconName.users, count: memberCount),
+        badge: showCount
+            ? _CountBadge(icon: DivineIconName.users, count: memberCount)
+            : null,
       ),
     );
   }
@@ -730,9 +807,10 @@ class _DescriptionBox extends StatelessWidget {
   }
 }
 
-/// Descriptions that allow identity resolution retain the existing inline
-/// links with neutral styling. Public people previews use passive text
-/// instead so mentions cannot fetch profiles or navigate out of the card.
+/// Descriptions that allow identity resolution render mentions as names in
+/// the description's neutral style. The whole card is the tap target, so the
+/// text ignores pointers rather than opening links it does not look like.
+/// Public people previews use passive text so mentions cannot fetch profiles.
 class _PlainLinkText extends StatelessWidget {
   const _PlainLinkText({required this.text, required this.style});
 
@@ -741,13 +819,15 @@ class _PlainLinkText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LinkifiedText(
-      text: text,
-      style: style,
-      linkStyle: style,
-      mentionStyle: style,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+    return IgnorePointer(
+      child: LinkifiedText(
+        text: text,
+        style: style,
+        linkStyle: style,
+        mentionStyle: style,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -781,6 +861,59 @@ class ListSkeletonizer extends StatelessWidget {
         stops: const [0, 0.5, 1],
       ),
       child: child,
+    );
+  }
+}
+
+/// The card's silhouette while its list is still on its way.
+///
+/// Same media geometry, gap and footer boxes as [DivineListThumbnail], so
+/// a gallery column keeps its rows when the placeholders give way to cards,
+/// and the same structure inside the media box: the five-slot fan for a
+/// video list, the three-tile collage for a people list. Paints as bones
+/// under an enclosing [Skeletonizer] with `ignoreContainers` on; the
+/// caller owns the shimmer effect and the semantics label for the column.
+class DivineListThumbnailSkeleton extends StatelessWidget {
+  /// Silhouette of a video list card: the thumbnail fan.
+  const DivineListThumbnailSkeleton.videos({super.key})
+    : _kind = _ListKind.videos;
+
+  /// Silhouette of a people list card: the avatar collage.
+  const DivineListThumbnailSkeleton.people({super.key})
+    : _kind = _ListKind.people;
+
+  final _ListKind _kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    // The styles only size the bones; the colours match what the real
+    // footer paints so the metrics come from the same styles.
+    final titleLine = _scaledLineHeight(
+      context,
+      VineTheme.titleSmallFont(color: colors.primaryText),
+    );
+    final descriptionLine = _scaledLineHeight(
+      context,
+      VineTheme.bodySmallFont(color: colors.secondaryText),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        switch (_kind) {
+          _ListKind.videos => _FanFrame(
+            slotBuilder: (_) => const _FanSlotBone(),
+          ),
+          _ListKind.people => _CollageFrame(
+            tileBuilder: (slot, seams) => _TileBone(slot: slot, seams: seams),
+          ),
+        },
+        const SizedBox(height: 8),
+        _TextBone(lineHeight: titleLine, widthFactor: 0.6),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.9),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.7),
+      ],
     );
   }
 }
@@ -852,6 +985,38 @@ class _TileBone extends StatelessWidget {
           child: DecoratedBox(decoration: BoxDecoration(border: seams)),
         ),
       ],
+    );
+  }
+}
+
+/// One text line's box with a bone inside it, so the placeholder footer is
+/// exactly as tall as the real one.
+class _TextBone extends StatelessWidget {
+  const _TextBone({required this.lineHeight, required this.widthFactor});
+
+  final double lineHeight;
+  final double widthFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: lineHeight,
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: FractionallySizedBox(
+          alignment: AlignmentDirectional.centerStart,
+          widthFactor: widthFactor,
+          child: Skeleton.leaf(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.vineColors.containerLow,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

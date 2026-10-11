@@ -132,7 +132,7 @@ void main() {
     CuratedList createList({
       required String id,
       String name = 'Test List',
-      List<String> videoEventIds = const [],
+      List<String> videoEventIds = const ['fixture-video'],
       String? description,
       String? pubkey,
       bool isPublic = true,
@@ -368,26 +368,35 @@ void main() {
       test('returns false when no default list exists', () {
         repository.setSubscribedLists([createList(id: 'other')]);
 
-        expect(repository.hasDefaultList(), isFalse);
+        expect(repository.hasDefaultList(ownerPubkey: _testPubkey), isFalse);
       });
 
       test('returns true when default list exists', () {
-        repository.setSubscribedLists([createList(id: defaultListId)]);
+        repository.setSubscribedLists([
+          createList(id: defaultListId, pubkey: _testPubkey),
+        ]);
 
-        expect(repository.hasDefaultList(), isTrue);
+        expect(repository.hasDefaultList(ownerPubkey: _testPubkey), isTrue);
       });
     });
 
     group('getDefaultList', () {
       test('returns null when no default list exists', () {
-        expect(repository.getDefaultList(), isNull);
+        expect(repository.getDefaultList(ownerPubkey: _testPubkey), isNull);
       });
 
       test('returns the default list', () {
-        final myList = createList(id: defaultListId, name: 'My List');
+        final myList = createList(
+          id: defaultListId,
+          name: 'My List',
+          pubkey: _testPubkey,
+        );
         repository.setSubscribedLists([myList]);
 
-        expect(repository.getDefaultList(), equals(myList));
+        expect(
+          repository.getDefaultList(ownerPubkey: _testPubkey),
+          equals(myList),
+        );
       });
     });
 
@@ -474,6 +483,26 @@ void main() {
 
         expect(results, hasLength(1));
         expect(results.first.id, equals('b'));
+      });
+
+      test('excludes lists with no videos, own or subscribed', () {
+        repository
+          ..setOwnLists([
+            createList(
+              id: 'mine',
+              name: 'Dance Drafts',
+              pubkey: _testPubkey,
+              videoEventIds: const [],
+            ),
+          ])
+          ..setSubscribedLists([
+            createList(id: 'bare', name: 'Dance Bare', videoEventIds: const []),
+            createList(id: 'full', name: 'Dance Full'),
+          ]);
+
+        final results = repository.searchLists('dance');
+
+        expect(results.map((l) => l.id), equals(['full']));
       });
     });
 
@@ -1095,10 +1124,11 @@ void main() {
       }
 
       test(
-        'clears prefilled thumbnails when no videos can be resolved',
+        'clears stale previews without fetching for an empty video list',
         () async {
           final list = createList(
             id: 'empty',
+            videoEventIds: const [],
           ).copyWith(thumbnailUrls: ['https://example.com/stale.jpg']);
           expect(
             (await repository.resolveListThumbnails([
@@ -1106,6 +1136,8 @@ void main() {
             ])).single.thumbnailUrls,
             isEmpty,
           );
+          verifyZeroInteractions(funnelcakeApiClient);
+          verifyZeroInteractions(nostrClient);
         },
       );
       test('enriches lists with resolved thumbnail URLs', () async {
@@ -1138,7 +1170,7 @@ void main() {
       });
 
       test('leaves a list without videos untouched', () async {
-        final list = createList(id: 'list-1');
+        final list = createList(id: 'list-1', videoEventIds: const []);
 
         final enriched = await repository.resolveListThumbnails([list]);
 
@@ -1182,20 +1214,37 @@ void main() {
         registerFallbackValue(<Filter>[]);
       });
 
-      test('asks the relays for a window past the placeholder flood', () async {
-        // Every account publishes an empty default list, so the newest 50
-        // list events are placeholders; the search reads the same 500-event
-        // window as the discovery gallery.
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+      test(
+        'reads the shared relay window with the shared read budget',
+        () async {
+          // Every account publishes an empty default list, so the newest 50
+          // list events are placeholders; the search reads the same window as
+          // discovery, and waits as long as discovery does rather than the
+          // client's default budget, which startup work can exhaust.
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) async => []);
 
-        await repository.searchAllLists('dance').toList();
+          await repository.searchAllLists('dance').toList();
 
-        final filters =
-            verify(() => nostrClient.queryEvents(captureAny())).captured.single
-                as List<Filter>;
-        expect(filters.single.kinds, equals([30005]));
-        expect(filters.single.limit, equals(500));
-      });
+          final captured = verify(
+            () => nostrClient.queryEvents(
+              captureAny(),
+              timeout: captureAny(named: 'timeout'),
+            ),
+          ).captured;
+          final filters = captured[0] as List<Filter>;
+          expect(filters.single.kinds, equals([30005]));
+          expect(filters.single.limit, equals(kPublicListsRelayWindow));
+          expect(kPublicListsRelayWindow, equals(500));
+          expect(captured[1], equals(kPublicCuratedListsRelayReadTimeout));
+          expect(
+            kPublicCuratedListsRelayReadTimeout,
+            greaterThan(const Duration(seconds: 5)),
+          );
+        },
+      );
 
       test('keeps same-named lists from different authors apart', () async {
         // Every account owns a `my_vine_list`: the viewer's must not hide
@@ -1208,7 +1257,9 @@ void main() {
             pubkey: _testPubkey,
           ),
         ]);
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               pubkey: _otherPubkey,
@@ -1236,6 +1287,39 @@ void main() {
         );
       });
 
+      test(
+        'a list its author later emptied is not found through an older '
+        'revision',
+        () async {
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => [
+              _makeEvent(
+                createdAt: 1718400000,
+                tags: [
+                  ['d', 'dance-list'],
+                  ['title', 'Dance'],
+                  ['e', 'video-1'],
+                ],
+              ),
+              _makeEvent(
+                createdAt: 1718400100,
+                tags: [
+                  ['d', 'dance-list'],
+                  ['title', 'Dance'],
+                ],
+              ),
+            ],
+          );
+
+          final emissions = await repository.searchAllLists('dance').toList();
+
+          expect(emissions.last, isEmpty);
+        },
+      );
+
       test('emits nothing for blank query', () async {
         await expectLater(repository.searchAllLists(''), emitsDone);
       });
@@ -1250,7 +1334,9 @@ void main() {
           createList(id: 'local-1', name: 'Dance Local'),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1294,12 +1380,16 @@ void main() {
           createList(id: 'shared-id', name: 'Dance Local'),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         await repository.searchAllLists('dance').toList();
 
         // Verify queryEvents was called (relay search happened)
-        verify(() => nostrClient.queryEvents(any())).called(1);
+        verify(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).called(1);
       });
 
       test('deduplicates relay results with local results', () async {
@@ -1307,9 +1397,11 @@ void main() {
           createList(id: 'shared-id', name: 'Dance Local'),
         ]);
 
-        // Relay returns a list with the same author-qualified coordinate — but
-        // excludeCoordinates should prevent it. Return a different one instead.
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        // Relay returns a list with the same ID — but excludeIds
+        // should prevent it. Return a different one instead.
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1349,7 +1441,9 @@ void main() {
           ),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             Event(
               _blockedPubkey,
@@ -1416,7 +1510,9 @@ void main() {
           ),
         );
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 
@@ -1443,7 +1539,9 @@ void main() {
 
         // Batched relay fallback returns event matching _videoEventId,
         // then relay search returns empty.
-        when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) {
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((invocation) {
           final filters = invocation.positionalArguments[0] as List<dynamic>;
           final filter = filters.first;
 
@@ -1480,7 +1578,9 @@ void main() {
           ),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeVideoEvent(
               dTag: 'my-video',
@@ -1507,7 +1607,9 @@ void main() {
           ),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 
@@ -1530,7 +1632,9 @@ void main() {
         ).thenAnswer((_) async => null);
 
         // Relay also returns empty
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 
@@ -1538,7 +1642,9 @@ void main() {
       });
 
       test('matches relay lists by description', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1558,7 +1664,9 @@ void main() {
       });
 
       test('matches relay lists by tag', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1577,7 +1685,9 @@ void main() {
       });
 
       test('keeps newer relay duplicate over older', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1619,7 +1729,9 @@ void main() {
         ).thenAnswer((_) async => null);
 
         // Batched relay fallback throws, relay search returns empty.
-        when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) {
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((invocation) {
           final filters = invocation.positionalArguments[0] as List<dynamic>;
           final filter = filters.first;
 
@@ -1656,7 +1768,10 @@ void main() {
           // Relay returns an event with kind 1 (text note) which causes
           // VideoEvent.fromNostrEvent to throw — exercises the on Exception
           // catch in _batchRelayVideos.
-          when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) {
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((invocation) {
             final filters = invocation.positionalArguments[0] as List<dynamic>;
             final filter = filters.first;
 
@@ -1691,7 +1806,9 @@ void main() {
           createList(id: 'public-1', name: 'Dance Public'),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 
@@ -1701,7 +1818,9 @@ void main() {
       });
 
       test('excludes relay lists with empty videoEventIds', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             _makeEvent(
               tags: [
@@ -1728,7 +1847,9 @@ void main() {
       });
 
       test('skips malformed relay events without d-tag', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             // Valid event
             _makeEvent(
@@ -1762,7 +1883,9 @@ void main() {
           createList(id: 'local-1', name: 'Dance Local'),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 
@@ -1812,7 +1935,9 @@ void main() {
         // Batched relay fallback: ref2 and ref3 go in one query.
         // Only ref3 returns a video with a thumbnail (ref2 has no match).
         // Relay search call returns empty.
-        when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) {
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((invocation) {
           final filters = invocation.positionalArguments[0] as List<dynamic>;
           final filter = filters.first;
 
@@ -1844,7 +1969,9 @@ void main() {
           createList(id: 'local-1', name: 'Dance Local'),
         ]);
 
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => []);
 
         final emissions = await repository.searchAllLists('dance').toList();
 

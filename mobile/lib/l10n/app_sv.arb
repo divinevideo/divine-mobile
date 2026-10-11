@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Kunde inte läsa in den här samlingen.",
     "featuredTabRetry": "Försök igen",
     "exploreNoVideosAvailable": "Inga videor tillgängliga",
-    "exploreDiscoverLists": "Upptäck listor",
-    "exploreAboutLists": "Om listor",
-    "exploreAboutListsDescription": "Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:",
     "explorePeopleLists": "Personlistor",
-    "explorePeopleListsDescription": "Följ grupper av kreatörer och se deras senaste videor",
     "exploreVideoLists": "Videolistor",
-    "exploreVideoListsDescription": "Skapa spellistor med dina favoritvideor för att titta på senare",
-    "exploreMyLists": "Mina listor",
-    "exploreSubscribedLists": "Prenumererade listor",
     "exploreErrorLoadingLists": "Fel vid inläsning av listor. Försök igen.",
     "exploreNewVideosCount": "{count, plural, one{1 ny video} other{{count} nya videor}}",
     "@exploreNewVideosCount": {
@@ -1640,7 +1633,6 @@
     "reportReceivedReviewNotice": "Vi skickar den automatiskt när du är ansluten. Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Stäng",
-    "listAddToList": "Lägg till i lista",
     "listVideoCount": "{count} videor",
     "@listVideoCount": {
         "placeholders": {
@@ -1649,31 +1641,12 @@
             }
         }
     },
-    "listNewList": "Ny lista",
     "listDone": "Klar",
     "listErrorLoading": "Fel vid inläsning av listor",
-    "listRemovedFrom": "Borttagen från {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Tillagd i {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Skapa ny lista",
     "listNewPeopleList": "Ny personlista",
     "listNameLabel": "Listnamn",
     "listDescriptionLabel": "Beskrivning (valfritt)",
-    "listPublicList": "Publik lista",
-    "listPublicListSubtitle": "Andra kan följa och se den här listan",
     "listPrivateListSubtitle": "Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.",
     "listVisibilityPublic": "Offentlig",
     "listVisibilityPrivate": "Privat",
@@ -1707,7 +1680,6 @@
             }
         }
     },
-    "listCancel": "Avbryt",
     "listCreate": "Skapa",
     "listCreateFailed": "Kunde inte skapa listan",
     "keyManagementTitle": "Nostr-nycklar",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Du har en ny uppdatering",
     "peopleListsAddToList": "Lägg till i lista",
-    "peopleListsSheetTitle": "Lägg till i lista",
     "peopleListsEmptyTitle": "Inga listor än",
     "peopleListsEmptySubtitle": "Skapa en lista för att börja gruppera personer.",
-    "peopleListsCreateList": "Skapa lista",
     "peopleListsNewListTitle": "Ny lista",
     "peopleListsRouteTitle": "Personlista",
     "peopleListsListNameLabel": "Listnamn",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Lägg till i {name}",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
-    "peopleListsAddButton": "Lägg till",
-    "peopleListsAddButtonWithCount": "Lägg till {count}",
     "peopleListsInNLists": "{count, plural, =1{I 1 lista} other{I {count} listor}}",
     "peopleListsRemoveConfirmTitle": "Ta bort {name}?",
     "peopleListsRemoveConfirmBody": "De kommer att tas bort från den här listan.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Kunde inte ta bort det här kontot från enheten. Försök igen.",
     "nostrSettingsDeleteAccount": "Radera konto och data",
     "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
-    "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Av ",
     "keyManagementYourPublicKeyLabel": "Din publika nyckel (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Upptäck listor",
-    "discoverListsFailedToLoad": "Kunde inte ladda listor",
-    "discoverListsLoading": "Söker upp publika listor...",
-    "discoverListsRelayTimeout": "Relayen returnerade inga listor i tid. Försök igen.",
-    "discoverListsServiceUnavailable": "Tjänsten är inte tillgänglig.",
-    "discoverListsEmptyTitle": "Inga publika listor hittades",
-    "discoverListsEmptySubtitle": "Kom tillbaka senare för nya listor",
-    "discoverListsByAuthorPrefix": "av",
     "curatedListEmptyTitle": "Inga videor i den här listan",
     "curatedListEmptySubtitle": "Lägg till några videor för att komma igång",
     "curatedListLoadingVideos": "Laddar videor...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Personer",
   "peopleListsPeopleNone": "Inga personer tillagda",
   "peopleListsSessionChanged": "Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.",
-  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Ingen stor förklaring",
   "ideasDescriptionFive": "Ville bara dela.",
   "ideasTitleSix": "Lite av idag",
-  "ideasDescriptionSix": "Lämnar det här."
+  "ideasDescriptionSix": "Lämnar det här.",
+  "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
+  "listsDiscoveryLoadingLabel": "Läser in listor",
+  "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
+  "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
+  "listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.",
+  "authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
+  "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
+  "peopleListsAddPeopleSearchHint": "Sök personer",
+  "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+  "listMakePublicLabel": "Gör offentlig",
+  "listCollaboratorsNone": "Inga",
+  "listAddCollaboratorTitle": "Lägg till medarbetare",
+  "listMakePublicSubtitle": "Låt andra se den här listan",
+  "listCollaboratorSearchHint": "Sök i Divine...",
+  "listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
+  "listPrivateCollaboratorsWarning": "Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.",
+  "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
+  "listRetrySync": "Synkronisera nu",
+  "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
+  "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
+  "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
+  "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
+  "listAddToLists": "Lägg till i listor"
 }

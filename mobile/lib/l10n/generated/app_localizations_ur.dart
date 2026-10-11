@@ -1440,34 +1440,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get exploreDiscoverLists => 'فہرستیں دریافت کریں';
-
-  @override
-  String get exploreAboutLists => 'فہرستوں کے بارے میں';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:';
-
-  @override
   String get explorePeopleLists => 'لوگوں کی فہرستیں';
 
   @override
-  String get explorePeopleListsDescription =>
-      'کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں';
-
-  @override
   String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں';
-
-  @override
-  String get exploreMyLists => 'میری فہرستیں';
-
-  @override
-  String get exploreSubscribedLists => 'سبسکرائب شدہ فہرستیں';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3937,17 +3913,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get peopleListsAddToList => 'فہرست میں شامل کریں';
 
   @override
-  String get peopleListsSheetTitle => 'فہرست میں شامل کریں';
-
-  @override
   String get peopleListsEmptyTitle => 'ابھی کوئی فہرست نہیں';
 
   @override
   String get peopleListsEmptySubtitle =>
       'لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔';
-
-  @override
-  String get peopleListsCreateList => 'فہرست بنائیں';
 
   @override
   String get peopleListsNewListTitle => 'نئی فہرست';
@@ -4029,14 +3999,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
-
-  @override
-  String get peopleListsAddButton => 'شامل کریں';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count شامل کریں';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4972,45 +4934,18 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportClose => 'بند کریں';
 
   @override
-  String get listAddToList => 'فہرست میں شامل کریں';
-
-  @override
   String listVideoCount(int count) {
     return '$count ویڈیوز';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگ',
-      one: '1 شخص',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'از ';
 
   @override
-  String get listNewList => 'نئی فہرست';
-
-  @override
   String get listDone => 'ہو گیا';
 
   @override
   String get listErrorLoading => 'فہرستیں لوڈ کرنے میں خرابی';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name سے ہٹا دی گئی';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name میں شامل کر دی گئی';
-  }
 
   @override
   String get listCreateNewList => 'نئی فہرست بنائیں';
@@ -5023,13 +4958,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
-
-  @override
-  String get listPublicList => 'عوامی فہرست';
-
-  @override
-  String get listPublicListSubtitle =>
-      'دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5137,9 +5065,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine پر $name';
   }
-
-  @override
-  String get listCancel => 'منسوخ کریں';
 
   @override
   String get listCreate => 'بنائیں';
@@ -6204,31 +6129,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsTitle => 'فہرستیں دریافت کریں';
-
-  @override
-  String get discoverListsFailedToLoad => 'فہرستیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get discoverListsLoading => 'عوامی فہرستیں دریافت ہو رہی ہیں...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsServiceUnavailable => 'سروس دستیاب نہیں ہے۔';
-
-  @override
-  String get discoverListsEmptyTitle => 'کوئی عوامی فہرست نہیں ملی';
-
-  @override
-  String get discoverListsEmptySubtitle => 'نئی فہرستوں کے لیے بعد میں دیکھیں';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'از';
 
   @override
   String get curatedListEmptyTitle => 'اس فہرست میں کوئی ویڈیو نہیں';
@@ -13215,10 +13115,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں';
-
-  @override
   String get listMemberNamesSeparator => '، ';
 
   @override
@@ -13337,4 +13233,93 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name کو فہرست سے ہٹائیں';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name کو فہرست میں شامل کریں';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
+
+  @override
+  String get listMakePublicLabel => 'عوامی بنائیں';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
+
+  @override
+  String get listCollaboratorsNone => 'کوئی نہیں';
+
+  @override
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
+
+  @override
+  String get listVideoNotAdded =>
+      'آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔';
+
+  @override
+  String get listVideoPendingSync =>
+      'آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔';
+
+  @override
+  String get listRetrySync => 'اب ہم آہنگ کریں';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get listRecoveryPending =>
+      'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
+
+  @override
+  String get listAddToLists => 'فہرستوں میں شامل کریں';
 }

@@ -9,7 +9,7 @@ part of 'video_feed_bloc.dart';
 /// New authenticated sessions use a pubkey-scoped key so switching accounts
 /// cannot carry a previous account's Following/list selection into a newly
 /// imported key with a different social graph.
-const _legacyFeedModeKey = 'selected_feed_mode';
+const String _legacyFeedModeKey = legacyHomeFeedModeKey;
 
 /// Persists and restores the selected [VideoFeedSource] for [VideoFeedBloc].
 class FeedModePreferenceStore {
@@ -18,29 +18,56 @@ class FeedModePreferenceStore {
     required String? userPubkey,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    FeedModePersistenceCoordinator? persistenceCoordinator,
   }) : _sharedPreferences = sharedPreferences,
        _userPubkey = userPubkey,
        _followRepository = followRepository,
-       _curatedListRepository = curatedListRepository;
+       _curatedListRepository = curatedListRepository,
+       _coordinator =
+           persistenceCoordinator ??
+           FeedModePersistenceCoordinator(
+             sharedPreferences: sharedPreferences,
+             userPubkey: userPubkey,
+           ) {
+    if (!_coordinator.matches(
+      sharedPreferences: sharedPreferences,
+      userPubkey: userPubkey,
+    )) {
+      throw ArgumentError(
+        'The persistence coordinator must match the account and preferences.',
+      );
+    }
+    _lease = _coordinator.claim();
+  }
 
   final SharedPreferences? _sharedPreferences;
   final String? _userPubkey;
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
+  final FeedModePersistenceCoordinator _coordinator;
+  late final FeedModePersistenceLease _lease;
 
   /// Account-scoped key the selected source is stored under.
-  String get key => _userPubkey == null
-      ? _legacyFeedModeKey
-      : '${_legacyFeedModeKey}_$_userPubkey';
+  String get key => _coordinator.key;
+
+  String? get _savedScopedValue => _lease.savedValue;
 
   /// The persisted source, or [VideoFeedSource.fromMode] of [fallbackMode] when
   /// nothing is stored.
-  VideoFeedSource restoreSource(FeedMode fallbackMode) {
+  ///
+  /// A stored people list is restored only while it is still among
+  /// [followedPeopleLists]; otherwise the feed falls back to For You, as it
+  /// does for a curated list that is no longer subscribed.
+  VideoFeedSource restoreSource(
+    FeedMode fallbackMode, {
+    List<PeopleListSearchResult> followedPeopleLists = const [],
+  }) {
     final saved = savedValue();
     if (saved == null) {
       return VideoFeedSource.fromMode(fallbackMode);
     }
-    return sourceFromValue(saved) ?? const VideoFeedSource.forYou();
+    return sourceFromValue(saved, followedPeopleLists: followedPeopleLists) ??
+        const VideoFeedSource.forYou();
   }
 
   /// The stored persistence value for the active account, migrating a legacy
@@ -49,7 +76,7 @@ class FeedModePreferenceStore {
     final prefs = _sharedPreferences;
     if (prefs == null) return null;
 
-    final scoped = prefs.getString(key);
+    final scoped = _savedScopedValue;
     if (scoped != null) return scoped;
 
     // Only unauthenticated/test callers should keep reading the legacy global
@@ -75,6 +102,8 @@ class FeedModePreferenceStore {
     // A legacy list preference cannot be proven to belong to the authenticated
     // account because the curated-list bridge can briefly hold stale data
     // across account switches. Only restore list selections from scoped keys.
+    // A people list never resolves here: the legacy key predates them and
+    // [sourceFromValue] is given no followed lists to match against.
     if (migratedSource.type == VideoFeedSourceType.subscribedList) {
       return null;
     }
@@ -84,13 +113,48 @@ class FeedModePreferenceStore {
   }
 
   /// Resolves a persisted value to a [VideoFeedSource], or `null` when unknown.
-  VideoFeedSource? sourceFromValue(String saved) {
-    if (saved.startsWith('list:')) {
-      final listId = saved.substring('list:'.length);
-      final list = _curatedListRepository.getListById(listId);
+  /// A legacy raw curated d-tag upgrades only from a complete snapshot. A partial
+  /// copy set cannot prove that another author does not share that d-tag.
+  VideoFeedSource? sourceFromValue(
+    String saved, {
+    List<PeopleListSearchResult> followedPeopleLists = const [],
+  }) {
+    if (saved.startsWith(VideoFeedSource.peopleListPersistencePrefix)) {
+      for (final followed in followedPeopleLists) {
+        final source = VideoFeedSource.peopleList(
+          listId: followed.list.id,
+          listName: followed.list.name,
+          listOwnerPubkey: followed.ownerPubkey,
+        );
+        if (source.persistenceValue == saved) return source;
+      }
+      return null;
+    }
+    if (VideoFeedSource.isCuratedListPreference(saved)) {
+      CuratedList? list;
+      if (saved.startsWith(VideoFeedSource.curatedListPersistencePrefix)) {
+        final canonical = saved.substring(
+          VideoFeedSource.curatedListPersistencePrefix.length,
+        );
+        final exact = _curatedListRepository.getListById(canonical);
+        if (exact?.authorScopedId == canonical) list = exact;
+      } else {
+        // Published list: records contain complete raw d-tags. A d-tag can
+        // itself look like another author's coordinate; never reinterpret it
+        // as that coordinate when its original author is unavailable.
+        if (!_curatedListRepository.hasCompleteSubscriptionSnapshot) {
+          return null;
+        }
+        final legacy = saved.substring('list:'.length);
+        final candidates = {
+          for (final candidate in _curatedListRepository.getSubscribedLists())
+            if (candidate.id == legacy) candidate.authorScopedId: candidate,
+        };
+        if (candidates.length == 1) list = candidates.values.single;
+      }
       if (list != null) {
         return VideoFeedSource.subscribedList(
-          listId: list.id,
+          listId: list.authorScopedId,
           listName: list.name,
         );
       }
@@ -111,14 +175,35 @@ class FeedModePreferenceStore {
     return null;
   }
 
+  /// Preference-only canonical namespace; source/menu/protocol IDs stay stable.
+  static String storageValueFor(VideoFeedSource source) =>
+      source.type == VideoFeedSourceType.subscribedList
+      ? '${VideoFeedSource.curatedListPersistencePrefix}${source.listId}'
+      : source.persistenceValue;
+
   /// Writes [source] to the scoped key and clears the legacy global key for
   /// authenticated sessions.
+  ///
+  /// A refused native write is logged and dropped: the choice still applies for
+  /// this session, and failing to remember it must not stop the feed loading.
   Future<void> persist(VideoFeedSource source) async {
-    final prefs = _sharedPreferences;
-    if (prefs == null) return;
-    await prefs.setString(key, source.persistenceValue);
-    if (_userPubkey != null) {
-      await prefs.remove(_legacyFeedModeKey);
+    try {
+      await _lease.persist(storageValueFor(source));
+      // The coordinator reports a refused native write as a StateError.
+      // ignore: avoid_catching_errors
+    } on StateError catch (error, stackTrace) {
+      Log.warning(
+        'Home could not save the selected feed source',
+        name: 'FeedModePreferenceStore',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
+
+  Future<ProvisionalFeedModeWrite> _prepare(VideoFeedSource source) =>
+      _lease.prepare(storageValueFor(source));
+
+  void _release() => _lease.release();
 }

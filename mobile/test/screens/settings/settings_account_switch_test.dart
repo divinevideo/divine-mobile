@@ -21,6 +21,8 @@ import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -33,6 +35,7 @@ import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
@@ -40,6 +43,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
@@ -115,6 +119,8 @@ void main() {
   late _MockVideoEventService videoEventService;
   late DivineHostFilterService divineHostFilterService;
   late _MockDeviceScope deviceScope;
+  late FeatureFlagService featureFlagService;
+  String? pendingTarget;
 
   DivineVideoDraft draftWithId(String id) => DivineVideoDraft.create(
     clips: const [],
@@ -144,6 +150,14 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     sharedPreferences = await SharedPreferences.getInstance();
+    featureFlagService = FeatureFlagService(
+      sharedPreferences,
+      const BuildConfiguration(),
+      canOverrideInternalFlags: () => true,
+    );
+    await featureFlagService.initialize();
+    await featureFlagService.setFlag(FeatureFlag.accountSwitching, true);
+    addTearDown(featureFlagService.dispose);
     authService = _MockAuthService();
     localeCubit = _MockLocaleCubit();
     publishBloc = _MockBackgroundPublishBloc();
@@ -159,6 +173,17 @@ void main() {
     videoEventService = _MockVideoEventService();
     divineHostFilterService = DivineHostFilterService(sharedPreferences);
     deviceScope = _MockDeviceScope();
+    pendingTarget = null;
+
+    when(() => authService.pendingAccountSwitchPubkey).thenAnswer(
+      (_) => pendingTarget,
+    );
+    when(
+      () => authService.pendingAccountSwitchPubkey = any(),
+    ).thenAnswer((call) {
+      pendingTarget = call.positionalArguments.single as String?;
+      return null;
+    });
 
     when(() => localeCubit.state).thenReturn(const LocaleState());
     when(() => publishBloc.parkInFlight()).thenAnswer((_) async {});
@@ -217,6 +242,7 @@ void main() {
   Widget wrap(Widget child) {
     return ProviderScope(
       overrides: [
+        featureFlagServiceProvider.overrideWithValue(featureFlagService),
         supporterApiConfiguredProvider.overrideWithValue(false),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         authServiceProvider.overrideWithValue(authService),
@@ -270,16 +296,22 @@ void main() {
   }
 
   /// Pumps Settings on a surface tall enough for the account header.
-  Future<void> pumpSettings(WidgetTester tester) async {
+  Future<void> pumpSettings(
+    WidgetTester tester, {
+    Widget child = const SettingsScreen(),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(wrap(const SettingsScreen()));
+    await tester.pumpWidget(wrap(child));
     await tester.pumpAndSettle();
   }
 
-  Future<AppLocalizations> pumpAndTapSwitch(WidgetTester tester) async {
-    await pumpSettings(tester);
+  Future<AppLocalizations> pumpAndTapSwitch(
+    WidgetTester tester, {
+    Widget child = const SettingsScreen(),
+  }) async {
+    await pumpSettings(tester, child: child);
 
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SettingsScreen)),
@@ -468,6 +500,34 @@ void main() {
         ),
       };
 
+  group('account cleanup recovery', () {
+    testWidgets(
+      'cleanup failure keeps the current account and offers a retry',
+      (
+        tester,
+      ) async {
+        when(() => deviceScope.switchController).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+        final l10n = await pumpAndTapSwitch(tester);
+        await tester.tap(accountTile(otherPubkey));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+        expect(
+          find.text(l10n.settingsAccountRestoreFailedSwitchMessage),
+          findsNothing,
+        );
+        expect(
+          find.text(l10n.settingsSessionExpiredSwitchMessage),
+          findsNothing,
+        );
+        verifyNever(() => authService.signOut());
+        verifyNever(() => authService.pendingAccountSwitchPubkey = any());
+      },
+    );
+  });
+
   group('switching hits an unusable session', () {
     for (final entry in unusableSessionFailures.entries) {
       testWidgets('offers a fresh sign-in on ${entry.key}', (tester) async {
@@ -517,6 +577,167 @@ void main() {
       // Nothing is remembered for the welcome screen either — backing out has to
       // leave the session exactly as it was, not stage a switch for later.
       verifyNever(() => authService.pendingAccountSwitchPubkey = any());
+    });
+  });
+
+  group('incomplete logout feedback', () {
+    Future<AppLocalizations> requestReauthentication(
+      WidgetTester tester, {
+      Widget child = const SettingsScreen(),
+    }) async {
+      when(
+        () => deviceScope.switchController,
+      ).thenThrow(SessionExpiredException());
+      final l10n = await pumpAndTapSwitch(tester, child: child);
+      await tester.tap(accountTile(otherPubkey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.authSignInTitle));
+      await tester.pumpAndSettle();
+      return l10n;
+    }
+
+    testWidgets('reauthentication refusal restores the prior pending target', (
+      tester,
+    ) async {
+      pendingTarget = currentPubkey;
+      when(() => authService.signOut()).thenAnswer(
+        (_) async => throw const UserDataCleanupException('cleanup incomplete'),
+      );
+      final l10n = await requestReauthentication(tester);
+
+      expect(pendingTarget, currentPubkey);
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      verify(() => authService.signOut()).called(1);
+    });
+
+    testWidgets('reauthentication refusal preserves a replacement target', (
+      tester,
+    ) async {
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+      final l10n = await requestReauthentication(tester);
+      expect(pendingTarget, otherPubkey);
+      authService.pendingAccountSwitchPubkey = currentPubkey;
+      signOut.completeError(
+        const UserDataCleanupException('cleanup incomplete'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(pendingTarget, currentPubkey);
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reauthentication refusal cannot change a successor identity', (
+      tester,
+    ) async {
+      pendingTarget = currentPubkey;
+      final leavingIdentity = PubkeyOnlyNostrIdentity(pubkey: currentPubkey);
+      when(() => authService.currentIdentity).thenReturn(leavingIdentity);
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+      final l10n = await requestReauthentication(tester);
+      final successorIdentity = PubkeyOnlyNostrIdentity(pubkey: currentPubkey);
+      when(() => authService.currentIdentity).thenReturn(successorIdentity);
+      signOut.completeError(
+        const UserDataCleanupException('cleanup incomplete'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(pendingTarget, otherPubkey);
+      expect(authService.currentIdentity, same(successorIdentity));
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reauthentication reports refusal after Settings tears down', (
+      tester,
+    ) async {
+      pendingTarget = currentPubkey;
+      final screen = ValueNotifier<Widget>(const SettingsScreen());
+      addTearDown(screen.dispose);
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+      final l10n = await requestReauthentication(
+        tester,
+        child: ValueListenableBuilder<Widget>(
+          valueListenable: screen,
+          builder: (_, child, _) => child,
+        ),
+      );
+      when(() => authService.isAuthenticated).thenReturn(false);
+      when(() => authService.currentPublicKeyHex).thenReturn(null);
+      screen.value = const Scaffold(body: Text('Welcome host'));
+      await tester.pumpAndSettle();
+      signOut.completeError(
+        const UserDataCleanupException('cleanup incomplete'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(pendingTarget, otherPubkey);
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.text('Welcome host'), findsOneWidget);
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'adding an account reports refusal and allows a healthy retry',
+      (tester) async {
+        when(() => authService.signOut()).thenAnswer(
+          (_) async =>
+              throw const UserDataCleanupException('cleanup incomplete'),
+        );
+        final l10n = await pumpAndTapSwitch(tester);
+        await tester.tap(find.text(l10n.settingsAddAnotherAccount).last);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(pendingTarget, isNull);
+        expect(tester.takeException(), isNull);
+        verify(() => authService.signOut()).called(1);
+
+        when(() => authService.signOut()).thenAnswer((_) async {});
+        await tester.tap(find.text(l10n.settingsSwitchAccount));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.settingsAddAnotherAccount).last);
+        await tester.pumpAndSettle();
+
+        verify(() => authService.signOut()).called(1);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('adding an account reports refusal after Settings tears down', (
+      tester,
+    ) async {
+      final screen = ValueNotifier<Widget>(const SettingsScreen());
+      addTearDown(screen.dispose);
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+      final l10n = await pumpAndTapSwitch(
+        tester,
+        child: ValueListenableBuilder<Widget>(
+          valueListenable: screen,
+          builder: (_, child, _) => child,
+        ),
+      );
+      await tester.tap(find.text(l10n.settingsAddAnotherAccount).last);
+      await tester.pumpAndSettle();
+      screen.value = const Scaffold(body: Text('Welcome host'));
+      await tester.pumpAndSettle();
+      signOut.completeError(
+        const UserDataCleanupException('cleanup incomplete'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.text('Welcome host'), findsOneWidget);
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 

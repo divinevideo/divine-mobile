@@ -99,7 +99,18 @@ class _MockProfileFeedCubit extends MockBloc<ProfileFeedEvent, ProfileFeedState>
 class _MockMyProfileBloc extends MockBloc<MyProfileEvent, MyProfileState>
     implements MyProfileBloc {}
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  _MockCuratedListService() {
+    when(() => isCurrentSession).thenReturn(true);
+    when(() => isInitialized).thenReturn(true);
+    when(() => initializationError).thenReturn(null);
+    when(() => hasLoadedSubscriptionIds).thenReturn(true);
+    when(() => subscribedLists).thenReturn(const <CuratedList>[]);
+    when(() => subscribedListIds).thenReturn(const <String>{});
+  }
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 /// Serves a mock service without running the real relay-backed build.
 class _FakeCuratedListsState extends CuratedListsState {

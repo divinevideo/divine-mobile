@@ -19,9 +19,6 @@ import 'package:profile_repository/profile_repository.dart';
 ///   * subscribe to [FollowRepository.followingStream] and
 ///     [FollowRepository.watchMyFollowers] for live relationship updates;
 ///   * merge both sides into a single map keyed by full-hex pubkey;
-///   * mark candidates whose pubkey appears in [existingMemberPubkeys] as
-///     [PeopleListCandidate.isAlreadyInList] so the UI can render them
-///     pre-checked and disabled;
 ///   * resolve [ProfileRepository] metadata for each candidate without
 ///     blocking the picker — cached profiles are used when present, and
 ///     a fresh fetch is fired-and-forgotten for the rest.
@@ -29,20 +26,18 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     with CloseGuardedEmit<AddPeopleToListState> {
   /// Creates a new cubit scoped to a single picker instance.
   ///
-  /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
-  /// the target list. Pass an empty list for a fresh list.
+  /// Which candidates are already in the list is not this cubit's to know:
+  /// the picker reads membership from `PeopleListsBloc` per row, so a tap
+  /// there is reflected without a round trip through here.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
     required ProfileRepository? profileRepository,
-    required List<String> existingMemberPubkeys,
   }) : _followRepository = followRepository,
        _profileRepository = profileRepository,
-       _existingMembers = existingMemberPubkeys.toSet(),
        super(const AddPeopleToListState());
 
   final FollowRepository _followRepository;
   final ProfileRepository? _profileRepository;
-  final Set<String> _existingMembers;
 
   StreamSubscription<List<String>>? _followingSub;
   StreamSubscription<FollowersSnapshot>? _followerSub;
@@ -53,11 +48,17 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   final Map<String, PeopleListCandidate> _candidatesByPubkey = {};
 
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
-  /// [AddPeopleToListStatus.failure] on error.
+  /// [AddPeopleToListStatus.failure] on error. Keeps ready candidates visible
+  /// while refreshing the live subscriptions.
   Future<void> started() async {
-    emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
+    if (isClosed) return;
+    if (state.status != AddPeopleToListStatus.ready) {
+      emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
+    }
     try {
-      _candidatesByPubkey.clear();
+      if (state.status != AddPeopleToListStatus.ready) {
+        _candidatesByPubkey.clear();
+      }
 
       // 1. Seed from cached following list so candidates appear immediately.
       final initialFollowing = _followRepository.followingPubkeys;
@@ -68,7 +69,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       // 2. Subscribe to the following stream for live updates. The stream
       // replays the current value for late subscribers (BehaviorSubject),
       // so later follow/unfollow deltas flow through the same sink.
-      await _followingSub?.cancel();
+      unawaited(_followingSub?.cancel().catchError(_onStreamError));
       _followingSub = _followRepository.followingStream.listen(
         _applyFollowingDelta,
         onError: _onStreamError,
@@ -76,8 +77,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
 
       // 3. Subscribe to my-followers stream. watchMyFollowers() yields
       // cached data instantly (when available) and then fresh data from
-      // network sources.
-      await _followerSub?.cancel();
+      // network sources. Cancellation can wait for an in-flight fetch.
+      unawaited(_followerSub?.cancel().catchError(_onStreamError));
       _followerSub = _followRepository.watchMyFollowers().listen(
         _applyFollowerDelta,
         onError: _onStreamError,
@@ -104,45 +105,15 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     emitIfOpen(state.copyWith(query: query));
   }
 
-  /// Toggle whether [pubkey] is selected for batch-add.
-  ///
-  /// Candidates already in the list
-  /// ([PeopleListCandidate.isAlreadyInList]) still toggle here, but the
-  /// view layer is expected to filter them out.
-  void candidateToggled(String pubkey) {
-    final next = Set<String>.from(state.selectedPubkeys);
-    if (!next.add(pubkey)) {
-      next.remove(pubkey);
-    }
-    emitIfOpen(state.copyWith(selectedPubkeys: next));
-  }
-
-  /// Clear only members confirmed by the repository; failed choices stay selected.
-  void additionsConfirmed(Set<String> pubkeys) {
-    _existingMembers.addAll(pubkeys);
-    for (final pubkey in pubkeys) {
-      final candidate = _candidatesByPubkey[pubkey];
-      if (candidate != null) {
-        _candidatesByPubkey[pubkey] = candidate.copyWith(isAlreadyInList: true);
-      }
-    }
-    emitIfOpen(
-      state.copyWith(
-        selectedPubkeys: state.selectedPubkeys.difference(pubkeys),
-        candidates: _sortedCandidates(),
-      ),
-    );
-  }
-
   /// Re-run the loader after a prior failure.
   void retryRequested() {
     unawaited(started());
   }
 
   @override
-  Future<void> close() async {
-    await _followingSub?.cancel();
-    await _followerSub?.cancel();
+  Future<void> close() {
+    unawaited(_followingSub?.cancel().catchError(_onStreamError));
+    unawaited(_followerSub?.cancel().catchError(_onStreamError));
     return super.close();
   }
 
@@ -165,7 +136,6 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
             pubkey: pubkey,
             isFollowing: isFollowing ?? false,
             isFollower: isFollower ?? false,
-            isAlreadyInList: _existingMembers.contains(pubkey),
           );
     _candidatesByPubkey[pubkey] = updated;
     return updated;
@@ -246,10 +216,14 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     for (final pk in pubkeys) {
       try {
         final cached = await repo.getCachedProfile(pubkey: pk);
-        if (cached != null && _applyProfile(pk, cached)) {
-          changed = true;
-        } else {
+        if (isClosed) return;
+        // Only a miss goes to the network. A refresh re-reads every kept
+        // candidate, and a cached profile it has already applied changes
+        // nothing.
+        if (cached == null) {
           unawaited(_fetchFreshAndApply(pk));
+        } else if (_applyProfile(pk, cached)) {
+          changed = true;
         }
       } catch (error, stackTrace) {
         addError(error, stackTrace);

@@ -18,10 +18,19 @@ Future<void> markFollowingPrefetchComplete(
 Future<bool> prepareFollowingAuthRedirect(
   SharedPreferences prefs,
   String pubkeyHex,
-  bool followingKnownEmpty,
-) async {
+  bool followingKnownEmpty, {
+  void Function()? ensureCurrent,
+}) async {
+  ensureCurrent?.call();
   if (followingKnownEmpty) {
-    await markFollowingPrefetchComplete(prefs, pubkeyHex);
+    final written = await prefs.setBool(
+      followingPrefetchMarkerKey(pubkeyHex),
+      true,
+    );
+    ensureCurrent?.call();
+    if (!written) {
+      throw StateError('Could not persist the following prefetch marker');
+    }
   }
   return prefs.containsKey(FollowingCacheRecord.storageKey(pubkeyHex)) ||
       hasFollowingPrefetchMarker(prefs, pubkeyHex);

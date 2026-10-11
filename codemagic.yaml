@@ -53,6 +53,12 @@
 #     this key to reach public relays without a manual `zsp publish`. Never log
 #     or echo this value.
 #
+# Public people-list discovery exclusions come from the GitHub repository
+# variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Release builds
+# read it with the existing github_credentials token, or accept an explicit
+# environment override. Missing/malformed policy blocks a release; values are
+# never printed or committed. Shorebird provenance includes the resolved policy.
+#
 # Every group named under a workflow's `groups:` key must appear in this
 # checklist. Codemagic validates this whole file before it provisions a machine,
 # so naming a group that does not exist fails *every* workflow here — not only
@@ -244,6 +250,13 @@ definitions:
         )
         File.chmod(0o600, 'build/shorebird/dart_defines.json')
         RUBY
+    - &write_shorebird_people_list_defines
+      name: Write Shorebird public-list policy
+      script: |
+        set -euo pipefail
+        python3 scripts/write_public_people_list_defines.py \
+          --output build/shorebird/dart_defines.json --merge \
+          --github-repository "$CM_REPO_SLUG"
     - &write_shorebird_public_key
       name: Write Shorebird patch public key
       script: |
@@ -303,6 +316,18 @@ definitions:
         SHOREBIRD_REVISION=$(git -C "$HOME/.shorebird" rev-parse HEAD)
         bash scripts/shorebird_provenance_store.sh fetch \
           "$SHOREBIRD_PLATFORM" "${{ inputs.RELEASE_VERSION }}" "$PROVENANCE_PATH"
+        PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=$(ruby scripts/shorebird_provenance.rb policy-required \
+          --platform "$SHOREBIRD_PLATFORM" \
+          --release-version "${{ inputs.RELEASE_VERSION }}" \
+          --record "$PROVENANCE_PATH")
+        if [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" = "true" ]; then
+          python3 scripts/write_public_people_list_defines.py \
+            --output build/shorebird/dart_defines.json --merge \
+            --github-repository "$CM_REPO_SLUG"
+        elif [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" != "false" ]; then
+          echo "ERROR: could not establish the release's public-list policy shape."
+          exit 1
+        fi
         ruby scripts/shorebird_provenance.rb verify \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "${{ inputs.RELEASE_VERSION }}" \
@@ -543,7 +568,11 @@ definitions:
         # This workflow packages a DMG for direct download. It does not provision
         # a macOS signing identity/profile in Codemagic, so disable signing for
         # the CI build and handle signing/notarization separately when needed.
+        python3 scripts/write_public_people_list_defines.py \
+          --output build/public_people_list_defines.json \
+          --github-repository "$CM_REPO_SLUG"
         env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
+          --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
@@ -1043,6 +1072,7 @@ workflows:
       - *prepare_ios_spm_packages
       - *pod_install
       - *write_shorebird_dart_defines
+      - *write_shorebird_people_list_defines
       - *build_ios
       - *emit_shorebird_provenance
       - *upload_dsyms_to_crashlytics
@@ -1166,6 +1196,7 @@ workflows:
       - *write_shorebird_public_key
       - *preflight_shorebird_android_release
       - *write_shorebird_dart_defines
+      - *write_shorebird_people_list_defines
       - *build_apk
       - *precache_shorebird_android_artifacts
       - *build_aab

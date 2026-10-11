@@ -1406,34 +1406,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get exploreDiscoverLists => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get exploreAboutLists => 'ስለ ዝርዝሮች';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡';
-
-  @override
   String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
 
   @override
-  String get explorePeopleListsDescription =>
-      'የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ';
-
-  @override
   String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ';
-
-  @override
-  String get exploreMyLists => 'የእኔ ዝርዝሮች';
-
-  @override
-  String get exploreSubscribedLists => 'የተመዘገቡ ዝርዝሮች';
 
   @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
@@ -3849,16 +3825,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override
-  String get peopleListsSheetTitle => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String get peopleListsEmptyTitle => 'እስካሁን ምንም ዝርዝሮች የሉም';
 
   @override
   String get peopleListsEmptySubtitle => 'ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get peopleListsCreateList => 'ዝርዝር ይፍጠሩ';
 
   @override
   String get peopleListsNewListTitle => 'አዲስ ዝርዝር';
@@ -3934,14 +3904,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
-
-  @override
-  String get peopleListsAddButton => 'አክል';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'አክል $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4846,45 +4808,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportClose => 'ገጠመ';
 
   @override
-  String get listAddToList => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String listVideoCount(int count) {
     return '$count ቪዲዮዎች';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ሰዎች',
-      one: '$count ሰው',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'በ';
 
   @override
-  String get listNewList => 'አዲስ ዝርዝር';
-
-  @override
   String get listDone => 'ተከናውኗል';
 
   @override
   String get listErrorLoading => 'ዝርዝሮችን መጫን ላይ ስህተት';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'ከ$name ተወግዷል';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'ወደ $name ታክሏል።';
-  }
 
   @override
   String get listCreateNewList => 'አዲስ ዝርዝር ይፍጠሩ';
@@ -4897,12 +4832,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
-
-  @override
-  String get listPublicList => 'የህዝብ ዝርዝር';
-
-  @override
-  String get listPublicListSubtitle => 'ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5009,9 +4938,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name በDivine ላይ';
   }
-
-  @override
-  String get listCancel => 'ሰርዝ';
 
   @override
   String get listCreate => 'ፍጠር';
@@ -6059,30 +5985,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።';
-
-  @override
-  String get discoverListsTitle => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get discoverListsFailedToLoad => 'ዝርዝሮችን መጫን አልተሳካም';
-
-  @override
-  String get discoverListsLoading => 'የህዝብ ዝርዝሮችን በመፈለግ ላይ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።';
-
-  @override
-  String get discoverListsServiceUnavailable => 'አገልግሎቱ አይገኝም።';
-
-  @override
-  String get discoverListsEmptyTitle => 'ምንም የህዝብ ዝርዝሮች አልተገኙም';
-
-  @override
-  String get discoverListsEmptySubtitle => 'ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'በ';
 
   @override
   String get curatedListEmptyTitle => 'በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም';
@@ -12889,9 +12791,6 @@ class AppLocalizationsAm extends AppLocalizations {
       'መለያህ ወይም የዝርዝሩ መዳረሻ ተቀይሯል። ለመቀጠል ይህን ገጽ እንደገና ክፈት።';
 
   @override
-  String get peopleListsSearchConnectionsHint => 'ተከታዮችን እና የምትከተላቸውን ፈልግ';
-
-  @override
   String get listMemberNamesSeparator => '፣ ';
 
   @override
@@ -13007,4 +12906,87 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
+
+  @override
+  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
+
+  @override
+  String get listSearchPeopleUnavailable => 'የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameን ከዝርዝር ያስወግዱ';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameን ወደ ዝርዝር ያክሉ';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
+
+  @override
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
+
+  @override
+  String get listCollaboratorsNone => 'ምንም';
+
+  @override
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
+
+  @override
+  String get listVideoNotAdded => 'ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።';
+
+  @override
+  String get listVideoPendingSync =>
+      'ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።';
+
+  @override
+  String get listRetrySync => 'አሁን አመሳስል';
+
+  @override
+  String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
+
+  @override
+  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
 }

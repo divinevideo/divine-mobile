@@ -32,6 +32,7 @@ void main() {
             '/hashtag/:tag',
             '/search/:term',
             '/list/:pubkey/:id',
+            '/people-lists/:id',
             '/saved-videos',
           ])
             GoRoute(path: path, builder: (_, _) => const SizedBox()),
@@ -77,6 +78,21 @@ void main() {
             ),
           ),
           equals('/profile/npub1abc/4'),
+        );
+      });
+
+      test('routes a shared people list link to its owner-qualified route', () {
+        const ownerPubkey =
+            'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+        expect(
+          handleAndReadLocation(
+            const DeepLink(
+              type: DeepLinkType.peopleList,
+              listPubkey: ownerPubkey,
+              listId: 'crew',
+            ),
+          ),
+          equals('/people-lists/crew?owner=$ownerPubkey'),
         );
       });
 

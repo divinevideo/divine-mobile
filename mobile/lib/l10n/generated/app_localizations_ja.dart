@@ -1311,33 +1311,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreNoVideosAvailable => '動画がないよ';
 
   @override
-  String get exploreDiscoverLists => 'リストを見つけよう';
-
-  @override
-  String get exploreAboutLists => 'リストについて';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'リストを使うと、Divine のコンテンツを2つの方法で整理・キュレーションできるよ:';
-
-  @override
   String get explorePeopleLists => 'ピープルリスト';
 
   @override
-  String get explorePeopleListsDescription =>
-      'クリエイターのグループをフォローして、最新の動画をチェックしよう';
-
-  @override
   String get exploreVideoLists => 'ビデオリスト';
-
-  @override
-  String get exploreVideoListsDescription => 'お気に入りの動画をプレイリストにまとめて、あとで見よう';
-
-  @override
-  String get exploreMyLists => 'マイリスト';
-
-  @override
-  String get exploreSubscribedLists => '購読中のリスト';
 
   @override
   String get exploreErrorLoadingLists => 'リストの読み込みに失敗。もう一回試してみて。';
@@ -3683,16 +3660,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddToList => 'リストに追加';
 
   @override
-  String get peopleListsSheetTitle => 'リストに追加';
-
-  @override
   String get peopleListsEmptyTitle => 'リストがありません';
 
   @override
   String get peopleListsEmptySubtitle => 'リストを作成して人々をグループ化しましょう。';
-
-  @override
-  String get peopleListsCreateList => 'リストを作成';
 
   @override
   String get peopleListsNewListTitle => '新しいリスト';
@@ -3768,14 +3739,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => '再試行';
-
-  @override
-  String get peopleListsAddButton => '追加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count人追加';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4666,45 +4629,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportClose => '閉じる';
 
   @override
-  String get listAddToList => 'リストに追加';
-
-  @override
   String listVideoCount(int count) {
     return '$count本の動画';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count人',
-      one: '1人',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => '作成者: ';
 
   @override
-  String get listNewList => '新しいリスト';
-
-  @override
   String get listDone => '完了';
 
   @override
   String get listErrorLoading => 'リストの読み込みに失敗';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$nameから削除したよ';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$nameに追加したよ';
-  }
 
   @override
   String get listCreateNewList => '新しいリストを作る';
@@ -4717,12 +4653,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => '説明 (任意)';
-
-  @override
-  String get listPublicList => '公開リスト';
-
-  @override
-  String get listPublicListSubtitle => 'みんながフォロー・閲覧できるよ';
 
   @override
   String get listPrivateListSubtitle => '動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。';
@@ -4826,9 +4756,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineの$name';
   }
-
-  @override
-  String get listCancel => 'キャンセル';
 
   @override
   String get listCreate => '作成';
@@ -5868,30 +5795,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'サブスクリプションの更新がうまくいかなかった。もう一回試してみて。';
-
-  @override
-  String get discoverListsTitle => 'リストを見つける';
-
-  @override
-  String get discoverListsFailedToLoad => 'リストの読み込みに失敗';
-
-  @override
-  String get discoverListsLoading => '公開リストを探してるよ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'リレーが時間内にリストを返さなかったよ。もう一度試してね。';
-
-  @override
-  String get discoverListsServiceUnavailable => 'サービスを利用できません。';
-
-  @override
-  String get discoverListsEmptyTitle => '公開リストが見つからなかった';
-
-  @override
-  String get discoverListsEmptySubtitle => 'あとでまたチェックしてみてね';
-
-  @override
-  String get discoverListsByAuthorPrefix => '作成者:';
 
   @override
   String get curatedListEmptyTitle => 'このリストには動画がないよ';
@@ -12574,9 +12477,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。';
 
   @override
-  String get peopleListsSearchConnectionsHint => 'フォロワーとフォロー中のユーザーを検索';
-
-  @override
   String get listMemberNamesSeparator => '、';
 
   @override
@@ -12692,4 +12592,84 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'リストを読み込み中';
+
+  @override
+  String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
+
+  @override
+  String get listSearchPeopleUnavailable => '現在、ユーザーリストを利用できません。';
+
+  @override
+  String get listSearchVideosUnavailable => '現在、動画リストを利用できません。';
+
+  @override
+  String get authAccountCleanupFailed => '前のアカウントのデータを削除できませんでした。もう一度お試しください。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameをリストから削除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameをリストに追加';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'コラボレーターを追加';
+
+  @override
+  String get listMakePublicLabel => '公開する';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divineを検索...';
+
+  @override
+  String get listCollaboratorsNone => 'なし';
+
+  @override
+  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
+
+  @override
+  String get listVideoNotAdded => 'リストは作成されましたが、この動画は追加されませんでした。';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。';
+
+  @override
+  String get listVideoPendingSync => 'リストと動画はこの端末に保存されています。動画は同期を待っています。';
+
+  @override
+  String get listRetrySync => '今すぐ同期';
+
+  @override
+  String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。';
+
+  @override
+  String get listAddToLists => 'リストに追加';
 }

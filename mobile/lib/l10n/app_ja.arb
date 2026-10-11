@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "このコレクションを読み込めませんでした。",
     "featuredTabRetry": "もう一度試す",
     "exploreNoVideosAvailable": "動画がないよ",
-    "exploreDiscoverLists": "リストを見つけよう",
-    "exploreAboutLists": "リストについて",
-    "exploreAboutListsDescription": "リストを使うと、Divine のコンテンツを2つの方法で整理・キュレーションできるよ:",
     "explorePeopleLists": "ピープルリスト",
-    "explorePeopleListsDescription": "クリエイターのグループをフォローして、最新の動画をチェックしよう",
     "exploreVideoLists": "ビデオリスト",
-    "exploreVideoListsDescription": "お気に入りの動画をプレイリストにまとめて、あとで見よう",
-    "exploreMyLists": "マイリスト",
-    "exploreSubscribedLists": "購読中のリスト",
     "exploreErrorLoadingLists": "リストの読み込みに失敗。もう一回試してみて。",
     "exploreNewVideosCount": "{count, plural, other{{count}本の新着動画}}",
     "@exploreNewVideosCount": {
@@ -1630,7 +1623,6 @@
     "reportReceivedReviewNotice": "ネットにつながったら自動で送信するよ。 チームが報告を確認して、適切に対応するね。ダイレクトメッセージでアップデートが届くかも。",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "閉じる",
-    "listAddToList": "リストに追加",
     "listVideoCount": "{count}本の動画",
     "@listVideoCount": {
         "placeholders": {
@@ -1639,31 +1631,12 @@
             }
         }
     },
-    "listNewList": "新しいリスト",
     "listDone": "完了",
     "listErrorLoading": "リストの読み込みに失敗",
-    "listRemovedFrom": "{name}から削除したよ",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name}に追加したよ",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "新しいリストを作る",
     "listNewPeopleList": "新しい人リスト",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
-    "listPublicList": "公開リスト",
-    "listPublicListSubtitle": "みんながフォロー・閲覧できるよ",
     "listPrivateListSubtitle": "動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。",
     "listVisibilityPublic": "公開",
     "listVisibilityPrivate": "非公開",
@@ -1697,7 +1670,6 @@
             }
         }
     },
-    "listCancel": "キャンセル",
     "listCreate": "作成",
     "listCreateFailed": "リストの作成がうまくいかなかった",
     "keyManagementTitle": "Nostr 鍵",
@@ -3033,10 +3005,8 @@
     },
     "notificationSystemUpdate": "新しいお知らせがあります",
     "peopleListsAddToList": "リストに追加",
-    "peopleListsSheetTitle": "リストに追加",
     "peopleListsEmptyTitle": "リストがありません",
     "peopleListsEmptySubtitle": "リストを作成して人々をグループ化しましょう。",
-    "peopleListsCreateList": "リストを作成",
     "peopleListsNewListTitle": "新しいリスト",
     "peopleListsRouteTitle": "ピープルリスト",
     "peopleListsListNameLabel": "リスト名",
@@ -3059,8 +3029,6 @@
     "peopleListsAddToListName": "{name}に追加",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
-    "peopleListsAddButton": "追加",
-    "peopleListsAddButtonWithCount": "{count}人追加",
     "peopleListsInNLists": "{count, plural, other{{count}件のリストに含まれています}}",
     "peopleListsRemoveConfirmTitle": "{name}を削除しますか？",
     "peopleListsRemoveConfirmBody": "このリストから削除されます。",
@@ -3300,14 +3268,6 @@
     "authConfirmPasswordRequired": "パスワードを確認してね",
     "authPasswordsDoNotMatch": "パスワードが一致しないよ",
     "authConfirmNewPasswordLabel": "新しいパスワードの確認",
-    "listPersonCount": "{count, plural, =1{1人} other{{count}人}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "作成者: ",
     "keyManagementYourPublicKeyLabel": "あなたの公開鍵 (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "リストを見つける",
-    "discoverListsFailedToLoad": "リストの読み込みに失敗",
-    "discoverListsLoading": "公開リストを探してるよ...",
-    "discoverListsRelayTimeout": "リレーが時間内にリストを返さなかったよ。もう一度試してね。",
-    "discoverListsServiceUnavailable": "サービスを利用できません。",
-    "discoverListsEmptyTitle": "公開リストが見つからなかった",
-    "discoverListsEmptySubtitle": "あとでまたチェックしてみてね",
-    "discoverListsByAuthorPrefix": "作成者:",
     "curatedListEmptyTitle": "このリストには動画がないよ",
     "curatedListEmptySubtitle": "動画を追加してみよう",
     "curatedListLoadingVideos": "動画を読み込み中...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "ユーザー",
   "peopleListsPeopleNone": "ユーザーはまだ追加されていません",
   "peopleListsSessionChanged": "アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。",
-  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索",
   "listCardSemanticLabel": "{visibility, select, private{{name}、非公開、{count}} other{{name}、{count}}}",
   "listMemberNamesSeparator": "、",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "説明はほどほどに",
   "ideasDescriptionFive": "ただシェアしたかっただけ。",
   "ideasTitleSix": "今日のかけら",
-  "ideasDescriptionSix": "ここに置いておきます。"
+  "ideasDescriptionSix": "ここに置いておきます。",
+  "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
+  "listsDiscoveryLoadingLabel": "リストを読み込み中",
+  "listSearchPeopleUnavailable": "現在、ユーザーリストを利用できません。",
+  "listSearchVideosUnavailable": "現在、動画リストを利用できません。",
+  "listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。",
+  "authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+  "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
+  "peopleListsAddPeopleSearchHint": "ユーザーを検索",
+  "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+  "listMakePublicLabel": "公開する",
+  "listCollaboratorsNone": "なし",
+  "listAddCollaboratorTitle": "コラボレーターを追加",
+  "listMakePublicSubtitle": "他の人もこのリストを見られます",
+  "listCollaboratorSearchHint": "Divineを検索...",
+  "listVideoNotAdded": "リストは作成されましたが、この動画は追加されませんでした。",
+  "listPrivateCollaboratorsWarning": "このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。",
+  "listVideoPendingSync": "リストと動画はこの端末に保存されています。動画は同期を待っています。",
+  "listRetrySync": "今すぐ同期",
+  "listPermissionsUnconfirmed": "この変更を確認できませんでした。もう一度お試しください。",
+  "listRecoveryPending": "このリストには同期を待っている変更があります。",
+  "listPermissionsRecoveryPending": "変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。",
+  "listRecoveryReadOnly": "動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。",
+  "listAddToLists": "リストに追加"
 }

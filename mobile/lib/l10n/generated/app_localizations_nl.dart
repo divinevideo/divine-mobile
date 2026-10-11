@@ -1442,34 +1442,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Geen video\'s beschikbaar';
 
   @override
-  String get exploreDiscoverLists => 'Lijsten ontdekken';
-
-  @override
-  String get exploreAboutLists => 'Over lijsten';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:';
-
-  @override
   String get explorePeopleLists => 'Personenlijsten';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Volg groepen makers en bekijk hun nieuwste video\'s';
-
-  @override
   String get exploreVideoLists => 'Videolijsten';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Maak afspeellijsten van je favoriete video\'s om later te bekijken';
-
-  @override
-  String get exploreMyLists => 'Mijn lijsten';
-
-  @override
-  String get exploreSubscribedLists => 'Gevolgde lijsten';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3946,17 +3922,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsAddToList => 'Toevoegen aan lijst';
 
   @override
-  String get peopleListsSheetTitle => 'Toevoegen aan lijst';
-
-  @override
   String get peopleListsEmptyTitle => 'Nog geen lijsten';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Maak een lijst om mensen te groeperen.';
-
-  @override
-  String get peopleListsCreateList => 'Lijst aanmaken';
 
   @override
   String get peopleListsNewListTitle => 'Nieuwe lijst';
@@ -4037,14 +4007,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Opnieuw proberen';
-
-  @override
-  String get peopleListsAddButton => 'Toevoegen';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count toevoegen';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4983,45 +4945,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportClose => 'Sluiten';
 
   @override
-  String get listAddToList => 'Toevoegen aan lijst';
-
-  @override
   String listVideoCount(int count) {
     return '$count video\'s';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personen',
-      one: '1 persoon',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'Door ';
 
   @override
-  String get listNewList => 'Nieuwe lijst';
-
-  @override
   String get listDone => 'Klaar';
 
   @override
   String get listErrorLoading => 'Fout bij laden van lijsten';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Verwijderd uit $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Toegevoegd aan $name';
-  }
 
   @override
   String get listCreateNewList => 'Nieuwe lijst maken';
@@ -5034,13 +4969,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Beschrijving (optioneel)';
-
-  @override
-  String get listPublicList => 'Openbare lijst';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Anderen kunnen deze lijst volgen en zien';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5149,9 +5077,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name op Divine';
   }
-
-  @override
-  String get listCancel => 'Annuleren';
 
   @override
   String get listCreate => 'Maken';
@@ -6224,32 +6149,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonnement bijwerken mislukt. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsTitle => 'Lijsten ontdekken';
-
-  @override
-  String get discoverListsFailedToLoad => 'Lijsten laden mislukt';
-
-  @override
-  String get discoverListsLoading => 'Publieke lijsten worden ontdekt...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'De relay leverde niet op tijd lijsten. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service niet beschikbaar.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Geen publieke lijsten gevonden';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Kom later terug voor nieuwe lijsten';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'door';
 
   @override
   String get curatedListEmptyTitle => 'Geen video\'s in deze lijst';
@@ -13292,10 +13191,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Zoek in volgers en mensen die je volgt';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -13414,4 +13309,93 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Lijsten laden';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personenlijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name uit lijst verwijderen';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kon de lijst niet bijwerken. Probeer het opnieuw.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name aan lijst toevoegen';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
+
+  @override
+  String get listMakePublicLabel => 'Openbaar maken';
+
+  @override
+  String get listCollaboratorSearchHint => 'Zoek in Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Geen';
+
+  @override
+  String get listMakePublicSubtitle => 'Laat anderen deze lijst zien';
+
+  @override
+  String get listVideoNotAdded =>
+      'Je lijst is gemaakt, maar deze video is niet toegevoegd.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.';
+
+  @override
+  String get listRetrySync => 'Nu synchroniseren';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
+
+  @override
+  String get listRecoveryPending =>
+      'Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
+
+  @override
+  String get listAddToLists => 'Toevoegen aan lijsten';
 }

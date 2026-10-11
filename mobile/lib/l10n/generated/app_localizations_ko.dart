@@ -1315,33 +1315,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreNoVideosAvailable => '이용 가능한 영상이 없어요';
 
   @override
-  String get exploreDiscoverLists => '리스트 둘러보기';
-
-  @override
-  String get exploreAboutLists => '리스트란?';
-
-  @override
-  String get exploreAboutListsDescription =>
-      '리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:';
-
-  @override
   String get explorePeopleLists => '사람 리스트';
 
   @override
-  String get explorePeopleListsDescription =>
-      '크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요';
-
-  @override
   String get exploreVideoLists => '영상 리스트';
-
-  @override
-  String get exploreVideoListsDescription => '좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요';
-
-  @override
-  String get exploreMyLists => '내 리스트';
-
-  @override
-  String get exploreSubscribedLists => '구독 리스트';
 
   @override
   String get exploreErrorLoadingLists => '리스트를 불러오지 못했어요. 다시 시도해보세요.';
@@ -3698,16 +3675,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddToList => '목록에 추가';
 
   @override
-  String get peopleListsSheetTitle => '목록에 추가';
-
-  @override
   String get peopleListsEmptyTitle => '목록이 없습니다';
 
   @override
   String get peopleListsEmptySubtitle => '목록을 만들어 사람들을 그룹화하세요.';
-
-  @override
-  String get peopleListsCreateList => '목록 만들기';
 
   @override
   String get peopleListsNewListTitle => '새 목록';
@@ -3783,14 +3754,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => '다시 시도';
-
-  @override
-  String get peopleListsAddButton => '추가';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count명 추가';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4684,45 +4647,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportClose => '닫기';
 
   @override
-  String get listAddToList => '목록에 추가';
-
-  @override
   String listVideoCount(int count) {
     return '영상 $count개';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명',
-      one: '1명',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => '작성자: ';
 
   @override
-  String get listNewList => '새 목록';
-
-  @override
   String get listDone => '완료';
 
   @override
   String get listErrorLoading => '목록을 불러오는 중 오류 발생';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name에서 삭제했어요';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name에 추가했어요';
-  }
 
   @override
   String get listCreateNewList => '새 목록 만들기';
@@ -4735,12 +4671,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => '설명 (선택)';
-
-  @override
-  String get listPublicList => '공개 목록';
-
-  @override
-  String get listPublicListSubtitle => '다른 사람들이 이 목록을 팔로우하고 볼 수 있어요';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4845,9 +4775,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine의 $name';
   }
-
-  @override
-  String get listCancel => '취소';
 
   @override
   String get listCreate => '만들기';
@@ -5888,30 +5815,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       '구독 업데이트에 실패했어요. 다시 시도해보세요.';
-
-  @override
-  String get discoverListsTitle => '리스트 둘러보기';
-
-  @override
-  String get discoverListsFailedToLoad => '리스트를 불러오지 못했어요';
-
-  @override
-  String get discoverListsLoading => '공개 리스트를 찾는 중...';
-
-  @override
-  String get discoverListsRelayTimeout => '릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.';
-
-  @override
-  String get discoverListsServiceUnavailable => '서비스를 사용할 수 없어요.';
-
-  @override
-  String get discoverListsEmptyTitle => '공개 리스트를 찾지 못했어요';
-
-  @override
-  String get discoverListsEmptySubtitle => '새 리스트가 올라오면 다시 와봐요';
-
-  @override
-  String get discoverListsByAuthorPrefix => '작성자';
 
   @override
   String get curatedListEmptyTitle => '이 리스트에 영상이 없어요';
@@ -12587,9 +12490,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.';
 
   @override
-  String get peopleListsSearchConnectionsHint => '팔로워 및 팔로우 중인 사람 검색';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -12705,4 +12605,85 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => '목록 불러오는 중';
+
+  @override
+  String get listsDiscoveryEmpty => '이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.';
+
+  @override
+  String get listSearchPeopleUnavailable => '지금은 사용자 목록을 이용할 수 없어요.';
+
+  @override
+  String get listSearchVideosUnavailable => '지금은 동영상 목록을 이용할 수 없어요.';
+
+  @override
+  String get authAccountCleanupFailed => '이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => '사람 검색';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '목록에서 $name 삭제';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      '목록을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '목록에 $name 추가';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => '협업자 추가';
+
+  @override
+  String get listMakePublicLabel => '공개로 설정';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine 검색...';
+
+  @override
+  String get listCollaboratorsNone => '없음';
+
+  @override
+  String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
+
+  @override
+  String get listVideoNotAdded => '목록은 만들어졌지만 이 동영상은 추가되지 않았어요.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      '이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.';
+
+  @override
+  String get listVideoPendingSync => '목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.';
+
+  @override
+  String get listRetrySync => '지금 동기화';
+
+  @override
+  String get listPermissionsUnconfirmed => '이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get listRecoveryPending => '이 목록에 동기화를 기다리는 변경 사항이 있어요.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.';
+
+  @override
+  String get listAddToLists => '목록에 추가';
 }

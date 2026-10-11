@@ -160,6 +160,11 @@ MockAuthService createMockAuthService({
   when(() => mockAuth.authState).thenReturn(authState);
   when(() => mockAuth.authStateStream)
       .thenAnswer((_) => const Stream<AuthState>.empty());
+  // Notification plumbing is available without claiming account settlement.
+  // Tests that need an active list writer must supply their own real receipt.
+  when(() => mockAuth.accountActivationChanges)
+      .thenAnswer((_) => const Stream.empty());
+  when(() => mockAuth.committedAccountActivationReceipt).thenReturn(null);
 
   // Providers built from an authenticated identity read requireIdentity, which
   // throws on the real service and returned null here. A pubkey-only identity

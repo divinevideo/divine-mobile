@@ -20,14 +20,16 @@ import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
-import 'package:openvine/utils/share_sheet.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
+import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
+import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -116,7 +118,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final useFrozenIds = widget.videoIds != null && localList == null;
     final videosAsync = useFrozenIds
         ? ref.watch(videoEventsByIdsProvider(widget.videoIds!))
-        : ref.watch(curatedListVideoEventsProvider(widget.listId));
+        : ref.watch(curatedListVideoEventsProvider(_cacheListId));
 
     // Managing posts needs loaded, non-empty content: an empty list has
     // nothing to remove and an error view has no posts to manage.
@@ -129,12 +131,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final service = ref.read(curatedListsStateProvider.notifier).service;
     final isOwned =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isOwnedList(widget.listId),
+          data: (_) => service?.isOwnedList(_cacheListId),
         ) ??
         false;
     final isSubscribed =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isSubscribedToList(widget.listId),
+          data: (_) => service?.isSubscribedToList(_cacheListId),
         ) ??
         false;
     final list = localList ?? widget.discoveredList;
@@ -186,29 +188,16 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             ),
         ],
         customActions: [
-          if (!isOwned)
-            _FollowListButton(
-              isSubscribed: isSubscribed,
+          // Not owned in the store does not mean someone else's: a link can
+          // run ahead of sync, and Search opens an unclaimed draft under the
+          // viewer's own pubkey.
+          if (!isOwned && !_isViewer(widget.authorPubkey))
+            FollowListButton(
+              isFollowing: isSubscribed,
               isBusy: _isTogglingSubscription,
               onPressed: _toggleSubscription,
             ),
-          if (!isOwned && isShareable)
-            DivineAppBarIconButton(
-              icon: SvgIconSource(DivineIconName.shareFat.assetPath),
-              onPressed: _shareList,
-              tooltip: context.l10n.listShareAction,
-              semanticLabel: context.l10n.listShareAction,
-              // Match the bar's own action chrome (the back button): green
-              // glyph on the bordered surface container.
-              backgroundColor: context.vineColors.surfaceContainer,
-              borderSide: BorderSide(
-                color: context.vineColors.outlineMuted,
-                width: 2,
-              ),
-              iconColor: context.vineColors.isLight
-                  ? VineTheme.primaryAccessible
-                  : VineTheme.primary,
-            ),
+          if (!isOwned && isShareable) ShareListButton(onPressed: _shareList),
         ],
       );
     }
@@ -414,8 +403,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   /// tile on screen.
   void _refreshListVideos() {
     ref
-      ..invalidate(curatedListVideosProvider(widget.listId))
-      ..invalidate(curatedListVideoEventsProvider(widget.listId));
+      ..invalidate(curatedListVideosProvider(_cacheListId))
+      ..invalidate(curatedListVideoEventsProvider(_cacheListId));
     // The discovered-list path watches the frozen-ids provider instead, and
     // Retry after a fetch error has to re-run that one.
     if (widget.videoIds case final ids?) {
@@ -448,6 +437,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     _exitManageMode();
   }
 
+  /// Whether [pubkey] is the signed-in viewer's.
+  bool _isViewer(String? pubkey) {
+    if (pubkey == null) return false;
+    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
+    return viewer != null && viewer.toLowerCase() == pubkey.toLowerCase();
+  }
+
   /// What a report on someone else's list names, or null when it cannot be
   /// reported yet: the viewer's own list (reporting it stays disabled, as it
   /// is for videos), or a list with no known author.
@@ -462,10 +458,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (!isOwnedKnown || author == null) return null;
     // Deep links can resolve an owned list before background sync adds it
     // to the local store; an absent entry does not mean someone else owns it.
-    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
-    if (viewer != null && viewer.toLowerCase() == author.toLowerCase()) {
-      return null;
-    }
+    if (_isViewer(author)) return null;
     final eventId =
         list?.nostrEventId ??
         ref
@@ -489,7 +482,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       expanded: false,
       scrollable: false,
       children: [
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_report_option',
           label: context.l10n.listReportAction,
           icon: DivineIconName.flag,
@@ -508,10 +501,24 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     );
   }
 
+  /// Keep existing local IDs usable, but never let another author's same
+  /// d-tag satisfy an author-scoped route. New discovered records are cached
+  /// under their coordinate so following them cannot select a colliding list.
+  String get _cacheListId {
+    final author = widget.authorPubkey;
+    if (author == null) return widget.listId;
+    final local = ref
+        .read(curatedListsStateProvider.notifier)
+        .service
+        ?.getListById(widget.listId);
+    if (local?.pubkey == author) return widget.listId;
+    return '$author:${widget.listId}';
+  }
+
   CuratedList? _localList() => ref
       .read(curatedListsStateProvider.notifier)
       .service
-      ?.getListById(widget.listId);
+      ?.getListById(_cacheListId);
 
   Future<void> _showOwnerActions({required bool canManagePosts}) async {
     final list = _localList();
@@ -524,13 +531,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       expanded: false,
       scrollable: false,
       children: [
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_edit_info_option',
           label: context.l10n.listEditInfoAction,
           icon: DivineIconName.info,
           action: _CuratedListAction.editInfo,
         ),
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_manage_posts_option',
           label: context.l10n.listManageVideosAction,
           icon: DivineIconName.pencilSimple,
@@ -538,13 +545,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           enabled: canManagePosts,
         ),
         if (isShareable)
-          _OwnerActionTile(
+          ListOwnerActionTile(
             identifier: 'list_share_option',
             label: context.l10n.listShareAction,
             icon: DivineIconName.share,
             action: _CuratedListAction.share,
           ),
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_delete_option',
           label: context.l10n.listDeleteAction,
           icon: DivineIconName.trash,
@@ -575,9 +582,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   Future<void> _editList() async {
     final list = _localList();
     if (list == null) return;
-    await context.showVideoPausingDialog<void>(
-      builder: (_) => CreateListDialog(existingList: list),
-    );
+    await showListInfoSheet(context, existingList: list);
   }
 
   Future<void> _shareList() async {
@@ -585,27 +590,14 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final authorPubkey = list?.pubkey;
     if (list == null || !list.isPublic || authorPubkey == null) return;
 
-    final path = CuratedListByAuthorScreen.pathFor(
-      pubkey: authorPubkey,
-      listId: list.id,
+    await shareListLink(
+      context,
+      name: list.name,
+      path: CuratedListByAuthorScreen.pathFor(
+        pubkey: authorPubkey,
+        listId: list.id,
+      ),
     );
-    final url = 'https://divine.video$path';
-    try {
-      await showShareSheet(
-        context,
-        ShareParams(
-          text: context.l10n.listShareText(list.name, url),
-          subject: context.l10n.listShareSubject(list.name),
-        ),
-      );
-    } catch (e) {
-      Log.error('Failed to share list: $e', category: LogCategory.ui);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.listShareFailed)));
-      }
-    }
   }
 
   Future<void> _confirmDeleteList() async {
@@ -676,7 +668,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       return;
     }
 
-    ref.invalidate(curatedListsProvider);
     final message = context.l10n.curatedListDeletedSnack;
     announceDetached(
       context,
@@ -699,24 +690,30 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (service == null || _isTogglingSubscription) {
       return;
     }
+    final openingOwner = ref.read(authServiceProvider).currentPublicKeyHex;
+    bool isSessionCurrent() =>
+        mounted &&
+        ref.read(authServiceProvider).currentPublicKeyHex == openingOwner &&
+        identical(
+          ref.read(curatedListsStateProvider.notifier).service,
+          service,
+        );
 
     setState(() {
       _isTogglingSubscription = true;
     });
 
     try {
-      if (service.isSubscribedToList(widget.listId)) {
-        await service.unsubscribeFromList(widget.listId);
-        Log.info(
-          'Unsubscribed from list: ${widget.listName}',
-          category: LogCategory.ui,
-        );
+      final wasSubscribed = service.isSubscribedToList(_cacheListId);
+      final bool didUpdate;
+      if (wasSubscribed) {
+        didUpdate = await service.unsubscribeFromList(_cacheListId);
       } else {
         // Prefer the relay-resolved record: the synthetic fallback has no
         // description or image, and whatever subscribes here is what the
         // cache serves from then on.
         final list =
-            service.getListById(widget.listId) ??
+            _localList() ??
             widget.discoveredList ??
             CuratedList(
               id: widget.listId,
@@ -726,25 +723,21 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
-        await service.subscribeToList(widget.listId, list);
-        Log.info(
-          'Subscribed to list: ${widget.listName}',
-          category: LogCategory.ui,
-        );
+        didUpdate = await service.subscribeToList(_cacheListId, list);
       }
-
-      // Invalidate providers so the Lists tab updates
-      ref.invalidate(curatedListsProvider);
+      if (!isSessionCurrent()) return;
+      if (!didUpdate) {
+        _showSubscriptionFailure();
+        return;
+      }
+      Log.info(
+        '${wasSubscribed ? 'Unsubscribed from' : 'Subscribed to'} list: '
+        '${widget.listName}',
+        category: LogCategory.ui,
+      );
     } catch (e) {
       Log.error('Failed to toggle subscription: $e', category: LogCategory.ui);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
-            backgroundColor: VineTheme.likeRed,
-          ),
-        );
-      }
+      if (isSessionCurrent()) _showSubscriptionFailure();
     } finally {
       if (mounted) {
         setState(() {
@@ -753,33 +746,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       }
     }
   }
-}
 
-/// Follow/Following pill shown to non-owners in the app bar.
-class _FollowListButton extends StatelessWidget {
-  const _FollowListButton({
-    required this.isSubscribed,
-    required this.isBusy,
-    required this.onPressed,
-  });
-
-  final bool isSubscribed;
-  final bool isBusy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DivineButton(
-      label: isSubscribed
-          ? context.l10n.listFollowingButton
-          : context.l10n.listFollowButton,
-      size: DivineButtonSize.small,
-      type: isSubscribed
-          ? DivineButtonType.secondary
-          : DivineButtonType.primary,
-      leadingIcon: isSubscribed ? DivineIconName.check : DivineIconName.plus,
-      isLoading: isBusy,
-      onPressed: isBusy ? null : onPressed,
+  void _showSubscriptionFailure() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
+        backgroundColor: VineTheme.likeRed,
+      ),
     );
   }
 }
@@ -894,77 +867,6 @@ class _ListAuthorAttribution extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One row of the owner actions sheet; pops the sheet with its [action].
-///
-/// A disabled row renders muted and ignores taps instead of hiding, so the
-/// owner can still see the option exists.
-class _OwnerActionTile extends StatelessWidget {
-  const _OwnerActionTile({
-    required this.identifier,
-    required this.label,
-    required this.icon,
-    required this.action,
-    this.isDestructive = false,
-    this.enabled = true,
-  });
-
-  final String identifier;
-  final String label;
-  final DivineIconName icon;
-  final _CuratedListAction action;
-  final bool isDestructive;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    // onErrorContainer, not fixed likeRed/error: the sheet surface follows
-    // the palette and the token keeps destructive contrast in both
-    // appearances (#7147, matching the comment options sheet).
-    final Color color;
-    if (!enabled) {
-      color = context.vineColors.onSurfaceMuted;
-    } else if (isDestructive) {
-      color = context.vineColors.onErrorContainer;
-    } else {
-      color = context.vineColors.onSurface;
-    }
-
-    void select() => Navigator.of(context).pop(action);
-
-    return Semantics(
-      identifier: identifier,
-      button: true,
-      enabled: enabled,
-      label: label,
-      // excludeSemantics drops the child subtree — including the
-      // GestureDetector's tap action — so the action is re-declared here.
-      onTap: enabled ? select : null,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? select : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            spacing: 16,
-            children: [
-              DivineIcon(icon: icon, color: color),
-              Expanded(
-                child: Text(
-                  label,
-                  style: VineTheme.titleMediumFont(color: color),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

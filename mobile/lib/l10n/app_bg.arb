@@ -527,15 +527,8 @@
     "featuredTabLoadFailed": "Тази колекция не можа да се зареди.",
     "featuredTabRetry": "Опитай пак",
     "exploreNoVideosAvailable": "Няма налични видеа",
-    "exploreDiscoverLists": "Открий списъци",
-    "exploreAboutLists": "Относно списъците",
-    "exploreAboutListsDescription": "Списъците ти помагат да организираш и управляваш Divine съдържание по два начина:",
     "explorePeopleLists": "Списъци с хора",
-    "explorePeopleListsDescription": "Следвай групи от творци и виж най-новите им видеа",
     "exploreVideoLists": "Видео списъци",
-    "exploreVideoListsDescription": "Създай плейлисти с любимите си видеа, за да ги гледаш по-късно",
-    "exploreMyLists": "Моите списъци",
-    "exploreSubscribedLists": "Абонирани списъци",
     "exploreErrorLoadingLists": "Грешка при зареждане на списъците. Опитай пак.",
     "exploreNewVideosCount": "{count, plural, =1{1 ново видео} other{{count} нови видеа}}",
     "@exploreNewVideosCount": {
@@ -1486,10 +1479,8 @@
         }
     },
     "peopleListsAddToList": "Добави към списъка",
-    "peopleListsSheetTitle": "Добави към списък",
     "peopleListsEmptyTitle": "Още няма списъци",
     "peopleListsEmptySubtitle": "Създай списък, за да започнеш да групираш хора.",
-    "peopleListsCreateList": "Създаване на списък",
     "peopleListsNewListTitle": "Нов списък",
     "peopleListsRouteTitle": "Списък с хора",
     "@peopleListsRouteTitle": {
@@ -1522,15 +1513,6 @@
     },
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
-    "peopleListsAddButton": "Добави",
-    "peopleListsAddButtonWithCount": "Добави {count}",
-    "@peopleListsAddButtonWithCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -1844,7 +1826,6 @@
     "reportReceivedReviewNotice": "Ще го изпратим автоматично, когато се свържеш с интернет. Екипът ни ще прегледа сигнала ти и ще предприеме нужните действия. Може да получаваш новини чрез директно съобщение.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Затвори",
-    "listAddToList": "Добави към списъка",
     "listVideoCount": "{count} видеа",
     "@listVideoCount": {
         "placeholders": {
@@ -1853,31 +1834,12 @@
             }
         }
     },
-    "listNewList": "Нов списък",
     "listDone": "Готово",
     "listErrorLoading": "Грешка при зареждане на списъците",
-    "listRemovedFrom": "Премахнато от {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Добавено към {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Създаване на нов списък",
     "listNewPeopleList": "Нов списък с хора",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
-    "listPublicList": "Публичен списък",
-    "listPublicListSubtitle": "Други могат да следват и да видят този списък",
     "listPrivateListSubtitle": "Видеата остават частни. Името, описанието, таговете и корицата остават видими.",
     "listVisibilityPublic": "Публичен",
     "listVisibilityPrivate": "Частен",
@@ -1911,7 +1873,6 @@
             }
         }
     },
-    "listCancel": "Отказ",
     "listCreate": "Създай",
     "listCreateFailed": "Неуспешно създаване на списък",
     "keyManagementTitle": "Nostr Ключове",
@@ -3417,14 +3378,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Не успяхме да махнем този акаунт от това устройство. Опитай пак.",
     "nostrSettingsDeleteAccount": "Изтрий акаунта и данните",
     "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
-    "listPersonCount": "{count, plural, =1{1 човек} other{{count} души}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "От ",
     "keyManagementYourPublicKeyLabel": "Твоят публичен ключ (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3471,14 +3424,6 @@
             }
         }
     },
-    "discoverListsTitle": "Открий списъци",
-    "discoverListsFailedToLoad": "Зареждането на списъците не успя",
-    "discoverListsLoading": "Откриваме публични списъци...",
-    "discoverListsRelayTimeout": "Релето не върна списъци навреме. Опитай пак.",
-    "discoverListsServiceUnavailable": "Услугата не е налична.",
-    "discoverListsEmptyTitle": "Не са намерени публични списъци",
-    "discoverListsEmptySubtitle": "Върни се по-късно за нови списъци",
-    "discoverListsByAuthorPrefix": "от",
     "curatedListEmptyTitle": "Няма видеа в този списък",
     "curatedListEmptySubtitle": "Добави няколко видеа, за да започнеш",
     "curatedListLoadingVideos": "Видеата се зареждат...",
@@ -5097,7 +5042,6 @@
   "peopleListsPeopleLabel": "Хора",
   "peopleListsPeopleNone": "Няма добавени хора",
   "peopleListsSessionChanged": "Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.",
-  "peopleListsSearchConnectionsHint": "Търси сред последователи и следвани",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Частен, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5143,5 +5087,43 @@
   "ideasTitleFive": "Без много обяснения",
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
-  "ideasDescriptionSix": "Оставям това тук."
+  "ideasDescriptionSix": "Оставям това тук.",
+  "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
+  "listsDiscoveryLoadingLabel": "Зареждане на списъци",
+  "listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",
+  "listSearchVideosUnavailable": "Списъците с видеа не са достъпни в момента.",
+  "listPrivateConversionTooLarge": "Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.",
+  "authAccountCleanupFailed": "Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+  "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
+  "peopleListsAddPeopleSearchHint": "Търси хора",
+  "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+  "listMakePublicLabel": "Направи публичен",
+  "listCollaboratorsNone": "Няма",
+  "listAddCollaboratorTitle": "Добави сътрудник",
+  "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
+  "listCollaboratorSearchHint": "Търсене Divine...",
+  "listVideoNotAdded": "Списъкът ти е създаден, но това видео не е добавено.",
+  "listPrivateCollaboratorsWarning": "Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.",
+  "listVideoPendingSync": "Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.",
+  "listRetrySync": "Синхронизирай сега",
+  "listPermissionsUnconfirmed": "Не можахме да потвърдим тази промяна. Опитай отново.",
+  "listRecoveryPending": "Този списък има промени, които чакат синхронизиране.",
+  "listPermissionsRecoveryPending": "Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.",
+  "listRecoveryReadOnly": "Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.",
+  "listAddToLists": "Добави към списъци"
 }

@@ -28,14 +28,38 @@ const _curatedListKind = 30005;
 /// Well-known d-tag for the user's default "My List".
 const defaultListId = 'my_vine_list';
 
-/// Newest kind-30005 events asked of each relay per search.
+/// Newest NIP-51 list events asked of each relay per read, for search and
+/// discovery alike.
 ///
 /// Every new account publishes an empty default list, and on production those
 /// placeholders are all but a percent or two of the newest events, so a
-/// 50-event window held nothing but placeholders whatever the query. 500 is
-/// the relay gateway's default discovery window; the placeholders drop out
-/// below because they carry no videos.
-const _relaySearchWindow = 500;
+/// 50-event window held nothing but placeholders whatever the query. The
+/// placeholders drop out of every read because they carry no videos.
+const kPublicListsRelayWindow = 500;
+
+/// How long a relay read of public lists waits before giving up.
+///
+/// Shared by search and discovery, so a user-typed search is not cut off by
+/// the client's default query budget while startup work holds the relay pool.
+const kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
+
+/// An immutable subscription snapshot and its resolution readiness.
+///
+/// Readiness travels with the exact rows, so an asynchronous listener cannot
+/// mistake an earlier partial emission for a later complete snapshot.
+class CuratedListSubscriptionSnapshot {
+  /// Copies [lists] into an unmodifiable snapshot.
+  CuratedListSubscriptionSnapshot({
+    required List<CuratedList> lists,
+    required this.isComplete,
+  }) : lists = List.unmodifiable(lists);
+
+  /// The subscribed lists captured when this snapshot was published.
+  final List<CuratedList> lists;
+
+  /// Whether missing identities and unique legacy aliases may be finalized.
+  final bool isComplete;
+}
 
 /// {@template curated_list_repository}
 /// Repository for managing curated video list subscriptions.
@@ -67,18 +91,38 @@ class CuratedListRepository {
   final CuratedListVideoFilter? _videoFilter;
   final Map<String, CuratedList> _subscribedLists = {};
   final Map<String, CuratedList> _ownLists = {};
+  bool _hasCompleteSubscriptionSnapshot = false;
+
+  /// Whether the bridge has supplied a complete subscription snapshot.
+  ///
+  /// Seeded or partial snapshots can expose cached exact identities, but must
+  /// not authorize migration or removal of an unresolved saved selection.
+  bool get hasCompleteSubscriptionSnapshot => _hasCompleteSubscriptionSnapshot;
 
   // BehaviorSubject replays last value to late subscribers, fixing race
   // condition where BLoC subscribes AFTER initial emission.
-  final _subscribedListsSubject = BehaviorSubject<List<CuratedList>>.seeded(
-    const [],
+  var _subscriptionSnapshot = CuratedListSubscriptionSnapshot(
+    lists: const [],
+    isComplete: false,
   );
+  late final _subscriptionSnapshotsSubject =
+      BehaviorSubject<CuratedListSubscriptionSnapshot>.seeded(
+        _subscriptionSnapshot,
+      );
+
+  /// The exact latest snapshot, for rejecting superseded queued emissions.
+  CuratedListSubscriptionSnapshot get subscriptionSnapshot =>
+      _subscriptionSnapshot;
+
+  /// Replays subscribed rows paired with their captured completeness.
+  Stream<CuratedListSubscriptionSnapshot> get subscriptionSnapshots =>
+      _subscriptionSnapshotsSubject.stream;
 
   /// A stream of subscribed curated lists.
   ///
   /// Replays the last emitted value to new subscribers (BehaviorSubject).
   Stream<List<CuratedList>> get subscribedListsStream =>
-      _subscribedListsSubject.stream;
+      subscriptionSnapshots.map((snapshot) => snapshot.lists);
 
   // ---------------------------------------------------------------------------
   // Mutation
@@ -90,16 +134,24 @@ class CuratedListRepository {
   /// from the legacy Riverpod `CuratedListService` into the repository so
   /// BLoCs can consume it via [subscribedListsStream].
   ///
-  /// Each list is keyed by its [CuratedList.id].
+  /// Each list is keyed by its complete [CuratedList.authorScopedId].
+  ///
+  /// [isComplete] must be false while subscription metadata or followed copies
+  /// are unavailable. Completeness is updated before the stream emits.
   ///
   /// Emits the new list on [subscribedListsStream].
   // TODO(curated-list-migration): Remove once the repository owns its own
   // data loading (Phase 2 — persistence + relay sync). At that point,
   // internal CRUD methods and relay fetch will emit on the stream directly.
-  void setSubscribedLists(List<CuratedList> lists) {
+  void setSubscribedLists(
+    List<CuratedList> lists, {
+    bool isComplete = true,
+  }) {
+    _hasCompleteSubscriptionSnapshot =
+        isComplete && !_subscriptionSnapshotsSubject.isClosed;
     _subscribedLists
       ..clear()
-      ..addEntries(lists.map((list) => MapEntry(list.id, list)));
+      ..addEntries(lists.map((list) => MapEntry(list.authorScopedId, list)));
     _emitSubscribedLists();
   }
 
@@ -114,50 +166,76 @@ class CuratedListRepository {
   void setOwnLists(List<CuratedList> lists) {
     _ownLists
       ..clear()
-      ..addEntries(lists.map((list) => MapEntry(list.id, list)));
+      ..addEntries(lists.map((list) => MapEntry(list.authorScopedId, list)));
   }
 
   // ---------------------------------------------------------------------------
   // Read-only queries
   // ---------------------------------------------------------------------------
 
-  /// Returns the subscribed list with the given [id], or `null` if not found.
-  CuratedList? getListById(String id) => _subscribedLists[id];
+  /// Returns a subscribed list by its complete author-qualified [id].
+  ///
+  /// A legacy raw d-tag resolves only when exactly one subscribed identity
+  /// matches. A missing qualified identity never aliases another author.
+  CuratedList? getListById(String id) {
+    final exact = _subscribedLists[id];
+    if (exact != null || _coordinatePrefix.hasMatch(id)) return exact;
+
+    CuratedList? match;
+    for (final list in _subscribedLists.values) {
+      if (list.id != id) continue;
+      if (match != null) return null;
+      match = list;
+    }
+    return match;
+  }
+
+  // Leading or repeated colons remain part of legacy raw d-tags. Only a full
+  // Nostr pubkey establishes an explicitly author-qualified missing identity.
+  static final _coordinatePrefix = RegExp('^[0-9a-fA-F]{64}:');
 
   /// Returns an unmodifiable snapshot of all subscribed lists.
   List<CuratedList> getSubscribedLists() =>
       List.unmodifiable(_subscribedLists.values.toList());
 
   /// Whether the user is subscribed to the list with [listId].
-  bool isSubscribedToList(String listId) =>
-      _subscribedLists.containsKey(listId);
+  bool isSubscribedToList(String listId) => getListById(listId) != null;
 
   /// Whether [videoEventId] is in the subscribed list with [listId].
   ///
   /// Returns `false` if the list does not exist.
   bool isVideoInList(String listId, String videoEventId) {
-    final list = _subscribedLists[listId];
+    final list = getListById(listId);
     return list?.videoEventIds.contains(videoEventId) ?? false;
   }
 
-  /// Whether the user's default "My List" is among the subscribed lists.
-  bool hasDefaultList() => _subscribedLists.containsKey(defaultListId);
+  /// Whether [ownerPubkey]'s default "My List" is subscribed.
+  bool hasDefaultList({required String ownerPubkey}) =>
+      getDefaultList(ownerPubkey: ownerPubkey) != null;
 
-  /// Returns the user's default "My List", or `null` if not subscribed.
-  CuratedList? getDefaultList() => _subscribedLists[defaultListId];
+  /// Returns [ownerPubkey]'s default "My List", or `null` if not subscribed.
+  ///
+  /// This subscribed-list query does not infer ownership for authorless rows
+  /// or include the viewer's unsubscribed own lists.
+  CuratedList? getDefaultList({required String ownerPubkey}) {
+    if (ownerPubkey.isEmpty) return null;
+    return _subscribedLists['$ownerPubkey:$defaultListId'];
+  }
 
   /// Searches the public lists known locally, the viewer's own and the
   /// subscribed ones, by [query] against name, description, and tags
   /// (case-insensitive).
   ///
-  /// Returns an empty list when [query] is blank.
+  /// A list with no videos is left out, as it is from relay results: search
+  /// only surfaces lists with something to watch. Returns an empty list when
+  /// [query] is blank.
   List<CuratedList> searchLists(String query) {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
     final matches = <String, CuratedList>{};
     for (final list in [..._ownLists.values, ..._subscribedLists.values]) {
-      if (!list.isPublic) continue;
+      if (!list.isPublic || !list.hasVideos) continue;
       if (_isBlocked(list.pubkey)) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
       matches.putIfAbsent(list.authorScopedId, () => list);
@@ -201,7 +279,7 @@ class CuratedListRepository {
   ///
   /// Returns an empty list if the list does not exist.
   List<String> getOrderedVideoIds(String listId) {
-    final list = _subscribedLists[listId];
+    final list = getListById(listId);
     if (list == null) return [];
 
     return switch (list.playOrder) {
@@ -241,7 +319,7 @@ class CuratedListRepository {
   /// resolving thumbnails.
   Future<List<CuratedList>> _queryListsFromRelays({
     required String query,
-    int limit = _relaySearchWindow,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeAuthorScopedIds,
   }) async {
     if (query.trim().isEmpty) return [];
@@ -249,29 +327,27 @@ class CuratedListRepository {
     final lowerQuery = query.toLowerCase();
     final excluded = excludeAuthorScopedIds ?? const {};
 
-    final events = await _nostrClient.queryEvents([
-      Filter(kinds: [_curatedListKind], limit: limit),
-    ]);
+    final events = await _nostrClient.queryEvents(
+      [
+        Filter(kinds: [_curatedListKind], limit: limit),
+      ],
+      timeout: kPublicCuratedListsRelayReadTimeout,
+    );
 
-    final seen = <String, CuratedList>{};
-    for (final event in events) {
+    final results = <CuratedList>[];
+    // The newest revision wins before any filter, or an older populated one
+    // would surface for a list its author has since emptied or renamed.
+    for (final event in CuratedListConverter.latestRevisions(events)) {
       if (_isBlocked(event.pubkey)) continue;
       final list = CuratedListConverter.fromEvent(event);
       if (list == null) continue;
-      final key = list.authorScopedId;
-      if (excluded.contains(key)) continue;
+      if (excluded.contains(list.authorScopedId)) continue;
       if (!list.isPublic || !list.hasVideos) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
-
-      // Dedup per author and d-tag, keep newest
-      final existing = seen[key];
-      if (existing != null && existing.updatedAt.isAfter(list.updatedAt)) {
-        continue;
-      }
-      seen[key] = list;
+      results.add(list);
     }
 
-    return seen.values.toList();
+    return results;
   }
 
   bool _isBlocked(String? pubkey) {
@@ -349,8 +425,13 @@ class CuratedListRepository {
   ///
   /// Idempotent — safe to call multiple times.
   Future<void> dispose() async {
-    if (!_subscribedListsSubject.isClosed) {
-      await _subscribedListsSubject.close();
+    _hasCompleteSubscriptionSnapshot = false;
+    _subscriptionSnapshot = CuratedListSubscriptionSnapshot(
+      lists: getSubscribedLists(),
+      isComplete: false,
+    );
+    if (!_subscriptionSnapshotsSubject.isClosed) {
+      await _subscriptionSnapshotsSubject.close();
     }
   }
 
@@ -587,10 +668,12 @@ class CuratedListRepository {
   // ---------------------------------------------------------------------------
 
   void _emitSubscribedLists() {
-    if (!_subscribedListsSubject.isClosed) {
-      _subscribedListsSubject.add(
-        List.unmodifiable(_subscribedLists.values.toList()),
-      );
+    _subscriptionSnapshot = CuratedListSubscriptionSnapshot(
+      lists: getSubscribedLists(),
+      isComplete: _hasCompleteSubscriptionSnapshot,
+    );
+    if (!_subscriptionSnapshotsSubject.isClosed) {
+      _subscriptionSnapshotsSubject.add(_subscriptionSnapshot);
     }
   }
 }

@@ -1472,34 +1472,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
 
   @override
-  String get exploreDiscoverLists => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get exploreAboutLists => 'జాబితాల గురించి';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'జాబితాలు Divine కంటెంట్‌ని రెండు విధాలుగా నిర్వహించడానికి మరియు నిర్వహించడంలో మీకు సహాయపడతాయి:';
-
-  @override
   String get explorePeopleLists => 'వ్యక్తుల జాబితాలు';
 
   @override
-  String get explorePeopleListsDescription =>
-      'సృష్టికర్తల సమూహాలను అనుసరించండి మరియు వారి తాజా వీడియోలను చూడండి';
-
-  @override
   String get exploreVideoLists => 'వీడియో జాబితాలు';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'తర్వాత చూడటానికి మీకు ఇష్టమైన వీడియోల ప్లేజాబితాలను సృష్టించండి';
-
-  @override
-  String get exploreMyLists => 'నా జాబితాలు';
-
-  @override
-  String get exploreSubscribedLists => 'సభ్యత్వం పొందిన జాబితాలు';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4078,17 +4054,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddToList => 'జాబితాకు జోడించండి';
 
   @override
-  String get peopleListsSheetTitle => 'జాబితాకు జోడించండి';
-
-  @override
   String get peopleListsEmptyTitle => 'ఇంకా జాబితాలు లేవు';
 
   @override
   String get peopleListsEmptySubtitle =>
       'వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.';
-
-  @override
-  String get peopleListsCreateList => 'జాబితాను సృష్టించండి';
 
   @override
   String get peopleListsNewListTitle => 'కొత్త జాబితా';
@@ -4171,14 +4141,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
-
-  @override
-  String get peopleListsAddButton => 'జోడించండి';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'జోడించండి $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -5132,9 +5094,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportClose => 'మూసివేయండి';
 
   @override
-  String get listAddToList => 'జాబితాకు జోడించండి';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5146,37 +5105,13 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$countవ్యక్తులు',
-      one: '1 వ్యక్తి',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'ద్వారా ';
-
-  @override
-  String get listNewList => 'కొత్త జాబితా';
 
   @override
   String get listDone => 'పూర్తయింది';
 
   @override
   String get listErrorLoading => 'జాబితాలను లోడ్ చేయడంలో లోపం';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'నుండి తీసివేయబడింది $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'దీనికి జోడించబడింది $name';
-  }
 
   @override
   String get listCreateNewList => 'కొత్త జాబితాను సృష్టించండి';
@@ -5189,13 +5124,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
-
-  @override
-  String get listPublicList => 'పబ్లిక్ జాబితా';
-
-  @override
-  String get listPublicListSubtitle =>
-      'ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5304,9 +5232,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineలో $name';
   }
-
-  @override
-  String get listCancel => 'రద్దు';
 
   @override
   String get listCreate => 'సృష్టించు';
@@ -6394,32 +6319,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'సభ్యత్వాన్ని నవీకరించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsTitle => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get discoverListsFailedToLoad => 'జాబితాలను లోడ్ చేయడంలో విఫలమైంది';
-
-  @override
-  String get discoverListsLoading => 'పబ్లిక్ జాబితాలను కనుగొంటోంది...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'రిలే సమయానికి జాబితాలను అందించలేదు. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'సేవ అందుబాటులో లేదు.';
-
-  @override
-  String get discoverListsEmptyTitle => 'పబ్లిక్ జాబితాలు ఏవీ కనుగొనబడలేదు';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'కొత్త జాబితాల కోసం తర్వాత మళ్లీ తనిఖీ చేయండి';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ద్వారా';
 
   @override
   String get curatedListEmptyTitle => 'ఈ జాబితాలో వీడియోలు లేవు';
@@ -13564,10 +13463,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -13686,4 +13581,93 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameని జాబితా నుండి తీసివేయండి';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameని జాబితాకు జోడించండి';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
+
+  @override
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
+
+  @override
+  String get listCollaboratorSearchHint => 'శోధన Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'ఏదీ లేదు';
+
+  @override
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
+
+  @override
+  String get listVideoNotAdded =>
+      'మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.';
+
+  @override
+  String get listVideoPendingSync =>
+      'మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.';
+
+  @override
+  String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get listRecoveryPending =>
+      'ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
+
+  @override
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
 }

@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/device_authentication_provider.dart';
@@ -277,6 +278,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
     if (confirmed != true) return;
 
     setState(() => _isImporting = true);
+    AuthFailureReason? failureReason;
 
     try {
       // Use AuthService for proper session setup and relay discovery
@@ -288,6 +290,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       final result = await authService.importFromNsec(nsec);
 
       if (!result.success) {
+        failureReason = result.failureReason;
         throw Exception(result.errorMessage ?? 'Failed to import key');
       }
 
@@ -322,7 +325,9 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
-            context.l10n.keyManagementImportFailed,
+            failureReason == AuthFailureReason.accountCleanupFailed
+                ? context.l10n.authAccountCleanupFailed
+                : context.l10n.keyManagementImportFailed,
             error: true,
             duration: const Duration(seconds: 5),
           ),

@@ -753,14 +753,16 @@ void main() {
     // Full-length hex, never truncated.
     final listEventId = 'e' * 64;
     final listAuthor = 'b' * 64;
-    final coordinate = '30005:$listAuthor:faves';
 
     setUp(() {
       mockNostrClient = createMockNostrService();
       when(() => mockNostrClient.publicKey).thenReturn('test_pubkey_hex');
     });
 
-    Future<void> openListReport(WidgetTester tester) async {
+    Future<void> openListReport(
+      WidgetTester tester, {
+      ReportedListKind kind = ReportedListKind.videos,
+    }) async {
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -770,7 +772,7 @@ void main() {
                 builder: (context) => ElevatedButton(
                   onPressed: () => ReportContentDialog.showForList(
                     context,
-                    kind: ReportedListKind.videos,
+                    kind: kind,
                     eventId: listEventId,
                     authorPubkey: listAuthor,
                     dTag: 'faves',
@@ -831,33 +833,37 @@ void main() {
       }
     });
 
-    testWidgets(
-      "files the report against the list's event, author and coordinate",
-      (tester) async {
-        await setLargeSurface(tester);
-        await openListReport(tester);
+    for (final kind in ReportedListKind.values) {
+      testWidgets(
+        'files the ${kind.name} list report against its event, author and coordinate',
+        (tester) async {
+          await setLargeSurface(tester);
+          await openListReport(tester, kind: kind);
 
-        await tester.tap(find.text(l10n.reportReasonHarassment));
-        await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
-        await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.reportReasonHarassment));
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.widgetWithText(DivineButton, l10n.reportSubmit),
+          );
+          await tester.pumpAndSettle();
 
-        final context = verify(
-          () => mockReportingService.reportContent(
-            eventId: listEventId,
-            authorPubkey: listAuthor,
-            reason: ContentFilterReason.harassment,
-            details: any(named: 'details'),
-            sourceRelay: any(named: 'sourceRelay'),
-            moderationContent: any(named: 'moderationContent'),
-            moderationTags: any(named: 'moderationTags'),
-            additionalContext: captureAny(named: 'additionalContext'),
-            addressableCoordinate: coordinate,
-          ),
-        ).captured.single;
-        expect(context, contains('Best skate clips'));
-      },
-    );
+          final context = verify(
+            () => mockReportingService.reportContent(
+              eventId: listEventId,
+              authorPubkey: listAuthor,
+              reason: ContentFilterReason.harassment,
+              details: any(named: 'details'),
+              sourceRelay: any(named: 'sourceRelay'),
+              moderationContent: any(named: 'moderationContent'),
+              moderationTags: any(named: 'moderationTags'),
+              additionalContext: captureAny(named: 'additionalContext'),
+              addressableCoordinate: '${kind.nostrKind}:$listAuthor:faves',
+            ),
+          ).captured.single;
+          expect(context, contains('Best skate clips'));
+        },
+      );
+    }
   });
 
   group('moderation DM integration', () {

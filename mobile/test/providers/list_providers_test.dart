@@ -1,28 +1,32 @@
-// ABOUTME: Tests for userListsProvider reactivity to authentication transitions
-// ABOUTME: Covers sign-in, sign-out, and active-account switches.
+// ABOUTME: Tests for the list providers: member videos, video events by id,
+// ABOUTME: curated list videos and the public people and curated list reads.
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart';
+import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
-class _MockAuthService extends Mock implements AuthService {}
+import '../../packages/people_lists_repository/test/helpers/in_memory_followed_people_lists_store.dart';
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
@@ -91,20 +95,6 @@ VideoEvent _video({
   );
 }
 
-UserList _buildList({
-  required String id,
-  required String name,
-  List<String> pubkeys = const [],
-}) {
-  return UserList(
-    id: id,
-    name: name,
-    pubkeys: pubkeys,
-    createdAt: _frozenNow,
-    updatedAt: _frozenNow,
-  );
-}
-
 void main() {
   group(userListMemberVideosProvider, () {
     const fetchedId =
@@ -162,6 +152,174 @@ void main() {
         if (state.hasValue) [for (final video in state.value!) video.id],
     ];
 
+    test('real info cubit rename cache add remove delete shares roster feeds '
+        'and preserves source under a fixed clock', () async {
+      await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+        final dir = await Directory.systemTemp.createTemp('review-roster-');
+        Box<dynamic>? box;
+        addTearDown(() async {
+          await box?.close();
+          await dir.delete(recursive: true);
+        });
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Duration.zero);
+        registerFallbackValue(Event(_ownerA, 1, [], ''));
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerA);
+        final stamp = DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+        var remote = Event(
+          _ownerA,
+          30000,
+          [
+            ['d', 'crew'],
+            ['title', 'Old name'],
+            ['p', _ownerB, 'wss://one.example', 'friend'],
+            ['p', _ownerB, 'wss://two.example', 'hint'],
+            ['expiration', '2000000000'],
+          ],
+          'foreign-ciphertext',
+          createdAt: stamp,
+        );
+        final sent = <Event>[];
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.first as Event;
+          sent.add(event);
+          if (event.kind == 30000 &&
+              (event.createdAt > remote.createdAt ||
+                  (event.createdAt == remote.createdAt &&
+                      event.id.compareTo(remote.id) < 0))) {
+            remote = event;
+          }
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const ['wss://relay.example'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        final repository = PeopleListsRepositoryImpl(
+          nostrClient: client,
+          cache: LocalPeopleListsCache(
+            openBox: () async =>
+                box ??= await Hive.openBox<dynamic>('roster', path: dir.path),
+          ),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
+        );
+        final queries = <List<String>>[];
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((i) async {
+          final authors = i.namedArguments[#authorPubkeys] as List<String>;
+          queries.add(List.of(authors));
+          return [
+            for (final author in authors)
+              _video(
+                id: author == _ownerB ? fetchedId : strangerId,
+                pubkey: author,
+              ),
+          ];
+        });
+        final container = buildContainer();
+        await repository.syncOwner(ownerPubkey: _ownerA);
+        final initial = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        expect(initial.pubkeys, [_ownerB]);
+        await collect(container, initial.pubkeys);
+        final mutations = PeopleListsBloc(
+          repository: repository,
+          ownerPubkeyStream: const Stream.empty(),
+          repositoryStream: const Stream.empty(),
+          enabledStream: const Stream.empty(),
+          initialOwnerPubkey: _ownerA,
+          clock: () => DateTime.utc(2026, 10, 4),
+        );
+        addTearDown(mutations.close);
+        final openingEpoch = mutations.mutationSessionEpoch;
+        final cubit = PeopleListInfoCubit(
+          submitMutation: mutations.submit,
+          ownerPubkey: _ownerA,
+          list: initial,
+          currentOwnerPubkey: () =>
+              !mutations.isClosed &&
+                  mutations.mutationSessionEpoch == openingEpoch
+              ? mutations.state.activeOwnerPubkey
+              : null,
+        );
+        addTearDown(cubit.close);
+        cubit.nameChanged('New name');
+        expect(await cubit.submitted(), PeopleListInfoStatus.saved);
+        final renamed = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        expect(renamed.name, 'New name');
+        expect(identical(initial.pubkeys, renamed.pubkeys), isFalse);
+        await collect(container, renamed.pubkeys);
+        expect(queries, [
+          [_ownerB],
+        ]);
+        expect(
+          (await repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+            pubkey: _blockedAuthor,
+          )).submitted,
+          isTrue,
+        );
+        final expanded = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        await collect(container, expanded.pubkeys);
+        expect(queries, [
+          [_ownerB],
+          [_ownerB, _blockedAuthor],
+        ]);
+        expect(
+          remote.tags.where((t) => t.first == 'p' && t[1] == _ownerB),
+          hasLength(2),
+        );
+        expect(
+          (await repository.removePubkey(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+            pubkey: _ownerB,
+          )).submitted,
+          isTrue,
+        );
+        final reduced = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        await collect(container, reduced.pubkeys);
+        expect(queries, [
+          [_ownerB],
+          [_ownerB, _blockedAuthor],
+          [_blockedAuthor],
+        ]);
+        expect(remote.content, 'foreign-ciphertext');
+        expect(remote.tags, contains(equals(['expiration', '2000000000'])));
+        expect(
+          (await repository.deleteList(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+          )).submitted,
+          isTrue,
+        );
+        expect(await repository.readLists(ownerPubkey: _ownerA), isEmpty);
+        var previous = stamp;
+        for (final event in sent) {
+          expect(event.createdAt, greaterThan(previous));
+          previous = event.createdAt;
+        }
+      });
+    });
+
     test(
       'reuses the feed after unchanged members are decoded from cache',
       () async {
@@ -170,10 +328,12 @@ void main() {
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
         ).thenAnswer((_) async => const []);
-        final initial = _buildList(
+        final initial = UserList(
           id: 'crew',
           name: 'Old name',
-          pubkeys: [_ownerA, _ownerB],
+          pubkeys: const [_ownerA, _ownerB],
+          createdAt: _frozenNow,
+          updatedAt: _frozenNow,
         );
         final renamed = UserList.fromJson(
           initial.copyWith(name: 'New name').toJson(),
@@ -528,231 +688,6 @@ void main() {
 
         expect(states.last, isA<AsyncError<List<VideoEvent>>>());
         expect(states.last.error, isA<StateError>());
-      },
-    );
-  });
-
-  group(userListsProvider, () {
-    late _MockAuthService mockAuthService;
-    late _MockPeopleListsRepository mockRepository;
-    late StreamController<AuthState> authStateController;
-    late StreamController<List<UserList>> ownerAListsController;
-    late StreamController<List<UserList>> ownerBListsController;
-
-    setUp(() {
-      mockAuthService = _MockAuthService();
-      mockRepository = _MockPeopleListsRepository();
-      authStateController = StreamController<AuthState>.broadcast();
-      ownerAListsController = StreamController<List<UserList>>.broadcast();
-      ownerBListsController = StreamController<List<UserList>>.broadcast();
-
-      when(
-        () => mockAuthService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
-      when(() => mockAuthService.authState).thenReturn(
-        AuthState.unauthenticated,
-      );
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
-
-      when(
-        () => mockRepository.watchLists(ownerPubkey: _ownerA),
-      ).thenAnswer((_) => ownerAListsController.stream);
-      when(
-        () => mockRepository.watchLists(ownerPubkey: _ownerB),
-      ).thenAnswer((_) => ownerBListsController.stream);
-    });
-
-    tearDown(() async {
-      await authStateController.close();
-      if (!ownerAListsController.isClosed) {
-        await ownerAListsController.close();
-      }
-      if (!ownerBListsController.isClosed) {
-        await ownerBListsController.close();
-      }
-    });
-
-    ProviderContainer buildContainer() {
-      return ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-          peopleListsRepositoryProvider.overrideWithValue(mockRepository),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWithValue(true),
-        ],
-      );
-    }
-
-    test(
-      'emits empty list when auth state is unauthenticated',
-      () async {
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.unauthenticated);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
-
-        final container = buildContainer();
-        addTearDown(container.dispose);
-
-        // Trigger initial build by listening.
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
-        // Flush the stream's first value.
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, isEmpty);
-        verifyNever(
-          () => mockRepository.watchLists(
-            ownerPubkey: any(named: 'ownerPubkey'),
-          ),
-        );
-      },
-    );
-
-    test(
-      'rebuilds and watches repository for new owner when auth '
-      'transitions from unauthenticated to authenticated',
-      () async {
-        final container = buildContainer();
-        addTearDown(container.dispose);
-
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
-        await Future<void>.delayed(Duration.zero);
-
-        // Initially unauthenticated — repo should not have been watched.
-        verifyNever(
-          () => mockRepository.watchLists(
-            ownerPubkey: any(named: 'ownerPubkey'),
-          ),
-        );
-
-        // Transition: user signs in. authService now reports ownerA.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerA);
-
-        // Invalidating currentAuthStateProvider simulates an auth-state change.
-        container.invalidate(currentAuthStateProvider);
-
-        await Future<void>.delayed(Duration.zero);
-
-        // Emit some lists from the repo stream.
-        ownerAListsController.add([
-          _buildList(id: 'list-a1', name: 'Friends'),
-        ]);
-
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, hasLength(1));
-        expect(value.value!.first.id, equals('list-a1'));
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerA),
-        ).called(1);
-      },
-    );
-
-    test(
-      'resubscribes to new owner repository after sign-out then sign-in '
-      'as a different account',
-      () async {
-        // Start authenticated as owner A.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerA);
-
-        final container = buildContainer();
-        addTearDown(container.dispose);
-
-        final subscription = container.listen(
-          userListsProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
-        await Future<void>.delayed(Duration.zero);
-
-        ownerAListsController.add([
-          _buildList(id: 'list-a1', name: 'Friends'),
-        ]);
-        await Future<void>.delayed(Duration.zero);
-
-        expect(
-          container.read(userListsProvider).value,
-          hasLength(1),
-        );
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerA),
-        ).called(1);
-
-        // Sign out — auth service emits `unauthenticated`. The stream
-        // event becomes `currentAuthStateProvider`'s new state, a genuinely
-        // different enum value, so dependents rebuild.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.unauthenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(null);
-        authStateController.add(AuthState.unauthenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        expect(
-          container.read(userListsProvider).value,
-          isEmpty,
-        );
-
-        // Sign in as owner B.
-        when(
-          () => mockAuthService.authState,
-        ).thenReturn(AuthState.authenticated);
-        when(
-          () => mockAuthService.currentPublicKeyHex,
-        ).thenReturn(_ownerB);
-        authStateController.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        ownerBListsController.add([
-          _buildList(id: 'list-b1', name: 'Crew'),
-          _buildList(id: 'list-b2', name: 'Inner Circle'),
-        ]);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-
-        final value = container.read(userListsProvider);
-        expect(value.hasValue, isTrue);
-        expect(value.value, hasLength(2));
-        expect(
-          value.value!.map((l) => l.id),
-          containsAll(<String>['list-b1', 'list-b2']),
-        );
-        verify(
-          () => mockRepository.watchLists(ownerPubkey: _ownerB),
-        ).called(1);
       },
     );
   });

@@ -17,10 +17,15 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+export 'package:openvine/services/feed_mode_persistence.dart';
 
 part 'feed_mode_preference_store.dart';
 part 'video_feed_event.dart';
@@ -49,10 +54,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    PeopleListsRepository? peopleListsRepository,
     ProfileRepository? profileRepository,
     ContentBlocklistRepository? contentBlocklistRepository,
     String? userPubkey,
     SharedPreferences? sharedPreferences,
+    // Retain this account scope above replaceable blocs; omission creates an
+    // isolated scope suitable for a single bloc, with no hidden global state.
+    FeedModePersistenceCoordinator? persistenceCoordinator,
     bool serveCachedHomeFeed = true,
     Duration autoRefreshMinInterval = _defaultAutoRefreshMinInterval,
     FeedPerformanceTracker? feedTracker,
@@ -62,10 +71,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
+       _peopleListsRepository = peopleListsRepository,
        _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _userPubkey = userPubkey,
-       _sharedPreferences = sharedPreferences,
        _serveCachedHomeFeed = serveCachedHomeFeed,
        _autoRefreshMinInterval = autoRefreshMinInterval,
        _feedTracker = feedTracker,
@@ -80,6 +89,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
          userPubkey: userPubkey,
          followRepository: followRepository,
          curatedListRepository: curatedListRepository,
+         persistenceCoordinator: persistenceCoordinator,
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
@@ -92,7 +102,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedRefreshRequested>(_onRefreshRequested);
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
-    on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
+    on<VideoFeedCuratedListsChanged>(
+      _onCuratedListsChanged,
+      transformer: sequential(),
+    );
+    on<VideoFeedFollowedPeopleListsChanged>(
+      _onFollowedPeopleListsChanged,
+      transformer: concurrent(),
+    );
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -103,10 +120,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final VideosRepository _videosRepository;
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
+
+  /// Where the people lists the viewer follows live. `null` leaves Home
+  /// without people-list feeds.
+  final PeopleListsRepository? _peopleListsRepository;
   final ProfileRepository? _profileRepository;
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
-  final SharedPreferences? _sharedPreferences;
   final bool _serveCachedHomeFeed;
   final Duration _autoRefreshMinInterval;
   final FeedPerformanceTracker? _feedTracker;
@@ -119,8 +139,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// Owns reading/writing the persisted feed-mode/source selection.
   final FeedModePreferenceStore _modePreferences;
   StreamSubscription<List<String>>? _followingSubscription;
-  StreamSubscription<List<CuratedList>>? _curatedListsSubscription;
+  StreamSubscription<CuratedListSubscriptionSnapshot>?
+  _curatedListsSubscription;
+  StreamSubscription<List<PeopleListSearchResult>>?
+  _followedPeopleListsSubscription;
   int _sourceSelectionSequence = 0;
+  int? _activeSourceSelection;
+  VideoFeedCuratedListsChanged? _deferredCuratedSnapshot;
+  VideoFeedFollowedPeopleListsChanged? _deferredFollowedPeopleLists;
+  int _followedListsSequence = 0;
+  bool _isClosing = false;
+  FollowedPeopleListRef? _pendingRestoredPeopleList;
+  String? _pendingRestoredCuratedList;
 
   /// Tracks when the last successful load completed, used by
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
@@ -129,6 +159,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   // Installing a fresh first page invalidates any continuation of the old
   // window, even when both requests belong to the same feed source.
   int _paginationGeneration = 0;
+
+  // A refresh of the same source must invalidate its previous first page.
+  int _loadGeneration = 0;
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
@@ -139,7 +172,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// the active video is replaced with fresh server data on every load
   /// (via [HomeFeedResumeManager]), so the feed is never stale beyond the
   /// current video. Subscribed curated lists are excluded — they are derived
-  /// from locally held list IDs, not a server feed.
+  /// from locally held list IDs, not a server feed — and so are followed
+  /// people lists, whose members can change between launches.
   bool _usesHomeFeedCache(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
@@ -227,7 +261,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// completions to trigger a corrective refresh or "no follows" CTA.
   ///
   /// Also subscribes to [CuratedListRepository.subscribedListsStream]
-  /// (skipping the first replay) so curated list changes refresh the feed.
+  /// so curated list changes refresh the feed. The first replay can finish
+  /// resolving a selection whose copy arrived while the initial feed loaded.
   ///
   /// If a feed mode was previously saved to SharedPreferences, that mode is
   /// restored. Otherwise [event.mode] is used. A forced start
@@ -238,14 +273,120 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    final source = event.forceMode
-        ? VideoFeedSource.fromMode(event.mode)
-        : _modePreferences.restoreSource(event.mode);
-    if (!event.forceMode &&
-        _sharedPreferences?.getString(_modePreferences.key) !=
-            source.persistenceValue) {
-      await _modePreferences.persist(source);
+    final startupSelection = _sourceSelectionSequence;
+    final initialFollowingPubkeys = List<String>.unmodifiable(
+      _followRepository.followingPubkeys,
+    );
+
+    // Only a saved people list needs the follows resolved before the first
+    // state. For anything else the watch below delivers them, so the first
+    // frame does not wait on the copy box opening.
+    final savedAtStart = _modePreferences._savedScopedValue;
+    final restoresPeopleList =
+        !event.forceMode &&
+        savedAtStart != null &&
+        VideoFeedSource.peopleListRefFromValue(savedAtStart) != null;
+    final followedRead = restoresPeopleList
+        ? await _readFollowedPeopleLists()
+        : const <PeopleListSearchResult>[];
+    if (_startupWasSuperseded(
+      startupSelection,
+      emit,
+      initialFollowingPubkeys,
+    )) {
+      return;
     }
+    final followedPeopleLists =
+        followedRead ?? const <PeopleListSearchResult>[];
+    late VideoFeedSource source;
+    late bool mayPersist;
+    while (true) {
+      final stored = _modePreferences._savedScopedValue;
+      final restoresCurated =
+          !event.forceMode &&
+          stored != null &&
+          VideoFeedSource.isCuratedListPreference(stored);
+      final snapshot = restoresCurated
+          ? _curatedListRepository.subscriptionSnapshot
+          : null;
+      source = event.forceMode
+          ? VideoFeedSource.fromMode(event.mode)
+          : _modePreferences.restoreSource(
+              event.mode,
+              followedPeopleLists: followedPeopleLists,
+            );
+      mayPersist =
+          !event.forceMode &&
+          await _mayPersistRestoredSource(source, followedRead);
+      if (_startupWasSuperseded(
+        startupSelection,
+        emit,
+        initialFollowingPubkeys,
+      )) {
+        return;
+      }
+      if (restoresCurated &&
+          !identical(snapshot, _curatedListRepository.subscriptionSnapshot)) {
+        continue;
+      }
+      if (mayPersist) {
+        if (restoresCurated) {
+          final persisted = await _persistCuratedSource(
+            VideoFeedCuratedListsChanged.snapshot(snapshot!),
+            source,
+            startupSelection,
+            emit,
+          );
+          if (!persisted) {
+            if (_startupWasSuperseded(
+              startupSelection,
+              emit,
+              initialFollowingPubkeys,
+            )) {
+              return;
+            }
+            if (!identical(
+              snapshot,
+              _curatedListRepository.subscriptionSnapshot,
+            )) {
+              // Storage now contains the original unresolved preference. Retry
+              // restoration against the newer snapshot before loading a source.
+              continue;
+            }
+            // This Home no longer owns the account's saved choice, so the
+            // write can never land. Use the restored source for this session.
+          }
+        } else {
+          await _modePreferences.persist(source);
+        }
+      }
+      if (_startupWasSuperseded(
+        startupSelection,
+        emit,
+        initialFollowingPubkeys,
+      )) {
+        return;
+      }
+      break;
+    }
+    _pendingRestoredPeopleList =
+        !event.forceMode &&
+            !mayPersist &&
+            source.type == VideoFeedSourceType.forYou
+        ? VideoFeedSource.peopleListRefFromValue(
+            _modePreferences._savedScopedValue ?? '',
+          )
+        : null;
+
+    final storedSource = _modePreferences._savedScopedValue;
+    _pendingRestoredCuratedList =
+        !event.forceMode &&
+            !mayPersist &&
+            source.type == VideoFeedSourceType.forYou &&
+            storedSource != null &&
+            VideoFeedSource.isCuratedListPreference(storedSource)
+        ? storedSource
+        : null;
 
     final subscribedLists = _curatedListRepository.getSubscribedLists();
 
@@ -254,6 +395,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         status: VideoFeedStatus.loading,
         source: source,
         subscribedLists: subscribedLists,
+        followedPeopleLists: followedPeopleLists,
         isLoadingMore: false,
         clearPaginationCursor: true,
       ),
@@ -261,12 +403,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     final feedLoad = _feedTracker?.startFeedLoad(source.mode.name);
 
-    final initialFollowingPubkeys = List<String>.unmodifiable(
-      _followRepository.followingPubkeys,
-    );
-
+    await _followedPeopleListsSubscription?.cancel();
+    if (emit.isDone || _isClosing) return;
+    _followedPeopleListsSubscription = _watchFollowedPeopleLists();
+    _refreshFollowedPeopleLists();
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
-    if (emit.isDone) return;
+    if (emit.isDone || _isClosing) return;
 
     // After the initial load, check for the "no follows" CTA. Needed for
     // BLoC re-creation (e.g. navigating back to home) when the follow repo
@@ -288,11 +430,43 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       }
     }
 
-    if (emit.isDone) return;
+    if (emit.isDone || _isClosing) return;
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    if (emit.isDone || _isClosing) return;
 
+    _followingSubscription = _watchFollowing(initialFollowingPubkeys);
+
+    // Subscribe to curated list changes.
+    _curatedListsSubscription = _watchCuratedLists();
+  }
+
+  /// A source chosen while startup reads storage still needs live feed updates.
+  bool _startupWasSuperseded(
+    int selection,
+    Emitter<VideoFeedBlocState> emit,
+    List<String> initialFollowingPubkeys,
+  ) {
+    if (emit.isDone || _isClosing) return true;
+    if (selection == _sourceSelectionSequence) return false;
+    if (_followedPeopleListsSubscription == null) {
+      _followedPeopleListsSubscription = _watchFollowedPeopleLists();
+      _refreshFollowedPeopleLists();
+    }
+    _followingSubscription ??= _watchFollowing(initialFollowingPubkeys);
+    _curatedListsSubscription ??= _watchCuratedLists();
+    return true;
+  }
+
+  StreamSubscription<CuratedListSubscriptionSnapshot> _watchCuratedLists() =>
+      _curatedListRepository.subscriptionSnapshots.listen((snapshot) {
+        addIfOpen(VideoFeedCuratedListsChanged.snapshot(snapshot));
+      });
+
+  StreamSubscription<List<String>> _watchFollowing(
+    List<String> initialFollowingPubkeys,
+  ) {
     // Subscribe to following list changes.
     //
     // The first replay can mean one of two things:
@@ -304,7 +478,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     // Distinguish those cases by comparing the first replay with the list
     // used for the initial fetch instead of relying on isInitialized.
     var isFirstFollowingEmission = true;
-    _followingSubscription = _followRepository.followingStream.listen((
+    return _followRepository.followingStream.listen((
       pubkeys,
     ) {
       if (isFirstFollowingEmission) {
@@ -316,24 +490,140 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
       addIfOpen(VideoFeedFollowingListChanged(pubkeys));
     });
+  }
 
-    // Subscribe to curated list changes.
-    _curatedListsSubscription = _curatedListRepository.subscribedListsStream
-        .skip(1)
-        .listen((lists) {
-          addIfOpen(VideoFeedCuratedListsChanged(lists));
-        });
+  /// The people lists the viewer follows: none when signed out or when Home
+  /// was built without the repository, and `null` when the local read fails.
+  /// A cache that cannot be read must not take the feed down with it, but
+  /// its answer is unknown, not empty: [_mayPersistRestoredSource] keeps a
+  /// stored selection on the strength of that difference.
+  Future<List<PeopleListSearchResult>?> _readFollowedPeopleLists() async {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return const [];
+    try {
+      return await repository.readFollowedLists(viewerPubkey: viewerPubkey);
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not read followed people lists',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // A box that will not open throws a `HiveError`, which is an `Error`,
+      // not an `Exception`. Home still loads without the people-list feeds;
+      // the observer reports the error only if it is a programming error.
+      if (error is! Exception) addError(error, stackTrace);
+      return null;
+    }
+  }
+
+  /// Whether the [restored] source may replace the stored one.
+  ///
+  /// A stored people list that did not resolve is kept while the answer is
+  /// unknown: the follows could not be read ([followed] is null), or the
+  /// follow is still held and only its copy is missing until the next relay
+  /// sync, as after "Reset app data". Persisting For You there would turn a
+  /// transient failure into a lost selection; the feed shows For You for
+  /// this session and the list is restored once its copy is back. A follow
+  /// that is gone is replaced, as an unsubscribed video list's is.
+  Future<bool> _mayPersistRestoredSource(
+    VideoFeedSource restored,
+    List<PeopleListSearchResult>? followed,
+  ) async {
+    final stored = _modePreferences._savedScopedValue;
+    if (stored == FeedModePreferenceStore.storageValueFor(restored)) {
+      return false;
+    }
+    if (stored != null &&
+        VideoFeedSource.isCuratedListPreference(stored) &&
+        !_curatedListRepository.hasCompleteSubscriptionSnapshot) {
+      return false;
+    }
+    final ref = stored == null
+        ? null
+        : VideoFeedSource.peopleListRefFromValue(stored);
+    if (ref == null) return true;
+    if (followed == null) return false;
+    return !await _isStillFollowed(ref);
+  }
+
+  /// Whether the viewer still follows [ref]. A follow that cannot be checked
+  /// counts as held, so a failed check cannot lose the stored selection.
+  Future<bool> _isStillFollowed(FollowedPeopleListRef ref) async {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return true;
+    try {
+      return await repository.isFollowingList(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ref.ownerPubkey,
+        listId: ref.listId,
+      );
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not check whether a people list is followed',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return true;
+    }
+  }
+
+  /// Follows and unfollows made while Home is alive. The stream replays the
+  /// current set first; the handler drops a set equal to the one in state.
+  StreamSubscription<List<PeopleListSearchResult>>?
+  _watchFollowedPeopleLists() {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return null;
+    return repository
+        .watchFollowedLists(viewerPubkey: viewerPubkey)
+        .listen(
+          (lists) => addIfOpen(VideoFeedFollowedPeopleListsChanged(lists)),
+          onError: (Object error, StackTrace stackTrace) {
+            Log.warning(
+              'VideoFeedBloc: followed people lists stream failed',
+              name: 'VideoFeedBloc',
+              category: LogCategory.storage,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
+  }
+
+  void _refreshFollowedPeopleLists() {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (_isClosing || repository == null || viewerPubkey == null) return;
+    runDetached(
+      repository.syncFollowedLists(
+        viewerPubkey: viewerPubkey,
+        isCancelled: () => _isClosing,
+      ),
+      'refresh Home followed people lists',
+      logName: 'VideoFeedBloc',
+      category: LogCategory.relay,
+    );
   }
 
   @override
   Future<void> close() async {
+    _isClosing = true;
+    _modePreferences._release();
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _followedPeopleListsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
+    _followedPeopleListsSubscription = null;
     return super.close();
   }
 
@@ -357,8 +647,40 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    // Skip if already on this source.
+    _pendingRestoredPeopleList = null;
+    _pendingRestoredCuratedList = null;
+    final selectionSequence = ++_sourceSelectionSequence;
+    _activeSourceSelection = selectionSequence;
+    try {
+      await _loadSelectedSource(source, selectionSequence, emit);
+    } finally {
+      if (_activeSourceSelection == selectionSequence) {
+        _activeSourceSelection = null;
+        final deferred = _deferredCuratedSnapshot;
+        _deferredCuratedSnapshot = null;
+        final deferredFollowed = _deferredFollowedPeopleLists;
+        _deferredFollowedPeopleLists = null;
+        if (!emit.isDone && !_isClosing) {
+          if (deferred != null) addIfOpen(deferred);
+          if (deferredFollowed != null) addIfOpen(deferredFollowed);
+        }
+      }
+    }
+  }
+
+  Future<void> _loadSelectedSource(
+    VideoFeedSource source,
+    int selectionSequence,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    // Skip loading if already on this source. Showing a source is not the same
+    // as having chosen it: a saved people list that did not resolve is kept
+    // while Home shows For You, so picking For You has to be saved.
     if (state.source == source && state.status == VideoFeedStatus.success) {
+      if (_modePreferences._savedScopedValue !=
+          FeedModePreferenceStore.storageValueFor(source)) {
+        await _modePreferences.persist(source);
+      }
       return;
     }
 
@@ -367,7 +689,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       reason: FeedLoadReason.sourceSwitch,
     );
 
-    final selectionSequence = ++_sourceSelectionSequence;
     final cachedVideos = await _readCachedFeed(source, skipCache: false);
     if (selectionSequence != _sourceSelectionSequence || emit.isDone) {
       if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
@@ -411,7 +732,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
   }
 
-  bool _listsEqual(List<String> a, List<String> b) {
+  bool _listsEqual<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
 
     for (var i = 0; i < a.length; i++) {
@@ -577,6 +898,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    _refreshFollowedPeopleLists();
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -613,6 +935,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedAutoRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    _refreshFollowedPeopleLists();
     if (state.source.type != VideoFeedSourceType.following &&
         state.source.type != VideoFeedSourceType.forYou &&
         state.source.type != VideoFeedSourceType.newVideos) {
@@ -686,6 +1009,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     // Silent refresh — keep current videos visible, replace when done.
+    // Starting the load discards the page a load-more is still fetching, and a
+    // failed refresh emits nothing, so the flag that page holds is released
+    // here as every other path that starts a load does.
+    if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -693,15 +1020,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
-  /// Handle curated list subscription changes from [CuratedListRepository].
-  ///
-  /// Only refreshes when the current mode is [FeedMode.following] and the
-  /// feed has already been loaded (avoids double-loading on startup).
+  /// Reconciles the active feed with current curated-list subscriptions.
   Future<void> _onCuratedListsChanged(
     VideoFeedCuratedListsChanged event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    // Stream delivery is asynchronous. A queued old snapshot must not remove
+    // a source chosen from a newer snapshot or declare a partial copy set final.
+    if (!_isCurrentCuratedSnapshot(event)) return;
+    final selectionSequence = _sourceSelectionSequence;
     final subscribedLists = event.subscribedLists;
+    if (_activeSourceSelection != null) {
+      // The visible source can still be the old one while an explicit choice
+      // awaits cache/storage. Reconcile only after that choice finishes, so an
+      // automatic fallback cannot overwrite the newer intent using old state.
+      _deferredCuratedSnapshot = event;
+      emit(state.copyWith(subscribedLists: subscribedLists));
+      return;
+    }
     if (state.status == VideoFeedStatus.loading) {
       if (subscribedLists.isNotEmpty) {
         emit(state.copyWith(subscribedLists: subscribedLists));
@@ -709,6 +1045,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
+    final pending = _pendingRestoredCuratedList;
+    if (pending != null) {
+      final restored = _modePreferences.sourceFromValue(pending);
+      if (restored != null ||
+          (event.isAuthoritative &&
+              _curatedListRepository.hasCompleteSubscriptionSnapshot)) {
+        final next = restored ?? const VideoFeedSource.forYou();
+        final persisted = await _persistCuratedSource(
+          event,
+          next,
+          selectionSequence,
+          emit,
+        );
+        if (!persisted) return;
+        _pendingRestoredCuratedList = null;
+        await _restartFeed(next, emit, subscribedLists: subscribedLists);
+        return;
+      }
+    }
     if (!state.isSubscribedListSelected) {
       emit(state.copyWith(subscribedLists: subscribedLists));
       return;
@@ -718,24 +1073,234 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     // longer in the subscription set (user unsubscribed, list was deleted),
     // fall back to forYou instead of reloading an empty list source.
     final selectedId = state.source.listId;
-    final stillSubscribed = subscribedLists.any((l) => l.id == selectedId);
-    final nextSource = stillSubscribed
-        ? state.source
-        : const VideoFeedSource.forYou();
+    final selected = subscribedLists
+        .where(
+          (list) => list.authorScopedId == selectedId,
+        )
+        .firstOrNull;
+    final stillSubscribed = selected != null;
+    if (!stillSubscribed && !event.isAuthoritative) {
+      emit(state.copyWith(subscribedLists: subscribedLists));
+      return;
+    }
+    if (stillSubscribed &&
+        _listsEqual(subscribedLists, state.subscribedLists)) {
+      return;
+    }
+    final nextSource = selected == null
+        ? const VideoFeedSource.forYou()
+        : VideoFeedSource.subscribedList(
+            listId: selected.authorScopedId,
+            listName: selected.name,
+          );
 
     if (!stillSubscribed) {
-      await _modePreferences.persist(nextSource);
+      final persisted = await _persistCuratedSource(
+        event,
+        nextSource,
+        selectionSequence,
+        emit,
+      );
+      if (!persisted) return;
     }
 
+    if (emit.isDone ||
+        _isClosing ||
+        selectionSequence != _sourceSelectionSequence) {
+      return;
+    }
+    await _restartFeed(nextSource, emit, subscribedLists: subscribedLists);
+  }
+
+  bool _isCurrentCuratedSnapshot(VideoFeedCuratedListsChanged event) =>
+      event.snapshot == null ||
+      identical(event.snapshot, _curatedListRepository.subscriptionSnapshot);
+
+  /// Automatic writes stay provisional until their exact snapshot and owner
+  /// are still current. Discard repairs the latest shared choice even after
+  /// this bloc closes or a replacement bloc claims the account's storage.
+  ///
+  /// A refused native write applies [source] for this session only, as
+  /// [FeedModePreferenceStore.persist] does for explicit choices.
+  Future<bool> _persistCuratedSource(
+    VideoFeedCuratedListsChanged event,
+    VideoFeedSource source,
+    int selectionSequence,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    bool isCurrent() =>
+        !emit.isDone &&
+        !_isClosing &&
+        selectionSequence == _sourceSelectionSequence &&
+        _isCurrentCuratedSnapshot(event);
+    final ProvisionalFeedModeWrite write;
+    try {
+      write = await _modePreferences._prepare(source);
+      // The coordinator reports a refused native write as a StateError.
+      // ignore: avoid_catching_errors
+    } on StateError catch (error, stackTrace) {
+      Log.warning(
+        'Home could not save the restored feed source',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return isCurrent();
+    }
+    if (isCurrent() && write.accept()) return true;
+    await write.discard();
+    return false;
+  }
+
+  /// Handle follows, unfollows and refreshed copies of followed people lists.
+  ///
+  /// The selected list going away falls back to For You, as an unsubscribed
+  /// curated list does. Its members changing reloads it, since the feed is
+  /// exactly those members' videos. Anything else only updates the menu.
+  Future<void> _onFollowedPeopleListsChanged(
+    VideoFeedFollowedPeopleListsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    final followed = event.followedPeopleLists;
+    final pending = _pendingRestoredPeopleList;
+    if (pending != null) {
+      for (final result in followed) {
+        if (result.ownerPubkey != pending.ownerPubkey ||
+            result.list.id != pending.listId) {
+          continue;
+        }
+        _pendingRestoredPeopleList = null;
+        await _restartFeed(
+          VideoFeedSource.peopleList(
+            listId: result.list.id,
+            listName: result.list.name,
+            listOwnerPubkey: result.ownerPubkey,
+          ),
+          emit,
+          followedPeopleLists: followed,
+        );
+        return;
+      }
+    }
+    if (_activeSourceSelection != null) {
+      // The visible source can still be the old one while an explicit choice
+      // awaits storage. Reconcile once it has finished, so an automatic
+      // fallback cannot overwrite the newer intent using old state.
+      _deferredFollowedPeopleLists = event;
+      return;
+    }
+    if (_listsEqual(followed, state.followedPeopleLists)) return;
+
+    final selectionSequence = _sourceSelectionSequence;
+    final sequence = ++_followedListsSequence;
+    final updated = state.copyWith(followedPeopleLists: followed);
+    final source = state.source;
+    if (source.type != VideoFeedSourceType.peopleList) {
+      emit(updated);
+      return;
+    }
+
+    final before = state.selectedPeopleList;
+    final after = updated.selectedPeopleList;
+    if (after == null) {
+      _loadGeneration++;
+      _paginationGeneration++;
+      emit(
+        updated.copyWith(
+          status: VideoFeedStatus.loading,
+          videos: [],
+          isLoadingMore: false,
+        ),
+      );
+      final stillFollowed = await _isStillFollowed(
+        FollowedPeopleListRef(
+          ownerPubkey: source.listOwnerPubkey!,
+          listId: source.listId!,
+        ),
+      );
+      bool isSuperseded() =>
+          emit.isDone ||
+          _isClosing ||
+          state.source != source ||
+          sequence != _followedListsSequence ||
+          selectionSequence != _sourceSelectionSequence;
+      if (isSuperseded()) return;
+      const fallback = VideoFeedSource.forYou();
+      // A missing cached copy is not an unfollow; preserve the restart choice.
+      if (stillFollowed) {
+        _pendingRestoredPeopleList = FollowedPeopleListRef(
+          ownerPubkey: source.listOwnerPubkey!,
+          listId: source.listId!,
+        );
+      } else if (!await _persistPeopleListFallback(
+        fallback,
+        selectionSequence,
+        emit,
+      )) {
+        return;
+      }
+      if (isSuperseded()) return;
+      await _restartFeed(fallback, emit, followedPeopleLists: followed);
+      return;
+    }
+    if (before == null ||
+        !_listsEqual(before.list.pubkeys, after.list.pubkeys)) {
+      await _restartFeed(source, emit, followedPeopleLists: followed);
+      return;
+    }
+    emit(updated);
+  }
+
+  /// Saves the automatic fall back to [fallback] unless the viewer chose a
+  /// source meanwhile, and says whether the fallback should go ahead.
+  ///
+  /// A write that fails does not stop it: the feed still has to leave a list
+  /// that is no longer followed, and the next start repairs what is stored.
+  Future<bool> _persistPeopleListFallback(
+    VideoFeedSource fallback,
+    int selectionSequence,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    bool isCurrent() =>
+        !emit.isDone &&
+        !_isClosing &&
+        selectionSequence == _sourceSelectionSequence;
+    try {
+      final write = await _modePreferences._prepare(fallback);
+      if (isCurrent() && write.accept()) return true;
+      await write.discard();
+      return false;
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not save the fall back from an unfollowed list',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return isCurrent();
+    }
+  }
+
+  /// Clears the feed and loads [source] from the network, carrying whichever
+  /// list collection just changed into the loading state.
+  Future<void> _restartFeed(
+    VideoFeedSource source,
+    Emitter<VideoFeedBlocState> emit, {
+    List<CuratedList>? subscribedLists,
+    List<PeopleListSearchResult>? followedPeopleLists,
+  }) async {
     emit(
       state.copyWith(
         status: VideoFeedStatus.loading,
-        source: nextSource,
+        source: source,
         videos: [],
         hasMore: true,
         isLoadingMore: false,
         clearError: true,
         subscribedLists: subscribedLists,
+        followedPeopleLists: followedPeopleLists,
         videoListSources: const {},
         listOnlyVideoIds: const {},
         clearPaginationCursor: true,
@@ -744,11 +1309,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
 
     final feedLoad = _feedTracker?.startFeedLoad(
-      nextSource.mode.name,
+      source.mode.name,
       reason: FeedLoadReason.refresh,
     );
 
-    await _loadVideos(nextSource, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle blocklist changes.
@@ -756,11 +1321,35 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// When [event.blockedPubkey] is provided, removes that user's videos
   /// from the current state instantly (no network call). When null,
   /// filters the current videos against the full blocklist in-memory.
-  void _onBlocklistChanged(
+  ///
+  /// Then reads the followed people lists again: a list whose owner is blocked
+  /// is left out of what the repository returns, but blocking changes neither
+  /// the follows nor the copies it watches, so nothing else would say so.
+  Future<void> _onBlocklistChanged(
     VideoFeedBlocklistChanged event,
     Emitter<VideoFeedBlocState> emit,
+  ) async {
+    _removeBlockedVideos(event.blockedPubkey, emit);
+
+    // A set read before a newer one was applied must not overwrite it, so read
+    // again until no other update landed while the read was in flight.
+    List<PeopleListSearchResult>? followed;
+    int appliedBeforeRead;
+    do {
+      appliedBeforeRead = _followedListsSequence;
+      followed = await _readFollowedPeopleLists();
+      if (followed == null || emit.isDone) return;
+    } while (appliedBeforeRead != _followedListsSequence);
+    await _onFollowedPeopleListsChanged(
+      VideoFeedFollowedPeopleListsChanged(followed),
+      emit,
+    );
+  }
+
+  void _removeBlockedVideos(
+    String? pubkey,
+    Emitter<VideoFeedBlocState> emit,
   ) {
-    final pubkey = event.blockedPubkey;
     if (pubkey != null) {
       final filtered = state.videos.where((v) => v.pubkey != pubkey).toList();
       if (filtered.length != state.videos.length) {
@@ -803,11 +1392,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
   }) async {
+    final generation = ++_loadGeneration;
+    _paginationGeneration++;
+    bool canEmit() =>
+        generation == _loadGeneration && _canEmitForSource(source, emit);
     try {
       final servedCache =
           prefetchedCachedVideos?.isNotEmpty ??
-          await _maybeServeCachedFeed(source, emit, skipCache, feedLoad);
-      if (!_canEmitForSource(source, emit)) return;
+          await _maybeServeCachedFeed(
+            source,
+            emit,
+            skipCache,
+            feedLoad,
+            generation: generation,
+          );
+      if (!canEmit()) return;
 
       // `revalidate` serves the cached window *and* forces a fresh fetch.
       // `skipCache` alone cannot express that: it also suppresses the served
@@ -823,7 +1422,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         skipCache: skipCache,
         revalidate: revalidate,
       );
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       // Filter out videos without valid URLs
       final validVideos = result.videos
@@ -893,6 +1492,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
       // Batch-fetch creator profiles to warm the Drift cache.
       await _fetchCreatorProfiles(validVideos, source, emit);
+      if (!canEmit()) return;
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
@@ -907,7 +1507,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         );
       }
     } catch (e) {
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       Log.error(
         'VideoFeedBloc: Failed to load videos - $e',
@@ -944,9 +1544,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
     bool skipCache,
-    FeedLoadHandle? feedLoad,
-  ) async {
+    FeedLoadHandle? feedLoad, {
+    required int generation,
+  }) async {
     final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
+    if (generation != _loadGeneration) return false;
     return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad);
   }
 
@@ -1102,6 +1704,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       _videosRepository
           .getVideosForList(
             _curatedListRepository.getOrderedVideoIds(source.listId!),
+          )
+          .then((videos) => HomeFeedResult(videos: videos)),
+    VideoFeedSourceType.peopleList =>
+      _videosRepository
+          .getVideosByAuthors(
+            authorPubkeys:
+                state.followedPeopleListFor(source)?.list.pubkeys ?? const [],
+            until: until,
           )
           .then((videos) => HomeFeedResult(videos: videos)),
     VideoFeedSourceType.newVideos =>

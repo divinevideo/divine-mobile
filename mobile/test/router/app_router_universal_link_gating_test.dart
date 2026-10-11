@@ -21,6 +21,7 @@ import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -105,6 +106,7 @@ void main() {
           SearchResultsPage.path,
           CuratedListFeedScreen.path,
           CuratedListByAuthorScreen.path,
+          UserListPeopleScreen.path,
         ])
           GoRoute(
             path: path,
@@ -129,7 +131,7 @@ void main() {
   }
 
   // Each entry is (universal link, the plain path it addresses), covering both
-  // /list shapes. profile, hashtag, search and list are exactly the types
+  // video-list and people-list shapes. These cover the types
   // universalLinkToRouterPath resolves; video and savedVideos,
   // signerCallback and unknown return null and already fell through to the
   // gates.
@@ -141,6 +143,14 @@ void main() {
     (
       'https://divine.video/list/$_listAuthor/my-vines',
       '/list/$_listAuthor/my-vines',
+    ),
+    (
+      'https://divine.video/people-lists/$_listAuthor/crew',
+      '/people-lists/crew?owner=$_listAuthor',
+    ),
+    (
+      'https://divine.video/people-lists/crew?owner=$_listAuthor',
+      '/people-lists/crew?owner=$_listAuthor',
     ),
   ];
 

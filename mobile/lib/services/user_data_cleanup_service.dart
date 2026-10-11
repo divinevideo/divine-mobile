@@ -10,11 +10,16 @@ import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
@@ -35,9 +40,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// detects identity changes and clears user-specific data to prevent
 /// data leakage between accounts.
 class UserDataCleanupService {
-  UserDataCleanupService(this._prefs);
+  UserDataCleanupService(this._prefs)
+    : _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
+  final CuratedListSessionCoordinator _listSessions;
 
   /// Optional callback invoked during cleanup to clear user-specific
   /// database tables (DMs, conversations, notifications, per-user DAOs).
@@ -135,14 +142,20 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
+    CuratedListRecoveryJournal.storagePrefix,
+    CuratedListRecoveryStorage.quarantinePrefix,
+    // Durable authorization tombstones survive same-pubkey account re-adds.
+    CuratedListRecoveryStorage.generationPrefix,
     'following_list_', // follow cache per pubkey
     'following_prefetch_complete_', // successful auth prefetch per pubkey
     'relay_discovery_', // relay discovery cache per npub
+    'curated_list_default_cleanup:', // unfinished default deletion per owner
   ];
 
   /// Checks if user-specific data should be cleared for the given pubkey.
   ///
   /// Returns true if:
+  /// - A required cleanup attempt has not finished, including after a restart
   /// - A different user was previously logged in (pubkey mismatch)
   /// - No pubkey stored but user-specific data exists (orphaned data)
   ///
@@ -150,6 +163,9 @@ class UserDataCleanupService {
   /// - Same user is logging in (pubkey matches)
   /// - Fresh install with no existing data
   bool shouldClearDataForUser(String currentPubkeyHex) {
+    // Required cleanup remains mandatory even if the last attempt removed
+    // every orphaned preference, or the same owner tries signing in again.
+    if (_prefs.containsKey(PendingAccountCleanup.storageKey)) return true;
     final storedPubkey = _prefs.getString('current_user_pubkey_hex');
 
     // If same user, no cleanup needed
@@ -201,11 +217,60 @@ class UserDataCleanupService {
   ///
   /// Throws [StateError] when a preference cannot be removed and propagates
   /// database cleanup failures so callers can retry the incomplete deletion.
+  /// Unattributable retained recovery bytes keep deletion incomplete.
   Future<int> deleteAccountData(
     String userPubkey, {
     required String userNpub,
     required bool preserveActiveSession,
+  }) {
+    Future<int> clear() => _deleteAccountData(
+      userPubkey,
+      userNpub: userNpub,
+      preserveActiveSession: preserveActiveSession,
+    );
+    // Removing an inactive account must not retire the active account's lease.
+    return preserveActiveSession
+        ? _listSessions.writes.runExclusive(clear)
+        : _listSessions.clearCaches(clear);
+  }
+
+  Future<int> _deleteAccountData(
+    String userPubkey, {
+    required String userNpub,
+    required bool preserveActiveSession,
   }) async {
+    final pending = PendingAccountCleanup.read(_prefs);
+    if (pending != null &&
+        !pending.covers(
+          userPubkey: userPubkey,
+          isIdentityChange: false,
+          deleteUserData: true,
+        )) {
+      throw const CuratedListRecoveryException();
+    }
+    final requiredCleanup =
+        pending ??
+        PendingAccountCleanup(
+          userPubkey: userPubkey,
+          isIdentityChange: false,
+          deleteUserData: true,
+        );
+    try {
+      await requiredCleanup.record(_prefs);
+    } on Object {
+      if (PendingAccountCleanup.readbackUnknown(_prefs)) {
+        _listSessions.markRecoveryReadbackUnknown();
+      }
+      rethrow;
+    }
+    if (!await CuratedListRecoveryStorage.verifyValue(
+      _prefs,
+      PendingAccountCleanup.storageKey,
+      _prefs.getString(PendingAccountCleanup.storageKey),
+    )) {
+      throw const CuratedListRecoveryException();
+    }
+    await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
     Future<void> remove(String key) async {
@@ -217,6 +282,11 @@ class UserDataCleanupService {
     }
 
     if (!preserveActiveSession) {
+      await CuratedListRecoveryJournal.migrateEmbeddedRecords(
+        _prefs,
+        legacyOwner: _prefs.getString('current_user_pubkey_hex'),
+        deletingOwner: userPubkey,
+      );
       for (final key in userSpecificKeys) {
         await remove(key);
       }
@@ -236,6 +306,11 @@ class UserDataCleanupService {
       await remove(legacyDraftOwnerKey);
     }
 
+    await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
+    clearedCount += (await CuratedListRecoveryJournal.removeOwnerEvidence(
+      _prefs,
+      userPubkey,
+    )).length;
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
@@ -253,6 +328,21 @@ class UserDataCleanupService {
       deleteUserData: true,
       preserveActiveSession: preserveActiveSession,
     );
+    try {
+      await requiredCleanup.complete(_prefs);
+    } on Object {
+      if (PendingAccountCleanup.readbackUnknown(_prefs)) {
+        _listSessions.markRecoveryReadbackUnknown();
+      }
+      rethrow;
+    }
+    if (!await CuratedListRecoveryStorage.verifyValue(
+      _prefs,
+      PendingAccountCleanup.storageKey,
+      null,
+    )) {
+      throw const CuratedListRecoveryException();
+    }
     return clearedCount;
   }
 
@@ -267,7 +357,61 @@ class UserDataCleanupService {
   ///
   /// Account-scoped caches are preserved across identity changes. Destructive
   /// cleanup removes only the known account's pubkey-scoped entries.
+  /// Required cleanup failures use one payload-free type for every auth caller.
   Future<int> clearUserSpecificData({
+    String? reason,
+    bool isIdentityChange = false,
+    String? userPubkey,
+    bool deleteUserData = false,
+  }) async {
+    try {
+      return await _listSessions.clearCaches(() async {
+        final pending = PendingAccountCleanup.read(_prefs);
+        var resumedCount = 0;
+        if (pending != null) {
+          // Resume the original scope first. A later identity change must not
+          // silently downgrade a failed destructive sweep to another owner.
+          resumedCount = await _clearUserSpecificData(
+            reason: 'resume_required_cleanup',
+            isIdentityChange: pending.isIdentityChange,
+            userPubkey: pending.userPubkey,
+            deleteUserData: pending.deleteUserData,
+          );
+          if (pending.covers(
+            userPubkey: userPubkey,
+            isIdentityChange: isIdentityChange,
+            deleteUserData: deleteUserData,
+          )) {
+            return resumedCount;
+          }
+        }
+        return resumedCount +
+            await _clearUserSpecificData(
+              reason: reason,
+              isIdentityChange: isIdentityChange,
+              userPubkey: userPubkey,
+              deleteUserData: deleteUserData,
+            );
+      });
+    } on UserDataCleanupException {
+      rethrow;
+    } on Object catch (e, stackTrace) {
+      // A cleanup failure must never become a partly established account.
+      // Its cause may contain unreadable private cache or database payloads,
+      // so only its type is logged.
+      Log.error(
+        'Account data cleanup failed (${e.runtimeType})',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
+      throw const UserDataCleanupException(
+        'Could not clear account data safely',
+      );
+    }
+  }
+
+  Future<int> _clearUserSpecificData({
     String? reason,
     bool isIdentityChange = false,
     String? userPubkey,
@@ -284,82 +428,78 @@ class UserDataCleanupService {
       category: LogCategory.auth,
     );
 
+    final requiredCleanup = deleteUserData || isIdentityChange
+        ? PendingAccountCleanup(
+            userPubkey: userPubkey,
+            isIdentityChange: isIdentityChange,
+            deleteUserData: deleteUserData,
+          )
+        : null;
+    // A refusal must stop before the first cache removal; otherwise a restart
+    // would lose the only evidence that database cleanup is still required.
+    await requiredCleanup?.record(_prefs);
+
     int clearedCount = 0;
     final clearedKeys = <String>[];
 
-    // Clear exact-match keys (always)
-    for (final key in userSpecificKeys) {
-      if (_prefs.containsKey(key)) {
-        await _prefs.remove(key);
-        clearedCount++;
-        clearedKeys.add(key);
+    Future<void> remove(String key) async {
+      if (!_prefs.containsKey(key)) return;
+      if (!await _prefs.remove(key)) {
+        throw const UserDataCleanupException('Could not clear account cache');
       }
+      clearedCount++;
+      clearedKeys.add(key);
+    }
+
+    if (deleteUserData && userPubkey != null) {
+      await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
+    }
+    // The stored marker describes the departing account. Identity-change
+    // callers may pass the incoming account, so it cannot scope legacy rows.
+    await CuratedListRecoveryJournal.migrateEmbeddedRecords(
+      _prefs,
+      legacyOwner: _prefs.getString('current_user_pubkey_hex'),
+      deletingOwner: deleteUserData ? userPubkey : null,
+    );
+    if (deleteUserData && userPubkey != null) {
+      final removed = await CuratedListRecoveryJournal.removeOwnerEvidence(
+        _prefs,
+        userPubkey,
+      );
+      clearedCount += removed.length;
+      clearedKeys.addAll(removed);
+    }
+
+    // Clear exact-match keys (always).
+    for (final key in userSpecificKeys) {
+      await remove(key);
     }
 
     if (deleteUserData || isIdentityChange) {
       for (final key in ownerScopedLegacyKeys) {
-        if (_prefs.containsKey(key)) {
-          await _prefs.remove(key);
-          clearedCount++;
-          clearedKeys.add(key);
-        }
+        await remove(key);
       }
-      if (_prefs.containsKey(legacyDraftOwnerKey)) {
-        await _prefs.remove(legacyDraftOwnerKey);
-        clearedCount++;
-        clearedKeys.add(legacyDraftOwnerKey);
-      }
+      await remove(legacyDraftOwnerKey);
     }
 
-    // The per-account saved-sounds bucket holds audio ids, urls, and metadata.
-    // Drop it only on a destructive delete of a known account — a plain account
-    // switch keeps it so the user's library survives switching back.
+    // Preserve owner-scoped libraries on an ordinary identity switch. Their
+    // sync cursors must be removed with their data on a destructive deletion,
+    // so a refused removal cannot later publish false remote tombstones.
     if (deleteUserData && userPubkey != null && userPubkey.isNotEmpty) {
-      final savedSoundsKey = SavedSoundsService.accountStorageKey(userPubkey);
-      if (_prefs.containsKey(savedSoundsKey)) {
-        await _prefs.remove(savedSoundsKey);
-        clearedCount++;
-        clearedKeys.add(savedSoundsKey);
-      }
-
-      // The creator-sync cursor records, per item, what this device last
-      // applied or published — it only makes sense paired with the local
-      // bucket above. If the bucket is cleared but the cursor survives, the
-      // next reconcile sees every previously-synced item as absent locally
-      // and reads that as this device having deleted them, publishing
-      // tombstones that wipe the account's synced library on every other
-      // device. Clearing both together makes the next reconcile a fresh
-      // pull from remote instead.
+      await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
+      await remove(SavedSoundsService.accountStorageKey(userPubkey));
       for (final kind in SyncItemKind.values) {
-        final cursorKey = PrefsSyncStateStore.appliedStorageKey(
-          kind,
-          userPubkey,
-        );
-        if (_prefs.containsKey(cursorKey)) {
-          await _prefs.remove(cursorKey);
-          clearedCount++;
-          clearedKeys.add(cursorKey);
-        }
+        await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
       }
-
       for (final key in AgeVerificationService.accountKeys(userPubkey)) {
-        if (_prefs.containsKey(key)) {
-          await _prefs.remove(key);
-          clearedCount++;
-          clearedKeys.add(key);
-        }
+        await remove(key);
       }
-
       for (final key in [
         FollowingCacheRecord.storageKey(userPubkey),
         followingPrefetchMarkerKey(userPubkey),
         MinorAccountReviewStatusStore.storageKey(userPubkey),
       ]) {
-        if (_prefs.containsKey(key)) {
-          await _prefs.remove(key);
-          clearedCount++;
-          clearedKeys.add(key);
-        }
+        await remove(key);
       }
     }
 
@@ -379,9 +519,10 @@ class UserDataCleanupService {
         );
       } catch (e, stackTrace) {
         Log.error(
-          'Database cleanup failed: $e\n$stackTrace',
+          'Database cleanup failed (${e.runtimeType})',
           name: 'UserDataCleanupService',
           category: LogCategory.auth,
+          stackTrace: stackTrace,
         );
         // An account switch must fail closed: proceeding after its shared
         // database cleanup fails can expose the departing account's local DM
@@ -392,6 +533,10 @@ class UserDataCleanupService {
         }
       }
     }
+
+    // Only acknowledged preference removals and completed required database
+    // cleanup may release the durable account boundary.
+    await requiredCleanup?.complete(_prefs);
 
     // Log detailed cleanup results for observability
     if (clearedCount > 0) {
@@ -446,5 +591,5 @@ class UserDataCleanupException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => cause == null ? message : '$message: $cause';
+  String toString() => message;
 }

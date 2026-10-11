@@ -609,15 +609,8 @@
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",
   "exploreNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
-  "exploreDiscoverLists": "فہرستیں دریافت کریں",
-  "exploreAboutLists": "فہرستوں کے بارے میں",
-  "exploreAboutListsDescription": "فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:",
   "explorePeopleLists": "لوگوں کی فہرستیں",
-  "explorePeopleListsDescription": "کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں",
   "exploreVideoLists": "ویڈیو فہرستیں",
-  "exploreVideoListsDescription": "بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں",
-  "exploreMyLists": "میری فہرستیں",
-  "exploreSubscribedLists": "سبسکرائب شدہ فہرستیں",
   "exploreErrorLoadingLists": "فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔",
   "exploreNewVideosCount": "{count, plural, =1{1 نئی ویڈیو} other{{count} نئی ویڈیوز}}",
   "@exploreNewVideosCount": {
@@ -1936,10 +1929,8 @@
     }
   },
   "peopleListsAddToList": "فہرست میں شامل کریں",
-  "peopleListsSheetTitle": "فہرست میں شامل کریں",
   "peopleListsEmptyTitle": "ابھی کوئی فہرست نہیں",
   "peopleListsEmptySubtitle": "لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔",
-  "peopleListsCreateList": "فہرست بنائیں",
   "peopleListsNewListTitle": "نئی فہرست",
   "peopleListsRouteTitle": "لوگوں کی فہرست",
   "@peopleListsRouteTitle": {
@@ -1972,15 +1963,6 @@
   },
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2414,7 +2396,6 @@
   "reportLearnMoreAt": "مزید جانیں",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "بند کریں",
-  "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
     "placeholders": {
@@ -2423,40 +2404,13 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 شخص} other{{count} لوگ}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "از ",
-  "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
-  "listRemovedFrom": "{name} سے ہٹا دی گئی",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} میں شامل کر دی گئی",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
-  "listPublicList": "عوامی فہرست",
-  "listPublicListSubtitle": "دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں",
   "listPrivateListSubtitle": "ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔",
   "listVisibilityPublic": "عوامی",
   "listVisibilityPrivate": "نجی",
@@ -2490,7 +2444,6 @@
       }
     }
   },
-  "listCancel": "منسوخ کریں",
   "listCreate": "بنائیں",
   "listCreateFailed": "فہرست نہیں بن سکی",
   "keyManagementTitle": "Nostr کلیدیں",
@@ -3181,14 +3134,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "discoverListsTitle": "فہرستیں دریافت کریں",
-  "discoverListsFailedToLoad": "فہرستیں لوڈ نہیں ہو سکیں",
-  "discoverListsLoading": "عوامی فہرستیں دریافت ہو رہی ہیں...",
-  "discoverListsRelayTimeout": "ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔",
-  "discoverListsServiceUnavailable": "سروس دستیاب نہیں ہے۔",
-  "discoverListsEmptyTitle": "کوئی عوامی فہرست نہیں ملی",
-  "discoverListsEmptySubtitle": "نئی فہرستوں کے لیے بعد میں دیکھیں",
-  "discoverListsByAuthorPrefix": "از",
   "curatedListEmptyTitle": "اس فہرست میں کوئی ویڈیو نہیں",
   "curatedListEmptySubtitle": "شروع کرنے کے لیے کچھ ویڈیوز شامل کریں",
   "curatedListLoadingVideos": "ویڈیوز لوڈ ہو رہی ہیں...",
@@ -6740,7 +6685,6 @@
   "peopleListsPeopleLabel": "لوگ",
   "peopleListsPeopleNone": "ابھی کوئی شخص شامل نہیں کیا گیا",
   "peopleListsSessionChanged": "آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔",
-  "peopleListsSearchConnectionsHint": "فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں",
   "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
   "listMemberNamesSeparator": "، ",
   "@listCardSemanticLabel": {
@@ -6786,5 +6730,43 @@
   "ideasTitleFive": "لمبی وضاحت کے بغیر",
   "ideasDescriptionFive": "بس شیئر کرنا تھا۔",
   "ideasTitleSix": "آج کا ایک حصہ",
-  "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔"
+  "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔",
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+  "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+  "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+  "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔",
+  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listAddCollaboratorTitle": "شریک کار شامل کریں",
+  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
+  "listCollaboratorsNone": "کوئی نہیں",
+  "listPrivateCollaboratorsWarning": "اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔",
+  "listVideoNotAdded": "آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔",
+  "listVideoPendingSync": "آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔",
+  "listRetrySync": "اب ہم آہنگ کریں",
+  "listPermissionsUnconfirmed": "اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+  "listRecoveryPending": "اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔",
+  "listPermissionsRecoveryPending": "آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔",
+  "listRecoveryReadOnly": "ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔",
+  "listAddToLists": "فہرستوں میں شامل کریں"
 }

@@ -1424,34 +1424,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get exploreDiscoverLists => 'Upptäck listor';
-
-  @override
-  String get exploreAboutLists => 'Om listor';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:';
-
-  @override
   String get explorePeopleLists => 'Personlistor';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Följ grupper av kreatörer och se deras senaste videor';
-
-  @override
   String get exploreVideoLists => 'Videolistor';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Skapa spellistor med dina favoritvideor för att titta på senare';
-
-  @override
-  String get exploreMyLists => 'Mina listor';
-
-  @override
-  String get exploreSubscribedLists => 'Prenumererade listor';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3925,17 +3901,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsAddToList => 'Lägg till i lista';
 
   @override
-  String get peopleListsSheetTitle => 'Lägg till i lista';
-
-  @override
   String get peopleListsEmptyTitle => 'Inga listor än';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Skapa en lista för att börja gruppera personer.';
-
-  @override
-  String get peopleListsCreateList => 'Skapa lista';
 
   @override
   String get peopleListsNewListTitle => 'Ny lista';
@@ -4018,14 +3988,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Försök igen';
-
-  @override
-  String get peopleListsAddButton => 'Lägg till';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Lägg till $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4958,45 +4920,18 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportClose => 'Stäng';
 
   @override
-  String get listAddToList => 'Lägg till i lista';
-
-  @override
   String listVideoCount(int count) {
     return '$count videor';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personer',
-      one: '1 person',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'Av ';
 
   @override
-  String get listNewList => 'Ny lista';
-
-  @override
   String get listDone => 'Klar';
 
   @override
   String get listErrorLoading => 'Fel vid inläsning av listor';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Borttagen från $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Tillagd i $name';
-  }
 
   @override
   String get listCreateNewList => 'Skapa ny lista';
@@ -5009,12 +4944,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Beskrivning (valfritt)';
-
-  @override
-  String get listPublicList => 'Publik lista';
-
-  @override
-  String get listPublicListSubtitle => 'Andra kan följa och se den här listan';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5121,9 +5050,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name på Divine';
   }
-
-  @override
-  String get listCancel => 'Avbryt';
 
   @override
   String get listCreate => 'Skapa';
@@ -6190,31 +6116,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Kunde inte uppdatera prenumerationen. Försök igen.';
-
-  @override
-  String get discoverListsTitle => 'Upptäck listor';
-
-  @override
-  String get discoverListsFailedToLoad => 'Kunde inte ladda listor';
-
-  @override
-  String get discoverListsLoading => 'Söker upp publika listor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relayen returnerade inga listor i tid. Försök igen.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Tjänsten är inte tillgänglig.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Inga publika listor hittades';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Kom tillbaka senare för nya listor';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'av';
 
   @override
   String get curatedListEmptyTitle => 'Inga videor i den här listan';
@@ -13226,10 +13127,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Sök bland följare och personer du följer';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -13348,4 +13245,93 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Läser in listor';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Inga listor dök upp den här gången. Dra för att uppdatera.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personlistor är inte tillgängliga just nu.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolistor är inte tillgängliga just nu.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Det gick inte att rensa det förra kontots data. Försök igen.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Sök personer';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Ta bort $name från listan';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kunde inte uppdatera listan. Försök igen.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Lägg till $name i listan';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
+
+  @override
+  String get listMakePublicLabel => 'Gör offentlig';
+
+  @override
+  String get listCollaboratorSearchHint => 'Sök i Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Inga';
+
+  @override
+  String get listMakePublicSubtitle => 'Låt andra se den här listan';
+
+  @override
+  String get listVideoNotAdded =>
+      'Din lista skapades, men den här videon lades inte till.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Din lista och video är sparade här. Videon väntar på synkronisering.';
+
+  @override
+  String get listRetrySync => 'Synkronisera nu';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Det gick inte att bekräfta ändringen. Försök igen.';
+
+  @override
+  String get listRecoveryPending =>
+      'Den här listan har ändringar som väntar på synkronisering.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
+
+  @override
+  String get listAddToLists => 'Lägg till i listor';
 }

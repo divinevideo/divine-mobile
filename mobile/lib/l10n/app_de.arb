@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Diese Sammlung konnte nicht geladen werden.",
     "featuredTabRetry": "Erneut versuchen",
     "exploreNoVideosAvailable": "Keine Videos verfügbar",
-    "exploreDiscoverLists": "Listen entdecken",
-    "exploreAboutLists": "Über Listen",
-    "exploreAboutListsDescription": "Listen helfen dir, Divine-Inhalte auf zwei Arten zu organisieren und zu kuratieren:",
     "explorePeopleLists": "Personen-Listen",
-    "explorePeopleListsDescription": "Folge Gruppen von Creatorn und sieh ihre neuesten Videos",
     "exploreVideoLists": "Video-Listen",
-    "exploreVideoListsDescription": "Erstelle Playlists deiner Lieblingsvideos, um sie später anzusehen",
-    "exploreMyLists": "Meine Listen",
-    "exploreSubscribedLists": "Abonnierte Listen",
     "exploreErrorLoadingLists": "Fehler beim Laden der Listen. Bitte versuch es nochmal.",
     "exploreNewVideosCount": "{count, plural, one{1 neues Video} other{{count} neue Videos}}",
     "@exploreNewVideosCount": {
@@ -1640,7 +1633,6 @@
     "reportReceivedReviewNotice": "Wir senden sie automatisch, sobald du verbunden bist. Unser Team prüft deine Meldung und ergreift entsprechende Maßnahmen. Du erhältst möglicherweise Updates per Direktnachricht.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Schließen",
-    "listAddToList": "Zur Liste hinzufügen",
     "listVideoCount": "{count} Videos",
     "@listVideoCount": {
         "placeholders": {
@@ -1649,31 +1641,12 @@
             }
         }
     },
-    "listNewList": "Neue Liste",
     "listDone": "Fertig",
     "listErrorLoading": "Fehler beim Laden der Listen",
-    "listRemovedFrom": "Aus {name} entfernt",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Zu {name} hinzugefügt",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Neue Liste erstellen",
     "listNewPeopleList": "Neue Personenliste",
     "listNameLabel": "Listenname",
     "listDescriptionLabel": "Beschreibung (optional)",
-    "listPublicList": "Öffentliche Liste",
-    "listPublicListSubtitle": "Andere können folgen und diese Liste sehen",
     "listPrivateListSubtitle": "Videos bleiben privat. Name, Beschreibung, Tags und Cover bleiben sichtbar.",
     "listVisibilityPublic": "Öffentlich",
     "listVisibilityPrivate": "Privat",
@@ -1707,7 +1680,6 @@
             }
         }
     },
-    "listCancel": "Abbrechen",
     "listCreate": "Erstellen",
     "listCreateFailed": "Liste konnte nicht erstellt werden",
     "keyManagementTitle": "Nostr-Schlüssel",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Du hast eine neue Aktualisierung",
     "peopleListsAddToList": "Zur Liste hinzufügen",
-    "peopleListsSheetTitle": "Zur Liste hinzufügen",
     "peopleListsEmptyTitle": "Noch keine Listen",
     "peopleListsEmptySubtitle": "Erstelle eine Liste, um Personen zu gruppieren.",
-    "peopleListsCreateList": "Liste erstellen",
     "peopleListsNewListTitle": "Neue Liste",
     "peopleListsRouteTitle": "Personenliste",
     "peopleListsListNameLabel": "Listenname",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Zu {name} hinzufügen",
     "peopleListsAddPeopleError": "Personen konnten nicht geladen werden. Bitte versuche es erneut.",
     "peopleListsAddPeopleRetry": "Erneut versuchen",
-    "peopleListsAddButton": "Hinzufügen",
-    "peopleListsAddButtonWithCount": "{count} hinzufügen",
     "peopleListsInNLists": "{count, plural, =1{In 1 Liste} other{In {count} Listen}}",
     "peopleListsRemoveConfirmTitle": "{name} entfernen?",
     "peopleListsRemoveConfirmBody": "Sie werden aus dieser Liste entfernt.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dieses Konto konnte nicht von diesem Gerät entfernt werden. Versuch es nochmal.",
     "nostrSettingsDeleteAccount": "Konto und Daten löschen",
     "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
-    "listPersonCount": "{count, plural, =1{1 Person} other{{count} Personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Von ",
     "keyManagementYourPublicKeyLabel": "Dein Public Key (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Listen entdecken",
-    "discoverListsFailedToLoad": "Listen konnten nicht geladen werden",
-    "discoverListsLoading": "Öffentliche Listen werden entdeckt...",
-    "discoverListsRelayTimeout": "Das Relay hat nicht rechtzeitig Listen geliefert. Versuch es nochmal.",
-    "discoverListsServiceUnavailable": "Dienst nicht verfügbar.",
-    "discoverListsEmptyTitle": "Keine öffentlichen Listen gefunden",
-    "discoverListsEmptySubtitle": "Schau später nochmal nach neuen Listen",
-    "discoverListsByAuthorPrefix": "von",
     "curatedListEmptyTitle": "Keine Videos in dieser Liste",
     "curatedListEmptySubtitle": "Füg ein paar Videos hinzu, um loszulegen",
     "curatedListLoadingVideos": "Videos werden geladen...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Personen",
   "peopleListsPeopleNone": "Keine Personen hinzugefügt",
   "peopleListsSessionChanged": "Dein Konto oder dein Zugriff auf die Liste hat sich geändert. Öffne diese Seite erneut, um fortzufahren.",
-  "peopleListsSearchConnectionsHint": "Follower und gefolgte Personen durchsuchen",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Ohne große Erklärung",
   "ideasDescriptionFive": "Wollte ich einfach teilen.",
   "ideasTitleSix": "Ein bisschen Heute",
-  "ideasDescriptionSix": "Das lasse ich hier."
+  "ideasDescriptionSix": "Das lasse ich hier.",
+  "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
+  "listsDiscoveryLoadingLabel": "Listen werden geladen",
+  "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
+  "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar.",
+  "listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert.",
+  "authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} zur Liste hinzufügen",
+  "peopleListsMembershipUpdateFailed": "Liste konnte nicht aktualisiert werden. Bitte versuch es nochmal.",
+  "peopleListsAddPeopleSearchHint": "Personen suchen",
+  "peopleListsRemovePersonSemanticLabel": "{name} aus der Liste entfernen",
+  "listMakePublicLabel": "Öffentlich machen",
+  "listCollaboratorsNone": "Keine",
+  "listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
+  "listMakePublicSubtitle": "Lass andere diese Liste sehen",
+  "listCollaboratorSearchHint": "Divine durchsuchen...",
+  "listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
+  "listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
+  "listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
+  "listRetrySync": "Jetzt synchronisieren",
+  "listPermissionsUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Versuch es erneut.",
+  "listRecoveryPending": "Diese Liste hat Änderungen, die auf die Synchronisierung warten.",
+  "listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
+  "listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
+  "listAddToLists": "Zu Listen hinzufügen"
 }

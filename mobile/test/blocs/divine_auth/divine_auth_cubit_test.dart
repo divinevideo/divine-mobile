@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -678,6 +679,57 @@ void main() {
               signInFailureReason: SignInFailureReason.unknown,
             ),
           ],
+        );
+
+        blocTest<DivineAuthCubit, DivineAuthState>(
+          'keeps sign-in form retryable when account cleanup is refused',
+          setUp: () {
+            when(
+              () => mockOAuth.headlessLogin(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessLoginResult(success: true, code: testCode),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            ).thenAnswer(
+              (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+            );
+            when(() => mockAuthService.signInWithDivineOAuth(any())).thenThrow(
+              const UserDataCleanupException('Could not clear account cache'),
+            );
+          },
+          build: buildCubit,
+          seed: () => const DivineAuthFormState(
+            email: testEmail,
+            password: testPassword,
+            isSignIn: true,
+          ),
+          act: (cubit) => cubit.submit(),
+          expect: () => [
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              isSubmitting: true,
+            ),
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              signInFailureReason: SignInFailureReason.accountCleanupFailed,
+            ),
+          ],
+          errors: () => [isA<UserDataCleanupException>()],
         );
 
         blocTest<DivineAuthCubit, DivineAuthState>(
@@ -1621,6 +1673,46 @@ void main() {
     });
 
     group('skipWithAnonymousAccount', () {
+      blocTest<DivineAuthCubit, DivineAuthState>(
+        'keeps cleanup failure distinct and restores an interactive form',
+        setUp: () {
+          when(() => mockAuthService.createAnonymousAccount()).thenThrow(
+            const UserDataCleanupException('Account cache unavailable'),
+          );
+        },
+        build: buildCubit,
+        seed: () => const DivineAuthFormState(),
+        act: (cubit) => cubit.skipWithAnonymousAccount(),
+        expect: () => [
+          const DivineAuthFormState(isSkipping: true),
+          const DivineAuthFormState(
+            signInFailureReason: SignInFailureReason.accountCleanupFailed,
+          ),
+        ],
+        errors: () => [isA<UserDataCleanupException>()],
+      );
+
+      blocTest<DivineAuthCubit, DivineAuthState>(
+        'clears a previous cleanup failure before retrying ordinary creation',
+        setUp: () {
+          when(() => mockAuthService.createAnonymousAccount()).thenThrow(
+            Exception('key generation failed'),
+          );
+        },
+        build: buildCubit,
+        seed: () => const DivineAuthFormState(
+          signInFailureReason: SignInFailureReason.accountCleanupFailed,
+        ),
+        act: (cubit) => cubit.skipWithAnonymousAccount(),
+        expect: () => [
+          const DivineAuthFormState(isSkipping: true),
+          const DivineAuthFormState(
+            generalError: 'Failed to create account. Please try again.',
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+
       blocTest<DivineAuthCubit, DivineAuthState>(
         'emits isSkipping then $DivineAuthSuccess on success',
         setUp: () {

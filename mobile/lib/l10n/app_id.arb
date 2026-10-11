@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Koleksi ini gagal dimuat.",
     "featuredTabRetry": "Coba lagi",
     "exploreNoVideosAvailable": "Tidak ada video tersedia",
-    "exploreDiscoverLists": "Temukan Daftar",
-    "exploreAboutLists": "Tentang Daftar",
-    "exploreAboutListsDescription": "Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:",
     "explorePeopleLists": "Daftar Orang",
-    "explorePeopleListsDescription": "Ikuti grup kreator dan lihat video terbaru mereka",
     "exploreVideoLists": "Daftar Video",
-    "exploreVideoListsDescription": "Buat playlist video favoritmu untuk ditonton nanti",
-    "exploreMyLists": "Daftarku",
-    "exploreSubscribedLists": "Daftar yang Dilanggan",
     "exploreErrorLoadingLists": "Gagal memuat daftar. Silakan coba lagi.",
     "exploreNewVideosCount": "{count, plural, other{{count} video baru}}",
     "@exploreNewVideosCount": {
@@ -1637,7 +1630,6 @@
     "reportReceivedReviewNotice": "Kami akan mengirimkannya otomatis saat kamu terhubung ke internet. Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Tutup",
-    "listAddToList": "Tambah ke Daftar",
     "listVideoCount": "{count} video",
     "@listVideoCount": {
         "placeholders": {
@@ -1646,31 +1638,12 @@
             }
         }
     },
-    "listNewList": "Daftar Baru",
     "listDone": "Selesai",
     "listErrorLoading": "Kesalahan memuat daftar",
-    "listRemovedFrom": "Dihapus dari {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Ditambahkan ke {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Buat Daftar Baru",
     "listNewPeopleList": "Daftar orang baru",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
-    "listPublicList": "Daftar Publik",
-    "listPublicListSubtitle": "Orang lain bisa mengikuti dan melihat daftar ini",
     "listPrivateListSubtitle": "Videonya tetap privat. Nama, deskripsi, tag, dan sampul tetap terlihat.",
     "listVisibilityPublic": "Publik",
     "listVisibilityPrivate": "Privat",
@@ -1704,7 +1677,6 @@
             }
         }
     },
-    "listCancel": "Batal",
     "listCreate": "Buat",
     "listCreateFailed": "Gagal membuat daftar",
     "keyManagementTitle": "Kunci Nostr",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Kamu punya pembaruan baru",
     "peopleListsAddToList": "Tambahkan ke daftar",
-    "peopleListsSheetTitle": "Tambahkan ke daftar",
     "peopleListsEmptyTitle": "Belum ada daftar",
     "peopleListsEmptySubtitle": "Buat daftar untuk mulai mengelompokkan orang.",
-    "peopleListsCreateList": "Buat daftar",
     "peopleListsNewListTitle": "Daftar baru",
     "peopleListsRouteTitle": "Daftar orang",
     "peopleListsListNameLabel": "Nama daftar",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Tambahkan ke {name}",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
-    "peopleListsAddButton": "Tambah",
-    "peopleListsAddButtonWithCount": "Tambah {count}",
     "peopleListsInNLists": "{count, plural, other{Di {count} daftar}}",
     "peopleListsRemoveConfirmTitle": "Hapus {name}?",
     "peopleListsRemoveConfirmBody": "Mereka akan dihapus dari daftar ini.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Gagal menghapus akun ini dari perangkat ini. Coba lagi.",
     "nostrSettingsDeleteAccount": "Hapus Akun dan Data",
     "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
-    "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Oleh ",
     "keyManagementYourPublicKeyLabel": "Kunci publikmu (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Jelajahi Daftar",
-    "discoverListsFailedToLoad": "Gagal memuat daftar",
-    "discoverListsLoading": "Mencari daftar publik...",
-    "discoverListsRelayTimeout": "Relay tidak mengembalikan daftar tepat waktu. Coba lagi.",
-    "discoverListsServiceUnavailable": "Layanan tidak tersedia.",
-    "discoverListsEmptyTitle": "Tidak ada daftar publik",
-    "discoverListsEmptySubtitle": "Cek lagi nanti untuk daftar baru",
-    "discoverListsByAuthorPrefix": "oleh",
     "curatedListEmptyTitle": "Belum ada video di daftar ini",
     "curatedListEmptySubtitle": "Tambahkan beberapa video untuk memulai",
     "curatedListLoadingVideos": "Memuat video...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Orang",
   "peopleListsPeopleNone": "Belum ada orang yang ditambahkan",
   "peopleListsSessionChanged": "Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.",
-  "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Tanpa banyak penjelasan",
   "ideasDescriptionFive": "Cuma ingin berbagi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
-  "ideasDescriptionSix": "Kutinggalkan ini di sini."
+  "ideasDescriptionSix": "Kutinggalkan ini di sini.",
+  "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
+  "listsDiscoveryLoadingLabel": "Memuat daftar",
+  "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
+  "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
+  "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
+  "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
+  "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
+  "listMakePublicLabel": "Jadikan publik",
+  "listCollaboratorsNone": "Tidak ada",
+  "listAddCollaboratorTitle": "Tambah kolaborator",
+  "listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
+  "listCollaboratorSearchHint": "Cari di Divine...",
+  "listVideoNotAdded": "Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.",
+  "listPrivateCollaboratorsWarning": "Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.",
+  "listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
+  "listRetrySync": "Sinkronkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
+  "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
+  "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
+  "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
+  "listAddToLists": "Tambahkan ke daftar"
 }

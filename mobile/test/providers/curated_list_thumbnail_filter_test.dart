@@ -209,6 +209,11 @@ class _Fixture {
       updatedAt: DateTime.utc(2026),
     );
     final lists = _Lists();
+    when(() => lists.isCurrentSession).thenReturn(true);
+    when(() => lists.isInitialized).thenReturn(true);
+    when(() => lists.initializationError).thenReturn(null);
+    when(() => lists.hasLoadedSubscriptionIds).thenReturn(true);
+    when(() => lists.subscribedListIds).thenReturn(const <String>{});
     when(() => lists.myLists).thenReturn([row]);
     when(() => lists.lists).thenReturn([row]);
     when(() => lists.subscribedLists).thenReturn(const []);

@@ -7,6 +7,8 @@ import 'package:nostr_sdk/nostr_sdk.dart' show NostrRemoteSignerInfo;
 import 'package:openvine/models/authentication_source.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+part 'signer_account_removal.dart';
+
 const _kBunkerInfoKey = 'bunker_info';
 const _kAmberPubkeyKey = 'amber_pubkey';
 const _kAmberPackageKey = 'amber_package';
@@ -28,12 +30,24 @@ class SignerSecureStore {
 
   // === NIP-46 bunker ===
 
-  Future<void> saveBunker(NostrRemoteSignerInfo info) async {
+  Future<void> saveBunker(
+    NostrRemoteSignerInfo info, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
     if (_storage == null) return;
     try {
       // Serialize bunker info as bunker URL (includes all needed data)
       final bunkerUrl = info.toString();
       await _storage.write(key: _kBunkerInfoKey, value: bunkerUrl);
+      ensureCurrent?.call();
+      if (ensureCurrent != null) {
+        final stored = await _storage.read(key: _kBunkerInfoKey);
+        ensureCurrent();
+        if (stored != bunkerUrl) {
+          throw StateError('Bunker credentials readback did not match');
+        }
+      }
       Log.info(
         'Saved bunker info to secure storage',
         name: 'SignerSecureStore',
@@ -45,6 +59,9 @@ class SignerSecureStore {
         name: 'SignerSecureStore',
         category: LogCategory.auth,
       );
+      if (ensureCurrent != null) {
+        rethrow;
+      }
     }
   }
 
@@ -91,12 +108,30 @@ class SignerSecureStore {
 
   // === NIP-55 Amber ===
 
-  Future<void> saveAmber(String pubkey, String? package) async {
+  Future<void> saveAmber(
+    String pubkey,
+    String? package, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
     if (_storage == null) return;
     try {
       await _storage.write(key: _kAmberPubkeyKey, value: pubkey);
+      ensureCurrent?.call();
       if (package != null) {
         await _storage.write(key: _kAmberPackageKey, value: package);
+      } else if (ensureCurrent != null) {
+        await _storage.delete(key: _kAmberPackageKey);
+      }
+      ensureCurrent?.call();
+      if (ensureCurrent != null) {
+        final storedPubkey = await _storage.read(key: _kAmberPubkeyKey);
+        ensureCurrent();
+        final storedPackage = await _storage.read(key: _kAmberPackageKey);
+        ensureCurrent();
+        if (storedPubkey != pubkey || storedPackage != package) {
+          throw StateError('Amber credentials readback did not match');
+        }
       }
       Log.info(
         'Saved Amber info to secure storage',
@@ -109,6 +144,9 @@ class SignerSecureStore {
         name: 'SignerSecureStore',
         category: LogCategory.auth,
       );
+      if (ensureCurrent != null) {
+        rethrow;
+      }
     }
   }
 
@@ -155,6 +193,43 @@ class SignerSecureStore {
   }
 
   // === Divine/Keycast OAuth session ===
+
+  /// Commits one exact bound OAuth input and its standalone credentials.
+  /// The caller owns the device lease; failed writes leave raw evidence intact.
+  Future<void> saveKeycastSession(
+    KeycastSession session, {
+    required void Function() ensureCurrent,
+  }) async {
+    ensureCurrent();
+    final storage = _storage ?? const FlutterSecureStorage();
+    await session.save(storage);
+    ensureCurrent();
+    final stored = await KeycastSession.load(storage);
+    ensureCurrent();
+    if (jsonEncode(stored?.toJson()) != jsonEncode(session.toJson())) {
+      throw StateError('OAuth credentials readback did not match');
+    }
+
+    Future<void> commitSlot(String key, String? value) async {
+      ensureCurrent();
+      if (value == null) {
+        await storage.delete(key: key);
+      } else {
+        await storage.write(key: key, value: value);
+      }
+      ensureCurrent();
+      final persisted = await storage.read(key: key);
+      ensureCurrent();
+      if (persisted != value) {
+        throw StateError('OAuth credential slot readback did not match');
+      }
+    }
+
+    await commitSlot(_kKeycastRefreshTokenKey, session.refreshToken);
+    ensureCurrent();
+    await commitSlot(_kKeycastAuthHandleKey, session.authorizationHandle);
+    ensureCurrent();
+  }
 
   /// Clears the global Keycast session, refresh token, and auth handle.
   ///
@@ -274,8 +349,10 @@ class SignerSecureStore {
   /// the original error-handling scope.
   Future<void> restoreActiveKeys(
     String pubkeyHex,
-    AuthenticationSource source,
-  ) async {
+    AuthenticationSource source, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
     final storage = _storage;
     if (storage == null) return;
     switch (source) {
@@ -283,6 +360,7 @@ class SignerSecureStore {
         final pubkey = await storage.read(
           key: '${_kAmberPubkeyKey}_$pubkeyHex',
         );
+        ensureCurrent?.call();
         Log.debug(
           'restoreActiveKeys: amber archive lookup — found=${pubkey != null}',
           name: 'SignerSecureStore',
@@ -290,11 +368,14 @@ class SignerSecureStore {
         );
         if (pubkey != null) {
           await storage.write(key: _kAmberPubkeyKey, value: pubkey);
+          ensureCurrent?.call();
           final package = await storage.read(
             key: '${_kAmberPackageKey}_$pubkeyHex',
           );
+          ensureCurrent?.call();
           if (package != null) {
             await storage.write(key: _kAmberPackageKey, value: package);
+            ensureCurrent?.call();
           }
         }
 
@@ -302,6 +383,7 @@ class SignerSecureStore {
         final bunkerUrl = await storage.read(
           key: '${_kBunkerInfoKey}_$pubkeyHex',
         );
+        ensureCurrent?.call();
         Log.debug(
           'restoreActiveKeys: bunker archive lookup — '
           'found=${bunkerUrl != null && bunkerUrl.isNotEmpty}',
@@ -310,12 +392,14 @@ class SignerSecureStore {
         );
         if (bunkerUrl != null) {
           await storage.write(key: _kBunkerInfoKey, value: bunkerUrl);
+          ensureCurrent?.call();
         }
 
       case AuthenticationSource.divineOAuth:
         final sessionJson = await storage.read(
           key: _keycastSessionKey(pubkeyHex),
         );
+        ensureCurrent?.call();
         Log.debug(
           'restoreActiveKeys: OAuth session archive lookup — '
           'found=${sessionJson != null}',
@@ -345,8 +429,10 @@ class SignerSecureStore {
               category: LogCategory.auth,
             );
             await storage.delete(key: _keycastSessionKey(pubkeyHex));
+            ensureCurrent?.call();
           } else {
             await session.save(storage);
+            ensureCurrent?.call();
             // Also restore the refresh token and auth handle to
             // their standalone keys — KeycastOAuth.refreshSession()
             // reads these separately from the session JSON, and
@@ -357,12 +443,14 @@ class SignerSecureStore {
                 key: _kKeycastRefreshTokenKey,
                 value: session.refreshToken,
               );
+              ensureCurrent?.call();
             }
             if (session.authorizationHandle != null) {
               await storage.write(
                 key: _kKeycastAuthHandleKey,
                 value: session.authorizationHandle,
               );
+              ensureCurrent?.call();
             }
           }
         }
@@ -374,8 +462,11 @@ class SignerSecureStore {
         // Clear any stale global signer keys so they don't hijack signing
         // operations for the non-bunker/non-keycast account.
         await clearBunker();
+        ensureCurrent?.call();
         await clearAmber();
+        ensureCurrent?.call();
         await KeycastSession.clear(storage);
+        ensureCurrent?.call();
         Log.debug(
           'restoreActiveKeys: local key-based auth — cleared stale signer keys',
           name: 'SignerSecureStore',
@@ -406,36 +497,12 @@ class SignerSecureStore {
     }
   }
 
-  /// Removes signer credentials that can be proven to belong to [pubkeyHex].
-  /// Propagates secure-storage failures so incomplete cleanup can be retried.
-  Future<void> clearAccount(String pubkeyHex) async {
-    final storage = _storage;
-    if (storage == null) return;
-
-    final amberPubkey = await storage.read(key: _kAmberPubkeyKey);
-    if (amberPubkey == pubkeyHex) {
-      await storage.delete(key: _kAmberPackageKey);
-      await storage.delete(key: _kAmberPubkeyKey);
-    }
-
-    final bunkerUrl = await storage.read(key: _kBunkerInfoKey);
-    if (bunkerUrl != null &&
-        NostrRemoteSignerInfo.parseBunkerUrl(bunkerUrl).userPubkey ==
-            pubkeyHex) {
-      await storage.delete(key: _kBunkerInfoKey);
-    }
-
-    final session = await KeycastSession.load(storage);
-    if (session?.userPubkey == pubkeyHex) {
-      await storage.delete(key: _kKeycastRefreshTokenKey);
-      await storage.delete(key: _kKeycastAuthHandleKey);
-      await KeycastSession.clear(storage);
-    }
-    await storage.delete(key: '${_kAmberPackageKey}_$pubkeyHex');
-    await storage.delete(key: '${_kAmberPubkeyKey}_$pubkeyHex');
-    await storage.delete(key: '${_kBunkerInfoKey}_$pubkeyHex');
-    await storage.delete(key: _keycastSessionKey(pubkeyHex));
-  }
+  /// Removes only raw signer records with verified ownership and readback.
+  /// Unknown or mismatched archives remain intact and make removal incomplete.
+  Future<void> clearAccount(
+    String pubkeyHex, {
+    void Function()? ensureCurrent,
+  }) => _clearVerifiedAccount(pubkeyHex, ensureCurrent: ensureCurrent);
 
   /// Whether a restorable per-account signer archive exists for [pubkeyHex]
   /// under [source]. For divineOAuth, also validates the archived session's

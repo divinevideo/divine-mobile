@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "تعذّر تحميل هذه المجموعة.",
     "featuredTabRetry": "حاول مرة أخرى",
     "exploreNoVideosAvailable": "لا توجد فيديوهات متاحة",
-    "exploreDiscoverLists": "اكتشف القوائم",
-    "exploreAboutLists": "عن القوائم",
-    "exploreAboutListsDescription": "القوائم تساعدك في تنظيم محتوى Divine بطريقتين:",
     "explorePeopleLists": "قوائم الأشخاص",
-    "explorePeopleListsDescription": "تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم",
     "exploreVideoLists": "قوائم الفيديو",
-    "exploreVideoListsDescription": "أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا",
-    "exploreMyLists": "قوائمي",
-    "exploreSubscribedLists": "القوائم المشترك بها",
     "exploreErrorLoadingLists": "خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.",
     "exploreNewVideosCount": "{count, plural, zero{لا توجد فيديوهات جديدة} one{فيديو جديد واحد} two{فيديوان جديدان} few{{count} فيديوهات جديدة} many{{count} فيديو جديد} other{{count} فيديو جديد}}",
     "@exploreNewVideosCount": {
@@ -1630,7 +1623,6 @@
     "reportReceivedReviewNotice": "سنرسله تلقائيًا عندما تتصل بالإنترنت. سيُراجع فريقنا بلاغك ويتخذ الإجراء المناسب. قد تتلقى تحديثات عبر رسالة مباشرة.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "إغلاق",
-    "listAddToList": "إضافة إلى قائمة",
     "listVideoCount": "{count} مقاطع فيديو",
     "@listVideoCount": {
         "placeholders": {
@@ -1639,31 +1631,12 @@
             }
         }
     },
-    "listNewList": "قائمة جديدة",
     "listDone": "تم",
     "listErrorLoading": "تعذر تحميل القوائم",
-    "listRemovedFrom": "تمت الإزالة من {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "تمت الإضافة إلى {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "إنشاء قائمة جديدة",
     "listNewPeopleList": "قائمة أشخاص جديدة",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
-    "listPublicList": "قائمة عامة",
-    "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
     "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
     "listVisibilityPublic": "عامة",
     "listVisibilityPrivate": "خاصة",
@@ -1697,7 +1670,6 @@
             }
         }
     },
-    "listCancel": "إلغاء",
     "listCreate": "إنشاء",
     "listCreateFailed": "تعذر إنشاء القائمة",
     "keyManagementTitle": "مفاتيح Nostr",
@@ -3033,10 +3005,8 @@
     },
     "notificationSystemUpdate": "لديك تحديث جديد",
     "peopleListsAddToList": "أضف إلى القائمة",
-    "peopleListsSheetTitle": "أضف إلى القائمة",
     "peopleListsEmptyTitle": "لا توجد قوائم بعد",
     "peopleListsEmptySubtitle": "أنشئ قائمة لبدء تجميع الأشخاص.",
-    "peopleListsCreateList": "إنشاء قائمة",
     "peopleListsNewListTitle": "قائمة جديدة",
     "peopleListsRouteTitle": "قائمة الأشخاص",
     "peopleListsListNameLabel": "اسم القائمة",
@@ -3059,8 +3029,6 @@
     "peopleListsAddToListName": "أضف إلى {name}",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
-    "peopleListsAddButton": "إضافة",
-    "peopleListsAddButtonWithCount": "إضافة {count}",
     "peopleListsInNLists": "{count, plural, zero{في صفر قوائم} one{في قائمة واحدة} two{في قائمتين} few{في {count} قوائم} many{في {count} قائمة} other{في {count} قوائم}}",
     "peopleListsRemoveConfirmTitle": "هل تريد إزالة {name}؟",
     "peopleListsRemoveConfirmBody": "سيتم إزالته/إزالتها من هذه القائمة.",
@@ -3300,14 +3268,6 @@
     "authConfirmPasswordRequired": "أكّد كلمة المرور",
     "authPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين",
     "authConfirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
-    "listPersonCount": "{count, plural, zero{لا أحد} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "بقلم ",
     "keyManagementYourPublicKeyLabel": "مفتاحك العام (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "اكتشف القوائم",
-    "discoverListsFailedToLoad": "فشل تحميل القوائم",
-    "discoverListsLoading": "جاري اكتشاف القوائم العامة...",
-    "discoverListsRelayTimeout": "لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.",
-    "discoverListsServiceUnavailable": "الخدمة غير متاحة.",
-    "discoverListsEmptyTitle": "لم يتم العثور على قوائم عامة",
-    "discoverListsEmptySubtitle": "عاود التحقق لاحقًا لرؤية قوائم جديدة",
-    "discoverListsByAuthorPrefix": "بقلم",
     "curatedListEmptyTitle": "لا فيديوهات في هذه القائمة",
     "curatedListEmptySubtitle": "أضف بعض الفيديوهات للبدء",
     "curatedListLoadingVideos": "جاري تحميل الفيديوهات...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "الأشخاص",
   "peopleListsPeopleNone": "لم تتم إضافة أي أشخاص",
   "peopleListsSessionChanged": "تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.",
-  "peopleListsSearchConnectionsHint": "ابحث في المتابعين ومن تتابعهم",
   "listCardSemanticLabel": "{visibility, select, private{{name}، خاصة، {count}} other{{name}، {count}}}",
   "listMemberNamesSeparator": "، ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "بلا شرح طويل",
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
-  "ideasDescriptionSix": "أترك هذا هنا."
+  "ideasDescriptionSix": "أترك هذا هنا.",
+  "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
+  "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
+  "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
+  "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن.",
+  "listPrivateConversionTooLarge": "هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.",
+  "authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+  "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
+  "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
+  "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+  "listMakePublicLabel": "جعل القائمة عامة",
+  "listCollaboratorsNone": "لا أحد",
+  "listAddCollaboratorTitle": "إضافة متعاون",
+  "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
+  "listCollaboratorSearchHint": "ابحث في Divine...",
+  "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
+  "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
+  "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
+  "listRetrySync": "زامن الآن",
+  "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
+  "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة.",
+  "listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.",
+  "listRecoveryReadOnly": "تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.",
+  "listAddToLists": "إضافة إلى القوائم"
 }

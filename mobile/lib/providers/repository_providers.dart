@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
@@ -42,6 +44,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/notify_subscriptions_unfollow_cleanup.dart';
@@ -271,23 +274,12 @@ CuratedListRepository curatedListRepository(Ref ref) {
 
   // Bridge: push curated list updates from legacy service into repository
   ref.listen(curatedListsStateProvider, (_, next) {
-    next.whenData((_) {
-      final service = ref.read(curatedListsStateProvider.notifier).service;
-      repository
-        ..setSubscribedLists(
-          service == null ? const [] : subscribedListsForHomeBridge(service),
-        )
-        ..setOwnLists(
-          service == null
-              ? const []
-              : ownListsForSearchBridge(
-                  service,
-                  viewerPubkey: ref
-                      .read(authServiceProvider)
-                      .currentPublicKeyHex,
-                ),
-        );
-    });
+    syncCuratedListRepositoryBridge(
+      repository,
+      ref.read(curatedListsStateProvider.notifier).service,
+      viewerPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
+      isDataReady: !next.isLoading && !next.hasError && next.hasValue,
+    );
   }, fireImmediately: true);
 
   ref.onDispose(repository.dispose);
@@ -353,9 +345,85 @@ Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
   await Future.wait([age.initialized, content.initialized]);
 }
 
+/// Applies a service snapshot without retaining a retired account's rows.
+///
+/// Policy changes keep this repository alive. A real account/client boundary
+/// can replace its dependencies before the service provider finishes rebuilding.
+/// Both immediate replay and loading/error transitions must exclude a retired
+/// service's cached data.
+@visibleForTesting
+void syncCuratedListRepositoryBridge(
+  CuratedListRepository repository,
+  CuratedListService? service, {
+  required String? viewerPubkey,
+  required bool isDataReady,
+}) {
+  final current = service != null && service.isCurrentSession ? service : null;
+  repository
+    ..setSubscribedLists(
+      current == null ? const [] : subscribedListsForHomeBridge(current),
+      isComplete:
+          isDataReady &&
+          current != null &&
+          hasCompleteSubscriptionSnapshotForHomeBridge(current),
+    )
+    ..setOwnLists(
+      current == null
+          ? const []
+          : ownListsForSearchBridge(current, viewerPubkey: viewerPubkey),
+    );
+}
+
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
-    service.subscribedLists;
+    service.isCurrentSession
+    ? service.subscribedLists
+          .where(_hasFullCuratedListAuthor)
+          .toList(growable: false)
+    : const [];
+
+bool _hasFullCuratedListAuthor(CuratedList list) =>
+    list.pubkey != null && _curatedListAuthor.hasMatch(list.pubkey!);
+
+final _curatedListAuthor = RegExp(r'^[0-9a-fA-F]{64}$');
+
+/// Whether Home may make final decisions about saved subscription identities.
+///
+/// Initialization validates the local cache, not the presence of every followed
+/// relay copy. Missing copies, unreadable metadata and retired sessions must
+/// remain incomplete even when some cached rows can already be displayed.
+@visibleForTesting
+bool hasCompleteSubscriptionSnapshotForHomeBridge(
+  CuratedListService service,
+) {
+  if (!service.isCurrentSession ||
+      !service.isInitialized ||
+      service.initializationError != null ||
+      !service.hasLoadedSubscriptionIds) {
+    return false;
+  }
+
+  final subscribed = service.subscribedLists;
+  // Unattributed followed cache rows remain available in the service, but
+  // cannot establish a canonical Home coordinate or a final empty snapshot.
+  if (subscribed.any((list) => !_hasFullCuratedListAuthor(list))) return false;
+  final exactIds = {for (final list in subscribed) list.authorScopedId};
+  for (final id in service.subscribedListIds) {
+    if (exactIds.contains(id)) continue;
+    if (_curatedListCoordinatePrefix.hasMatch(id)) return false;
+
+    // The service's legacy lookup intentionally prefers an owned list. That
+    // preference cannot establish uniqueness for migrating Home's selection.
+    final matches = service.lists.where((list) => list.id == id).toList();
+    final identities = {for (final list in matches) list.authorScopedId};
+    if (identities.length != 1 || !exactIds.contains(identities.single)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+final _curatedListCoordinatePrefix = RegExp('^[0-9a-fA-F]{64}:');
 
 /// The viewer's own lists, which the search matches alongside the subscribed
 /// ones; `subscribedLists` never holds them.
@@ -368,11 +436,12 @@ List<CuratedList> ownListsForSearchBridge(
   CuratedListService service, {
   required String? viewerPubkey,
 }) => [
-  for (final list in service.myLists)
-    if (list.pubkey == null && viewerPubkey != null)
-      list.copyWith(pubkey: viewerPubkey)
-    else
-      list,
+  if (service.isCurrentSession)
+    for (final list in service.myLists)
+      if (list.pubkey == null && viewerPubkey != null)
+        list.copyWith(pubkey: viewerPubkey)
+      else
+        list,
 ];
 
 /// Provider for HashtagRepository instance.
@@ -571,8 +640,21 @@ CurationRepository curationRepository(Ref ref) {
   );
 }
 
+/// Keeps cache writes serialized while auth/relay changes replace services.
+final curatedListCacheWriteCoordinatorProvider =
+    Provider<CuratedListCacheWriteCoordinator>(
+      (ref) => CuratedListSessionCoordinator.forPreferences(
+        ref.watch(sharedPreferencesProvider),
+      ).writes,
+    );
+
+/// A failed initialization surfaces at once, so the retry the viewer drives is
+/// reachable. Riverpod's default retries an `Exception` ten times with backoff,
+/// and while it does the state is loading that carries the error.
+Duration? _noAutomaticRetry(int retryCount, Object error) => null;
+
 /// Lists state notifier - manages curated lists state
-@riverpod
+@Riverpod(retry: _noAutomaticRetry)
 class CuratedListsState extends _$CuratedListsState {
   CuratedListService? _service;
 
@@ -584,30 +666,49 @@ class CuratedListsState extends _$CuratedListsState {
     final authService = ref.watch(authServiceProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
 
-    _service = CuratedListService(
+    // An incoming container can build before its first frame commits account
+    // activation. Replace that fenced service when AuthService assigns the
+    // terminal receipt; the auth enum itself may already be authenticated.
+    // The event only triggers reconstruction. The new service must still
+    // obtain and verify its own current receipt.
+    ref.watch(currentAccountActivationReceiptProvider);
+
+    final service = CuratedListService(
       nostrService: nostrService,
       authService: authService,
       prefs: prefs,
+      cacheWriteCoordinator: ref.watch(
+        curatedListCacheWriteCoordinatorProvider,
+      ),
     );
+    _service = service;
+    final providerRef = ref;
+    void onServiceChanged() {
+      if (!providerRef.mounted || !identical(_service, service)) return;
+      state = AsyncValue.data(service.lists);
+    }
 
-    // Register dispose callback BEFORE async gap to avoid "ref already disposed" error
-    ref.onDispose(() => _service?.removeListener(_onServiceChanged));
+    providerRef.onDispose(() {
+      service.removeListener(onServiceChanged);
+      service.dispose();
+    });
 
-    // Initialize the service to create default list and sync with relays
-    await _service!.initialize();
-
-    // Check if provider was disposed during initialization
-    if (!ref.mounted) return [];
-
-    // Listen to changes and update state
-    _service!.addListener(_onServiceChanged);
-
-    return _service!.lists;
-  }
-
-  void _onServiceChanged() {
-    // When service calls notifyListeners(), update the state
-    state = AsyncValue.data(_service!.lists);
+    // Load the local list cache and start background relay synchronization.
+    await service.initialize();
+    if (!providerRef.mounted ||
+        !identical(_service, service) ||
+        !service.isCurrentSession) {
+      return [];
+    }
+    final initializationError = service.initializationError;
+    if (initializationError != null) {
+      Error.throwWithStackTrace(
+        initializationError,
+        service.initializationStackTrace ?? StackTrace.current,
+      );
+    }
+    service.addListener(onServiceChanged);
+    return service.lists;
   }
 }
 
@@ -627,10 +728,27 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     openBox: () => HiveBoxOpener.open<dynamic>(_peopleListsBoxName),
   );
 
+  final excludedDTags = AppConfig.publicPeopleListExcludedDTags;
+  if (excludedDTags == null) {
+    Log.warning(
+      'Public people-list discovery policy is missing or invalid; '
+      'release builds must supply DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS',
+      name: 'peopleListsRepository',
+      category: LogCategory.system,
+    );
+  }
+
   return PeopleListsRepositoryImpl(
+    additionalExcludedPublicDTags: excludedDTags ?? const {},
     nostrClient: nostrClient,
     cache: cache,
+    followedListsStore: ref.watch(followedPeopleListsStoreProvider),
+    followedListsWriteCoordinator: ref.watch(
+      followedPeopleListsWriteCoordinatorProvider,
+    ),
     blockFilter: createBlockedAuthorFilter(ref),
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    discoveryRelayUrls: [ref.watch(currentEnvironmentProvider).relayUrl],
   );
 }
 

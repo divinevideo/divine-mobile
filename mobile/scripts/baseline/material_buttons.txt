@@ -17,7 +17,6 @@ lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/comments/widgets/comment_input.dart	3
 lib/screens/comments/widgets/comment_options_modal.dart	1
 lib/screens/curated_list_feed_screen.dart	2
-lib/screens/discover_lists_screen.dart	2
 lib/screens/feed/video_feed_page/feed_empty_widget.dart	1
 lib/screens/followers/my_followers_screen.dart	1
 lib/screens/followers/others_followers_screen.dart	1
@@ -33,7 +32,6 @@ lib/screens/video_editor/voice_over_recorder_screen.dart	1
 lib/screens/video_engagement/video_engagement_list_view.dart	1
 lib/screens/web_auth_screen.dart	1
 lib/utils/external_link_launcher.dart	2
-lib/widgets/add_to_list_dialog.dart	4
 lib/widgets/age_verification_dialog.dart	2
 lib/widgets/auth/forgot_password_dialog.dart	2
 lib/widgets/camera_fab.dart	1

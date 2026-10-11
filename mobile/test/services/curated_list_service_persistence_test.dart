@@ -12,8 +12,10 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -44,14 +46,20 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       mockNostr = _MockNostrClient();
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(
+        mockNostr,
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
+      await stubCommittedListAccount(auth: mockAuth, preferences: prefs);
 
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(
@@ -71,7 +79,11 @@ void main() {
       });
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       when(
@@ -79,19 +91,40 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
-        (_) async => Event.fromJson({
-          'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test',
-          'sig': 'test_sig',
-        }),
+        (invocation) async => Event(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          invocation.namedArguments[#kind] as int,
+          invocation.namedArguments[#tags] as List<List<String>>,
+          invocation.namedArguments[#content] as String,
+          createdAt: invocation.namedArguments[#createdAt] as int?,
+        ),
       );
     });
+
+    test(
+      'publication fixture reaches confirmed relay with the signed revision',
+      () async {
+        final publicationService = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(publicationService.dispose);
+        final created = await publicationService.createList(name: 'Fixture');
+        final event =
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(created!.nostrEventId, event.id);
+        expect(event.kind, 30005);
+        expect(event.tags, contains(equals(['title', 'Fixture'])));
+        expect(event.createdAt, greaterThan(0));
+      },
+    );
 
     group('Save to Preferences', () {
       test('saves list to SharedPreferences after creation', () async {
@@ -168,6 +201,22 @@ void main() {
         expect(savedData, isNot(contains('To Delete')));
       });
 
+      test('saves subscribed list ids to SharedPreferences', () async {
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+
+        final list = await service.createList(name: 'Test List');
+        await service.subscribeToList(list!.id);
+
+        final savedData = prefs.getString(
+          CuratedListService.subscribedListsStorageKey,
+        );
+        expect(savedData, contains(list.id));
+      });
+
       test('saves all list fields to SharedPreferences', () async {
         final service = CuratedListService(
           nostrService: mockNostr,
@@ -190,6 +239,149 @@ void main() {
         expect(savedData, contains('tag1'));
         expect(savedData, contains('shuffle'));
       });
+
+      test('preserves corrupted data and blocks replacement writes', () async {
+        const corrupted = 'invalid json {{{';
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          corrupted,
+        );
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+
+        addTearDown(service.dispose);
+        expect(service.recoveryNeedsRepair, isTrue);
+        expect(service.isReadyForMutations, isFalse);
+        expect(await service.createList(name: 'After Corruption'), isNull);
+        expect(prefs.get(CuratedListService.listsStorageKey), corrupted);
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        verifyNever(() => mockNostr.publishEvent(any()));
+        await service.initialize();
+        expect(service.isInitialized, isTrue);
+        expect(service.initializationError, isNull);
+        expect(service.isReadyForMutations, isFalse);
+        await prefs.reload();
+
+        final recreated = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(recreated.dispose);
+        expect(recreated.lists, isEmpty);
+        expect(recreated.recoveryNeedsRepair, isTrue);
+        expect(await recreated.createList(name: 'After Restart'), isNull);
+        expect(prefs.get(CuratedListService.listsStorageKey), corrupted);
+        expect(
+          prefs.get(CuratedListRecoveryStorage.sharedQuarantineKey),
+          isNull,
+        );
+      });
+
+      test('preserves all raw rows until the bad row is repaired', () async {
+        final original = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(original.dispose);
+        final accepted = await original.createList(name: 'Kept');
+        expect(accepted?.nostrEventId, isNotNull);
+        final rows = jsonDecode(
+          prefs.getString(CuratedListService.listsStorageKey)!,
+        ) as List<dynamic>;
+        final corrupted = jsonEncode([...rows, 'not a row']);
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          corrupted,
+        );
+        clearInteractions(mockNostr);
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
+        expect(service.lists, [accepted]);
+        expect(service.recoveryNeedsRepair, isTrue);
+        expect(service.isReadyForMutations, isFalse);
+        expect(await service.createList(name: 'Added'), isNull);
+        expect(prefs.get(CuratedListService.listsStorageKey), corrupted);
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        verifyNever(() => mockNostr.publishEvent(any()));
+        await prefs.reload();
+
+        final recreated = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(recreated.dispose);
+        expect(recreated.lists, [accepted]);
+        expect(recreated.recoveryNeedsRepair, isTrue);
+        expect(await recreated.createList(name: 'After Restart'), isNull);
+        expect(prefs.get(CuratedListService.listsStorageKey), corrupted);
+
+        // Supply the original known-good rows explicitly; the service must
+        // not guess how to discard corrupt private recovery evidence itself.
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode(rows),
+        );
+        final repaired = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        addTearDown(repaired.dispose);
+        expect(repaired.recoveryNeedsRepair, isFalse);
+        expect(repaired.lists.map((list) => list.name), ['Kept']);
+        expect(await repaired.createList(name: 'Added'), isNotNull);
+        expect(
+          repaired.lists.map((list) => list.name),
+          unorderedEquals(['Kept', 'Added']),
+        );
+      });
+
+      test(
+        'keeps the lists after a row it cannot decode instead of deleting them',
+        () async {
+          final original = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          await original.createList(name: 'Kept');
+          await original.createList(name: 'Later');
+          addTearDown(original.dispose);
+          final rows = jsonDecode(
+            prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List<dynamic>;
+          // A map from another build or schema that the model cannot parse.
+          final undecodable = {
+            ...(rows.first as Map<String, dynamic>),
+            'id': 'undecodable',
+            'createdAt': 'not a date',
+          };
+          final raw = jsonEncode([rows.first, undecodable, ...rows.skip(1)]);
+          await prefs.setString(CuratedListService.listsStorageKey, raw);
+          final service = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
+          addTearDown(service.dispose);
+          clearInteractions(mockNostr);
+
+          expect(await service.createList(name: 'Added'), isNull);
+          expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          verifyNever(() => mockNostr.publishEvent(any()));
+        },
+      );
     });
 
     group('Load from Preferences', () {

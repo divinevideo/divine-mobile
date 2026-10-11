@@ -1469,34 +1469,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Aucune vidéo disponible';
 
   @override
-  String get exploreDiscoverLists => 'Découvrir les listes';
-
-  @override
-  String get exploreAboutLists => 'À propos des listes';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Les listes t\'aident à organiser et curater le contenu Divine de deux façons :';
-
-  @override
   String get explorePeopleLists => 'Listes de personnes';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Suis des groupes de créateurs et vois leurs dernières vidéos';
-
-  @override
   String get exploreVideoLists => 'Listes de vidéos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crée des playlists de tes vidéos préférées à regarder plus tard';
-
-  @override
-  String get exploreMyLists => 'Mes listes';
-
-  @override
-  String get exploreSubscribedLists => 'Listes abonnées';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3997,17 +3973,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get peopleListsAddToList => 'Ajouter à la liste';
 
   @override
-  String get peopleListsSheetTitle => 'Ajouter à la liste';
-
-  @override
   String get peopleListsEmptyTitle => 'Aucune liste pour l\'instant';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Crée une liste pour commencer à regrouper des personnes.';
-
-  @override
-  String get peopleListsCreateList => 'Créer une liste';
 
   @override
   String get peopleListsNewListTitle => 'Nouvelle liste';
@@ -4092,14 +4062,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Réessayer';
-
-  @override
-  String get peopleListsAddButton => 'Ajouter';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Ajouter $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -5040,45 +5002,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportClose => 'Fermer';
 
   @override
-  String get listAddToList => 'Ajouter à une liste';
-
-  @override
   String listVideoCount(int count) {
     return '$count vidéos';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personnes',
-      one: '$count personne',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'Par ';
 
   @override
-  String get listNewList => 'Nouvelle liste';
-
-  @override
   String get listDone => 'Terminé';
 
   @override
   String get listErrorLoading => 'Erreur de chargement des listes';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Retiré de $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Ajouté à $name';
-  }
 
   @override
   String get listCreateNewList => 'Créer une nouvelle liste';
@@ -5091,13 +5026,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Description (facultatif)';
-
-  @override
-  String get listPublicList => 'Liste publique';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Les autres peuvent suivre et voir cette liste';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5205,9 +5133,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sur Divine';
   }
-
-  @override
-  String get listCancel => 'Annuler';
 
   @override
   String get listCreate => 'Créer';
@@ -6282,32 +6207,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Impossible de mettre à jour l\'abonnement. Réessaie.';
-
-  @override
-  String get discoverListsTitle => 'Découvrir des listes';
-
-  @override
-  String get discoverListsFailedToLoad => 'Échec du chargement des listes';
-
-  @override
-  String get discoverListsLoading => 'Recherche de listes publiques...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Le relais n\'a pas renvoyé de listes à temps. Réessaie.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service indisponible.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Aucune liste publique trouvée';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Reviens plus tard pour de nouvelles listes';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'par';
 
   @override
   String get curatedListEmptyTitle => 'Aucune vidéo dans cette liste';
@@ -13423,10 +13322,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton compte ou ton accès à la liste a changé. Rouvre cette page pour continuer.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Rechercher parmi les abonnés et les abonnements';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -13547,4 +13442,93 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Je laisse ça ici.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Chargement des listes';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Aucune liste cette fois-ci. Tire pour actualiser.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Les listes de personnes sont indisponibles pour le moment.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Les listes de vidéos sont indisponibles pour le moment.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Impossible d’effacer les données du compte précédent. Réessaie.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Rechercher des personnes';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Retirer $name de la liste';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Impossible de mettre à jour la liste. Réessaie.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Ajouter $name à la liste';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Ajouter un collaborateur';
+
+  @override
+  String get listMakePublicLabel => 'Rendre publique';
+
+  @override
+  String get listCollaboratorSearchHint => 'Rechercher dans Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Aucun';
+
+  @override
+  String get listMakePublicSubtitle => 'Les autres peuvent voir cette liste';
+
+  @override
+  String get listVideoNotAdded =>
+      'Ta liste a été créée, mais cette vidéo n’a pas été ajoutée.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Rendre cette liste privée supprime aussi ses collaborateurs. Tu seras la seule personne à pouvoir ajouter des vidéos.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Ta liste et ta vidéo sont enregistrées ici. La vidéo est en attente de synchronisation.';
+
+  @override
+  String get listRetrySync => 'Synchroniser maintenant';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Impossible de confirmer ce changement. Réessaie.';
+
+  @override
+  String get listRecoveryPending =>
+      'Cette liste a des modifications en attente de synchronisation.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Votre modification a été acceptée. Appuyez sur Synchroniser maintenant pour terminer son enregistrement. Les modifications sont suspendues jusque-là.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Certaines modifications enregistrées dans les listes de vidéos doivent être récupérées. Tu peux consulter les listes de vidéos, mais les modifications sont en pause.';
+
+  @override
+  String get listAddToLists => 'Ajouter aux listes';
 }

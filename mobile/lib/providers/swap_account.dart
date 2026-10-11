@@ -13,7 +13,10 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -201,8 +204,31 @@ Future<void> swapAccount({
   AccountSignIn signIn = _defaultSignIn,
 }) async {
   await controller.runExclusive(() async {
-    await currentAuthService.archiveCurrentSignerInfo();
     final current = controller.currentContainer;
+    final outgoingCommit = controller.currentCommit;
+    if (outgoingCommit == null || !outgoingCommit.isCurrent) {
+      throw StateError('The outgoing account container has not committed');
+    }
+    void ensureOutgoingCurrent() {
+      if (!outgoingCommit.isCurrent) {
+        throw const AccountActivationRetiredException();
+      }
+    }
+
+    ensureOutgoingCurrent();
+    currentAuthService.bindAccountActivationHost(
+      () => outgoingCommit.isCurrent,
+    );
+    final rollbackAuthority = currentAuthService
+        .captureAccountRollbackAuthority(
+          hostIsCurrent: () => outgoingCommit.isCurrent,
+        );
+    await currentAuthService.archiveCurrentSignerInfo();
+    ensureOutgoingCurrent();
+    rollbackAuthority.ensureCurrent();
+    final sessionSnapshot = AccountSessionSnapshot.capture(
+      deviceScope.sharedPreferences,
+    );
     final outgoingPushCoordinator =
         current != null && current.exists(pushNotificationSyncProvider)
         ? current.read(pushNotificationSyncProvider)
@@ -222,13 +248,36 @@ Future<void> swapAccount({
     final keyStorage = container.read(secureKeyStorageProvider);
     SecureKeyContainer? previousPrimary;
     var outgoingDmIngestQuiesced = false;
+    var targetSubmitted = false;
+    final incomingAuth = container.read(authServiceProvider);
     try {
+      // Capture only while the original identity and rendered host still own
+      // the device. A foreign cached key cannot authorize rollback storage.
       previousPrimary = await keyStorage.getKeyContainer();
+      ensureOutgoingCurrent();
+      rollbackAuthority.ensureCurrent();
+      if (previousPrimary != null &&
+          previousPrimary.publicKeyHex != rollbackAuthority.ownerPubkey) {
+        throw StateError('Outgoing primary identity does not match its owner');
+      }
+      rollbackAuthority.retireForSwitch();
+      await incomingAuth.prepareAccountSwitchActivation(
+        deviceScope.sharedPreferences,
+        ownerPubkey: account.pubkeyHex,
+        outgoingHostIsCurrent: () => outgoingCommit.isCurrent,
+      );
+      ensureOutgoingCurrent();
       // Before sign-in, because sign-in is what runs the identity-change
       // cleanup that wipes the shared DM tables. See #7318.
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
+      ensureOutgoingCurrent();
+      await CuratedListSessionCoordinator.forPreferences(
+        deviceScope.sharedPreferences,
+      ).retireAndDrain();
+      ensureOutgoingCurrent();
       await signIn(container, account);
-      await controller.swapTo(
+      ensureOutgoingCurrent();
+      final commitFuture = controller.swapToAndCommit(
         container,
         beforePreviousContainerDispose: outgoingPushCoordinator == null
             ? null
@@ -254,6 +303,14 @@ Future<void> swapAccount({
                 }
               },
       );
+      targetSubmitted = true;
+      final incomingCommit = await commitFuture;
+      await incomingAuth.commitAccountSwitchActivation(
+        hostIsCurrent: () => incomingCommit.isCurrent,
+      );
+      if (!incomingCommit.isCurrent) {
+        throw const AccountActivationRetiredException();
+      }
       try {
         await container
             .read(authServiceProvider)
@@ -267,6 +324,13 @@ Future<void> swapAccount({
         );
       }
     } catch (_) {
+      final failedTicket = incomingAuth.retireAccountSwitchActivation();
+      // A completed frame cannot be rolled back by an obsolete native result.
+      // Leave its activation fenced for explicit recovery, preserving evidence.
+      if (targetSubmitted || !outgoingCommit.isCurrent) {
+        if (!targetSubmitted) container.dispose();
+        rethrow;
+      }
       // The outgoing container stays live on a rollback. If this attempt
       // stopped its live subscription, restore that subscription before the
       // key restores below, which can throw. History recovery remains
@@ -275,8 +339,50 @@ Future<void> swapAccount({
         await _resumeOutgoingDmIngest(current);
       }
       try {
-        await currentAuthService.restoreSignerInfoForCurrentAccount();
-        await keyStorage.restorePrimaryKeyContainer(previousPrimary);
+        if (failedTicket == null) {
+          throw const AccountActivationRetiredException();
+        }
+        final coordinator = AccountActivationCoordinator.forPreferences(
+          deviceScope.sharedPreferences,
+        );
+        final rollbackTicket = await rollbackAuthority.beginRollback(
+          deviceScope.sharedPreferences,
+          failedTicket,
+        );
+        void ensureRollbackCurrent() {
+          rollbackAuthority.ensureCurrent();
+          coordinator.ensureCurrent(rollbackTicket);
+        }
+
+        await coordinator.runGuardedStorage(rollbackTicket, () async {
+          await currentAuthService.restoreSignerInfoForCurrentAccount(
+            ensureCurrent: ensureRollbackCurrent,
+          );
+          ensureRollbackCurrent();
+          await keyStorage.restorePrimaryKeyContainer(previousPrimary);
+          ensureRollbackCurrent();
+          keyStorage.clearCache();
+          final restoredKeys = await keyStorage.getKeyContainer();
+          ensureRollbackCurrent();
+          if (restoredKeys?.publicKeyHex != previousPrimary?.publicKeyHex) {
+            throw StateError(
+              'Outgoing primary identity readback did not match',
+            );
+          }
+          await sessionSnapshot.restore(
+            deviceScope.sharedPreferences,
+            ensureCurrent: ensureRollbackCurrent,
+          );
+          ensureRollbackCurrent();
+        });
+        // Native restoration releases the storage lease before the new
+        // terminal proof enters that same queue. Never nest those leases.
+        await currentAuthService.restoreCurrentAccountActivation(
+          deviceScope.sharedPreferences,
+          hostIsCurrent: () => outgoingCommit.isCurrent,
+          previousTicket: rollbackTicket,
+        );
+        ensureOutgoingCurrent();
       } catch (rollbackError, rollbackStack) {
         // Swallowed on purpose: the caller dispatches on the sign-in failure's
         // type to decide between the re-auth offer and the generic snackbar,
@@ -288,10 +394,19 @@ Future<void> swapAccount({
           stackTrace: rollbackStack,
         );
       } finally {
-        container.dispose();
+        // Never re-enable the retired service: old ACKs must remain invalid
+        // even when this failed switch restores the same account.
+        if (current != null && current.exists(curatedListsStateProvider)) {
+          current.invalidate(curatedListsStateProvider);
+        }
+        if (!identical(controller.currentContainer, container)) {
+          container.dispose();
+        }
       }
       rethrow;
     }
-    previousPrimary?.dispose();
+    // getKeyContainer lends its cached object. Auth/storage still own it,
+    // including while outgoing push cleanup or a restored session uses it.
+    // Its owner and secure finalizer perform disposal; this caller must not.
   });
 }

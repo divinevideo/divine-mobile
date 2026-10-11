@@ -609,15 +609,8 @@
   "featuredTabLoadFailed": "Không tải được bộ sưu tập này.",
   "featuredTabRetry": "Thử lại",
   "exploreNoVideosAvailable": "Không có video nào",
-  "exploreDiscoverLists": "Khám phá danh sách",
-  "exploreAboutLists": "Về danh sách",
-  "exploreAboutListsDescription": "Danh sách giúp bạn sắp xếp và tuyển chọn nội dung Divine theo hai cách:",
   "explorePeopleLists": "Danh sách người",
-  "explorePeopleListsDescription": "Theo dõi nhóm nhà sáng tạo và xem video mới nhất của họ",
   "exploreVideoLists": "Danh sách video",
-  "exploreVideoListsDescription": "Tạo danh sách phát từ những video yêu thích để xem sau",
-  "exploreMyLists": "Danh sách của tôi",
-  "exploreSubscribedLists": "Danh sách đã đăng ký",
   "exploreErrorLoadingLists": "Lỗi khi tải danh sách. Vui lòng thử lại.",
   "exploreNewVideosCount": "{count, plural, =1{1 video mới} other{{count} video mới}}",
   "@exploreNewVideosCount": {
@@ -1936,10 +1929,8 @@
     }
   },
   "peopleListsAddToList": "Thêm vào danh sách",
-  "peopleListsSheetTitle": "Thêm vào danh sách",
   "peopleListsEmptyTitle": "Chưa có danh sách nào",
   "peopleListsEmptySubtitle": "Tạo một danh sách để bắt đầu nhóm mọi người.",
-  "peopleListsCreateList": "Tạo danh sách",
   "peopleListsNewListTitle": "Danh sách mới",
   "peopleListsRouteTitle": "Danh sách người",
   "@peopleListsRouteTitle": {
@@ -1972,15 +1963,6 @@
   },
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2414,7 +2396,6 @@
   "reportLearnMoreAt": "Tìm hiểu thêm tại",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Đóng",
-  "listAddToList": "Thêm vào danh sách",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2423,40 +2404,13 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 người} other{{count} người}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "Bởi ",
-  "listNewList": "Danh sách mới",
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
-  "listRemovedFrom": "Đã xóa khỏi {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Đã thêm vào {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Tạo danh sách mới",
   "listNewPeopleList": "Danh sách người mới",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
-  "listPublicList": "Danh sách công khai",
-  "listPublicListSubtitle": "Người khác có thể theo dõi và xem danh sách này",
   "listPrivateListSubtitle": "Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.",
   "listVisibilityPublic": "Công khai",
   "listVisibilityPrivate": "Riêng tư",
@@ -2490,7 +2444,6 @@
       }
     }
   },
-  "listCancel": "Hủy",
   "listCreate": "Tạo",
   "listCreateFailed": "Không tạo được danh sách",
   "keyManagementTitle": "Khóa Nostr",
@@ -3181,14 +3134,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Không cập nhật được đăng ký. Vui lòng thử lại.",
-  "discoverListsTitle": "Khám phá danh sách",
-  "discoverListsFailedToLoad": "Không tải được danh sách",
-  "discoverListsLoading": "Đang khám phá danh sách công khai...",
-  "discoverListsRelayTimeout": "Relay không trả về danh sách kịp lúc. Thử lại nhé.",
-  "discoverListsServiceUnavailable": "Dịch vụ không khả dụng.",
-  "discoverListsEmptyTitle": "Không tìm thấy danh sách công khai nào",
-  "discoverListsEmptySubtitle": "Quay lại sau để xem danh sách mới nhé",
-  "discoverListsByAuthorPrefix": "bởi",
   "curatedListEmptyTitle": "Chưa có video nào trong danh sách này",
   "curatedListEmptySubtitle": "Thêm vài video để bắt đầu",
   "curatedListLoadingVideos": "Đang tải video...",
@@ -6740,7 +6685,6 @@
   "peopleListsPeopleLabel": "Mọi người",
   "peopleListsPeopleNone": "Chưa thêm ai",
   "peopleListsSessionChanged": "Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.",
-  "peopleListsSearchConnectionsHint": "Tìm người theo dõi và người bạn đang theo dõi",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Riêng tư, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -6786,5 +6730,43 @@
   "ideasTitleFive": "Không cần giải thích nhiều",
   "ideasDescriptionFive": "Chỉ muốn chia sẻ thôi.",
   "ideasTitleSix": "Một chút hôm nay",
-  "ideasDescriptionSix": "Để điều này ở đây."
+  "ideasDescriptionSix": "Để điều này ở đây.",
+  "listsDiscoveryLoadingLabel": "Đang tải danh sách",
+  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
+  "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
+  "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
+  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
+  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.",
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "peopleListsAddPeopleSearchHint": "Tìm người",
+  "listMakePublicSubtitle": "Cho người khác xem danh sách này",
+  "listMakePublicLabel": "Đặt công khai",
+  "listAddCollaboratorTitle": "Thêm cộng tác viên",
+  "listCollaboratorSearchHint": "Tìm trên Divine...",
+  "listCollaboratorsNone": "Không có",
+  "listPrivateCollaboratorsWarning": "Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.",
+  "listVideoNotAdded": "Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.",
+  "listVideoPendingSync": "Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.",
+  "listRetrySync": "Đồng bộ ngay",
+  "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
+  "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
+  "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
+  "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
+  "listAddToLists": "Thêm vào danh sách"
 }

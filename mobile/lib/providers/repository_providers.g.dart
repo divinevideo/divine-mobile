@@ -208,7 +208,7 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'0a51d226f11eae6005e559b2186a9659d0c7fa32';
+    r'0ed6dffc81dfa5be530dc1597e7dcc0b3dacc219';
 
 /// Shared preview policy for My Lists and public list search.
 ///
@@ -713,7 +713,7 @@ final class CuratedListsStateProvider
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: _noAutomaticRetry,
         name: r'curatedListsStateProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -728,7 +728,7 @@ final class CuratedListsStateProvider
   CuratedListsState create() => CuratedListsState();
 }
 
-String _$curatedListsStateHash() => r'c6255dcf311db8ce01adb1aa64f5b40e38bd9729';
+String _$curatedListsStateHash() => r'0b4e989910bf7dc36d497ebf3c2802f957616f4e';
 
 /// Lists state notifier - manages curated lists state
 
@@ -817,7 +817,7 @@ final class PeopleListsRepositoryProvider
 }
 
 String _$peopleListsRepositoryHash() =>
-    r'486b3f30391906e12735ed541fe1ba87672ed796';
+    r'e35593fe44626407a3cf1dcd537f3451fdb890af';
 
 /// Repository for the reserved kind 30000 `d=notify` subscription list.
 ///

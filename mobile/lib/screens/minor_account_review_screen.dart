@@ -367,7 +367,28 @@ class _LoadedView extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         TextButton(
-          onPressed: () => ref.read(authServiceProvider).signOut(),
+          onPressed: () async {
+            final authService = ref.read(authServiceProvider);
+            final messenger = ScaffoldMessenger.of(context);
+            final cleanupFailedMessage = l10n.authAccountCleanupFailed;
+            try {
+              await authService.signOut();
+            } catch (error, stackTrace) {
+              Log.error(
+                'Minor account sign-out could not complete',
+                name: 'MinorAccountReviewScreen',
+                error: error,
+                stackTrace: stackTrace,
+              );
+              if (!messenger.mounted) return;
+              messenger.showSnackBar(
+                DivineSnackbarContainer.snackBar(
+                  cleanupFailedMessage,
+                  error: true,
+                ),
+              );
+            }
+          },
           child: Text(
             l10n.minorAccountReviewLogOut,
             style: VineTheme.bodyMediumFont(

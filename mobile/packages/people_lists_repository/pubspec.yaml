@@ -8,7 +8,10 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  clock: ^1.1.2
+  crypto: ^3.0.7
   equatable: ^2.0.5
+  funnelcake_api_client:
   hive_ce:
   models:
   nostr_client:

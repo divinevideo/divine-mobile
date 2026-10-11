@@ -234,7 +234,11 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
         value: widget.state.marketingConsent,
         enabled: !isDisabled,
       ),
-      errorWidget: widget.state.generalError != null
+      errorWidget:
+          widget.state.signInFailureReason ==
+              SignInFailureReason.accountCleanupFailed
+          ? AuthErrorBox(message: context.l10n.authAccountCleanupFailed)
+          : widget.state.generalError != null
           ? AuthErrorBox(message: widget.state.generalError!)
           : null,
       primaryButton: DivineButton(

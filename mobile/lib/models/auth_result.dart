@@ -8,7 +8,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer;
 import 'package:nostr_sdk/nostr_sdk.dart' show NostrConnectFailureReason;
 
-enum AuthFailureReason { incorrectPassword }
+enum AuthFailureReason { incorrectPassword, accountCleanupFailed }
 
 /// Result of authentication operations
 class AuthResult {

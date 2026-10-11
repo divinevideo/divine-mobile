@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Nu am putut încărca această colecție.",
     "featuredTabRetry": "Încearcă din nou",
     "exploreNoVideosAvailable": "Niciun videoclip disponibil",
-    "exploreDiscoverLists": "Descoperă liste",
-    "exploreAboutLists": "Despre liste",
-    "exploreAboutListsDescription": "Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:",
     "explorePeopleLists": "Liste de oameni",
-    "explorePeopleListsDescription": "Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor",
     "exploreVideoLists": "Liste de videoclipuri",
-    "exploreVideoListsDescription": "Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu",
-    "exploreMyLists": "Listele mele",
-    "exploreSubscribedLists": "Liste la care ești abonat",
     "exploreErrorLoadingLists": "Eroare la încărcarea listelor. Încearcă din nou.",
     "exploreNewVideosCount": "{count, plural, =1{1 videoclip nou} other{{count} videoclipuri noi}}",
     "@exploreNewVideosCount": {
@@ -1640,7 +1633,6 @@
     "reportReceivedReviewNotice": "Îl vom trimite automat când te conectezi la internet. Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Închide",
-    "listAddToList": "Adaugă la listă",
     "listVideoCount": "{count, plural, one{1 videoclip} few{{count} videoclipuri} other{{count} de videoclipuri}}",
     "@listVideoCount": {
         "placeholders": {
@@ -1649,31 +1641,12 @@
             }
         }
     },
-    "listNewList": "Listă nouă",
     "listDone": "Gata",
     "listErrorLoading": "Eroare la încărcarea listelor",
-    "listRemovedFrom": "Eliminat din {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Adăugat la {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Creează o listă nouă",
     "listNewPeopleList": "Listă nouă de persoane",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
-    "listPublicList": "Listă publică",
-    "listPublicListSubtitle": "Alții pot urmări și vedea această listă",
     "listPrivateListSubtitle": "Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.",
     "listVisibilityPublic": "Publică",
     "listVisibilityPrivate": "Privată",
@@ -1707,7 +1680,6 @@
             }
         }
     },
-    "listCancel": "Anulează",
     "listCreate": "Creează",
     "listCreateFailed": "N-am putut crea lista",
     "keyManagementTitle": "Chei Nostr",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Ai o actualizare nouă",
     "peopleListsAddToList": "Adaugă la listă",
-    "peopleListsSheetTitle": "Adaugă la listă",
     "peopleListsEmptyTitle": "Nicio listă încă",
     "peopleListsEmptySubtitle": "Creează o listă pentru a începe să grupezi persoane.",
-    "peopleListsCreateList": "Creează listă",
     "peopleListsNewListTitle": "Listă nouă",
     "peopleListsRouteTitle": "Listă de persoane",
     "peopleListsListNameLabel": "Numele listei",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Adaugă la {name}",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
-    "peopleListsAddButton": "Adaugă",
-    "peopleListsAddButtonWithCount": "Adaugă {count}",
     "peopleListsInNLists": "{count, plural, =1{Într-o listă} few{În {count} liste} other{În {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Elimini {name}?",
     "peopleListsRemoveConfirmBody": "Va fi eliminat/ă din această listă.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "N-am putut elimina acest cont de pe acest dispozitiv. Încearcă din nou.",
     "nostrSettingsDeleteAccount": "Șterge contul și datele",
     "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
-    "listPersonCount": "{count, plural, =1{1 persoană} few{{count} persoane} other{{count} de persoane}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "De ",
     "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Descoperă liste",
-    "discoverListsFailedToLoad": "N-am putut încărca listele",
-    "discoverListsLoading": "Se descoperă liste publice...",
-    "discoverListsRelayTimeout": "Releul nu a returnat liste la timp. Încearcă din nou.",
-    "discoverListsServiceUnavailable": "Serviciul nu este disponibil.",
-    "discoverListsEmptyTitle": "Nicio listă publică găsită",
-    "discoverListsEmptySubtitle": "Revino mai târziu pentru liste noi",
-    "discoverListsByAuthorPrefix": "de",
     "curatedListEmptyTitle": "Niciun videoclip în această listă",
     "curatedListEmptySubtitle": "Adaugă câteva videoclipuri ca să începi",
     "curatedListLoadingVideos": "Se încarcă videoclipurile...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Persoane",
   "peopleListsPeopleNone": "Nicio persoană adăugată",
   "peopleListsSessionChanged": "Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.",
-  "peopleListsSearchConnectionsHint": "Caută printre urmăritori și persoanele urmărite",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Fără mari explicații",
   "ideasDescriptionFive": "Am vrut doar să împărtășesc.",
   "ideasTitleSix": "Un pic din ziua de azi",
-  "ideasDescriptionSix": "Las asta aici."
+  "ideasDescriptionSix": "Las asta aici.",
+  "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
+  "listsDiscoveryLoadingLabel": "Se încarcă listele",
+  "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
+  "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum.",
+  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
+  "authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+  "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
+  "peopleListsAddPeopleSearchHint": "Caută persoane",
+  "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+  "listMakePublicLabel": "Fă lista publică",
+  "listCollaboratorsNone": "Niciunul",
+  "listAddCollaboratorTitle": "Adaugă un colaborator",
+  "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
+  "listCollaboratorSearchHint": "Caută în Divine...",
+  "listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
+  "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
+  "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
+  "listRetrySync": "Sincronizează acum",
+  "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
+  "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
+  "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
+  "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
+  "listAddToLists": "Adaugă la liste"
 }

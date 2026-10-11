@@ -14,6 +14,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
@@ -50,7 +51,10 @@ class ListsSection extends StatelessWidget {
     final hasAnyResults = videoResults.isNotEmpty || peopleResults.isNotEmpty;
 
     // In the All tab, hide entire section when results are empty and loaded.
-    if (!showAll && status == .success && !hasAnyResults) {
+    final hasSourceFailure = context.select(
+      (ListSearchBloc bloc) => bloc.state.hasSourceFailure,
+    );
+    if (!showAll && status == .success && !hasAnyResults && !hasSourceFailure) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
@@ -96,6 +100,28 @@ class _ListsContent extends StatelessWidget {
       return const _LoadingState();
     }
 
+    final state = context.watch<ListSearchBloc>().state;
+    if (state.hasSourceFailure) {
+      return SliverMainAxisGroup(
+        slivers: [
+          if (state.videoStatus == ListSearchSourceStatus.failure)
+            _SourceUnavailableNotice(
+              message: context.l10n.listSearchVideosUnavailable,
+            ),
+          if (state.peopleStatus == ListSearchSourceStatus.failure)
+            _SourceUnavailableNotice(
+              message: context.l10n.listSearchPeopleUnavailable,
+            ),
+          if (videoResults.isNotEmpty || peopleResults.isNotEmpty)
+            _ResultsGrid(
+              videoResults: videoResults,
+              peopleResults: peopleResults,
+              showAll: showAll,
+            ),
+        ],
+      );
+    }
+
     if (status == .failure) {
       return SearchSectionErrorState(
         onRetry: () =>
@@ -116,6 +142,41 @@ class _ListsContent extends StatelessWidget {
       videoResults: videoResults,
       peopleResults: peopleResults,
       showAll: showAll,
+    );
+  }
+}
+
+class _SourceUnavailableNotice extends StatelessWidget {
+  const _SourceUnavailableNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: [
+            Text(
+              message,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.secondaryText,
+              ),
+            ),
+            DivineButton(
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
+              label: context.l10n.searchTryAgain,
+              onPressed: () => context.read<ListSearchBloc>().add(
+                const ListSearchRetried(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -372,13 +433,17 @@ void _navigateToPeopleList(
 }
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {
+  final author = list.pubkey;
   runDetached(
     context.push<void>(
-      CuratedListFeedScreen.pathForId(list.id),
+      author == null
+          ? CuratedListFeedScreen.pathForId(list.id)
+          : CuratedListByAuthorScreen.pathFor(pubkey: author, listId: list.id),
       extra: CuratedListRouteExtra(
         listName: list.name,
         videoIds: list.videoEventIds,
-        authorPubkey: list.pubkey,
+        authorPubkey: author,
+        list: list,
       ),
     ),
     'open curated list search result',

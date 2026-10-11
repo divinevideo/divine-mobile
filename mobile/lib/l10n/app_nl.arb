@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Deze collectie kon niet worden geladen.",
     "featuredTabRetry": "Probeer opnieuw",
     "exploreNoVideosAvailable": "Geen video's beschikbaar",
-    "exploreDiscoverLists": "Lijsten ontdekken",
-    "exploreAboutLists": "Over lijsten",
-    "exploreAboutListsDescription": "Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:",
     "explorePeopleLists": "Personenlijsten",
-    "explorePeopleListsDescription": "Volg groepen makers en bekijk hun nieuwste video's",
     "exploreVideoLists": "Videolijsten",
-    "exploreVideoListsDescription": "Maak afspeellijsten van je favoriete video's om later te bekijken",
-    "exploreMyLists": "Mijn lijsten",
-    "exploreSubscribedLists": "Gevolgde lijsten",
     "exploreErrorLoadingLists": "Fout bij laden van lijsten. Probeer het opnieuw.",
     "exploreNewVideosCount": "{count, plural, one{1 nieuwe video} other{{count} nieuwe video''s}}",
     "@exploreNewVideosCount": {
@@ -1640,7 +1633,6 @@
     "reportReceivedReviewNotice": "We versturen die automatisch zodra je verbinding hebt. Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Sluiten",
-    "listAddToList": "Toevoegen aan lijst",
     "listVideoCount": "{count} video's",
     "@listVideoCount": {
         "placeholders": {
@@ -1649,31 +1641,12 @@
             }
         }
     },
-    "listNewList": "Nieuwe lijst",
     "listDone": "Klaar",
     "listErrorLoading": "Fout bij laden van lijsten",
-    "listRemovedFrom": "Verwijderd uit {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Toegevoegd aan {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Nieuwe lijst maken",
     "listNewPeopleList": "Nieuwe personenlijst",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
-    "listPublicList": "Openbare lijst",
-    "listPublicListSubtitle": "Anderen kunnen deze lijst volgen en zien",
     "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
     "listVisibilityPublic": "Openbaar",
     "listVisibilityPrivate": "Privé",
@@ -1707,7 +1680,6 @@
             }
         }
     },
-    "listCancel": "Annuleren",
     "listCreate": "Maken",
     "listCreateFailed": "Lijst maken mislukt",
     "keyManagementTitle": "Nostr-sleutels",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Je hebt een nieuwe update",
     "peopleListsAddToList": "Toevoegen aan lijst",
-    "peopleListsSheetTitle": "Toevoegen aan lijst",
     "peopleListsEmptyTitle": "Nog geen lijsten",
     "peopleListsEmptySubtitle": "Maak een lijst om mensen te groeperen.",
-    "peopleListsCreateList": "Lijst aanmaken",
     "peopleListsNewListTitle": "Nieuwe lijst",
     "peopleListsRouteTitle": "Personenlijst",
     "peopleListsListNameLabel": "Lijstnaam",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Toevoegen aan {name}",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
-    "peopleListsAddButton": "Toevoegen",
-    "peopleListsAddButtonWithCount": "{count} toevoegen",
     "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
     "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
     "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
     "nostrSettingsDeleteAccount": "Account en data verwijderen",
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-    "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Door ",
     "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Lijsten ontdekken",
-    "discoverListsFailedToLoad": "Lijsten laden mislukt",
-    "discoverListsLoading": "Publieke lijsten worden ontdekt...",
-    "discoverListsRelayTimeout": "De relay leverde niet op tijd lijsten. Probeer het opnieuw.",
-    "discoverListsServiceUnavailable": "Service niet beschikbaar.",
-    "discoverListsEmptyTitle": "Geen publieke lijsten gevonden",
-    "discoverListsEmptySubtitle": "Kom later terug voor nieuwe lijsten",
-    "discoverListsByAuthorPrefix": "door",
     "curatedListEmptyTitle": "Geen video's in deze lijst",
     "curatedListEmptySubtitle": "Voeg wat video's toe om te beginnen",
     "curatedListLoadingVideos": "Video's laden...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Personen",
   "peopleListsPeopleNone": "Geen personen toegevoegd",
   "peopleListsSessionChanged": "Je account of toegang tot de lijst is gewijzigd. Open deze pagina opnieuw om verder te gaan.",
-  "peopleListsSearchConnectionsHint": "Zoek in volgers en mensen die je volgt",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privé, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Geen grote uitleg",
   "ideasDescriptionFive": "Wilde het gewoon delen.",
   "ideasTitleSix": "Een beetje van vandaag",
-  "ideasDescriptionSix": "Dit laat ik hier achter."
+  "ideasDescriptionSix": "Dit laat ik hier achter.",
+  "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
+  "listsDiscoveryLoadingLabel": "Lijsten laden",
+  "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
+  "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
+  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
+  "authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+  "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
+  "peopleListsAddPeopleSearchHint": "Mensen zoeken",
+  "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+  "listMakePublicLabel": "Openbaar maken",
+  "listCollaboratorsNone": "Geen",
+  "listAddCollaboratorTitle": "Medewerker toevoegen",
+  "listMakePublicSubtitle": "Laat anderen deze lijst zien",
+  "listCollaboratorSearchHint": "Zoek in Divine...",
+  "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
+  "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
+  "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
+  "listRetrySync": "Nu synchroniseren",
+  "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
+  "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
+  "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
+  "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
+  "listAddToLists": "Toevoegen aan lijsten"
 }

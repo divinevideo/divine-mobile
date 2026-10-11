@@ -72,6 +72,12 @@ VideoFeedSource _sourceFor(VideoFeedSourceType type) => switch (type) {
     listId: 'list-id',
     listName: 'Curated List',
   ),
+  VideoFeedSourceType.peopleList => const VideoFeedSource.peopleList(
+    listId: 'people-list-id',
+    listName: 'People List',
+    listOwnerPubkey:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  ),
   VideoFeedSourceType.newVideos => const VideoFeedSource.newVideos(),
   VideoFeedSourceType.classic => const VideoFeedSource.classic(),
 };
@@ -228,6 +234,31 @@ void main() {
 
       verify(() => router.go(ExploreScreen.pathForTab('popular'))).called(1);
     });
+
+    testWidgets(
+      "says a followed people list's members have posted nothing, rather "
+      'than blaming who the viewer follows',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          _buildEmptyFeedSubject(
+            const VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: VideoFeedSource.peopleList(
+                listId: 'crew',
+                listName: 'Crew',
+                listOwnerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text(l10n.peopleListsNoVideosSubtitle), findsOneWidget);
+        expect(find.text(l10n.feedFollowingEmpty), findsNothing);
+        expect(find.text(l10n.feedExploreVideos), findsOneWidget);
+      },
+    );
 
     testWidgets('uses the design-system arrow on the Following empty CTA', (
       tester,
@@ -1189,6 +1220,51 @@ void main() {
         container.read(lastTabPositionProvider)[RouteType.home],
         equals(12),
       );
+    });
+
+    testWidgets('a failed restored people feed still allows choosing For You', (
+      tester,
+    ) async {
+      const state = VideoFeedBlocState(
+        status: VideoFeedStatus.failure,
+        error: VideoFeedError.loadFailed,
+        source: VideoFeedSource.peopleList(
+          listId: 'crew',
+          listName: 'Unavailable Crew',
+          listOwnerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+      );
+      when(() => videoFeedBloc.state).thenReturn(state);
+      whenListen(
+        videoFeedBloc,
+        const Stream<VideoFeedBlocState>.empty(),
+        initialState: state,
+      );
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+              BlocProvider<VideoPlaybackStatusCubit>(
+                create: (_) => VideoPlaybackStatusCubit(),
+              ),
+              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+            ],
+            child: const VideoFeedView(),
+          ),
+        ),
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.text('Unavailable Crew'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('For You'));
+      await tester.pumpAndSettle();
+      verify(
+        () => videoFeedBloc.add(
+          const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+        ),
+      ).called(1);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('retry resets home index before refreshing failed feed', (

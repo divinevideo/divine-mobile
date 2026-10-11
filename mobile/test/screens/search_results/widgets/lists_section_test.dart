@@ -8,6 +8,8 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/lists_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
@@ -65,6 +67,58 @@ void main() {
             ),
           ),
         ),
+      );
+    }
+
+    for (final showAll in [false, true]) {
+      testWidgets(
+        'partial people failure keeps video cards (showAll: $showAll)',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            ListSearchState(
+              status: ListSearchStatus.success,
+              query: 'test',
+              videoResults: [testList],
+              videoStatus: ListSearchSourceStatus.success,
+              peopleStatus: ListSearchSourceStatus.failure,
+            ),
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: getStandardTestOverrides(),
+              child: buildSubject(showAll: showAll),
+            ),
+          );
+          expect(
+            find.text('People lists are unavailable right now.'),
+            findsOneWidget,
+          );
+          expect(find.text('Top Videos'), findsOneWidget);
+          expect(find.byType(SearchSectionEmptyState), findsNothing);
+          await tester.tap(find.text('Try again'));
+          verify(() => mockBloc.add(const ListSearchRetried())).called(1);
+        },
+      );
+
+      testWidgets(
+        'unavailable people and empty video never claim no matches (showAll: $showAll)',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            const ListSearchState(
+              status: ListSearchStatus.failure,
+              query: 'test',
+              videoStatus: ListSearchSourceStatus.success,
+              peopleStatus: ListSearchSourceStatus.failure,
+            ),
+          );
+          await tester.pumpWidget(buildSubject(showAll: showAll));
+          expect(
+            find.text('People lists are unavailable right now.'),
+            findsOneWidget,
+          );
+          expect(find.byType(SearchSectionEmptyState), findsNothing);
+          expect(find.text('Try again'), findsOneWidget);
+        },
       );
     }
 
@@ -150,6 +204,62 @@ void main() {
           expect(find.byType(SearchSectionErrorState), findsOneWidget);
         },
       );
+    });
+
+    testWidgets('a video result navigates with its record riding along', (
+      tester,
+    ) async {
+      // The record lets the list screen share and describe a list the
+      // local store has never seen, before a Follow caches it.
+      final goRouter = MockGoRouter();
+      when(
+        () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
+      when(() => mockBloc.state).thenReturn(
+        ListSearchState(
+          status: ListSearchStatus.success,
+          query: 'test',
+          videoResults: [testList],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [...getStandardTestOverrides()],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 800,
+                height: 1000,
+                child: BlocProvider<ListSearchBloc>.value(
+                  value: mockBloc,
+                  child: MockGoRouterProvider(
+                    goRouter: goRouter,
+                    child: const CustomScrollView(
+                      slivers: [ListsSection()],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text(testList.name));
+
+      final extra =
+          verify(
+                () => goRouter.push<void>(
+                  '/list/$_authorOne/${Uri.encodeComponent(testList.id)}',
+                  extra: captureAny(named: 'extra'),
+                ),
+              ).captured.single
+              as CuratedListRouteExtra;
+      expect(extra.list, same(testList));
     });
 
     for (final showAll in [false, true]) {
@@ -303,6 +413,116 @@ void main() {
         },
       );
     }
+
+    group('video list result navigation', () {
+      late MockGoRouter goRouter;
+
+      setUp(() {
+        goRouter = MockGoRouter();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+      });
+
+      Widget buildRoutedSubject({required bool showAll}) {
+        return ProviderScope(
+          overrides: getStandardTestOverrides(),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 800,
+                height: 1000,
+                child: BlocProvider<ListSearchBloc>.value(
+                  value: mockBloc,
+                  child: MockGoRouterProvider(
+                    goRouter: goRouter,
+                    child: CustomScrollView(
+                      slivers: [ListsSection(showAll: showAll)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      for (final showAll in [false, true]) {
+        testWidgets(
+          'opens the author-qualified route so a lost route extra cannot '
+          'change which list opens (showAll: $showAll)',
+          (tester) async {
+            when(() => mockBloc.state).thenReturn(
+              ListSearchState(
+                status: ListSearchStatus.success,
+                query: 'test',
+                videoResults: [testList],
+              ),
+            );
+            await tester.pumpWidget(buildRoutedSubject(showAll: showAll));
+            await tester.pump();
+
+            await tester.tap(find.text('Top Videos'));
+
+            final captured = verify(
+              () => goRouter.push<void>(
+                captureAny(),
+                extra: captureAny(named: 'extra'),
+              ),
+            ).captured;
+            expect(captured.first, equals('/list/$_authorOne/cl1'));
+            expect(
+              captured.last,
+              isA<CuratedListRouteExtra>()
+                  .having((extra) => extra.list, 'list', testList)
+                  .having(
+                    (extra) => extra.authorPubkey,
+                    'authorPubkey',
+                    _authorOne,
+                  ),
+            );
+          },
+        );
+
+        testWidgets(
+          'falls back to the list id route when the author is unknown '
+          '(showAll: $showAll)',
+          (tester) async {
+            final unattributed = CuratedList(
+              id: 'legacy',
+              name: 'Legacy List',
+              videoEventIds: const ['vid1'],
+              createdAt: now,
+              updatedAt: now,
+            );
+            when(() => mockBloc.state).thenReturn(
+              ListSearchState(
+                status: ListSearchStatus.success,
+                query: 'test',
+                videoResults: [unattributed],
+              ),
+            );
+            await tester.pumpWidget(buildRoutedSubject(showAll: showAll));
+            await tester.pump();
+
+            await tester.tap(find.text('Legacy List'));
+
+            final captured = verify(
+              () => goRouter.push<void>(
+                captureAny(),
+                extra: captureAny(named: 'extra'),
+              ),
+            ).captured;
+            expect(
+              captured.first,
+              equals(CuratedListFeedScreen.pathForId('legacy')),
+            );
+          },
+        );
+      }
+    });
 
     testWidgets('retry dispatches $ListSearchQueryChanged with current query', (
       tester,

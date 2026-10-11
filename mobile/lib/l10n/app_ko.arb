@@ -342,15 +342,8 @@
     "featuredTabLoadFailed": "이 컬렉션을 불러오지 못했어요.",
     "featuredTabRetry": "다시 시도",
     "exploreNoVideosAvailable": "이용 가능한 영상이 없어요",
-    "exploreDiscoverLists": "리스트 둘러보기",
-    "exploreAboutLists": "리스트란?",
-    "exploreAboutListsDescription": "리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:",
     "explorePeopleLists": "사람 리스트",
-    "explorePeopleListsDescription": "크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요",
     "exploreVideoLists": "영상 리스트",
-    "exploreVideoListsDescription": "좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요",
-    "exploreMyLists": "내 리스트",
-    "exploreSubscribedLists": "구독 리스트",
     "exploreErrorLoadingLists": "리스트를 불러오지 못했어요. 다시 시도해보세요.",
     "exploreNewVideosCount": "{count, plural, other{새 영상 {count}개}}",
     "exploreLoadNewVideosLabel": "{count, plural, other{새 영상 {count}개 불러오기}}",
@@ -1176,7 +1169,6 @@
     "reportReceivedReviewNotice": "인터넷에 연결되면 자동으로 보낼게요. 저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "닫기",
-    "listAddToList": "목록에 추가",
     "listVideoCount": "영상 {count}개",
     "@listVideoCount": {
         "placeholders": {
@@ -1185,31 +1177,12 @@
             }
         }
     },
-    "listNewList": "새 목록",
     "listDone": "완료",
     "listErrorLoading": "목록을 불러오는 중 오류 발생",
-    "listRemovedFrom": "{name}에서 삭제했어요",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name}에 추가했어요",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "새 목록 만들기",
     "listNewPeopleList": "새 사람 목록",
     "listNameLabel": "목록 이름",
     "listDescriptionLabel": "설명 (선택)",
-    "listPublicList": "공개 목록",
-    "listPublicListSubtitle": "다른 사람들이 이 목록을 팔로우하고 볼 수 있어요",
     "listPrivateListSubtitle": "동영상은 비공개로 유지돼요. 이름, 설명, 태그, 커버는 계속 보여요.",
     "listVisibilityPublic": "공개",
     "listVisibilityPrivate": "비공개",
@@ -1243,7 +1216,6 @@
             }
         }
     },
-    "listCancel": "취소",
     "listCreate": "만들기",
     "listCreateFailed": "목록 만들기에 실패했어요",
     "keyManagementTitle": "Nostr 키",
@@ -2579,10 +2551,8 @@
     },
     "notificationSystemUpdate": "새로운 업데이트가 있어요",
     "peopleListsAddToList": "목록에 추가",
-    "peopleListsSheetTitle": "목록에 추가",
     "peopleListsEmptyTitle": "목록이 없습니다",
     "peopleListsEmptySubtitle": "목록을 만들어 사람들을 그룹화하세요.",
-    "peopleListsCreateList": "목록 만들기",
     "peopleListsNewListTitle": "새 목록",
     "peopleListsRouteTitle": "사람 목록",
     "peopleListsListNameLabel": "목록 이름",
@@ -2605,8 +2575,6 @@
     "peopleListsAddToListName": "{name}에 추가",
     "peopleListsAddPeopleError": "사람을 불러올 수 없습니다. 다시 시도해 주세요.",
     "peopleListsAddPeopleRetry": "다시 시도",
-    "peopleListsAddButton": "추가",
-    "peopleListsAddButtonWithCount": "{count}명 추가",
     "peopleListsInNLists": "{count, plural, other{{count}개 목록에 포함}}",
     "peopleListsRemoveConfirmTitle": "{name}을(를) 삭제하시겠습니까?",
     "peopleListsRemoveConfirmBody": "이 목록에서 삭제됩니다.",
@@ -2846,14 +2814,6 @@
     "authConfirmPasswordRequired": "비밀번호를 다시 입력해주세요",
     "authPasswordsDoNotMatch": "비밀번호가 일치하지 않아요",
     "authConfirmNewPasswordLabel": "새 비밀번호 확인",
-    "listPersonCount": "{count, plural, =1{1명} other{{count}명}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "작성자: ",
     "keyManagementYourPublicKeyLabel": "공개 키 (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -2900,14 +2860,6 @@
             }
         }
     },
-    "discoverListsTitle": "리스트 둘러보기",
-    "discoverListsFailedToLoad": "리스트를 불러오지 못했어요",
-    "discoverListsLoading": "공개 리스트를 찾는 중...",
-    "discoverListsRelayTimeout": "릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.",
-    "discoverListsServiceUnavailable": "서비스를 사용할 수 없어요.",
-    "discoverListsEmptyTitle": "공개 리스트를 찾지 못했어요",
-    "discoverListsEmptySubtitle": "새 리스트가 올라오면 다시 와봐요",
-    "discoverListsByAuthorPrefix": "작성자",
     "curatedListEmptyTitle": "이 리스트에 영상이 없어요",
     "curatedListEmptySubtitle": "영상을 추가해서 시작해보세요",
     "curatedListLoadingVideos": "영상 불러오는 중...",
@@ -4519,7 +4471,6 @@
   "peopleListsPeopleLabel": "사람",
   "peopleListsPeopleNone": "추가된 사람이 없어요",
   "peopleListsSessionChanged": "계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.",
-  "peopleListsSearchConnectionsHint": "팔로워 및 팔로우 중인 사람 검색",
   "listCardSemanticLabel": "{visibility, select, private{{name}, 비공개, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -4565,5 +4516,43 @@
   "ideasTitleFive": "긴 설명 없이",
   "ideasDescriptionFive": "그냥 나누고 싶었어요.",
   "ideasTitleSix": "오늘의 한 조각",
-  "ideasDescriptionSix": "여기에 남겨 둘게요."
+  "ideasDescriptionSix": "여기에 남겨 둘게요.",
+  "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
+  "listsDiscoveryLoadingLabel": "목록 불러오는 중",
+  "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
+  "listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요.",
+  "listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.",
+  "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "목록에 {name} 추가",
+  "peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
+  "peopleListsAddPeopleSearchHint": "사람 검색",
+  "peopleListsRemovePersonSemanticLabel": "목록에서 {name} 삭제",
+  "listMakePublicLabel": "공개로 설정",
+  "listCollaboratorsNone": "없음",
+  "listAddCollaboratorTitle": "협업자 추가",
+  "listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
+  "listCollaboratorSearchHint": "Divine 검색...",
+  "listVideoNotAdded": "목록은 만들어졌지만 이 동영상은 추가되지 않았어요.",
+  "listPrivateCollaboratorsWarning": "이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.",
+  "listVideoPendingSync": "목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.",
+  "listRetrySync": "지금 동기화",
+  "listPermissionsUnconfirmed": "이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.",
+  "listRecoveryPending": "이 목록에 동기화를 기다리는 변경 사항이 있어요.",
+  "listPermissionsRecoveryPending": "변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.",
+  "listRecoveryReadOnly": "동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.",
+  "listAddToLists": "목록에 추가"
 }

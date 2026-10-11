@@ -247,6 +247,41 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 
 ---
 
+### 9. People List Links
+
+Opens someone else's people list, read-only. The Share action on the
+people-list screen sends the first shape, which is also the address
+`divine.video` routes beside `/list/{pubkey}/{listId}`; the second is the
+in-app route's own shape and is accepted as well.
+
+**Patterns**:
+- `https://divine.video/people-lists/{pubkey}/{listId}`
+- `https://divine.video/people-lists/{listId}?owner={pubkey}`
+
+**Parameters**:
+- `pubkey` / `owner` (required): List author public key (hex, npub, or
+  nprofile; the web page accepts hex only, which is what Share sends). External
+  people-list links without an author are ignored. The internal
+  `/people-lists/:listId` route still opens the current viewer's own list.
+- `listId` (required): People list d-tag
+
+**Examples**:
+```
+https://divine.video/people-lists/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/crew
+https://divine.video/people-lists/crew?owner=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+```
+
+**Mobile Behavior**:
+- Both shapes navigate to `/people-lists/{listId}?owner={pubkey}`, resolved
+  from relays by author + d-tag
+
+---
+
+**Release coordination:** iOS opening additionally requires the deployed web
+AASA association to claim `/people-lists/*`. Coordinate the app release with
+[divine-web #730](https://github.com/divinevideo/divine-web/pull/730); mobile
+parsing alone does not install that server association.
+
 ## URL Patterns Summary
 
 | URL Pattern | View | Mobile Route | Purpose |
@@ -260,6 +295,8 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 | `/search/{term}/{i}` | Feed | `/search/{term}/{i}` | Search results (feed) |
 | `/list/{listId}` | Grid | `/list/{listId}` | Curated video list |
 | `/list/{pubkey}/{listId}` | Grid | `/list/{pubkey}/{listId}` | Authored curated video list |
+| `/people-lists/{pubkey}/{listId}` | Grid | `/people-lists/{listId}?owner={pubkey}` | Shared people list (web address) |
+| `/people-lists/{listId}?owner={pubkey}` | Grid | `/people-lists/{listId}?owner={pubkey}` | Shared people list (in-app shape) |
 
 ## Special Characters in URLs
 
@@ -341,7 +378,8 @@ first frame.
 | `/apps/:slug` | `NostrAppDirectoryEntry` | Resolved by slug |
 | `/inbox/conversation/:id` | counterparty pubkeys | Read from the conversation row. A DM-restricted account (#176) is bounced to the inbox instead, by design |
 | `/inbox/message-requests/:id` | counterparty pubkeys | Same, via `RequestPreviewCubit` |
-| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads. `/list/:pubkey/:listId` resolves from relays by author + d-tag |
+| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads |
+| `/list/:pubkey/:listId` | the discovered `CuratedList`, used only when its author and d-tag match the path | Resolved from relays by author + d-tag |
 | `/categories/:categoryName` | `VideoCategory` | Rebuilt from the path segment with a zero video count |
 | `/video/:id` | prefetched video, comment autoscroll | Loaded by id |
 | `/sound/:id` | `AudioEvent` (+ source video) | `SoundDetailLoader` fetches by id |

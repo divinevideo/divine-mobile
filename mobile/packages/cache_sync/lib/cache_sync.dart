@@ -23,3 +23,4 @@ export 'src/cache_dao.dart';
 export 'src/cache_fetch_policy.dart';
 export 'src/cache_result.dart';
 export 'src/cache_sync.dart';
+export 'src/sqlite_cache_store.dart';

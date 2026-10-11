@@ -911,15 +911,8 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "exploreDiscoverLists": "Discover Lists",
-  "exploreAboutLists": "About Lists",
-  "exploreAboutListsDescription": "Lists help you organize and curate Divine content in two ways:",
   "explorePeopleLists": "People Lists",
-  "explorePeopleListsDescription": "Follow groups of creators and see their latest videos",
   "exploreVideoLists": "Video Lists",
-  "exploreVideoListsDescription": "Create playlists of your favorite videos to watch later",
-  "exploreMyLists": "My Lists",
-  "exploreSubscribedLists": "Subscribed Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -2511,10 +2504,8 @@
     }
   },
   "peopleListsAddToList": "Add to list",
-  "peopleListsSheetTitle": "Add to list",
   "peopleListsEmptyTitle": "No lists yet",
   "peopleListsEmptySubtitle": "Create a list to start grouping people.",
-  "peopleListsCreateList": "Create list",
   "peopleListsNewListTitle": "New list",
   "peopleListsRouteTitle": "People list",
   "@peopleListsRouteTitle": {
@@ -2555,15 +2546,6 @@
   },
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3176,7 +3158,6 @@
   "reportLearnMoreAt": "Learn more at",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Close",
-  "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
     "placeholders": {
@@ -3185,40 +3166,13 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 person} other{{count} people}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "By ",
-  "listNewList": "New List",
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
-  "listRemovedFrom": "Removed from {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Added to {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
-  "listPublicList": "Public List",
-  "listPublicListSubtitle": "Others can follow and see this list",
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
   "listVisibilityPrivate": "Private",
@@ -3281,7 +3235,6 @@
       }
     }
   },
-  "listCancel": "Cancel",
   "listCreate": "Create",
   "listCreateFailed": "Failed to create list",
   "keyManagementTitle": "Nostr Keys",
@@ -4137,14 +4090,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Failed to update subscription. Please try again.",
-  "discoverListsTitle": "Discover Lists",
-  "discoverListsFailedToLoad": "Failed to load lists",
-  "discoverListsLoading": "Discovering public lists...",
-  "discoverListsRelayTimeout": "The relay did not return lists in time. Try again.",
-  "discoverListsServiceUnavailable": "Service not available.",
-  "discoverListsEmptyTitle": "No public lists found",
-  "discoverListsEmptySubtitle": "Check back later for new lists",
-  "discoverListsByAuthorPrefix": "by",
   "curatedListEmptyTitle": "No videos in this list",
   "curatedListEmptySubtitle": "Add some videos to get started",
   "curatedListLoadingVideos": "Loading videos...",
@@ -9531,7 +9476,6 @@
   "peopleListsPeopleLabel": "People",
   "peopleListsPeopleNone": "No people added",
   "peopleListsSessionChanged": "Your account or list access changed. Reopen this page to continue.",
-  "peopleListsSearchConnectionsHint": "Search followers and following",
   "@listMemberNamesSeparator": {
     "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
   },
@@ -9685,5 +9629,96 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
-  }
+  },
+  "listPrivateConversionTooLarge": "This list is too large to make private. Remove some videos first. Your edits are kept here and haven't been saved.",
+  "@listPrivateConversionTooLarge": {
+    "description": "An oversized public list cannot become private; the open editor retains unsaved drafts."
+  },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "@listsDiscoveryEmpty": {
+    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
+  },
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
+  "listSearchPeopleUnavailable": "People lists are unavailable right now.",
+  "@listSearchVideosUnavailable": {
+    "description": "Video-list search source could not answer; shown beside healthy people results with retry."
+  },
+  "@listSearchPeopleUnavailable": {
+    "description": "People-list search source could not answer; shown beside healthy video results with retry."
+  },
+  "listSearchVideosUnavailable": "Video lists are unavailable right now.",
+  "@authAccountCleanupFailed": {
+    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
+  },
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPeopleSearchHint": "Search people",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "listAddCollaboratorTitle": "Add a collaborator",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listMakePublicLabel": "Make public",
+  "listCollaboratorSearchHint": "Search Divine...",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
+  "listCollaboratorsNone": "None",
+  "listMakePublicSubtitle": "Let others see this list",
+  "@listVideoPendingSync": {
+    "description": "Video added locally to a newly created list but publication has not succeeded."
+  },
+  "@listPrivateCollaboratorsWarning": {
+    "description": "Confirmation explains that making a list private revokes its collaborators."
+  },
+  "@listVideoNotAdded": {
+    "description": "A newly created list exists but could not accept the requested video."
+  },
+  "listVideoNotAdded": "Your list was created, but this video wasn't added.",
+  "listPrivateCollaboratorsWarning": "Making this list private also removes its collaborators. Only you will be able to add videos.",
+  "@listRetrySync": {
+    "description": "Retry publishing the saved list without adding or removing videos."
+  },
+  "listVideoPendingSync": "Your list and video are saved here. The video is waiting to sync.",
+  "listRetrySync": "Sync now",
+  "@listPermissionsUnconfirmed": {
+    "description": "Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed."
+  },
+  "listPermissionsUnconfirmed": "Couldn't confirm this change. Try again.",
+  "@listRecoveryPending": {
+    "description": "Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure."
+  },
+  "listRecoveryPending": "This list has changes waiting to sync.",
+  "@listPermissionsRecoveryPending": {
+    "description": "A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission."
+  },
+  "listPermissionsRecoveryPending": "Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.",
+  "listRecoveryReadOnly": "Some saved changes to video lists need recovery. You can view video lists, but editing is paused.",
+  "@listAddToLists": {
+    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
+  },
+  "listAddToLists": "Add to lists"
 }

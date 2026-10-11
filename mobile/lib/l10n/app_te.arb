@@ -822,15 +822,8 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
-  "exploreDiscoverLists": "జాబితాలను కనుగొనండి",
-  "exploreAboutLists": "జాబితాల గురించి",
-  "exploreAboutListsDescription": "జాబితాలు Divine కంటెంట్‌ని రెండు విధాలుగా నిర్వహించడానికి మరియు నిర్వహించడంలో మీకు సహాయపడతాయి:",
   "explorePeopleLists": "వ్యక్తుల జాబితాలు",
-  "explorePeopleListsDescription": "సృష్టికర్తల సమూహాలను అనుసరించండి మరియు వారి తాజా వీడియోలను చూడండి",
   "exploreVideoLists": "వీడియో జాబితాలు",
-  "exploreVideoListsDescription": "తర్వాత చూడటానికి మీకు ఇష్టమైన వీడియోల ప్లేజాబితాలను సృష్టించండి",
-  "exploreMyLists": "నా జాబితాలు",
-  "exploreSubscribedLists": "సభ్యత్వం పొందిన జాబితాలు",
   "exploreErrorLoadingLists": "జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "exploreNewVideosCount": "{count, plural, =1{1 కొత్త వీడియో} other{{count}కొత్త వీడియోలు}}",
   "@exploreNewVideosCount": {
@@ -2290,10 +2283,8 @@
     }
   },
   "peopleListsAddToList": "జాబితాకు జోడించండి",
-  "peopleListsSheetTitle": "జాబితాకు జోడించండి",
   "peopleListsEmptyTitle": "ఇంకా జాబితాలు లేవు",
   "peopleListsEmptySubtitle": "వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.",
-  "peopleListsCreateList": "జాబితాను సృష్టించండి",
   "peopleListsNewListTitle": "కొత్త జాబితా",
   "peopleListsRouteTitle": "వ్యక్తుల జాబితా",
   "@peopleListsRouteTitle": {
@@ -2326,15 +2317,6 @@
   },
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2869,7 +2851,6 @@
   "reportLearnMoreAt": "ఇక్కడ మరింత తెలుసుకోండి",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "మూసివేయండి",
-  "listAddToList": "జాబితాకు జోడించండి",
   "listVideoCount": "{count, plural, =1{{count}వీడియో} other{{count}వీడియోలు}}",
   "@listVideoCount": {
     "placeholders": {
@@ -2878,40 +2859,13 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 వ్యక్తి} other{{count}వ్యక్తులు}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "ద్వారా ",
-  "listNewList": "కొత్త జాబితా",
   "listDone": "పూర్తయింది",
   "listErrorLoading": "జాబితాలను లోడ్ చేయడంలో లోపం",
-  "listRemovedFrom": "నుండి తీసివేయబడింది {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "దీనికి జోడించబడింది {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
-  "listPublicList": "పబ్లిక్ జాబితా",
-  "listPublicListSubtitle": "ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు",
   "listPrivateListSubtitle": "వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.",
   "listVisibilityPublic": "పబ్లిక్",
   "listVisibilityPrivate": "ప్రైవేట్",
@@ -2945,7 +2899,6 @@
       }
     }
   },
-  "listCancel": "రద్దు",
   "listCreate": "సృష్టించు",
   "listCreateFailed": "జాబితాను రూపొందించడంలో విఫలమైంది",
   "keyManagementTitle": "Nostr కీలు",
@@ -3745,14 +3698,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "సభ్యత్వాన్ని నవీకరించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "discoverListsTitle": "జాబితాలను కనుగొనండి",
-  "discoverListsFailedToLoad": "జాబితాలను లోడ్ చేయడంలో విఫలమైంది",
-  "discoverListsLoading": "పబ్లిక్ జాబితాలను కనుగొంటోంది...",
-  "discoverListsRelayTimeout": "రిలే సమయానికి జాబితాలను అందించలేదు. మళ్లీ ప్రయత్నించండి.",
-  "discoverListsServiceUnavailable": "సేవ అందుబాటులో లేదు.",
-  "discoverListsEmptyTitle": "పబ్లిక్ జాబితాలు ఏవీ కనుగొనబడలేదు",
-  "discoverListsEmptySubtitle": "కొత్త జాబితాల కోసం తర్వాత మళ్లీ తనిఖీ చేయండి",
-  "discoverListsByAuthorPrefix": "ద్వారా",
   "curatedListEmptyTitle": "ఈ జాబితాలో వీడియోలు లేవు",
   "curatedListEmptySubtitle": "ప్రారంభించడానికి కొన్ని వీడియోలను జోడించండి",
   "curatedListLoadingVideos": "వీడియోలు లోడ్ అవుతోంది...",
@@ -8478,7 +8423,6 @@
   "peopleListsPeopleLabel": "వ్యక్తులు",
   "peopleListsPeopleNone": "ఇంకా ఎవరినీ జోడించలేదు",
   "peopleListsSessionChanged": "మీ ఖాతా లేదా జాబితా యాక్సెస్ మారింది. కొనసాగించడానికి ఈ పేజీని మళ్లీ తెరవండి.",
-  "peopleListsSearchConnectionsHint": "అనుచరులు మరియు మీరు అనుసరిస్తున్నవారిలో వెతకండి",
   "listMemberNamesSeparator": ", ",
   "listCardSemanticLabel": "{visibility, select, private{{name}, ప్రైవేట్, {count}} other{{name}, {count}}}",
   "@listCardSemanticLabel": {
@@ -8524,5 +8468,43 @@
   "ideasTitleFive": "పెద్ద వివరణ లేకుండా",
   "ideasDescriptionFive": "ఊరికే పంచుకోవాలనుకున్నాను.",
   "ideasTitleSix": "ఈ రోజులో కొంత",
-  "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను."
+  "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను.",
+  "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
+  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
+  "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
+  "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
+  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
+  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
+  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
+  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
+  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
+  "listCollaboratorSearchHint": "శోధన Divine...",
+  "listCollaboratorsNone": "ఏదీ లేదు",
+  "listPrivateCollaboratorsWarning": "ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.",
+  "listVideoNotAdded": "మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.",
+  "listVideoPendingSync": "మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.",
+  "listRetrySync": "ఇప్పుడే సింక్ చేయండి",
+  "listPermissionsUnconfirmed": "ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "listRecoveryPending": "ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.",
+  "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
+  "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
+  "listAddToLists": "జాబితాలకు జోడించండి"
 }

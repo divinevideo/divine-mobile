@@ -7,12 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 void main() {
@@ -149,6 +152,79 @@ void main() {
         );
 
         expect(find.text('@aeontropy'), findsOneWidget);
+      });
+    });
+
+    group('row actions', () {
+      /// Leaves [showAddToListButton] to the tile's own default when omitted,
+      /// so the default itself is what the first test pins.
+      Future<void> pumpActions(
+        WidgetTester tester, {
+        bool? showAddToListButton,
+        Widget? trailing,
+      }) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              profileVanishedProvider(pubkey).overrideWith((ref) => false),
+              followRelationshipProvider(
+                pubkey,
+              ).overrideWith((ref) => Stream.value(FollowRelationship.none)),
+              userProfileReactiveProvider(
+                pubkey,
+              ).overrideWith((ref) => Stream.value(profileWith())),
+              isFeatureEnabledProvider(
+                FeatureFlag.profileListFeatures,
+              ).overrideWithValue(true),
+              isFeatureEnabledProvider(
+                FeatureFlag.curatedLists,
+              ).overrideWithValue(true),
+            ],
+            home: Scaffold(
+              body: showAddToListButton == null
+                  ? UserProfileTile(
+                      pubkey: pubkey,
+                      showFollowButton: false,
+                      trailing: trailing,
+                    )
+                  : UserProfileTile(
+                      pubkey: pubkey,
+                      showFollowButton: false,
+                      showAddToListButton: showAddToListButton,
+                      trailing: trailing,
+                    ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('shows the add-to-list action by default', (tester) async {
+        // Nothing passed: this is the constructor default every Following
+        // screen rides, and the control for the case below.
+        await pumpActions(tester);
+
+        expect(findByTooltip(l10n.peopleListsAddToList), findsOneWidget);
+      });
+
+      testWidgets('hides the add-to-list action when told to', (tester) async {
+        await pumpActions(tester, showAddToListButton: false);
+
+        expect(findByTooltip(l10n.peopleListsAddToList), findsNothing);
+      });
+
+      testWidgets('renders a trailing action at the end of the row', (
+        tester,
+      ) async {
+        await pumpActions(
+          tester,
+          showAddToListButton: false,
+          trailing: const Text('row action'),
+        );
+
+        final name = tester.getTopRight(find.text('Aeontropy')).dx;
+        final action = tester.getTopLeft(find.text('row action')).dx;
+        expect(action, greaterThan(name));
       });
     });
   });

@@ -594,6 +594,30 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('git checkout --detach "refs/remotes/origin/${{ inputs.PATCH_BRANCH }}"', self.contents)
         self.assertIn("*prepare_patch_source", self.contents)
 
+    def test_shorebird_policy_defines_follow_authenticated_release_shape(self) -> None:
+        baseline = self._definition_block("write_shorebird_dart_defines")
+        policy = self._definition_block("write_shorebird_people_list_defines")
+        self.assertNotIn("write_public_people_list_defines.py", baseline)
+        self.assertIn("write_public_people_list_defines.py", policy)
+        patch = self._definition_block("fetch_and_verify_shorebird_provenance")
+        self.assertIn("set -euo pipefail", patch)
+        self.assertLess(patch.index("shorebird_provenance_store.sh fetch"), patch.index("policy-required"))
+        self.assertLess(patch.index("policy-required"), patch.index("write_public_people_list_defines.py"))
+        self.assertLess(patch.index("write_public_people_list_defines.py"), patch.index("shorebird_provenance.rb verify"))
+        self.assertIn('if [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" = "true" ]; then', patch)
+        self.assertIn('elif [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" != "false" ]; then', patch)
+
+        for workflow_name in ("ios-build", "android-build"):
+            workflow = self._workflow_block(workflow_name)
+            self.assertLess(workflow.index("- *write_shorebird_dart_defines"), workflow.index("- *write_shorebird_people_list_defines"))
+            build_step = "- *build_ios" if workflow_name == "ios-build" else "- *build_aab"
+            self.assertLess(workflow.index("- *write_shorebird_people_list_defines"), workflow.index(build_step))
+        for workflow_name in ("ios-patch", "android-patch"):
+            workflow = self._workflow_block(workflow_name)
+            self.assertNotIn("- *write_shorebird_people_list_defines", workflow)
+            self.assertLess(workflow.index("- *write_shorebird_dart_defines"), workflow.index("- *fetch_and_verify_shorebird_provenance"))
+            self.assertLess(workflow.index("- *fetch_and_verify_shorebird_provenance"), workflow.index("- *prepare_patch_source"))
+
     def test_prepare_patch_source_fails_closed(self) -> None:
         # Codemagic does not abort a multi-line script when a command fails, so
         # the step must set -e: a rejected identity check or a failed

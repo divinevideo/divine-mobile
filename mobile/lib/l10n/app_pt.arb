@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Não foi possível carregar esta coleção.",
     "featuredTabRetry": "Tentar de novo",
     "exploreNoVideosAvailable": "Nenhum vídeo disponível",
-    "exploreDiscoverLists": "Descobrir listas",
-    "exploreAboutLists": "Sobre listas",
-    "exploreAboutListsDescription": "Listas te ajudam a organizar e curar conteúdo do Divine de duas formas:",
     "explorePeopleLists": "Listas de pessoas",
-    "explorePeopleListsDescription": "Siga grupos de criadores e veja os últimos vídeos deles",
     "exploreVideoLists": "Listas de vídeos",
-    "exploreVideoListsDescription": "Crie playlists dos seus vídeos favoritos para assistir depois",
-    "exploreMyLists": "Minhas listas",
-    "exploreSubscribedLists": "Listas inscritas",
     "exploreErrorLoadingLists": "Erro ao carregar listas. Por favor, tente novamente.",
     "exploreNewVideosCount": "{count, plural, one{{count} vídeo novo} other{{count} vídeos novos}}",
     "@exploreNewVideosCount": {
@@ -1640,7 +1633,6 @@
     "reportReceivedReviewNotice": "Vamos enviar automaticamente quando você tiver conexão. Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Fechar",
-    "listAddToList": "Adicionar à lista",
     "listVideoCount": "{count} vídeos",
     "@listVideoCount": {
         "placeholders": {
@@ -1649,31 +1641,12 @@
             }
         }
     },
-    "listNewList": "Nova lista",
     "listDone": "Concluído",
     "listErrorLoading": "Erro ao carregar listas",
-    "listRemovedFrom": "Removido de {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Adicionado a {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Criar nova lista",
     "listNewPeopleList": "Nova lista de pessoas",
     "listNameLabel": "Nome da lista",
     "listDescriptionLabel": "Descrição (opcional)",
-    "listPublicList": "Lista pública",
-    "listPublicListSubtitle": "Outras pessoas podem seguir e ver esta lista",
     "listPrivateListSubtitle": "Os vídeos ficam privados. Nome, descrição, tags e capa continuam visíveis.",
     "listVisibilityPublic": "Pública",
     "listVisibilityPrivate": "Privada",
@@ -1707,7 +1680,6 @@
             }
         }
     },
-    "listCancel": "Cancelar",
     "listCreate": "Criar",
     "listCreateFailed": "Falha ao criar a lista",
     "keyManagementTitle": "Chaves Nostr",
@@ -3040,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Você tem uma nova atualização",
     "peopleListsAddToList": "Adicionar à lista",
-    "peopleListsSheetTitle": "Adicionar à lista",
     "peopleListsEmptyTitle": "Ainda sem listas",
     "peopleListsEmptySubtitle": "Cria uma lista para começar a agrupar pessoas.",
-    "peopleListsCreateList": "Criar lista",
     "peopleListsNewListTitle": "Nova lista",
     "peopleListsRouteTitle": "Lista de pessoas",
     "peopleListsListNameLabel": "Nome da lista",
@@ -3066,8 +3036,6 @@
     "peopleListsAddToListName": "Adicionar a {name}",
     "peopleListsAddPeopleError": "Não foi possível carregar as pessoas. Tente novamente.",
     "peopleListsAddPeopleRetry": "Tentar novamente",
-    "peopleListsAddButton": "Adicionar",
-    "peopleListsAddButtonWithCount": "Adicionar {count}",
     "peopleListsInNLists": "{count, plural, =1{Em {count} lista} other{Em {count} listas}}",
     "peopleListsRemoveConfirmTitle": "Remover {name}?",
     "peopleListsRemoveConfirmBody": "Será removido/a desta lista.",
@@ -3300,14 +3268,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Não foi possível remover esta conta deste dispositivo. Tente novamente.",
     "nostrSettingsDeleteAccount": "Excluir conta e dados",
     "nostrSettingsDeleteAccountSubtitle": "Envia solicitações de exclusão do seu conteúdo e desconecta você neste dispositivo. Relays, clientes, índices de busca e outros dispositivos conectados podem manter cópias.",
-    "listPersonCount": "{count, plural, =1{{count} pessoa} other{{count} pessoas}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Por ",
     "keyManagementYourPublicKeyLabel": "Sua chave pública (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3354,14 +3314,6 @@
             }
         }
     },
-    "discoverListsTitle": "Descobrir listas",
-    "discoverListsFailedToLoad": "Falha ao carregar listas",
-    "discoverListsLoading": "Descobrindo listas públicas...",
-    "discoverListsRelayTimeout": "O relay não devolveu listas a tempo. Tente de novo.",
-    "discoverListsServiceUnavailable": "Serviço indisponível.",
-    "discoverListsEmptyTitle": "Nenhuma lista pública encontrada",
-    "discoverListsEmptySubtitle": "Volte mais tarde para ver novas listas",
-    "discoverListsByAuthorPrefix": "por",
     "curatedListEmptyTitle": "Sem vídeos nesta lista",
     "curatedListEmptySubtitle": "Adicione alguns vídeos pra começar",
     "curatedListLoadingVideos": "Carregando vídeos...",
@@ -4973,7 +4925,6 @@
   "peopleListsPeopleLabel": "Pessoas",
   "peopleListsPeopleNone": "Nenhuma pessoa adicionada",
   "peopleListsSessionChanged": "Sua conta ou seu acesso à lista mudou. Abra esta página novamente para continuar.",
-  "peopleListsSearchConnectionsHint": "Buscar seguidores e pessoas que você segue",
   "listCardSemanticLabel": "{visibility, select, private{{name}, Privada, {count}} other{{name}, {count}}}",
   "listMemberNamesSeparator": ", ",
   "@listCardSemanticLabel": {
@@ -5019,5 +4970,43 @@
   "ideasTitleFive": "Sem grandes explicações",
   "ideasDescriptionFive": "Só queria compartilhar.",
   "ideasTitleSix": "Um pouco de hoje",
-  "ideasDescriptionSix": "Vou deixar isso aqui."
+  "ideasDescriptionSix": "Vou deixar isso aqui.",
+  "listsDiscoveryEmpty": "Nenhuma lista deu as caras desta vez. Puxe para atualizar.",
+  "listsDiscoveryLoadingLabel": "Carregando listas",
+  "listSearchPeopleUnavailable": "As listas de pessoas estão indisponíveis no momento.",
+  "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento.",
+  "listPrivateConversionTooLarge": "Esta lista é grande demais para se tornar privada. Remova alguns vídeos primeiro. Suas alterações continuam aqui e ainda não foram salvas.",
+  "authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tente novamente.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Adicionar {name} à lista",
+  "peopleListsMembershipUpdateFailed": "Não foi possível atualizar a lista. Tente de novo.",
+  "peopleListsAddPeopleSearchHint": "Pesquisar pessoas",
+  "peopleListsRemovePersonSemanticLabel": "Remover {name} da lista",
+  "listMakePublicLabel": "Tornar pública",
+  "listCollaboratorsNone": "Nenhum",
+  "listAddCollaboratorTitle": "Adicionar colaborador",
+  "listMakePublicSubtitle": "Deixe outras pessoas verem esta lista",
+  "listCollaboratorSearchHint": "Pesquisar no Divine...",
+  "listVideoNotAdded": "Sua lista foi criada, mas este vídeo não foi adicionado.",
+  "listPrivateCollaboratorsWarning": "Tornar esta lista privada também remove seus colaboradores. Só você poderá adicionar vídeos.",
+  "listVideoPendingSync": "Sua lista e seu vídeo estão salvos aqui. O vídeo está aguardando a sincronização.",
+  "listRetrySync": "Sincronizar agora",
+  "listPermissionsUnconfirmed": "Não foi possível confirmar esta alteração. Tente novamente.",
+  "listRecoveryPending": "Esta lista tem alterações aguardando sincronização.",
+  "listPermissionsRecoveryPending": "Sua alteração foi aceita. Toque em Sincronizar agora para terminar de salvá-la. A edição está pausada até lá.",
+  "listRecoveryReadOnly": "Algumas alterações salvas nas listas de vídeos precisam ser recuperadas. Você pode ver as listas de vídeos, mas a edição está pausada.",
+  "listAddToLists": "Adicionar às listas"
 }
