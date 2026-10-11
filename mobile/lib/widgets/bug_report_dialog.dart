@@ -16,11 +16,13 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/bug_report_log_summary.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/image_attachment_picker.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 import 'package:openvine/widgets/support_form_actions.dart';
 import 'package:openvine/widgets/support_form_fields.dart';
 import 'package:openvine/widgets/support_public_submission_notice.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Route for collecting and submitting bug reports.
 class BugReportScreen extends StatefulWidget {
@@ -248,15 +250,20 @@ class BugReportActions extends StatelessWidget {
   }
 
   void _submit(BuildContext context, BugReportFields fields) {
-    context.read<BugReportCubit>().submit(
-      subject: fields.subject.text,
-      description: fields.description.text,
-      stepsToReproduce: fields.steps.text,
-      expectedBehavior: fields.expected.text,
-      attachments: fields.attachments,
-      currentScreen: currentScreen,
-      recentScreens: recentScreens,
-      userPubkey: userPubkey,
+    runDetached(
+      context.read<BugReportCubit>().submit(
+        subject: fields.subject.text,
+        description: fields.description.text,
+        stepsToReproduce: fields.steps.text,
+        expectedBehavior: fields.expected.text,
+        attachments: fields.attachments,
+        currentScreen: currentScreen,
+        recentScreens: recentScreens,
+        userPubkey: userPubkey,
+      ),
+      'submit bug report',
+      logName: 'BugReportDialog',
+      category: LogCategory.ui,
     );
   }
 
