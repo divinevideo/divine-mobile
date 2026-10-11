@@ -513,7 +513,7 @@ void main() {
 
       tearDown(() => refiled.close());
 
-      Future<void> pumpThread(WidgetTester tester) async {
+      Future<GoRouter> pumpThread(WidgetTester tester) async {
         final router = GoRouter(
           initialLocation: ConversationPage.pathForId(testConversationId),
           routes: [
@@ -527,6 +527,10 @@ void main() {
             GoRoute(
               path: InboxPage.path,
               builder: (_, _) => const Scaffold(body: Text('inbox')),
+            ),
+            GoRoute(
+              path: '/cover',
+              builder: (_, _) => const Scaffold(body: Text('cover')),
             ),
           ],
         );
@@ -559,6 +563,14 @@ void main() {
           ),
         );
         await tester.pump();
+        return router;
+      }
+
+      // The router resolves a new location asynchronously, then animates.
+      Future<void> settleRoute(WidgetTester tester) async {
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
       }
 
       String? conversationOnScreen(WidgetTester tester) => tester
@@ -586,12 +598,47 @@ void main() {
         await pumpThread(tester);
 
         refiled.add({movedToId, testPubkey});
+        // The page leaves after the frame that saw the move, and the router
+        // resolves the new location before the transition starts.
+        await tester.pump();
         await tester.pump();
         // Long enough for the outgoing page to finish its route transition.
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byType(ConversationPage), findsNothing);
         expect(find.text('inbox'), findsOneWidget);
+      });
+
+      testWidgets('waits for a screen opened over it to close before '
+          'following', (tester) async {
+        final router = await pumpThread(tester);
+        String topLocation() =>
+            router.routerDelegate.currentConfiguration.last.matchedLocation;
+        unawaited(router.push<void>('/cover'));
+        await settleRoute(tester);
+        expect(topLocation(), equals('/cover'));
+        expect(find.text('cover'), findsOneWidget);
+
+        refiled.add({movedToId});
+        await settleRoute(tester);
+
+        expect(topLocation(), equals('/cover'));
+        expect(find.text('cover'), findsOneWidget);
+        expect(
+          router.routerDelegate.currentConfiguration.matches,
+          hasLength(2),
+        );
+
+        router.pop();
+        await settleRoute(tester);
+
+        expect(find.text('cover'), findsNothing);
+        expect(conversationOnScreen(tester), equals(movedToId));
+        expect(
+          topLocation(),
+          equals(ConversationPage.pathForId(movedToId)),
+        );
+        expect(router.canPop(), isFalse);
       });
     });
   });

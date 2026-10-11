@@ -268,22 +268,52 @@ class _ConversationBlocScope extends ConsumerWidget {
           ),
         ),
       ],
-      child: BlocListener<ConversationRefileCubit, Set<String>>(
-        // The messages on screen were moved under the conversation they
-        // answer and this one no longer exists (#10037). Left open, it is an
-        // empty thread whose composer still writes to everyone it named.
-        listener: (context, movedTo) {
-          if (movedTo.length == 1) {
-            context.pushReplacement(ConversationPage.pathForId(movedTo.single));
-          } else {
-            context.go(InboxPage.path);
-          }
-        },
+      child: _FollowRefiledMessages(
         child: ConversationView(
           participantPubkeys: participantPubkeys,
           subject: subject,
         ),
       ),
     );
+  }
+}
+
+/// Leaves a conversation whose messages were moved under the conversations
+/// they answer (#10037). Left open, it is an empty thread whose composer still
+/// writes to everyone it named.
+///
+/// Waits until this conversation is the top route: router navigation acts on
+/// the top route, so following from underneath a screen opened over the
+/// thread would replace that screen and leave this one beneath it.
+class _FollowRefiledMessages extends StatefulWidget {
+  const _FollowRefiledMessages({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FollowRefiledMessages> createState() => _FollowRefiledMessagesState();
+}
+
+class _FollowRefiledMessagesState extends State<_FollowRefiledMessages> {
+  var _followed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final movedTo = context.select(
+      (ConversationRefileCubit cubit) => cubit.state,
+    );
+    final isCurrent = ModalRoute.isCurrentOf(context) ?? true;
+    if (movedTo.isNotEmpty && isCurrent && !_followed) {
+      _followed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (movedTo.length == 1) {
+          context.pushReplacement(ConversationPage.pathForId(movedTo.single));
+        } else {
+          context.go(InboxPage.path);
+        }
+      });
+    }
+    return widget.child;
   }
 }
