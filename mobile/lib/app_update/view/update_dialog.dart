@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shows a dialog when the update urgency is moderate or urgent.
@@ -68,17 +70,22 @@ class _UpdateDialogListenerState extends State<UpdateDialogListener> {
     _pending = null;
     _waitingSince = null;
 
-    showDialog<void>(
-      context: navigatorContext,
-      builder: (_) => BlocProvider.value(
-        value: bloc,
-        child: _UpdateDialog(
-          urgency: state.urgency,
-          latestVersion: state.latestVersion ?? '',
-          downloadUrl: state.downloadUrl ?? '',
-          highlights: state.releaseHighlights,
+    runDetached(
+      showDialog<void>(
+        context: navigatorContext,
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: _UpdateDialog(
+            urgency: state.urgency,
+            latestVersion: state.latestVersion ?? '',
+            downloadUrl: state.downloadUrl ?? '',
+            highlights: state.releaseHighlights,
+          ),
         ),
       ),
+      'show app update dialog',
+      logName: 'UpdateDialog',
+      category: LogCategory.ui,
     );
   }
 
@@ -143,9 +150,8 @@ class _UpdateDialog extends StatelessWidget {
         isUrgent
             ? context.l10n.updateUrgentTitle
             : context.l10n.updateModerateTitle,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: context.vineColors.primaryText,
-        ),
+        style: Theme.of(context).textTheme.titleMedium
+            ?.copyWith(color: context.vineColors.primaryText),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -172,9 +178,8 @@ class _UpdateDialog extends StatelessWidget {
                     Expanded(
                       child: Text(
                         highlight,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: context.vineColors.primaryText,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: context.vineColors.primaryText),
                       ),
                     ),
                   ],
