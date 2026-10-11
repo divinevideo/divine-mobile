@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockHashtagService extends Mock implements HashtagService {}
@@ -91,5 +92,42 @@ void main() {
         expect(find.text('No videos found for #nostr'), findsOneWidget);
       },
     );
+
+    testWidgets('logs a failed initial load instead of leaking it', (
+      tester,
+    ) async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      when(
+        () => mockVideosRepository.getHashtagFeedVideos(
+          hashtag: any(named: 'hashtag'),
+        ),
+      ).thenAnswer(
+        (_) => Future<HashtagFeedVideosResult>.error(
+          Exception('feed unavailable'),
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget('nostr'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final failures = logCapture
+          .getRecentLogs()
+          .where(
+            (entry) =>
+                entry.name == 'HashtagFeedScreen' &&
+                entry.level == LogLevel.error,
+          )
+          .toList();
+      expect(failures, hasLength(1));
+      expect(failures.single.category, LogCategory.video);
+      expect(
+        failures.single.message,
+        'Failed to load hashtag videos: Exception: feed unavailable',
+      );
+    });
   });
 }
