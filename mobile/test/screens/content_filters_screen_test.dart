@@ -1,16 +1,20 @@
 // ABOUTME: Widget tests for ContentFiltersScreen — verifies the loaded
-// ABOUTME: category controls, the age-gate banner, and that tapping a segment
-// ABOUTME: persists the preference through ContentFilterService.
+// ABOUTME: category controls, the age-gate banner, that tapping a segment
+// ABOUTME: persists the preference through ContentFilterService, and that a
+// ABOUTME: failed load or save is observed instead of escaping unhandled.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
@@ -19,6 +23,25 @@ class _MockContentFilterService extends Mock implements ContentFilterService {}
 
 class _MockAgeVerificationService extends Mock
     implements AgeVerificationService {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -247,6 +270,69 @@ void main() {
         isSemantics(hasEnabledState: true, isEnabled: false),
       );
       handle.dispose();
+    });
+
+    group('async failures', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
+      testWidgets('reports a programming error thrown while loading', (
+        tester,
+      ) async {
+        when(
+          ageService.initialize,
+        ).thenAnswer((_) => Future<void>.error(StateError('load invariant')));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+      });
+
+      testWidgets('reports a programming error thrown while saving', (
+        tester,
+      ) async {
+        when(() => ageService.isAdultContentVerified).thenReturn(true);
+        when(
+          () => filterService.setPreference(any(), any()),
+        ).thenAnswer((_) => Future<void>.error(StateError('save invariant')));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10nOf(tester).contentFiltersWarn).first);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+      });
     });
   });
 }

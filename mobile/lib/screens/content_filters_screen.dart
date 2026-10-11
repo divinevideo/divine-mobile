@@ -15,7 +15,9 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Page: bridges the filter + age services into [ContentFiltersCubit].
 class ContentFiltersScreen extends ConsumerWidget {
@@ -32,10 +34,19 @@ class ContentFiltersScreen extends ConsumerWidget {
       // Both are moderation services that can be rebuilt; re-key so the Cubit
       // reloads with fresh instances rather than operating on stale ones.
       key: ValueKey((contentFilterService, ageVerificationService)),
-      create: (_) => ContentFiltersCubit(
-        contentFilterService: contentFilterService,
-        ageVerificationService: ageVerificationService,
-      )..load(),
+      create: (_) {
+        final cubit = ContentFiltersCubit(
+          contentFilterService: contentFilterService,
+          ageVerificationService: ageVerificationService,
+        );
+        runDetached(
+          cubit.load(),
+          'load content filter preferences',
+          logName: 'ContentFiltersScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const ContentFiltersView(),
     );
   }
@@ -183,7 +194,12 @@ class _CategoryGroup extends StatelessWidget {
               preference: state.preferenceFor(label),
               locked: state.isLabelLocked(label),
               onChanged: (preference) {
-                onChanged(label, preference);
+                runDetached(
+                  onChanged(label, preference),
+                  'save content filter preference',
+                  logName: 'ContentFiltersScreen',
+                  category: LogCategory.ui,
+                );
               },
             ),
           ),
