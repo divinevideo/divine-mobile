@@ -4124,6 +4124,14 @@ void main() {
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
+          // Receiving rooms reads the replies still waiting for their parent
+          // before it stores a message (#10037); there are none here.
+          when(
+            () => mockDirectMessagesDao.groupRepliesMissingTheirTarget(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => const {});
+
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
@@ -18823,6 +18831,14 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => null);
+
+          // Receiving rooms reads the replies still waiting for their parent
+          // before it stores a message (#10037); there are none here.
+          when(
+            () => mockDirectMessagesDao.groupRepliesMissingTheirTarget(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => const {});
 
           final controller = StreamController<Event>();
           when(

@@ -48,6 +48,9 @@ import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// A stored conversation: its id and the pubkeys taking part in it.
+typedef _Conversation = ({String id, List<String> participants});
+
 /// Decrypts a gift-wrapped event (kind 1059) through the NIP-17 layers
 /// (gift wrap → seal → rumor) and returns the inner rumor event.
 ///
@@ -916,6 +919,15 @@ class DmRepository {
   /// [_eventLock]. A suspended remote signer must not block account cleanup;
   /// generation checks prevent its late result from entering persistence.
   Future<void>? _giftWrapProcessingLock;
+
+  /// Rooms holding a reply to a message [_roomsAwaitingOwner] does not have
+  /// yet, by that message's id. Such a reply is filed as a room because its
+  /// parent is unknown; the parent's arrival is the moment to look again
+  /// (#10037). Read from the database once per account, then kept current by
+  /// the receive path, because `reply_to_id` has no index to ask by.
+  final Map<String, Set<String>> _roomsAwaitingReplyTarget = {};
+  String? _roomsAwaitingOwner;
+  Future<void> _roomsAwaitingLoad = Future<void>.value();
 
   /// Tracks the first post-auth cleanup pass so conversation queries can avoid
   /// emitting stale denormalized previews before repairs land.
@@ -3444,6 +3456,11 @@ class DmRepository {
         var skippedByTransactionalGiftWrapDedup = false;
         var suppressedByRemovedConversation = false;
         int? removedAt;
+        // A peer's reply only opens a room while receiving rooms is on, so
+        // putting one back under its parent ships behind the same flag.
+        // TODO(realmeylisdev): Remove with the groupMessages flag (#8269).
+        final refilesMentions = _receivesPeerRooms();
+        final refiledInto = <String>{};
         await _conversationsDao.runInTransaction(() async {
           // Re-check dedup inside transaction (TOCTOU protection). The skip is
           // logged after the transaction below; logging here too would emit one
@@ -3457,6 +3474,7 @@ class DmRepository {
             conversationId: conversationId,
             ownerPubkey: ownerPubkey,
           );
+          if (refilesMentions) await _roomsAwaitingReady(ownerPubkey);
           // A sender picks `created_at`, so only the id proves a removal.
           if ((removedAt != null && persistedCreatedAt <= removedAt!) ||
               await _wasRemovedWithConversation(rumor.id, ownerPubkey)) {
@@ -3525,6 +3543,38 @@ class DmRepository {
               ownerPubkey: ownerPubkey,
             );
           }
+
+          if (refilesMentions) {
+            // A reply stored before this message could not tell what it
+            // answered and opened a room for itself. Now it can (#10037).
+            // Each room is looked at once per awaited message, and a reply
+            // in this same conversation answers it here, not from a wider
+            // room.
+            for (final roomId
+                in _roomsAwaitingReplyTarget.remove(rumor.id) ??
+                    const <String>{}) {
+              if (roomId == conversationId) continue;
+              refiledInto.addAll(
+                await _dissolveRoomOfMentions(roomId, ownerPubkey),
+              );
+            }
+            // And this one may be such a reply itself. A room the user has
+            // written in is never taken apart, so it is not worth watching.
+            final answeredId = replyToId;
+            if (isGroup &&
+                !isSentByMe &&
+                answeredId != null &&
+                !(existing?.currentUserHasSent ?? false) &&
+                await _directMessagesDao.getMessageById(
+                      answeredId,
+                      ownerPubkey: ownerPubkey,
+                    ) ==
+                    null) {
+              _roomsAwaitingReplyTarget
+                  .putIfAbsent(answeredId, () => <String>{})
+                  .add(conversationId);
+            }
+          }
         });
 
         if (skippedByTransactionalGiftWrapDedup) {
@@ -3562,6 +3612,12 @@ class DmRepository {
             category: LogCategory.system,
           );
           return;
+        }
+
+        // A soft-deleted reply can be the newest one moved; the preview has
+        // to come from the newest message still shown.
+        for (final refiledConversationId in refiledInto) {
+          await _refreshConversationPreview(refiledConversationId);
         }
 
         // Advance sync boundaries in BOTH clocks, because they answer two
@@ -9790,7 +9846,9 @@ class DmRepository {
   /// ([replyToId]) to a stored message in a strictly smaller conversation that
   /// the rumor fully contains, the NIP-10 reply-mention shape that made
   /// clients widen 1:1s (#2740). Only someone in that conversation can add to
-  /// it, so a mention from anyone else stays in the 1:1 with its sender.
+  /// it, so a mention from anyone else stays in the 1:1 with its sender. One
+  /// stored before the message it answers is a room until that message
+  /// arrives; see [_dissolveRoomOfMentions].
   ///
   /// A room this install already holds wins before any is asked. A client
   /// that widens a 1:1 with extra p tags and no reply looks exactly like a
@@ -9843,19 +9901,28 @@ class DmRepository {
         room.toSet(),
       );
       if (answered != null) {
-        final senderIsMember = answered.any(
-          (pubkey) => pubkeysEqual(pubkey, senderPubkey),
-        );
-        return senderIsMember ? answered : canonical1to1;
+        return _homeOfMention(answered, senderPubkey).participants;
       }
     }
     return _receivesPeerRooms() ? room : canonical1to1;
   }
 
-  /// The participants of the conversation holding the stored message
-  /// [replyToId], when [room] strictly widens it, which makes a reply naming
-  /// [room] a mention. Null when the reply is not one.
-  Future<List<String>?> _smallerConversationAnsweredBy(
+  /// Where a mention from [senderPubkey] of the conversation [answered]
+  /// belongs: in it when they are one of its members, otherwise in the
+  /// one-to-one with them.
+  _Conversation _homeOfMention(_Conversation answered, String senderPubkey) {
+    final senderIsMember = answered.participants.any(
+      (pubkey) => pubkeysEqual(pubkey, senderPubkey),
+    );
+    if (senderIsMember) return answered;
+    final oneToOne = [_userPubkey, senderPubkey]..sort();
+    return (id: computeConversationId(oneToOne), participants: oneToOne);
+  }
+
+  /// The conversation holding the stored message [replyToId], when [room]
+  /// strictly widens it, which makes a reply naming [room] a mention. Null
+  /// when the reply is not one.
+  Future<_Conversation?> _smallerConversationAnsweredBy(
     String replyToId,
     Set<String> room,
   ) async {
@@ -9879,7 +9946,180 @@ class DmRepository {
       return null;
     }
     final answered = decoded.cast<String>();
-    return isMentionOfWiderRoom(answered.toSet(), room) ? answered : null;
+    if (!isMentionOfWiderRoom(answered.toSet(), room)) return null;
+    return (id: parentConversation.id, participants: answered);
+  }
+
+  /// Makes [_roomsAwaitingReplyTarget] hold what [ownerPubkey] has stored.
+  ///
+  /// Await before storing a message: read afterwards, the replies waiting for
+  /// that very message would no longer count as waiting.
+  Future<void> _roomsAwaitingReady(String ownerPubkey) {
+    if (_roomsAwaitingOwner != ownerPubkey) {
+      _roomsAwaitingOwner = ownerPubkey;
+      _roomsAwaitingReplyTarget.clear();
+      _roomsAwaitingLoad = _loadRoomsAwaitingReplyTargets(ownerPubkey);
+    }
+    return _roomsAwaitingLoad;
+  }
+
+  Future<void> _loadRoomsAwaitingReplyTargets(String ownerPubkey) async {
+    final Map<String, Set<String>> stored;
+    try {
+      stored = await _directMessagesDao.groupRepliesMissingTheirTarget(
+        ownerPubkey: ownerPubkey,
+      );
+    } on Object catch (e, stackTrace) {
+      // Only the replies stored on an earlier launch go unwatched; the ones
+      // this launch stores are still noted as they arrive.
+      Log.warning(
+        'Could not read the replies waiting for their parent for '
+        '${pubkeyForLogs(ownerPubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    if (_roomsAwaitingOwner != ownerPubkey) return;
+    for (final entry in stored.entries) {
+      _roomsAwaitingReplyTarget
+          .putIfAbsent(entry.key, () => <String>{})
+          .addAll(entry.value);
+    }
+  }
+
+  /// Moves every message of [roomId] under the conversation it answers and
+  /// drops the room, when the room holds nothing but replies that mention it.
+  ///
+  /// A reply that tags someone extra is filed under the conversation it
+  /// answers ([_resolveConversationParticipants]). Stored before that
+  /// conversation's message, it looked like the first message of a room and
+  /// opened one. Read oldest first, with each message placed where it would
+  /// have gone had it arrived in order, a room is only taken apart when none
+  /// of its messages would have opened it. The user's own message, one queued
+  /// for the room, or anything that is not such a reply all mean someone used
+  /// it as a room, and it stays exactly as it is (#8401 is what folding a real
+  /// room into a smaller conversation costs).
+  ///
+  /// Call inside the transaction that stored the awaited message. Returns the
+  /// conversations that received messages, whose previews need a refresh once
+  /// the transaction has committed.
+  Future<Set<String>> _dissolveRoomOfMentions(
+    String roomId,
+    String ownerPubkey,
+  ) async {
+    final room = await _conversationsDao.getConversation(
+      roomId,
+      ownerPubkey: ownerPubkey,
+    );
+    if (room == null || !room.isGroup) return const {};
+    final queued = await _outgoingDmsDao?.getForConversation(
+      conversationId: roomId,
+      ownerPubkey: ownerPubkey,
+    );
+    if (queued != null && queued.isNotEmpty) return const {};
+
+    final rows =
+        await _directMessagesDao.getAllMessagesForConversationIncludingDeleted(
+            roomId,
+            ownerPubkey: ownerPubkey,
+          )
+          ..sort((a, b) {
+            final byTime = a.createdAt.compareTo(b.createdAt);
+            return byTime != 0 ? byTime : a.id.compareTo(b.id);
+          });
+    // Decided from the rows alone, before any parent is looked up: a real
+    // room is turned away here however many messages it holds.
+    final everyRowIsAPeerReply = rows.every(
+      (row) =>
+          row.replyToId != null && !pubkeysEqual(row.senderPubkey, ownerPubkey),
+    );
+    if (rows.isEmpty || !everyRowIsAPeerReply) return const {};
+
+    final homes = <String, _Conversation>{};
+    for (final row in rows) {
+      final replyToId = row.replyToId!;
+      final named = {
+        for (final pubkey in reconstructParticipants(
+          row.tagsJson,
+          row.senderPubkey,
+        ))
+          pubkey.toLowerCase(),
+      };
+      // A parent that is itself moving is answered where it is going.
+      final parentHome = homes[replyToId];
+      final answered = parentHome == null
+          ? await _smallerConversationAnsweredBy(replyToId, named)
+          : isMentionOfWiderRoom(parentHome.participants.toSet(), named)
+          ? parentHome
+          : null;
+      if (answered == null) return const {};
+      final home = _homeOfMention(answered, row.senderPubkey);
+      // The receive path drops a message stamped at or before the removal of
+      // its conversation; moving one in would bring it back.
+      final removedAt = await _removedConversationsDao?.removedAtFor(
+        conversationId: home.id,
+        ownerPubkey: ownerPubkey,
+      );
+      if (removedAt != null && row.createdAt <= removedAt) return const {};
+      homes[row.id] = home;
+    }
+
+    final movedTo = <String>{};
+    for (final home in {
+      for (final home in homes.values) home.id: home,
+    }.values) {
+      final moving = [
+        for (final row in rows)
+          if (homes[row.id]!.id == home.id) row,
+      ];
+      final existing = await _conversationsDao.getConversation(
+        home.id,
+        ownerPubkey: ownerPubkey,
+      );
+      final newest = moving.last;
+      await _conversationsDao.upsertConversation(
+        id: home.id,
+        participantPubkeys: jsonEncode(home.participants),
+        isGroup: home.participants.length > 2,
+        createdAt: existing?.createdAt ?? moving.first.createdAt,
+        lastMessageContent: newest.messageKind == EventKind.fileMessage
+            ? _filePreviewText(newest.fileType)
+            : newest.content,
+        lastMessageTimestamp: newest.createdAt,
+        lastMessageSenderPubkey: newest.senderPubkey,
+        // Read state follows the room these were shown in: a reply the user
+        // has not seen there is still unread where it lands.
+        isRead: room.isRead,
+        currentUserHasSent: existing?.currentUserHasSent ?? false,
+        ownerPubkey: ownerPubkey,
+        dmProtocol: 'nip17',
+      );
+      final messageIds = [for (final row in moving) row.id];
+      await _directMessagesDao.reassignMessages(
+        messageIds: messageIds,
+        toConversationId: home.id,
+        ownerPubkey: ownerPubkey,
+      );
+      await _reactionsRepository?.reassignForMovedMessages(
+        targetMessageIds: messageIds,
+        toConversationId: home.id,
+        ownerPubkey: ownerPubkey,
+      );
+      movedTo.add(home.id);
+    }
+    await _conversationsDao.deleteConversation(
+      roomId,
+      ownerPubkey: ownerPubkey,
+    );
+    Log.info(
+      'Moved ${rows.length} reply mention(s) out of room $roomId into the '
+      'conversation(s) they answer (${movedTo.join(', ')}) and dropped the '
+      'room: every message in it answered a smaller conversation',
+      category: LogCategory.system,
+    );
+    return movedTo;
   }
 
   /// Extracts Kind 15 file metadata from event tags.
