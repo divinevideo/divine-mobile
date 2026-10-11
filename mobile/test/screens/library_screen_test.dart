@@ -1198,6 +1198,56 @@ void main() {
           expect(reporter.recordedErrors, isEmpty);
         },
       );
+
+      testWidgets(
+        'confirming empty trash after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          final trashed = DivineVideoClip(
+            id: 'trashed',
+            video: EditorVideo.file('/test/trashed.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/test/trashed.jpg',
+            ghostFramePath: '/test/trashed_ghost.jpg',
+            deletedAt: DateTime(2026),
+          );
+          when(
+            () => mockClipLibraryService.getTrashedClips(),
+          ).thenAnswer((_) async => [trashed]);
+
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final clipsBloc = BlocProvider.of<ClipsLibraryBloc>(
+            tester.element(find.byType(ClipsTab)),
+          )..add(const ClipsLibraryFilterChanged(ClipLibraryTrashFilter()));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(en.libraryTrashEmptyAllLabel));
+          await tester.pumpAndSettle();
+          expect(find.text(en.libraryTrashEmptyConfirmTitle), findsOneWidget);
+
+          libraryVisible.value = false;
+          await tester.pump();
+          expect(clipsBloc.isClosed, isTrue);
+          expect(find.text(en.libraryTrashEmptyConfirmTitle), findsOneWidget);
+
+          await tester.tap(find.text(en.libraryDeleteConfirm));
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
+          verifyNever(() => mockClipLibraryService.hardDelete(any()));
+        },
+      );
     });
 
     group('web', () {

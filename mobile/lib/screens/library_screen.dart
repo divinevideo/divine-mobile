@@ -320,7 +320,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       onSecondaryPressed: () => navigator.pop(false),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
     clipsBloc.add(const ClipsLibraryEmptyTrash());
   }
 
