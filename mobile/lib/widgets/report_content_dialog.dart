@@ -402,7 +402,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
     announceDetached(
       context,
       context.l10n.reportDetailsImageNotAttached,
-      description: 'announce report attachment was dropped',
+      description: 'announce dropped report attachment',
       logName: 'ReportContentDialog',
     );
   }
