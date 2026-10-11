@@ -5035,10 +5035,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listContinue => 'جاری رکھیں';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5863,6 +5859,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'شریک کار دعوت';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9317,7 +9318,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'منتخب کلپ کتنا شفاف ہو، یہ طے کریں';
+      'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
@@ -9772,6 +9773,36 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'لیئر اینیمیشن میں ترمیم کریں';
+
+  @override
+  String get videoEditorKeyframeAdd => 'کی فریم شامل کریں';
+
+  @override
+  String get videoEditorKeyframeRemove => 'کی فریم ہٹائیں';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time پر موجود کی فریم پر جائیں';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'کی فریمز';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'لیئر کے کی فریمز میں ترمیم کریں';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ایفیکٹ';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'کی فریم $from سے $to تک حرکت';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'آنا';
@@ -13113,6 +13144,99 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'مشینی ترجمہ';
+
+  @override
+  String get ideasNeedIdeas => 'خیالات چاہییں؟';
+
+  @override
+  String get ideasHide => 'خیالات چھپائیں';
+
+  @override
+  String get ideasFromVideo => 'میری ویڈیو سے';
+
+  @override
+  String get ideasSurprise => 'مجھے حیران کریں';
+
+  @override
+  String get ideasPrepare => 'آلے پر تجاویز تیار کریں';
+
+  @override
+  String get ideasUnavailable =>
+      'ویڈیو کے خیالات ابھی دستیاب نہیں۔ مجھے حیران کریں آزمائیں۔';
+
+  @override
+  String get ideasSourceVideo => 'آپ کی ویڈیو کی بنیاد پر';
+
+  @override
+  String get ideasSourceTranscript => 'آپ کی نقل کی بنیاد پر';
+
+  @override
+  String get ideasSourcePremade => 'تھوڑی سی تحریک';
+
+  @override
+  String get ideasUseBoth => 'دونوں استعمال کریں';
+
+  @override
+  String get ideasMore => 'مزید خیالات';
+
+  @override
+  String get ideasGenerateTranscript => 'نقل تیار کریں';
+
+  @override
+  String get ideasEditTranscript => 'نقل میں ترمیم کریں';
+
+  @override
+  String get ideasTranscript => 'خیالات کے لیے نقل';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'نقل کے لیے Divine کی سروس استعمال ہوتی ہے، آلے پر پروسیسنگ متبادل ہے۔ الفاظ کی تجاویز آپ کے فون پر رہتی ہیں۔ اس سے پوسٹ میں سب ٹائٹلز شامل نہیں ہوں گے۔';
+
+  @override
+  String get ideasApplied => 'خیال شامل ہوگیا۔ اپنا رنگ دیں۔';
+
+  @override
+  String get ideasUndo => 'واپس کریں';
+
+  @override
+  String get ideasTitleOne => 'ایک چھوٹا سا لمحہ';
+
+  @override
+  String get ideasDescriptionOne => 'یہ شیئر کرنے کا دل کیا۔';
+
+  @override
+  String get ideasTitleTwo => 'یہ لیجیے';
+
+  @override
+  String get ideasDescriptionTwo => 'میرے دن کا ایک چھوٹا حصہ۔';
+
+  @override
+  String get ideasTitleThree => 'بار بار دیکھنے کے لیے';
+
+  @override
+  String get ideasDescriptionThree => 'محفوظ رکھنے والا لمحہ۔';
+
+  @override
+  String get ideasTitleFour => 'یہ میں نے بنایا';
+
+  @override
+  String get ideasDescriptionFour => 'میری طرف سے کچھ چھوٹا سا۔';
+
+  @override
+  String get ideasTitleFive => 'لمبی وضاحت کے بغیر';
+
+  @override
+  String get ideasDescriptionFive => 'بس شیئر کرنا تھا۔';
+
+  @override
+  String get ideasTitleSix => 'آج کا ایک حصہ';
+
+  @override
+  String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
 
   @override
   String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';

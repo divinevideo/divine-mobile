@@ -8515,12 +8515,6 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get listContinue;
 
-  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
-  ///
-  /// In en, this message translates to:
-  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
-  String get listPrivateConversionTooLarge;
-
   /// Shown when a video cannot be added to a private list because its encrypted payload would exceed the NIP-44 size limit. Retrying cannot succeed, so the copy must not suggest trying again.
   ///
   /// In en, this message translates to:
@@ -10033,6 +10027,12 @@ abstract class AppLocalizations {
   /// **'Collaborator invite'**
   String get inboxConversationCollabInvitePreview;
 
+  /// Leads the last-message preview of a group conversation in the inbox list when someone other than the viewer wrote that message, so the preview does not read as if the room said it. The message text follows this string directly, so keep the separator, and any space after it, at the end.
+  ///
+  /// In en, this message translates to:
+  /// **'{sender}: '**
+  String inboxConversationPreviewSenderPrefix(String sender);
+
   /// Plaintext body of the encrypted DM that invites someone to collaborate on a video. Includes a clickable web link so non-Divine Nostr clients can preview the video. The trailing 'Open Divine to review and accept.' sentence MUST stay verbatim — Divine uses it as a marker to suppress legacy plaintext invites in conversation views.
   ///
   /// In en, this message translates to:
@@ -10231,7 +10231,7 @@ abstract class AppLocalizations {
   /// **'Add custom emoji reaction'**
   String get dmReactionAddCustomA11yLabel;
 
-  /// Hint text in the in-player reply composer when replying to a reel that {name} shared in a DM.
+  /// Hint text in the in-player reply composer when a reel was shared in a DM. {name} is the person in a one-to-one thread and the room's title in a group, because a reply goes to everyone in the thread.
   ///
   /// In en, this message translates to:
   /// **'Message {name}…'**
@@ -15839,16 +15839,16 @@ abstract class AppLocalizations {
   /// **'Apply the color mask'**
   String get videoEditorChromaKeyDoneSemanticLabel;
 
-  /// Caption of the button in the timeline controls of a clip that was detached onto the canvas, and title of the sheet it opens, for how see-through the clip is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls.
+  /// Caption of the button in the timeline controls of a layer (a text, sticker, drawing or a clip detached onto the canvas), and title of the sheet it opens, for how see-through the layer is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls.
   ///
   /// In en, this message translates to:
   /// **'Opacity'**
   String get videoEditorOpacityLabel;
 
-  /// Accessibility label for the Opacity button in the timeline controls of a clip that was detached onto the canvas.
+  /// Accessibility label for the Opacity button in the timeline controls of a layer: a text, sticker, drawing or a clip detached onto the canvas.
   ///
   /// In en, this message translates to:
-  /// **'Set how see-through the selected clip is'**
+  /// **'Set how see-through the selected layer is'**
   String get videoEditorOpacitySemanticLabel;
 
   /// No description provided for @videoEditorChromaKeyAutoDetect.
@@ -16612,6 +16612,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit layer animation'**
   String get videoEditorLayerAnimationButtonSemanticLabel;
+
+  /// Button in the keyframe sheet of a layer in the video editor that pins the layer's position, size, rotation and opacity at the playhead as a keyframe. The layer then moves between its keyframes while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Add keyframe'**
+  String get videoEditorKeyframeAdd;
+
+  /// The same button in the keyframe sheet when the playhead sits on one of the layer's keyframes, which it then removes.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove keyframe'**
+  String get videoEditorKeyframeRemove;
+
+  /// Accessibility label for a keyframe marker on the selected layer in the video editor timeline. Tapping it moves the playhead onto that keyframe.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to keyframe at {time}'**
+  String videoEditorKeyframeMarkerSemanticLabel(String time);
+
+  /// Label of the button in the bottom bar of a selected layer in the video editor timeline that opens its keyframe sheet, and title of that sheet. Keyframes pin the layer's position, size, rotation and opacity at points in time; the layer moves between them while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyframes'**
+  String get videoEditorKeyframesLabel;
+
+  /// Accessibility label for the Keyframes button in the bottom bar of a selected layer in the video editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit layer keyframes'**
+  String get videoEditorKeyframesButtonSemanticLabel;
+
+  /// One-line explanation at the top of the keyframe sheet of a layer in the video editor. The playhead is the vertical line marking the current time on the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.'**
+  String get videoEditorKeyframesHint;
+
+  /// Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect'**
+  String get videoEditorKeyframeEffect;
+
+  /// Heading above the effect and the easing curves in the keyframe sheet of a layer. They set how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe. The numbers name keyframes, like a page number, and are not a quantity, so the text takes no plural.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion from keyframe {from} to {to}'**
+  String videoEditorKeyframeCurveSegment(String from, String to);
 
   /// Tab/segment label for the animation a layer plays when it appears.
   ///
@@ -21938,6 +21986,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Machine-translated'**
   String get subtitleMachineTranslated;
+
+  /// Inline publishing ideas: NeedIdeas
+  ///
+  /// In en, this message translates to:
+  /// **'Need ideas?'**
+  String get ideasNeedIdeas;
+
+  /// Inline publishing ideas: Hide
+  ///
+  /// In en, this message translates to:
+  /// **'Hide ideas'**
+  String get ideasHide;
+
+  /// Inline publishing ideas: FromVideo
+  ///
+  /// In en, this message translates to:
+  /// **'From my video'**
+  String get ideasFromVideo;
+
+  /// Inline publishing ideas: Surprise
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise me'**
+  String get ideasSurprise;
+
+  /// Inline publishing ideas: Prepare
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare on-device suggestions'**
+  String get ideasPrepare;
+
+  /// Inline publishing ideas: Unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Video ideas aren’t available right now. Try Surprise me.'**
+  String get ideasUnavailable;
+
+  /// Inline publishing ideas: SourceVideo
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your video'**
+  String get ideasSourceVideo;
+
+  /// Inline publishing ideas: SourceTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your transcript'**
+  String get ideasSourceTranscript;
+
+  /// Inline publishing ideas: SourcePremade
+  ///
+  /// In en, this message translates to:
+  /// **'A little inspiration'**
+  String get ideasSourcePremade;
+
+  /// Inline publishing ideas: UseBoth
+  ///
+  /// In en, this message translates to:
+  /// **'Use both'**
+  String get ideasUseBoth;
+
+  /// Inline publishing ideas: More
+  ///
+  /// In en, this message translates to:
+  /// **'More ideas'**
+  String get ideasMore;
+
+  /// Inline publishing ideas: GenerateTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Generate transcript'**
+  String get ideasGenerateTranscript;
+
+  /// Inline publishing ideas: EditTranscript
+  ///
+  /// In en, this message translates to:
+  /// **'Edit transcript'**
+  String get ideasEditTranscript;
+
+  /// Inline publishing ideas: Transcript
+  ///
+  /// In en, this message translates to:
+  /// **'Transcript for ideas'**
+  String get ideasTranscript;
+
+  /// Inline publishing ideas: TranscriptionNotice
+  ///
+  /// In en, this message translates to:
+  /// **'Transcription uses Divine’s service, with an on-device fallback. Suggested wording stays on your phone. This won’t add subtitles to your post.'**
+  String get ideasTranscriptionNotice;
+
+  /// Inline publishing ideas: Applied
+  ///
+  /// In en, this message translates to:
+  /// **'Idea added. Make it yours.'**
+  String get ideasApplied;
+
+  /// Inline publishing ideas: Undo
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get ideasUndo;
+
+  /// Inline publishing ideas: TitleOne
+  ///
+  /// In en, this message translates to:
+  /// **'A small moment'**
+  String get ideasTitleOne;
+
+  /// Inline publishing ideas: DescriptionOne
+  ///
+  /// In en, this message translates to:
+  /// **'Felt like sharing this.'**
+  String get ideasDescriptionOne;
+
+  /// Inline publishing ideas: TitleTwo
+  ///
+  /// In en, this message translates to:
+  /// **'Here goes'**
+  String get ideasTitleTwo;
+
+  /// Inline publishing ideas: DescriptionTwo
+  ///
+  /// In en, this message translates to:
+  /// **'Putting this little bit of my day out there.'**
+  String get ideasDescriptionTwo;
+
+  /// Inline publishing ideas: TitleThree
+  ///
+  /// In en, this message translates to:
+  /// **'One for the loop'**
+  String get ideasTitleThree;
+
+  /// Inline publishing ideas: DescriptionThree
+  ///
+  /// In en, this message translates to:
+  /// **'A moment worth keeping.'**
+  String get ideasDescriptionThree;
+
+  /// Inline publishing ideas: TitleFour
+  ///
+  /// In en, this message translates to:
+  /// **'Made this'**
+  String get ideasTitleFour;
+
+  /// Inline publishing ideas: DescriptionFour
+  ///
+  /// In en, this message translates to:
+  /// **'A little something from me.'**
+  String get ideasDescriptionFour;
+
+  /// Inline publishing ideas: TitleFive
+  ///
+  /// In en, this message translates to:
+  /// **'No big explanation'**
+  String get ideasTitleFive;
+
+  /// Inline publishing ideas: DescriptionFive
+  ///
+  /// In en, this message translates to:
+  /// **'Just wanted to share.'**
+  String get ideasDescriptionFive;
+
+  /// Inline publishing ideas: TitleSix
+  ///
+  /// In en, this message translates to:
+  /// **'A little bit of today'**
+  String get ideasTitleSix;
+
+  /// Inline publishing ideas: DescriptionSix
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving this here.'**
+  String get ideasDescriptionSix;
+
+  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
+  String get listPrivateConversionTooLarge;
 
   /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
   ///

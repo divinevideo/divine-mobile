@@ -5021,10 +5021,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listContinue => 'Fortsätt';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5847,6 +5843,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'Inbjudan att samarbeta';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9318,7 +9319,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ställ in hur genomskinligt det valda klippet är';
+      'Ställ in hur genomskinligt det valda lagret är';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
@@ -9771,6 +9772,36 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Redigera lageranimering';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Lägg till nyckelbildruta';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Ta bort nyckelbildruta';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Gå till nyckelbildrutan vid $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Nyckelbildrutor';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Redigera lagrets nyckelbildrutor';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och flytta, skala eller vrid sedan lagret. Det glider från nyckelbildruta till nyckelbildruta.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Rörelse från nyckelbildruta $from till $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'In';
@@ -13125,6 +13156,99 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Maskinöversatt';
+
+  @override
+  String get ideasNeedIdeas => 'Behöver du idéer?';
+
+  @override
+  String get ideasHide => 'Dölj idéer';
+
+  @override
+  String get ideasFromVideo => 'Från min video';
+
+  @override
+  String get ideasSurprise => 'Överraska mig';
+
+  @override
+  String get ideasPrepare => 'Förbered förslag på enheten';
+
+  @override
+  String get ideasUnavailable =>
+      'Videoidéer är inte tillgängliga just nu. Prova Överraska mig.';
+
+  @override
+  String get ideasSourceVideo => 'Baserat på din video';
+
+  @override
+  String get ideasSourceTranscript => 'Baserat på din transkription';
+
+  @override
+  String get ideasSourcePremade => 'Lite inspiration';
+
+  @override
+  String get ideasUseBoth => 'Använd båda';
+
+  @override
+  String get ideasMore => 'Fler idéer';
+
+  @override
+  String get ideasGenerateTranscript => 'Skapa transkription';
+
+  @override
+  String get ideasEditTranscript => 'Redigera transkription';
+
+  @override
+  String get ideasTranscript => 'Transkription för idéer';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transkriptionen använder Divines tjänst, med enheten som reserv. Textförslag stannar på din telefon. Detta lägger inte till undertexter i ditt inlägg.';
+
+  @override
+  String get ideasApplied => 'Idé tillagd. Gör den till din.';
+
+  @override
+  String get ideasUndo => 'Ångra';
+
+  @override
+  String get ideasTitleOne => 'Ett litet ögonblick';
+
+  @override
+  String get ideasDescriptionOne => 'Kände för att dela det här.';
+
+  @override
+  String get ideasTitleTwo => 'Nu kör vi';
+
+  @override
+  String get ideasDescriptionTwo => 'En liten bit av min dag.';
+
+  @override
+  String get ideasTitleThree => 'För loopen';
+
+  @override
+  String get ideasDescriptionThree => 'Ett ögonblick att spara.';
+
+  @override
+  String get ideasTitleFour => 'Jag gjorde det här';
+
+  @override
+  String get ideasDescriptionFour => 'En liten grej från mig.';
+
+  @override
+  String get ideasTitleFive => 'Ingen stor förklaring';
+
+  @override
+  String get ideasDescriptionFive => 'Ville bara dela.';
+
+  @override
+  String get ideasTitleSix => 'Lite av idag';
+
+  @override
+  String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Läser in listor';

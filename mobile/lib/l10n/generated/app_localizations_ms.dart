@@ -5027,10 +5027,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listContinue => 'Teruskan';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5856,6 +5852,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'Jemputan kolaborator';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9325,7 +9326,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Tetapkan tahap lutsinar klip yang dipilih';
+      'Tetapkan tahap lutsinar lapisan yang dipilih';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Kesan automatik';
@@ -9779,6 +9780,36 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Sunting animasi lapisan';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Tambah bingkai kunci';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Buang bingkai kunci';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Pergi ke bingkai kunci pada $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Bingkai kunci';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Edit bingkai kunci lapisan';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Tambah bingkai kunci, alihkan kepala main, kemudian alihkan, ubah saiz atau putar lapisan. Lapisan meluncur dari bingkai kunci ke bingkai kunci.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Kesan';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Gerakan dari bingkai kunci $from ke $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Masuk';
@@ -13120,6 +13151,99 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Terjemahan mesin';
+
+  @override
+  String get ideasNeedIdeas => 'Perlukan idea?';
+
+  @override
+  String get ideasHide => 'Sembunyikan idea';
+
+  @override
+  String get ideasFromVideo => 'Daripada video saya';
+
+  @override
+  String get ideasSurprise => 'Kejutkan saya';
+
+  @override
+  String get ideasPrepare => 'Sediakan cadangan pada peranti';
+
+  @override
+  String get ideasUnavailable =>
+      'Idea video tidak tersedia sekarang. Cuba Kejutkan saya.';
+
+  @override
+  String get ideasSourceVideo => 'Berdasarkan video anda';
+
+  @override
+  String get ideasSourceTranscript => 'Berdasarkan transkrip anda';
+
+  @override
+  String get ideasSourcePremade => 'Sedikit inspirasi';
+
+  @override
+  String get ideasUseBoth => 'Gunakan kedua-duanya';
+
+  @override
+  String get ideasMore => 'Lagi idea';
+
+  @override
+  String get ideasGenerateTranscript => 'Jana transkrip';
+
+  @override
+  String get ideasEditTranscript => 'Edit transkrip';
+
+  @override
+  String get ideasTranscript => 'Transkrip untuk idea';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transkripsi menggunakan perkhidmatan Divine, dengan pemprosesan pada peranti sebagai sandaran. Cadangan teks kekal pada telefon anda. Ini tidak menambah sari kata pada siaran.';
+
+  @override
+  String get ideasApplied => 'Idea ditambah. Jadikannya milik anda.';
+
+  @override
+  String get ideasUndo => 'Buat asal';
+
+  @override
+  String get ideasTitleOne => 'Detik kecil';
+
+  @override
+  String get ideasDescriptionOne => 'Rasa hendak berkongsi ini.';
+
+  @override
+  String get ideasTitleTwo => 'Ini dia';
+
+  @override
+  String get ideasDescriptionTwo => 'Sedikit daripada hari saya.';
+
+  @override
+  String get ideasTitleThree => 'Untuk ditonton berulang';
+
+  @override
+  String get ideasDescriptionThree => 'Detik yang patut disimpan.';
+
+  @override
+  String get ideasTitleFour => 'Hasil saya';
+
+  @override
+  String get ideasDescriptionFour => 'Sesuatu yang kecil daripada saya.';
+
+  @override
+  String get ideasTitleFive => 'Tanpa penjelasan panjang';
+
+  @override
+  String get ideasDescriptionFive => 'Cuma hendak berkongsi.';
+
+  @override
+  String get ideasTitleSix => 'Sedikit tentang hari ini';
+
+  @override
+  String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Memuatkan senarai';

@@ -4995,10 +4995,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listContinue => 'Tiếp tục';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5821,6 +5817,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'Lời mời cộng tác';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9278,7 +9279,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Đặt mức trong suốt cho clip đã chọn';
+      'Đặt mức trong suốt cho lớp đã chọn';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
@@ -9727,6 +9728,36 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'Sửa hiệu ứng lớp';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Thêm khung hình chính';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Xóa khung hình chính';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Đến khung hình chính tại $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Khung hình chính';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Chỉnh sửa khung hình chính của lớp';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Hiệu ứng';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Chuyển động từ khung hình chính $from đến $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Xuất hiện';
@@ -13062,6 +13093,99 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Bản dịch máy';
+
+  @override
+  String get ideasNeedIdeas => 'Cần ý tưởng?';
+
+  @override
+  String get ideasHide => 'Ẩn ý tưởng';
+
+  @override
+  String get ideasFromVideo => 'Từ video của tôi';
+
+  @override
+  String get ideasSurprise => 'Làm tôi bất ngờ';
+
+  @override
+  String get ideasPrepare => 'Chuẩn bị gợi ý trên thiết bị';
+
+  @override
+  String get ideasUnavailable =>
+      'Chưa có ý tưởng từ video lúc này. Hãy thử Làm tôi bất ngờ.';
+
+  @override
+  String get ideasSourceVideo => 'Dựa trên video của bạn';
+
+  @override
+  String get ideasSourceTranscript => 'Dựa trên bản chép lời của bạn';
+
+  @override
+  String get ideasSourcePremade => 'Một chút cảm hứng';
+
+  @override
+  String get ideasUseBoth => 'Dùng cả hai';
+
+  @override
+  String get ideasMore => 'Thêm ý tưởng';
+
+  @override
+  String get ideasGenerateTranscript => 'Tạo bản chép lời';
+
+  @override
+  String get ideasEditTranscript => 'Sửa bản chép lời';
+
+  @override
+  String get ideasTranscript => 'Bản chép lời cho ý tưởng';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Việc chép lời dùng dịch vụ Divine, với xử lý trên thiết bị làm phương án dự phòng. Gợi ý câu chữ nằm trên điện thoại của bạn. Việc này không thêm phụ đề vào bài đăng.';
+
+  @override
+  String get ideasApplied => 'Đã thêm ý tưởng. Hãy thêm dấu ấn của bạn.';
+
+  @override
+  String get ideasUndo => 'Hoàn tác';
+
+  @override
+  String get ideasTitleOne => 'Một khoảnh khắc nhỏ';
+
+  @override
+  String get ideasDescriptionOne => 'Muốn chia sẻ điều này.';
+
+  @override
+  String get ideasTitleTwo => 'Bắt đầu thôi';
+
+  @override
+  String get ideasDescriptionTwo => 'Một chút trong ngày của tôi.';
+
+  @override
+  String get ideasTitleThree => 'Để xem lại mãi';
+
+  @override
+  String get ideasDescriptionThree => 'Khoảnh khắc đáng giữ lại.';
+
+  @override
+  String get ideasTitleFour => 'Tôi làm đấy';
+
+  @override
+  String get ideasDescriptionFour => 'Một chút gì đó từ tôi.';
+
+  @override
+  String get ideasTitleFive => 'Không cần giải thích nhiều';
+
+  @override
+  String get ideasDescriptionFive => 'Chỉ muốn chia sẻ thôi.';
+
+  @override
+  String get ideasTitleSix => 'Một chút hôm nay';
+
+  @override
+  String get ideasDescriptionSix => 'Để điều này ở đây.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';

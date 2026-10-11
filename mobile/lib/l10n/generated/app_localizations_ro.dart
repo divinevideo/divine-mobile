@@ -5175,10 +5175,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listContinue => 'Continuă';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -6014,6 +6010,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'Invitație de colaborare';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9529,7 +9530,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Setează cât de transparent e clipul selectat';
+      'Setează cât de transparent e stratul selectat';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
@@ -9984,6 +9985,36 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editează animația stratului';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Adaugă cadru cheie';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Elimină cadrul cheie';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Mergi la cadrul cheie de la $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Cadre cheie';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Editează cadrele cheie ale stratului';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Adaugă un cadru cheie, mută capul de redare, apoi mută, redimensionează sau rotește stratul. Stratul alunecă de la un cadru cheie la altul.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Mișcarea de la cadrul cheie $from la $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Intrare';
@@ -13389,6 +13420,99 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Traducere automată';
+
+  @override
+  String get ideasNeedIdeas => 'Ai nevoie de idei?';
+
+  @override
+  String get ideasHide => 'Ascunde ideile';
+
+  @override
+  String get ideasFromVideo => 'Din videoclipul meu';
+
+  @override
+  String get ideasSurprise => 'Surprinde-mă';
+
+  @override
+  String get ideasPrepare => 'Pregătește sugestiile pe dispozitiv';
+
+  @override
+  String get ideasUnavailable =>
+      'Ideile din videoclip nu sunt disponibile acum. Încearcă Surprinde-mă.';
+
+  @override
+  String get ideasSourceVideo => 'Pe baza videoclipului tău';
+
+  @override
+  String get ideasSourceTranscript => 'Pe baza transcrierii tale';
+
+  @override
+  String get ideasSourcePremade => 'Puțină inspirație';
+
+  @override
+  String get ideasUseBoth => 'Folosește ambele';
+
+  @override
+  String get ideasMore => 'Mai multe idei';
+
+  @override
+  String get ideasGenerateTranscript => 'Generează transcrierea';
+
+  @override
+  String get ideasEditTranscript => 'Editează transcrierea';
+
+  @override
+  String get ideasTranscript => 'Transcriere pentru idei';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transcrierea folosește serviciul Divine, cu procesare pe dispozitiv ca alternativă. Sugestiile de text rămân pe telefon. Nu se adaugă subtitrări la postare.';
+
+  @override
+  String get ideasApplied => 'Idee adăugată. Fă-o a ta.';
+
+  @override
+  String get ideasUndo => 'Anulează';
+
+  @override
+  String get ideasTitleOne => 'Un mic moment';
+
+  @override
+  String get ideasDescriptionOne => 'Am vrut să împărtășesc asta.';
+
+  @override
+  String get ideasTitleTwo => 'Iată';
+
+  @override
+  String get ideasDescriptionTwo => 'O mică parte din ziua mea.';
+
+  @override
+  String get ideasTitleThree => 'De văzut în buclă';
+
+  @override
+  String get ideasDescriptionThree => 'Un moment de păstrat.';
+
+  @override
+  String get ideasTitleFour => 'Făcut de mine';
+
+  @override
+  String get ideasDescriptionFour => 'Ceva mic din partea mea.';
+
+  @override
+  String get ideasTitleFive => 'Fără mari explicații';
+
+  @override
+  String get ideasDescriptionFive => 'Am vrut doar să împărtășesc.';
+
+  @override
+  String get ideasTitleSix => 'Un pic din ziua de azi';
+
+  @override
+  String get ideasDescriptionSix => 'Las asta aici.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Se încarcă listele';

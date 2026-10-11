@@ -5081,10 +5081,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listContinue => 'Продължи';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5911,6 +5907,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'Покана за сътрудник';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9403,7 +9404,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Задай колко прозрачен да е избраният клип';
+      'Задай колко прозрачен да е избраният слой';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
@@ -9860,6 +9861,36 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Редактиране на анимация на слоя';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Добави ключов кадър';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Премахни ключовия кадър';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Към ключовия кадър на $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Ключови кадри';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Редактирай ключовите кадри на слоя';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Добави ключов кадър, премести главата за възпроизвеждане, после премести, оразмери или завърти слоя. Той се плъзга от ключов кадър към ключов кадър.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Ефект';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Движение от ключов кадър $from до $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Вход';
@@ -13247,6 +13278,99 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Машинен превод';
+
+  @override
+  String get ideasNeedIdeas => 'Трябват ти идеи?';
+
+  @override
+  String get ideasHide => 'Скрий идеите';
+
+  @override
+  String get ideasFromVideo => 'От моето видео';
+
+  @override
+  String get ideasSurprise => 'Изненадай ме';
+
+  @override
+  String get ideasPrepare => 'Подготви предложения на устройството';
+
+  @override
+  String get ideasUnavailable =>
+      'Идеите от видеото сега не са налични. Пробвай Изненадай ме.';
+
+  @override
+  String get ideasSourceVideo => 'Въз основа на видеото ти';
+
+  @override
+  String get ideasSourceTranscript => 'Въз основа на транскрипцията ти';
+
+  @override
+  String get ideasSourcePremade => 'Малко вдъхновение';
+
+  @override
+  String get ideasUseBoth => 'Използвай и двете';
+
+  @override
+  String get ideasMore => 'Още идеи';
+
+  @override
+  String get ideasGenerateTranscript => 'Създай транскрипция';
+
+  @override
+  String get ideasEditTranscript => 'Редактирай транскрипцията';
+
+  @override
+  String get ideasTranscript => 'Транскрипция за идеи';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Транскрипцията използва услугата на Divine, с обработка на устройството като резервен вариант. Предложенията за текст остават на телефона ти. Това не добавя субтитри към публикацията.';
+
+  @override
+  String get ideasApplied => 'Идеята е добавена. Направи я своя.';
+
+  @override
+  String get ideasUndo => 'Отмени';
+
+  @override
+  String get ideasTitleOne => 'Малък момент';
+
+  @override
+  String get ideasDescriptionOne => 'Искаше ми се да споделя това.';
+
+  @override
+  String get ideasTitleTwo => 'Ето го';
+
+  @override
+  String get ideasDescriptionTwo => 'Малка част от деня ми.';
+
+  @override
+  String get ideasTitleThree => 'За повторение';
+
+  @override
+  String get ideasDescriptionThree => 'Момент, който си струва да запазя.';
+
+  @override
+  String get ideasTitleFour => 'Мое дело';
+
+  @override
+  String get ideasDescriptionFour => 'Нещо малко от мен.';
+
+  @override
+  String get ideasTitleFive => 'Без много обяснения';
+
+  @override
+  String get ideasDescriptionFive => 'Просто исках да споделя.';
+
+  @override
+  String get ideasTitleSix => 'Малко от днес';
+
+  @override
+  String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';

@@ -5202,10 +5202,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listContinue => 'కొనసాగించండి';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -6041,6 +6037,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'సహకారి ఆహ్వానం';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9581,7 +9582,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'ఎంచుకున్న క్లిప్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
+      'ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
@@ -10047,6 +10048,36 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'లేయర్ యానిమేషన్‌ను సవరించండి';
+
+  @override
+  String get videoEditorKeyframeAdd => 'కీఫ్రేమ్‌ను జోడించండి';
+
+  @override
+  String get videoEditorKeyframeRemove => 'కీఫ్రేమ్‌ను తీసివేయండి';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$time వద్ద ఉన్న కీఫ్రేమ్‌కు వెళ్ళండి';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'కీఫ్రేమ్‌లు';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'లేయర్ కీఫ్రేమ్‌లను సవరించండి';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై లేయర్‌ను కదిలించండి, పరిమాణం మార్చండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'కీఫ్రేమ్ $from నుండి $to వరకు కదలిక';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'నమోదు చేయండి';
@@ -13461,6 +13492,99 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'యంత్ర అనువాదం';
+
+  @override
+  String get ideasNeedIdeas => 'ఆలోచనలు కావాలా?';
+
+  @override
+  String get ideasHide => 'ఆలోచనలు దాచు';
+
+  @override
+  String get ideasFromVideo => 'నా వీడియో నుంచి';
+
+  @override
+  String get ideasSurprise => 'నన్ను ఆశ్చర్యపరచు';
+
+  @override
+  String get ideasPrepare => 'పరికరంలో సూచనలను సిద్ధం చేయి';
+
+  @override
+  String get ideasUnavailable =>
+      'వీడియో ఆలోచనలు ఇప్పుడు అందుబాటులో లేవు. నన్ను ఆశ్చర్యపరచు ప్రయత్నించండి.';
+
+  @override
+  String get ideasSourceVideo => 'మీ వీడియో ఆధారంగా';
+
+  @override
+  String get ideasSourceTranscript => 'మీ లిప్యంతరీకరణ ఆధారంగా';
+
+  @override
+  String get ideasSourcePremade => 'కొంచెం స్ఫూర్తి';
+
+  @override
+  String get ideasUseBoth => 'రెండూ వాడు';
+
+  @override
+  String get ideasMore => 'మరిన్ని ఆలోచనలు';
+
+  @override
+  String get ideasGenerateTranscript => 'లిప్యంతరీకరణ సృష్టించు';
+
+  @override
+  String get ideasEditTranscript => 'లిప్యంతరీకరణ సవరించు';
+
+  @override
+  String get ideasTranscript => 'ఆలోచనల కోసం లిప్యంతరీకరణ';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'లిప్యంతరీకరణ Divine సేవను వాడుతుంది; అవసరమైతే పరికరంలో ప్రాసెస్ చేస్తుంది. పదాల సూచనలు మీ ఫోన్‌లోనే ఉంటాయి. ఇది మీ పోస్ట్‌కు ఉపశీర్షికలను జోడించదు.';
+
+  @override
+  String get ideasApplied => 'ఆలోచన జోడించబడింది. మీ శైలిని చేర్చండి.';
+
+  @override
+  String get ideasUndo => 'రద్దు చేయి';
+
+  @override
+  String get ideasTitleOne => 'ఒక చిన్న క్షణం';
+
+  @override
+  String get ideasDescriptionOne => 'ఇది పంచుకోవాలనిపించింది.';
+
+  @override
+  String get ideasTitleTwo => 'ఇదిగో';
+
+  @override
+  String get ideasDescriptionTwo => 'నా రోజులో ఒక చిన్న భాగం.';
+
+  @override
+  String get ideasTitleThree => 'మళ్లీ మళ్లీ చూడటానికి';
+
+  @override
+  String get ideasDescriptionThree => 'దాచుకోదగిన క్షణం.';
+
+  @override
+  String get ideasTitleFour => 'నేను చేసినది';
+
+  @override
+  String get ideasDescriptionFour => 'నా నుంచి ఒక చిన్న విషయం.';
+
+  @override
+  String get ideasTitleFive => 'పెద్ద వివరణ లేకుండా';
+
+  @override
+  String get ideasDescriptionFive => 'ఊరికే పంచుకోవాలనుకున్నాను.';
+
+  @override
+  String get ideasTitleSix => 'ఈ రోజులో కొంత';
+
+  @override
+  String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';

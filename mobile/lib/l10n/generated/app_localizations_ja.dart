@@ -4728,10 +4728,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listContinue => '続ける';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5534,6 +5530,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'コラボ招待';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -8863,7 +8864,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpacityLabel => '不透明度';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '選択したクリップの透け具合を設定';
+  String get videoEditorOpacitySemanticLabel => '選択したレイヤーの透け具合を設定';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
@@ -9288,6 +9289,35 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'レイヤーアニメーションを編集';
+
+  @override
+  String get videoEditorKeyframeAdd => 'キーフレームを追加';
+
+  @override
+  String get videoEditorKeyframeRemove => 'キーフレームを削除';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '$timeのキーフレームへ移動';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'キーフレーム';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => 'レイヤーのキーフレームを編集';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'キーフレームを追加し、再生ヘッドを動かしてから、レイヤーを移動・拡大縮小・回転します。レイヤーはキーフレームからキーフレームへなめらかに動きます。';
+
+  @override
+  String get videoEditorKeyframeEffect => 'エフェクト';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'キーフレーム$fromから$toへの動き';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'イン';
@@ -12474,6 +12504,98 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => '機械翻訳';
+
+  @override
+  String get ideasNeedIdeas => 'アイデアが必要？';
+
+  @override
+  String get ideasHide => 'アイデアを閉じる';
+
+  @override
+  String get ideasFromVideo => '自分の動画から';
+
+  @override
+  String get ideasSurprise => 'おまかせ';
+
+  @override
+  String get ideasPrepare => '端末内の提案を準備';
+
+  @override
+  String get ideasUnavailable => '動画からのアイデアは今は利用できません。「おまかせ」を試してください。';
+
+  @override
+  String get ideasSourceVideo => '動画に基づく提案';
+
+  @override
+  String get ideasSourceTranscript => '文字起こしに基づく提案';
+
+  @override
+  String get ideasSourcePremade => 'ちょっとしたヒント';
+
+  @override
+  String get ideasUseBoth => '両方使う';
+
+  @override
+  String get ideasMore => 'ほかのアイデア';
+
+  @override
+  String get ideasGenerateTranscript => '文字起こしを生成';
+
+  @override
+  String get ideasEditTranscript => '文字起こしを編集';
+
+  @override
+  String get ideasTranscript => 'アイデア用の文字起こし';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      '文字起こしにはDivineのサービスを使い、利用できない場合は端末内で処理します。文章の提案は端末内で生成します。投稿に字幕は追加されません。';
+
+  @override
+  String get ideasApplied => 'アイデアを追加しました。自分らしく編集しよう。';
+
+  @override
+  String get ideasUndo => '元に戻す';
+
+  @override
+  String get ideasTitleOne => '小さなひととき';
+
+  @override
+  String get ideasDescriptionOne => 'これをシェアしたくなった。';
+
+  @override
+  String get ideasTitleTwo => 'いってみよう';
+
+  @override
+  String get ideasDescriptionTwo => '今日のほんのひとコマ。';
+
+  @override
+  String get ideasTitleThree => 'ループでどうぞ';
+
+  @override
+  String get ideasDescriptionThree => '残しておきたい瞬間。';
+
+  @override
+  String get ideasTitleFour => '作ってみた';
+
+  @override
+  String get ideasDescriptionFour => '私からのちょっとしたもの。';
+
+  @override
+  String get ideasTitleFive => '説明はほどほどに';
+
+  @override
+  String get ideasDescriptionFive => 'ただシェアしたかっただけ。';
+
+  @override
+  String get ideasTitleSix => '今日のかけら';
+
+  @override
+  String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
 
   @override
   String get listsDiscoveryLoadingLabel => 'リストを読み込み中';

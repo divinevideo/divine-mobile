@@ -5047,10 +5047,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listContinue => 'Doorgaan';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5878,6 +5874,11 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get inboxConversationCollabInvitePreview =>
       'Uitnodiging om samen te werken';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9358,7 +9359,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Instellen hoe doorzichtig de geselecteerde clip is';
+      'Instellen hoe doorzichtig de geselecteerde laag is';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';
@@ -9815,6 +9816,36 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Laaganimatie bewerken';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Keyframe toevoegen';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Keyframe verwijderen';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Naar keyframe op $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframes';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Keyframes van de laag bewerken';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Voeg een keyframe toe, verplaats de afspeelkop en verschuif, schaal of draai dan de laag. Die glijdt van keyframe naar keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Beweging van keyframe $from naar $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Ingang';
@@ -13189,6 +13220,99 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Automatisch vertaald';
+
+  @override
+  String get ideasNeedIdeas => 'Ideeën nodig?';
+
+  @override
+  String get ideasHide => 'Ideeën verbergen';
+
+  @override
+  String get ideasFromVideo => 'Uit mijn video';
+
+  @override
+  String get ideasSurprise => 'Verras me';
+
+  @override
+  String get ideasPrepare => 'Suggesties op het apparaat voorbereiden';
+
+  @override
+  String get ideasUnavailable =>
+      'Video-ideeën zijn nu niet beschikbaar. Probeer Verras me.';
+
+  @override
+  String get ideasSourceVideo => 'Gebaseerd op je video';
+
+  @override
+  String get ideasSourceTranscript => 'Gebaseerd op je transcript';
+
+  @override
+  String get ideasSourcePremade => 'Een beetje inspiratie';
+
+  @override
+  String get ideasUseBoth => 'Beide gebruiken';
+
+  @override
+  String get ideasMore => 'Meer ideeën';
+
+  @override
+  String get ideasGenerateTranscript => 'Transcript maken';
+
+  @override
+  String get ideasEditTranscript => 'Transcript bewerken';
+
+  @override
+  String get ideasTranscript => 'Transcript voor ideeën';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transcriptie gebruikt de dienst van Divine, met verwerking op het apparaat als alternatief. Tekstsuggesties blijven op je telefoon. Dit voegt geen ondertitels toe aan je bericht.';
+
+  @override
+  String get ideasApplied => 'Idee toegevoegd. Maak het van jou.';
+
+  @override
+  String get ideasUndo => 'Ongedaan maken';
+
+  @override
+  String get ideasTitleOne => 'Een klein moment';
+
+  @override
+  String get ideasDescriptionOne => 'Dit wilde ik delen.';
+
+  @override
+  String get ideasTitleTwo => 'Daar gaan we';
+
+  @override
+  String get ideasDescriptionTwo => 'Een klein stukje van mijn dag.';
+
+  @override
+  String get ideasTitleThree => 'Voor in de loop';
+
+  @override
+  String get ideasDescriptionThree => 'Een moment om te bewaren.';
+
+  @override
+  String get ideasTitleFour => 'Zelf gemaakt';
+
+  @override
+  String get ideasDescriptionFour => 'Een kleinigheid van mij.';
+
+  @override
+  String get ideasTitleFive => 'Geen grote uitleg';
+
+  @override
+  String get ideasDescriptionFive => 'Wilde het gewoon delen.';
+
+  @override
+  String get ideasTitleSix => 'Een beetje van vandaag';
+
+  @override
+  String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Lijsten laden';

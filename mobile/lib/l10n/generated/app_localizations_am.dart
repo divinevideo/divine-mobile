@@ -4909,10 +4909,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listContinue => 'ቀጥል';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5721,6 +5717,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => 'የተባባሪ ግብዣ';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9107,7 +9108,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'የተመረጠው ቅንጥብ ምን ያህል እንደሚታይ ማዘጋጀት';
+      'የተመረጠው ንብርብር ምን ያህል እንደሚታይ ማዘጋጀት';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
@@ -9544,6 +9545,36 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'የንብርብር እነማ አርትዕ';
+
+  @override
+  String get videoEditorKeyframeAdd => 'ቁልፍ ፍሬም አክል';
+
+  @override
+  String get videoEditorKeyframeRemove => 'ቁልፍ ፍሬም አስወግድ';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'በ$time ወዳለው ቁልፍ ፍሬም ሂድ';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'ቁልፍ ፍሬሞች';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'የንብርብሩን ቁልፍ ፍሬሞች ማስተካከያ';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ንብርብሩን ያንቀሳቅሱ፣ መጠኑን ይቀይሩ ወይም ያሽከርክሩ። ንብርብሩ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
+
+  @override
+  String get videoEditorKeyframeEffect => 'ውጤት';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'እንቅስቃሴ ከቁልፍ ፍሬም $from እስከ $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'መግቢያ';
@@ -12787,6 +12818,98 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'በማሽን የተተረጎመ';
+
+  @override
+  String get ideasNeedIdeas => 'ሀሳብ ይፈልጋሉ?';
+
+  @override
+  String get ideasHide => 'ሀሳቦችን ደብቅ';
+
+  @override
+  String get ideasFromVideo => 'ከእኔ ቪዲዮ';
+
+  @override
+  String get ideasSurprise => 'አስደንቀኝ';
+
+  @override
+  String get ideasPrepare => 'በመሣሪያው ላይ ጥቆማዎችን አዘጋጅ';
+
+  @override
+  String get ideasUnavailable => 'የቪዲዮ ሀሳቦች አሁን አይገኙም። አስደንቀኝን ይሞክሩ።';
+
+  @override
+  String get ideasSourceVideo => 'በእርስዎ ቪዲዮ መሠረት';
+
+  @override
+  String get ideasSourceTranscript => 'በእርስዎ የጽሑፍ ግልባጭ መሠረት';
+
+  @override
+  String get ideasSourcePremade => 'ትንሽ መነሳሳት';
+
+  @override
+  String get ideasUseBoth => 'ሁለቱንም ተጠቀም';
+
+  @override
+  String get ideasMore => 'ተጨማሪ ሀሳቦች';
+
+  @override
+  String get ideasGenerateTranscript => 'ንግግርን ወደ ጽሑፍ ቀይር';
+
+  @override
+  String get ideasEditTranscript => 'ጽሑፉን አርትዕ';
+
+  @override
+  String get ideasTranscript => 'ለሀሳቦች የተጻፈ ንግግር';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'ንግግርን ወደ ጽሑፍ ለመቀየር የDivine አገልግሎት ይጠቀማል፤ ካልተቻለ በመሣሪያው ላይ ይሠራል። የቃላት ጥቆማዎች በስልክዎ ላይ ይቀራሉ። ይህ በልጥፍዎ ላይ ንዑስ ርዕሶችን አይጨምርም።';
+
+  @override
+  String get ideasApplied => 'ሀሳቡ ተጨምሯል። የራስዎን ቅርጽ ይስጡት።';
+
+  @override
+  String get ideasUndo => 'ቀልብስ';
+
+  @override
+  String get ideasTitleOne => 'ትንሽ ቅጽበት';
+
+  @override
+  String get ideasDescriptionOne => 'ይህን ማጋራት ፈለግሁ።';
+
+  @override
+  String get ideasTitleTwo => 'እነሆ';
+
+  @override
+  String get ideasDescriptionTwo => 'ከቀኔ ትንሽ ክፍል።';
+
+  @override
+  String get ideasTitleThree => 'ደጋግሞ ለማየት';
+
+  @override
+  String get ideasDescriptionThree => 'ሊቀመጥ የሚገባ ቅጽበት።';
+
+  @override
+  String get ideasTitleFour => 'ይህን ሠራሁ';
+
+  @override
+  String get ideasDescriptionFour => 'ከእኔ ትንሽ ነገር።';
+
+  @override
+  String get ideasTitleFive => 'ያለ ረጅም ማብራሪያ';
+
+  @override
+  String get ideasDescriptionFive => 'ማጋራት ብቻ ፈለግሁ።';
+
+  @override
+  String get ideasTitleSix => 'ከዛሬ ትንሽ';
+
+  @override
+  String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
 
   @override
   String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';

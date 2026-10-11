@@ -4708,10 +4708,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listContinue => '继续';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5504,6 +5500,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get inboxConversationCollabInvitePreview => '合作邀请';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -8781,7 +8782,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacityLabel => '不透明度';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '设置所选片段的透明程度';
+  String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
@@ -9196,6 +9197,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => '编辑图层动画';
+
+  @override
+  String get videoEditorKeyframeAdd => '添加关键帧';
+
+  @override
+  String get videoEditorKeyframeRemove => '移除关键帧';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return '跳到 $time 的关键帧';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => '关键帧';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel => '编辑图层关键帧';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      '添加关键帧，移动播放头，然后移动、缩放或旋转图层。图层会在关键帧之间平滑移动。';
+
+  @override
+  String get videoEditorKeyframeEffect => '效果';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return '从关键帧 $from 到 $to 的运动';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => '入场';
@@ -12326,6 +12356,98 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => '机器翻译';
+
+  @override
+  String get ideasNeedIdeas => '需要灵感？';
+
+  @override
+  String get ideasHide => '收起灵感';
+
+  @override
+  String get ideasFromVideo => '来自我的视频';
+
+  @override
+  String get ideasSurprise => '给我惊喜';
+
+  @override
+  String get ideasPrepare => '准备设备端建议';
+
+  @override
+  String get ideasUnavailable => '暂时无法从视频生成灵感，试试“给我惊喜”。';
+
+  @override
+  String get ideasSourceVideo => '根据你的视频';
+
+  @override
+  String get ideasSourceTranscript => '根据你的转录文本';
+
+  @override
+  String get ideasSourcePremade => '一点灵感';
+
+  @override
+  String get ideasUseBoth => '两个都用';
+
+  @override
+  String get ideasMore => '更多灵感';
+
+  @override
+  String get ideasGenerateTranscript => '生成转写文本';
+
+  @override
+  String get ideasEditTranscript => '编辑转写文本';
+
+  @override
+  String get ideasTranscript => '用于灵感的转写文本';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      '转写使用 Divine 服务，不可用时在设备上处理。文案建议在手机本地生成。这不会为帖子添加字幕。';
+
+  @override
+  String get ideasApplied => '已添加灵感，改成你的风格吧。';
+
+  @override
+  String get ideasUndo => '撤销';
+
+  @override
+  String get ideasTitleOne => '小小的瞬间';
+
+  @override
+  String get ideasDescriptionOne => '就是想分享这个。';
+
+  @override
+  String get ideasTitleTwo => '来啦';
+
+  @override
+  String get ideasDescriptionTwo => '分享我一天中的小片段。';
+
+  @override
+  String get ideasTitleThree => '值得循环';
+
+  @override
+  String get ideasDescriptionThree => '值得留下的瞬间。';
+
+  @override
+  String get ideasTitleFour => '我做的';
+
+  @override
+  String get ideasDescriptionFour => '送上一点我的小创作。';
+
+  @override
+  String get ideasTitleFive => '无需太多解释';
+
+  @override
+  String get ideasDescriptionFive => '只是想分享。';
+
+  @override
+  String get ideasTitleSix => '今天的一小段';
+
+  @override
+  String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
 
   @override
   String get listsDiscoveryLoadingLabel => '正在加载列表';

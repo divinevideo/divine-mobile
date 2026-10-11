@@ -5166,10 +5166,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listContinue => 'Dalej';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -6004,6 +6000,11 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get inboxConversationCollabInvitePreview =>
       'Zaproszenie do współpracy';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9508,7 +9509,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ustaw, jak bardzo przezroczysty ma być wybrany klip';
+      'Ustaw, jak bardzo przezroczysta ma być wybrana warstwa';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
@@ -9966,6 +9967,36 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Edytuj animację warstwy';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Dodaj klatkę kluczową';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Usuń klatkę kluczową';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Przejdź do klatki kluczowej w $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Klatki kluczowe';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Edytuj klatki kluczowe warstwy';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem przesuń, przeskaluj lub obróć warstwę. Warstwa płynnie przechodzi między klatkami kluczowymi.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efekt';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Ruch od klatki kluczowej $from do $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Wejście';
@@ -13384,6 +13415,99 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Tłumaczenie maszynowe';
+
+  @override
+  String get ideasNeedIdeas => 'Potrzebujesz pomysłów?';
+
+  @override
+  String get ideasHide => 'Ukryj pomysły';
+
+  @override
+  String get ideasFromVideo => 'Z mojego filmu';
+
+  @override
+  String get ideasSurprise => 'Zaskocz mnie';
+
+  @override
+  String get ideasPrepare => 'Przygotuj sugestie na urządzeniu';
+
+  @override
+  String get ideasUnavailable =>
+      'Pomysły z filmu są teraz niedostępne. Spróbuj Zaskocz mnie.';
+
+  @override
+  String get ideasSourceVideo => 'Na podstawie Twojego filmu';
+
+  @override
+  String get ideasSourceTranscript => 'Na podstawie Twojej transkrypcji';
+
+  @override
+  String get ideasSourcePremade => 'Trochę inspiracji';
+
+  @override
+  String get ideasUseBoth => 'Użyj obu';
+
+  @override
+  String get ideasMore => 'Więcej pomysłów';
+
+  @override
+  String get ideasGenerateTranscript => 'Wygeneruj transkrypcję';
+
+  @override
+  String get ideasEditTranscript => 'Edytuj transkrypcję';
+
+  @override
+  String get ideasTranscript => 'Transkrypcja do pomysłów';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transkrypcja korzysta z usługi Divine, a w razie potrzeby z urządzenia. Sugestie tekstu pozostają na telefonie. Nie doda to napisów do posta.';
+
+  @override
+  String get ideasApplied => 'Pomysł dodany. Nadaj mu swój styl.';
+
+  @override
+  String get ideasUndo => 'Cofnij';
+
+  @override
+  String get ideasTitleOne => 'Mała chwila';
+
+  @override
+  String get ideasDescriptionOne => 'Chcę się tym podzielić.';
+
+  @override
+  String get ideasTitleTwo => 'No to start';
+
+  @override
+  String get ideasDescriptionTwo => 'Mały fragment mojego dnia.';
+
+  @override
+  String get ideasTitleThree => 'Do zapętlenia';
+
+  @override
+  String get ideasDescriptionThree => 'Chwila warta zachowania.';
+
+  @override
+  String get ideasTitleFour => 'Moje dzieło';
+
+  @override
+  String get ideasDescriptionFour => 'Mała rzecz ode mnie.';
+
+  @override
+  String get ideasTitleFive => 'Bez wielkich wyjaśnień';
+
+  @override
+  String get ideasDescriptionFive => 'Po prostu chcę się podzielić.';
+
+  @override
+  String get ideasTitleSix => 'Odrobina dzisiaj';
+
+  @override
+  String get ideasDescriptionSix => 'Zostawiam to tutaj.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Wczytywanie list';

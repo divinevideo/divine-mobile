@@ -5061,10 +5061,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listContinue => 'Magpatuloy';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5892,6 +5888,11 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get inboxConversationCollabInvitePreview =>
       'Imbitasyon bilang collaborator';
+
+  @override
+  String inboxConversationPreviewSenderPrefix(String sender) {
+    return '$sender: ';
+  }
 
   @override
   String collaboratorInviteDmBody(String title, String url) {
@@ -9391,7 +9392,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'I-set kung gaano ka-transparent ang napiling clip';
+      'I-set kung gaano ka-transparent ang napiling layer';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
@@ -9849,6 +9850,36 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'I-edit ang animation ng layer';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Magdagdag ng keyframe';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Alisin ang keyframe';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Pumunta sa keyframe sa $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Keyframes';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'I-edit ang mga keyframe ng layer';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Magdagdag ng keyframe, ilipat ang playhead, tapos ilipat, i-resize o i-rotate ang layer. Dadausdos ito mula keyframe hanggang keyframe.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Effect';
+
+  @override
+  String videoEditorKeyframeCurveSegment(String from, String to) {
+    return 'Galaw mula keyframe $from hanggang $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Pasok';
@@ -13234,6 +13265,99 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Awtomatikong isinalin';
+
+  @override
+  String get ideasNeedIdeas => 'Kailangan ng ideya?';
+
+  @override
+  String get ideasHide => 'Itago ang mga ideya';
+
+  @override
+  String get ideasFromVideo => 'Mula sa video ko';
+
+  @override
+  String get ideasSurprise => 'Sorpresahin ako';
+
+  @override
+  String get ideasPrepare => 'Ihanda ang mga mungkahi sa device';
+
+  @override
+  String get ideasUnavailable =>
+      'Walang ideya mula sa video sa ngayon. Subukan ang Sorpresahin ako.';
+
+  @override
+  String get ideasSourceVideo => 'Batay sa video mo';
+
+  @override
+  String get ideasSourceTranscript => 'Batay sa transcript mo';
+
+  @override
+  String get ideasSourcePremade => 'Kaunting inspirasyon';
+
+  @override
+  String get ideasUseBoth => 'Gamitin pareho';
+
+  @override
+  String get ideasMore => 'Iba pang ideya';
+
+  @override
+  String get ideasGenerateTranscript => 'Gumawa ng transcript';
+
+  @override
+  String get ideasEditTranscript => 'I-edit ang transcript';
+
+  @override
+  String get ideasTranscript => 'Transcript para sa mga ideya';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Gumagamit ang transcription ng serbisyo ng Divine, na may pagproseso sa device bilang alternatibo. Nananatili sa telepono mo ang mga mungkahing teksto. Hindi ito magdaragdag ng subtitle sa post mo.';
+
+  @override
+  String get ideasApplied => 'Naidagdag ang ideya. Gawin mong sarili.';
+
+  @override
+  String get ideasUndo => 'I-undo';
+
+  @override
+  String get ideasTitleOne => 'Isang munting sandali';
+
+  @override
+  String get ideasDescriptionOne => 'Gusto ko lang ibahagi ito.';
+
+  @override
+  String get ideasTitleTwo => 'Eto na';
+
+  @override
+  String get ideasDescriptionTwo => 'Isang maliit na bahagi ng araw ko.';
+
+  @override
+  String get ideasTitleThree => 'Para sa paulit-ulit na panonood';
+
+  @override
+  String get ideasDescriptionThree => 'Sandaling sulit itago.';
+
+  @override
+  String get ideasTitleFour => 'Gawa ko ito';
+
+  @override
+  String get ideasDescriptionFour => 'Kaunting bagay mula sa akin.';
+
+  @override
+  String get ideasTitleFive => 'Walang mahabang paliwanag';
+
+  @override
+  String get ideasDescriptionFive => 'Gusto ko lang magbahagi.';
+
+  @override
+  String get ideasTitleSix => 'Kaunti mula sa araw na ito';
+
+  @override
+  String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';
