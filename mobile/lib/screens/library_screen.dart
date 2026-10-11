@@ -422,10 +422,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (columns == null) return;
     if (!context.mounted) return;
     clipsBloc.add(ClipsLibraryGridColumnsChanged(columns));
-    _announceGridColumns(context, columns);
-  }
-
-  void _announceGridColumns(BuildContext context, int columns) {
     announceDetached(
       context,
       context.l10n.libraryGridSizeColumns(columns),
