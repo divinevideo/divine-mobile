@@ -1,7 +1,40 @@
 // ABOUTME: Application configuration including backend URLs and environment settings
 // ABOUTME: Centralizes app configuration for different environments (dev, staging, prod)
 
+import 'package:flutter/foundation.dart';
+import 'package:openvine/models/environment_config.dart';
+
 class AppConfig {
+  static const String liveApiBaseUrlOverride = String.fromEnvironment(
+    'LIVE_API_URL',
+  );
+  static String get liveApiBaseUrl => resolveLiveApiBaseUrl();
+  static String resolveLiveApiBaseUrl({
+    String? overrideBaseUrl,
+    String? environmentName,
+    TargetPlatform? targetPlatform,
+    bool? isWeb,
+  }) {
+    final explicitOverride = (overrideBaseUrl ?? liveApiBaseUrlOverride).trim();
+    if (explicitOverride.isNotEmpty) {
+      return explicitOverride.replaceFirst(RegExp(r'/+$'), '');
+    }
+
+    final currentEnvironment = (environmentName ?? environment).toLowerCase();
+    final useLocalDefaults =
+        currentEnvironment == 'development' || currentEnvironment == 'local';
+    if (useLocalDefaults) {
+      final resolvedPlatform = targetPlatform ?? defaultTargetPlatform;
+      final resolvedIsWeb = isWeb ?? kIsWeb;
+      final host = !resolvedIsWeb && resolvedPlatform == TargetPlatform.android
+          ? androidEmulatorHost
+          : loopbackHost;
+      return 'http://$host:$localLiveApiPort';
+    }
+
+    return productionLiveApiBaseUrl;
+  }
+
   // Backend configuration
 
   /// Canonical Divine REST API base (funnelcake, `api.divine.video`).

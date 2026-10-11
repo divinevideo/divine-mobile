@@ -9,6 +9,10 @@ enum FeatureFlag {
     'Inline title, description, and hashtag ideas.',
     audience: FeatureFlagAudience.internal,
   ),
+  livestreamingBeta(
+    'Livestream',
+    'Enable livestream discovery, joining, and hosting',
+  ),
   enhancedAnalytics(
     'Enhanced Analytics',
     'Detailed usage tracking and insights',

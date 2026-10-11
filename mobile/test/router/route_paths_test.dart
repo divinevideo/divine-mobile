@@ -6,6 +6,20 @@ import 'package:openvine/router/route_paths.dart';
 
 void main() {
   group(RoutePaths, () {
+    test('live identifiers round trip as individual URL segments', () {
+      const roomId = 'room/with ?#% snow 雪';
+      const sessionId = 'session/100%?';
+      expect(Uri.parse(RoutePaths.liveRoomDetailFor(roomId)).pathSegments, [
+        'live',
+        'room',
+        roomId,
+      ]);
+      expect(
+        Uri.parse(RoutePaths.liveRoomFor(roomId, sessionId)).pathSegments,
+        ['live', 'room', roomId, 'session', sessionId],
+      );
+    });
+
     // Expected values were read off the screen classes before the locations
     // moved here, so drift in either direction fails these tests.
     test('constants keep the exact locations the screens declared', () {

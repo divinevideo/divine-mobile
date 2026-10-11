@@ -20,6 +20,10 @@ enum RouteType {
   likedVideos, // Current user's liked videos feed
   hashtag, // Still supported as push route within explore
   categoryGallery, // Category gallery pushed from explore categories
+  liveDiscovery,
+  goLive,
+  liveRoomDetail,
+  liveRoom,
   videoRecorder, // Video recorder screen
   videoEditor, // Video editor screen
   videoMetadata, // Video editor meta screen
@@ -91,6 +95,8 @@ class RouteContext {
     this.videoId,
     this.draftId,
     this.conversationId,
+    this.roomId,
+    this.sessionId,
     this.isUnavailablePins = false,
   });
 
@@ -105,6 +111,8 @@ class RouteContext {
   final String? videoId;
   final String? draftId;
   final String? conversationId;
+  final String? roomId;
+  final String? sessionId;
   final bool isUnavailablePins;
 
   /// What this route is *about*, with [videoIndex] deliberately left out.
@@ -130,6 +138,8 @@ class RouteContext {
     videoId,
     draftId,
     conversationId,
+    roomId,
+    sessionId,
     isUnavailablePins,
   );
 }
@@ -175,6 +185,11 @@ bool _isKnownRouteShape(List<String> segments) {
   final length = segments.length;
 
   switch (firstSegment) {
+    case 'live':
+      return length == 1 ||
+          (length == 2 && segments[1] == 'go') ||
+          (length == 3 && segments[1] == 'room') ||
+          (length == 5 && segments[1] == 'room' && segments[3] == 'session');
     case 'home':
     case 'explore':
     case 'notifications':
@@ -428,6 +443,38 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
         type: RouteType.categoryGallery,
         categoryName: categoryName,
       );
+
+    case 'live':
+      if (segments.length == 1) {
+        return const RouteContext(type: RouteType.liveDiscovery);
+      }
+
+      if (segments[1] == 'go') {
+        return const RouteContext(type: RouteType.goLive);
+      }
+
+      if (segments[1] == 'room') {
+        if (segments.length < 3) {
+          return const RouteContext(type: RouteType.liveDiscovery);
+        }
+
+        final roomId = _safeDecode(segments[2]);
+        if (segments.length > 4 && segments[3] == 'session') {
+          final sessionId = _safeDecode(segments[4]);
+          return RouteContext(
+            type: RouteType.liveRoom,
+            roomId: roomId,
+            sessionId: sessionId,
+          );
+        }
+
+        return RouteContext(
+          type: RouteType.liveRoomDetail,
+          roomId: roomId,
+        );
+      }
+
+      return const RouteContext(type: RouteType.liveDiscovery);
 
     case 'video-recorder':
       return const RouteContext(type: RouteType.videoRecorder);
@@ -746,6 +793,33 @@ String buildRoute(RouteContext context) {
         return RoutePaths.explore;
       }
       return RoutePaths.categoryGalleryFor(categoryName);
+
+    case RouteType.liveDiscovery:
+      return RoutePaths.liveDiscovery;
+
+    case RouteType.goLive:
+      return RoutePaths.goLive;
+
+    case RouteType.liveRoomDetail:
+      final roomId = context.roomId;
+      if (roomId == null || roomId.isEmpty) {
+        return RoutePaths.liveDiscovery;
+      }
+      return RoutePaths.liveRoomDetailFor(roomId);
+
+    case RouteType.liveRoom:
+      final roomId = context.roomId;
+      final sessionId = context.sessionId;
+      if (roomId == null ||
+          roomId.isEmpty ||
+          sessionId == null ||
+          sessionId.isEmpty) {
+        return RoutePaths.liveDiscovery;
+      }
+      return RoutePaths.liveRoomFor(
+        roomId,
+        sessionId,
+      );
 
     case RouteType.videoRecorder:
       return RoutePaths.videoRecorder;

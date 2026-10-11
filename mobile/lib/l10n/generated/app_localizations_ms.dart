@@ -13345,4 +13345,515 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
+
+  @override
+  String get liveTabLabel => 'Langsung';
+
+  @override
+  String get liveHideParticipantLocally => 'Sembunyikan daripada paparan saya';
+
+  @override
+  String get liveHideChatLocally => 'Sembunyikan sembang untuk saya';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Menyembunyikan peserta atau sembang mereka hanya mengubah paparan anda. Audio mereka kekal aktif dan orang lain masih melihat mereka.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Mesej yang disembunyikan masih kelihatan kepada orang lain.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Lihat sepintas lalu hos yang sedang bersiaran atau akan bersiaran seterusnya.';
+
+  @override
+  String get liveActiveSpeakers => 'Penutur aktif';
+
+  @override
+  String get liveApprove => 'Luluskan';
+
+  @override
+  String get liveAudience => 'Penonton';
+
+  @override
+  String get liveAudioOnly => 'Audio sahaja';
+
+  @override
+  String get liveBlockUser => 'Sekat pengguna';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Kamera dan mikrofon dimatikan';
+
+  @override
+  String get liveChat => 'Sembang';
+
+  @override
+  String get liveConnectionLooksShaky => 'Sambungan nampak tidak stabil';
+
+  @override
+  String get liveCoverImageURL => 'URL imej muka depan';
+
+  @override
+  String get liveDefaultThumbnail => 'Imej kecil lalai';
+
+  @override
+  String get liveDemote => 'Turunkan peranan';
+
+  @override
+  String get liveDeny => 'Tolak';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Singgah di bilik yang sudah bermula.';
+
+  @override
+  String get liveEndSession => 'Tamatkan sesi';
+
+  @override
+  String get liveEndThisLiveSession => 'Tamatkan sesi langsung ini?';
+
+  @override
+  String get liveFailedToReportUser => 'Gagal melaporkan pengguna';
+
+  @override
+  String get liveFeaturedHosts => 'Hos pilihan';
+
+  @override
+  String get liveFlipCamera => 'Tukar kamera';
+
+  @override
+  String get liveGoLive => 'Siarkan langsung';
+
+  @override
+  String get liveHandRaised => 'Tangan diangkat';
+
+  @override
+  String get liveHost => 'Hos';
+
+  @override
+  String get liveHostControls => 'Kawalan hos';
+
+  @override
+  String get liveJoinLive => 'Sertai siaran langsung';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Pastikan bilik stabil dengan beralih kepada audio sahaja sehingga rangkaian pulih.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Urus pentas dan tangan yang diangkat, serta kurangkan penggunaan video apabila rangkaian tidak stabil.';
+
+  @override
+  String get liveLiveAudioOnly => 'Siaran langsung audio sahaja';
+
+  @override
+  String get liveLiveNow => 'Sedang bersiaran';
+
+  @override
+  String get liveLiveRoom => 'Bilik langsung';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'Bilik langsung tidak tersedia.';
+
+  @override
+  String get liveLiveVideo => 'Video langsung';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Video dan audio langsung';
+
+  @override
+  String get liveLowerHand => 'Turunkan tangan';
+
+  @override
+  String get liveManageParticipants => 'Urus peserta';
+
+  @override
+  String get liveModeration => 'Moderasi';
+
+  @override
+  String get liveModerator => 'Moderator';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Belum ada penutur aktif.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Tiada penonton untuk dimoderasi sekarang.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Belum ada mesej. Mulakan perbualan.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet =>
+      'Belum ada sesiapa menyertai bilik ini.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak =>
+      'Tiada sesiapa sedang menunggu untuk bercakap.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Belum ada bilik. Mulakan yang pertama.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => 'Belum ada sesi dijadualkan.';
+
+  @override
+  String get liveNothingHereYet => 'Belum ada apa-apa di sini.';
+
+  @override
+  String get liveOnStage => 'Di pentas';
+
+  @override
+  String get liveOpenReplay => 'Buka rakaman semula';
+
+  @override
+  String get liveOpenRoom => 'Buka bilik';
+
+  @override
+  String get liveParticipants => 'Peserta';
+
+  @override
+  String get livePromote => 'Naikkan peranan';
+
+  @override
+  String get liveRaiseHand => 'Angkat tangan';
+
+  @override
+  String get liveRaisedHands => 'Tangan diangkat';
+
+  @override
+  String get liveReplayProcessing => 'Rakaman semula sedang diproses';
+
+  @override
+  String get liveReplayQueued => 'Rakaman semula dalam giliran';
+
+  @override
+  String get liveReplayReady => 'Rakaman semula sedia';
+
+  @override
+  String get liveReplayUnavailable => 'Rakaman semula tidak tersedia';
+
+  @override
+  String get liveReportUser => 'Laporkan pengguna';
+
+  @override
+  String get liveRoomDetail => 'Butiran bilik';
+
+  @override
+  String get liveRoomDetails => 'Butiran bilik';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Pautan bilik disalin ke papan klip';
+
+  @override
+  String get liveRoomTitle => 'Tajuk bilik';
+
+  @override
+  String get liveRoomUnavailable => 'Bilik tidak tersedia.';
+
+  @override
+  String get liveSaySomething => 'Katakan sesuatu';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Lihat apa yang akan datang.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Lihat siapa sedang bersiaran atau mulakan bilik anda sendiri.';
+
+  @override
+  String get liveSend => 'Hantar';
+
+  @override
+  String get liveSession => 'Sesi';
+
+  @override
+  String get liveShareRoom => 'Kongsi bilik';
+
+  @override
+  String get liveSpeaker => 'Penutur';
+
+  @override
+  String get liveSpeakerHandRaised => 'Penutur, tangan diangkat';
+
+  @override
+  String get liveSpeakers => 'Penutur';
+
+  @override
+  String get liveStage => 'Pentas';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'Mulakan bilik awam dalam satu langkah.';
+
+  @override
+  String get liveStartLiveNow => 'Mulakan siaran langsung sekarang';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Memulakan kamera dan mikrofon...';
+
+  @override
+  String get liveStartingCamera => 'Memulakan kamera...';
+
+  @override
+  String get liveStartingMicrophone => 'Memulakan mikrofon...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Beralih kepada audio sahaja';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Siaran langsung telah tamat, tetapi rakaman semula sedia untuk ditonton.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Siaran langsung telah tamat. Kami masih memproses rakaman semula.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Ini menamatkan bilik untuk semua orang dan menutup pentas.';
+
+  @override
+  String get liveTurnCameraOff => 'Matikan kamera';
+
+  @override
+  String get liveTurnCameraOn => 'Hidupkan kamera';
+
+  @override
+  String get liveTurnMicOff => 'Matikan mikrofon';
+
+  @override
+  String get liveTurnMicOn => 'Hidupkan mikrofon';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Tidak dapat membuka bilik langsung ini.';
+
+  @override
+  String get liveUpcoming => 'Akan datang';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Kemas kini tajuk bilik';
+
+  @override
+  String get liveUpdateTitleStatus => 'Kemas kini tajuk/status';
+
+  @override
+  String get liveUserBlocked => 'Pengguna disekat';
+
+  @override
+  String get liveUserReported => 'Pengguna dilaporkan';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Menggunakan foto profil anda sebagai imej kecil awal.';
+
+  @override
+  String get liveWaitingForMedia => 'Menunggu media';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Menunggu penutur menyertai pentas.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout =>
+      'Apakah topik siaran langsung anda?';
+
+  @override
+  String get liveYouAreOnStage => 'Anda berada di pentas';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Tangan anda diangkat. Hos boleh membawa anda ke pentas daripada giliran penutur.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName sedang bersiaran';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Sertai $displayName secara langsung di Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Hos: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers penutur',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners pendengar',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Bermula $time';
+  }
+
+  @override
+  String get liveEnded => 'Tamat';
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Tamat $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Dijadualkan pada $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Sertai $title secara langsung di Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Bilik langsung: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts hos',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators moderator',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers penutur',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience pendengar',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count penutur',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pendengar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pendengar dalam bilik',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Mesej sembang langsung daripada $displayName';
+  }
+
+  @override
+  String get liveShareFailed => 'Tidak dapat berkongsi bilik ini. Cuba lagi.';
+
+  @override
+  String get liveBlockFailed => 'Tidak dapat menyekat pengguna ini. Cuba lagi.';
+
+  @override
+  String get liveRoomStatusHint => 'Gunakan open, private atau closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Tidak dapat mengemas kini bilik ini. Cuba lagi.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Tidak dapat menyambung ke bilik ini. Cuba lagi.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Tidak dapat memuatkan kemas kini bilik. Cuba lagi.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Akses kamera disekat. Benarkannya dalam Tetapan.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Benarkan akses kamera untuk menghidupkan kamera anda.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Tiada kamera tersedia.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Tidak dapat meminta akses kamera. Semak Tetapan.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Akses mikrofon disekat. Benarkannya dalam Tetapan.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Benarkan akses mikrofon untuk menghidupkan mikrofon anda.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'Tiada mikrofon tersedia.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Tidak dapat meminta akses mikrofon. Semak Tetapan.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Pentas penuh. Tunggu sehingga seorang penutur keluar.';
+
+  @override
+  String get liveTitleRequired => 'Masukkan tajuk bilik.';
+
+  @override
+  String get liveStartFailed => 'Tidak dapat memulakan bilik ini. Cuba lagi.';
+
+  @override
+  String get liveSendFailed => 'Tidak dapat menghantar mesej anda. Cuba lagi.';
+
+  @override
+  String get liveChatLoadFailed => 'Tidak dapat memuatkan sembang. Cuba lagi.';
 }

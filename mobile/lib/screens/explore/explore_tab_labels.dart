@@ -35,6 +35,7 @@ String labelForExploreTabName(
   String name, {
   bool shellTitle = false,
 }) => switch (name) {
+  'live' => l10n.liveTabLabel,
   exploreFeaturedTabName => l10n.exploreTabFeatured,
   exploreClassicsTabName =>
     shellTitle ? l10n.navExploreClassics : l10n.exploreTabClassics,

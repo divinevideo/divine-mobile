@@ -13459,4 +13459,524 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Itago sa aking view';
+
+  @override
+  String get liveHideChatLocally => 'Itago ang chat para sa akin';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Ang pagtatago ng kalahok o ng chat niya ay sa view mo lang. Naka-on pa rin ang audio niya at nakikita pa rin siya ng iba.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Nakikita pa rin ng iba ang mga nakatagong mensahe.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Isang mabilis na tingin sa mga host na live ngayon o susunod na.';
+
+  @override
+  String get liveActiveSpeakers => 'Aktibong speakers';
+
+  @override
+  String get liveApprove => 'Aprubahan';
+
+  @override
+  String get liveAudience => 'Audience';
+
+  @override
+  String get liveAudioOnly => 'Audio lang';
+
+  @override
+  String get liveBlockUser => 'I-block ang user';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Naka-off ang camera at mic';
+
+  @override
+  String get liveChat => 'Chat';
+
+  @override
+  String get liveConnectionLooksShaky => 'Mukhang mahina ang koneksyon';
+
+  @override
+  String get liveCoverImageURL => 'URL ng cover image';
+
+  @override
+  String get liveDefaultThumbnail => 'Default na thumbnail';
+
+  @override
+  String get liveDemote => 'Ibaba ang role';
+
+  @override
+  String get liveDeny => 'Tanggihan';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Makisali sa mga room na nagsimula na.';
+
+  @override
+  String get liveEndSession => 'Tapusin ang session';
+
+  @override
+  String get liveEndThisLiveSession => 'Tapusin ang live session na ito?';
+
+  @override
+  String get liveFailedToReportUser => 'Hindi na-report ang user';
+
+  @override
+  String get liveFeaturedHosts => 'Mga tampok na host';
+
+  @override
+  String get liveFlipCamera => 'Palitan ang camera';
+
+  @override
+  String get liveGoLive => 'Mag-live';
+
+  @override
+  String get liveHandRaised => 'Nakataas ang kamay';
+
+  @override
+  String get liveHost => 'Host';
+
+  @override
+  String get liveHostControls => 'Mga kontrol ng host';
+
+  @override
+  String get liveJoinLive => 'Sumali sa live';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Lumipat sa audio lang para manatiling stable ang room habang hindi pa maayos ang koneksyon.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Ayusin ang stage, asikasuhin ang mga nakataas na kamay, at bawasan ang gamit sa network kapag mahina ang koneksyon.';
+
+  @override
+  String get liveLiveAudioOnly => 'Live na audio lang';
+
+  @override
+  String get liveLiveNow => 'Live ngayon';
+
+  @override
+  String get liveLiveRoom => 'Live room';
+
+  @override
+  String get liveLiveRoomsAreUnavailable =>
+      'Hindi available ang mga live room.';
+
+  @override
+  String get liveLiveVideo => 'Live video';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Live video at audio';
+
+  @override
+  String get liveLowerHand => 'Ibaba ang kamay';
+
+  @override
+  String get liveManageParticipants => 'Pamahalaan ang mga kalahok';
+
+  @override
+  String get liveModeration => 'Moderation';
+
+  @override
+  String get liveModerator => 'Moderator';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Wala pang aktibong speakers.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Walang audience na kailangang i-moderate ngayon.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Wala pang messages. Ikaw na ang mauna.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'Wala pang sumasali sa room.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'Walang naghihintay magsalita.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Wala pang room. Simulan ang una.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'Wala pang naka-schedule na session.';
+
+  @override
+  String get liveNothingHereYet => 'Wala pa rito.';
+
+  @override
+  String get liveOnStage => 'Nasa stage';
+
+  @override
+  String get liveOpenReplay => 'Buksan ang replay';
+
+  @override
+  String get liveOpenRoom => 'Buksan ang room';
+
+  @override
+  String get liveParticipants => 'Mga kalahok';
+
+  @override
+  String get livePromote => 'Itaas ang role';
+
+  @override
+  String get liveRaiseHand => 'Itaas ang kamay';
+
+  @override
+  String get liveRaisedHands => 'Mga nakataas na kamay';
+
+  @override
+  String get liveReplayProcessing => 'Pinoproseso ang replay';
+
+  @override
+  String get liveReplayQueued => 'Nakapila ang replay';
+
+  @override
+  String get liveReplayReady => 'Handa na ang replay';
+
+  @override
+  String get liveReplayUnavailable => 'Hindi available ang replay';
+
+  @override
+  String get liveReportUser => 'I-report ang user';
+
+  @override
+  String get liveRoomDetail => 'Detalye ng room';
+
+  @override
+  String get liveRoomDetails => 'Mga detalye ng room';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Nakopya ang link ng room sa clipboard';
+
+  @override
+  String get liveRoomTitle => 'Pamagat ng room';
+
+  @override
+  String get liveRoomUnavailable => 'Hindi available ang room.';
+
+  @override
+  String get liveSaySomething => 'May gusto kang sabihin?';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Tingnan kung ano ang susunod.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Tingnan kung sino ang live ngayon o gumawa ng sarili mong room.';
+
+  @override
+  String get liveSend => 'Ipadala';
+
+  @override
+  String get liveSession => 'Session';
+
+  @override
+  String get liveShareRoom => 'I-share ang room';
+
+  @override
+  String get liveSpeaker => 'Speaker';
+
+  @override
+  String get liveSpeakerHandRaised => 'Speaker, nakataas ang kamay';
+
+  @override
+  String get liveSpeakers => 'Mga speaker';
+
+  @override
+  String get liveStage => 'Stage';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => 'Gumawa agad ng public room.';
+
+  @override
+  String get liveStartLiveNow => 'Simulan ang live ngayon';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Binubuksan ang camera at microphone...';
+
+  @override
+  String get liveStartingCamera => 'Binubuksan ang camera...';
+
+  @override
+  String get liveStartingMicrophone => 'Binubuksan ang microphone...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Lumipat sa audio lang';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Tapos na ang live, pero puwede nang panoorin ang replay.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Tapos na ang live. Inihahanda pa namin ang replay.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Tatapusin nito ang room para sa lahat at isasara ang stage.';
+
+  @override
+  String get liveTurnCameraOff => 'I-off ang camera';
+
+  @override
+  String get liveTurnCameraOn => 'I-on ang camera';
+
+  @override
+  String get liveTurnMicOff => 'I-off ang mic';
+
+  @override
+  String get liveTurnMicOn => 'I-on ang mic';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Hindi mabuksan ang live room na ito.';
+
+  @override
+  String get liveUpcoming => 'Paparating';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Baguhin ang pamagat ng room';
+
+  @override
+  String get liveUpdateTitleStatus => 'Baguhin ang pamagat/status';
+
+  @override
+  String get liveUserBlocked => 'Na-block ang user';
+
+  @override
+  String get liveUserReported => 'Na-report ang user';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Ginagamit ang profile photo mo bilang unang thumbnail.';
+
+  @override
+  String get liveWaitingForMedia => 'Naghihintay ng media';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Hinihintay ang mga speaker na umakyat sa stage.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'Tungkol saan ang live mo?';
+
+  @override
+  String get liveYouAreOnStage => 'Nasa stage ka';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Nakataas ang kamay mo. Puwede kang paakyatin ng host sa stage mula sa pila ng speakers.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return 'Live si $displayName';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Makisama kay $displayName nang live sa Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Host: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers mga speaker',
+      one: '$speakers speaker',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners nakikinig',
+      one: '$listeners nakikinig',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Nagsimula noong $time';
+  }
+
+  @override
+  String get liveEnded => 'Natapos na';
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Natapos noong $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Naka-schedule sa $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Sumali sa $title nang live sa Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Live room: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts mga host',
+      one: '$hosts host',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators mga moderator',
+      one: '$moderators moderator',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers mga speaker',
+      one: '$speakers speaker',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience nakikinig',
+      one: '$audience nakikinig',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mga speaker',
+      one: '$count speaker',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nakikinig',
+      one: '$count nakikinig',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nakikinig sa room',
+      one: '$count nakikinig sa room',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Live chat message mula kay $displayName';
+  }
+
+  @override
+  String get liveShareFailed => 'Hindi ma-share ang room na ito. Subukan ulit.';
+
+  @override
+  String get liveBlockFailed => 'Hindi ma-block ang user na ito. Subukan ulit.';
+
+  @override
+  String get liveRoomStatusHint => 'Gamitin ang open, private, o closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Hindi ma-update ang room na ito. Subukan ulit.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Hindi makakonekta sa room na ito. Subukan ulit.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Hindi ma-load ang mga update ng room. Subukan ulit.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Naka-block ang access sa camera. I-enable ito sa Settings.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Payagan ang access sa camera para ma-on ang camera mo.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Walang available na camera.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Hindi makahingi ng access sa camera. Tingnan ang Settings.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Naka-block ang access sa microphone. I-enable ito sa Settings.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Payagan ang access sa microphone para ma-on ang microphone mo.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable =>
+      'Walang available na microphone.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Hindi makahingi ng access sa microphone. Tingnan ang Settings.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Puno ang stage. Hintaying may bumabang speaker.';
+
+  @override
+  String get liveTitleRequired => 'Maglagay ng pamagat ng room.';
+
+  @override
+  String get liveStartFailed =>
+      'Hindi masimulan ang room na ito. Subukan ulit.';
+
+  @override
+  String get liveSendFailed => 'Hindi maipadala ang message mo. Subukan ulit.';
+
+  @override
+  String get liveChatLoadFailed => 'Hindi ma-load ang chat. Subukan ulit.';
 }

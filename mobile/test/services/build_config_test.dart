@@ -7,6 +7,12 @@ import 'package:openvine/features/feature_flags/services/build_configuration.dar
 
 void main() {
   group('BuildConfiguration', () {
+    test('livestream defaults off', () {
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.livestreamingBeta),
+        isFalse,
+      );
+    });
     test('should read from environment variables', () {
       // This tests compile-time constants
       const config = BuildConfiguration();
@@ -78,6 +84,10 @@ void main() {
       expect(
         config.getEnvironmentKey(FeatureFlag.videoReplies),
         equals('FF_VIDEO_REPLIES'),
+      );
+      expect(
+        config.getEnvironmentKey(FeatureFlag.livestreamingBeta),
+        equals('FF_LIVESTREAMING_BETA'),
       );
     });
 

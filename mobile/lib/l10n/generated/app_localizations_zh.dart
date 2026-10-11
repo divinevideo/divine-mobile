@@ -12542,4 +12542,484 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get liveTabLabel => '直播';
+
+  @override
+  String get liveHideParticipantLocally => '在我的视图中隐藏';
+
+  @override
+  String get liveHideChatLocally => '仅对我隐藏聊天';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      '隐藏参与者或其聊天只会改变你的视图。他们的音频仍然开启，其他人仍然可以看到他们。';
+
+  @override
+  String get liveHiddenChatNotice => '隐藏的消息仍然对其他人可见。';
+
+  @override
+  String get liveFeaturedHostsDescription => '快速查看正在直播或即将开播的主持人。';
+
+  @override
+  String get liveActiveSpeakers => '正在发言';
+
+  @override
+  String get liveApprove => '批准';
+
+  @override
+  String get liveAudience => '听众';
+
+  @override
+  String get liveAudioOnly => '仅音频';
+
+  @override
+  String get liveBlockUser => '屏蔽用户';
+
+  @override
+  String get liveCameraAndMicAreOff => '摄像头和麦克风已关闭';
+
+  @override
+  String get liveChat => '聊天';
+
+  @override
+  String get liveConnectionLooksShaky => '连接似乎不稳定';
+
+  @override
+  String get liveCoverImageURL => '封面图片 URL';
+
+  @override
+  String get liveDefaultThumbnail => '默认缩略图';
+
+  @override
+  String get liveDemote => '降低角色权限';
+
+  @override
+  String get liveDeny => '拒绝';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling => '进入已经开始的房间。';
+
+  @override
+  String get liveEndSession => '结束会话';
+
+  @override
+  String get liveEndThisLiveSession => '结束这场直播？';
+
+  @override
+  String get liveFailedToReportUser => '举报用户失败';
+
+  @override
+  String get liveFeaturedHosts => '精选主持人';
+
+  @override
+  String get liveFlipCamera => '切换摄像头';
+
+  @override
+  String get liveGoLive => '开始直播';
+
+  @override
+  String get liveHandRaised => '已举手';
+
+  @override
+  String get liveHost => '主持人';
+
+  @override
+  String get liveHostControls => '主持人控制';
+
+  @override
+  String get liveJoinLive => '加入直播';
+
+  @override
+  String get liveAudioOnlySuggestion => '在网络恢复稳定之前，切换到仅音频模式，让房间保持稳定。';
+
+  @override
+  String get liveHostControlsDescription => '管理台上的发言者和举手请求，并在网络不稳定时适当切换模式。';
+
+  @override
+  String get liveLiveAudioOnly => '仅音频直播';
+
+  @override
+  String get liveLiveNow => '正在直播';
+
+  @override
+  String get liveLiveRoom => '直播间';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => '直播间暂不可用。';
+
+  @override
+  String get liveLiveVideo => '视频直播';
+
+  @override
+  String get liveLiveVideoAndAudio => '视频和音频直播';
+
+  @override
+  String get liveLowerHand => '放下手';
+
+  @override
+  String get liveManageParticipants => '管理参与者';
+
+  @override
+  String get liveModeration => '管理';
+
+  @override
+  String get liveModerator => '管理员';
+
+  @override
+  String get liveNoActiveSpeakersYet => '还没有人在发言。';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow => '目前没有需要管理的听众。';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence => '还没有消息。来聊聊吧。';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => '还没有人加入房间。';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => '没有人在等待发言。';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne => '还没有房间。来开第一个吧。';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => '还没有安排会话。';
+
+  @override
+  String get liveNothingHereYet => '这里还没有内容。';
+
+  @override
+  String get liveOnStage => '台上';
+
+  @override
+  String get liveOpenReplay => '打开回放';
+
+  @override
+  String get liveOpenRoom => '打开房间';
+
+  @override
+  String get liveParticipants => '参与者';
+
+  @override
+  String get livePromote => '提升角色权限';
+
+  @override
+  String get liveRaiseHand => '举手';
+
+  @override
+  String get liveRaisedHands => '举手请求';
+
+  @override
+  String get liveReplayProcessing => '回放处理中';
+
+  @override
+  String get liveReplayQueued => '回放等待处理中';
+
+  @override
+  String get liveReplayReady => '回放已就绪';
+
+  @override
+  String get liveReplayUnavailable => '回放不可用';
+
+  @override
+  String get liveReportUser => '举报用户';
+
+  @override
+  String get liveRoomDetail => '房间详情';
+
+  @override
+  String get liveRoomDetails => '房间信息';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard => '房间链接已复制到剪贴板';
+
+  @override
+  String get liveRoomTitle => '房间标题';
+
+  @override
+  String get liveRoomUnavailable => '房间不可用。';
+
+  @override
+  String get liveSaySomething => '说点什么';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => '看看接下来有什么。';
+
+  @override
+  String get liveDiscoveryDescription => '看看谁正在直播，或创建自己的房间。';
+
+  @override
+  String get liveSend => '发送';
+
+  @override
+  String get liveSession => '会话';
+
+  @override
+  String get liveShareRoom => '分享房间';
+
+  @override
+  String get liveSpeaker => '发言者';
+
+  @override
+  String get liveSpeakerHandRaised => '发言者，已举手';
+
+  @override
+  String get liveSpeakers => '发言者';
+
+  @override
+  String get liveStage => '台上';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => '立即创建一个公开房间。';
+
+  @override
+  String get liveStartLiveNow => '立即开始直播';
+
+  @override
+  String get liveStartingCameraAndMicrophone => '正在启动摄像头和麦克风...';
+
+  @override
+  String get liveStartingCamera => '正在启动摄像头...';
+
+  @override
+  String get liveStartingMicrophone => '正在启动麦克风...';
+
+  @override
+  String get liveSwitchToAudioOnly => '切换到仅音频';
+
+  @override
+  String get liveReplayReadyDescription => '直播已结束，可以观看回放了。';
+
+  @override
+  String get liveReplayProcessingDescription => '直播已结束。我们仍在处理回放交接。';
+
+  @override
+  String get liveEndSessionConfirmation => '这将为所有人结束房间，并关闭发言台。';
+
+  @override
+  String get liveTurnCameraOff => '关闭摄像头';
+
+  @override
+  String get liveTurnCameraOn => '开启摄像头';
+
+  @override
+  String get liveTurnMicOff => '关闭麦克风';
+
+  @override
+  String get liveTurnMicOn => '开启麦克风';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => '无法打开此直播间。';
+
+  @override
+  String get liveUpcoming => '即将开始';
+
+  @override
+  String get liveUpdateTheRoomTitle => '更新房间标题';
+
+  @override
+  String get liveUpdateTitleStatus => '更新标题/状态';
+
+  @override
+  String get liveUserBlocked => '已屏蔽用户';
+
+  @override
+  String get liveUserReported => '已举报用户';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      '使用你的头像作为初始缩略图。';
+
+  @override
+  String get liveWaitingForMedia => '等待音视频';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage => '等待发言者上台。';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => '你想直播什么？';
+
+  @override
+  String get liveYouAreOnStage => '你已上台';
+
+  @override
+  String get liveHandRaisedDescription => '你已举手。主持人可以从等待发言的队列中邀请你上台。';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName 正在直播';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return '来 Divine 和 $displayName 一起聊聊直播吧。';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return '主持人：$pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers 位发言者',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners 位听众',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return '开始于 $time';
+  }
+
+  @override
+  String get liveEnded => '已结束';
+
+  @override
+  String liveEndedAt(String time) {
+    return '结束于 $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return '预定于 $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return '在 Divine 加入 $title 直播';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return '直播间：$title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts 位主持人',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators 位管理员',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers 位发言者',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience 位听众',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 位发言者',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 位听众',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '房间里有 $count 位听众',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return '来自 $displayName 的直播聊天消息';
+  }
+
+  @override
+  String get liveShareFailed => '无法分享此房间。请重试。';
+
+  @override
+  String get liveBlockFailed => '无法屏蔽此用户。请重试。';
+
+  @override
+  String get liveRoomStatusHint => '使用 open、private 或 closed';
+
+  @override
+  String get liveErrorRequestFailed => '无法更新此房间。请重试。';
+
+  @override
+  String get liveErrorConnectionFailed => '无法连接到此房间。请重试。';
+
+  @override
+  String get liveErrorSubscriptionFailed => '无法加载房间更新。请重试。';
+
+  @override
+  String get liveErrorCameraBlocked => '摄像头访问被阻止。请在设置中启用。';
+
+  @override
+  String get liveErrorCameraRequired => '允许访问摄像头以开启摄像头。';
+
+  @override
+  String get liveErrorCameraUnavailable => '没有可用的摄像头。';
+
+  @override
+  String get liveErrorCameraPromptBlocked => '无法请求摄像头访问权限。请检查设置。';
+
+  @override
+  String get liveErrorMicrophoneBlocked => '麦克风访问被阻止。请在设置中启用。';
+
+  @override
+  String get liveErrorMicrophoneRequired => '允许访问麦克风以开启麦克风。';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => '没有可用的麦克风。';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked => '无法请求麦克风访问权限。请检查设置。';
+
+  @override
+  String get liveErrorSpeakerCapacityReached => '台上已满。请等待一位发言者离开。';
+
+  @override
+  String get liveTitleRequired => '请输入房间标题。';
+
+  @override
+  String get liveStartFailed => '无法创建此房间。请重试。';
+
+  @override
+  String get liveSendFailed => '无法发送你的消息。请重试。';
+
+  @override
+  String get liveChatLoadFailed => '无法加载聊天。请重试。';
 }

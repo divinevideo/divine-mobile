@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart' as cryptography;
-import 'package:kepler/kepler.dart';
 import 'package:pointycastle/export.dart';
 
 // Message encrypt and decrypt
@@ -339,8 +339,19 @@ class NIP44V2 {
   }
 
   static Uint8List shareSecret(String privateString, String publicString) {
-    final secretIV = Kepler.byteSecret(privateString, '02$publicString');
-    final key = Uint8List.fromList(secretIV[0]);
+    final domain = ECDomainParameters('secp256k1');
+    final agreement = ECDHBasicAgreement()
+      ..init(ECPrivateKey(BigInt.parse(privateString, radix: 16), domain));
+    final publicKey = ECPublicKey(
+      domain.curve.decodePoint(
+        Uint8List.fromList(hex.decode('02$publicString')),
+      ),
+      domain,
+    );
+    final sharedX = agreement.calculateAgreement(publicKey);
+    final key = Uint8List.fromList(
+      hex.decode(sharedX.toRadixString(16).padLeft(64, '0')),
+    );
     final salt = Uint8List.fromList(utf8.encode('nip44-v2'));
     return hkdfExtract(salt, key);
   }

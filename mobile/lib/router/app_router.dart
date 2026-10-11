@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/screenshot_mode.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -42,6 +44,11 @@ import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/key_import_screen.dart';
+import 'package:openvine/screens/live/go_live_page.dart';
+import 'package:openvine/screens/live/live_discovery_page.dart';
+import 'package:openvine/screens/live/live_room_detail_page.dart';
+import 'package:openvine/screens/live/live_room_page.dart';
+import 'package:openvine/screens/live/live_route_data.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
@@ -89,6 +96,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = RouterRefreshListenable(
     authService.authStateStream,
   );
+  ref.listen(isFeatureEnabledProvider(FeatureFlag.livestreamingBeta), (_, _) {
+    refreshListenable.refresh();
+  });
   // Compared against the status last routed on rather than Riverpod's
   // `previous`: a finished fetch records the account's last-known status
   // before the provider settles, so recomputing `previous` would already see
@@ -178,6 +188,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ...settingsRoutes(ref),
       ...profileRoutes(),
       ...libraryRoutes(),
+      ...buildLiveRoutes(
+        liveEnabled: true,
+        isEnabled: () =>
+            ref.read(isFeatureEnabledProvider(FeatureFlag.livestreamingBeta)),
+      ),
     ],
   );
 
@@ -196,4 +211,65 @@ List<NavigatorObserver> _buildRouterObservers(Ref ref) {
   ];
 
   return observers;
+}
+
+List<RouteBase> buildLiveRoutes({
+  required bool liveEnabled,
+  bool Function()? isEnabled,
+}) {
+  if (!liveEnabled) {
+    return const <RouteBase>[];
+  }
+
+  return <RouteBase>[
+    GoRoute(
+      redirect: (context, state) =>
+          isEnabled?.call() == false ? '/explore' : null,
+      path: LiveDiscoveryPage.path,
+      name: LiveDiscoveryPage.routeName,
+      builder: (context, state) => const LiveDiscoveryPage(),
+    ),
+    GoRoute(
+      redirect: (context, state) =>
+          isEnabled?.call() == false ? '/explore' : null,
+      path: LiveRoomDetailPage.pathPattern,
+      name: LiveRoomDetailPage.routeName,
+      builder: (context, state) {
+        final detailData = state.extra is LiveRoomDetailRouteData
+            ? state.extra! as LiveRoomDetailRouteData
+            : null;
+
+        return LiveRoomDetailPage(
+          roomId: state.pathParameters['roomId'] ?? '',
+          initialRoom: detailData?.room,
+          initialSession: detailData?.session,
+        );
+      },
+    ),
+    GoRoute(
+      redirect: (context, state) =>
+          isEnabled?.call() == false ? '/explore' : null,
+      path: LiveRoomPage.pathPattern,
+      name: LiveRoomPage.routeName,
+      builder: (context, state) {
+        final roomData = state.extra is LiveRoomRouteData
+            ? state.extra! as LiveRoomRouteData
+            : null;
+
+        return LiveRoomPage(
+          roomId: state.pathParameters['roomId'] ?? '',
+          sessionId: state.pathParameters['sessionId'] ?? '',
+          initialRoom: roomData?.room,
+          initialSession: roomData?.session,
+        );
+      },
+    ),
+    GoRoute(
+      redirect: (context, state) =>
+          isEnabled?.call() == false ? '/explore' : null,
+      path: GoLivePage.path,
+      name: GoLivePage.routeName,
+      builder: (context, state) => const GoLivePage(),
+    ),
+  ];
 }

@@ -13471,4 +13471,525 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get liveTabLabel => 'На живо';
+
+  @override
+  String get liveHideParticipantLocally => 'Скрий от моя изглед';
+
+  @override
+  String get liveHideChatLocally => 'Скрий чата за мен';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Скриването на участник или неговия чат променя само твоя изглед. Звукът му остава включен и останалите продължават да го виждат.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Скритите съобщения остават видими за всички останали.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Бърз поглед към хората, които водят на живо или започват скоро.';
+
+  @override
+  String get liveActiveSpeakers => 'Говорят в момента';
+
+  @override
+  String get liveApprove => 'Одобри';
+
+  @override
+  String get liveAudience => 'Публика';
+
+  @override
+  String get liveAudioOnly => 'Само аудио';
+
+  @override
+  String get liveBlockUser => 'Блокирай човека';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Камерата и микрофонът са изключени';
+
+  @override
+  String get liveChat => 'Чат';
+
+  @override
+  String get liveConnectionLooksShaky => 'Връзката изглежда нестабилна';
+
+  @override
+  String get liveCoverImageURL => 'URL на корицата';
+
+  @override
+  String get liveDefaultThumbnail => 'Миниатюра по подразбиране';
+
+  @override
+  String get liveDemote => 'Понижи ролята';
+
+  @override
+  String get liveDeny => 'Откажи';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Влез в стаи, където вече кипи живот.';
+
+  @override
+  String get liveEndSession => 'Край на сесията';
+
+  @override
+  String get liveEndThisLiveSession => 'Да приключи ли тази сесия на живо?';
+
+  @override
+  String get liveFailedToReportUser => 'Неуспешно докладване на човека';
+
+  @override
+  String get liveFeaturedHosts => 'Избрани домакини';
+
+  @override
+  String get liveFlipCamera => 'Смени камерата';
+
+  @override
+  String get liveGoLive => 'Започни на живо';
+
+  @override
+  String get liveHandRaised => 'Вдигната ръка';
+
+  @override
+  String get liveHost => 'Домакин';
+
+  @override
+  String get liveHostControls => 'Контроли за домакина';
+
+  @override
+  String get liveJoinLive => 'Присъедини се на живо';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Премини само на аудио, за да остане стаята стабилна, докато връзката се подобри.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Подреждай сцената, следи вдигнатите ръце и адаптирай излъчването при проблеми с мрежата.';
+
+  @override
+  String get liveLiveAudioOnly => 'На живо само с аудио';
+
+  @override
+  String get liveLiveNow => 'На живо сега';
+
+  @override
+  String get liveLiveRoom => 'Стая на живо';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'Стаите на живо не са достъпни.';
+
+  @override
+  String get liveLiveVideo => 'Видео на живо';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Видео и аудио на живо';
+
+  @override
+  String get liveLowerHand => 'Свали ръката';
+
+  @override
+  String get liveManageParticipants => 'Управление на участието';
+
+  @override
+  String get liveModeration => 'Модериране';
+
+  @override
+  String get liveModerator => 'Модерация';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Още никой не говори.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'В момента няма хора от публиката за модериране.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Още няма съобщения. Наруши тишината.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet =>
+      'Още никой не се е присъединил към стаята.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'Никой не чака да говори.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne => 'Още няма стаи. Създай първата.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => 'Още няма насрочена сесия.';
+
+  @override
+  String get liveNothingHereYet => 'Тук още няма нищо.';
+
+  @override
+  String get liveOnStage => 'На сцената';
+
+  @override
+  String get liveOpenReplay => 'Отвори записа';
+
+  @override
+  String get liveOpenRoom => 'Отвори стаята';
+
+  @override
+  String get liveParticipants => 'Участващи';
+
+  @override
+  String get livePromote => 'Повиши ролята';
+
+  @override
+  String get liveRaiseHand => 'Вдигни ръка';
+
+  @override
+  String get liveRaisedHands => 'Вдигнати ръце';
+
+  @override
+  String get liveReplayProcessing => 'Записът се обработва';
+
+  @override
+  String get liveReplayQueued => 'Записът е на опашка';
+
+  @override
+  String get liveReplayReady => 'Записът е готов';
+
+  @override
+  String get liveReplayUnavailable => 'Записът не е достъпен';
+
+  @override
+  String get liveReportUser => 'Докладвай човека';
+
+  @override
+  String get liveRoomDetail => 'Подробност за стаята';
+
+  @override
+  String get liveRoomDetails => 'Подробности за стаята';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Връзката към стаята е копирана в клипборда';
+
+  @override
+  String get liveRoomTitle => 'Заглавие на стаята';
+
+  @override
+  String get liveRoomUnavailable => 'Стаята не е достъпна.';
+
+  @override
+  String get liveSaySomething => 'Кажи нещо';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Виж какво предстои.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Виж кой е на живо или създай своя стая.';
+
+  @override
+  String get liveSend => 'Изпрати';
+
+  @override
+  String get liveSession => 'Сесия';
+
+  @override
+  String get liveShareRoom => 'Сподели стаята';
+
+  @override
+  String get liveSpeaker => 'Говорещ човек';
+
+  @override
+  String get liveSpeakerHandRaised => 'Говорещ човек, вдигната ръка';
+
+  @override
+  String get liveSpeakers => 'Говорещи';
+
+  @override
+  String get liveStage => 'Сцена';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'Създай публична стая на момента.';
+
+  @override
+  String get liveStartLiveNow => 'Започни на живо сега';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Стартиране на камерата и микрофона...';
+
+  @override
+  String get liveStartingCamera => 'Стартиране на камерата...';
+
+  @override
+  String get liveStartingMicrophone => 'Стартиране на микрофона...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Премини само на аудио';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Излъчването приключи, но записът е готов за гледане.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Излъчването приключи. Все още подготвяме записа.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Това приключва стаята за всички и затваря сцената.';
+
+  @override
+  String get liveTurnCameraOff => 'Изключи камерата';
+
+  @override
+  String get liveTurnCameraOn => 'Включи камерата';
+
+  @override
+  String get liveTurnMicOff => 'Изключи микрофона';
+
+  @override
+  String get liveTurnMicOn => 'Включи микрофона';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Тази стая на живо не може да се отвори.';
+
+  @override
+  String get liveUpcoming => 'Предстоящи';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Обнови заглавието на стаята';
+
+  @override
+  String get liveUpdateTitleStatus => 'Обнови заглавието/статуса';
+
+  @override
+  String get liveUserBlocked => 'Блокирането е успешно';
+
+  @override
+  String get liveUserReported => 'Докладването е успешно';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Профилната ти снимка се използва като начална миниатюра.';
+
+  @override
+  String get liveWaitingForMedia => 'Изчакване на медия';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Изчакване на хората, които ще говорят, да се качат на сцената.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'За какво ще бъде излъчването ти?';
+
+  @override
+  String get liveYouAreOnStage => 'На сцената си';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Ръката ти е вдигната. Домакинът може да те покани на сцената от опашката за говорене.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName е на живо';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Ела да прекараш време с $displayName на живо в Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Домакин: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers говорещи',
+      one: '$speakers говорещ човек',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners слушащи',
+      one: '$listeners слушащ човек',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Начало: $time';
+  }
+
+  @override
+  String get liveEnded => 'Приключило';
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Край: $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Насрочено за $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Присъедини се към $title на живо в Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Стая на живо: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts хора с роля на домакин',
+      one: '$hosts човек с роля на домакин',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators хора в модерацията',
+      one: '$moderators човек в модерацията',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers говорещи',
+      one: '$speakers говорещ човек',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience слушащи',
+      one: '$audience слушащ човек',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count говорещи',
+      one: '$count говорещ човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count слушащи',
+      one: '$count слушащ човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count слушащи в стаята',
+      one: '$count слушащ човек в стаята',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Съобщение в чата на живо от $displayName';
+  }
+
+  @override
+  String get liveShareFailed =>
+      'Стаята не може да бъде споделена. Опитай отново.';
+
+  @override
+  String get liveBlockFailed =>
+      'Този човек не може да бъде блокиран. Опитай отново.';
+
+  @override
+  String get liveRoomStatusHint => 'Използвай open, private или closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Стаята не може да бъде обновена. Опитай отново.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Свързването с тази стая е неуспешно. Опитай отново.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Обновяванията на стаята не могат да се заредят. Опитай отново.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Достъпът до камерата е блокиран. Разреши го в настройките.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Разреши достъп до камерата, за да я включиш.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Няма достъпна камера.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Не може да се поиска достъп до камерата. Провери настройките.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Достъпът до микрофона е блокиран. Разреши го в настройките.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Разреши достъп до микрофона, за да го включиш.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'Няма достъпен микрофон.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Не може да се поиска достъп до микрофона. Провери настройките.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Сцената е пълна. Изчакай някой да слезе.';
+
+  @override
+  String get liveTitleRequired => 'Въведи заглавие на стаята.';
+
+  @override
+  String get liveStartFailed =>
+      'Стаята не може да бъде стартирана. Опитай отново.';
+
+  @override
+  String get liveSendFailed =>
+      'Съобщението ти не може да бъде изпратено. Опитай отново.';
+
+  @override
+  String get liveChatLoadFailed => 'Чатът не може да се зареди. Опитай отново.';
 }

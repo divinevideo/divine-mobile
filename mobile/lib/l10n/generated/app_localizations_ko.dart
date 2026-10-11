@@ -12705,4 +12705,489 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get liveTabLabel => '라이브';
+
+  @override
+  String get liveHideParticipantLocally => '내 화면에서 숨기기';
+
+  @override
+  String get liveHideChatLocally => '나에게만 채팅 숨기기';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      '참가자나 채팅을 숨겨도 내 화면만 바뀝니다. 오디오는 계속 켜져 있고 다른 사람에게는 그대로 표시됩니다.';
+
+  @override
+  String get liveHiddenChatNotice => '숨긴 메시지는 다른 사람에게는 계속 표시됩니다.';
+
+  @override
+  String get liveFeaturedHostsDescription => '지금 방송 중이거나 곧 시작할 호스트를 한눈에 확인해요.';
+
+  @override
+  String get liveActiveSpeakers => '발언 중인 사람';
+
+  @override
+  String get liveApprove => '승인';
+
+  @override
+  String get liveAudience => '청중';
+
+  @override
+  String get liveAudioOnly => '오디오만';
+
+  @override
+  String get liveBlockUser => '사용자 차단';
+
+  @override
+  String get liveCameraAndMicAreOff => '카메라와 마이크가 꺼져 있어요';
+
+  @override
+  String get liveChat => '채팅';
+
+  @override
+  String get liveConnectionLooksShaky => '연결이 불안정해 보여요';
+
+  @override
+  String get liveCoverImageURL => '커버 이미지 URL';
+
+  @override
+  String get liveDefaultThumbnail => '기본 썸네일';
+
+  @override
+  String get liveDemote => '역할 낮추기';
+
+  @override
+  String get liveDeny => '거절';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling => '이미 진행 중인 방에 들러 보세요.';
+
+  @override
+  String get liveEndSession => '세션 종료';
+
+  @override
+  String get liveEndThisLiveSession => '이 라이브 세션을 종료할까요?';
+
+  @override
+  String get liveFailedToReportUser => '사용자를 신고하지 못했어요';
+
+  @override
+  String get liveFeaturedHosts => '주목할 호스트';
+
+  @override
+  String get liveFlipCamera => '카메라 전환';
+
+  @override
+  String get liveGoLive => '라이브 시작';
+
+  @override
+  String get liveHandRaised => '손을 들었어요';
+
+  @override
+  String get liveHost => '호스트';
+
+  @override
+  String get liveHostControls => '호스트 제어';
+
+  @override
+  String get liveJoinLive => '라이브 참여';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      '연결이 안정될 때까지 오디오만 사용하면 방을 안정적으로 유지할 수 있어요.';
+
+  @override
+  String get liveHostControlsDescription =>
+      '무대와 발언 요청을 관리하고, 네트워크가 불안정할 때 방송 품질을 조정해요.';
+
+  @override
+  String get liveLiveAudioOnly => '오디오 전용 라이브';
+
+  @override
+  String get liveLiveNow => '지금 라이브 중';
+
+  @override
+  String get liveLiveRoom => '라이브 방';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => '라이브 방을 이용할 수 없어요.';
+
+  @override
+  String get liveLiveVideo => '라이브 영상';
+
+  @override
+  String get liveLiveVideoAndAudio => '라이브 영상 및 오디오';
+
+  @override
+  String get liveLowerHand => '손 내리기';
+
+  @override
+  String get liveManageParticipants => '참여자 관리';
+
+  @override
+  String get liveModeration => '관리';
+
+  @override
+  String get liveModerator => '관리자';
+
+  @override
+  String get liveNoActiveSpeakersYet => '아직 발언 중인 사람이 없어요.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow => '지금 관리할 청중이 없어요.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence => '아직 메시지가 없어요. 먼저 말을 걸어 보세요.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => '아직 방에 참여한 사람이 없어요.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => '발언을 기다리는 사람이 없어요.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne => '아직 방이 없어요. 첫 방을 만들어 보세요.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => '아직 예정된 세션이 없어요.';
+
+  @override
+  String get liveNothingHereYet => '아직 아무것도 없어요.';
+
+  @override
+  String get liveOnStage => '무대 위';
+
+  @override
+  String get liveOpenReplay => '다시보기 열기';
+
+  @override
+  String get liveOpenRoom => '방 열기';
+
+  @override
+  String get liveParticipants => '참여자';
+
+  @override
+  String get livePromote => '역할 높이기';
+
+  @override
+  String get liveRaiseHand => '손 들기';
+
+  @override
+  String get liveRaisedHands => '손을 든 사람';
+
+  @override
+  String get liveReplayProcessing => '다시보기 처리 중';
+
+  @override
+  String get liveReplayQueued => '다시보기 대기 중';
+
+  @override
+  String get liveReplayReady => '다시보기 준비 완료';
+
+  @override
+  String get liveReplayUnavailable => '다시보기를 이용할 수 없어요';
+
+  @override
+  String get liveReportUser => '사용자 신고';
+
+  @override
+  String get liveRoomDetail => '방 정보';
+
+  @override
+  String get liveRoomDetails => '방 상세 정보';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard => '방 링크를 클립보드에 복사했어요';
+
+  @override
+  String get liveRoomTitle => '방 제목';
+
+  @override
+  String get liveRoomUnavailable => '방을 이용할 수 없어요.';
+
+  @override
+  String get liveSaySomething => '메시지를 입력하세요';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => '다음 일정을 확인해 보세요.';
+
+  @override
+  String get liveDiscoveryDescription => '지금 라이브 중인 사람을 찾거나 내 방을 시작해 보세요.';
+
+  @override
+  String get liveSend => '보내기';
+
+  @override
+  String get liveSession => '세션';
+
+  @override
+  String get liveShareRoom => '방 공유';
+
+  @override
+  String get liveSpeaker => '발언자';
+
+  @override
+  String get liveSpeakerHandRaised => '발언자, 손을 들었어요';
+
+  @override
+  String get liveSpeakers => '발언자';
+
+  @override
+  String get liveStage => '무대';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => '공개 방을 간편하게 시작해 보세요.';
+
+  @override
+  String get liveStartLiveNow => '지금 라이브 시작';
+
+  @override
+  String get liveStartingCameraAndMicrophone => '카메라와 마이크를 시작하는 중...';
+
+  @override
+  String get liveStartingCamera => '카메라를 시작하는 중...';
+
+  @override
+  String get liveStartingMicrophone => '마이크를 시작하는 중...';
+
+  @override
+  String get liveSwitchToAudioOnly => '오디오만 사용하기';
+
+  @override
+  String get liveReplayReadyDescription => '라이브는 끝났지만 다시보기를 시청할 수 있어요.';
+
+  @override
+  String get liveReplayProcessingDescription => '라이브가 끝났어요. 다시보기를 아직 준비하고 있어요.';
+
+  @override
+  String get liveEndSessionConfirmation => '모든 사람의 방이 종료되고 무대가 닫혀요.';
+
+  @override
+  String get liveTurnCameraOff => '카메라 끄기';
+
+  @override
+  String get liveTurnCameraOn => '카메라 켜기';
+
+  @override
+  String get liveTurnMicOff => '마이크 끄기';
+
+  @override
+  String get liveTurnMicOn => '마이크 켜기';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => '이 라이브 방을 열 수 없어요.';
+
+  @override
+  String get liveUpcoming => '예정';
+
+  @override
+  String get liveUpdateTheRoomTitle => '방 제목 수정';
+
+  @override
+  String get liveUpdateTitleStatus => '제목/상태 수정';
+
+  @override
+  String get liveUserBlocked => '사용자를 차단했어요';
+
+  @override
+  String get liveUserReported => '사용자를 신고했어요';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      '프로필 사진을 초기 썸네일로 사용해요.';
+
+  @override
+  String get liveWaitingForMedia => '미디어 대기 중';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage => '발언자가 무대에 올라오기를 기다리고 있어요.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => '어떤 주제로 라이브를 할까요?';
+
+  @override
+  String get liveYouAreOnStage => '무대에 올라와 있어요';
+
+  @override
+  String get liveHandRaisedDescription =>
+      '손을 들었어요. 호스트가 발언 대기열에서 무대로 초대할 수 있어요.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName 님이 라이브 중이에요';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Divine에서 $displayName 님과 라이브로 함께해요.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return '호스트: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '발언자: $speakers명',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '청취자: $listeners명',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return '시작: $time';
+  }
+
+  @override
+  String get liveEnded => '종료됨';
+
+  @override
+  String liveEndedAt(String time) {
+    return '종료: $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return '예정: $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Divine에서 $title 라이브에 참여해요';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return '라이브 방: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '호스트: $hosts명',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '관리자: $moderators명',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '발언자: $speakers명',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '청취자: $audience명',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '발언자: $count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '청취자: $count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '방의 청취자: $count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return '$displayName 님의 라이브 채팅 메시지';
+  }
+
+  @override
+  String get liveShareFailed => '이 방을 공유할 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveBlockFailed => '이 사용자를 차단할 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveRoomStatusHint => 'open, private 또는 closed를 사용하세요';
+
+  @override
+  String get liveErrorRequestFailed => '이 방을 수정할 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveErrorConnectionFailed => '이 방에 연결할 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveErrorSubscriptionFailed => '방 업데이트를 불러올 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveErrorCameraBlocked => '카메라 접근이 차단되어 있어요. 설정에서 허용해 주세요.';
+
+  @override
+  String get liveErrorCameraRequired => '카메라를 켜려면 카메라 접근을 허용해 주세요.';
+
+  @override
+  String get liveErrorCameraUnavailable => '사용할 수 있는 카메라가 없어요.';
+
+  @override
+  String get liveErrorCameraPromptBlocked => '카메라 접근을 요청할 수 없어요. 설정을 확인해 주세요.';
+
+  @override
+  String get liveErrorMicrophoneBlocked => '마이크 접근이 차단되어 있어요. 설정에서 허용해 주세요.';
+
+  @override
+  String get liveErrorMicrophoneRequired => '마이크를 켜려면 마이크 접근을 허용해 주세요.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => '사용할 수 있는 마이크가 없어요.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      '마이크 접근을 요청할 수 없어요. 설정을 확인해 주세요.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      '무대가 가득 찼어요. 발언자가 내려올 때까지 기다려 주세요.';
+
+  @override
+  String get liveTitleRequired => '방 제목을 입력해 주세요.';
+
+  @override
+  String get liveStartFailed => '이 방을 시작할 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveSendFailed => '메시지를 보낼 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String get liveChatLoadFailed => '채팅을 불러올 수 없어요. 다시 시도해 주세요.';
 }

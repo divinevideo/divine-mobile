@@ -13269,4 +13269,521 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+
+  @override
+  String get liveTabLabel => 'Canlı';
+
+  @override
+  String get liveHideParticipantLocally => 'Benim görünümümden gizle';
+
+  @override
+  String get liveHideChatLocally => 'Sohbeti benim için gizle';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Bir katılımcıyı veya sohbetini gizlemek yalnızca senin görünümünü değiştirir. Sesi açık kalır ve diğer herkes onu görmeye devam eder.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Gizlenen mesajlar diğer herkes tarafından görülebilir.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Şu anda canlı yayında olan veya sıradaki sunuculara göz at.';
+
+  @override
+  String get liveActiveSpeakers => 'Aktif konuşmacılar';
+
+  @override
+  String get liveApprove => 'Onayla';
+
+  @override
+  String get liveAudience => 'Dinleyiciler';
+
+  @override
+  String get liveAudioOnly => 'Yalnızca ses';
+
+  @override
+  String get liveBlockUser => 'Kullanıcıyı engelle';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Kamera ve mikrofon kapalı';
+
+  @override
+  String get liveChat => 'Sohbet';
+
+  @override
+  String get liveConnectionLooksShaky => 'Bağlantı kararsız görünüyor';
+
+  @override
+  String get liveCoverImageURL => 'Kapak görseli URL\'si';
+
+  @override
+  String get liveDefaultThumbnail => 'Varsayılan küçük resim';
+
+  @override
+  String get liveDemote => 'Rolü düşür';
+
+  @override
+  String get liveDeny => 'Reddet';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Sohbetin başladığı odalara katıl.';
+
+  @override
+  String get liveEndSession => 'Oturumu bitir';
+
+  @override
+  String get liveEndThisLiveSession => 'Bu canlı oturum bitsin mi?';
+
+  @override
+  String get liveFailedToReportUser => 'Kullanıcı bildirilemedi';
+
+  @override
+  String get liveFeaturedHosts => 'Öne çıkan sunucular';
+
+  @override
+  String get liveFlipCamera => 'Kamerayı değiştir';
+
+  @override
+  String get liveGoLive => 'Canlı yayın aç';
+
+  @override
+  String get liveHandRaised => 'El kaldırıldı';
+
+  @override
+  String get liveHost => 'Sunucu';
+
+  @override
+  String get liveHostControls => 'Sunucu kontrolleri';
+
+  @override
+  String get liveJoinLive => 'Canlı yayına katıl';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Ağ düzelene kadar yalnızca sese geçerek odanın bağlantısını koru.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Sahneyi düzenle, kaldırılan elleri takip et ve ağ sorunlarında videoyu azalt.';
+
+  @override
+  String get liveLiveAudioOnly => 'Yalnızca sesli canlı yayın';
+
+  @override
+  String get liveLiveNow => 'Şimdi canlı';
+
+  @override
+  String get liveLiveRoom => 'Canlı oda';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'Canlı odalar kullanılamıyor.';
+
+  @override
+  String get liveLiveVideo => 'Canlı video';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Canlı video ve ses';
+
+  @override
+  String get liveLowerHand => 'Elini indir';
+
+  @override
+  String get liveManageParticipants => 'Katılımcıları yönet';
+
+  @override
+  String get liveModeration => 'Moderasyon';
+
+  @override
+  String get liveModerator => 'Moderatör';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Henüz aktif konuşmacı yok.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Şu anda yönetilecek dinleyici yok.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Henüz mesaj yok. Sessizliği boz.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'Odaya henüz kimse katılmadı.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'Konuşmak için bekleyen yok.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Henüz oda yok. İlkini sen başlat.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'Henüz bir oturum planlanmadı.';
+
+  @override
+  String get liveNothingHereYet => 'Burada henüz bir şey yok.';
+
+  @override
+  String get liveOnStage => 'Sahnede';
+
+  @override
+  String get liveOpenReplay => 'Tekrarı aç';
+
+  @override
+  String get liveOpenRoom => 'Odayı aç';
+
+  @override
+  String get liveParticipants => 'Katılımcılar';
+
+  @override
+  String get livePromote => 'Rolü yükselt';
+
+  @override
+  String get liveRaiseHand => 'El kaldır';
+
+  @override
+  String get liveRaisedHands => 'Kaldırılan eller';
+
+  @override
+  String get liveReplayProcessing => 'Tekrar işleniyor';
+
+  @override
+  String get liveReplayQueued => 'Tekrar sıraya alındı';
+
+  @override
+  String get liveReplayReady => 'Tekrar hazır';
+
+  @override
+  String get liveReplayUnavailable => 'Tekrar kullanılamıyor';
+
+  @override
+  String get liveReportUser => 'Kullanıcıyı bildir';
+
+  @override
+  String get liveRoomDetail => 'Oda ayrıntısı';
+
+  @override
+  String get liveRoomDetails => 'Oda ayrıntıları';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Oda bağlantısı panoya kopyalandı';
+
+  @override
+  String get liveRoomTitle => 'Oda başlığı';
+
+  @override
+  String get liveRoomUnavailable => 'Oda kullanılamıyor.';
+
+  @override
+  String get liveSaySomething => 'Bir şey söyle';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Sırada ne var, bak.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Şu anda kim canlı yayında, bak veya kendi odanı başlat.';
+
+  @override
+  String get liveSend => 'Gönder';
+
+  @override
+  String get liveSession => 'Oturum';
+
+  @override
+  String get liveShareRoom => 'Odayı paylaş';
+
+  @override
+  String get liveSpeaker => 'Konuşmacı';
+
+  @override
+  String get liveSpeakerHandRaised => 'Konuşmacı, el kaldırıldı';
+
+  @override
+  String get liveSpeakers => 'Konuşmacılar';
+
+  @override
+  String get liveStage => 'Sahne';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'Tek adımda herkese açık bir oda başlat.';
+
+  @override
+  String get liveStartLiveNow => 'Şimdi canlı yayın başlat';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Kamera ve mikrofon başlatılıyor...';
+
+  @override
+  String get liveStartingCamera => 'Kamera başlatılıyor...';
+
+  @override
+  String get liveStartingMicrophone => 'Mikrofon başlatılıyor...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Yalnızca sese geç';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Canlı yayın bitti ama tekrar izlenmeye hazır.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Canlı yayın bitti. Tekrarı hâlâ işliyoruz.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Bu, odayı herkes için bitirir ve sahneyi kapatır.';
+
+  @override
+  String get liveTurnCameraOff => 'Kamerayı kapat';
+
+  @override
+  String get liveTurnCameraOn => 'Kamerayı aç';
+
+  @override
+  String get liveTurnMicOff => 'Mikrofonu kapat';
+
+  @override
+  String get liveTurnMicOn => 'Mikrofonu aç';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => 'Bu canlı oda açılamıyor.';
+
+  @override
+  String get liveUpcoming => 'Yaklaşan';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Oda başlığını güncelle';
+
+  @override
+  String get liveUpdateTitleStatus => 'Başlığı/durumu güncelle';
+
+  @override
+  String get liveUserBlocked => 'Kullanıcı engellendi';
+
+  @override
+  String get liveUserReported => 'Kullanıcı bildirildi';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Başlangıç küçük resmi olarak profil fotoğrafın kullanılıyor.';
+
+  @override
+  String get liveWaitingForMedia => 'Medya bekleniyor';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Konuşmacıların sahneye katılması bekleniyor.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout =>
+      'Canlı yayının ne hakkında olacak?';
+
+  @override
+  String get liveYouAreOnStage => 'Sahnedesin';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Elin kalkık. Sunucu seni konuşmacı sırasından sahneye alabilir.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName canlı yayında';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Divine\'da $displayName ile canlı sohbete katıl.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Sunucu: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers konuşmacı',
+      one: '$speakers konuşmacı',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners dinleyici',
+      one: '$listeners dinleyici',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Başlangıç: $time';
+  }
+
+  @override
+  String get liveEnded => 'Sona erdi';
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Bitiş: $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Planlanan zaman: $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Divine\'da $title canlı yayınına katıl';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Canlı oda: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts sunucu',
+      one: '$hosts sunucu',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators moderatör',
+      one: '$moderators moderatör',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers konuşmacı',
+      one: '$speakers konuşmacı',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience dinleyici',
+      one: '$audience dinleyici',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count konuşmacı',
+      one: '$count konuşmacı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dinleyici',
+      one: '$count dinleyici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Odada $count dinleyici',
+      one: 'Odada $count dinleyici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return '$displayName adlı kişiden canlı sohbet mesajı';
+  }
+
+  @override
+  String get liveShareFailed => 'Bu oda paylaşılamıyor. Tekrar dene.';
+
+  @override
+  String get liveBlockFailed => 'Bu kullanıcı engellenemiyor. Tekrar dene.';
+
+  @override
+  String get liveRoomStatusHint => 'open, private veya closed kullan';
+
+  @override
+  String get liveErrorRequestFailed => 'Bu oda güncellenemiyor. Tekrar dene.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Bu odaya bağlanılamıyor. Tekrar dene.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Oda güncellemeleri yüklenemiyor. Tekrar dene.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Kamera erişimi engellenmiş. Ayarlar\'dan etkinleştir.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Kameranı açmak için kamera erişimine izin ver.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Kullanılabilir kamera yok.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Kamera erişimi istenemiyor. Ayarlar\'ı kontrol et.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Mikrofon erişimi engellenmiş. Ayarlar\'dan etkinleştir.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Mikrofonunu açmak için mikrofon erişimine izin ver.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'Kullanılabilir mikrofon yok.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Mikrofon erişimi istenemiyor. Ayarlar\'ı kontrol et.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Sahne dolu. Bir konuşmacının ayrılmasını bekle.';
+
+  @override
+  String get liveTitleRequired => 'Bir oda başlığı gir.';
+
+  @override
+  String get liveStartFailed => 'Bu oda başlatılamıyor. Tekrar dene.';
+
+  @override
+  String get liveSendFailed => 'Mesajın gönderilemiyor. Tekrar dene.';
+
+  @override
+  String get liveChatLoadFailed => 'Sohbet yüklenemiyor. Tekrar dene.';
 }

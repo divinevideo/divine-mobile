@@ -22328,6 +22328,816 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get liveTabLabel;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from my view'**
+  String get liveHideParticipantLocally;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide chat for me'**
+  String get liveHideChatLocally;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hiding a participant or their chat only changes your view. Their audio stays on and everyone else still sees them.'**
+  String get liveLocalHidingExplanation;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden messages are visible to everyone else.'**
+  String get liveHiddenChatNotice;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick scan of the hosts who are live or lined up next.'**
+  String get liveFeaturedHostsDescription;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Active speakers'**
+  String get liveActiveSpeakers;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get liveApprove;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience'**
+  String get liveAudience;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio only'**
+  String get liveAudioOnly;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Block user'**
+  String get liveBlockUser;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera and mic are off'**
+  String get liveCameraAndMicAreOff;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get liveChat;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection looks shaky'**
+  String get liveConnectionLooksShaky;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image URL'**
+  String get liveCoverImageURL;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Default thumbnail'**
+  String get liveDefaultThumbnail;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Demote'**
+  String get liveDemote;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Deny'**
+  String get liveDeny;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop into rooms that are already rolling.'**
+  String get liveDropIntoRoomsThatAreAlreadyRolling;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'End session'**
+  String get liveEndSession;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'End this live session?'**
+  String get liveEndThisLiveSession;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to report user'**
+  String get liveFailedToReportUser;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured hosts'**
+  String get liveFeaturedHosts;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip camera'**
+  String get liveFlipCamera;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Go live'**
+  String get liveGoLive;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand raised'**
+  String get liveHandRaised;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get liveHost;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Host controls'**
+  String get liveHostControls;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Join live'**
+  String get liveJoinLive;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the room stable by switching to audio only until the network settles.'**
+  String get liveAudioOnlySuggestion;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the stage tight, work the raised hands, and degrade cleanly when the network gets weird.'**
+  String get liveHostControlsDescription;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live audio only'**
+  String get liveLiveAudioOnly;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live now'**
+  String get liveLiveNow;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live room'**
+  String get liveLiveRoom;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live rooms are unavailable.'**
+  String get liveLiveRoomsAreUnavailable;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live video'**
+  String get liveLiveVideo;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Live video and audio'**
+  String get liveLiveVideoAndAudio;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower hand'**
+  String get liveLowerHand;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage participants'**
+  String get liveManageParticipants;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderation'**
+  String get liveModeration;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderator'**
+  String get liveModerator;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No active speakers yet.'**
+  String get liveNoActiveSpeakersYet;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No audience members to moderate right now.'**
+  String get liveNoAudienceMembersToModerateRightNow;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet. Break the silence.'**
+  String get liveNoMessagesYetBreakTheSilence;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No one has joined the room yet.'**
+  String get liveNoOneHasJoinedTheRoomYet;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No one is waiting to speak.'**
+  String get liveNoOneIsWaitingToSpeak;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No rooms yet. Start the first one.'**
+  String get liveNoRoomsYetStartTheFirstOne;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'No session has been scheduled yet.'**
+  String get liveNoSessionHasBeenScheduledYet;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet.'**
+  String get liveNothingHereYet;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'On stage'**
+  String get liveOnStage;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Open replay'**
+  String get liveOpenReplay;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Open room'**
+  String get liveOpenRoom;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Participants'**
+  String get liveParticipants;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote'**
+  String get livePromote;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise hand'**
+  String get liveRaiseHand;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Raised hands'**
+  String get liveRaisedHands;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay processing'**
+  String get liveReplayProcessing;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay queued'**
+  String get liveReplayQueued;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay ready'**
+  String get liveReplayReady;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay unavailable'**
+  String get liveReplayUnavailable;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Report user'**
+  String get liveReportUser;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Room detail'**
+  String get liveRoomDetail;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Room details'**
+  String get liveRoomDetails;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Room link copied to clipboard'**
+  String get liveRoomLinkCopiedToClipboard;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Room title'**
+  String get liveRoomTitle;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Room unavailable.'**
+  String get liveRoomUnavailable;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Say something'**
+  String get liveSaySomething;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'See what is lined up next.'**
+  String get liveSeeWhatIsLinedUpNext;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'See who is live right now or start your own room.'**
+  String get liveDiscoveryDescription;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get liveSend;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get liveSession;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Share room'**
+  String get liveShareRoom;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get liveSpeaker;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker, hand raised'**
+  String get liveSpeakerHandRaised;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Speakers'**
+  String get liveSpeakers;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get liveStage;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a public room in one shot.'**
+  String get liveStartAPublicRoomInOneShot;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Start live now'**
+  String get liveStartLiveNow;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting camera and microphone...'**
+  String get liveStartingCameraAndMicrophone;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting camera...'**
+  String get liveStartingCamera;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting microphone...'**
+  String get liveStartingMicrophone;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to audio only'**
+  String get liveSwitchToAudioOnly;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'The live ended, but the replay is ready to watch.'**
+  String get liveReplayReadyDescription;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'The live ended. We are still processing the replay handoff.'**
+  String get liveReplayProcessingDescription;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'This ends the room for everyone and closes the stage.'**
+  String get liveEndSessionConfirmation;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn camera off'**
+  String get liveTurnCameraOff;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn camera on'**
+  String get liveTurnCameraOn;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn mic off'**
+  String get liveTurnMicOff;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn mic on'**
+  String get liveTurnMicOn;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open this live room.'**
+  String get liveUnableToOpenThisLiveRoom;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get liveUpcoming;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the room title'**
+  String get liveUpdateTheRoomTitle;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Update title/status'**
+  String get liveUpdateTitleStatus;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'User blocked'**
+  String get liveUserBlocked;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'User reported'**
+  String get liveUserReported;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Using your profile photo as the starting thumbnail.'**
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for media'**
+  String get liveWaitingForMedia;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for speakers to join the stage.'**
+  String get liveWaitingForSpeakersToJoinTheStage;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you going live about?'**
+  String get liveWhatAreYouGoingLiveAbout;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'You are on stage'**
+  String get liveYouAreOnStage;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hand is raised. The host can bring you on stage from the speaker queue.'**
+  String get liveHandRaisedDescription;
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{displayName} is live'**
+  String liveDefaultRoomTitle(String displayName);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Come hang out with {displayName} live on Divine.'**
+  String liveDefaultRoomSummary(String displayName);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Host: {pubkey}'**
+  String liveHostLabel(String pubkey);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{speakers, plural, one{{speakers} speaker} other{{speakers} speakers}} · {listeners, plural, one{{listeners} listener} other{{listeners} listeners}}'**
+  String liveParticipantCounts(int speakers, int listeners);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Started {time}'**
+  String liveStartedAt(String time);
+
+  /// Status badge for a live session that has ended
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get liveEnded;
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {time}'**
+  String liveEndedAt(String time);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled for {time}'**
+  String liveScheduledFor(String time);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Join {title} live on Divine'**
+  String liveShareSubject(String title);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Live room: {title}'**
+  String liveRoomShareSubject(String title);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{hosts, plural, one{{hosts} host} other{{hosts} hosts}}, {moderators, plural, one{{moderators} moderator} other{{moderators} moderators}}, {speakers, plural, one{{speakers} speaker} other{{speakers} speakers}}, {audience, plural, one{{audience} listener} other{{audience} listeners}}'**
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} speaker} other{{count} speakers}}'**
+  String liveSpeakerCount(int count);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} listener} other{{count} listeners}}'**
+  String liveListeningCount(int count);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} listener in the room} other{{count} listeners in the room}}'**
+  String liveRoomListenerCount(int count);
+
+  /// Live room UI message. Preserve all placeholders.
+  ///
+  /// In en, this message translates to:
+  /// **'Live chat message from {displayName}'**
+  String liveChatMessageSemantics(String displayName);
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to share this room. Try again.'**
+  String get liveShareFailed;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to block this user. Try again.'**
+  String get liveBlockFailed;
+
+  /// Label or message in live rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Use open, private, or closed'**
+  String get liveRoomStatusHint;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update this room. Try again.'**
+  String get liveErrorRequestFailed;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to this room. Try again.'**
+  String get liveErrorConnectionFailed;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load room updates. Try again.'**
+  String get liveErrorSubscriptionFailed;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is blocked. Enable it in Settings.'**
+  String get liveErrorCameraBlocked;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow camera access to turn on your camera.'**
+  String get liveErrorCameraRequired;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'No camera is available.'**
+  String get liveErrorCameraUnavailable;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to request camera access. Check Settings.'**
+  String get liveErrorCameraPromptBlocked;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone access is blocked. Enable it in Settings.'**
+  String get liveErrorMicrophoneBlocked;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow microphone access to turn on your microphone.'**
+  String get liveErrorMicrophoneRequired;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'No microphone is available.'**
+  String get liveErrorMicrophoneUnavailable;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to request microphone access. Check Settings.'**
+  String get liveErrorMicrophonePromptBlocked;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'The stage is full. Wait for a speaker to leave.'**
+  String get liveErrorSpeakerCapacityReached;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a room title.'**
+  String get liveTitleRequired;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to start this room. Try again.'**
+  String get liveStartFailed;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to send your message. Try again.'**
+  String get liveSendFailed;
+
+  /// Live room label or message.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load chat. Try again.'**
+  String get liveChatLoadFailed;
 }
 
 class _AppLocalizationsDelegate

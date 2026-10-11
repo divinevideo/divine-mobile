@@ -13007,4 +13007,510 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get liveTabLabel => 'ቀጥታ';
+
+  @override
+  String get liveHideParticipantLocally => 'ከእኔ እይታ ደብቅ';
+
+  @override
+  String get liveHideChatLocally => 'ውይይቱን ለእኔ ደብቅ';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'ተሳታፊን ወይም ውይይቱን መደበቅ የአንተን እይታ ብቻ ይቀይራል። ድምፁ አይጠፋም፤ ሌሎችም ማየታቸውን ይቀጥላሉ።';
+
+  @override
+  String get liveHiddenChatNotice => 'የተደበቁ መልዕክቶች ለሌሎች ሁሉ ይታያሉ።';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'አሁን በቀጥታ የሚያስተላልፉ ወይም ቀጥለው የሚጀምሩ አስተናጋጆችን በፍጥነት ይመልከቱ።';
+
+  @override
+  String get liveActiveSpeakers => 'ንቁ ተናጋሪዎች';
+
+  @override
+  String get liveApprove => 'ማጽደቅ';
+
+  @override
+  String get liveAudience => 'ታዳሚዎች';
+
+  @override
+  String get liveAudioOnly => 'ድምፅ ብቻ';
+
+  @override
+  String get liveBlockUser => 'ተጠቃሚን ማገድ';
+
+  @override
+  String get liveCameraAndMicAreOff => 'ካሜራው እና ማይክሮፎኑ ጠፍተዋል';
+
+  @override
+  String get liveChat => 'ውይይት';
+
+  @override
+  String get liveConnectionLooksShaky => 'ግንኙነቱ ያልተረጋጋ ይመስላል';
+
+  @override
+  String get liveCoverImageURL => 'የሽፋን ምስል URL';
+
+  @override
+  String get liveDefaultThumbnail => 'ነባሪ ድንክዬ ምስል';
+
+  @override
+  String get liveDemote => 'ሚናን ዝቅ ማድረግ';
+
+  @override
+  String get liveDeny => 'አለመፍቀድ';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'አስቀድመው ወደ ጀመሩ ክፍሎች ይግቡ።';
+
+  @override
+  String get liveEndSession => 'ክፍለ ጊዜውን ማብቃት';
+
+  @override
+  String get liveEndThisLiveSession => 'ይህን የቀጥታ ክፍለ ጊዜ ማብቃት ይፈልጋሉ?';
+
+  @override
+  String get liveFailedToReportUser => 'ተጠቃሚውን ሪፖርት ማድረግ አልተቻለም';
+
+  @override
+  String get liveFeaturedHosts => 'ተለይተው የቀረቡ አስተናጋጆች';
+
+  @override
+  String get liveFlipCamera => 'ካሜራ መቀየር';
+
+  @override
+  String get liveGoLive => 'የቀጥታ ስርጭት መጀመር';
+
+  @override
+  String get liveHandRaised => 'እጅ ተነስቷል';
+
+  @override
+  String get liveHost => 'አስተናጋጅ';
+
+  @override
+  String get liveHostControls => 'የአስተናጋጅ መቆጣጠሪያዎች';
+
+  @override
+  String get liveJoinLive => 'የቀጥታ ስርጭትን መቀላቀል';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'ግንኙነቱ እስኪረጋጋ ድረስ ወደ ድምፅ ብቻ በመቀየር ክፍሉን የተረጋጋ ያድርጉ።';
+
+  @override
+  String get liveHostControlsDescription =>
+      'መድረኩን ያስተዳድሩ፣ የተነሱ እጆችን ይከታተሉ እና ኔትወርኩ ሲቸገር ስርጭቱን ያስተካክሉ።';
+
+  @override
+  String get liveLiveAudioOnly => 'የቀጥታ ስርጭት በድምፅ ብቻ';
+
+  @override
+  String get liveLiveNow => 'አሁን በቀጥታ';
+
+  @override
+  String get liveLiveRoom => 'የቀጥታ ክፍል';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'የቀጥታ ክፍሎች አይገኙም።';
+
+  @override
+  String get liveLiveVideo => 'የቀጥታ ቪዲዮ';
+
+  @override
+  String get liveLiveVideoAndAudio => 'የቀጥታ ቪዲዮ እና ድምፅ';
+
+  @override
+  String get liveLowerHand => 'እጅ ማውረድ';
+
+  @override
+  String get liveManageParticipants => 'ተሳታፊዎችን ማስተዳደር';
+
+  @override
+  String get liveModeration => 'ክትትል';
+
+  @override
+  String get liveModerator => 'አወያይ';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'እስካሁን ንቁ ተናጋሪዎች የሉም።';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'በአሁኑ ጊዜ ክትትል የሚደረግባቸው ታዳሚዎች የሉም።';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence => 'ገና መልዕክቶች የሉም። ውይይቱን ይጀምሩ።';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'እስካሁን ማንም ክፍሉን አልተቀላቀለም።';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'ለመናገር የሚጠብቅ ማንም የለም።';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne => 'ገና ክፍሎች የሉም። የመጀመሪያውን ይፍጠሩ።';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => 'እስካሁን ምንም ክፍለ ጊዜ አልተያዘም።';
+
+  @override
+  String get liveNothingHereYet => 'እዚህ ገና ምንም የለም።';
+
+  @override
+  String get liveOnStage => 'በመድረክ ላይ';
+
+  @override
+  String get liveOpenReplay => 'ቅጂውን መክፈት';
+
+  @override
+  String get liveOpenRoom => 'ክፍል መክፈት';
+
+  @override
+  String get liveParticipants => 'ተሳታፊዎች';
+
+  @override
+  String get livePromote => 'ሚናን ከፍ ማድረግ';
+
+  @override
+  String get liveRaiseHand => 'እጅ ማንሳት';
+
+  @override
+  String get liveRaisedHands => 'የተነሱ እጆች';
+
+  @override
+  String get liveReplayProcessing => 'ቅጂው እየተዘጋጀ ነው';
+
+  @override
+  String get liveReplayQueued => 'ቅጂው በተራ እየጠበቀ ነው';
+
+  @override
+  String get liveReplayReady => 'ቅጂው ዝግጁ ነው';
+
+  @override
+  String get liveReplayUnavailable => 'ቅጂው አይገኝም';
+
+  @override
+  String get liveReportUser => 'ተጠቃሚን ሪፖርት ማድረግ';
+
+  @override
+  String get liveRoomDetail => 'የክፍሉ ዝርዝር';
+
+  @override
+  String get liveRoomDetails => 'የክፍሉ ዝርዝሮች';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard => 'የክፍሉ አገናኝ ወደ ቅንጥብ ሰሌዳ ተቀድቷል';
+
+  @override
+  String get liveRoomTitle => 'የክፍሉ ርዕስ';
+
+  @override
+  String get liveRoomUnavailable => 'ክፍሉ አይገኝም።';
+
+  @override
+  String get liveSaySomething => 'አንድ ነገር ይበሉ';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'ቀጥሎ የሚመጣውን ይመልከቱ።';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'አሁን በቀጥታ የሚያስተላልፉትን ይመልከቱ ወይም የራስዎን ክፍል ይጀምሩ።';
+
+  @override
+  String get liveSend => 'መላክ';
+
+  @override
+  String get liveSession => 'ክፍለ ጊዜ';
+
+  @override
+  String get liveShareRoom => 'ክፍል ማጋራት';
+
+  @override
+  String get liveSpeaker => 'ተናጋሪ';
+
+  @override
+  String get liveSpeakerHandRaised => 'ተናጋሪ፣ እጅ ተነስቷል';
+
+  @override
+  String get liveSpeakers => 'ተናጋሪዎች';
+
+  @override
+  String get liveStage => 'መድረክ';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => 'የሕዝብ ክፍልን በቀላሉ ይጀምሩ።';
+
+  @override
+  String get liveStartLiveNow => 'አሁን የቀጥታ ስርጭት መጀመር';
+
+  @override
+  String get liveStartingCameraAndMicrophone => 'ካሜራ እና ማይክሮፎን በመጀመር ላይ...';
+
+  @override
+  String get liveStartingCamera => 'ካሜራ በመጀመር ላይ...';
+
+  @override
+  String get liveStartingMicrophone => 'ማይክሮፎን በመጀመር ላይ...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'ወደ ድምፅ ብቻ መቀየር';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'የቀጥታ ስርጭቱ አልቋል፣ ግን ቅጂው ለማየት ዝግጁ ነው።';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'የቀጥታ ስርጭቱ አልቋል። ቅጂውን ገና እያዘጋጀን ነው።';
+
+  @override
+  String get liveEndSessionConfirmation => 'ይህ ክፍሉን ለሁሉም ያበቃል እና መድረኩን ይዘጋል።';
+
+  @override
+  String get liveTurnCameraOff => 'ካሜራ ማጥፋት';
+
+  @override
+  String get liveTurnCameraOn => 'ካሜራ ማብራት';
+
+  @override
+  String get liveTurnMicOff => 'ማይክሮፎን ማጥፋት';
+
+  @override
+  String get liveTurnMicOn => 'ማይክሮፎን ማብራት';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => 'ይህን የቀጥታ ክፍል መክፈት አልተቻለም።';
+
+  @override
+  String get liveUpcoming => 'በቅርቡ';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'የክፍሉን ርዕስ ማዘመን';
+
+  @override
+  String get liveUpdateTitleStatus => 'ርዕስ/ሁኔታ ማዘመን';
+
+  @override
+  String get liveUserBlocked => 'ተጠቃሚው ታግዷል';
+
+  @override
+  String get liveUserReported => 'ተጠቃሚው ሪፖርት ተደርጓል';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'የመገለጫ ፎቶዎን እንደ መጀመሪያ ድንክዬ ምስል በመጠቀም ላይ።';
+
+  @override
+  String get liveWaitingForMedia => 'ሚዲያ በመጠበቅ ላይ';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'ተናጋሪዎች ወደ መድረኩ እስኪመጡ በመጠበቅ ላይ።';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'የቀጥታ ስርጭትዎ ስለ ምን ይሆናል?';
+
+  @override
+  String get liveYouAreOnStage => 'እርስዎ በመድረክ ላይ ነዎት';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'እጅዎ ተነስቷል። አስተናጋጁ ከተናጋሪዎች ተራ ወደ መድረክ ሊጋብዝዎ ይችላል።';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName በቀጥታ እያስተላለፉ ነው';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'ከ$displayName ጋር በDivine በቀጥታ ጊዜ ያሳልፉ።';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'አስተናጋጅ፦ $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers ተናጋሪዎች',
+      one: '$speakers ተናጋሪ',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners አድማጮች',
+      one: '$listeners አድማጭ',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'የጀመረው፦ $time';
+  }
+
+  @override
+  String get liveEnded => 'አብቅቷል';
+
+  @override
+  String liveEndedAt(String time) {
+    return 'ያበቃው፦ $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'ለ$time የተያዘ';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return '$titleን በDivine በቀጥታ ይቀላቀሉ';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'የቀጥታ ክፍል፦ $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts አስተናጋጆች',
+      one: '$hosts አስተናጋጅ',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators አወያዮች',
+      one: '$moderators አወያይ',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers ተናጋሪዎች',
+      one: '$speakers ተናጋሪ',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience አድማጮች',
+      one: '$audience አድማጭ',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ተናጋሪዎች',
+      one: '$count ተናጋሪ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count አድማጮች',
+      one: '$count አድማጭ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count አድማጮች በክፍሉ ውስጥ',
+      one: '$count አድማጭ በክፍሉ ውስጥ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'ከ$displayName የቀጥታ ውይይት መልዕክት';
+  }
+
+  @override
+  String get liveShareFailed => 'ይህን ክፍል ማጋራት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveBlockFailed => 'ይህን ተጠቃሚ ማገድ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveRoomStatusHint => 'open፣ private ወይም closed ይጠቀሙ';
+
+  @override
+  String get liveErrorRequestFailed => 'ይህን ክፍል ማዘመን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'ከዚህ ክፍል ጋር መገናኘት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'የክፍሉን ዝማኔዎች መጫን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveErrorCameraBlocked => 'የካሜራ መዳረሻ ታግዷል። በቅንብሮች ውስጥ ይፍቀዱት።';
+
+  @override
+  String get liveErrorCameraRequired => 'ካሜራዎን ለማብራት የካሜራ መዳረሻን ይፍቀዱ።';
+
+  @override
+  String get liveErrorCameraUnavailable => 'የሚገኝ ካሜራ የለም።';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'የካሜራ መዳረሻ መጠየቅ አልተቻለም። ቅንብሮችን ያረጋግጡ።';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'የማይክሮፎን መዳረሻ ታግዷል። በቅንብሮች ውስጥ ይፍቀዱት።';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'ማይክሮፎንዎን ለማብራት የማይክሮፎን መዳረሻን ይፍቀዱ።';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'የሚገኝ ማይክሮፎን የለም።';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'የማይክሮፎን መዳረሻ መጠየቅ አልተቻለም። ቅንብሮችን ያረጋግጡ።';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'መድረኩ ሞልቷል። አንድ ተናጋሪ እስኪወርድ ይጠብቁ።';
+
+  @override
+  String get liveTitleRequired => 'የክፍል ርዕስ ያስገቡ።';
+
+  @override
+  String get liveStartFailed => 'ይህን ክፍል መጀመር አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveSendFailed => 'መልዕክትዎን መላክ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get liveChatLoadFailed => 'ውይይቱን መጫን አልተቻለም። እንደገና ይሞክሩ።';
 }

@@ -1,5 +1,5 @@
 import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/models/content_moderation.dart';
 
 extension ContentFilterReasonLocalizations on AppLocalizations {
   String reportReasonTitle(ContentFilterReason reason) {
