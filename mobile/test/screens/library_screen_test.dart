@@ -1318,6 +1318,131 @@ void main() {
           expect(reporter.recordedErrors, isEmpty);
         },
       );
+
+      // The category flows chain several sheets, so they are the longest-lived
+      // detached work on this screen. Whatever one of them throws must reach
+      // runDetached rather than escape as an unhandled error.
+      group('category flows', () {
+        final travel = ClipCategory(
+          id: 'cat-travel',
+          name: 'Travel',
+          createdAt: DateTime(2026),
+        );
+
+        testWidgets(
+          'deleting a category after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                  tester.element(find.byType(ClipsTab)),
+                )..add(
+                  ClipsLibraryFilterChanged(
+                    ClipLibraryCategoryFilter(travel.id),
+                  ),
+                );
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryCategoryManageSemanticLabel),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(en.libraryCategoryDeleteAction));
+            await tester.pumpAndSettle();
+            final confirmTitle = en.libraryCategoryDeleteConfirmTitle(
+              travel.name,
+            );
+            expect(find.text(confirmTitle), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(confirmTitle), findsOneWidget);
+
+            await tester.tap(find.text(en.commonDelete));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+
+        testWidgets(
+          'archiving selected clips after the library is gone leaves nothing '
+          'unhandled',
+          (tester) async {
+            final filed = DivineVideoClip(
+              id: 'filed',
+              video: EditorVideo.file('/test/filed.mp4'),
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: models.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+              thumbnailPath: '/test/filed.jpg',
+              ghostFramePath: '/test/filed_ghost.jpg',
+              categoryId: travel.id,
+            );
+            when(
+              () => mockClipLibraryService.getAllClips(),
+            ).thenAnswer((_) async => [filed]);
+            when(
+              () => mockClipLibraryService.getCategories(),
+            ).thenAnswer((_) async => [travel]);
+
+            await tester.pumpWidget(
+              buildWidget(
+                initialTabIndex: 1,
+                tabsMode: LibraryTabsMode.withoutSounds,
+                libraryVisible: libraryVisible,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final clipsBloc =
+                BlocProvider.of<ClipsLibraryBloc>(
+                    tester.element(find.byType(ClipsTab)),
+                  )
+                  ..add(const ClipsLibraryEnterSelectionMode())
+                  ..add(ClipsLibraryToggleSelection(filed));
+            await tester.pumpAndSettle();
+
+            await tester.tap(
+              find.bySemanticsLabel(en.libraryMoveSelectedClipsTooltip),
+            );
+            await tester.pumpAndSettle();
+            // "Archive" is also a filter chip, so scope the tap to the sheet.
+            await tester.tap(
+              find.descendant(
+                of: find.byType(VineBottomSheet),
+                matching: find.text(en.libraryArchiveAction),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final keepAction = en.libraryArchiveKeepCategoryAction(travel.name);
+            expect(find.text(keepAction), findsOneWidget);
+
+            libraryVisible.value = false;
+            await tester.pump();
+            expect(clipsBloc.isClosed, isTrue);
+            expect(find.text(keepAction), findsOneWidget);
+
+            await tester.tap(find.text(keepAction));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+      });
     });
 
     group('web', () {

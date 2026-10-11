@@ -738,16 +738,26 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                   ),
                             onManageActiveCategory: activeCategory == null
                                 ? null
-                                : () => ClipCategoryActions.runManageFlow(
-                                    context: context,
-                                    bloc: clipsBloc,
-                                    category: activeCategory,
+                                : () => runDetached(
+                                    ClipCategoryActions.runManageFlow(
+                                      context: context,
+                                      bloc: clipsBloc,
+                                      category: activeCategory,
+                                    ),
+                                    'manage library category',
+                                    logName: 'LibraryScreen',
+                                    category: LogCategory.ui,
                                   ),
                             onMoveSelectedClips: hasVisibleSelection
-                                ? () => ClipCategoryActions.runMoveFlow(
-                                    context: context,
-                                    bloc: clipsBloc,
-                                    clipIds: visibleSelectedClipIds,
+                                ? () => runDetached(
+                                    ClipCategoryActions.runMoveFlow(
+                                      context: context,
+                                      bloc: clipsBloc,
+                                      clipIds: visibleSelectedClipIds,
+                                    ),
+                                    'move selected library clips',
+                                    logName: 'LibraryScreen',
+                                    category: LogCategory.ui,
                                   )
                                 : null,
                             onDeleteSelectedClips: hasVisibleSelection
