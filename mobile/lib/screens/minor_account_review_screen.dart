@@ -1,8 +1,6 @@
 // ABOUTME: Hard-gate screen shown when an authenticated account is restricted
 // ABOUTME: pending parental consent / minor-account review.
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +18,7 @@ import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -397,11 +396,14 @@ class _LoadedView extends ConsumerWidget {
         reviewCase.moderationConversationId ??
         DmRepository.computeConversationId([currentPubkey, moderationPubkey]);
 
-    unawaited(
-      context.push(
+    runDetached(
+      context.push<void>(
         ConversationPage.pathForId(conversationId),
         extra: [moderationPubkey],
       ),
+      'open moderation conversation',
+      logName: 'MinorAccountReviewScreen',
+      category: LogCategory.ui,
     );
   }
 
@@ -463,20 +465,23 @@ class _LoadedView extends ConsumerWidget {
   }
 
   void _continueToNextStep(BuildContext context, MinorReviewCase reviewCase) {
-    if (reviewCase.isUnder13Path) {
-      unawaited(context.push(MinorAccountReviewUnder13SupportScreen.path));
-      return;
-    }
+    final location = reviewCase.isUnder13Path
+        ? MinorAccountReviewUnder13SupportScreen.path
+        : switch (reviewCase.allowedResolution) {
+            MinorReviewResolutionType.parentVideoOrEmail =>
+              MinorAccountReviewParentContactScreen.path,
+            MinorReviewResolutionType.supportEmailOnly =>
+              MinorAccountReviewUnder13SupportScreen.path,
+            MinorReviewResolutionType.supportReviewOnly ||
+            MinorReviewResolutionType.unknown => SupportCenterScreen.path,
+          };
 
-    switch (reviewCase.allowedResolution) {
-      case MinorReviewResolutionType.parentVideoOrEmail:
-        unawaited(context.push(MinorAccountReviewParentContactScreen.path));
-      case MinorReviewResolutionType.supportEmailOnly:
-        unawaited(context.push(MinorAccountReviewUnder13SupportScreen.path));
-      case MinorReviewResolutionType.supportReviewOnly:
-      case MinorReviewResolutionType.unknown:
-        unawaited(context.push(SupportCenterScreen.path));
-    }
+    runDetached(
+      context.push<void>(location),
+      'open next account review step',
+      logName: 'MinorAccountReviewScreen',
+      category: LogCategory.ui,
+    );
   }
 }
 
