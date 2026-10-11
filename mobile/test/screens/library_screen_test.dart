@@ -23,6 +23,7 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -34,6 +35,7 @@ import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/go_router.dart';
@@ -98,6 +100,21 @@ class _StubClipManagerNotifier extends ClipManagerNotifier {
   ClipManagerState build() => ClipManagerState(clips: _clips);
 }
 
+/// Holds [clearAll] open until [gate] completes, so a test can change the
+/// screen while "Create video" is still waiting on it.
+class _GatedVideoPublishNotifier extends VideoPublishNotifier {
+  _GatedVideoPublishNotifier(this.gate);
+
+  final Completer<void> gate;
+  int clearAllCalls = 0;
+
+  @override
+  Future<void> clearAll({bool keepAutosavedDraft = false}) {
+    clearAllCalls++;
+    return gate.future;
+  }
+}
+
 List<Object?> _captureAnnouncements(WidgetTester tester) {
   final announced = <Object?>[];
   tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
@@ -158,6 +175,7 @@ void main() {
       List<DivineVideoClip> editorClips = const [],
       List<DivineVideoClip> sessionClips = const [],
       ValueListenable<bool>? libraryVisible,
+      List<Override> extraOverrides = const [],
     }) {
       final library = LibraryScreen(
         selectionMode: selectionMode,
@@ -179,6 +197,7 @@ void main() {
             clipManagerProvider.overrideWith(
               () => _StubClipManagerNotifier(sessionClips),
             ),
+          ...extraOverrides,
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -1246,6 +1265,57 @@ void main() {
           expect(tester.takeException(), isNull);
           expect(reporter.recordedErrors, isEmpty);
           verifyNever(() => mockClipLibraryService.hardDelete(any()));
+        },
+      );
+
+      testWidgets(
+        'creating a video after the library is gone neither throws nor '
+        'reports',
+        (tester) async {
+          final clip = DivineVideoClip(
+            id: 'selected',
+            video: EditorVideo.file('/test/selected.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/test/selected.jpg',
+            ghostFramePath: '/test/selected_ghost.jpg',
+          );
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [clip]);
+          final publish = _GatedVideoPublishNotifier(Completer<void>());
+
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              libraryVisible: libraryVisible,
+              extraOverrides: [
+                videoPublishProvider.overrideWith(() => publish),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          BlocProvider.of<ClipsLibraryBloc>(
+              tester.element(find.byType(ClipsTab)),
+            )
+            ..add(const ClipsLibraryEnterSelectionMode())
+            ..add(ClipsLibraryToggleSelection(clip));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(en.libraryCreateVideo(1)));
+          await tester.pump();
+          expect(publish.clearAllCalls, equals(1));
+
+          libraryVisible.value = false;
+          await tester.pump();
+          publish.gate.complete();
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(reporter.recordedErrors, isEmpty);
         },
       );
     });

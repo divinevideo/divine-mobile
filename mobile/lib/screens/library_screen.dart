@@ -443,6 +443,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     if (!widget.selectionMode) {
       await ref.read(videoPublishProvider.notifier).clearAll();
+      if (!mounted) return;
 
       final clipManagerNotifier = ref.read(clipManagerProvider.notifier);
       // Drop unreadable stills (deleted / zero-byte captures), then collapse
