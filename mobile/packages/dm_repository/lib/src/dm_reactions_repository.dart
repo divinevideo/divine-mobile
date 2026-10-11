@@ -113,7 +113,8 @@ class DmReactionRetryTarget {
   /// stores none.
   final String targetMessageAuthor;
 
-  /// Persisted publish status: `'failed'` or `'pending'`.
+  /// Persisted publish status: `'failed'` or `'pending'` for a reaction,
+  /// `'deletion_pending'` or `'deletion_unconfirmed'` for a removal.
   final String publishStatus;
 
   /// Rumor `created_at` (unix seconds). Lets the sweep hold back a still-in-
@@ -432,9 +433,9 @@ class DmReactionsRepository {
         .map((rows) => _collapsePerReactor(rows.map(_rowToModel).toList()));
   }
 
-  /// Whether the current account has a pending or refused removal for the
-  /// target message. This reads the durable queue because pending removals are
-  /// deliberately absent from [watchForConversation].
+  /// Whether the current account has a removal for the target message that
+  /// is pending, refused or unconfirmed. This reads the durable queue because
+  /// pending removals are deliberately absent from [watchForConversation].
   Future<bool> hasOutstandingOwnDeletion({
     required String targetMessageId,
   }) {
@@ -1025,8 +1026,8 @@ class DmReactionsRepository {
   ///
   /// Marks the row `deletion_sent` on a confirmed publish and
   /// `deletion_refused` when send policy blocks it — off the sweep's
-  /// worklist, rumor retained for a user-driven retry; leaves it pending
-  /// otherwise so the sweep tries again.
+  /// worklist, rumor retained for a user-driven retry; leaves its status
+  /// unchanged otherwise, so the sweep tries again.
   Future<DmReactionDeletionOutcome> retryDeletion({
     required String rumorId,
     required String targetMessageAuthor,
@@ -1037,6 +1038,25 @@ class DmReactionsRepository {
         rumorId: rumorId,
         targetMessageAuthor: targetMessageAuthor,
       ),
+    );
+  }
+
+  /// Record that automatic retries ran out for the own removal [rumorId]
+  /// without a relay confirming its kind-5.
+  ///
+  /// The removal becomes visible in the thread as a warning the user can
+  /// retry, instead of staying hidden with nothing left to re-drive it. It
+  /// keeps its stored kind-5 and stays in [retryableDeletions], so a later
+  /// launch retries it on its own. Changes nothing when the removal was
+  /// confirmed or refused in the meantime.
+  ///
+  /// Throws:
+  ///
+  /// * the database error when the row cannot be written.
+  Future<void> markDeletionUnconfirmed({required String rumorId}) {
+    return _reactionsDao.markDeletionUnconfirmed(
+      id: rumorId,
+      ownerPubkey: _userPubkey,
     );
   }
 
@@ -1901,7 +1921,8 @@ class DmReactionsRepository {
       'failed' => DmReactionPublishStatus.failed,
       'sent' => DmReactionPublishStatus.sent,
       'blocked' => DmReactionPublishStatus.blocked,
-      DmReactionsDao.deletionRefused => DmReactionPublishStatus.removalRefused,
+      DmReactionsDao.deletionRefused || DmReactionsDao.deletionUnconfirmed =>
+        DmReactionPublishStatus.removalRefused,
       _ => DmReactionPublishStatus.received,
     };
     return DmReaction(

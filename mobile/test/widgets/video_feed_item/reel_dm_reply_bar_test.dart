@@ -456,6 +456,161 @@ void main() {
       );
     });
 
+    testWidgets(
+      'a removal that was not delivered is not shown as the active reaction',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(wrap(context()));
+        await tester.pump();
+
+        DmReaction ownHeart(DmReactionPublishStatus status) => DmReaction(
+          id: 'own-heart',
+          conversationId: 'convo-id',
+          targetMessageId: _reelId,
+          targetMessageAuthor: _peer,
+          reactorPubkey: _owner,
+          emoji: '❤️',
+          createdAt: 1700000000,
+          ownerPubkey: _owner,
+          publishStatus: status,
+        );
+
+        reactionStream.add([ownHeart(DmReactionPublishStatus.sent)]);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(find.text('❤️')),
+          isSemantics(isSelected: true),
+          reason: 'a delivered reaction is the active one',
+        );
+
+        reactionStream.add([ownHeart(DmReactionPublishStatus.removalRefused)]);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(find.text('❤️')),
+          isSemantics(isSelected: false),
+        );
+        semantics.dispose();
+      },
+    );
+
+    group('a reaction refused while a removal is outstanding', () {
+      const undeliveredRemoval = DmReaction(
+        id: 'own-heart',
+        conversationId: 'convo-id',
+        targetMessageId: _reelId,
+        targetMessageAuthor: _peer,
+        reactorPubkey: _owner,
+        emoji: '❤️',
+        createdAt: 1700000000,
+        ownerPubkey: _owner,
+        publishStatus: DmReactionPublishStatus.removalRefused,
+      );
+
+      // The bar sits at the top here so the notice cannot cover its emojis.
+      Future<void> pumpBarWith(
+        WidgetTester tester,
+        List<DmReaction> rows,
+      ) async {
+        final barVisible = ValueNotifier<bool>(true);
+        addTearDown(barVisible.dispose);
+        await tester.pumpWidget(toggleableBarApp(barVisible, context()));
+        await tester.pump();
+        reactionStream.add(rows);
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> expectRefusedWithNotice(
+        WidgetTester tester, {
+        required String tap,
+        required List<DmReaction> rows,
+      }) async {
+        final semantics = tester.ensureSemantics();
+        final announcements = captureAnnouncements(tester);
+        final notice = lookupAppLocalizations(
+          const Locale('en'),
+        ).dmReactionAddBlockedByRemoval;
+        await pumpBarWith(tester, rows);
+
+        await tester.tap(find.text(tap));
+        await tester.pumpAndSettle();
+
+        expect(find.text(notice), findsOneWidget);
+        expect(announcements, contains(notice));
+        expect(
+          tester.getSemantics(find.text(tap)),
+          isSemantics(isSelected: false),
+        );
+        verifyNever(
+          () => reactionsRepo.publish(
+            conversationId: any(named: 'conversationId'),
+            targetMessageId: any(named: 'targetMessageId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+            emoji: any(named: 'emoji'),
+          ),
+        );
+        semantics.dispose();
+      }
+
+      testWidgets(
+        'the emoji of the undelivered removal is not left highlighted',
+        (tester) async {
+          await expectRefusedWithNotice(
+            tester,
+            tap: '❤️',
+            rows: const [undeliveredRemoval],
+          );
+        },
+      );
+
+      testWidgets('a different emoji is not left highlighted', (tester) async {
+        await expectRefusedWithNotice(
+          tester,
+          tap: '😂',
+          rows: const [undeliveredRemoval],
+        );
+      });
+
+      testWidgets(
+        'an emoji is not left highlighted while the removal is still pending',
+        (tester) async {
+          when(
+            () => reactionsRepo.hasOutstandingOwnDeletion(
+              targetMessageId: any(named: 'targetMessageId'),
+            ),
+          ).thenAnswer((_) async => true);
+
+          await expectRefusedWithNotice(tester, tap: '❤️', rows: const []);
+        },
+      );
+
+      testWidgets(
+        'a second tap inside the throttle window is refused as well',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          await pumpBarWith(tester, const [undeliveredRemoval]);
+
+          await tester.tap(find.text('❤️'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('❤️'));
+          await tester.pump();
+          expect(
+            tester.getSemantics(find.text('❤️')),
+            isSemantics(isSelected: true),
+            reason: 'the second tap is waiting out the throttle',
+          );
+
+          await tester.pump(ReelReplyConstants.reactionThrottle);
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.getSemantics(find.text('❤️')),
+            isSemantics(isSelected: false),
+          );
+          semantics.dispose();
+        },
+      );
+    });
+
     testWidgets('re-tapping the active emoji is a no-op', (tester) async {
       await tester.pumpWidget(wrap(context()));
       await tester.pump();

@@ -13,7 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show DmReactionPublishStatus;
+import 'package:models/models.dart' show DmReaction, DmReactionPublishStatus;
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/inline_reel_reply/inline_reel_reply_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
@@ -260,9 +260,7 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
         .read<ConversationReactionsCubit>()
         .state
         .reactionsByMessageId[_ctx.sharedReelMessageId];
-    return list
-        ?.firstWhereOrNull((r) => r.reactorPubkey == widget.ownerPubkey)
-        ?.emoji;
+    return _ownActiveReaction(list, widget.ownerPubkey)?.emoji;
   }
 
   void _onEmojiTap(String emoji, {bool fromPicker = false}) {
@@ -302,6 +300,18 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
       _announce(context.l10n.dmReelReactionSentAnnouncement(emoji));
       setState(() => _optimisticEmoji = null);
     }
+  }
+
+  /// The cubit refuses a reaction while a removal on this reel is still
+  /// outstanding. Drop the highlight and say why, as the thread does.
+  void _onReactionRefused() {
+    setState(() {
+      _optimisticEmoji = null;
+      _lastDispatchedEmoji = null;
+    });
+    final notice = context.l10n.dmReactionAddBlockedByRemoval;
+    _announce(notice);
+    _showChatSnackBar(notice);
   }
 
   void _startThrottle() {
@@ -583,6 +593,11 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
                   curr.reactionsByMessageId[_ctx.sharedReelMessageId],
           listener: (context, state) => _reconcileOptimisticReaction(state),
         ),
+        BlocListener<ConversationReactionsCubit, ConversationReactionsState>(
+          listenWhen: (prev, curr) =>
+              prev.blockedReactionAttempts != curr.blockedReactionAttempts,
+          listener: (context, state) => _onReactionRefused(),
+        ),
       ],
       child: ColoredBox(
         color: context.vineColors.surface,
@@ -629,14 +644,26 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   /// ring follows the persisted reaction, with the optimistic value layered on.
   String? _activeEmojiForHighlight() {
     final persisted = context.select(
-      (ConversationReactionsCubit c) => c
-          .state
-          .reactionsByMessageId[_ctx.sharedReelMessageId]
-          ?.firstWhereOrNull((r) => r.reactorPubkey == widget.ownerPubkey)
-          ?.emoji,
+      (ConversationReactionsCubit c) => _ownActiveReaction(
+        c.state.reactionsByMessageId[_ctx.sharedReelMessageId],
+        widget.ownerPubkey,
+      )?.emoji,
     );
     return _optimisticEmoji ?? persisted;
   }
+}
+
+/// The viewer's own reaction that is still in effect. A removal that was not
+/// delivered stays in the list as a warning row; it is not an active reaction.
+DmReaction? _ownActiveReaction(
+  List<DmReaction>? reactions,
+  String ownerPubkey,
+) {
+  return reactions?.firstWhereOrNull(
+    (reaction) =>
+        reaction.reactorPubkey == ownerPubkey &&
+        reaction.publishStatus != DmReactionPublishStatus.removalRefused,
+  );
 }
 
 /// Pill text field mirroring [InlineCommentComposerBar]'s composer geometry.

@@ -22,6 +22,10 @@ abstract class DmReactionRetryServiceReportableSites {
   /// Top-level sweep catch — the sweep loop or repository call raised before
   /// per-reaction dispatch completed.
   static const String sweepTopLevel = 'DmReactionRetryService.sweepTopLevel';
+
+  /// A removal whose budget ran out could not be recorded as unconfirmed.
+  static const String markDeletionUnconfirmed =
+      'DmReactionRetryService.markDeletionUnconfirmed';
 }
 
 /// Backoff + budget configuration for [DmReactionRetryService].
@@ -113,8 +117,11 @@ enum _RetryAttemptOutcome { recovered, refused, failed }
 /// **Backoff/budget:** per-reaction attempts are tracked in memory. A reaction
 /// is skipped until `lastAttempt + backoff(attempts)` elapses and dropped from
 /// the sweep once it hits [DmReactionRetryConfig.maxRetries] (a manual re-tap
-/// still works). Entries for reactions that are no longer retryable (sent,
-/// deleted) are pruned each pass so the maps stay bounded to the live set.
+/// still works). A removal has no chip to re-tap, so when its budget runs out
+/// it is marked unconfirmed: the thread then shows it as a warning with a
+/// retry, and a later launch retries it with a fresh budget (#8390). Entries
+/// for reactions that are no longer retryable (sent, deleted) are pruned each
+/// pass so the maps stay bounded to the live set.
 class DmReactionRetryService {
   /// Construct the service. [reactionsRepository] must be the same instance
   /// the UI publishes through, so retried rows share its DAO and credentials.
@@ -149,9 +156,9 @@ class DmReactionRetryService {
   /// [_driveTargets] charges a target's budget on any non-success result. So
   /// five foreground transitions in airplane mode would otherwise exhaust a
   /// pending removal, after which the sweep skips it for the rest of the
-  /// process and the kind-5 never publishes — invisibly, because the chip is
-  /// already filtered out of the thread. [_retryTriggerStream] re-fires the
-  /// sweep when the network returns. Mirrors `OutgoingDmRetryService`. #7319.
+  /// process and reports a removal failure that was only ever an outage.
+  /// [_retryTriggerStream] re-fires the sweep when the network returns.
+  /// Mirrors `OutgoingDmRetryService`. #7319.
   final OfflineProbe? _isOffline;
 
   final DmReactionRetryConfig _config;
@@ -303,6 +310,7 @@ class DmReactionRetryService {
           DmReactionDeletionOutcome.unconfirmed ||
           DmReactionDeletionOutcome.unavailable => _RetryAttemptOutcome.failed,
         },
+        onBudgetSpent: _markDeletionUnconfirmed,
       );
 
       Log.info(
@@ -412,6 +420,7 @@ class DmReactionRetryService {
     required bool applyPendingMinAge,
     required Future<_RetryAttemptOutcome> Function(DmReactionRetryTarget)
     driver,
+    Future<void> Function(DmReactionRetryTarget)? onBudgetSpent,
   }) async {
     var recovered = 0;
     var failed = 0;
@@ -459,27 +468,11 @@ class DmReactionRetryService {
         }
       }
 
+      _RetryAttemptOutcome outcome;
       try {
-        switch (await driver(target)) {
-          case _RetryAttemptOutcome.recovered:
-            _attempts.remove(id);
-            _lastAttempt.remove(id);
-            recovered++;
-          case _RetryAttemptOutcome.refused:
-            _attempts.remove(id);
-            _lastAttempt.remove(id);
-            refused++;
-          case _RetryAttemptOutcome.failed:
-            _attempts[id] = attempts + 1;
-            _lastAttempt[id] = _now();
-            failed++;
-            if (attempts + 1 < _config.maxRetries) stillRetryable++;
-        }
+        outcome = await driver(target);
       } on Object catch (e, stackTrace) {
-        _attempts[id] = attempts + 1;
-        _lastAttempt[id] = _now();
-        failed++;
-        if (attempts + 1 < _config.maxRetries) stillRetryable++;
+        outcome = _RetryAttemptOutcome.failed;
         Log.error(
           'reaction retry threw for $id: $e',
           name: 'DmReactionRetryService',
@@ -496,6 +489,26 @@ class DmReactionRetryService {
           ),
         );
       }
+
+      switch (outcome) {
+        case _RetryAttemptOutcome.recovered:
+          _attempts.remove(id);
+          _lastAttempt.remove(id);
+          recovered++;
+        case _RetryAttemptOutcome.refused:
+          _attempts.remove(id);
+          _lastAttempt.remove(id);
+          refused++;
+        case _RetryAttemptOutcome.failed:
+          _attempts[id] = attempts + 1;
+          _lastAttempt[id] = _now();
+          failed++;
+          if (attempts + 1 < _config.maxRetries) {
+            stillRetryable++;
+          } else {
+            await onBudgetSpent?.call(target);
+          }
+      }
     }
 
     return (
@@ -507,6 +520,32 @@ class DmReactionRetryService {
       skippedTooYoung: skippedTooYoung,
       stillRetryable: stillRetryable,
     );
+  }
+
+  /// This process will not attempt [target] again. Record that, so the
+  /// removal is shown with a retry instead of staying hidden.
+  ///
+  /// Never throws: a throw would end the pass before the targets after
+  /// this one were driven.
+  Future<void> _markDeletionUnconfirmed(DmReactionRetryTarget target) async {
+    try {
+      await _repository.markDeletionUnconfirmed(rumorId: target.rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'could not mark removal ${target.rumorId} unconfirmed: $e',
+        name: 'DmReactionRetryService',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      unawaited(
+        _crashReporting.recordError(
+          e,
+          stackTrace,
+          reason: DmReactionRetryServiceReportableSites.markDeletionUnconfirmed,
+        ),
+      );
+    }
   }
 
   /// Probe connectivity, treating a broken probe as online.
