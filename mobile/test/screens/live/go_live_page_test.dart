@@ -276,7 +276,7 @@ void main() {
               liveApiServiceProvider.overrideWithValue(mockLiveApiService),
             ],
             child: MaterialApp.router(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               routerConfig: router,
             ),
