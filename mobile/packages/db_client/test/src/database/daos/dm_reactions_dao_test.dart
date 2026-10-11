@@ -955,6 +955,129 @@ void main() {
       },
     );
 
+    group('markDeletionUnconfirmed', () {
+      Future<void> removeOwnReaction() async {
+        await insertPending();
+        await dao.markOwnDeletionPending(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+          deletionRumorJson: '{"kind":5}',
+        );
+      }
+
+      Future<List<String>> visibleIds() async {
+        final visible = await dao
+            .watchForConversation(
+              conversationId: _conversationId,
+              ownerPubkey: _ownerA,
+            )
+            .first;
+        return visible.map((row) => row.id).toList();
+      }
+
+      test(
+        'shows the removal in the thread, keeps its kind-5, and leaves it '
+        'on the automatic retry set',
+        () async {
+          await removeOwnReaction();
+          expect(await visibleIds(), isEmpty);
+
+          await dao.markDeletionUnconfirmed(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+          );
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.publishStatus, DmReactionsDao.deletionUnconfirmed);
+          expect(row.isDeleted, isTrue);
+          expect(row.rumorEventJson, '{"kind":5}');
+          expect(await visibleIds(), [_pendingId]);
+          final retryable = await dao.getRetryableOwnDeletions(
+            ownerPubkey: _ownerA,
+          );
+          expect(retryable.map((r) => r.id), [_pendingId]);
+        },
+      );
+
+      test('counts as an outstanding removal for its message', () async {
+        await removeOwnReaction();
+        await dao.markDeletionUnconfirmed(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        expect(
+          await dao.hasOutstandingOwnDeletion(
+            targetMessageId: _targetMessageId,
+            ownerPubkey: _ownerA,
+          ),
+          isTrue,
+        );
+      });
+
+      test('leaves a removal that was already confirmed alone', () async {
+        await removeOwnReaction();
+        await dao.markDeletionSent(id: _pendingId, ownerPubkey: _ownerA);
+
+        await dao.markDeletionUnconfirmed(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.publishStatus, 'deletion_sent');
+        expect(await visibleIds(), isEmpty);
+      });
+
+      test('leaves a removal the send policy refused alone', () async {
+        await removeOwnReaction();
+        await dao.markDeletionRefused(id: _pendingId, ownerPubkey: _ownerA);
+
+        await dao.markDeletionUnconfirmed(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.publishStatus, DmReactionsDao.deletionRefused);
+        expect(
+          await dao.getRetryableOwnDeletions(ownerPubkey: _ownerA),
+          isEmpty,
+        );
+      });
+
+      test('a later confirmation takes it out of the thread', () async {
+        await removeOwnReaction();
+        await dao.markDeletionUnconfirmed(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+        expect(await visibleIds(), [_pendingId]);
+
+        await dao.markDeletionSent(id: _pendingId, ownerPubkey: _ownerA);
+
+        expect(await visibleIds(), isEmpty);
+        expect(
+          await dao.getRetryableOwnDeletions(ownerPubkey: _ownerA),
+          isEmpty,
+        );
+      });
+
+      test('survives an account switch that keeps retryable rows', () async {
+        await removeOwnReaction();
+        await dao.markDeletionUnconfirmed(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        await dao.deleteNonRetryableForOwner(_ownerA);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row, isNotNull);
+        expect(row!.rumorEventJson, '{"kind":5}');
+      });
+    });
+
     group('reassignForTargetMessages', () {
       test('follows the named targets to the new conversation', () async {
         await insertPending();

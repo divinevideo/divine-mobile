@@ -71,6 +71,11 @@ void main() {
         targetMessageAuthor: any(named: 'targetMessageAuthor'),
       ),
     ).thenAnswer((_) async => DmReactionDeletionOutcome.sent);
+    when(
+      () => repository.markDeletionUnconfirmed(
+        rumorId: any(named: 'rumorId'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -583,6 +588,195 @@ void main() {
         ).called(1);
       },
     );
+
+    group('a removal whose retry budget runs out (#8390)', () {
+      const twoAttempts = DmReactionRetryConfig(
+        maxRetries: 2,
+        initialDelay: Duration(milliseconds: 1),
+      );
+
+      void stubPendingRemoval() {
+        when(repository.retryableDeletions).thenAnswer(
+          (_) async => [
+            _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
+          ],
+        );
+      }
+
+      void stubRemovalOutcome(DmReactionDeletionOutcome outcome) {
+        when(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      test('is marked unconfirmed after its last attempt fails, not '
+          'before', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        stubPendingRemoval();
+        stubRemovalOutcome(DmReactionDeletionOutcome.unconfirmed);
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(rumorId: 'd1'),
+        );
+
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+        verify(
+          () => repository.markDeletionUnconfirmed(rumorId: 'd1'),
+        ).called(1);
+
+        // Later passes skip the spent row without marking it again.
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(rumorId: 'd1'),
+        );
+        verify(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(2);
+      });
+
+      test('is marked unconfirmed when its last attempt throws', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        stubPendingRemoval();
+        when(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenThrow(StateError('signer gone'));
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+
+        verify(
+          () => repository.markDeletionUnconfirmed(rumorId: 'd1'),
+        ).called(1);
+      });
+
+      test('is not marked when the removal is delivered on its last '
+          'attempt', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        stubPendingRemoval();
+        stubRemovalOutcome(DmReactionDeletionOutcome.unconfirmed);
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        stubRemovalOutcome(DmReactionDeletionOutcome.sent);
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+      });
+
+      test('is not marked when send policy refuses it', () async {
+        stubPendingRemoval();
+        stubRemovalOutcome(DmReactionDeletionOutcome.refused);
+
+        // One attempt is the whole budget, so a refusal charged like a
+        // failure would mark it here.
+        await buildService(
+          retryConfig: const DmReactionRetryConfig(maxRetries: 1),
+        ).sweep();
+
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+      });
+
+      test('leaves a reaction whose own budget ran out alone', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(
+          repository.retryableReactions,
+        ).thenAnswer((_) async => [_target(rumorId: 'r1')]);
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(2);
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+      });
+
+      test(
+        'a failure to mark it does not stop the removals after it',
+        () async {
+          when(repository.retryableDeletions).thenAnswer(
+            (_) async => [
+              _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
+              _target(rumorId: 'd2', publishStatus: 'deletion_pending'),
+            ],
+          );
+          when(
+            () => repository.retryDeletion(
+              rumorId: any(named: 'rumorId'),
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).thenAnswer((_) async => DmReactionDeletionOutcome.unconfirmed);
+          when(
+            () => repository.markDeletionUnconfirmed(rumorId: 'd1'),
+          ).thenThrow(StateError('database closed'));
+
+          await buildService(
+            retryConfig: const DmReactionRetryConfig(maxRetries: 1),
+          ).sweep();
+
+          verify(
+            () => repository.retryDeletion(
+              rumorId: 'd2',
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).called(1);
+          verify(
+            () => repository.markDeletionUnconfirmed(rumorId: 'd2'),
+          ).called(1);
+        },
+      );
+    });
 
     group('follow-up heartbeat (#7327)', () {
       final start = DateTime.utc(2026, 10, 7, 12);

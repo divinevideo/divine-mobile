@@ -11189,8 +11189,11 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
   /// Publish status for outgoing rows; null for incoming (received from
   /// relay). Values: `pending`, `sent`, `failed`, `blocked` (send-policy
   /// refused, terminal), `deletion_pending` (soft-deleted, kind-5 awaiting
-  /// durable delivery), `deletion_sent` (kind-5 confirmed, terminal), and
-  /// `deletion_refused` (automatic retries stopped, retained for user retry).
+  /// durable delivery), `deletion_sent` (kind-5 confirmed, terminal),
+  /// `deletion_refused` (send policy refused the kind-5; automatic retries
+  /// stopped, retained for user retry), and `deletion_unconfirmed` (a run of
+  /// automatic retries ended without a relay confirming the kind-5; shown for
+  /// user retry and retried again by a later launch).
   final String? publishStatus;
 
   /// JSON-encoded list of the pubkeys this reaction, and its kind-5 removal,
