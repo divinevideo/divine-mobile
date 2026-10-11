@@ -59,10 +59,13 @@ class HashtagRepository {
         offset: offset,
       );
 
-      if (query == null || query.isEmpty) return remoteResults;
+      final usable = remoteResults
+          .where(HashtagExtractor.isWithinLengthLimit)
+          .toList();
+      if (query == null || query.isEmpty) return usable;
 
       final lowerQuery = query.toLowerCase();
-      final filtered = remoteResults
+      final filtered = usable
           .where((tag) => tag.toLowerCase().contains(lowerQuery))
           .toList();
 
@@ -84,7 +87,10 @@ class HashtagRepository {
   List<String> searchHashtagsLocally({required String query, int limit = 20}) {
     final trimmed = query.trim();
     if (trimmed.isEmpty || _localSearch == null) return const [];
-    return _localSearch(trimmed, limit);
+    return _localSearch(
+      trimmed,
+      limit,
+    ).where(HashtagExtractor.isWithinLengthLimit).toList();
   }
 
   /// Counts locally cached hashtag matches.
