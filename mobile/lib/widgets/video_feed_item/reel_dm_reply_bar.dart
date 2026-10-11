@@ -302,6 +302,18 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     }
   }
 
+  /// The cubit refuses a reaction while a removal on this reel is still
+  /// outstanding. Drop the highlight and say why, as the thread does.
+  void _onReactionRefused() {
+    setState(() {
+      _optimisticEmoji = null;
+      _lastDispatchedEmoji = null;
+    });
+    final notice = context.l10n.dmReactionAddBlockedByRemoval;
+    _announce(notice);
+    _showChatSnackBar(notice);
+  }
+
   void _startThrottle() {
     _throttleTimer?.cancel();
     _throttleTimer = Timer(ReelReplyConstants.reactionThrottle, () {
@@ -580,6 +592,11 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
               prev.reactionsByMessageId[_ctx.sharedReelMessageId] !=
                   curr.reactionsByMessageId[_ctx.sharedReelMessageId],
           listener: (context, state) => _reconcileOptimisticReaction(state),
+        ),
+        BlocListener<ConversationReactionsCubit, ConversationReactionsState>(
+          listenWhen: (prev, curr) =>
+              prev.blockedReactionAttempts != curr.blockedReactionAttempts,
+          listener: (context, state) => _onReactionRefused(),
         ),
       ],
       child: ColoredBox(
