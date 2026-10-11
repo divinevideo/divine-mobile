@@ -21,6 +21,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
+/// Fails the next move of messages between conversations once, so a test can
+/// roll back the transaction that stores a parent and takes a room apart.
+class _ReassignFailingDao extends DirectMessagesDao {
+  _ReassignFailingDao(super.attachedDatabase);
+
+  bool failNextReassign = false;
+  final Completer<void> reassignFailed = Completer<void>();
+
+  @override
+  Future<int> reassignMessages({
+    required List<String> messageIds,
+    required String toConversationId,
+    required String ownerPubkey,
+  }) {
+    if (failNextReassign) {
+      failNextReassign = false;
+      reassignFailed.complete();
+      throw StateError('disk I/O error');
+    }
+    return super.reassignMessages(
+      messageIds: messageIds,
+      toConversationId: toConversationId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+}
+
 final String _ownerSecret = '1' * 64;
 final String _aliceSecret = '2' * 64;
 final String _bobSecret = '3' * 64;
@@ -49,7 +76,7 @@ void main() {
 
   late AppDatabase db;
   late ConversationsDao conversationsDao;
-  late DirectMessagesDao messagesDao;
+  late _ReassignFailingDao messagesDao;
   late _MockNostrClient nostrClient;
   late StreamController<Event> relay;
   late DmRepository repository;
@@ -82,7 +109,7 @@ void main() {
     historyPage = const [];
     db = AppDatabase.test(NativeDatabase.memory());
     conversationsDao = ConversationsDao(db);
-    messagesDao = DirectMessagesDao(db);
+    messagesDao = _ReassignFailingDao(db);
     nostrClient = _MockNostrClient();
     relay = StreamController<Event>.broadcast();
 
@@ -326,6 +353,27 @@ void main() {
       repository = buildRepository();
       await repository.startListening();
       await deliver(parent, authorSecret: _aliceSecret);
+
+      expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
+    });
+
+    test('joins the one-to-one when storing its parent is rolled back and '
+        'retried', () async {
+      final parent = hello();
+      await deliver(ccBob(parent), authorSecret: _aliceSecret);
+      final parentWrap = await wrap(parent, authorSecret: _aliceSecret);
+
+      messagesDao.failNextReassign = true;
+      relay.add(parentWrap);
+      await messagesDao.reassignFailed.future.timeout(_settleTimeout);
+      expect(
+        await messagesDao.getMessageById(parent.id, ownerPubkey: _owner),
+        isNull,
+        reason: 'the failed move rolls the parent back too',
+      );
+
+      relay.add(parentWrap);
+      await settled(parentWrap.id);
 
       expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
     });

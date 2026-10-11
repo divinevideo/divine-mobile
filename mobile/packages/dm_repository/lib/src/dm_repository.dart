@@ -3586,10 +3586,12 @@ class DmRepository {
             // answered and opened a room for itself. Now it can (#10037).
             // Each room is looked at once per awaited message, and a reply
             // in this same conversation answers it here, not from a wider
-            // room.
-            for (final roomId
-                in _roomsAwaitingReplyTarget.remove(rumor.id) ??
-                    const <String>{}) {
+            // room. The entry is dropped only once this transaction commits:
+            // a rollback brings the message back for a retry, and the retry
+            // needs the rooms to look at again.
+            for (final roomId in {
+              ...?_roomsAwaitingReplyTarget[rumor.id],
+            }) {
               if (roomId == conversationId) continue;
               refiledInto.addAll(
                 await _dissolveRoomOfMentions(roomId, ownerPubkey),
@@ -3651,6 +3653,7 @@ class DmRepository {
           return;
         }
 
+        if (refilesMentions) _roomsAwaitingReplyTarget.remove(rumor.id);
         // A soft-deleted reply can be the newest one moved; the preview has
         // to come from the newest message still shown.
         for (final refiledConversationId in refiledInto) {
