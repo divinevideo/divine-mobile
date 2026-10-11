@@ -82,7 +82,7 @@ abstract final class ClipCategoryActions {
       title: context.l10n.libraryCategoryCreateTitle,
       confirmLabel: context.l10n.libraryCategoryCreateAction,
     );
-    if (name == null) return;
+    if (name == null || !context.mounted) return;
     bloc.add(ClipsLibraryCategoryCreated(name, clipIds: clipIds));
   }
 
@@ -103,7 +103,7 @@ abstract final class ClipCategoryActions {
           confirmLabel: context.l10n.libraryCategoryRenameAction,
           initialName: category.name,
         );
-        if (name == null) return;
+        if (name == null || !context.mounted) return;
         bloc.add(
           ClipsLibraryCategoryRenamed(categoryId: category.id, name: name),
         );
@@ -112,7 +112,7 @@ abstract final class ClipCategoryActions {
           context: context,
           category: category,
         );
-        if (!confirmed) return;
+        if (!confirmed || !context.mounted) return;
         bloc.add(ClipsLibraryCategoryDeleted(category.id));
     }
   }
@@ -170,7 +170,7 @@ abstract final class ClipCategoryActions {
           // Dismissing the question cancels the archive rather than picking
           // for the user — either answer moves clips out of a view they are
           // looking at.
-          if (categoryChoice == null) return;
+          if (categoryChoice == null || !context.mounted) return;
           clearCategory = categoryChoice == ClipArchiveCategoryChoice.remove;
         }
         bloc.add(
