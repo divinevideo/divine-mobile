@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/live_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/live_chat_repository.dart';
@@ -53,6 +55,50 @@ void main() {
         ),
       ).thenAnswer((_) => const Stream<Event>.empty());
       when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
+    });
+
+    group('liveApiServiceProvider', () {
+      ProviderContainer createContainer(EnvironmentConfig environment) {
+        final container = ProviderContainer(
+          overrides: [
+            nip98AuthServiceProvider.overrideWithValue(mockNip98AuthService),
+            currentEnvironmentProvider.overrideWithValue(environment),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      test('targets the hosted live API for production', () {
+        final container = createContainer(EnvironmentConfig.production);
+
+        expect(
+          container.read(liveApiServiceProvider).baseUrl,
+          equals(productionLiveApiBaseUrl),
+        );
+      });
+
+      test('targets the hosted live API for staging', () {
+        final container = createContainer(
+          const EnvironmentConfig(environment: AppEnvironment.staging),
+        );
+
+        expect(
+          container.read(liveApiServiceProvider).baseUrl,
+          equals(productionLiveApiBaseUrl),
+        );
+      });
+
+      test('targets the local live API for the local environment', () {
+        final container = createContainer(
+          const EnvironmentConfig(environment: AppEnvironment.local),
+        );
+
+        expect(
+          container.read(liveApiServiceProvider).baseUrl,
+          equals('http://$localHost:$localLiveApiPort'),
+        );
+      });
     });
 
     test(
