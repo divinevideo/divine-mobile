@@ -459,6 +459,48 @@ final class VideoFrameEffectProcessor {
   }
 }
 
+/// When frame effects over a held frame are drawn at the clock's time instead
+/// of the frame's own.
+///
+/// A still — a freeze frame, a long stop-motion hold — is encoded as one
+/// sample lasting its whole length, while the export draws effects on every
+/// frame of it. Drawn at the still's own time, they stood still with it.
+enum HeldFrameEffects {
+  /// How long a frame may stand while the clock runs before effects take the
+  /// clock's time. Footage at 17 fps or more replaces its frames inside it
+  /// and keeps their own time. A slow-motion clip, or a frame the decoder is
+  /// late with, stands longer and is treated like a still.
+  static let afterUs: Int64 = 60_000
+
+  /// Spacing of redraws over a held frame the output hands over nothing new
+  /// for, the 30 fps the export draws effects at. A little under a frame's
+  /// 33.3 ms so a late display tick cannot push a redraw to the tick after:
+  /// it lands on every second tick at 60 Hz, third at 90 Hz, fourth at 120 Hz.
+  static let intervalUs: Int64 = 30_000
+
+  /// The time effects are drawn at over a frame from `frameUs` shown at
+  /// `itemUs`, given they were last drawn at `drawnUs` since the last flush.
+  ///
+  /// A frame shown well past its own time is held: a device's output hands
+  /// over nothing new, the simulator's and macOS's the same frame on every
+  /// tick, and a paused seek can land inside a still. A frame behind
+  /// `drawnUs`, decoded late after a hold, takes the clock's time as well:
+  /// its own would count as a jump back, and the effects would start over.
+  static func timeUs(frameUs: Int64, itemUs: Int64, drawnUs: Int64?) -> Int64 {
+    if itemUs - frameUs >= afterUs { return itemUs }
+    if let drawnUs, frameUs < drawnUs, itemUs >= drawnUs { return itemUs }
+    return frameUs
+  }
+
+  /// The time to draw effects at again over the frame from `heldUs`, last
+  /// drawn at `drawnUs`, with the clock at `nowUs`; `nil` while it is too
+  /// soon, either for the frame to count as held or since the last draw.
+  static func redrawTimeUs(heldUs: Int64, drawnUs: Int64, nowUs: Int64) -> Int64? {
+    guard nowUs - heldUs >= afterUs, nowUs - drawnUs >= intervalUs else { return nil }
+    return nowUs
+  }
+}
+
 extension CMTime {
   /// This time in microseconds, or `nil` when it is not a number: an
   /// invalid or indefinite time has NaN seconds, which no integer holds.

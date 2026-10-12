@@ -36,6 +36,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// of effects can redraw a paused frame.
     private var latestSourceBuffer: CVPixelBuffer?
     private var latestSourceTime = CMTime.invalid
+    /// The time effects were last drawn over `latestSourceBuffer` at, which
+    /// runs ahead of `latestSourceTime` while that frame is held.
+    private var latestEffectsTimeUs: Int64?
     private var hasDeliveredFirstFrame = false
     private weak var player: AVPlayer?
     /// Item the output is currently attached to, so we can detach cleanly.
@@ -497,11 +500,20 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         redrawWithEffects()
     }
 
-    /// Draws the last decoded frame again with the current frame effects.
+    /// Draws the last decoded frame again with the current frame effects,
+    /// where they were last drawn over it. Never at the frame's own time while
+    /// it is held: earlier than the effects' newest frame, that counts as a
+    /// jump back and throws their earlier frames away.
     private func redrawWithEffects() {
-        guard !isDisposed, let source = latestSourceBuffer,
-            let timeUs = latestSourceTime.microseconds
-        else { return }
+        guard let timeUs = latestEffectsTimeUs else { return }
+        redrawWithEffects(atUs: timeUs)
+    }
+
+    /// Draws the last decoded frame again with the current frame effects at
+    /// `timeUs`.
+    private func redrawWithEffects(atUs timeUs: Int64) {
+        guard !isDisposed, let source = latestSourceBuffer else { return }
+        latestEffectsTimeUs = timeUs
         let shown = frameEffects.process(source, timeUs: timeUs)
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
@@ -517,19 +529,25 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     }
 
     /// Delivers `pixelBuffer`, the frame for `itemTime`. `frameTime` is the
-    /// frame's own presentation time when known, which frame effects key
-    /// their history on; the display tick that pulled it can lie after it.
+    /// frame's own presentation time when known; the display tick that pulled
+    /// it can lie after it. Frame effects are drawn at the time
+    /// `HeldFrameEffects` picks: the frame's own, or `itemTime` once it is held
+    /// or late.
     private func deliverFrame(
         _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
     ) {
+        let time = frameTime.isValid ? frameTime : itemTime
+        // What was drawn before this frame, so read ahead of the updates below.
+        let drawnUs = lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil
+        let drawTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime, drawnUs: drawnUs)
         lastDeliveredItemTime = itemTime
         nextStallRecoveryTime = 0
-        let time = frameTime.isValid ? frameTime : itemTime
         latestSourceBuffer = pixelBuffer
         latestSourceTime = time
+        latestEffectsTimeUs = drawTimeUs
         var shown = pixelBuffer
-        if frameEffects.isActive, let timeUs = time.microseconds {
-            shown = frameEffects.process(pixelBuffer, timeUs: timeUs)
+        if frameEffects.isActive, let drawTimeUs {
+            shown = frameEffects.process(pixelBuffer, timeUs: drawTimeUs)
         }
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
@@ -597,7 +615,33 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)
+            redrawEffectsOverHeldFrameIfNeeded(at: itemTime)
         }
+    }
+
+    /// The time frame effects are drawn at over the frame from `frameTime`,
+    /// shown at `itemTime` (see `HeldFrameEffects`).
+    private func effectsTimeUs(
+        forFrameAt frameTime: CMTime, shownAt itemTime: CMTime, drawnUs: Int64?
+    ) -> Int64? {
+        guard let frameUs = frameTime.microseconds else { return nil }
+        guard let itemUs = itemTime.microseconds else { return frameUs }
+        return HeldFrameEffects.timeUs(frameUs: frameUs, itemUs: itemUs, drawnUs: drawnUs)
+    }
+
+    /// Keeps frame effects moving over a held frame while the output hands
+    /// over nothing new, as it does on a device, at about the rate the export
+    /// draws them.
+    private func redrawEffectsOverHeldFrameIfNeeded(at itemTime: CMTime) {
+        guard frameEffects.isActive, let player, player.rate > 0,
+            lastDeliveredItemTime.isValid,
+            let heldUs = latestSourceTime.microseconds,
+            let drawnUs = latestEffectsTimeUs,
+            let nowUs = itemTime.microseconds,
+            let redrawUs = HeldFrameEffects.redrawTimeUs(
+                heldUs: heldUs, drawnUs: drawnUs, nowUs: nowUs)
+        else { return }
+        redrawWithEffects(atUs: redrawUs)
     }
 
     /// Breaks the "playing but frozen" deadlock where `AVPlayerItemVideoOutput`
