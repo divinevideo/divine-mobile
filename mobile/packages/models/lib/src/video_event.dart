@@ -1199,6 +1199,7 @@ class VideoEvent {
 
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
+  static final _blankLineRun = RegExp(r'\n{3,}');
 
   String _withoutTrailingChipHashtags(String text) {
     final chips = {for (final tag in allHashtags) tag.toLowerCase()};
@@ -1219,7 +1220,7 @@ class VideoEvent {
       lines.add(kept.trimRight());
     }
     if (!stripped) return text.trim();
-    return lines.join('\n').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    return lines.join('\n').replaceAll(_blankLineRun, '\n\n').trim();
   }
 
   static bool _isChipHashtag(String token, Set<String> chips) {
