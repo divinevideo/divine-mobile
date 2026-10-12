@@ -132,6 +132,16 @@ void main() {
       );
     });
 
+    test('leaves a caption with no removable hashtag as written', () {
+      expect(
+        build(
+          content: 'Verse one\n\n\n\nVerse two  \nChorus',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('Verse one\n\n\n\nVerse two  \nChorus'),
+      );
+    });
+
     test('strips a very long run of trailing chip hashtags quickly', () {
       final video = build(
         content: 'Caption ${List.filled(20000, '#a').join(' ')}',

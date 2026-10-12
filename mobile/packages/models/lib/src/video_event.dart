@@ -1191,7 +1191,8 @@ class VideoEvent {
   /// itself once nothing else is left on it. The Vine archive import repeats
   /// the caption's hashtags on a line of their own, so the raw description
   /// would show them as text twice above the chips. Hashtags inside a
-  /// sentence stay, since removing them would break the sentence.
+  /// sentence stay, since removing them would break the sentence. A caption
+  /// with nothing to drop is returned trimmed and otherwise as written.
   late final String chipCaptionDescription = _withoutTrailingChipHashtags(
     displayContent,
   );
@@ -1202,6 +1203,7 @@ class VideoEvent {
   String _withoutTrailingChipHashtags(String text) {
     final chips = {for (final tag in allHashtags) tag.toLowerCase()};
     final lines = <String>[];
+    var stripped = false;
     for (final line in text.split('\n')) {
       final tokens = _lineToken.allMatches(line).toList();
       var keep = tokens.length;
@@ -1211,10 +1213,12 @@ class VideoEvent {
       var kept = line;
       if (keep < tokens.length) {
         kept = keep == 0 ? '' : line.substring(0, tokens[keep - 1].end);
+        stripped = true;
       }
       if (kept.trim().isEmpty && line.trim().isNotEmpty) continue;
       lines.add(kept.trimRight());
     }
+    if (!stripped) return text.trim();
     return lines.join('\n').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
   }
 
