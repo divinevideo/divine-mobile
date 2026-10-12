@@ -7,13 +7,43 @@ import 'package:openvine/blocs/shorebird_patch/shorebird_patch_cubit.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockShorebirdPatchCubit extends MockCubit<ShorebirdPatchState>
     implements ShorebirdPatchCubit {}
 
+class _MockShorebirdUpdater extends Mock implements ShorebirdUpdater {}
+
 void main() {
+  group(ShorebirdPatchSection, () {
+    testWidgets('observes an initialization failure', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final updater = _MockShorebirdUpdater();
+      when(() => updater.isAvailable).thenThrow(StateError('unavailable'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: ShorebirdPatchSection(
+              preferences: preferences,
+              updaterFactory: () => updater,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text(l10n.devOptionsShorebirdLoading), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  });
+
   group(ShorebirdPatchView, () {
     late _MockShorebirdPatchCubit cubit;
     late AppLocalizations l10n;

@@ -8,8 +8,10 @@ import 'package:openvine/blocs/shorebird_patch/shorebird_patch_cubit.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/repositories/shorebird_patch_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Lets a tester pull the `staging` track on the store binary they are running.
 class ShorebirdPatchSection extends StatefulWidget {
@@ -44,14 +46,28 @@ class _ShorebirdPatchSectionState extends State<ShorebirdPatchSection> {
           updater: updater,
           preferences: widget.preferences,
         ),
-      )..load();
+      );
+      runDetached(
+        cubit.load(),
+        'load Shorebird patch state',
+        logName: 'ShorebirdPatchSection',
+        category: LogCategory.system,
+      );
       setState(() => _cubit = cubit);
     });
   }
 
   @override
   void dispose() {
-    _cubit?.close();
+    final cubit = _cubit;
+    if (cubit != null) {
+      runDetached(
+        cubit.close(),
+        'close Shorebird patch section',
+        logName: 'ShorebirdPatchSection',
+        category: LogCategory.system,
+      );
+    }
     super.dispose();
   }
 
