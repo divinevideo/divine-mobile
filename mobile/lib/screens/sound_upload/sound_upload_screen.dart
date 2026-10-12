@@ -133,7 +133,13 @@ class _SoundUploadViewState extends State<SoundUploadView> {
 
   Future<void> _pickFile() async {
     await _stopPreview();
-    final file = await widget.pickAudioFile();
+    final XFile? file;
+    try {
+      file = await widget.pickAudioFile();
+    } catch (e, stackTrace) {
+      if (mounted) context.read<SoundUploadCubit>().pickFailed(e, stackTrace);
+      return;
+    }
     if (!mounted || file == null || file.path.isEmpty) return;
     await context.read<SoundUploadCubit>().importFile(
       sourcePath: file.path,

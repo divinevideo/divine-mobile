@@ -78,6 +78,18 @@ class SoundUploadCubit extends Cubit<SoundUploadState>
     }
   }
 
+  /// Reports a pick the platform picker could not hand over.
+  ///
+  /// The Android picker throws when it cannot copy the chosen file (#10065),
+  /// so the pick never reaches [importFile]. A standing failure is cleared
+  /// first, so a second failed pick still reads as a change to a listener.
+  void pickFailed(Object error, StackTrace stackTrace) {
+    if (state.isBusy) return;
+    addError(error, stackTrace);
+    if (state.failure != null) emitIfOpen(state.copyWith(failure: null));
+    _failImport();
+  }
+
   void _failImport() {
     emitIfOpen(
       state.copyWith(
