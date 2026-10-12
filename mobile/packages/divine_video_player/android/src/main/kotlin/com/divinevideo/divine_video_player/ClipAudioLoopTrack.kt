@@ -595,12 +595,19 @@ internal class ClipAudioLoopTrack private constructor(
                 val startUs = decoded.startUs
                 // The whole decode in one pass, so the filters carry their
                 // history into the material the loop blends past its end.
-                val samples = if (retainDecoded) {
-                    EqualizerPcm.equalized(decoded.samples, channels, sampleRate, equalizer)
-                } else {
-                    decoded.samples.also {
+                val samples = when {
+                    !retainDecoded -> decoded.samples.also {
                         EqualizerPcm.apply(it, channels, sampleRate, equalizer)
                     }
+                    // [LoopPcm.prepare] only reads what it is given, so a
+                    // flat curve needs no copy of the retained decode.
+                    equalizer == null || equalizer.isFlat -> decoded.samples
+                    else -> EqualizerPcm.equalized(
+                        decoded.samples,
+                        channels,
+                        sampleRate,
+                        equalizer,
+                    )
                 }
                 val prepared = LoopPcm.prepare(
                     samples = samples,
