@@ -229,18 +229,6 @@ const Duration _dmInboxQueryTimeout = Duration(seconds: 5);
 /// indexer cannot hold the whole recipient resolution open (#7317).
 const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 
-/// Why a kind-10050 lookup that reported `timedOut` was inconclusive.
-///
-/// The read result says only that a leg did not settle, never why: a relay
-/// that stayed silent and a read the client skipped on this device (no
-/// query-pool slot reached it in time) report the same flag. Blaming the
-/// relays sent support looking for a relay fault behind a local queue
-/// (#10004). The client files a "Query ended" diagnostic for every such read,
-/// with the reason, so the line points there instead of guessing.
-const String _dmInboxLegDidNotSettle =
-    'a leg did not settle: a relay was silent or the read never left this '
-    'device, and its "Query ended" relay diagnostic says which';
-
 /// Kept back from what is left of the resolution budget when the write-relay
 /// leg runs, so the leg returns its own answer — including a list one relay
 /// sent before another stalled — before the whole resolution is abandoned.
@@ -4776,7 +4764,7 @@ class DmRepository {
         // that as a timeout misreads it.
         inconclusiveReason = noRelayAnswered
             ? 'no relay took the REQ'
-            : _dmInboxLegDidNotSettle;
+            : 'not every relay settled';
       } else {
         absentOrFailed = _OwnDmInboxState.absent;
       }
@@ -5023,7 +5011,7 @@ class DmRepository {
     if (result.noRelays || result.timedOut) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : _dmInboxLegDidNotSettle;
+          : 'not every relay settled';
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '
