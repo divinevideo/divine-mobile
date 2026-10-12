@@ -111,6 +111,19 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// Minimum spacing between stalled-texture recovery re-arms.
     private static let stallRecoveryIntervalSeconds: CFTimeInterval = 0.3
 
+    /// How long the frame on screen may stand while the clock runs before
+    /// frame effects are drawn over it again at the current time. Longer than
+    /// the gap between two frames of any footage, so a frame of ordinary video
+    /// is drawn by the decoder, never by this.
+    private static let heldFrameEffectsAfterUs: Int64 = 60_000
+
+    /// Spacing of frame-effect redraws over a held frame, about the 30 fps the
+    /// export draws effects at.
+    private static let heldFrameEffectsIntervalUs: Int64 = 33_333
+
+    /// Player time frame effects were last drawn over a held frame at.
+    private var lastHeldFrameEffectsUs: Int64?
+
     /// Serialises access to `latestPixelBuffer`, which is written on the
     /// display-link callback (main thread) and read on Flutter's render
     /// thread via `copyPixelBuffer()`.
@@ -524,6 +537,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     ) {
         lastDeliveredItemTime = itemTime
         nextStallRecoveryTime = 0
+        lastHeldFrameEffectsUs = nil
         let time = frameTime.isValid ? frameTime : itemTime
         latestSourceBuffer = pixelBuffer
         latestSourceTime = time
@@ -597,7 +611,37 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             deliverFrame(pixelBuffer, at: itemTime, frameTime: frameTime)
         } else {
             recoverStalledTextureIfNeeded(output, itemTime: itemTime)
+            redrawEffectsOverHeldFrameIfNeeded(at: itemTime)
         }
+    }
+
+    /// Keeps frame effects moving over a frame that stands for a while.
+    ///
+    /// A still — a freeze frame, a long stop-motion hold — is encoded as one
+    /// sample lasting its whole length, so the output hands over no new frame
+    /// until it ends while the clock runs on. Effects are drawn per delivered
+    /// frame and take the time from it, so without this they froze for the
+    /// length of the still, though the export draws them on every frame.
+    private func redrawEffectsOverHeldFrameIfNeeded(at itemTime: CMTime) {
+        guard frameEffects.isActive, let player, player.rate > 0,
+            lastDeliveredItemTime.isValid,
+            let source = latestSourceBuffer,
+            let heldUs = latestSourceTime.microseconds,
+            let nowUs = itemTime.microseconds,
+            nowUs - heldUs >= VideoTextureOutput.heldFrameEffectsAfterUs
+        else { return }
+        if let lastUs = lastHeldFrameEffectsUs, nowUs >= lastUs,
+            nowUs - lastUs < VideoTextureOutput.heldFrameEffectsIntervalUs
+        {
+            return
+        }
+        lastHeldFrameEffectsUs = nowUs
+        let shown = frameEffects.process(source, timeUs: nowUs)
+        os_unfair_lock_lock(&pixelBufferLock)
+        latestPixelBuffer = shown
+        os_unfair_lock_unlock(&pixelBufferLock)
+        guard isFrameDeliveryEnabled else { return }
+        registry.textureFrameAvailable(textureId)
     }
 
     /// Breaks the "playing but frozen" deadlock where `AVPlayerItemVideoOutput`
