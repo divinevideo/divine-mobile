@@ -3324,6 +3324,18 @@
       }
     }
   },
+  "libraryGalleryImportLabel": "اپنی گیلری سے کلپس شامل کریں",
+  "libraryGalleryImportExplainerTitle": "اپنی کلپس واپس لائیں",
+  "libraryGalleryImportExplainerSubtitle": "آپ صرف وہی کلپس واپس لا سکتے ہیں جو آپ نے Divine کیمرے سے بنائی ہیں۔ ہم پہلے ہر کلپ کی C2PA سے تصدیق کرتے ہیں تاکہ آپ کی کلپس میں کچھ اور شامل نہ ہو۔",
+  "libraryGalleryImportExplainerButton": "کلپس منتخب کریں",
+  "libraryGalleryImportTitle": "گیلری سے شامل کریں",
+  "libraryGalleryImportItemWaiting": "انتظار میں…",
+  "libraryGalleryImportItemChecking": "جانچ ہو رہی ہے…",
+  "libraryGalleryImportItemAdded": "آپ کی کلپس میں شامل ہو گئی",
+  "libraryGalleryImportItemAlreadyInLibrary": "پہلے سے آپ کی کلپس میں ہے",
+  "libraryGalleryImportItemNotVerified": "تصدیق نہیں ہو سکی کہ یہ Divine سے بنی ہے",
+  "libraryGalleryImportItemCheckUnavailable": "ابھی جانچ نہیں ہو سکی۔ بعد میں دوبارہ کوشش کریں۔",
+  "libraryGalleryImportDone": "ہو گیا",
   "libraryClipsDeletedCount": "{count, plural, =1{1 کلپ حذف ہو گئی} other{{count} کلپس حذف ہو گئیں}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

@@ -3324,6 +3324,18 @@
       }
     }
   },
+  "libraryGalleryImportLabel": "Tambah klip daripada galeri anda",
+  "libraryGalleryImportExplainerTitle": "Bawa balik klip anda",
+  "libraryGalleryImportExplainerSubtitle": "Anda hanya boleh membawa balik klip yang anda rakam dengan kamera Divine. Kami sahkan setiap klip dengan C2PA dahulu, supaya tiada yang lain masuk ke klip anda.",
+  "libraryGalleryImportExplainerButton": "Pilih klip",
+  "libraryGalleryImportTitle": "Tambah daripada galeri",
+  "libraryGalleryImportItemWaiting": "Menunggu…",
+  "libraryGalleryImportItemChecking": "Menyemak…",
+  "libraryGalleryImportItemAdded": "Ditambah ke klip anda",
+  "libraryGalleryImportItemAlreadyInLibrary": "Sudah ada dalam klip anda",
+  "libraryGalleryImportItemNotVerified": "Tidak dapat mengesahkan klip ini dirakam dengan Divine",
+  "libraryGalleryImportItemCheckUnavailable": "Tidak dapat disemak sekarang. Cuba lagi nanti.",
+  "libraryGalleryImportDone": "Selesai",
   "libraryClipsDeletedCount": "{count, plural, =1{1 klip dipadam} other{{count} klip dipadam}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

@@ -6501,6 +6501,45 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Galerinden klip ekle';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Kliplerini geri getir';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Yalnızca Divine kamerasıyla çektiğin klipleri geri getirebilirsin. Kliplerine başka bir şey karışmasın diye her birini önce C2PA ile doğruluyoruz.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Klip seç';
+
+  @override
+  String get libraryGalleryImportTitle => 'Galeriden ekle';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Bekliyor…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Kontrol ediliyor…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Kliplerine eklendi';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'Zaten kliplerinde';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Divine ile çekildiği doğrulanamadı';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Şu an kontrol edilemiyor. Daha sonra tekrar dene.';
+
+  @override
+  String get libraryGalleryImportDone => 'Tamam';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

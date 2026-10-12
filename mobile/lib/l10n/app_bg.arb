@@ -2332,6 +2332,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Добави клипове от галерията си",
+    "libraryGalleryImportExplainerTitle": "Върни клиповете си",
+    "libraryGalleryImportExplainerSubtitle": "Можеш да върнеш само клипове, заснети с камерата на Divine. Първо проверяваме всеки от тях с C2PA, за да не попадне нищо друго сред клиповете ти.",
+    "libraryGalleryImportExplainerButton": "Избери клипове",
+    "libraryGalleryImportTitle": "Добави от галерията",
+    "libraryGalleryImportItemWaiting": "Изчаква…",
+    "libraryGalleryImportItemChecking": "Проверява се…",
+    "libraryGalleryImportItemAdded": "Добавен към клиповете ти",
+    "libraryGalleryImportItemAlreadyInLibrary": "Вече е в клиповете ти",
+    "libraryGalleryImportItemNotVerified": "Не успяхме да потвърдим, че е заснет с Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Не може да се провери сега. Опитай пак по-късно.",
+    "libraryGalleryImportDone": "Готово",
     "libraryClipsDeletedCount": "{count, plural, =1{1 клип е изтрит} other{{count} клипа са изтрити}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {

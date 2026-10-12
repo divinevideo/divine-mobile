@@ -7,9 +7,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
+import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -21,7 +23,9 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
@@ -162,6 +166,8 @@ class LibraryScreen extends ConsumerWidget {
             includeAutosaveDraft: includeAutosaveDraft,
           )..add(const DraftsLibraryLoadRequested()),
         ),
+        if (_offersGalleryImport(selectionMode: selectionMode))
+          const GalleryClipImportProvider(),
       ],
       child: _LibraryView(
         initialTabIndex: initialTabIndex,
@@ -173,6 +179,13 @@ class LibraryScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Whether the library offers to bring clips back from the device gallery.
+///
+/// Only where the platform can check a clip's C2PA credential, and not in the
+/// picker sheet, which only adds clips that are already in the library.
+bool _offersGalleryImport({required bool selectionMode}) =>
+    !selectionMode && ClipProvenanceVerifier.isSupportedPlatform;
 
 class _LibraryView extends ConsumerStatefulWidget {
   const _LibraryView({
@@ -489,6 +502,46 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     }
   }
 
+  /// Picks videos from the device gallery and adds those shot with the
+  /// Divine camera back to the library, showing each one's check on
+  /// [GalleryClipImportPage].
+  ///
+  /// While an import is still running, this reopens its page instead.
+  Future<void> _importFromGallery(BuildContext context) async {
+    final importCubit = context.read<GalleryClipImportCubit>();
+    if (importCubit.state.isImporting) {
+      await GalleryClipImportPage.open(context, importCubit);
+      return;
+    }
+
+    final confirmed = await confirmGalleryClipImport(
+      context,
+      ref.read(sharedPreferencesProvider),
+    );
+    if (!confirmed || !context.mounted) return;
+
+    final List<XFile> picked;
+    try {
+      picked = await ref.read(libraryVideoPickerProvider).pickMultiVideo();
+    } catch (error, stackTrace) {
+      Log.error(
+        'Picking gallery videos for the clip library failed',
+        name: _logName,
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    if (picked.isEmpty || !context.mounted) return;
+
+    _detach(
+      importCubit.importClips([for (final file in picked) file.path]),
+      'import gallery clips into library',
+    );
+    await GalleryClipImportPage.open(context, importCubit);
+  }
+
   void _exitLibrarySelectionMode(ClipsLibraryBloc clipsBloc) {
     clipsBloc.add(const ClipsLibraryExitSelectionMode());
   }
@@ -510,6 +563,9 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     final isPreparing = publishState == VideoPublishState.preparing;
 
     final clipsBloc = context.read<ClipsLibraryBloc>();
+    final offersGalleryImport = _offersGalleryImport(
+      selectionMode: widget.selectionMode,
+    );
 
     // A chroma-key take recorded just before the library opened can still be
     // baking; when its keyed file lands, show that instead of the raw take.
@@ -520,6 +576,14 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     return MultiBlocListener(
       listeners: [
+        // The import outlives its page, so the grid follows it from here:
+        // every clip that passes shows up as soon as it is added.
+        if (offersGalleryImport)
+          BlocListener<GalleryClipImportCubit, GalleryClipImportState>(
+            listenWhen: (prev, curr) => curr.addedCount > prev.addedCount,
+            listener: (context, state) =>
+                clipsBloc.add(const ClipsLibraryClipsChanged()),
+          ),
         BlocListener<ClipsLibraryBloc, ClipsLibraryState>(
           listenWhen: (prev, curr) =>
               _shouldAutoOpenSelectionMode &&
@@ -736,6 +800,12 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             onEnterSelectionMode: () => clipsBloc.add(
                               const ClipsLibraryEnterSelectionMode(),
                             ),
+                            onImportFromGallery: offersGalleryImport
+                                ? () => _detach(
+                                    _importFromGallery(context),
+                                    'open gallery clip import',
+                                  )
+                                : null,
                             isTrashFilterActive: clipsState.isShowingTrash,
                             onEmptyTrash: clipsState.trashedClips.isEmpty
                                 ? null

@@ -11209,6 +11209,78 @@ abstract class AppLocalizations {
   /// **'{destination} permission denied'**
   String libraryGalleryPermissionDenied(String destination);
 
+  /// Clip library action that picks videos from the device gallery and adds the ones shot with the Divine camera back to the clip library. Shown as the button's accessibility label and as its row in the toolbar's overflow menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Add clips from your gallery'**
+  String get libraryGalleryImportLabel;
+
+  /// Title of the one-time sheet shown before the user first picks gallery videos to add back to the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring back your clips'**
+  String get libraryGalleryImportExplainerTitle;
+
+  /// Body of the one-time gallery import sheet, also shown at the top of the import page. C2PA is the content-credentials standard; keep the acronym.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only bring back clips you shot with the Divine camera. We verify each one with C2PA first, so nothing else ends up in your clips.'**
+  String get libraryGalleryImportExplainerSubtitle;
+
+  /// Button on the one-time gallery import sheet that opens the system picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose clips'**
+  String get libraryGalleryImportExplainerButton;
+
+  /// App bar title of the page listing the videos picked from the gallery while they are checked and added.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from gallery'**
+  String get libraryGalleryImportTitle;
+
+  /// Row status: the video is queued behind others picked before it.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting…'**
+  String get libraryGalleryImportItemWaiting;
+
+  /// Row status: the video's C2PA credential is being checked.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get libraryGalleryImportItemChecking;
+
+  /// Row status: the video passed the check and is in the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your clips'**
+  String get libraryGalleryImportItemAdded;
+
+  /// Row status on the gallery import page: the video passed the check, but the clip library already holds the same footage, so nothing was added.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in your clips'**
+  String get libraryGalleryImportItemAlreadyInLibrary;
+
+  /// Row status: the video's credential does not prove it was shot with the Divine camera, so it was not added.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm it was shot with Divine'**
+  String get libraryGalleryImportItemNotVerified;
+
+  /// Row status: the check could not run right now, e.g. offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check right now. Try again later.'**
+  String get libraryGalleryImportItemCheckUnavailable;
+
+  /// Button closing the gallery import page once every video is checked.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get libraryGalleryImportDone;
+
   /// No description provided for @libraryClipsDeletedCount.
   ///
   /// In en, this message translates to:

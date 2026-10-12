@@ -52,9 +52,12 @@ sealed class VideoClipImportResult {
 }
 
 final class VideoClipImportSuccess extends VideoClipImportResult {
-  const VideoClipImportSuccess(this.clip);
+  const VideoClipImportSuccess(this.clip, {this.alreadyInLibrary = false});
 
   final DivineVideoClip clip;
+
+  /// Whether [clip] was in the library already, so nothing was added.
+  final bool alreadyInLibrary;
 }
 
 final class VideoClipImportFailure extends VideoClipImportResult {
@@ -231,7 +234,8 @@ class VideoClipImportService {
   ///
   /// [contributorPubkeys] are the accounts the clip's signed history names as
   /// having recorded or edited it before. Each is credited too, so a clip
-  /// passed along a chain of friends credits all of them (#9893).
+  /// passed along a chain of friends credits all of them (#9893), except the
+  /// account whose library it goes into.
   ///
   /// [targetAspectRatio] is the crop the sender recorded for. When absent it
   /// is derived from the file: near-square and wider maps to square,
@@ -239,7 +243,8 @@ class VideoClipImportService {
   ///
   /// The clip's id is derived from [messageId], so saving the same message
   /// again returns the clip already in the library instead of adding a
-  /// duplicate or overwriting edits made to it since.
+  /// duplicate or overwriting edits made to it since, and restores it when it
+  /// is in the trash.
   ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importReceivedClip({
@@ -249,6 +254,120 @@ class VideoClipImportService {
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
     List<String> contributorPubkeys = const [],
+  }) {
+    return _importVerifiedClip(
+      source: source,
+      clipId: 'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
+      c2paManifestId: c2paManifestId,
+      senderPubkey: senderPubkey,
+      targetAspectRatio: targetAspectRatio,
+      contributorPubkeys: contributorPubkeys,
+    );
+  }
+
+  /// Imports a video picked from the device gallery into the library.
+  ///
+  /// [source] must already have passed the C2PA camera-capture check, as for
+  /// [importReceivedClip]: a clip saved to the gallery keeps its manifest,
+  /// so it can come back into the library with the same proof it left with.
+  ///
+  /// Nobody sent it, so it credits only what its signed history and the
+  /// media server say: whoever published it when the file is a post already
+  /// published on Divine, and otherwise every account in
+  /// [contributorPubkeys]. The account whose library it goes into is never
+  /// credited, so its own recording or post comes back without a credit.
+  /// When it cannot be told whether the file is a published post, the import
+  /// fails with [VideoClipImportFailureReason.sourceLookupFailed].
+  ///
+  /// Footage the library already holds is not added twice: a clip outside
+  /// the trash signed with [c2paManifestId], such as the recording the
+  /// gallery copy was saved from or an earlier import of it, is returned with
+  /// [VideoClipImportSuccess.alreadyInLibrary] set. The clip's id is derived
+  /// from the file's SHA-256 and the library's account, so an earlier import
+  /// of the same file into this library that is in the trash is restored
+  /// rather than copied again.
+  ///
+  /// [source] is copied, never moved; the caller still owns it.
+  Future<VideoClipImportResult> importGalleryClip({
+    required File source,
+    required String c2paManifestId,
+    List<String> contributorPubkeys = const [],
+  }) async {
+    final String videoHash;
+    try {
+      videoHash = await _hashFile(source.path);
+    } catch (e) {
+      Log.warning(
+        'Failed to hash gallery clip: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.copyFailed,
+      );
+    }
+
+    final inLibrary = await _clipSignedAs(c2paManifestId);
+    if (inLibrary != null) {
+      return VideoClipImportSuccess(inLibrary, alreadyInLibrary: true);
+    }
+
+    // Clips share one table across the accounts on this device, so the id
+    // names the library too: another account importing the same file gets
+    // its own clip instead of finding this one.
+    final owner = _clipLibraryService.ownerPubkey;
+    return _importVerifiedClip(
+      source: source,
+      clipId: owner == null
+          ? 'gallery_clip_$videoHash'
+          : 'gallery_clip_${owner}_$videoHash',
+      videoHash: videoHash,
+      c2paManifestId: c2paManifestId,
+      contributorPubkeys: contributorPubkeys,
+    );
+  }
+
+  /// The library clip outside the trash whose proof names [c2paManifestId],
+  /// if any.
+  ///
+  /// A manifest's label is unique to the signing that wrote it, so a clip
+  /// carrying it plays the same signed footage.
+  Future<DivineVideoClip?> _clipSignedAs(String c2paManifestId) async {
+    for (final clip in await _clipLibraryService.getAllClips()) {
+      final proof = clip.proofManifestJson;
+      if (proof == null || !proof.contains(c2paManifestId)) continue;
+      try {
+        final decoded = jsonDecode(proof);
+        if (decoded is Map<String, dynamic> &&
+            decoded['c2paManifestId'] == c2paManifestId) {
+          return clip;
+        }
+      } on FormatException {
+        // A clip with an unreadable proof record names no manifest.
+        continue;
+      }
+    }
+    return null;
+  }
+
+  /// Copies a clip that passed the C2PA check into the library as [clipId].
+  ///
+  /// A clip already saved under [clipId] is returned as it is, and one in this
+  /// library's trash is restored, since bringing it back is what was asked
+  /// for. The first credit goes to whoever published the file when it is a
+  /// post already published on Divine, and to [senderPubkey] otherwise; every
+  /// other account in [contributorPubkeys] follows. The library's own account
+  /// is never credited.
+  ///
+  /// [videoHash] is [source]'s SHA-256 when the caller already computed it.
+  Future<VideoClipImportResult> _importVerifiedClip({
+    required File source,
+    required String clipId,
+    required String c2paManifestId,
+    required List<String> contributorPubkeys,
+    String? senderPubkey,
+    String? videoHash,
+    models.AspectRatio? targetAspectRatio,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -257,24 +376,39 @@ class VideoClipImportService {
       );
     }
 
-    final clipId =
-        'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}';
     final existing = await _clipLibraryService.getClipById(clipId);
-    if (existing != null && existing.deletedAt == null) {
-      return VideoClipImportSuccess(existing);
+    if (existing != null) {
+      // Another account's trash is not this library's to restore.
+      if (existing.deletedAt == null ||
+          await _clipLibraryService.belongsToAnotherAccount(clipId)) {
+        return VideoClipImportSuccess(existing, alreadyInLibrary: true);
+      }
+      // Saving over a trashed row leaves it in the trash, so the clip would
+      // be reported as added while staying out of sight.
+      final restored = await _clipLibraryService.restore(clipId);
+      final clip = restored
+          ? await _clipLibraryService.getClipById(clipId)
+          : null;
+      // The trash can be emptied or the clip trashed again during import.
+      if (clip == null || clip.deletedAt != null) {
+        return const VideoClipImportFailure(
+          VideoClipImportFailureReason.saveFailed,
+        );
+      }
+      return VideoClipImportSuccess(clip);
     }
 
     final importedAt = _now();
 
     File? copiedVideo;
     try {
-      final videoHash = await _hashFile(source.path);
+      final hash = videoHash ?? await _hashFile(source.path);
       final PublishedClipSource? published;
       try {
-        published = await _publishedSourceResolver?.resolve(videoHash);
+        published = await _publishedSourceResolver?.resolve(hash);
       } on PublishedClipSourceLookupException catch (e) {
         Log.warning(
-          'Could not tell whether a received clip is a published post: $e',
+          'Could not tell whether an imported clip is a published post: $e',
           name: _logName,
           category: LogCategory.video,
         );
@@ -310,7 +444,7 @@ class VideoClipImportService {
 
       final actualRatio = _ratioOf(metadata);
       final proof = models.NativeProofData(
-        videoHash: videoHash,
+        videoHash: hash,
         c2paManifestId: c2paManifestId,
       );
       final post = published?.video;
@@ -318,6 +452,7 @@ class VideoClipImportService {
       // way a clip imported from a published video is. Only footage that was
       // never published credits the person who sent it.
       final author = post?.pubkey ?? published?.ownerPubkey ?? senderPubkey;
+      final owner = _clipLibraryService.ownerPubkey;
 
       final clip = DivineVideoClip(
         id: clipId,
@@ -332,14 +467,17 @@ class VideoClipImportService {
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
         sourceCredits: [
-          models.ClipSourceCredit(
-            authorPubkey: author,
-            eventId: post?.id,
-            addressableId: post?.addressableId,
-            relayUrl: post?.sourceRelay,
-          ),
+          if (author != null && author != owner)
+            models.ClipSourceCredit(
+              authorPubkey: author,
+              eventId: post?.id,
+              addressableId: post?.addressableId,
+              relayUrl: post?.sourceRelay,
+            ),
+          // Nobody is the source of their own clip.
           for (final pubkey in contributorPubkeys)
-            if (pubkey != author) models.ClipSourceCredit(authorPubkey: pubkey),
+            if (pubkey != author && pubkey != owner)
+              models.ClipSourceCredit(authorPubkey: pubkey),
         ],
       );
 
@@ -347,7 +485,7 @@ class VideoClipImportService {
       return VideoClipImportSuccess(clip);
     } on FileSystemException catch (e) {
       Log.warning(
-        'Failed to copy received clip into documents: $e',
+        'Failed to copy imported clip into documents: $e',
         name: _logName,
         category: LogCategory.video,
       );
@@ -357,7 +495,7 @@ class VideoClipImportService {
       );
     } catch (e) {
       Log.warning(
-        'Failed to save received clip: $e',
+        'Failed to save imported clip: $e',
         name: _logName,
         category: LogCategory.video,
       );

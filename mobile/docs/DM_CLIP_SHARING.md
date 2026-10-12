@@ -185,11 +185,14 @@ those platforms; elsewhere the attach button still sends a gallery video.
 documents directory, like any other library clip, and stores:
 
 - the sender's pubkey as the clip's first source credit, followed by every
-  other account the verified history names, and
+  other account the verified history names except the recipient's own, and
 - a proof record naming the verified manifest (`proofManifestJson`).
 
 The file keeps the sender's manifest, so an edit of the clip, and the post it
 ends up in, is signed with the whole history as an ingredient.
+
+Saving the same message again returns the clip already in the library, and
+restores it when it is in the trash.
 
 The source credit is public once the clip is used. A video the recipient posts
 with a received clip in it carries the credited account as a clip-source `p`
@@ -207,6 +210,60 @@ uploaded it). A match credits whoever published the post, linked to it with an
 who forwarded it. If the lookup cannot run, nothing is imported and the
 recipient is asked to try again rather than credit the wrong person.
 
+## Back from the gallery
+
+Saving a clip to the gallery, from the clip library or from a received video's
+save button, writes the clip's exact file, so the copy keeps its manifest. The
+clips tab's **Add clips from your gallery** action brings such copies back:
+it opens the system picker with multiple selection, and every picked video
+goes through the same C2PA check before
+`VideoClipImportService.importGalleryClip` adds it. A gallery is therefore no
+way around the check: a video from another app, a screen recording or a
+re-encoded download stays out exactly like an unverified DM clip.
+
+The first time, a sheet explains that only clips shot with the Divine camera
+come back and that each is verified with C2PA first; it is shown again until
+the user confirms it. After the pick, `GalleryClipImportPage` lists every
+picked video with its preview frame. Each row keeps a spinner while it waits
+or is checked, then shows a check mark when the clip is in the library, a
+prohibition sign when its credential does not prove a Divine capture, or a
+warning when the check could not run. A video whose footage is already in the
+library gets a muted check mark and "Already in your clips".
+
+- **The pickers hand over the original bytes.** Android's photo picker streams
+  the file into the app cache unchanged, and iOS's PHPicker is asked for the
+  current representation, so it does not transcode. Only MP4 and QuickTime
+  files are given to the C2PA reader. The picker's temporary copies are
+  deleted once each video is handled; the library keeps its own copy.
+- **Credits come from the file alone**, since nobody sent it. A file that is a
+  post already published on Divine credits whoever published it, linked with
+  an `a` tag, after the same media-server lookup as a received clip. Otherwise
+  every account the verified history names is credited except the one whose
+  library it goes into, so an own recording comes back without a credit and an
+  edit of a friend's clip still credits the friend. The publisher credit
+  follows the same rule, so an own post comes back without a credit too. The
+  same rule now applies to received clips: nobody is credited as the source of
+  their own footage.
+- **Footage the library already holds is not added twice.** A clip outside
+  the trash whose proof record names the same C2PA manifest, such as the
+  recording the copy was saved from, a received clip or an earlier import,
+  makes the row read "Already in your clips". A manifest's label is unique to
+  the signing that wrote it, so the same label means the same signed footage.
+- **The id comes from the account and the file's SHA-256**
+  (`gallery_clip_<owner pubkey>_<sha256>`). Clips share one table across the
+  accounts on a device, so a second account importing the same file gets its
+  own clip. An earlier import of the same file that is in this library's trash
+  is restored rather than copied again; saving over a trashed row would leave
+  it in the trash. Neither import restores another account's trashed clip.
+- **The import outlives its page.** `GalleryClipImportCubit` belongs to the
+  library, not the page, so leaving the page keeps the check running, each
+  clip that passes shows up in the grid as it is added, and the import action
+  reopens the page while the import is still running.
+
+The action is offered on Android and iOS only, and not in the library picker
+the editor and the DM composer open, which only adds clips already in the
+library.
+
 ## Limits
 
 - **Edits need to reach ProofSign.** A library save or merge made offline is
@@ -219,3 +276,6 @@ recipient is asked to try again rather than credit the wrong person.
   so a video containing stop-motion footage is posted without a C2PA manifest.
 - **Android and iOS only.** Other platforms have no C2PA reader and keep the
   plain gallery attach and save.
+- **A gallery copy proves nothing once it changes.** Trimming or editing it in
+  the Photos or Gallery app, or exporting it through another app, rewrites the
+  file, and it fails the check like any other altered video.

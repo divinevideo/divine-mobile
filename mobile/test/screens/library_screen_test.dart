@@ -2,6 +2,7 @@
 // ABOUTME: Covers tabs, navigation, empty states, and clip selection flows
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
@@ -9,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
@@ -22,16 +25,22 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/library/clips_tab.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
+import 'package:openvine/widgets/library/gallery_clip_import.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -47,6 +56,14 @@ class _FakeEditorVideo extends Fake implements EditorVideo {}
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+class _MockImagePicker extends Mock implements ImagePicker {}
+
+class _MockClipProvenanceVerifier extends Mock
+    implements ClipProvenanceVerifier {}
+
+class _MockVideoClipImportService extends Mock
+    implements VideoClipImportService {}
 
 class _RecordingCrashReporter implements CrashReporter {
   final recordedErrors = <Object>[];
@@ -148,6 +165,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(<DivineVideoClip>[]);
       registerFallbackValue(_FakeEditorVideo());
+      registerFallbackValue(File(''));
     });
 
     setUp(() async {
@@ -176,6 +194,7 @@ void main() {
       List<DivineVideoClip> sessionClips = const [],
       ValueListenable<bool>? libraryVisible,
       List<Override> extraOverrides = const [],
+      bool routed = false,
     }) {
       final library = LibraryScreen(
         selectionMode: selectionMode,
@@ -183,6 +202,15 @@ void main() {
         tabsMode: tabsMode,
         editorClips: editorClips,
       );
+      final GoRouter? router;
+      if (routed) {
+        router = GoRouter(
+          routes: [GoRoute(path: '/', builder: (_, _) => library)],
+        );
+        addTearDown(router.dispose);
+      } else {
+        router = null;
+      }
       return ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
@@ -199,20 +227,27 @@ void main() {
             ),
           ...extraOverrides,
         ],
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: VineTheme.theme,
-          home: libraryVisible == null
-              ? library
-              : Scaffold(
-                  body: ValueListenableBuilder<bool>(
-                    valueListenable: libraryVisible,
-                    builder: (context, visible, _) =>
-                        visible ? library : const SizedBox.shrink(),
-                  ),
-                ),
-        ),
+        child: router != null
+            ? MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                routerConfig: router,
+              )
+            : MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                home: libraryVisible == null
+                    ? library
+                    : Scaffold(
+                        body: ValueListenableBuilder<bool>(
+                          valueListenable: libraryVisible,
+                          builder: (context, visible, _) =>
+                              visible ? library : const SizedBox.shrink(),
+                        ),
+                      ),
+              ),
       );
     }
 
@@ -1491,6 +1526,295 @@ void main() {
             expect(reporter.recordedErrors, isEmpty);
           },
         );
+      });
+    });
+
+    group('gallery import', () {
+      const pickedPath = '/picked/clip.mp4';
+      const manifestId = 'urn:c2pa:3fa85f64-5717-4562-b3fc-2c963f66afa6';
+      final importedClip = DivineVideoClip(
+        id: 'gallery_clip_1',
+        video: EditorVideo.file('/test/gallery_clip_1.mp4'),
+        duration: const Duration(seconds: 3),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: models.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+        thumbnailPath: '/test/gallery_clip_1.jpg',
+        ghostFramePath: '/test/gallery_clip_1_ghost.jpg',
+      );
+      const verified = ClipProvenanceResult(
+        ClipProvenanceStatus.verified,
+        activeManifestId: manifestId,
+      );
+
+      late _MockImagePicker picker;
+      late _MockClipProvenanceVerifier verifier;
+      late _MockVideoClipImportService importService;
+
+      setUp(() {
+        picker = _MockImagePicker();
+        verifier = _MockClipProvenanceVerifier();
+        importService = _MockVideoClipImportService();
+        when(
+          () => picker.pickMultiVideo(),
+        ).thenAnswer((_) async => [XFile(pickedPath)]);
+        when(
+          () => mockClipLibraryService.recoverMissingAssets(any()),
+        ).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.first as List<DivineVideoClip>,
+        );
+      });
+
+      List<Override> importOverrides() => [
+        libraryVideoPickerProvider.overrideWithValue(picker),
+        clipProvenanceVerifierProvider.overrideWithValue(verifier),
+        videoClipImportServiceProvider.overrideWithValue(importService),
+        galleryClipThumbnailLoaderProvider.overrideWithValue((_) async => null),
+      ];
+
+      void stubImportSuccess() {
+        when(
+          () => importService.importGalleryClip(
+            source: any(named: 'source'),
+            c2paManifestId: any(named: 'c2paManifestId'),
+            contributorPubkeys: any(named: 'contributorPubkeys'),
+          ),
+        ).thenAnswer((_) async {
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [importedClip]);
+          return VideoClipImportSuccess(importedClip);
+        });
+      }
+
+      Future<void> pumpLibrary(
+        WidgetTester tester, {
+        bool explainerSeen = true,
+      }) async {
+        if (explainerSeen) {
+          await sharedPreferences.setBool(
+            GalleryClipImportPrefs.explainerShownKey,
+            true,
+          );
+        }
+        // Routed, so the import page closes through go_router as in the app.
+        await tester.pumpWidget(
+          buildWidget(
+            initialTabIndex: 1,
+            extraOverrides: importOverrides(),
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      /// Taps the import action and lets any sheet or page transition finish.
+      ///
+      /// Pumps for the transition instead of settling: a video still being
+      /// checked keeps its spinner turning, so the tree never settles.
+      Future<void> tapImport(WidgetTester tester) async {
+        await tester.tap(find.bySemanticsLabel(en.libraryGalleryImportLabel));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+      }
+
+      group('explainer', () {
+        testWidgets('explains the check before the first pick', (
+          tester,
+        ) async {
+          await pumpLibrary(tester, explainerSeen: false);
+
+          await tapImport(tester);
+
+          expect(
+            find.text(en.libraryGalleryImportExplainerTitle),
+            findsOneWidget,
+          );
+          verifyNever(() => picker.pickMultiVideo());
+
+          await tester.tap(find.text(en.libraryGalleryImportExplainerButton));
+          await tester.pumpAndSettle();
+
+          verify(() => picker.pickMultiVideo()).called(1);
+          expect(
+            sharedPreferences.getBool(GalleryClipImportPrefs.explainerShownKey),
+            isTrue,
+          );
+        });
+
+        testWidgets('skips the explainer once it was confirmed', (
+          tester,
+        ) async {
+          when(() => picker.pickMultiVideo()).thenAnswer((_) async => []);
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+
+          expect(
+            find.text(en.libraryGalleryImportExplainerTitle),
+            findsNothing,
+          );
+          verify(() => picker.pickMultiVideo()).called(1);
+        });
+
+        testWidgets('opens no picker when the explainer is dismissed', (
+          tester,
+        ) async {
+          await pumpLibrary(tester, explainerSeen: false);
+
+          await tapImport(tester);
+          await tester.tapAt(const Offset(10, 10));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(en.libraryGalleryImportExplainerTitle),
+            findsNothing,
+          );
+          verifyNever(() => picker.pickMultiVideo());
+          expect(
+            sharedPreferences.getBool(GalleryClipImportPrefs.explainerShownKey),
+            isNull,
+          );
+        });
+      });
+
+      group('import page', () {
+        testWidgets('checks each picked video and shows its result', (
+          tester,
+        ) async {
+          final verification = Completer<ClipProvenanceResult>();
+          when(
+            () => verifier.verify(pickedPath),
+          ).thenAnswer((_) => verification.future);
+          stubImportSuccess();
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+
+          expect(find.byType(GalleryClipImportView), findsOneWidget);
+          expect(
+            find.text(en.libraryGalleryImportItemChecking),
+            findsOneWidget,
+          );
+          expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+          verification.complete(verified);
+          await tester.pumpAndSettle();
+
+          expect(find.text(en.libraryGalleryImportItemAdded), findsOneWidget);
+          expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is DivineIcon &&
+                  widget.icon == DivineIconName.checkCircle,
+            ),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('marks a video that fails the check as rejected', (
+          tester,
+        ) async {
+          when(() => verifier.verify(pickedPath)).thenAnswer(
+            (_) async =>
+                const ClipProvenanceResult(ClipProvenanceStatus.noCredentials),
+          );
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+
+          expect(
+            find.text(en.libraryGalleryImportItemNotVerified),
+            findsOneWidget,
+          );
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is DivineIcon &&
+                  widget.icon == DivineIconName.prohibit,
+            ),
+            findsOneWidget,
+          );
+          verifyZeroInteractions(importService);
+        });
+
+        testWidgets('shows the added clip in the grid after Done', (
+          tester,
+        ) async {
+          when(
+            () => verifier.verify(pickedPath),
+          ).thenAnswer((_) async => verified);
+          stubImportSuccess();
+          await pumpLibrary(tester);
+          expect(find.byType(VideoClipThumbnailCard), findsNothing);
+
+          await tapImport(tester);
+          await tester.tap(find.text(en.libraryGalleryImportDone));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(GalleryClipImportView), findsNothing);
+          expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
+        });
+
+        testWidgets('keeps importing after the page is closed', (
+          tester,
+        ) async {
+          final verification = Completer<ClipProvenanceResult>();
+          when(
+            () => verifier.verify(pickedPath),
+          ).thenAnswer((_) => verification.future);
+          stubImportSuccess();
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+          // The system back gesture, as the page has no Material back button.
+          await tester.binding.handlePopRoute();
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          verification.complete(verified);
+          await tester.pumpAndSettle();
+
+          expect(find.byType(GalleryClipImportView), findsNothing);
+          expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
+        });
+
+        testWidgets('reopens the running import instead of picking again', (
+          tester,
+        ) async {
+          final verification = Completer<ClipProvenanceResult>();
+          when(
+            () => verifier.verify(pickedPath),
+          ).thenAnswer((_) => verification.future);
+          stubImportSuccess();
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+          // The system back gesture, as the page has no Material back button.
+          await tester.binding.handlePopRoute();
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await tapImport(tester);
+
+          expect(find.byType(GalleryClipImportView), findsOneWidget);
+          verify(() => picker.pickMultiVideo()).called(1);
+
+          verification.complete(verified);
+          await tester.pumpAndSettle();
+        });
+
+        testWidgets('opens no page when the picker is dismissed', (
+          tester,
+        ) async {
+          when(() => picker.pickMultiVideo()).thenAnswer((_) async => []);
+          await pumpLibrary(tester);
+
+          await tapImport(tester);
+
+          expect(find.byType(GalleryClipImportView), findsNothing);
+          verifyZeroInteractions(verifier);
+        });
       });
     });
 

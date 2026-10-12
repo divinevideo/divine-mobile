@@ -6227,6 +6227,44 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'ギャラリーからクリップを追加';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'クリップを取り戻す';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      '戻せるのは、Divineのカメラで撮影したクリップだけです。ほかの動画がクリップに入らないよう、最初にC2PAで1本ずつ確認します。';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'クリップを選ぶ';
+
+  @override
+  String get libraryGalleryImportTitle => 'ギャラリーから追加';
+
+  @override
+  String get libraryGalleryImportItemWaiting => '待機中…';
+
+  @override
+  String get libraryGalleryImportItemChecking => '確認中…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'クリップに追加しました';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'すでにクリップにあります';
+
+  @override
+  String get libraryGalleryImportItemNotVerified => 'Divineで撮影されたことを確認できませんでした';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      '今は確認できません。後でもう一度お試しください。';
+
+  @override
+  String get libraryGalleryImportDone => '完了';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

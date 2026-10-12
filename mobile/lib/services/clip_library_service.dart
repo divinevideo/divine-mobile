@@ -220,9 +220,10 @@ class ClipLibraryService {
   /// Deserialize a single clip [row], returning `null` (and logging) when the
   /// row is corrupt so one bad clip can't abort the whole list load.
   ///
-  /// The organization columns (`category_id`, `archived_at`) live on the row
-  /// rather than inside the JSON blob, so they are copied onto the parsed
-  /// clip here — the column stays the single source of truth.
+  /// The organization columns (`category_id`, `archived_at`) and the trash
+  /// column (`deleted_at`) live on the row rather than inside the JSON blob,
+  /// so they are copied onto the parsed clip here — the column stays the
+  /// single source of truth.
   DivineVideoClip? _tryParseClipRow(
     ClipRow row,
     String documentsPath, {
@@ -233,7 +234,11 @@ class ClipLibraryService {
       return DivineVideoClip.fromJson(
         clipJson,
         documentsPath,
-      ).copyWith(categoryId: row.categoryId, archivedAt: row.archivedAt);
+      ).copyWith(
+        categoryId: row.categoryId,
+        archivedAt: row.archivedAt,
+        deletedAt: row.deletedAt,
+      );
     } catch (e) {
       Log.error(
         '❌ Skipping corrupt $label ${row.id}: $e',
@@ -246,7 +251,8 @@ class ClipLibraryService {
 
   /// Get a single clip by ID.
   ///
-  /// Returns `null` when the row is missing or corrupt, matching the
+  /// A clip in the trash is returned too, with its [DivineVideoClip.deletedAt]
+  /// set. Returns `null` when the row is missing or corrupt, matching the
   /// list loaders' skip-and-log behaviour so a single bad row can't throw
   /// out of a lookup. Callers already treat `null` as "no clip".
   Future<DivineVideoClip?> getClipById(String id) async {
@@ -255,6 +261,19 @@ class ClipLibraryService {
 
     final documentsPath = await getDocumentsPath();
     return _tryParseClipRow(row, documentsPath, label: 'clip');
+  }
+
+  /// Whether the clip [id] is stored for an account other than this
+  /// library's owner.
+  ///
+  /// Clips share one table across the accounts on a device, keyed by id
+  /// alone, so a clip [getClipById] finds may belong to another account.
+  /// A clip with no owner predates per-account libraries and is shared.
+  Future<bool> belongsToAnotherAccount(String id) async {
+    final owner = ownerPubkey;
+    if (owner == null) return false;
+    final rowOwner = (await _clipsDao.getClipById(id))?.ownerPubkey;
+    return rowOwner != null && rowOwner != owner;
   }
 
   /// Notes [sha256] as the hash the camera wrote the recording [fileName]
@@ -642,10 +661,7 @@ class ClipLibraryService {
         // library: a backdrop the editor generated is not something the user
         // can restore into a composition on its own.
         if (clip.isPlaceholder || clip.isFreezeFrame) continue;
-        byClipId.putIfAbsent(
-          clip.id,
-          () => clip.copyWith(deletedAt: row.deletedAt),
-        );
+        byClipId.putIfAbsent(clip.id, () => clip);
       }
       return byClipId.values.toList();
     } catch (e) {

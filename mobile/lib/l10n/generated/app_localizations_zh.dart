@@ -6189,6 +6189,43 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => '从相册添加片段';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => '找回你的片段';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      '你只能找回用 Divine 相机拍摄的片段。我们会先用 C2PA 逐一验证，确保不会有其他内容进入你的片段库。';
+
+  @override
+  String get libraryGalleryImportExplainerButton => '选择片段';
+
+  @override
+  String get libraryGalleryImportTitle => '从相册添加';
+
+  @override
+  String get libraryGalleryImportItemWaiting => '等待中…';
+
+  @override
+  String get libraryGalleryImportItemChecking => '正在检查…';
+
+  @override
+  String get libraryGalleryImportItemAdded => '已加入你的片段库';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => '已在你的片段库中';
+
+  @override
+  String get libraryGalleryImportItemNotVerified => '无法确认是用 Divine 拍摄的';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable => '现在无法检查，请稍后再试。';
+
+  @override
+  String get libraryGalleryImportDone => '完成';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -2129,6 +2129,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "ギャラリーからクリップを追加",
+    "libraryGalleryImportExplainerTitle": "クリップを取り戻す",
+    "libraryGalleryImportExplainerSubtitle": "戻せるのは、Divineのカメラで撮影したクリップだけです。ほかの動画がクリップに入らないよう、最初にC2PAで1本ずつ確認します。",
+    "libraryGalleryImportExplainerButton": "クリップを選ぶ",
+    "libraryGalleryImportTitle": "ギャラリーから追加",
+    "libraryGalleryImportItemWaiting": "待機中…",
+    "libraryGalleryImportItemChecking": "確認中…",
+    "libraryGalleryImportItemAdded": "クリップに追加しました",
+    "libraryGalleryImportItemAlreadyInLibrary": "すでにクリップにあります",
+    "libraryGalleryImportItemNotVerified": "Divineで撮影されたことを確認できませんでした",
+    "libraryGalleryImportItemCheckUnavailable": "今は確認できません。後でもう一度お試しください。",
+    "libraryGalleryImportDone": "完了",
     "libraryNoClipsYetSubtitle": "録画したクリップがここに表示されます",
     "libraryNoClipsYetTitle": "まだクリップがありません",
     "libraryNoDraftsYetSubtitle": "下書きとして保存した動画がここに表示されます",

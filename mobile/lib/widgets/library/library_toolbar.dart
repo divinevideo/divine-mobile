@@ -53,6 +53,7 @@ class LibraryToolbar extends StatelessWidget {
     required this.onLeadingPressed,
     required this.onOpenSortMenu,
     required this.onEnterSelectionMode,
+    this.onImportFromGallery,
     this.isTrashFilterActive = false,
     this.onEmptyTrash,
     this.onManageActiveCategory,
@@ -67,6 +68,11 @@ class LibraryToolbar extends StatelessWidget {
   final VoidCallback onLeadingPressed;
   final VoidCallback onOpenSortMenu;
   final VoidCallback onEnterSelectionMode;
+
+  /// Adds videos from the device gallery back to the library, or shows the
+  /// import still running. Null where the platform cannot check a clip's
+  /// C2PA credential, which leaves the action out.
+  final VoidCallback? onImportFromGallery;
 
   /// Whether the clip grid is currently showing the trash bin. Sorting and
   /// selecting do not apply there, so those actions step aside.
@@ -147,6 +153,13 @@ class LibraryToolbar extends StatelessWidget {
     }
 
     return [
+      if (!isLibrarySelectionMode && onImportFromGallery != null)
+        _ClipAction(
+          icon: .images,
+          menuLabel: l10n.libraryGalleryImportLabel,
+          semanticLabel: l10n.libraryGalleryImportLabel,
+          onPressed: onImportFromGallery,
+        ),
       if (!isLibrarySelectionMode && onManageActiveCategory != null)
         _ClipAction(
           icon: .pencilSimple,

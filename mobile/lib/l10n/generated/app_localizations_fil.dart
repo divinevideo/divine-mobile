@@ -6612,6 +6612,46 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel =>
+      'Magdagdag ng clips mula sa gallery mo';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Ibalik ang mga clip mo';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Ang maibabalik mo lang ay ang mga clip na kinunan mo gamit ang Divine camera. Vine-verify muna namin ang bawat isa gamit ang C2PA, para walang ibang mapunta sa clips mo.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Pumili ng clips';
+
+  @override
+  String get libraryGalleryImportTitle => 'Idagdag mula sa gallery';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Naghihintay…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Tinitingnan…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Naidagdag sa clips mo';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'Nasa clips mo na';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Hindi makumpirma na kinunan ito sa Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Hindi ma-check ngayon. Subukan ulit mamaya.';
+
+  @override
+  String get libraryGalleryImportDone => 'Tapos na';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

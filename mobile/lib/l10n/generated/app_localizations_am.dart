@@ -6423,6 +6423,45 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'ክሊፖችን ከጋለሪዎ ያክሉ';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'ክሊፖችዎን ይመልሱ';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'መመለስ የሚችሉት በDivine ካሜራ የቀረጿቸውን ክሊፖች ብቻ ነው። ሌላ ነገር ወደ ክሊፖችዎ እንዳይገባ እያንዳንዱን በመጀመሪያ በC2PA እናረጋግጣለን።';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'ክሊፖችን ይምረጡ';
+
+  @override
+  String get libraryGalleryImportTitle => 'ከጋለሪ ያክሉ';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'በመጠባበቅ ላይ…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'በማረጋገጥ ላይ…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'ወደ ክሊፖችዎ ታክሏል';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'አስቀድሞ በክሊፖችዎ ውስጥ አለ';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'በDivine መቀረጹን ማረጋገጥ አልተቻለም';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'አሁን ማረጋገጥ አልተቻለም። ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryGalleryImportDone => 'ተጠናቋል';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

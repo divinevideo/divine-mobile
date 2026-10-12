@@ -3324,6 +3324,18 @@
       }
     }
   },
+  "libraryGalleryImportLabel": "Thêm clip từ thư viện ảnh",
+  "libraryGalleryImportExplainerTitle": "Lấy lại clip của bạn",
+  "libraryGalleryImportExplainerSubtitle": "Bạn chỉ có thể lấy lại các clip đã quay bằng camera Divine. Chúng tôi xác minh từng clip bằng C2PA trước, để không có gì khác lọt vào clip của bạn.",
+  "libraryGalleryImportExplainerButton": "Chọn clip",
+  "libraryGalleryImportTitle": "Thêm từ thư viện ảnh",
+  "libraryGalleryImportItemWaiting": "Đang chờ…",
+  "libraryGalleryImportItemChecking": "Đang kiểm tra…",
+  "libraryGalleryImportItemAdded": "Đã thêm vào clip của bạn",
+  "libraryGalleryImportItemAlreadyInLibrary": "Đã có trong clip của bạn",
+  "libraryGalleryImportItemNotVerified": "Không thể xác nhận clip được quay bằng Divine",
+  "libraryGalleryImportItemCheckUnavailable": "Hiện không kiểm tra được. Thử lại sau nhé.",
+  "libraryGalleryImportDone": "Xong",
   "libraryClipsDeletedCount": "{count, plural, =1{Đã xóa 1 clip} other{Đã xóa {count} clip}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

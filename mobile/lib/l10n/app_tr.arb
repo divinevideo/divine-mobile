@@ -2136,6 +2136,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Galerinden klip ekle",
+    "libraryGalleryImportExplainerTitle": "Kliplerini geri getir",
+    "libraryGalleryImportExplainerSubtitle": "Yalnızca Divine kamerasıyla çektiğin klipleri geri getirebilirsin. Kliplerine başka bir şey karışmasın diye her birini önce C2PA ile doğruluyoruz.",
+    "libraryGalleryImportExplainerButton": "Klip seç",
+    "libraryGalleryImportTitle": "Galeriden ekle",
+    "libraryGalleryImportItemWaiting": "Bekliyor…",
+    "libraryGalleryImportItemChecking": "Kontrol ediliyor…",
+    "libraryGalleryImportItemAdded": "Kliplerine eklendi",
+    "libraryGalleryImportItemAlreadyInLibrary": "Zaten kliplerinde",
+    "libraryGalleryImportItemNotVerified": "Divine ile çekildiği doğrulanamadı",
+    "libraryGalleryImportItemCheckUnavailable": "Şu an kontrol edilemiyor. Daha sonra tekrar dene.",
+    "libraryGalleryImportDone": "Tamam",
     "libraryNoClipsYetSubtitle": "Kaydettiğin videolar burada görünür",
     "libraryNoClipsYetTitle": "Henüz klip yok",
     "libraryNoDraftsYetSubtitle": "Taslak olarak kaydettiğin videolar burada görünür",

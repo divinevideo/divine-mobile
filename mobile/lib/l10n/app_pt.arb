@@ -2139,6 +2139,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Adicionar clipes da sua galeria",
+    "libraryGalleryImportExplainerTitle": "Traga seus clipes de volta",
+    "libraryGalleryImportExplainerSubtitle": "Você só pode trazer de volta clipes gravados com a câmera do Divine. Primeiro verificamos cada um com C2PA, para que nada mais entre nos seus clipes.",
+    "libraryGalleryImportExplainerButton": "Escolher clipes",
+    "libraryGalleryImportTitle": "Adicionar da galeria",
+    "libraryGalleryImportItemWaiting": "Aguardando…",
+    "libraryGalleryImportItemChecking": "Verificando…",
+    "libraryGalleryImportItemAdded": "Adicionado aos seus clipes",
+    "libraryGalleryImportItemAlreadyInLibrary": "Já está nos seus clipes",
+    "libraryGalleryImportItemNotVerified": "Não foi possível confirmar que foi gravado com o Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Não dá para verificar agora. Tente de novo mais tarde.",
+    "libraryGalleryImportDone": "Concluído",
     "libraryNoClipsYetSubtitle": "Seus clipes gravados aparecerão aqui",
     "libraryNoClipsYetTitle": "Ainda não há clipes",
     "libraryNoDraftsYetSubtitle": "Vídeos salvos como rascunho aparecerão aqui",

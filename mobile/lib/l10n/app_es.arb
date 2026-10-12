@@ -2147,6 +2147,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Agregar clips de tu galería",
+    "libraryGalleryImportExplainerTitle": "Recuperá tus clips",
+    "libraryGalleryImportExplainerSubtitle": "Solo podés recuperar clips que grabaste con la cámara de Divine. Primero verificamos cada uno con C2PA, para que no se cuele nada más en tus clips.",
+    "libraryGalleryImportExplainerButton": "Elegir clips",
+    "libraryGalleryImportTitle": "Agregar desde la galería",
+    "libraryGalleryImportItemWaiting": "En espera…",
+    "libraryGalleryImportItemChecking": "Comprobando…",
+    "libraryGalleryImportItemAdded": "Agregado a tus clips",
+    "libraryGalleryImportItemAlreadyInLibrary": "Ya está en tus clips",
+    "libraryGalleryImportItemNotVerified": "No pudimos confirmar que se grabó con Divine",
+    "libraryGalleryImportItemCheckUnavailable": "No se pudo revisar ahora. Probá más tarde.",
+    "libraryGalleryImportDone": "Listo",
     "libraryNoClipsYetSubtitle": "Tus clips de video grabados aparecerán aquí",
     "libraryNoClipsYetTitle": "Aún no hay clips",
     "libraryNoDraftsYetSubtitle": "Los videos que guardes como borrador aparecerán aquí",

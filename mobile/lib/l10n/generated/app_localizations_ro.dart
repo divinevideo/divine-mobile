@@ -6738,6 +6738,46 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Adaugă clipuri din galeria ta';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Adu-ți clipurile înapoi';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Poți aduce înapoi doar clipurile filmate cu camera Divine. Mai întâi verificăm fiecare clip cu C2PA, ca să nu ajungă altceva printre clipurile tale.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Alege clipuri';
+
+  @override
+  String get libraryGalleryImportTitle => 'Adaugă din galerie';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'În așteptare…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Se verifică…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Adăugat la clipurile tale';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'Este deja în clipurile tale';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Nu am putut confirma că a fost filmat cu Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Nu se poate verifica acum. Încearcă din nou mai târziu.';
+
+  @override
+  String get libraryGalleryImportDone => 'Gata';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

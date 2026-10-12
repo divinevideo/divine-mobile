@@ -2129,6 +2129,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "إضافة مقاطع من معرض الصور",
+    "libraryGalleryImportExplainerTitle": "استعد مقاطعك",
+    "libraryGalleryImportExplainerSubtitle": "يمكنك استعادة المقاطع التي صوّرتها بكاميرا Divine فقط. نتحقق من كل مقطع أولًا عبر C2PA، حتى لا يدخل مقاطعك شيء آخر.",
+    "libraryGalleryImportExplainerButton": "اختيار مقاطع",
+    "libraryGalleryImportTitle": "إضافة من معرض الصور",
+    "libraryGalleryImportItemWaiting": "في الانتظار…",
+    "libraryGalleryImportItemChecking": "جارٍ التحقق…",
+    "libraryGalleryImportItemAdded": "تمت إضافته إلى مقاطعك",
+    "libraryGalleryImportItemAlreadyInLibrary": "موجود بالفعل في مقاطعك",
+    "libraryGalleryImportItemNotVerified": "تعذّر التأكد من أنه صُوّر بـ Divine",
+    "libraryGalleryImportItemCheckUnavailable": "تعذّر التحقق الآن. حاول مرة أخرى لاحقًا.",
+    "libraryGalleryImportDone": "تم",
     "libraryNoClipsYetSubtitle": "ستُظهر مقاطع الفيديو المسجّلة هنا",
     "libraryNoClipsYetTitle": "لا توجد مقاطع بعد",
     "libraryNoDraftsYetSubtitle": "ستُظهر الفيديو الذي تحفظه كمسودة هنا",
