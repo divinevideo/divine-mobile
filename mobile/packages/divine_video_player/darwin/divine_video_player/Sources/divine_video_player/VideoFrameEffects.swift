@@ -472,8 +472,10 @@ enum HeldFrameEffects {
   static let afterUs: Int64 = 60_000
 
   /// Spacing of redraws over a held frame the output hands over nothing new
-  /// for, about the 30 fps the export draws effects at.
-  static let intervalUs: Int64 = 33_333
+  /// for, the 30 fps the export draws effects at. A little under a frame's
+  /// 33.3 ms so a late display tick cannot push a redraw to the tick after:
+  /// it lands on every second tick at 60 Hz, third at 90 Hz, fourth at 120 Hz.
+  static let intervalUs: Int64 = 30_000
 
   /// The time effects are drawn at over a frame from `frameUs` shown at
   /// `itemUs`, given they were last drawn at `drawnUs` since the last flush.

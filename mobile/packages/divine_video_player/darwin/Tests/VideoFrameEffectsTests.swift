@@ -23,7 +23,44 @@ enum VideoFrameEffectsTests {
     decodingFromAnAssetThatFailsCompletesTheFill()
     heldFramesAreDrawnAtTheClocksTime()
     heldFramesAreRedrawnOnlyOnceHeldAndDue()
+    redrawsOverAHeldFrameKeepASteadyThirtyFramesASecond()
     print("VideoFrameEffectsTests passed")
+  }
+
+  /// Display ticks arrive a little early or late. A spacing equal to a whole
+  /// number of display periods lets that decide whether a redraw lands on a
+  /// tick or the one after, which measured 23 to 26 redraws a second rather
+  /// than 30.
+  private static func redrawsOverAHeldFrameKeepASteadyThirtyFramesASecond() {
+    for displayHz in [60.0, 90.0, 120.0] {
+      let perSecond = redrawsPerSecond(displayHz: displayHz, jitterUs: 1_000)
+      precondition(
+        abs(perSecond - 30) <= 1, "\(perSecond) redraws a second at \(displayHz) Hz")
+    }
+  }
+
+  /// Redraws a second over a frame held for ten seconds, with every display
+  /// tick off by up to `jitterUs` either way.
+  private static func redrawsPerSecond(displayHz: Double, jitterUs: Int64) -> Double {
+    let seconds: Int64 = 10
+    var seed: UInt64 = 42
+    func jitter() -> Int64 {
+      seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+      return Int64(seed >> 33) % (2 * jitterUs + 1) - jitterUs
+    }
+    var drawnUs: Int64 = 0
+    var redraws = 0
+    var tick = 1.0
+    while true {
+      let nowUs = Int64((tick * 1_000_000 / displayHz).rounded()) + jitter()
+      if nowUs > seconds * 1_000_000 { break }
+      if let redrawUs = HeldFrameEffects.redrawTimeUs(heldUs: 0, drawnUs: drawnUs, nowUs: nowUs) {
+        drawnUs = redrawUs
+        redraws += 1
+      }
+      tick += 1
+    }
+    return Double(redraws) / Double(seconds)
   }
 
   /// With nothing new from the output, effects are drawn again over the frame
