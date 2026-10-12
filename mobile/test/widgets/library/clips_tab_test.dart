@@ -604,6 +604,26 @@ void main() {
       testWidgets('pinching the grid open changes the column count', (
         tester,
       ) async {
+        final announcements = <String>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (message) async {
+                final data = message! as Map<Object?, Object?>;
+                if (data['type'] == 'announce') {
+                  final payload = data['data']! as Map<Object?, Object?>;
+                  announcements.add(payload['message']! as String);
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
         when(() => mockBloc.state).thenReturn(
           ClipsLibraryState(
             status: ClipsLibraryStatus.loaded,
@@ -629,6 +649,7 @@ void main() {
         verify(
           () => mockBloc.add(const ClipsLibraryGridColumnsChanged(2)),
         ).called(1);
+        expect(announcements, [en.libraryGridSizeColumns(2)]);
       });
 
       testWidgets('the grid still pinches after a filter switch', (
