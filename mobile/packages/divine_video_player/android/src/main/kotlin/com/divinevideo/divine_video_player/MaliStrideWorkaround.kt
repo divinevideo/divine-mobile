@@ -8,6 +8,7 @@ import android.opengl.EGLConfig
 import android.opengl.GLES20
 import android.content.Context
 import android.os.Build
+import androidx.media3.common.Format
 import androidx.media3.common.VideoFrameProcessingException
 import androidx.media3.common.util.GlProgram
 import androidx.media3.common.util.GlUtil
@@ -103,6 +104,14 @@ internal object MaliStrideWorkaround {
         val scaledHeight = if (ratio < 1f) Math.round(height / ratio) else height
         return if (rotationDegrees % 180 != 0) Size(scaledHeight, scaledWidth) else Size(scaledWidth, scaledHeight)
     }
+
+    /**
+     * The largest [outputSize] among [formats], the renditions an adaptive
+     * stream may switch between; null when none of them has a size yet.
+     */
+    fun largestOutputSize(formats: List<Format>): Size? = formats
+        .mapNotNull { outputSize(it.width, it.height, it.rotationDegrees, it.pixelWidthHeightRatio) }
+        .maxByOrNull { it.width.toLong() * it.height }
 
     /**
      * Mali's three-digit models (G310, G510, G610 and later) are the

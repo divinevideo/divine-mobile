@@ -1,6 +1,7 @@
 package com.divinevideo.divine_video_player
 
 import android.content.Context
+import androidx.media3.common.Format
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import io.mockk.mockk
@@ -109,6 +110,20 @@ class MaliStrideWorkaroundTest {
     }
 
     @Test
+    fun `largestOutputSize sizes an adaptive stream by its largest rendition`() {
+        val renditions = listOf(video(480, 854), video(720, 1280))
+        assertEquals(Size(720, 1280), MaliStrideWorkaround.largestOutputSize(renditions))
+        assertEquals(Size(720, 1280), MaliStrideWorkaround.largestOutputSize(renditions.reversed()))
+    }
+
+    @Test
+    fun `largestOutputSize skips renditions without a size`() {
+        val renditions = listOf(Format.Builder().build(), video(480, 854))
+        assertEquals(Size(480, 854), MaliStrideWorkaround.largestOutputSize(renditions))
+        assertNull(MaliStrideWorkaround.largestOutputSize(listOf(Format.Builder().build())))
+    }
+
+    @Test
     fun `the GL copy builds a stage for HDR output`() {
         // Media3 asks for HDR whenever an HDR clip keeps its HDR output; a
         // stage that refused would stop that clip on the affected devices.
@@ -119,4 +134,7 @@ class MaliStrideWorkaroundTest {
     fun `the GL copy is never dropped as a no-op`() {
         assertFalse(StrideCopyGlEffect.isNoOp(720, 1280))
     }
+
+    private fun video(width: Int, height: Int): Format =
+        Format.Builder().setWidth(width).setHeight(height).build()
 }
