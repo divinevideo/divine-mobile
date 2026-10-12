@@ -21,7 +21,32 @@ enum VideoFrameEffectsTests {
     precondition(CMTime(value: 3, timescale: 2).microseconds == 1_500_000)
 
     decodingFromAnAssetThatFailsCompletesTheFill()
+    heldFramesAreDrawnAtTheClocksTime()
     print("VideoFrameEffectsTests passed")
+  }
+
+  /// A still is one sample lasting its whole length. Drawn at its own time,
+  /// effects over it stood still for that length, while the export kept
+  /// them moving.
+  private static func heldFramesAreDrawnAtTheClocksTime() {
+    // A 30 fps frame shown a display tick late keeps its own time.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_016_000, drawnUs: 966_667)
+        == 1_000_000)
+    // Half a second into a still, as after a paused seek into it.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 2_000_000, itemUs: 2_500_000, drawnUs: nil)
+        == 2_500_000)
+    // The frame after a hold, decoded late: behind the last redraw over the
+    // still, so its own time would make the effects start over.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 3_000_000, itemUs: 3_040_000, drawnUs: 3_020_000)
+        == 3_040_000)
+    // After a flush nothing was drawn yet, and an earlier frame is a real
+    // jump back.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_010_000, drawnUs: nil)
+        == 1_000_000)
   }
 
   /// A decode that fails reports an invalid time for the frame it could not
