@@ -308,7 +308,9 @@ void main() {
       final thumbnailFile = File('${tempDir.path}/thumbnail.jpg')
         ..writeAsBytesSync(_transparentPngBytes);
 
-      installMockDivineVideoPlayer(streamHandler: _FirstFrameStreamHandler());
+      installMockDivineVideoPlayer(
+        streamHandler: _FirstFrameStreamHandler(),
+      );
 
       final clip = testClip.copyWith(
         video: EditorVideo.file(videoFile.path),
@@ -407,9 +409,9 @@ void main() {
                     key: gridCardKey,
                     clip: clip,
                     showSelectionIndicator: false,
-                    onTap: () =>
-                        Navigator.of(context)
-                            .push(videoClipPreviewRoute(clip: clip)),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(videoClipPreviewRoute(clip: clip)),
                   ),
                 ),
               ),
@@ -574,8 +576,9 @@ void main() {
       ) async {
         installMockDivineVideoPlayer();
 
-        when(() => mockGallerySaveService.saveVideoToGallery(any()))
-            .thenAnswer((_) async => result);
+        when(
+          () => mockGallerySaveService.saveVideoToGallery(any()),
+        ).thenAnswer((_) async => result);
 
         await tester.pumpWidget(buildTestWidget());
         await tester.pump(const Duration(milliseconds: 100));
