@@ -1435,6 +1435,76 @@ void main() {
       },
     );
 
+    test(
+      'a read that also asks the normal relays stays on the main pool, '
+      'whatever its temp relays',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor);
+
+        final result = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl],
+          relayTypes: const [RelayType.temp, RelayType.normal],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        expect(result.timedOut, isTrue);
+        expect(
+          _tempRelayFor(setup.tempRelays, indexerUrl),
+          isNull,
+          reason: 'only a temp-only read may take the outside pool',
+        );
+        await setup.occupants;
+      },
+    );
+
+    test(
+      'an outside-only read that finds the pools closing mid-call ends as a '
+      'skipped read rather than throwing',
+      () async {
+        final nostr = _newNostr();
+        final dbClient = _MockAppDbClient();
+        final database = _MockAppDatabase();
+        final dao = _MockNostrEventsDao();
+        when(() => dbClient.database).thenReturn(database);
+        when(() => database.nostrEventsDao).thenReturn(dao);
+        final cacheGate = Completer<List<Event>>();
+        when(
+          () => dao.getEventsByFilter(any()),
+        ).thenAnswer((_) => cacheGate.future);
+        final relayManager = _MockRelayManager();
+        when(() => relayManager.connectedRelays).thenReturn([_pooledRelayUrl]);
+        when(
+          () => relayManager.configuredRelays,
+        ).thenReturn([_pooledRelayUrl]);
+        when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+        when(() => relayManager.diagnosticsSink).thenReturn(null);
+        when(relayManager.dispose).thenAnswer((_) async {});
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: relayManager,
+          dbClient: dbClient,
+        );
+
+        // Held at the cache read until both pools have closed.
+        final pending = client.readEvents(
+          [inboxList()],
+          tempRelays: const [indexerUrl],
+          relayTypes: const [RelayType.temp],
+        );
+        await pumpEventQueue();
+        await client.dispose();
+        cacheGate.complete(const []);
+
+        final result = await pending;
+
+        expect(result.endedBy, QueryEnd.deadline);
+        expect(result.events, isEmpty);
+      },
+    );
+
     test('a temp read naming a pool member still waits for a slot', () async {
       final setup = await _saturatedPool(holdFor: holdFor);
 
