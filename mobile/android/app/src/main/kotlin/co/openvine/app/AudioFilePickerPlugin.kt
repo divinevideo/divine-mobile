@@ -4,7 +4,6 @@
 package co.openvine.app
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -23,6 +22,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 import java.io.File
 import java.io.IOException
+import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -48,10 +48,14 @@ class AudioFilePickerPlugin :
         // FragmentActivity only accepts request codes in the lower 16 bits.
         private const val REQUEST_CODE_PICK_AUDIO = 7461
 
-        // Holds the latest pick only: every caller copies the pick into
-        // library storage straight away, so the previous one is cleared
-        // before the next is written.
+        // Each pick is copied into its own folder under this one, so a new
+        // pick never deletes a copy an earlier import has not opened yet.
         private const val PICKS_DIR = "audio_picks"
+
+        // Every caller copies the pick into library storage straight away,
+        // so a pick folder this old is no longer read and is swept when the
+        // next pick is copied.
+        private const val STALE_PICK_AGE_MS = 60 * 60 * 1000L
         private const val FALLBACK_BASE_NAME = "audio"
     }
 
@@ -125,7 +129,9 @@ class AudioFilePickerPlugin :
         try {
             @Suppress("DEPRECATION")
             activity.startActivityForResult(intent, REQUEST_CODE_PICK_AUDIO)
-        } catch (e: ActivityNotFoundException) {
+        } catch (e: Exception) {
+            // Any failure to launch must release the pick, or every later pick
+            // gets `already_active`.
             pendingResult = null
             result.error("no_picker", e.message, null)
         }
@@ -176,9 +182,10 @@ class AudioFilePickerPlugin :
             try {
                 val picked = copyToCache(context, uri)
                 postReply { result.success(picked) }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // IOException for a failed copy, SecurityException when a provider
-                // refuses the stream (flutter/flutter#100025).
+                // refuses the stream (flutter/flutter#100025). An Error is caught
+                // too, so Dart always gets a reply instead of waiting forever.
                 Log.w(TAG, "Copying the picked audio file failed", e)
                 postReply { result.error("copy_failed", e.message, null) }
             }
@@ -193,7 +200,7 @@ class AudioFilePickerPlugin :
         }
     }
 
-    /** Copies the picked document into [PICKS_DIR] and returns the copy's path. */
+    /** Copies the picked document into its own folder and returns the copy's path. */
     private fun copyToCache(context: Context, uri: Uri): String {
         val resolver = context.contentResolver
         val displayName = resolver.query(
@@ -209,9 +216,10 @@ class AudioFilePickerPlugin :
             .getExtensionFromMimeType(resolver.getType(uri))
             ?.takeIf { it.matches(Regex("[A-Za-z0-9]+")) }
 
-        val directory = File(context.cacheDir, PICKS_DIR)
-        directory.deleteRecursively()
-        if (!directory.isDirectory && !directory.mkdirs()) {
+        val picksDir = File(context.cacheDir, PICKS_DIR)
+        deleteStalePicks(picksDir)
+        val directory = File(picksDir, UUID.randomUUID().toString())
+        if (!directory.mkdirs()) {
             throw IOException("Could not create ${directory.path}")
         }
         val target = File(directory, pickedFileName(displayName, mimeExtension))
@@ -225,12 +233,19 @@ class AudioFilePickerPlugin :
             input.use { source ->
                 target.outputStream().use { sink -> source.copyTo(sink) }
             }
-        } catch (e: Exception) {
-            // A partial copy of a large file is not worth keeping until the next pick.
-            target.delete()
+        } catch (e: Throwable) {
+            // A partial copy of a large file is not worth keeping until the sweep.
+            directory.deleteRecursively()
             throw e
         }
         return target.path
+    }
+
+    private fun deleteStalePicks(picksDir: File) {
+        val cutoff = System.currentTimeMillis() - STALE_PICK_AGE_MS
+        picksDir.listFiles()
+            ?.filter { it.lastModified() < cutoff }
+            ?.forEach { it.deleteRecursively() }
     }
 
     /**
