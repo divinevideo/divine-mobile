@@ -2235,6 +2235,7 @@ void main() {
       List<List<String>> nostrEventTags = const [],
       Map<String, String> rawTags = const {},
       String content = 'A published clip',
+      List<String> hashtags = const [],
     }) {
       return VideoEvent(
         id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
@@ -2247,8 +2248,30 @@ void main() {
         videoUrl: 'https://media.divine.video/published.mp4',
         nostrEventTags: nostrEventTags,
         rawTags: rawTags,
+        hashtags: hashtags,
       );
     }
+
+    test('seeds tags under the hashtag rules', () {
+      container
+          .read(videoEditorProvider.notifier)
+          .initFromPublishedVideo(
+            buildVideo(hashtags: ['Funny', 'VineHashtagsMasterList' * 10]),
+          );
+
+      expect(container.read(videoEditorProvider).tags, equals({'funny'}));
+    });
+
+    test('drops a mixed-case tag once the caption loses its hashtag', () {
+      final notifier = container.read(videoEditorProvider.notifier)
+        ..initFromPublishedVideo(
+          buildVideo(content: 'meet #Funny', hashtags: ['Funny']),
+        );
+
+      notifier.updateMetadata(description: 'meet');
+
+      expect(container.read(videoEditorProvider).tags, isEmpty);
+    });
 
     test('seeds allowAudioReuse from live nostrEventTags', () {
       // rawTags is intentionally left empty so this isolates the live-tag
@@ -2669,6 +2692,37 @@ void main() {
           );
         },
       );
+
+      test('restores hashtags under the hashtag rules', () async {
+        final draft = DivineVideoDraft.create(
+          id: 'draft-1',
+          clips: [
+            DivineVideoClip(
+              id: 'present',
+              video: EditorVideo.file(clipVideoPath),
+              thumbnailPath: clipThumbnailPath,
+              duration: const Duration(seconds: 3),
+              recordedAt: DateTime.now(),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+          title: 'Title',
+          description: '',
+          hashtags: {'Funny', 'VineHashtagsMasterList' * 10},
+          selectedApproach: 'video',
+        );
+        when(
+          () => mockDraftStorage.getDraftById('draft-1'),
+        ).thenAnswer((_) async => draft);
+
+        final result = await container
+            .read(videoEditorProvider.notifier)
+            .restoreDraft('draft-1');
+
+        expect(result, isTrue);
+        expect(container.read(videoEditorProvider).tags, equals({'funny'}));
+      });
 
       test(
         'drops clips whose source video file is missing on restore',

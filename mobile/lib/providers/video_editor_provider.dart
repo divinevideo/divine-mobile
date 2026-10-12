@@ -821,7 +821,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       allowAudioReuse: video.allowAudioReuse,
       title: video.title ?? '',
       description: content,
-      tags: video.hashtags.toSet(),
+      // Older events can carry mixed-case or over-long tags, and caption
+      // hashtag extraction compares against normalized ones.
+      tags: HashtagExtractor.normalizeVideoHashtags(video.hashtags).toSet(),
       contentWarnings: video.contentWarningLabels
           .map(ContentLabel.fromValue)
           .whereType<ContentLabel>()
@@ -1265,7 +1267,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     state = state.copyWith(
       title: draft.title,
       description: draft.description,
-      tags: draft.hashtags,
+      tags: HashtagExtractor.normalizeVideoHashtags(draft.hashtags).toSet(),
       allowAudioReuse: draft.allowAudioReuse,
       audioShareAttribution: draft.audioShareAttribution,
       shareReplyToFeed: draft.shareReplyToFeed,
