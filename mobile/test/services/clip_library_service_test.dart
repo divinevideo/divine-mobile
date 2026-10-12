@@ -696,6 +696,26 @@ void main() {
         expect(found, isNull);
       });
 
+      test('reports a clip in the trash as deleted', () async {
+        final clip = DivineVideoClip(
+          id: 'trashed_clip',
+          video: EditorVideo.file('/tmp/test.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        await service.saveClip(clip);
+        expect((await service.getClipById('trashed_clip'))!.deletedAt, isNull);
+
+        await service.softDelete('trashed_clip');
+
+        expect(
+          (await service.getClipById('trashed_clip'))!.deletedAt,
+          isNotNull,
+        );
+      });
+
       test('returns null for a corrupt clip row', () async {
         final validClip = DivineVideoClip(
           id: 'corrupt_clip',
