@@ -170,15 +170,20 @@ class _ForYouContent extends ConsumerStatefulWidget {
 class _ForYouContentState extends ConsumerState<_ForYouContent>
     with ScrollToHideMixin {
   void _showAlgorithmExplainer(BuildContext context) {
-    VineBottomSheet.show(
-      context: context,
-      // Long-form content: keep the pre-design-system sizing so the explainer
-      // still opens nearly full-height instead of the 0.6 default.
-      initialChildSize: 0.85,
-      minChildSize: VineTheme.bottomSheetDismissFloor,
-      maxChildSize: 0.95,
-      buildScrollBody: (scrollController) =>
-          _AlgorithmExplainerSheet(scrollController: scrollController),
+    runDetached(
+      VineBottomSheet.show<void>(
+        context: context,
+        // Long-form content: keep the pre-design-system sizing so the explainer
+        // still opens nearly full-height instead of the 0.6 default.
+        initialChildSize: 0.85,
+        minChildSize: VineTheme.bottomSheetDismissFloor,
+        maxChildSize: 0.95,
+        buildScrollBody: (scrollController) =>
+            _AlgorithmExplainerSheet(scrollController: scrollController),
+      ),
+      'show For You algorithm explainer',
+      logName: 'ForYouTab',
+      category: LogCategory.ui,
     );
   }
 
