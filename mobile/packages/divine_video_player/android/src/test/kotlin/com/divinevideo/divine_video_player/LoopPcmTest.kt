@@ -371,6 +371,31 @@ class LoopPcmTest {
     }
 
     @Test
+    fun `never writes to the decode it was given`() {
+        // A loop that keeps its raw decode for reshaping hands it over as it
+        // is when there is nothing to filter, so prepare may only read it.
+        val scenarios = listOf(
+            // A short decode, padded and ramped.
+            tone(frames = sampleRate * 2) to 2_020_000L,
+            // Material past the loop point to blend with.
+            tone(frames = sampleRate + sampleRate / 4) to 1_000_000L,
+            // Nothing past the loop point, carried on from the lap.
+            tone(frames = sampleRate) to 1_000_000L,
+        )
+
+        for ((source, loopUs) in scenarios) {
+            val before = source.copyOf()
+
+            LoopPcm.prepare(source, 1, sampleRate, loopUs)!!
+
+            assertTrue(
+                "a decode of ${source.size} frames was written to",
+                source.contentEquals(before),
+            )
+        }
+    }
+
+    @Test
     fun `leaves the material outside the blend untouched`() {
         val loopFrames = sampleRate
         val samples = tone(frames = loopFrames + sampleRate / 4)

@@ -45,8 +45,14 @@ internal class ClipAudioLoopTrack private constructor(
     private val track: AudioTrack,
     private val sampleRate: Int,
     private val frameCount: Int,
+    // Written by release() on the platform thread, read by reshaped() on the
+    // metadata executor.
+    @Volatile
+    private var decoded: DecodedPcm? = null,
+    private val loopUs: Long = 0L,
 ) {
 
+    @Volatile
     private var released = false
 
     /** The part of the loop's volume above 100 %; see [setBoost]. */
@@ -296,9 +302,35 @@ internal class ClipAudioLoopTrack private constructor(
         boost.setGain(gain)
     }
 
+    /**
+     * Builds a loop of the same clip filtered with [equalizer], from the raw
+     * decode this one kept; null when it kept none, or the build failed.
+     *
+     * The result has the same length, so the two can be swapped under one
+     * picture without moving the lap; one that came out different is
+     * released. Blocks on the filters and the [AudioTrack] write, so it must
+     * not run on the platform thread.
+     */
+    fun reshaped(equalizer: AudioEqualizer?): ClipAudioLoopTrack? {
+        val source = decoded ?: return null
+        if (released) return null
+        val next = build(source, loopUs, equalizer, retainDecoded = true, label = "reshape")
+            ?: return null
+        if (next.frameCount != frameCount) {
+            DivineVideoPlayerLog.warning(
+                "Reshaped loop audio is ${next.frameCount} frames, not $frameCount; dropping it",
+                name = "DivineVideoPlayer.AudioLoop",
+            )
+            next.release()
+            return null
+        }
+        return next
+    }
+
     fun release() {
         if (released) return
         released = true
+        decoded = null
         boost.release()
         runCatching {
             track.pause()
@@ -378,6 +410,10 @@ internal class ClipAudioLoopTrack private constructor(
          *
          * [equalizer] is applied to the decoded PCM, since the track plays it
          * outside the player's audio sink, where the clip's equalizer runs.
+         * With [retainDecoded] the loop keeps the unfiltered decode so
+         * [reshaped] can follow an equalizer change without decoding again;
+         * that is a megabyte or more on the heap, so only an editing surface
+         * asks for it.
          *
          * Returns null when there is nothing to play or anything goes wrong;
          * the caller then leaves the audio with ExoPlayer. Blocks on I/O and on
@@ -391,7 +427,21 @@ internal class ClipAudioLoopTrack private constructor(
             clipStartUs: Long = 0L,
             remoteSourceFactory: DataSource.Factory? = null,
             equalizer: AudioEqualizer? = null,
+            retainDecoded: Boolean = false,
         ): ClipAudioLoopTrack? {
+            if (loopUs <= 0) return null
+            val decoded = decode(uri, headers, clipStartUs, remoteSourceFactory) ?: return null
+            return build(decoded, loopUs, equalizer, retainDecoded, label = uri)
+        }
+
+        /** Decodes [uri]'s first audio track, unfiltered. See [create]. */
+        @UnstableApi
+        private fun decode(
+            uri: String,
+            headers: Map<String, String>,
+            clipStartUs: Long,
+            remoteSourceFactory: DataSource.Factory?,
+        ): DecodedPcm? {
             val extractor = MediaExtractor()
             var codec: MediaCodec? = null
             var remoteSource: DataSourceMediaDataSource? = null
@@ -416,7 +466,7 @@ internal class ClipAudioLoopTrack private constructor(
                     val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
                     if (mime.startsWith("audio/") && audioIndex < 0) audioIndex = index
                 }
-                if (audioIndex < 0 || loopUs <= 0) return null
+                if (audioIndex < 0) return null
 
                 val inputFormat = extractor.getTrackFormat(audioIndex)
                 val mime = inputFormat.getString(MediaFormat.KEY_MIME) ?: return null
@@ -514,11 +564,55 @@ internal class ClipAudioLoopTrack private constructor(
                 val samples = ShortArray(raw.size / 2)
                 ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
                     .asShortBuffer().get(samples)
+                val startUs = (firstPresentationUs ?: 0L) - clipStartUs
+                return DecodedPcm(samples, channels, sampleRate, startUs)
+            } catch (e: Exception) {
+                DivineVideoPlayerLog.warning(
+                    "Could not build looping audio for $uri: $e",
+                    name = "DivineVideoPlayer.AudioLoop",
+                )
+                return null
+            } finally {
+                runCatching { codec?.stop() }
+                runCatching { codec?.release() }
+                runCatching { extractor.release() }
+                runCatching { remoteSource?.close() }
+            }
+        }
+
+        /**
+         * Filters [decoded] with [equalizer], cuts and blends it to [loopUs]
+         * and wraps it in a looping [AudioTrack]; null when anything goes
+         * wrong. [decoded] is filtered in place unless [retainDecoded], in
+         * which case it is left raw for the loop to keep for [reshaped].
+         */
+        private fun build(
+            decoded: DecodedPcm,
+            loopUs: Long,
+            equalizer: AudioEqualizer?,
+            retainDecoded: Boolean,
+            label: String,
+        ): ClipAudioLoopTrack? {
+            try {
+                val channels = decoded.channels
+                val sampleRate = decoded.sampleRate
+                val startUs = decoded.startUs
                 // The whole decode in one pass, so the filters carry their
                 // history into the material the loop blends past its end.
-                EqualizerPcm.apply(samples, channels, sampleRate, equalizer)
-
-                val startUs = (firstPresentationUs ?: 0L) - clipStartUs
+                val samples = when {
+                    !retainDecoded -> decoded.samples.also {
+                        EqualizerPcm.apply(it, channels, sampleRate, equalizer)
+                    }
+                    // [LoopPcm.prepare] only reads what it is given, so a
+                    // flat curve needs no copy of the retained decode.
+                    equalizer == null || equalizer.isFlat -> decoded.samples
+                    else -> EqualizerPcm.equalized(
+                        decoded.samples,
+                        channels,
+                        sampleRate,
+                        equalizer,
+                    )
+                }
                 val prepared = LoopPcm.prepare(
                     samples = samples,
                     channels = channels,
@@ -570,7 +664,7 @@ internal class ClipAudioLoopTrack private constructor(
                 // plays the clip once and leaves it silent for good.
                 if (track.setLoopPoints(0, loopFrames, -1) != AudioTrack.SUCCESS) {
                     DivineVideoPlayerLog.warning(
-                        "Could not loop clip audio for $uri; leaving it with ExoPlayer",
+                        "Could not loop clip audio for $label; leaving it with ExoPlayer",
                         name = "DivineVideoPlayer.AudioLoop",
                     )
                     track.release()
@@ -589,19 +683,31 @@ internal class ClipAudioLoopTrack private constructor(
                         },
                     name = "DivineVideoPlayer.AudioLoop",
                 )
-                return ClipAudioLoopTrack(track, sampleRate, loopFrames)
+                return ClipAudioLoopTrack(
+                    track,
+                    sampleRate,
+                    loopFrames,
+                    decoded.takeIf { retainDecoded },
+                    loopUs,
+                )
             } catch (e: Exception) {
                 DivineVideoPlayerLog.warning(
-                    "Could not build looping audio for $uri: $e",
+                    "Could not build looping audio for $label: $e",
                     name = "DivineVideoPlayer.AudioLoop",
                 )
                 return null
-            } finally {
-                runCatching { codec?.stop() }
-                runCatching { codec?.release() }
-                runCatching { extractor.release() }
-                runCatching { remoteSource?.close() }
             }
         }
     }
 }
+
+/**
+ * A clip's audio as the decoder produced it: interleaved 16-bit [samples], and
+ * [startUs], where the first one lies on the clip's timeline.
+ */
+internal class DecodedPcm(
+    val samples: ShortArray,
+    val channels: Int,
+    val sampleRate: Int,
+    val startUs: Long,
+)
