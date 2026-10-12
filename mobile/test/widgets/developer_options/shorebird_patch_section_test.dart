@@ -6,6 +6,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_cubit.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_state.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
@@ -17,14 +20,47 @@ class _MockShorebirdPatchCubit extends MockCubit<ShorebirdPatchState>
 
 class _MockShorebirdUpdater extends Mock implements ShorebirdUpdater {}
 
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
+
 void main() {
   group(ShorebirdPatchSection, () {
-    testWidgets('observes an initialization failure', (tester) async {
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
+
+    setUp(() {
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
+    });
+
+    testWidgets('reports a rejected initialization instead of leaking it', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final preferences = await SharedPreferences.getInstance();
       final updater = _MockShorebirdUpdater();
       when(() => updater.isAvailable).thenThrow(StateError('unavailable'));
-      final l10n = lookupAppLocalizations(const Locale('en'));
 
       await tester.pumpWidget(
         testMaterialApp(
@@ -38,8 +74,16 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text(l10n.devOptionsShorebirdLoading), findsOneWidget);
       expect(tester.takeException(), isNull);
+      expect(reporter.recordedErrors, hasLength(1));
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
       await tester.pumpWidget(const SizedBox.shrink());
     });
   });
