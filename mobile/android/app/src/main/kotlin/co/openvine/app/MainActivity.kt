@@ -88,6 +88,9 @@ class MainActivity : FlutterFragmentActivity() {
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
 
+        // Audio import picker that never loads the picked file into memory (#10065).
+        flutterEngine.plugins.add(AudioFilePickerPlugin())
+
         // Divine's own video effects, for the editor preview and the export (#9708).
         EchoVideoEffect.register()
 

@@ -2,7 +2,6 @@
 // ABOUTME: Shared by the editor's import row and the standalone sound upload.
 
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 
 /// Extensions the audio file pickers offer.
 ///
@@ -13,13 +12,13 @@ import 'package:flutter/foundation.dart';
 /// accepted by the import service.
 const audioPickerExtensions = ['aac', 'm4a', 'mp3', 'wav'];
 
-/// The type group every audio picker passes to `openFile`.
+/// The type group `AudioFilePickerService` opens the picker on.
 ///
-/// `file_selector` rather than `file_picker`: on Android the latter (10.x)
-/// sends `EXTRA_MIME_TYPES` as a `String` for `FileType.audio`, which the
-/// system picker reads as "accept everything" and opens on images, and drops
-/// the filter to `*/*` outright when any custom extension is unmapped.
-/// `file_selector` sends a proper `String[]`, so `audio/*` holds. iOS needs
+/// Not `file_picker`: on Android it (10.x) sends `EXTRA_MIME_TYPES` as a
+/// `String` for `FileType.audio`, which the system picker reads as "accept
+/// everything" and opens on images, and drops the filter to `*/*` outright
+/// when any custom extension is unmapped. The app's Android picker sends a
+/// proper `String[]`, as `file_selector` does, so `audio/*` holds. iOS needs
 /// the UTI, desktop the extensions.
 XTypeGroup audioPickerTypeGroup({required String label}) => XTypeGroup(
   label: label,
@@ -38,10 +37,3 @@ XTypeGroup audioPickerTypeGroup({required String label}) => XTypeGroup(
 /// filesystem path here, so it is Android-only.
 const androidAudioPickerInitialUri =
     'content://com.android.providers.media.documents/root/audio_root';
-
-/// The `initialDirectory` for `openFile`: the audio root on Android, none
-/// elsewhere.
-String? audioPickerInitialDirectory() =>
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-    ? androidAudioPickerInitialUri
-    : null;

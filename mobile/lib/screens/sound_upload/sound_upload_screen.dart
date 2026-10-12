@@ -10,12 +10,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, UserProfile;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/sound_upload/sound_upload_cubit.dart';
-import 'package:openvine/constants/audio_picker_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
@@ -126,11 +126,8 @@ class _SoundUploadViewState extends State<SoundUploadView> {
     await _stopPreview();
     final picker =
         widget.pickAudioFile ??
-        () => openFile(
-          acceptedTypeGroups: [
-            audioPickerTypeGroup(label: context.l10n.audioPickerTypeGroup),
-          ],
-          initialDirectory: audioPickerInitialDirectory(),
+        () => const AudioFilePickerService().pickAudioFile(
+          typeGroupLabel: context.l10n.audioPickerTypeGroup,
         );
     final file = await picker();
     if (!mounted || file == null || file.path.isEmpty) return;
