@@ -45,10 +45,14 @@ internal class ClipAudioLoopTrack private constructor(
     private val track: AudioTrack,
     private val sampleRate: Int,
     private val frameCount: Int,
+    // Written by release() on the platform thread, read by reshaped() on the
+    // metadata executor.
+    @Volatile
     private var decoded: DecodedPcm? = null,
     private val loopUs: Long = 0L,
 ) {
 
+    @Volatile
     private var released = false
 
     /** The part of the loop's volume above 100 %; see [setBoost]. */
