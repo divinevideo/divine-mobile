@@ -1617,6 +1617,23 @@ class DivineVideoPlayerInstanceTest {
         return listener
     }
 
+    /**
+     * Has [mockHandler] keep a delayed runnable until it is removed, as a real
+     * handler does, and returns what is left waiting.
+     */
+    private fun holdDelayedRunnables(): MutableList<Runnable> {
+        val waiting = mutableListOf<Runnable>()
+        every { mockHandler.postDelayed(any(), any<Long>()) } answers {
+            waiting += firstArg<Runnable>()
+            true
+        }
+        every { mockHandler.removeCallbacks(any<Runnable>()) } answers {
+            waiting.removeAll { it === firstArg<Runnable>() }
+            Unit
+        }
+        return waiting
+    }
+
     /** Runs the reshape the last equalizer change scheduled; returns its landing. */
     private fun runScheduledReshape(): List<Runnable> {
         val scheduled = mutableListOf<Runnable>()
@@ -1684,11 +1701,16 @@ class DivineVideoPlayerInstanceTest {
             val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
             val next = mockk<ClipAudioLoopTrack>(relaxed = true)
             installReshapableLoop(loop, next)
+            val waiting = holdDelayedRunnables()
 
             instance.onMethodCall(equalizersCall(2.0), mockk(relaxed = true))
             instance.onMethodCall(equalizersCall(4.0), mockk(relaxed = true))
             instance.onMethodCall(equalizersCall(6.0), mockk(relaxed = true))
-            runScheduledReshape()
+
+            // A real handler runs everything left waiting, so each change has
+            // to take the one before it off the queue.
+            assertEquals(1, waiting.size)
+            waiting.single().run()
 
             val reshaped = mutableListOf<AudioEqualizer?>()
             verify(exactly = 1) { loop.reshaped(captureNullable(reshaped)) }
