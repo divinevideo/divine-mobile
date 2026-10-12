@@ -63,7 +63,7 @@ class _ShorebirdPatchSectionState extends State<ShorebirdPatchSection> {
     if (cubit != null) {
       runDetached(
         cubit.close(),
-        'close Shorebird patch section',
+        'close Shorebird patch cubit',
         logName: 'ShorebirdPatchSection',
         category: LogCategory.system,
       );
