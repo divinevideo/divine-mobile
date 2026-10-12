@@ -52,7 +52,7 @@ TagsPickerInputParseResult parseTagsPickerInput({
   final parts = text.split(separators);
   // Heuristic: input that grew by >1 character in a single notifier tick
   // is treated as a paste. Safe today because the field filters to
-  // [a-zA-Z0-9 ,] — if the allow-list is widened, autocorrect / IME
+  // [a-zA-Z0-9 ] — if the allow-list is widened, autocorrect / IME
   // (e.g. CJK composition, swipe-to-type, `omw` → `on my way`) may land
   // here and unexpectedly commit a token.
   final isPaste = text.length - previousText.length > 1;

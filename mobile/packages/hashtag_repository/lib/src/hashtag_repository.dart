@@ -36,8 +36,9 @@ class HashtagRepository {
 
   /// Searches for hashtags matching [query].
   ///
-  /// Returns a list of hashtag name strings sorted by popularity/trending.
-  /// When [query] is null or empty, returns popular hashtags without filtering.
+  /// Returns a list of hashtag name strings sorted by popularity/trending,
+  /// leaving out tags over [HashtagExtractor.maxHashtagLength]. When [query]
+  /// is null or empty, returns popular hashtags without filtering by query.
   /// [limit] defaults to 20.
   ///
   /// The search strategy is:
@@ -83,7 +84,8 @@ class HashtagRepository {
     return searchHashtagsLocally(query: query ?? '', limit: limit);
   }
 
-  /// Searches locally cached hashtags without performing a network request.
+  /// Searches locally cached hashtags without performing a network request,
+  /// leaving out tags over [HashtagExtractor.maxHashtagLength].
   List<String> searchHashtagsLocally({required String query, int limit = 20}) {
     final trimmed = query.trim();
     if (trimmed.isEmpty || _localSearch == null) return const [];
