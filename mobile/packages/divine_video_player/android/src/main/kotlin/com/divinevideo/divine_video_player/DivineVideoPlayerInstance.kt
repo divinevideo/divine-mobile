@@ -63,8 +63,9 @@ internal class DivineVideoPlayerInstance(
         AudioOverlayManager(ctx)
     },
     /**
-     * Decodes a looping clip's audio off the platform thread. Single-threaded,
-     * so two decodes for the same player cannot interleave.
+     * Decodes a looping clip's audio, and filters it again for a new
+     * equalizer, off the platform thread. Single-threaded, so two of these
+     * for the same player cannot interleave.
      */
     private val metadataExecutor: ExecutorService =
         Executors.newSingleThreadExecutor(metadataThreadFactory(playerId)),
@@ -1160,15 +1161,16 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * Hands the sound from ExoPlayer to [loop] while both are playing.
+     * Hands the sound to [loop] while both are playing: from ExoPlayer, or
+     * from [from] when a running loop is replaced by a reshaped one.
      *
      * The loop starts muted and is placed again until it measures within
      * [LoopAudioSync.DEADBAND_US] of the picture — inaudible while it is
      * silent — or until [TAKEOVER_ALIGN_TIMEOUT_NS] passes. Then the two
      * cross over in [TAKEOVER_FADE_STEPS] steps: two copies of the same sound
      * a few milliseconds apart, so the crossing is not heard, and neither is a
-     * seam, because there is none mid-lap. ExoPlayer's audio renderer is only
-     * switched off once it is silent.
+     * seam, because there is none mid-lap. What it replaces — ExoPlayer's
+     * audio renderer, or [from] — is only switched off once it is silent.
      */
     private inner class ClipAudioTakeover(
         val loop: ClipAudioLoopTrack,
