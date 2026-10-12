@@ -419,7 +419,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
     runDetached(
       deepLinkService.initialize(),
       'initialize deep-link service',
-      logName: 'DivineApp',
+      logName: 'DeepLinkHandler',
       category: LogCategory.ui,
     );
 
@@ -429,7 +429,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
     runDetached(
       _notificationTapSubscription?.cancel() ?? Future<void>.value(),
       'replace notification tap subscription',
-      logName: 'DivineApp',
+      logName: 'DeepLinkHandler',
       category: LogCategory.system,
     );
     _notificationTapSubscription = ref
