@@ -144,7 +144,6 @@ bool shouldSuspendDownloadsAtLaunch(AppLifecycleState? state) =>
 class _DivineAppState extends ConsumerState<DivineApp>
     with WidgetsBindingObserver {
   bool _backgroundInitDone = false;
-  StreamSubscription<void>? _shakeSubscription;
   StreamSubscription<NotificationTapEvent>? _notificationTapSubscription;
   ProviderSubscription<AsyncValue<AccountDeletionAttempt?>>?
   _deletionAttemptSubscription;
@@ -292,16 +291,6 @@ class _DivineAppState extends ConsumerState<DivineApp>
       _notificationTapSubscription = null;
     }
     unawaited(_quickActionsCoordinator?.dispose());
-    final shakeCancellation = _shakeSubscription?.cancel();
-    if (shakeCancellation != null) {
-      runDetached(
-        shakeCancellation,
-        'cancel shake subscription',
-        logName: 'DivineApp',
-        category: LogCategory.system,
-      );
-      _shakeSubscription = null;
-    }
     super.dispose();
   }
 
