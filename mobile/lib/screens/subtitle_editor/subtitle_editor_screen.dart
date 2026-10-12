@@ -80,7 +80,7 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
     } else {
       runDetached(
         _resolve(),
-        'resolve subtitle video',
+        'resolve video ${widget.videoId} for subtitle editing',
         logName: 'SubtitleEditorScreen',
         category: LogCategory.video,
       );
@@ -133,7 +133,7 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
         );
         runDetached(
           cubit.load(),
-          'load subtitle cues',
+          'load subtitle cues for video ${video.id}',
           logName: 'SubtitleEditorScreen',
           category: LogCategory.video,
         );

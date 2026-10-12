@@ -22,6 +22,7 @@ import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_resolver.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/test_helpers.dart';
 
@@ -753,6 +754,33 @@ void main() {
       expect(resolver.resolvedIds, [videoId]);
       expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('logs a failed lookup with the full video id', (tester) async {
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final resolver = _FakeVideoEventResolver(
+        null,
+        error: StateError('resolver failed'),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SubtitleEditorScreen(videoId: videoId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final errorLogs = logCapture.getRecentLogs(minLevel: LogLevel.error);
+      expect(errorLogs.map((log) => log.message), contains(contains(videoId)));
     });
   });
 }
