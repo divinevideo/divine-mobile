@@ -215,7 +215,7 @@ void main() {
           // Go back from User A's profile
           router.pop();
           await pumpUntilSettled(tester);
-          await initialProfileRoute;
+          await _expectRoutePopped(initialProfileRoute, 'User A profile');
 
           await tapBottomNavTab(tester, 'explore_tab');
           await pumpUntilSettled(tester);
@@ -267,7 +267,7 @@ void main() {
 
           router.pop();
           await pumpUntilSettled(tester);
-          await refreshedProfileRoute;
+          await _expectRoutePopped(refreshedProfileRoute, 'refreshed profile');
 
           // ── Cleanup ──
           drainAsyncErrors(tester);
@@ -276,4 +276,13 @@ void main() {
       timeout: const Timeout(Duration(minutes: 5)),
     );
   });
+}
+
+/// Awaits a pushed route's result, failing fast if `router.pop()` closed
+/// something else and the route is still open.
+Future<void> _expectRoutePopped(Future<void> routePopped, String route) {
+  return routePopped.timeout(
+    const Duration(seconds: 5),
+    onTimeout: () => fail('router.pop() did not close the $route route'),
+  );
 }
