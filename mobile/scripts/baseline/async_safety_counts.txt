@@ -20,7 +20,6 @@ discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/delete_account_dialog.dart	2
 discarded_futures|lib/widgets/feed_tuning/feed_tuning_swipe_overlay.dart	1
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
-discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
 discarded_futures|lib/widgets/save_original_progress_sheet.dart	1
@@ -34,5 +33,4 @@ unawaited_futures|lib/screens/verify/verify_screen.dart	1
 unawaited_futures|lib/screens/video_recorder_screen.dart	1
 unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
-unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1

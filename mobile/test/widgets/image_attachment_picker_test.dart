@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_metadata_stripper/image_metadata_stripper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -95,6 +96,54 @@ void main() {
         expect(result, isNotNull);
         expect(result!.length, 1);
         expect(result!.first.path, '/tmp/img1.jpg');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('announces attachment count after adding and removing images', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      final announcements = <String>[];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            (message) async {
+              final data = message! as Map<Object?, Object?>;
+              if (data['type'] == 'announce') {
+                final payload = data['data']! as Map<Object?, Object?>;
+                announcements.add(payload['message']! as String);
+              }
+              return null;
+            },
+          );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            );
+      });
+
+      try {
+        when(
+          () => mockPicker.pickMultiImage(
+            maxWidth: any(named: 'maxWidth'),
+            imageQuality: any(named: 'imageQuality'),
+          ),
+        ).thenAnswer((_) async => [XFile('/tmp/one.jpg')]);
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.tap(find.bySemanticsLabel(l10n.bugReportAttachImages));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel(l10n.bugReportRemoveImage));
+        await tester.pumpAndSettle();
+
+        expect(announcements, [
+          l10n.bugReportImagesCount(1, 3),
+          l10n.bugReportImagesCount(0, 3),
+        ]);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
