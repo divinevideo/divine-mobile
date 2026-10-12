@@ -171,7 +171,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       );
   // Owns the single-flight refresh futures + timeouts; the facade keeps the
   // _hasExpiredOAuthSession flag and all result application, reached here
-  // through ports so restore orchestration stays byte-identical.
+  // through ports. A rejected mid-session refresh writes the flag via
+  // onRefreshRejected (#9943).
   late final OAuthSessionCoordinator _oauthCoordinator =
       OAuthSessionCoordinator(
         oauthClient: _oauthClient,
@@ -233,7 +234,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   UserProfile? _currentProfile;
   String? _lastError;
   bool _storageErrorOccurred = false;
-  // Every write notifies [expiredOAuthSessionListenable] (#9943). Never
+  // Every change notifies [expiredOAuthSessionListenable] (#9943). Never
   // disposed: [dispose] must stay repeatable and late async writers may land
   // after it; listeners are removed by their own owners.
   final ValueNotifier<bool> _expiredOAuthSession = ValueNotifier(false);
