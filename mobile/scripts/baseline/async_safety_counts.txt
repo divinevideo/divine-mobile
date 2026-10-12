@@ -24,7 +24,6 @@ discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
 discarded_futures|lib/widgets/save_original_progress_sheet.dart	1
-discarded_futures|lib/widgets/support_capped_text_field.dart	2
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2

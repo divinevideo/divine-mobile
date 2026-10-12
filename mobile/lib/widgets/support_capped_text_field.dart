@@ -2,10 +2,10 @@
 // ABOUTME: Keeps dropped keyboard content from looking like accepted evidence
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// A [DivineTextField] with a hard character cap that tells the user when the
 /// cap dropped what they pasted.
@@ -78,10 +78,11 @@ class _SupportCappedTextFieldState extends State<SupportCappedTextField> {
     // The notice sits beside the field rather than inside its decoration, so
     // it is outside the field's semantics node and a screen reader would not
     // otherwise announce that the paste was cut.
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       context.l10n.supportFieldLimitReached,
-      Directionality.of(context),
+      description: 'announce support field text limit',
+      logName: 'SupportCappedTextField',
     );
   }
 
@@ -103,10 +104,11 @@ class _SupportCappedTextFieldState extends State<SupportCappedTextField> {
     }
     // Each insertion is a separate action, so announce every attempt even
     // while the visual notice is already present.
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       notice,
-      Directionality.of(context),
+      description: 'announce rejected support field image insertion',
+      logName: 'SupportCappedTextField',
     );
   }
 
