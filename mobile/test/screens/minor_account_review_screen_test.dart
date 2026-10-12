@@ -1,4 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,18 +9,22 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../helpers/go_router.dart';
 import '../helpers/scroll.dart';
 import '../helpers/url_launcher_test_double.dart';
+
+class _MockAuthService extends Mock implements AuthService {}
 
 typedef _NextStepCase = ({
   String description,
@@ -844,12 +849,162 @@ void main() {
         );
       });
     });
+
+    group('moderation conversation', () {
+      final viewerPubkey = 'a' * 64;
+      final moderatorPubkey = 'b' * 64;
+      late MockGoRouter goRouter;
+      late _MockAuthService authService;
+
+      setUp(() {
+        goRouter = MockGoRouter();
+        authService = _MockAuthService();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        when(() => authService.currentPublicKeyHex).thenReturn(viewerPubkey);
+      });
+
+      Future<void> tapOpenModerationMessage(WidgetTester tester) async {
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MinorAccountReviewScreen)),
+        );
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewOpenModerationMessage),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewOpenModerationMessage),
+        );
+        await tester.pump();
+      }
+
+      testWidgets('opens the conversation the case names with the moderator', (
+        tester,
+      ) async {
+        await _pumpReview(
+          tester,
+          goRouter: goRouter,
+          authService: authService,
+          reviewCase: _reviewCase(
+            ageBand: SuspectedAgeBand.age13To15,
+            resolution: MinorReviewResolutionType.parentVideoOrEmail,
+            moderationConversationPubkey: moderatorPubkey,
+            moderationConversationId: 'conversation-named-by-case',
+          ),
+        );
+
+        await tapOpenModerationMessage(tester);
+
+        final pushed = verify(
+          () => goRouter.push<void>(
+            captureAny(),
+            extra: captureAny(named: 'extra'),
+          ),
+        ).captured;
+        expect(pushed, [
+          ConversationPage.pathForId('conversation-named-by-case'),
+          [moderatorPubkey],
+        ]);
+      });
+
+      testWidgets(
+        'derives the conversation from both pubkeys when the case names none',
+        (tester) async {
+          await _pumpReview(
+            tester,
+            goRouter: goRouter,
+            authService: authService,
+            reviewCase: _reviewCase(
+              ageBand: SuspectedAgeBand.age13To15,
+              resolution: MinorReviewResolutionType.parentVideoOrEmail,
+              moderationConversationPubkey: moderatorPubkey,
+            ),
+          );
+
+          await tapOpenModerationMessage(tester);
+
+          final pushed = verify(
+            () => goRouter.push<void>(
+              captureAny(),
+              extra: captureAny(named: 'extra'),
+            ),
+          ).captured;
+          expect(pushed, [
+            ConversationPage.pathForId(
+              DmRepository.computeConversationId([
+                viewerPubkey,
+                moderatorPubkey,
+              ]),
+            ),
+            [moderatorPubkey],
+          ]);
+        },
+      );
+
+      testWidgets('stays put when the signed-in pubkey is unavailable', (
+        tester,
+      ) async {
+        when(() => authService.currentPublicKeyHex).thenReturn(null);
+        await _pumpReview(
+          tester,
+          goRouter: goRouter,
+          authService: authService,
+          reviewCase: _reviewCase(
+            ageBand: SuspectedAgeBand.age13To15,
+            resolution: MinorReviewResolutionType.parentVideoOrEmail,
+            moderationConversationPubkey: moderatorPubkey,
+          ),
+        );
+
+        await tapOpenModerationMessage(tester);
+
+        verifyNever(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        );
+      });
+
+      testWidgets('disables the message button when the case names no '
+          'moderator', (tester) async {
+        await _pumpReview(
+          tester,
+          goRouter: goRouter,
+          authService: authService,
+          reviewCase: _reviewCase(
+            ageBand: SuspectedAgeBand.age13To15,
+            resolution: MinorReviewResolutionType.parentVideoOrEmail,
+          ),
+        );
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MinorAccountReviewScreen)),
+        );
+
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewOpenModerationMessage),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+
+        final button = tester.widget<DivineButton>(
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewOpenModerationMessage,
+          ),
+        );
+        expect(button.onPressed, isNull);
+      });
+    });
   });
 }
 
 MinorReviewCase _reviewCase({
   required SuspectedAgeBand ageBand,
   required MinorReviewResolutionType resolution,
+  String? moderationConversationPubkey,
+  String? moderationConversationId,
 }) {
   return MinorReviewCase(
     id: 'case-navigation',
@@ -861,6 +1016,8 @@ MinorReviewCase _reviewCase({
       body: 'We need parental consent information.',
     ),
     supportEmail: 'support@divine.video',
+    moderationConversationPubkey: moderationConversationPubkey,
+    moderationConversationId: moderationConversationId,
   );
 }
 
@@ -868,6 +1025,7 @@ Future<void> _pumpReview(
   WidgetTester tester, {
   required MockGoRouter goRouter,
   required MinorReviewCase reviewCase,
+  AuthService? authService,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -878,6 +1036,8 @@ Future<void> _pumpReview(
             currentCase: reviewCase,
           );
         }),
+        if (authService != null)
+          authServiceProvider.overrideWithValue(authService),
       ],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
