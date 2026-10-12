@@ -22,7 +22,6 @@ discarded_futures|lib/widgets/feed_tuning/feed_tuning_swipe_overlay.dart	1
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
-discarded_futures|lib/widgets/save_original_progress_sheet.dart	1
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
