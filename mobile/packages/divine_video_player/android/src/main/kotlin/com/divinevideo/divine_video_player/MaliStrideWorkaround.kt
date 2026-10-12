@@ -44,7 +44,8 @@ internal object MaliStrideWorkaround {
     /**
      * `adb shell setprop debug.divine.gl_video_copy 1` forces the GL copy on
      * any device and `0` forces it off; anything else leaves the choice to
-     * the device check. Read for every new player.
+     * the device check. Read once, when the first player is built, so
+     * restart the app after changing it.
      */
     private const val OVERRIDE_PROPERTY = "debug.divine.gl_video_copy"
 
@@ -178,27 +179,33 @@ internal object MaliStrideWorkaround {
 /**
  * Copies each frame unchanged. Its only job is to put Media3's GL stage
  * between the decoder and the Flutter texture; see [MaliStrideWorkaround].
+ *
+ * The copy does not interpret colours, so it serves HDR output too: Media3
+ * asks for it with [useHdr] whenever an HDR clip keeps its HDR output, and
+ * rejecting that would stop such a clip from playing on the very devices
+ * the copy is for.
  */
 @UnstableApi
 internal object StrideCopyGlEffect : GlEffect {
     override fun toGlShaderProgram(context: Context, useHdr: Boolean): GlShaderProgram {
-        if (useHdr) throw VideoFrameProcessingException("The GL copy does not support HDR")
-        android.util.Log.d("DivineVideoPlayer.Effects", "GL copy stage built")
-        return Program()
+        android.util.Log.d("DivineVideoPlayer.Effects", "GL copy stage built (hdr=$useHdr)")
+        return Program(useHdr)
     }
 
     // A no-op would let Media3 drop the stage, and the stage is the point.
     override fun isNoOp(inputWidth: Int, inputHeight: Int): Boolean = false
 
     @UnstableApi
-    private class Program :
-        BaseGlShaderProgram(/* useHighPrecisionColorComponents= */ false, /* texturePoolCapacity= */ 1) {
-        private val copy = GlProgram(VERTEX_SHADER, COPY_SHADER)
+    private class Program(useHdr: Boolean) :
+        BaseGlShaderProgram(/* useHighPrecisionColorComponents= */ useHdr, /* texturePoolCapacity= */ 1) {
+        // Built with the first frame, so building the stage needs no GL call.
+        private var copy: GlProgram? = null
 
         override fun configure(inputWidth: Int, inputHeight: Int): Size = Size(inputWidth, inputHeight)
 
         override fun drawFrame(inputTexId: Int, presentationTimeUs: Long) {
             try {
+                val copy = copy ?: GlProgram(VERTEX_SHADER, COPY_SHADER).also { copy = it }
                 copy.use()
                 copy.setSamplerTexIdUniform("uTexSampler", inputTexId, 0)
                 val vertices = GlUtil.getNormalizedCoordinateBounds()
@@ -213,7 +220,8 @@ internal object StrideCopyGlEffect : GlEffect {
 
         override fun release() {
             super.release()
-            copy.delete()
+            copy?.delete()
+            copy = null
         }
     }
 

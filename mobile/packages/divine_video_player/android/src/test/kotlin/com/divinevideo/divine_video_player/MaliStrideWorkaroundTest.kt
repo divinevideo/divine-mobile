@@ -1,9 +1,12 @@
 package com.divinevideo.divine_video_player
 
+import android.content.Context
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,5 +106,17 @@ class MaliStrideWorkaroundTest {
     fun `outputSize waits for a track with a size`() {
         assertNull(MaliStrideWorkaround.outputSize(0, 0, 0, 1f))
         assertNull(MaliStrideWorkaround.outputSize(-1, 1280, 0, 1f))
+    }
+
+    @Test
+    fun `the GL copy builds a stage for HDR output`() {
+        // Media3 asks for HDR whenever an HDR clip keeps its HDR output; a
+        // stage that refused would stop that clip on the affected devices.
+        assertNotNull(StrideCopyGlEffect.toGlShaderProgram(mockk<Context>(), useHdr = true))
+    }
+
+    @Test
+    fun `the GL copy is never dropped as a no-op`() {
+        assertFalse(StrideCopyGlEffect.isNoOp(720, 1280))
     }
 }
