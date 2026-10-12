@@ -642,24 +642,10 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Used by the retry service / a future "X messages failed" badge in
   /// the inbox app bar.
   Stream<List<OutgoingDm>> watchAllForOwner(String ownerPubkey) {
-    return _allForOwnerQuery(
-      ownerPubkey,
-    ).watch().map((rows) => rows.map(_rowToModel).toList());
-  }
-
-  /// Fetch every row for the given account, oldest first: the rows
-  /// [watchAllForOwner] emits, read now instead of on its next re-run.
-  Future<List<OutgoingDm>> getAllForOwner(String ownerPubkey) async {
-    final rows = await _allForOwnerQuery(ownerPubkey).get();
-    return rows.map(_rowToModel).toList();
-  }
-
-  SimpleSelectStatement<$OutgoingDmsTable, OutgoingDmRow> _allForOwnerQuery(
-    String ownerPubkey,
-  ) {
-    return select(outgoingDms)
+    final query = select(outgoingDms)
       ..where((t) => t.ownerPubkey.equals(ownerPubkey))
       ..orderBy([(t) => OrderingTerm(expression: t.queuedAt)]);
+    return query.watch().map((rows) => rows.map(_rowToModel).toList());
   }
 
   /// Fetch every row for the given account, oldest first.
