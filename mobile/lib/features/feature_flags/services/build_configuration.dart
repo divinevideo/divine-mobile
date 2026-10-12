@@ -66,8 +66,9 @@ class BuildConfiguration {
           defaultValue: true,
         );
       case FeatureFlag.groupMessages:
-        // Default OFF until receiving a group works too (#7338). Sending to
-        // one already does, so the flag only gates the picker that starts it.
+        // Default OFF until group messaging is ready to turn on (#8269). The
+        // flag gates the picker that starts a group and filing a room someone
+        // else starts as a room.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
     }
   }

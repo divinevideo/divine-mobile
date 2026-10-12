@@ -88,8 +88,9 @@ enum FeatureFlag {
   ),
   groupMessages(
     'Group Messages',
-    'Start a message with several people from the New message sheet. '
-        'Stays off until receiving a group works too (#7338).',
+    'Start a message with several people from the New message sheet, and '
+        'file a group someone else starts as a group. Stays off until group '
+        'messaging is ready (#8269).',
     audience: FeatureFlagAudience.internal,
   );
 

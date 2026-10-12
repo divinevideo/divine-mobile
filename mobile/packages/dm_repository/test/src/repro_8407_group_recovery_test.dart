@@ -1142,6 +1142,81 @@ void main() {
         reason: 'a null tags_json row cannot name a room',
       );
     });
+
+    // The recorded version is the cost guard for the full scan: the same
+    // attestable split is restored while an older version is recorded, and
+    // left alone once the current one is.
+    group('recorded recovery version', () {
+      /// The one-to-one with Alice holds two senders' messages for the same
+      /// wider room, the shape the pass can attest.
+      Future<String> seedSplitRoom() async {
+        final oneToOneId = await seedConversation([_me, _alice]);
+        await seedMessage(
+          id: 'split-alice',
+          conversationId: oneToOneId,
+          sender: _alice,
+          pTags: [_me, _bob],
+          createdAt: 1700000002,
+        );
+        await seedMessage(
+          id: 'split-me',
+          conversationId: oneToOneId,
+          sender: _me,
+          pTags: [_alice, _bob],
+          createdAt: 1700000003,
+        );
+        return DmRepository.computeConversationId([_me, _alice, _bob]);
+      }
+
+      Future<DmSyncState> syncStateRecording(int version) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final syncState = DmSyncState(await SharedPreferences.getInstance());
+        await syncState.setGroupRecoveryVersion(_me, version);
+        return syncState;
+      }
+
+      test('runs the pass while an older version is recorded', () async {
+        final roomId = await seedSplitRoom();
+        final syncState = await syncStateRecording(
+          DmSyncState.currentGroupRecoveryVersion - 1,
+        );
+
+        await recoverViaSetCredentials(syncState: syncState);
+
+        final restored = await conversations.getConversation(
+          roomId,
+          ownerPubkey: _me,
+        );
+        expect(restored, isNotNull);
+        expect(restored!.isGroup, isTrue);
+        expect(
+          (await messages.getMessagesForConversation(
+            roomId,
+            ownerPubkey: _me,
+          )).map((m) => m.id).toSet(),
+          equals({'split-alice', 'split-me'}),
+        );
+        expect(
+          syncState.groupRecoveryVersion(_me),
+          DmSyncState.currentGroupRecoveryVersion,
+        );
+      });
+
+      test('skips the pass once the current version is recorded', () async {
+        final roomId = await seedSplitRoom();
+        final syncState = await syncStateRecording(
+          DmSyncState.currentGroupRecoveryVersion,
+        );
+
+        await recoverViaSetCredentials(syncState: syncState);
+
+        expect(
+          await conversations.getConversation(roomId, ownerPubkey: _me),
+          isNull,
+          reason: 'a recorded current version is the cost guard for the scan',
+        );
+      });
+    });
   });
 }
 

@@ -2,6 +2,8 @@
 // ABOUTME: route constants. Ensures ConversationPage provides ConversationBloc
 // ABOUTME: to ConversationView via BlocProvider.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,6 +120,9 @@ void main() {
       // dependency sits beside the tests that have it.
       setUp(() {
         when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+        when(
+          () => mockDmRepository.watchRefiledFrom(any()),
+        ).thenAnswer((_) => const Stream<Set<String>>.empty());
       });
 
       testWidgets('renders $ConversationView', (tester) async {
@@ -489,6 +494,152 @@ void main() {
           ).called(1);
         },
       );
+    });
+    group('when the conversation on screen is taken apart', () {
+      const movedToId =
+          '00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff';
+      late StreamController<Set<String>> refiled;
+
+      setUp(() {
+        refiled = StreamController<Set<String>>.broadcast();
+        when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+        when(() => mockDmRepository.watchRefiledFrom(any())).thenAnswer(
+          (invocation) =>
+              invocation.positionalArguments.single == testConversationId
+              ? refiled.stream
+              : const Stream<Set<String>>.empty(),
+        );
+      });
+
+      tearDown(() => refiled.close());
+
+      Future<GoRouter> pumpThread(WidgetTester tester) async {
+        final router = GoRouter(
+          initialLocation: ConversationPage.pathForId(testConversationId),
+          routes: [
+            GoRoute(
+              path: ConversationPage.pathPattern,
+              builder: (_, state) => ConversationPage(
+                conversationId: state.pathParameters['id']!,
+                participantPubkeys: const [otherPubkey],
+              ),
+            ),
+            GoRoute(
+              path: InboxPage.path,
+              builder: (_, _) => const Scaffold(body: Text('inbox')),
+            ),
+            GoRoute(
+              path: '/cover',
+              builder: (_, _) => const Scaffold(body: Text('cover')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            ...getStandardTestOverrides(mockAuthService: mockAuthService),
+            videoEventServiceProvider.overrideWithValue(
+              createMockVideoEventService(),
+            ),
+            connectionStatusServiceProvider.overrideWithValue(
+              _MockConnectionStatusService(),
+            ),
+            dmRepositoryProvider.overrideWithValue(mockDmRepository),
+            fetchUserProfileProvider(
+              otherPubkey,
+            ).overrideWith((ref) async => null),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pump();
+        return router;
+      }
+
+      // The router resolves a new location asynchronously, then animates.
+      Future<void> settleRoute(WidgetTester tester) async {
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+      }
+
+      String? conversationOnScreen(WidgetTester tester) => tester
+          .widgetList<ConversationPage>(find.byType(ConversationPage))
+          .map((page) => page.conversationId)
+          .singleOrNull;
+
+      testWidgets('opens the conversation its messages were moved to', (
+        tester,
+      ) async {
+        await pumpThread(tester);
+        expect(conversationOnScreen(tester), equals(testConversationId));
+
+        refiled.add({movedToId});
+        // Discrete pumps: the mounted DM machinery arms a periodic timer
+        // that pumpAndSettle would leave pending at teardown.
+        await tester.pump();
+        await tester.pump();
+
+        expect(conversationOnScreen(tester), equals(movedToId));
+      });
+
+      testWidgets('goes back to the inbox when they were moved to more than '
+          'one conversation', (tester) async {
+        await pumpThread(tester);
+
+        refiled.add({movedToId, testPubkey});
+        // The page leaves after the frame that saw the move, and the router
+        // resolves the new location before the transition starts.
+        await tester.pump();
+        await tester.pump();
+        // Long enough for the outgoing page to finish its route transition.
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byType(ConversationPage), findsNothing);
+        expect(find.text('inbox'), findsOneWidget);
+      });
+
+      testWidgets('waits for a screen opened over it to close before '
+          'following', (tester) async {
+        final router = await pumpThread(tester);
+        String topLocation() =>
+            router.routerDelegate.currentConfiguration.last.matchedLocation;
+        unawaited(router.push<void>('/cover'));
+        await settleRoute(tester);
+        expect(topLocation(), equals('/cover'));
+        expect(find.text('cover'), findsOneWidget);
+
+        refiled.add({movedToId});
+        await settleRoute(tester);
+
+        expect(topLocation(), equals('/cover'));
+        expect(find.text('cover'), findsOneWidget);
+        expect(
+          router.routerDelegate.currentConfiguration.matches,
+          hasLength(2),
+        );
+
+        router.pop();
+        await settleRoute(tester);
+
+        expect(find.text('cover'), findsNothing);
+        expect(conversationOnScreen(tester), equals(movedToId));
+        expect(
+          topLocation(),
+          equals(ConversationPage.pathForId(movedToId)),
+        );
+        expect(router.canPop(), isFalse);
+      });
     });
   });
 }

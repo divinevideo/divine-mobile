@@ -1229,6 +1229,111 @@ void main() {
       });
     });
 
+    group('groupRepliesMissingTheirTarget', () {
+      const owner = 'owner_pubkey';
+      const groupId = 'conv_group';
+
+      Future<void> conversation(
+        String id, {
+        required bool isGroup,
+        bool currentUserHasSent = false,
+        String ownerPubkey = owner,
+      }) => database.conversationsDao.upsertConversation(
+        id: id,
+        participantPubkeys: '[]',
+        isGroup: isGroup,
+        createdAt: 1700000000,
+        currentUserHasSent: currentUserHasSent,
+        ownerPubkey: ownerPubkey,
+      );
+
+      Future<void> message(
+        String id, {
+        required String conversationId,
+        String? replyToId,
+        String ownerPubkey = owner,
+      }) => dao.insertMessage(
+        id: id,
+        conversationId: conversationId,
+        senderPubkey: 'pubkey_alice',
+        content: id,
+        createdAt: 1700000000,
+        giftWrapId: 'gw_$id',
+        replyToId: replyToId,
+        ownerPubkey: ownerPubkey,
+      );
+
+      test('maps a missing target to the groups holding a reply to '
+          'it', () async {
+        await conversation(groupId, isGroup: true);
+        await conversation('conv_group_2', isGroup: true);
+        await message('reply', conversationId: groupId, replyToId: 'absent');
+        await message(
+          'reply_2',
+          conversationId: 'conv_group_2',
+          replyToId: 'absent',
+        );
+
+        expect(
+          await dao.groupRepliesMissingTheirTarget(ownerPubkey: owner),
+          equals({
+            'absent': {groupId, 'conv_group_2'},
+          }),
+        );
+      });
+
+      test('leaves out a reply whose target is stored', () async {
+        await conversation(groupId, isGroup: true);
+        await conversation(conversationId1, isGroup: false);
+        await message('target', conversationId: conversationId1);
+        await message('reply', conversationId: groupId, replyToId: 'target');
+
+        expect(
+          await dao.groupRepliesMissingTheirTarget(ownerPubkey: owner),
+          isEmpty,
+        );
+      });
+
+      test('leaves out a reply in a one-to-one', () async {
+        await conversation(conversationId1, isGroup: false);
+        await message(
+          'reply',
+          conversationId: conversationId1,
+          replyToId: 'absent',
+        );
+
+        expect(
+          await dao.groupRepliesMissingTheirTarget(ownerPubkey: owner),
+          isEmpty,
+        );
+      });
+
+      test('leaves out a group the account has written in', () async {
+        await conversation(groupId, isGroup: true, currentUserHasSent: true);
+        await message('reply', conversationId: groupId, replyToId: 'absent');
+
+        expect(
+          await dao.groupRepliesMissingTheirTarget(ownerPubkey: owner),
+          isEmpty,
+        );
+      });
+
+      test('reads only the given account', () async {
+        await conversation(groupId, isGroup: true, ownerPubkey: 'other');
+        await message(
+          'reply',
+          conversationId: groupId,
+          replyToId: 'absent',
+          ownerPubkey: 'other',
+        );
+
+        expect(
+          await dao.groupRepliesMissingTheirTarget(ownerPubkey: owner),
+          isEmpty,
+        );
+      });
+    });
+
     group('hasGiftWrap', () {
       test('returns true when gift wrap ID exists', () async {
         await dao.insertMessage(

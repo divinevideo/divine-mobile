@@ -16,6 +16,9 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -26,6 +29,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
 
 class _FakeFilter extends Fake implements nostr_filter.Filter {}
 
@@ -117,9 +122,12 @@ void main() {
 
     ProviderContainer createContainer({
       required NostrSessionReadiness readiness,
+      FeatureFlagService? featureFlagService,
     }) {
       return ProviderContainer(
         overrides: [
+          if (featureFlagService != null)
+            featureFlagServiceProvider.overrideWithValue(featureFlagService),
           nostrServiceProvider.overrideWithValue(mockNostrClient),
           authServiceProvider.overrideWithValue(mockAuthService),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -220,6 +228,36 @@ void main() {
         ),
         isFalse,
         reason: 'an ordinary peer stays removable',
+      );
+    });
+
+    // #7338: a room someone else starts reaches group surfaces that still
+    // assume the user picked its members, so receiving one follows the same
+    // flag as starting one. The repository default is off, so a forgotten
+    // injection would leave receiving rooms off even with the flag on.
+    test('receives peer rooms exactly while groupMessages is on', () {
+      final flags = _MockFeatureFlagService();
+      var groupMessages = false;
+      when(
+        () => flags.isEnabled(FeatureFlag.groupMessages),
+      ).thenAnswer((_) => groupMessages);
+      final container = createContainer(
+        readiness: const NostrSessionReadiness.identityKnown(
+          pubkey: testPubkey,
+        ),
+        featureFlagService: flags,
+      );
+      addTearDown(container.dispose);
+      final repository = container.read(dmRepositoryProvider);
+
+      expect(repository.receivesPeerRooms, isFalse);
+
+      groupMessages = true;
+
+      expect(
+        repository.receivesPeerRooms,
+        isTrue,
+        reason: 'the flag is read per rumor, not captured at build',
       );
     });
 

@@ -81,6 +81,9 @@ void main() {
         // loading state while the owner is unknown (#8187), which would
         // otherwise mask the re-keying this file exists to pin.
         when(() => repo.userPubkey).thenReturn(testPubkey);
+        when(
+          () => repo.watchRefiledFrom(any()),
+        ).thenAnswer((_) => const Stream<Set<String>>.empty());
         when(() => repo.markConversationAsRead(any())).thenAnswer((_) async {});
         when(repo.backfillHistoryIfNeeded).thenAnswer((_) async {});
         when(
@@ -351,6 +354,9 @@ void main() {
       mockResponseSvcB = _MockCollaboratorResponseService();
 
       when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+      when(
+        () => mockDmRepository.watchRefiledFrom(any()),
+      ).thenAnswer((_) => const Stream<Set<String>>.empty());
       when(
         () => mockDmRepository.backfillHistoryIfNeeded(),
       ).thenAnswer((_) async {});

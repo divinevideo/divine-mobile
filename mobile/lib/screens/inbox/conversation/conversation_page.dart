@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_participants_cubit.dart';
+import 'package:openvine/blocs/dm/conversation/conversation_refile_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -253,11 +254,66 @@ class _ConversationBlocScope extends ConsumerWidget {
             confirmationRepository: confirmationRepository,
           ),
         ),
+        // Same identity-keying as ConversationBloc, including conversationId.
+        BlocProvider<ConversationRefileCubit>(
+          key: ValueKey((
+            conversationId,
+            dmRepository,
+            currentPubkey,
+            'refile',
+          )),
+          create: (_) => ConversationRefileCubit(
+            dmRepository: dmRepository,
+            conversationId: conversationId,
+          ),
+        ),
       ],
-      child: ConversationView(
-        participantPubkeys: participantPubkeys,
-        subject: subject,
+      child: _FollowRefiledMessages(
+        child: ConversationView(
+          participantPubkeys: participantPubkeys,
+          subject: subject,
+        ),
       ),
     );
+  }
+}
+
+/// Leaves a conversation whose messages were moved under the conversations
+/// they answer (#10037). Left open, it is an empty thread whose composer still
+/// writes to everyone it named.
+///
+/// Waits until this conversation is the top route: router navigation acts on
+/// the top route, so following from underneath a screen opened over the
+/// thread would replace that screen and leave this one beneath it.
+class _FollowRefiledMessages extends StatefulWidget {
+  const _FollowRefiledMessages({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FollowRefiledMessages> createState() => _FollowRefiledMessagesState();
+}
+
+class _FollowRefiledMessagesState extends State<_FollowRefiledMessages> {
+  var _followed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final movedTo = context.select(
+      (ConversationRefileCubit cubit) => cubit.state,
+    );
+    final isCurrent = ModalRoute.isCurrentOf(context) ?? true;
+    if (movedTo.isNotEmpty && isCurrent && !_followed) {
+      _followed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (movedTo.length == 1) {
+          context.pushReplacement(ConversationPage.pathForId(movedTo.single));
+        } else {
+          context.go(InboxPage.path);
+        }
+      });
+    }
+    return widget.child;
   }
 }
