@@ -37,7 +37,7 @@ import androidx.media3.effect.GlShaderProgram
  * green band at the right edge (flutter/flutter#193444).
  *
  * Remove once the engine fix for flutter/flutter#193551 ships in the Flutter
- * version Divine builds with.
+ * version Divine builds with; tracked in divinevideo/divine-mobile#10060.
  */
 @UnstableApi
 internal object MaliStrideWorkaround {
