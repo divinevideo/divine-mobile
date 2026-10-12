@@ -8,6 +8,8 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 // Mirrors Flutter's private _kBackGestureWidth in cupertino/route.dart.
 const double _platformBackGestureWidth = 20;
@@ -66,7 +68,12 @@ class _FeedTuningSwipeOverlayState extends State<FeedTuningSwipeOverlay> {
     setState(() => _dragExtent += delta);
     final passed = _dragExtent.abs() >= widget.commitThreshold;
     if (passed && !_passedThreshold) {
-      HapticFeedback.selectionClick();
+      runDetached(
+        HapticFeedback.selectionClick(),
+        'play feed tuning threshold haptic',
+        logName: 'FeedTuningSwipeOverlay',
+        category: LogCategory.ui,
+      );
     }
     _passedThreshold = passed;
   }
