@@ -15,6 +15,8 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.Size
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.common.MediaItem
@@ -25,9 +27,11 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
@@ -190,9 +194,40 @@ internal class DivineVideoPlayerInstance(
      */
     private var frameEffectOutputSize: Size? = null
 
-    /** The size reported to Dart while frame effects draw the frames. */
+    /**
+     * Whether this player sends its frames through [StrideCopyGlEffect]
+     * because the device shears hardware-decoded frames; see
+     * [MaliStrideWorkaround]. Decided when the player is built.
+     */
+    private var strideGlCopy = false
+
+    /**
+     * Whether the selected tracks gave the GL copy its output size. A stream
+     * whose tracks carry no dimensions, such as an HLS playlist without
+     * RESOLUTION, is sized from the decoder's input format instead.
+     */
+    private var strideCopySizedByTracks = false
+
+    private val strideCopySizeListener = object : AnalyticsListener {
+        override fun onVideoInputFormatChanged(
+            eventTime: AnalyticsListener.EventTime,
+            format: Format,
+            decoderReuseEvaluation: DecoderReuseEvaluation?,
+        ) {
+            if (!strideCopySizedByTracks) applyStrideCopyOutputSize(listOf(format))
+        }
+    }
+
+    /**
+     * Whether a Media3 GL stage draws the frames, which then come out upright
+     * and at [frameEffectOutputSize] instead of the decoder's size.
+     */
+    private val routesThroughGl: Boolean
+        get() = frameEffectsState != null || strideGlCopy
+
+    /** The size reported to Dart while a GL stage draws the frames. */
     private val frameEffectReportedSize: Size?
-        get() = if (frameEffectsState != null) frameEffectOutputSize else null
+        get() = if (routesThroughGl) frameEffectOutputSize else null
 
     /** The buffer size the output surface was set to for frame effects. */
     private var frameEffectSurfaceSize: Size? = null
@@ -470,7 +505,17 @@ internal class DivineVideoPlayerInstance(
         return player ?: (playerFactory?.invoke(context) ?: buildDefaultPlayer())
             .also { newPlayer ->
                 player = newPlayer
-                frameEffectsState?.let { newPlayer.setVideoEffects(listOf(FrameEffectsGlEffect(it))) }
+                strideGlCopy = MaliStrideWorkaround.applies()
+                val effects = frameEffectsState?.let { listOf(FrameEffectsGlEffect(it)) }
+                    ?: if (strideGlCopy) listOf(StrideCopyGlEffect) else null
+                effects?.let { newPlayer.setVideoEffects(it) }
+                if (strideGlCopy) newPlayer.addAnalyticsListener(strideCopySizeListener)
+                if (strideGlCopy && frameEffectsState == null) {
+                    DivineVideoPlayerLog.info(
+                        "$logTarget routes frames through the GL copy",
+                        name = "DivineVideoPlayer.Effects",
+                    )
+                }
                 newPlayer.setSeekParameters(SeekParameters.EXACT)
                 newPlayer.addListener(playerListener)
                 newPlayer.setVideoFrameMetadataListener(renderedFrameListener)
@@ -1688,11 +1733,25 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
+     * Sizes the GL copy's output from [formats] while no frame effects own
+     * that size. Returns whether any of them had dimensions.
+     */
+    private fun applyStrideCopyOutputSize(formats: List<Format>): Boolean {
+        if (!strideGlCopy || frameEffectsState != null) return false
+        val size = MaliStrideWorkaround.largestOutputSize(formats) ?: return false
+        if (size == frameEffectOutputSize) return true
+        frameEffectOutputSize = size
+        sendFrameEffectOutputResolution()
+        sendStateUpdate()
+        return true
+    }
+
+    /**
      * Tells the video renderer the output size, which Media3 needs when its
      * effect pipeline draws into a surface handed over directly.
      */
     private fun sendFrameEffectOutputResolution() {
-        if (frameEffectsState == null) return
+        if (!routesThroughGl) return
         val exoPlayer = player ?: return
         val size = frameEffectOutputSize ?: return
         applyFrameEffectSurfaceSize(size)
@@ -2515,6 +2574,22 @@ internal class DivineVideoPlayerInstance(
             // again for any future error.
             decoderRetryCount = 0
             sendStateUpdate()
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            // With a GL stage Media3 reports no video size, and the stage
+            // draws nothing until it has an output size. Frame effects read
+            // it from the clip's file; the GL copy plays remote clips too,
+            // so it takes the size from the selected track.
+            // An adaptive stream selects several renditions at once, so the
+            // largest of them sizes the output; a smaller one is scaled up.
+            if (!strideGlCopy || frameEffectsState != null) return
+            val group = tracks.groups
+                .firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.isSelected } ?: return
+            val formats = (0 until group.length)
+                .filter { group.isTrackSelected(it) }
+                .map { group.getTrackFormat(it) }
+            strideCopySizedByTracks = applyStrideCopyOutputSize(formats)
         }
 
         override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
