@@ -64,7 +64,6 @@ class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
       unawaited(
         _consumptionAnalytics.commentSent(
           targetVideoId: video.id,
-          targetPubkey: video.pubkey,
         ),
       );
       emitIfOpen(state.copyWith(status: InlineCommentComposerStatus.submitted));

@@ -245,7 +245,6 @@ class CommentComposerBloc
       unawaited(
         _consumptionAnalytics.commentSent(
           targetVideoId: _rootEventId,
-          targetPubkey: _rootAuthorPubkey,
         ),
       );
     } catch (e, stackTrace) {

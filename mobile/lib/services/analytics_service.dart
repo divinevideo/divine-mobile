@@ -104,8 +104,7 @@ class AnalyticsService implements BackgroundAwareService {
   /// Testing flag to disable Nostr publishing in unit tests.
   final bool _disableNostrPublishing;
 
-  /// SharedPreferences key for the user's analytics consent choice.
-  static const String analyticsEnabledPreferenceKey = 'analytics_enabled';
+  static const String _analyticsEnabledKey = 'analytics_enabled';
 
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
@@ -158,8 +157,7 @@ class AnalyticsService implements BackgroundAwareService {
     try {
       // Load analytics preference from storage
       final prefs = await SharedPreferences.getInstance();
-      final storedConsent =
-          prefs.getBool(analyticsEnabledPreferenceKey) ?? true;
+      final storedConsent = prefs.getBool(_analyticsEnabledKey) ?? true;
       _isInitialized = true;
       // Stored opt-out takes the same withdrawal path a live toggle does, so
       // rows persisted before the preference loaded (or by a build that
@@ -252,10 +250,7 @@ class AnalyticsService implements BackgroundAwareService {
       final prefs = await SharedPreferences.getInstance();
       // `setBool` returns false when the platform rejected the write; that is
       // a failure the caller has to see, not a value to discard.
-      final written = await prefs.setBool(
-        analyticsEnabledPreferenceKey,
-        enabled,
-      );
+      final written = await prefs.setBool(_analyticsEnabledKey, enabled);
       if (!written) {
         Log.error(
           'Storage rejected the analytics preference write',
@@ -412,6 +407,13 @@ class AnalyticsService implements BackgroundAwareService {
     await _productEventQueue?.clear();
   }
 
+  /// Identifies the current governed session without exposing account identity.
+  ///
+  /// Consumers reset their measurement state when this changes so navigation
+  /// depth cannot bridge login, account switches, or consent withdrawal.
+  String get productAnalyticsSessionId =>
+      _sessionIdOverride?.call() ?? _sessionId;
+
   void _rotateProductAnalyticsIdentity() {
     if (_anonymousIdOverride == null) _anonymousId = _uuid.v4();
     if (_sessionIdOverride == null) _sessionId = _uuid.v4();
@@ -457,6 +459,36 @@ class AnalyticsService implements BackgroundAwareService {
         loopCount: loopCount,
         completed: completed,
         endReason: endReason,
+      ),
+    ),
+  );
+
+  /// Records a confirmed engagement or share intent without target identity.
+  Future<String?> recordEngagement({
+    required ProductAnalyticsV2EngagementAction action,
+    String? contentId,
+  }) => _trackProductEvent(
+    (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
+      envelope: envelope,
+      properties: ProductAnalyticsV2EngagementRecordedProperties(
+        action: action,
+        contentId: contentId,
+      ),
+    ),
+  );
+
+  /// Records deliberate navigation depth within one visible feed session.
+  Future<String?> recordFeedDepth({
+    required String feedSessionId,
+    required ProductAnalyticsV2FeedType feedType,
+    required int depth,
+  }) => _trackProductEvent(
+    (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
+      envelope: envelope,
+      properties: ProductAnalyticsV2FeedDepthRecordedProperties(
+        feedSessionId: feedSessionId,
+        feedType: feedType,
+        depth: depth,
       ),
     ),
   );

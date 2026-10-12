@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
@@ -45,6 +44,7 @@ import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/repositories/community_content_label_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
+import 'package:openvine/screens/feed/feed_auto_advance_error_listener.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -69,6 +69,7 @@ import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart'
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 // ---------------------------------------------------------------------------
@@ -106,18 +107,6 @@ class _MockCommentsRepository extends Mock implements CommentsRepository {}
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
-
-class _RecordingAnalytics extends NoOpAnalyticsEventSink {
-  final events = <({String name, Map<String, Object> parameters})>[];
-
-  @override
-  Future<void> logEvent({
-    required String name,
-    required Map<String, Object> parameters,
-  }) async {
-    events.add((name: name, parameters: parameters));
-  }
-}
 
 /// Flag service with community content warnings ON, everything else OFF.
 FeatureFlagService _communityFlagsOn() {
@@ -2178,6 +2167,38 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    testWidgets('automatic broken-video recovery does not increase depth', (
+      tester,
+    ) async {
+      final analytics = RecordingConsumptionAnalytics();
+      addTearDown(analytics.dispose);
+      final first = _makeVideo();
+      final second = _makeVideo(id: 'b' * 64);
+      await _pumpFeedVideos(
+        tester,
+        videos: [first, second],
+        feedAutoAdvanceCubit: _MockFeedAutoAdvanceCubit()
+          ..stub(const FeedAutoAdvanceState(enabled: true)),
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
+          ),
+        ],
+      );
+      await tester.pump();
+      final recovery = tester
+          .widgetList<FeedAutoAdvancePastErrorListener>(
+            find.byType(FeedAutoAdvancePastErrorListener),
+          )
+          .singleWhere((listener) => listener.videoId == first.id);
+      recovery.onSkipBrokenVideo();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(analytics.events, isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 4));
+    });
+
     for (final status in [
       PlaybackStatus.forbidden,
       PlaybackStatus.ageRestricted,
@@ -2442,7 +2463,7 @@ void main() {
     testWidgets('does not record a same-index programmatic activation', (
       tester,
     ) async {
-      final analytics = _RecordingAnalytics();
+      final analytics = RecordingConsumptionAnalytics();
       final firstVideo = _makeVideo();
       final replacementVideo = _makeVideo(
         id: 'c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1b2',
@@ -2456,7 +2477,7 @@ void main() {
         videos: [firstVideo],
         additionalOverrides: [
           consumptionAnalyticsTrackerProvider.overrideWithValue(
-            ConsumptionAnalyticsTracker(analytics: analytics),
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
           ),
         ],
       );
@@ -2476,7 +2497,7 @@ void main() {
     });
 
     testWidgets('does not record a programmatic page advance', (tester) async {
-      final analytics = _RecordingAnalytics();
+      final analytics = RecordingConsumptionAnalytics();
       final feedKey = GlobalKey<FeedVideosState>();
       final firstVideo = _makeVideo();
       final secondVideo = _makeVideo(
@@ -2489,7 +2510,7 @@ void main() {
         feedKey: feedKey,
         additionalOverrides: [
           consumptionAnalyticsTrackerProvider.overrideWithValue(
-            ConsumptionAnalyticsTracker(analytics: analytics),
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
           ),
         ],
       );
@@ -2506,8 +2527,92 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    for (final status in [
+      PlaybackStatus.forbidden,
+      PlaybackStatus.ageRestricted,
+      PlaybackStatus.unavailable,
+    ]) {
+      testWidgets('explicit Skip on $status records depth without playback', (
+        tester,
+      ) async {
+        final analytics = RecordingConsumptionAnalytics();
+        final firstVideo = _makeVideo();
+        final secondVideo = _makeVideo(id: 'b' * 64);
+        await _pumpFeedVideos(
+          tester,
+          videos: [firstVideo, secondVideo],
+          videoPlaybackStatusCubit: _MockVideoPlaybackStatusCubit()
+            ..stub(status, firstVideo.id),
+          additionalOverrides: [
+            consumptionAnalyticsTrackerProvider.overrideWithValue(
+              ConsumptionAnalyticsTracker(analytics: () => analytics),
+            ),
+          ],
+        );
+        await tester.pump();
+        await tester.tap(find.text('Skip').hitTestable());
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(analytics.events, hasLength(1));
+        expect(analytics.events.single.name, 'feed_depth_recorded');
+        expect(analytics.events.single.parameters['depth'], 2);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      });
+    }
+
+    testWidgets(
+      'identity and consent boundaries reset depth and feed identity',
+      (
+        tester,
+      ) async {
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final first = _makeVideo();
+        final second = _makeVideo(id: 'b' * 64);
+        final third = _makeVideo(id: 'c' * 64);
+        await _pumpFeedVideos(
+          tester,
+          videos: [first, second, third],
+          additionalOverrides: [
+            consumptionAnalyticsTrackerProvider.overrideWithValue(
+              ConsumptionAnalyticsTracker(analytics: () => analytics),
+            ),
+          ],
+        );
+        final feed = tester.widget<InfiniteVideoFeed>(
+          find.byType(InfiniteVideoFeed),
+        );
+        feed.onActiveVideoChanged?.call(second, 1);
+        await tester.pump();
+        final firstSession =
+            analytics.events.single.parameters['feed_session_id'];
+        await analytics.handleIdentityChange();
+        feed.onActiveVideoChanged?.call(third, 2);
+        await tester.pump();
+        expect(analytics.events.last.parameters['depth'], 2);
+        expect(
+          analytics.events.last.parameters['feed_session_id'],
+          isNot(firstSession),
+        );
+        final signedInSession =
+            analytics.events.last.parameters['feed_session_id'];
+        await analytics.setAnalyticsEnabled(false);
+        feed.onActiveVideoChanged?.call(second, 1);
+        await tester.pump();
+        expect(analytics.events.last.parameters['depth'], 2);
+        expect(
+          analytics.events.last.parameters['feed_session_id'],
+          isNot(signedInSession),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
     testWidgets('records the first real swipe at depth two', (tester) async {
-      final analytics = _RecordingAnalytics();
+      final analytics = RecordingConsumptionAnalytics();
       final firstVideo = _makeVideo();
       final secondVideo = _makeVideo(
         id: 'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1',
@@ -2518,7 +2623,7 @@ void main() {
         videos: [firstVideo, secondVideo],
         additionalOverrides: [
           consumptionAnalyticsTrackerProvider.overrideWithValue(
-            ConsumptionAnalyticsTracker(analytics: analytics),
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
           ),
         ],
       );
@@ -2530,15 +2635,16 @@ void main() {
       await tester.pump();
 
       expect(analytics.events, hasLength(1));
-      expect(analytics.events.single.name, 'feed_scrolled');
+      expect(analytics.events.single.name, 'feed_depth_recorded');
       expect(analytics.events.single.parameters, {
+        'feed_session_id': isA<String>(),
         'feed_type': 'unknown',
         'depth': 2,
       });
     });
 
     testWidgets('resets depth when the feed session changes', (tester) async {
-      final analytics = _RecordingAnalytics();
+      final analytics = RecordingConsumptionAnalytics();
       final feedKey = GlobalKey<FeedVideosState>();
       final firstVideo = _makeVideo();
       final secondVideo = _makeVideo(
@@ -2552,7 +2658,7 @@ void main() {
       );
       final overrides = [
         consumptionAnalyticsTrackerProvider.overrideWithValue(
-          ConsumptionAnalyticsTracker(analytics: analytics),
+          ConsumptionAnalyticsTracker(analytics: () => analytics),
         ),
       ];
 
@@ -2587,7 +2693,12 @@ void main() {
       await tester.pump();
 
       expect(analytics.events, hasLength(2));
+      expect(
+        analytics.events.last.parameters['feed_session_id'],
+        isNot(analytics.events.first.parameters['feed_session_id']),
+      );
       expect(analytics.events.last.parameters, {
+        'feed_session_id': isA<String>(),
         'feed_type': 'list',
         'depth': 2,
       });
@@ -2601,7 +2712,7 @@ void main() {
         // Switching between two subscribed lists keeps trafficSource=home and
         // sourceDetail='list', so the session revision is the *only* reset
         // trigger. Without it, list B's first swipe would report depth 3.
-        final analytics = _RecordingAnalytics();
+        final analytics = RecordingConsumptionAnalytics();
         final feedKey = GlobalKey<FeedVideosState>();
         final firstVideo = _makeVideo();
         final secondVideo = _makeVideo(
@@ -2621,7 +2732,7 @@ void main() {
         );
         final overrides = [
           consumptionAnalyticsTrackerProvider.overrideWithValue(
-            ConsumptionAnalyticsTracker(analytics: analytics),
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
           ),
         ];
 
@@ -2657,6 +2768,7 @@ void main() {
 
         expect(analytics.events, hasLength(2));
         expect(analytics.events.last.parameters, {
+          'feed_session_id': isA<String>(),
           'feed_type': 'list',
           'depth': 2,
         });
@@ -2668,7 +2780,7 @@ void main() {
     testWidgets(
       'keeps depth when videos change without a new session revision',
       (tester) async {
-        final analytics = _RecordingAnalytics();
+        final analytics = RecordingConsumptionAnalytics();
         final feedKey = GlobalKey<FeedVideosState>();
         final firstVideo = _makeVideo();
         final secondVideo = _makeVideo(
@@ -2688,7 +2800,7 @@ void main() {
         );
         final overrides = [
           consumptionAnalyticsTrackerProvider.overrideWithValue(
-            ConsumptionAnalyticsTracker(analytics: analytics),
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
           ),
         ];
 
@@ -2724,6 +2836,10 @@ void main() {
 
         expect(analytics.events, hasLength(2));
         expect(analytics.events.last.parameters['depth'], 3);
+        expect(
+          analytics.events.last.parameters['feed_session_id'],
+          analytics.events.first.parameters['feed_session_id'],
+        );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 4));
       },

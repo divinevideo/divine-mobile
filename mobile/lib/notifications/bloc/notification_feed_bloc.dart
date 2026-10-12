@@ -484,7 +484,7 @@ class NotificationFeedBloc
       if (!wasFollowing) {
         await _followRepository.follow(event.pubkey);
         unawaited(
-          _consumptionAnalytics.followAdded(targetPubkey: event.pubkey),
+          _consumptionAnalytics.followAdded(),
         );
       }
       emit(

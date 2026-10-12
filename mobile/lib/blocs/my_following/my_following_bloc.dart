@@ -200,7 +200,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       if (!wasFollowing) {
         unawaited(
           _consumptionAnalytics.followAdded(
-            targetPubkey: event.pubkey,
             targetVideoId: event.targetVideoId,
           ),
         );

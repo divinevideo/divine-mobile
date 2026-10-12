@@ -1,149 +1,49 @@
-// ABOUTME: Verifies the GA4 contract for consumption and engagement events.
+// ABOUTME: Verifies governed consumption calls omit relationship identity.
 
-import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 
+import '../../helpers/recording_consumption_analytics.dart';
+
 void main() {
-  late _RecordingAnalytics analytics;
-  late ConsumptionAnalyticsTracker tracker;
-
-  setUp(() {
-    analytics = _RecordingAnalytics();
-    tracker = ConsumptionAnalyticsTracker(analytics: analytics);
-  });
-
   group(ConsumptionAnalyticsTracker, () {
-    test('does not record events when analytics is disabled', () async {
-      final disabledTracker = ConsumptionAnalyticsTracker(
-        analytics: analytics,
-        isEnabled: () => false,
-      );
+    late RecordingConsumptionAnalytics analytics;
+    late ConsumptionAnalyticsTracker tracker;
 
-      await disabledTracker.videoStarted(
-        video: _video,
-        trafficSource: ViewTrafficSource.home,
-        position: 0,
-      );
-
-      expect(analytics.events, isEmpty);
+    setUp(() {
+      analytics = RecordingConsumptionAnalytics();
+      tracker = ConsumptionAnalyticsTracker(analytics: () => analytics);
+      addTearDown(analytics.dispose);
     });
 
-    test('absorbs consent lookup failures', () async {
-      final trackerWithFailingConsent = ConsumptionAnalyticsTracker(
-        analytics: analytics,
-        isEnabled: () => throw StateError('preferences unavailable'),
-      );
+    test('records engagement without creator or target identity', () async {
+      await tracker.reactionSent(targetVideoId: 'a' * 64);
+      await tracker.commentSent(targetVideoId: 'a' * 64);
+      await tracker.shareTapped(targetVideoId: 'a' * 64);
+      await tracker.followAdded(targetVideoId: 'a' * 64);
 
-      await expectLater(
-        trackerWithFailingConsent.videoStarted(
-          video: _video,
-          trafficSource: ViewTrafficSource.home,
-          position: 0,
-        ),
-        completes,
-      );
-      expect(analytics.events, isEmpty);
-    });
-
-    test('records the requested video consumption parameters', () async {
-      await tracker.videoStarted(
-        video: _video,
-        trafficSource: ViewTrafficSource.home,
-        position: 4,
-      );
-      await tracker.videoCompleted(
-        videoId: _video.id,
-        watchMs: 6200,
-        pctWatched: 103.3,
-        loops: 1,
-      );
-      await tracker.videoSkipped(
-        videoId: _video.id,
-        watchMs: 800,
-        position: 4,
-      );
-      await tracker.feedScrolled(
-        trafficSource: ViewTrafficSource.home,
-        depth: 5,
-      );
-
-      expect(analytics.events.map((event) => event.name), [
-        'video_started',
-        'video_completed',
-        'video_skipped',
-        'feed_scrolled',
+      expect(analytics.eventNames, everyElement('engagement_recorded'));
+      expect(analytics.parameters, [
+        for (final action in [
+          'reaction_sent',
+          'comment_sent',
+          'share_tapped',
+          'follow_added',
+        ])
+          {'action': action, 'content_id': 'a' * 64},
       ]);
-      expect(analytics.events[0].parameters, {
-        'video_id': 'video_id',
-        'author_pubkey': 'creator_pubkey',
-        'feed_type': 'home',
-        'position_in_feed': 4,
-        'is_archive': 0,
-      });
-      expect(analytics.events[1].parameters, {
-        'video_id': 'video_id',
-        'watch_ms': 6200,
-        'pct_watched': 103.3,
-        'loops': 1,
-      });
-      expect(analytics.events[2].parameters, {
-        'video_id': 'video_id',
-        'watch_ms': 800,
-        'position_in_feed': 4,
-      });
-      expect(analytics.events[3].parameters, {
-        'feed_type': 'home',
-        'depth': 5,
-      });
     });
 
-    test('records engagement targets', () async {
-      await tracker.reactionSent(
-        targetVideoId: _video.id,
-        targetPubkey: _video.pubkey,
-      );
-      await tracker.commentSent(
-        targetVideoId: _video.id,
-        targetPubkey: _video.pubkey,
-      );
-      await tracker.shareTapped(
-        targetVideoId: _video.id,
-        targetPubkey: _video.pubkey,
-      );
-      await tracker.followAdded(
-        targetPubkey: _video.pubkey,
-        targetVideoId: _video.id,
-      );
-
-      expect(analytics.events.map((event) => event.name), [
-        'reaction_sent',
-        'comment_sent',
-        'share_tapped',
-        'follow_added',
-      ]);
-      expect(
-        analytics.events.first.parameters,
-        {'target_video_id': 'video_id', 'target_pubkey': 'creator_pubkey'},
-      );
-      expect(analytics.events.last.parameters, {
-        'target_video_id': 'video_id',
-        'target_pubkey': 'creator_pubkey',
-      });
+    test('non-video follows contain no relationship target', () async {
+      await tracker.followAdded();
+      expect(analytics.parameters.single, {'action': 'follow_added'});
     });
 
-    test('omits video context for non-video follows', () async {
-      await tracker.followAdded(targetPubkey: _video.pubkey);
-
-      expect(analytics.events.single.parameters, {
-        'target_pubkey': 'creator_pubkey',
-      });
-    });
-
-    test('normalizes every home and discovery feed source', () async {
+    test('preserves session identity and normalized feed types', () async {
+      const session = '55555555-5555-4555-8555-555555555555';
       const cases = [
+        (ViewTrafficSource.home, null, 'home'),
         (ViewTrafficSource.home, 'foryou', 'for_you'),
         (ViewTrafficSource.home, 'following', 'following'),
         (ViewTrafficSource.home, 'list', 'list'),
@@ -153,62 +53,42 @@ void main() {
         (ViewTrafficSource.discoveryNew, null, 'new_vines'),
         (ViewTrafficSource.discoveryClassic, null, 'classics'),
         (ViewTrafficSource.discoveryPopular, null, 'popular'),
-        (ViewTrafficSource.discoveryFeatured, null, 'featured'),
+        (ViewTrafficSource.discoveryFeatured, 'private-theme', 'featured'),
+        (ViewTrafficSource.profile, null, 'profile'),
+        (ViewTrafficSource.share, null, 'share'),
+        (ViewTrafficSource.search, null, 'search'),
+        (ViewTrafficSource.unknown, null, 'unknown'),
       ];
-
-      for (final (trafficSource, sourceDetail, _) in cases) {
+      for (final (source, detail, _) in cases) {
         await tracker.feedScrolled(
-          trafficSource: trafficSource,
-          sourceDetail: sourceDetail,
+          trafficSource: source,
+          sourceDetail: detail,
+          feedSessionId: session,
           depth: 2,
         );
       }
-
-      expect(
-        analytics.events.map((event) => event.parameters['feed_type']),
-        cases.map((entry) => entry.$3),
-      );
+      expect(analytics.eventNames, everyElement('feed_depth_recorded'));
+      expect(analytics.parameters, [
+        for (final (_, _, feedType) in cases)
+          {'feed_session_id': session, 'feed_type': feedType, 'depth': 2},
+      ]);
     });
 
-    test('does not let sink failures escape into product actions', () async {
-      final failingTracker = ConsumptionAnalyticsTracker(
-        analytics: _ThrowingAnalytics(),
+    test('delivery failures never escape into product actions', () async {
+      final service = RecordingConsumptionAnalytics(
+        failure: StateError('analytics unavailable'),
       );
-
+      addTearDown(service.dispose);
+      final failing = ConsumptionAnalyticsTracker(analytics: () => service);
+      await expectLater(failing.followAdded(), completes);
       await expectLater(
-        failingTracker.followAdded(targetPubkey: _video.pubkey),
+        failing.feedScrolled(
+          trafficSource: ViewTrafficSource.home,
+          feedSessionId: '55555555-5555-4555-8555-555555555555',
+          depth: 2,
+        ),
         completes,
       );
     });
   });
 }
-
-typedef _RecordedEvent = ({String name, Map<String, Object> parameters});
-
-class _RecordingAnalytics extends NoOpAnalyticsEventSink {
-  final events = <_RecordedEvent>[];
-
-  @override
-  Future<void> logEvent({
-    required String name,
-    required Map<String, Object> parameters,
-  }) async {
-    events.add((name: name, parameters: parameters));
-  }
-}
-
-class _ThrowingAnalytics extends NoOpAnalyticsEventSink {
-  @override
-  Future<void> logEvent({
-    required String name,
-    required Map<String, Object> parameters,
-  }) => Future.error(StateError('analytics unavailable'));
-}
-
-final _video = VideoEvent(
-  id: 'video_id',
-  pubkey: 'creator_pubkey',
-  createdAt: 1700000000,
-  content: 'test video',
-  timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-);

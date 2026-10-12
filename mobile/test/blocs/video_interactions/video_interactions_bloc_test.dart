@@ -78,7 +78,6 @@ void main() {
       when(
         () => mockConsumptionAnalytics.reactionSent(
           targetVideoId: any(named: 'targetVideoId'),
-          targetPubkey: any(named: 'targetPubkey'),
         ),
       ).thenAnswer((_) async {});
     });
@@ -1005,7 +1004,6 @@ void main() {
           verify(
             () => mockConsumptionAnalytics.reactionSent(
               targetVideoId: testEventId,
-              targetPubkey: testAuthorPubkey,
             ),
           ).called(1);
         },
@@ -1077,7 +1075,6 @@ void main() {
           verifyNever(
             () => mockConsumptionAnalytics.reactionSent(
               targetVideoId: any(named: 'targetVideoId'),
-              targetPubkey: any(named: 'targetPubkey'),
             ),
           );
         },
@@ -1183,7 +1180,6 @@ void main() {
           verifyNever(
             () => mockConsumptionAnalytics.reactionSent(
               targetVideoId: any(named: 'targetVideoId'),
-              targetPubkey: any(named: 'targetPubkey'),
             ),
           );
         },

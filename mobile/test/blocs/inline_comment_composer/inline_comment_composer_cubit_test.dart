@@ -53,7 +53,6 @@ void main() {
       when(
         () => consumptionAnalytics.commentSent(
           targetVideoId: any(named: 'targetVideoId'),
-          targetPubkey: any(named: 'targetPubkey'),
         ),
       ).thenAnswer((_) async {});
     });
@@ -108,7 +107,6 @@ void main() {
           verify(
             () => consumptionAnalytics.commentSent(
               targetVideoId: 'video-id',
-              targetPubkey: 'author-pubkey',
             ),
           ).called(1);
         },
@@ -204,7 +202,6 @@ void main() {
           verifyNever(
             () => consumptionAnalytics.commentSent(
               targetVideoId: any(named: 'targetVideoId'),
-              targetPubkey: any(named: 'targetPubkey'),
             ),
           );
         },

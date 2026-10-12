@@ -459,6 +459,69 @@ void main() {
       );
     });
 
+    test(
+      'consumption uses shared consent, signed identity, and typed fields',
+      () async {
+        final queue = _MockProductEventQueue();
+        when(() => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')))
+            .thenAnswer((_) async {});
+        when(queue.clear).thenAnswer((_) async {});
+        String? owner;
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          currentUserPubkey: () => owner,
+        );
+        Future<void> record() async {
+          await analyticsService.recordEngagement(
+            action: ProductAnalyticsV2EngagementAction.followAdded,
+          );
+          await analyticsService.recordFeedDepth(
+            feedSessionId: '55555555-5555-4555-8555-555555555555',
+            feedType: ProductAnalyticsV2FeedType.list,
+            depth: 2,
+          );
+        }
+
+        await record();
+        await analyticsService.initialize();
+        await record();
+        verifyNever(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        );
+        owner = 'a' * 64;
+        await analyticsService.handleIdentityChange();
+        await record();
+        final events = verify(
+          () => queue.enqueue(captureAny(), ownerPubkey: owner),
+        ).captured.cast<ProductAnalyticsV2Event>();
+        expect(events.map((event) => event.eventName), [
+          'engagement_recorded',
+          'feed_depth_recorded',
+        ]);
+        expect(events.first.propertiesJson, {'action': 'follow_added'});
+        expect(events.last.propertiesJson, {
+          'feed_session_id': '55555555-5555-4555-8555-555555555555',
+          'feed_type': 'list',
+          'depth': 2,
+        });
+        for (final event in events) {
+          expect(
+            event.envelope.eventId,
+            AnalyticsService.computeProductAnalyticsEventId(event.toJson()),
+          );
+          expect(event.toJson().toString(), isNot(contains(owner)));
+        }
+        await analyticsService.setAnalyticsEnabled(false);
+        await record();
+        verifyNever(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        );
+      },
+    );
+
     test('queues a private experiment assignment', () async {
       final queue = _MockProductEventQueue();
       when(

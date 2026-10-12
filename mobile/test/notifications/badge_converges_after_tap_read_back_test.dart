@@ -6,7 +6,6 @@
 
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,6 +16,8 @@ import 'package:openvine/features/consumption_analytics/consumption_analytics_tr
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/services/app_badge_service.dart';
 import 'package:rxdart/rxdart.dart' hide NotificationKind;
+
+import '../helpers/recording_consumption_analytics.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -110,8 +111,10 @@ void main() {
   group('badge converges after tap -> read -> back', () {
     late _FakeNotificationRepository repository;
     late _MockFollowRepository followRepository;
+    late RecordingConsumptionAnalytics analytics;
 
     setUp(() {
+      analytics = RecordingConsumptionAnalytics();
       repository = _FakeNotificationRepository(
         NotificationPage(
           items: [_unreadLike('n1'), _unreadLike('n2'), _unreadFollow('n3')],
@@ -123,6 +126,7 @@ void main() {
     });
 
     tearDown(() async {
+      analytics.dispose();
       await repository.close();
     });
 
@@ -134,7 +138,7 @@ void main() {
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
           consumptionAnalytics: ConsumptionAnalyticsTracker(
-            analytics: const NoOpAnalyticsEventSink(),
+            analytics: () => analytics,
           ),
         );
         addTearDown(bloc.close);
@@ -186,7 +190,7 @@ void main() {
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
           consumptionAnalytics: ConsumptionAnalyticsTracker(
-            analytics: const NoOpAnalyticsEventSink(),
+            analytics: () => analytics,
           ),
         );
         addTearDown(bloc.close);
@@ -220,7 +224,7 @@ void main() {
         followRepository: followRepository,
         appBadgeClearer: const _NoopAppBadgeClearer(),
         consumptionAnalytics: ConsumptionAnalyticsTracker(
-          analytics: const NoOpAnalyticsEventSink(),
+          analytics: () => analytics,
         ),
       );
       addTearDown(bloc.close);

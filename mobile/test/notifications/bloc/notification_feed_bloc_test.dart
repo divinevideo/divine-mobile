@@ -8,7 +8,6 @@
 
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -20,6 +19,8 @@ import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/bloc/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/app_badge_service.dart';
+
+import '../../helpers/recording_consumption_analytics.dart';
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
@@ -82,14 +83,14 @@ void main() {
     late _MockNotificationRepository mockNotificationRepo;
     late _MockFollowRepository mockFollowRepo;
     late _MockAppBadgeClearer mockAppBadgeClearer;
-    late _RecordingAnalytics analytics;
+    late RecordingConsumptionAnalytics analytics;
     late StreamController<NotificationPage> snapshotController;
 
     setUp(() {
       mockNotificationRepo = _MockNotificationRepository();
       mockFollowRepo = _MockFollowRepository();
       mockAppBadgeClearer = _MockAppBadgeClearer();
-      analytics = _RecordingAnalytics();
+      analytics = RecordingConsumptionAnalytics();
       snapshotController = StreamController<NotificationPage>.broadcast();
 
       when(() => mockFollowRepo.isFollowing(any())).thenReturn(false);
@@ -125,7 +126,7 @@ void main() {
           followRepository: mockFollowRepo,
           appBadgeClearer: appBadgeClearer ?? mockAppBadgeClearer,
           consumptionAnalytics: ConsumptionAnalyticsTracker(
-            analytics: analytics,
+            analytics: () => analytics,
           ),
         );
 
@@ -135,7 +136,7 @@ void main() {
           followRepository: mockFollowRepo,
           appBadgeClearer: appBadgeClearer ?? mockAppBadgeClearer,
           consumptionAnalytics: ConsumptionAnalyticsTracker(
-            analytics: analytics,
+            analytics: () => analytics,
           ),
           filter: NotificationKind.follow,
         );
@@ -1225,9 +1226,9 @@ void main() {
         ],
         verify: (_) {
           expect(analytics.events, hasLength(1));
-          expect(analytics.events.single.name, 'follow_added');
+          expect(analytics.events.single.name, 'engagement_recorded');
           expect(analytics.events.single.parameters, {
-            'target_pubkey': _bobPubkey,
+            'action': 'follow_added',
           });
         },
       );
@@ -1265,7 +1266,9 @@ void main() {
         verify: (_) {
           verify(() => mockFollowRepo.follow(_bobPubkey)).called(1);
           expect(
-            analytics.events.where((event) => event.name == 'follow_added'),
+            analytics.events.where(
+              (event) => event.name == 'engagement_recorded',
+            ),
             hasLength(1),
           );
         },
@@ -1389,18 +1392,4 @@ void main() {
       );
     });
   });
-}
-
-typedef _RecordedEvent = ({String name, Map<String, Object> parameters});
-
-class _RecordingAnalytics extends NoOpAnalyticsEventSink {
-  final events = <_RecordedEvent>[];
-
-  @override
-  Future<void> logEvent({
-    required String name,
-    required Map<String, Object> parameters,
-  }) async {
-    events.add((name: name, parameters: parameters));
-  }
 }
