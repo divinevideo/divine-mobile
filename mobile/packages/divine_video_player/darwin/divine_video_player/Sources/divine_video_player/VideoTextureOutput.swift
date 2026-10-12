@@ -524,8 +524,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     }
 
     /// Delivers `pixelBuffer`, the frame for `itemTime`. `frameTime` is the
-    /// frame's own presentation time when known, which frame effects key
-    /// their history on; the display tick that pulled it can lie after it.
+    /// frame's own presentation time when known; the display tick that pulled
+    /// it can lie after it. Frame effects are drawn at the time
+    /// `HeldFrameEffects` picks: the frame's own, or `itemTime` once it is held
+    /// or late.
     private func deliverFrame(
         _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
     ) {
