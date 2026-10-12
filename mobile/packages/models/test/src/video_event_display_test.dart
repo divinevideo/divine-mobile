@@ -58,6 +58,81 @@ void main() {
     });
   });
 
+  group('VideoEvent.chipCaptionDescription', () {
+    test('drops the hashtag line the Vine archive import appends', () {
+      expect(
+        build(
+          content:
+              '#windowsxp #glenn\n\nOriginal stats: 3 loops - 2 likes'
+              '\n\n#windowsxp #glenn',
+          rawTags: const {'platform': 'vine'},
+          hashtags: const ['windowsxp', 'glenn'],
+        ).chipCaptionDescription,
+        equals('Original stats: 3 loops - 2 likes'),
+      );
+    });
+
+    test('drops hashtags that end a sentence and keeps the sentence', () {
+      expect(
+        build(
+          content: 'Two startup sounds together. #windowsxp #outoftune',
+          hashtags: const ['windowsxp', 'outoftune'],
+        ).chipCaptionDescription,
+        equals('Two startup sounds together.'),
+      );
+    });
+
+    test('keeps hashtags inside a sentence', () {
+      expect(
+        build(
+          content: 'I love #pizza so much',
+          hashtags: const ['pizza'],
+        ).chipCaptionDescription,
+        equals('I love #pizza so much'),
+      );
+    });
+
+    test('matches chips without regard to case', () {
+      expect(
+        build(
+          content: 'Caption #WindowsXP',
+          hashtags: const ['windowsxp'],
+        ).chipCaptionDescription,
+        equals('Caption'),
+      );
+    });
+
+    test('keeps trailing hashtags that are not chips', () {
+      expect(
+        build(
+          content: 'Caption #notachip #glenn',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('Caption #notachip'),
+      );
+    });
+
+    test('drops the synthetic classic hashtag for an original Vine', () {
+      expect(
+        build(
+          content: 'Caption #classic',
+          rawTags: const {'platform': 'vine'},
+        ).chipCaptionDescription,
+        equals('Caption'),
+      );
+    });
+
+    test('keeps blank lines between remaining paragraphs', () {
+      expect(
+        build(
+          content: 'First\n\nSecond',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond'),
+      );
+    });
+  });
+
   group('VideoEvent.captionTitle', () {
     test('returns the title for a non-classic video', () {
       expect(

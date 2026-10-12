@@ -1185,6 +1185,35 @@ class VideoEvent {
   String? get captionTitle =>
       isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
 
+  /// Description to show in surfaces that render [allHashtags] as chips.
+  ///
+  /// Drops hashtags that end a line when each is already a chip, and the line
+  /// itself once nothing else is left on it. The Vine archive import repeats
+  /// the caption's hashtags on a line of their own, so the raw description
+  /// would show them as text twice above the chips. Hashtags inside a
+  /// sentence stay, since removing them would break the sentence.
+  late final String chipCaptionDescription = _withoutTrailingChipHashtags(
+    displayContent,
+  );
+
+  static final _trailingHashtag = RegExp(r'(?:^|\s)#([^\s#]+)\s*$');
+
+  String _withoutTrailingChipHashtags(String text) {
+    final chips = {for (final tag in allHashtags) tag.toLowerCase()};
+    final lines = <String>[];
+    for (final line in text.split('\n')) {
+      var kept = line;
+      while (true) {
+        final match = _trailingHashtag.firstMatch(kept);
+        if (match == null || !chips.contains(match[1]!.toLowerCase())) break;
+        kept = kept.substring(0, match.start);
+      }
+      if (kept.trim().isEmpty && line.trim().isNotEmpty) continue;
+      lines.add(kept.trimRight());
+    }
+    return lines.join('\n').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  }
+
   /// Zalgo-safe embedded author name for display.
   ///
   /// Returns `null` when no embedded author name is set. Profile display-name
