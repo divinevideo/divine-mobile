@@ -353,7 +353,9 @@ void main() {
           isEmpty,
         );
 
+        // Still shown after the cleared field's debounced empty query.
         await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text(tooLongCopy), findsOneWidget);
       });
 
       testWidgets('shows a character counter once a tag gets long', (

@@ -210,6 +210,34 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a too-long notice when the cleared field sends an empty query',
+        build: createBloc,
+        seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),
+        act: (b) => b.add(const TagsPickerQueryChanged('')),
+        wait: debounce,
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagTooLong));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'clears a too-long notice once a new query is typed',
+        build: createBloc,
+        seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),
+        act: (b) => b.add(const TagsPickerQueryChanged('fu')),
+        wait: debounce,
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.searching)
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.success)
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
         'clears search state immediately on TagsPickerSearchCleared',
         build: createBloc,
         seed: () => const TagsPickerState(

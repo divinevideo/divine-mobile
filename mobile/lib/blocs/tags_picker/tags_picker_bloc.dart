@@ -145,12 +145,13 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   ) async {
     final query = event.query.trim();
     if (query.isEmpty) {
+      // Every commit clears the field, which lands here one debounce later,
+      // so the notice is kept until the user types a new tag.
       emit(
         state.copyWith(
           status: TagsPickerStatus.initial,
           query: '',
           searchResults: const [],
-          notice: TagsPickerNotice.none,
         ),
       );
       return;
