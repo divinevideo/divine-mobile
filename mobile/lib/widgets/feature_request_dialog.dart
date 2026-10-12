@@ -11,10 +11,12 @@ import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 import 'package:openvine/widgets/support_form_actions.dart';
 import 'package:openvine/widgets/support_form_fields.dart';
 import 'package:openvine/widgets/support_public_submission_notice.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Route for collecting and submitting feature requests.
 class FeatureRequestScreen extends StatefulWidget {
@@ -195,12 +197,17 @@ class FeatureRequestActions extends StatelessWidget {
   final String? userPubkey;
 
   void _submit(BuildContext context, FeatureRequestFields fields) {
-    context.read<FeatureRequestCubit>().submit(
-      subject: fields.subject.text,
-      description: fields.description.text,
-      usefulness: fields.usefulness.text,
-      whenToUse: fields.whenToUse.text,
-      userPubkey: userPubkey,
+    runDetached(
+      context.read<FeatureRequestCubit>().submit(
+        subject: fields.subject.text,
+        description: fields.description.text,
+        usefulness: fields.usefulness.text,
+        whenToUse: fields.whenToUse.text,
+        userPubkey: userPubkey,
+      ),
+      'submit feature request',
+      logName: 'FeatureRequestActions',
+      category: LogCategory.system,
     );
   }
 

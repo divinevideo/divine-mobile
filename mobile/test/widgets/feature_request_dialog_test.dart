@@ -4,12 +4,16 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/feature_request/feature_request_cubit.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
 import 'package:openvine/widgets/support_public_submission_notice.dart';
 
@@ -17,6 +21,40 @@ import '../helpers/keyboard_content_insertion.dart';
 
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+  final recordedReasons = <String?>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+    recordedReasons.add(reason);
+  }
+}
+
+/// A cubit whose `submit` rejects, which the real one never does after its
+/// first emit, so the view's own handling of a rejected future is reachable.
+class _RejectingFeatureRequestCubit extends FeatureRequestCubit {
+  @override
+  Future<void> submit({
+    required String subject,
+    required String description,
+    required String usefulness,
+    required String whenToUse,
+    String? userPubkey,
+  }) => Future<void>.error(StateError('submit invariant'));
+}
 
 Future<bool> _submitSucceeds({
   required String subject,
@@ -132,9 +170,7 @@ void main() {
       final fields = tester.widgetList<TextField>(find.byType(TextField));
       expect(fields, hasLength(4));
       expect(
-        fields.every(
-          (field) => field.contentInsertionConfiguration != null,
-        ),
+        fields.every((field) => field.contentInsertionConfiguration != null),
         isTrue,
       );
 
@@ -333,6 +369,61 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.supportRequestFeature), findsNothing);
+    });
+  });
+
+  group(FeatureRequestActions, () {
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
+    late FeatureRequestFields fields;
+
+    setUp(() {
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+      fields = FeatureRequestFields()
+        ..subject.text = 'Subject'
+        ..description.text = 'Description';
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
+      fields.dispose();
+    });
+
+    testWidgets('reports a programming error thrown while submitting', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<FeatureRequestCubit>(
+              create: (_) => _RejectingFeatureRequestCubit(),
+              child: FeatureRequestActions(fields: fields),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text(l10n.featureRequestSendRequest));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(reporter.recordedErrors, hasLength(1));
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
+      expect(
+        reporter.recordedReasons.single,
+        equals('runDetached FeatureRequestActions'),
+      );
     });
   });
 }
