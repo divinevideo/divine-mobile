@@ -148,7 +148,7 @@ void main() {
           final router = GoRouter.of(
             tester.element(find.byType(Scaffold).first),
           );
-          final initialProfileRoute = router.push<void>(profilePath);
+          final initialProfilePopped = router.push<void>(profilePath);
           await pumpUntilSettled(tester);
           logPhase('Pushed to User A profile: $profilePath');
 
@@ -208,7 +208,7 @@ void main() {
           // Go back from User A's profile
           router.pop();
           await pumpUntilSettled(tester);
-          await _expectRoutePopped(initialProfileRoute, 'User A profile');
+          await _expectRoutePopped(initialProfilePopped, 'User A profile');
 
           await tapBottomNavTab(tester, 'explore_tab');
           await pumpUntilSettled(tester);
@@ -218,7 +218,7 @@ void main() {
           // ProfileFeedCubit. If the repository serves an instant cached reseed,
           // the cubit follows it with a skip-cache refresh, so the deleted video is
           // removed once Funnelcake filters it.
-          final refreshedProfileRoute = router.push<void>(profilePath);
+          final refreshedProfilePopped = router.push<void>(profilePath);
           await pumpUntilSettled(tester, maxSeconds: 15);
           logPhase('Back on User A profile');
 
@@ -251,7 +251,7 @@ void main() {
 
           router.pop();
           await pumpUntilSettled(tester);
-          await _expectRoutePopped(refreshedProfileRoute, 'refreshed profile');
+          await _expectRoutePopped(refreshedProfilePopped, 'refreshed profile');
 
           // ── Cleanup ──
           drainAsyncErrors(tester);
