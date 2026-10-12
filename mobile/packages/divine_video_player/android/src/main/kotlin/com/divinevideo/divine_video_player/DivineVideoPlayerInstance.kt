@@ -1561,6 +1561,11 @@ internal class DivineVideoPlayerInstance(
                     } else if (next == null) {
                         // Nothing to filter again from; the player takes the
                         // sound back, as it did before loops could reshape.
+                        DivineVideoPlayerLog.warning(
+                            "$logTarget loop audio could not be filtered " +
+                                "again; the player takes the sound back",
+                            name = "DivineVideoPlayer.AudioLoop",
+                        )
                         releaseClipAudioLoop()
                         startClipAudioLoop(lastClipsRaw, clipCount)
                     } else {
