@@ -49,7 +49,8 @@ class _FakeVideoEventResolver implements VideoEventResolver {
     resolvedIds.add(eventId);
     allowOwnContentBypassValues.add(allowOwnContentBypass);
     requireRawTagsValues.add(requireRawTags);
-    if (error case final error?) throw error;
+    final failure = error;
+    if (failure != null) throw failure;
     return video;
   }
 }
@@ -749,6 +750,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(resolver.resolvedIds, [videoId]);
       expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
