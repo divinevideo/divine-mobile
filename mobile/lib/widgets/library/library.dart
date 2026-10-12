@@ -7,6 +7,7 @@ export 'clips_tab.dart';
 export 'draft_status_badge.dart';
 export 'drafts_tab.dart';
 export 'empty_library_state.dart';
+export 'gallery_clip_import.dart';
 export 'library_toolbar.dart';
 export 'pinch_zoom_grid.dart';
 export 'scheduled_section.dart';

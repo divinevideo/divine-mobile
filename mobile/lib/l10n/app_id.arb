@@ -2136,6 +2136,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Tambahkan klip dari galerimu",
+    "libraryGalleryImportExplainerTitle": "Kembalikan klipmu",
+    "libraryGalleryImportExplainerSubtitle": "Kamu hanya bisa mengembalikan klip yang kamu rekam dengan kamera Divine. Kami memverifikasi setiap klip dengan C2PA dulu, supaya tidak ada yang lain masuk ke klipmu.",
+    "libraryGalleryImportExplainerButton": "Pilih klip",
+    "libraryGalleryImportTitle": "Tambahkan dari galeri",
+    "libraryGalleryImportItemWaiting": "Menunggu…",
+    "libraryGalleryImportItemChecking": "Memeriksa…",
+    "libraryGalleryImportItemAdded": "Ditambahkan ke klipmu",
+    "libraryGalleryImportItemAlreadyInLibrary": "Sudah ada di klipmu",
+    "libraryGalleryImportItemNotVerified": "Tidak dapat memastikan klip ini direkam dengan Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Tidak bisa dicek sekarang. Coba lagi nanti.",
+    "libraryGalleryImportDone": "Selesai",
     "libraryNoClipsYetSubtitle": "Klip video yang kamu rekam akan muncul di sini",
     "libraryNoClipsYetTitle": "Belum ada klip",
     "libraryNoDraftsYetSubtitle": "Video yang kamu simpan sebagai draf akan muncul di sini",

@@ -31,6 +31,7 @@ void main() {
       VoidCallback? onLeadingPressed,
       VoidCallback? onOpenSortMenu,
       VoidCallback? onEnterSelectionMode,
+      VoidCallback? onImportFromGallery,
       bool isTrashFilterActive = false,
       VoidCallback? onEmptyTrash,
       VoidCallback? onManageActiveCategory,
@@ -56,6 +57,7 @@ void main() {
                 onLeadingPressed: onLeadingPressed ?? () {},
                 onOpenSortMenu: onOpenSortMenu ?? () {},
                 onEnterSelectionMode: onEnterSelectionMode ?? () {},
+                onImportFromGallery: onImportFromGallery,
                 isTrashFilterActive: isTrashFilterActive,
                 onEmptyTrash: onEmptyTrash,
                 onManageActiveCategory: onManageActiveCategory,
@@ -208,6 +210,29 @@ void main() {
 
         expect(find.text(en.libraryTrashEmptyAllLabel), findsNothing);
         expect(iconButton(DivineIconName.dotsThree), findsNothing);
+      });
+
+      testWidgets('shows the gallery import action only where offered', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        expect(iconButton(DivineIconName.images), findsNothing);
+
+        await tester.pumpWidget(buildWidget(onImportFromGallery: () {}));
+        expect(
+          find.bySemanticsLabel(en.libraryGalleryImportLabel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('leaves the gallery import action out while selecting', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(isLibrarySelectionMode: true, onImportFromGallery: () {}),
+        );
+
+        expect(iconButton(DivineIconName.images), findsNothing);
       });
 
       testWidgets('shows the manage action only for a category filter', (
@@ -365,6 +390,11 @@ void main() {
         for (var width = 280.0; width <= 520.0; width += 5) {
           for (final build in [
             () => buildWidget(width: width, onManageActiveCategory: () {}),
+            () => buildWidget(
+              width: width,
+              onImportFromGallery: () {},
+              onManageActiveCategory: () {},
+            ),
             () => buildWidget(
               width: width,
               isLibrarySelectionMode: true,
@@ -540,6 +570,25 @@ void main() {
         expect(find.text(en.librarySelectClipsSemanticLabel), findsNothing);
       });
 
+      testWidgets('gallery import row triggers onImportFromGallery', (
+        tester,
+      ) async {
+        var pressed = false;
+        await tester.pumpWidget(
+          buildWidget(
+            width: narrowWidth,
+            onImportFromGallery: () => pressed = true,
+          ),
+        );
+
+        await tester.tap(iconButton(DivineIconName.dotsThree));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(en.libraryGalleryImportLabel));
+        await tester.pumpAndSettle();
+
+        expect(pressed, isTrue);
+      });
+
       testWidgets('manage row triggers onManageActiveCategory', (tester) async {
         var pressed = false;
         await tester.pumpWidget(
@@ -668,6 +717,20 @@ void main() {
         );
 
         await tester.tap(find.text(en.librarySelect));
+        expect(pressed, isTrue);
+      });
+
+      testWidgets('gallery import button triggers onImportFromGallery', (
+        tester,
+      ) async {
+        var pressed = false;
+        await tester.pumpWidget(
+          buildWidget(onImportFromGallery: () => pressed = true),
+        );
+
+        await tester.tap(iconButton(DivineIconName.images));
+        await tester.pump();
+
         expect(pressed, isTrue);
       });
 

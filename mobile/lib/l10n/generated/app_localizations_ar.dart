@@ -6549,6 +6549,46 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'إضافة مقاطع من معرض الصور';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'استعد مقاطعك';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'يمكنك استعادة المقاطع التي صوّرتها بكاميرا Divine فقط. نتحقق من كل مقطع أولًا عبر C2PA، حتى لا يدخل مقاطعك شيء آخر.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'اختيار مقاطع';
+
+  @override
+  String get libraryGalleryImportTitle => 'إضافة من معرض الصور';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'في الانتظار…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'جارٍ التحقق…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'تمت إضافته إلى مقاطعك';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'موجود بالفعل في مقاطعك';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'تعذّر التأكد من أنه صُوّر بـ Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'تعذّر التحقق الآن. حاول مرة أخرى لاحقًا.';
+
+  @override
+  String get libraryGalleryImportDone => 'تم';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

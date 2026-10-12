@@ -6632,6 +6632,46 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Добави клипове от галерията си';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Върни клиповете си';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Можеш да върнеш само клипове, заснети с камерата на Divine. Първо проверяваме всеки от тях с C2PA, за да не попадне нищо друго сред клиповете ти.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Избери клипове';
+
+  @override
+  String get libraryGalleryImportTitle => 'Добави от галерията';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Изчаква…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Проверява се…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Добавен към клиповете ти';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'Вече е в клиповете ти';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Не успяхме да потвърдим, че е заснет с Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Не може да се провери сега. Опитай пак по-късно.';
+
+  @override
+  String get libraryGalleryImportDone => 'Готово';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

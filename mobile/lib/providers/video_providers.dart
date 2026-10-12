@@ -7,6 +7,7 @@ import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
+import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
@@ -56,6 +57,7 @@ import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -487,6 +489,25 @@ final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
 /// driven by a fake in widget tests; `ImagePicker` talks to a platform plugin
 /// that no test binding provides.
 final dmVideoPickerProvider = Provider<ImagePicker>((ref) => ImagePicker());
+
+/// Gallery picker used to bring saved clips back into the clip library.
+///
+/// A provider for the same reason as [dmVideoPickerProvider]: widget tests
+/// drive the library's import path with a fake.
+final libraryVideoPickerProvider = Provider<ImagePicker>(
+  (ref) => ImagePicker(),
+);
+
+/// Reads the preview frame of a video picked for the clip library's gallery
+/// import, so the import page can show which clip each row is.
+///
+/// A provider so widget tests can replace the native thumbnailer.
+final galleryClipThumbnailLoaderProvider = Provider<GalleryClipThumbnailLoader>(
+  (ref) =>
+      (path) async =>
+          (await VideoThumbnailService.extractThumbnailBytes(videoPath: path))
+              ?.bytes,
+);
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].

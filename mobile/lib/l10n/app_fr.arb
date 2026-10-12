@@ -2139,6 +2139,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Ajouter des clips depuis ta galerie",
+    "libraryGalleryImportExplainerTitle": "Récupère tes clips",
+    "libraryGalleryImportExplainerSubtitle": "Tu peux seulement récupérer les clips filmés avec la caméra Divine. On vérifie chacun avec C2PA d'abord, pour que rien d'autre n'arrive dans tes clips.",
+    "libraryGalleryImportExplainerButton": "Choisir des clips",
+    "libraryGalleryImportTitle": "Ajouter depuis la galerie",
+    "libraryGalleryImportItemWaiting": "En attente…",
+    "libraryGalleryImportItemChecking": "Vérification…",
+    "libraryGalleryImportItemAdded": "Ajouté à tes clips",
+    "libraryGalleryImportItemAlreadyInLibrary": "Déjà dans tes clips",
+    "libraryGalleryImportItemNotVerified": "Impossible de confirmer qu'il a été filmé avec Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Vérification impossible pour l'instant. Réessaie plus tard.",
+    "libraryGalleryImportDone": "Terminé",
     "libraryNoClipsYetSubtitle": "Tes clips enregistrés apparaîtront ici",
     "libraryNoClipsYetTitle": "Pas encore de clips",
     "libraryNoDraftsYetSubtitle": "Les vidéos enregistrées en brouillon apparaîtront ici",

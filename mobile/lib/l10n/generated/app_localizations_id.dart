@@ -6494,6 +6494,45 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Tambahkan klip dari galerimu';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Kembalikan klipmu';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Kamu hanya bisa mengembalikan klip yang kamu rekam dengan kamera Divine. Kami memverifikasi setiap klip dengan C2PA dulu, supaya tidak ada yang lain masuk ke klipmu.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Pilih klip';
+
+  @override
+  String get libraryGalleryImportTitle => 'Tambahkan dari galeri';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Menunggu…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Memeriksa…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Ditambahkan ke klipmu';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'Sudah ada di klipmu';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Tidak dapat memastikan klip ini direkam dengan Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Tidak bisa dicek sekarang. Coba lagi nanti.';
+
+  @override
+  String get libraryGalleryImportDone => 'Selesai';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

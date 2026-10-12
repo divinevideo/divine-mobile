@@ -3932,6 +3932,18 @@
       }
     }
   },
+  "libraryGalleryImportLabel": "మీ గ్యాలరీ నుండి క్లిప్‌లను జోడించండి",
+  "libraryGalleryImportExplainerTitle": "మీ క్లిప్‌లను తిరిగి తెచ్చుకోండి",
+  "libraryGalleryImportExplainerSubtitle": "Divine కెమెరాతో మీరు చిత్రీకరించిన క్లిప్‌లను మాత్రమే తిరిగి తెచ్చుకోవచ్చు. మీ క్లిప్‌లలో వేరేదీ చేరకుండా ముందుగా ప్రతి దాన్ని C2PAతో ధృవీకరిస్తాం.",
+  "libraryGalleryImportExplainerButton": "క్లిప్‌లను ఎంచుకోండి",
+  "libraryGalleryImportTitle": "గ్యాలరీ నుండి జోడించండి",
+  "libraryGalleryImportItemWaiting": "వేచి ఉంది…",
+  "libraryGalleryImportItemChecking": "తనిఖీ చేస్తోంది…",
+  "libraryGalleryImportItemAdded": "మీ క్లిప్‌లకు జోడించబడింది",
+  "libraryGalleryImportItemAlreadyInLibrary": "ఇప్పటికే మీ క్లిప్‌లలో ఉంది",
+  "libraryGalleryImportItemNotVerified": "Divineతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం",
+  "libraryGalleryImportItemCheckUnavailable": "ప్రస్తుతం తనిఖీ చేయడం సాధ్యపడలేదు. తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "libraryGalleryImportDone": "పూర్తయింది",
   "libraryClipsDeletedCount": "{count, plural, =1{1 క్లిప్ తొలగించబడింది} other{{count}క్లిప్‌లు తొలగించబడ్డాయి}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

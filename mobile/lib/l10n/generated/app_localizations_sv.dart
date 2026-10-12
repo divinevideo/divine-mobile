@@ -6562,6 +6562,46 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Lägg till klipp från ditt galleri';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Hämta tillbaka dina klipp';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Du kan bara hämta tillbaka klipp du har filmat med Divine-kameran. Vi verifierar varje klipp med C2PA först, så att inget annat hamnar bland dina klipp.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Välj klipp';
+
+  @override
+  String get libraryGalleryImportTitle => 'Lägg till från galleriet';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Väntar…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Kollar…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Tillagt i dina klipp';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'Finns redan bland dina klipp';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Kunde inte bekräfta att det är filmat med Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Går inte att kolla just nu. Försök igen senare.';
+
+  @override
+  String get libraryGalleryImportDone => 'Klar';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

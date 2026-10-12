@@ -6770,6 +6770,48 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel =>
+      'మీ గ్యాలరీ నుండి క్లిప్‌లను జోడించండి';
+
+  @override
+  String get libraryGalleryImportExplainerTitle =>
+      'మీ క్లిప్‌లను తిరిగి తెచ్చుకోండి';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Divine కెమెరాతో మీరు చిత్రీకరించిన క్లిప్‌లను మాత్రమే తిరిగి తెచ్చుకోవచ్చు. మీ క్లిప్‌లలో వేరేదీ చేరకుండా ముందుగా ప్రతి దాన్ని C2PAతో ధృవీకరిస్తాం.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'క్లిప్‌లను ఎంచుకోండి';
+
+  @override
+  String get libraryGalleryImportTitle => 'గ్యాలరీ నుండి జోడించండి';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'వేచి ఉంది…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'తనిఖీ చేస్తోంది…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'మీ క్లిప్‌లకు జోడించబడింది';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'ఇప్పటికే మీ క్లిప్‌లలో ఉంది';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Divineతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'ప్రస్తుతం తనిఖీ చేయడం సాధ్యపడలేదు. తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryGalleryImportDone => 'పూర్తయింది';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -2538,6 +2538,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "ክሊፖችን ከጋለሪዎ ያክሉ",
+    "libraryGalleryImportExplainerTitle": "ክሊፖችዎን ይመልሱ",
+    "libraryGalleryImportExplainerSubtitle": "መመለስ የሚችሉት በDivine ካሜራ የቀረጿቸውን ክሊፖች ብቻ ነው። ሌላ ነገር ወደ ክሊፖችዎ እንዳይገባ እያንዳንዱን በመጀመሪያ በC2PA እናረጋግጣለን።",
+    "libraryGalleryImportExplainerButton": "ክሊፖችን ይምረጡ",
+    "libraryGalleryImportTitle": "ከጋለሪ ያክሉ",
+    "libraryGalleryImportItemWaiting": "በመጠባበቅ ላይ…",
+    "libraryGalleryImportItemChecking": "በማረጋገጥ ላይ…",
+    "libraryGalleryImportItemAdded": "ወደ ክሊፖችዎ ታክሏል",
+    "libraryGalleryImportItemAlreadyInLibrary": "አስቀድሞ በክሊፖችዎ ውስጥ አለ",
+    "libraryGalleryImportItemNotVerified": "በDivine መቀረጹን ማረጋገጥ አልተቻለም",
+    "libraryGalleryImportItemCheckUnavailable": "አሁን ማረጋገጥ አልተቻለም። ቆይተው እንደገና ይሞክሩ።",
+    "libraryGalleryImportDone": "ተጠናቋል",
     "libraryClipsDeletedCount": "{count, plural, =1{{count} ክሊፕ ተሰርዟል} other{{count} ክሊፖች ተሰርዘዋል}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {

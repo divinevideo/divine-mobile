@@ -6535,6 +6535,46 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Thêm clip từ thư viện ảnh';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Lấy lại clip của bạn';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Bạn chỉ có thể lấy lại các clip đã quay bằng camera Divine. Chúng tôi xác minh từng clip bằng C2PA trước, để không có gì khác lọt vào clip của bạn.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Chọn clip';
+
+  @override
+  String get libraryGalleryImportTitle => 'Thêm từ thư viện ảnh';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'Đang chờ…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Đang kiểm tra…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Đã thêm vào clip của bạn';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'Đã có trong clip của bạn';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Không thể xác nhận clip được quay bằng Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Hiện không kiểm tra được. Thử lại sau nhé.';
+
+  @override
+  String get libraryGalleryImportDone => 'Xong';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

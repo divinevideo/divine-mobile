@@ -3324,6 +3324,18 @@
       }
     }
   },
+  "libraryGalleryImportLabel": "从相册添加片段",
+  "libraryGalleryImportExplainerTitle": "找回你的片段",
+  "libraryGalleryImportExplainerSubtitle": "你只能找回用 Divine 相机拍摄的片段。我们会先用 C2PA 逐一验证，确保不会有其他内容进入你的片段库。",
+  "libraryGalleryImportExplainerButton": "选择片段",
+  "libraryGalleryImportTitle": "从相册添加",
+  "libraryGalleryImportItemWaiting": "等待中…",
+  "libraryGalleryImportItemChecking": "正在检查…",
+  "libraryGalleryImportItemAdded": "已加入你的片段库",
+  "libraryGalleryImportItemAlreadyInLibrary": "已在你的片段库中",
+  "libraryGalleryImportItemNotVerified": "无法确认是用 Divine 拍摄的",
+  "libraryGalleryImportItemCheckUnavailable": "现在无法检查，请稍后再试。",
+  "libraryGalleryImportDone": "完成",
   "libraryClipsDeletedCount": "{count, plural, =1{已删除 1 个片段} other{已删除 {count} 个片段}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

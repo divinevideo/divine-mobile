@@ -6640,6 +6640,45 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'Aggiungi clip dalla tua galleria';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'Recupera i tuoi clip';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'Puoi recuperare solo i clip girati con la fotocamera di Divine. Prima li verifichiamo uno per uno con C2PA, così nei tuoi clip non finisce nient\'altro.';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'Scegli i clip';
+
+  @override
+  String get libraryGalleryImportTitle => 'Aggiungi dalla galleria';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'In attesa…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'Controllo in corso…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'Aggiunto ai tuoi clip';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary => 'Già nei tuoi clip';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'Impossibile confermare che sia stato girato con Divine';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'Impossibile controllare adesso. Riprova più tardi.';
+
+  @override
+  String get libraryGalleryImportDone => 'Fatto';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

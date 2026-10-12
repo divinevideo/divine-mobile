@@ -2139,6 +2139,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Lägg till klipp från ditt galleri",
+    "libraryGalleryImportExplainerTitle": "Hämta tillbaka dina klipp",
+    "libraryGalleryImportExplainerSubtitle": "Du kan bara hämta tillbaka klipp du har filmat med Divine-kameran. Vi verifierar varje klipp med C2PA först, så att inget annat hamnar bland dina klipp.",
+    "libraryGalleryImportExplainerButton": "Välj klipp",
+    "libraryGalleryImportTitle": "Lägg till från galleriet",
+    "libraryGalleryImportItemWaiting": "Väntar…",
+    "libraryGalleryImportItemChecking": "Kollar…",
+    "libraryGalleryImportItemAdded": "Tillagt i dina klipp",
+    "libraryGalleryImportItemAlreadyInLibrary": "Finns redan bland dina klipp",
+    "libraryGalleryImportItemNotVerified": "Kunde inte bekräfta att det är filmat med Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Går inte att kolla just nu. Försök igen senare.",
+    "libraryGalleryImportDone": "Klar",
     "libraryNoClipsYetSubtitle": "Dina inspelade videoklipp visas här",
     "libraryNoClipsYetTitle": "Inga klipp än",
     "libraryNoDraftsYetSubtitle": "Videor du sparar som utkast visas här",

@@ -6576,6 +6576,46 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get libraryGalleryImportLabel => 'اپنی گیلری سے کلپس شامل کریں';
+
+  @override
+  String get libraryGalleryImportExplainerTitle => 'اپنی کلپس واپس لائیں';
+
+  @override
+  String get libraryGalleryImportExplainerSubtitle =>
+      'آپ صرف وہی کلپس واپس لا سکتے ہیں جو آپ نے Divine کیمرے سے بنائی ہیں۔ ہم پہلے ہر کلپ کی C2PA سے تصدیق کرتے ہیں تاکہ آپ کی کلپس میں کچھ اور شامل نہ ہو۔';
+
+  @override
+  String get libraryGalleryImportExplainerButton => 'کلپس منتخب کریں';
+
+  @override
+  String get libraryGalleryImportTitle => 'گیلری سے شامل کریں';
+
+  @override
+  String get libraryGalleryImportItemWaiting => 'انتظار میں…';
+
+  @override
+  String get libraryGalleryImportItemChecking => 'جانچ ہو رہی ہے…';
+
+  @override
+  String get libraryGalleryImportItemAdded => 'آپ کی کلپس میں شامل ہو گئی';
+
+  @override
+  String get libraryGalleryImportItemAlreadyInLibrary =>
+      'پہلے سے آپ کی کلپس میں ہے';
+
+  @override
+  String get libraryGalleryImportItemNotVerified =>
+      'تصدیق نہیں ہو سکی کہ یہ Divine سے بنی ہے';
+
+  @override
+  String get libraryGalleryImportItemCheckUnavailable =>
+      'ابھی جانچ نہیں ہو سکی۔ بعد میں دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryGalleryImportDone => 'ہو گیا';
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

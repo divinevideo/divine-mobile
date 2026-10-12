@@ -2139,6 +2139,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Adaugă clipuri din galeria ta",
+    "libraryGalleryImportExplainerTitle": "Adu-ți clipurile înapoi",
+    "libraryGalleryImportExplainerSubtitle": "Poți aduce înapoi doar clipurile filmate cu camera Divine. Mai întâi verificăm fiecare clip cu C2PA, ca să nu ajungă altceva printre clipurile tale.",
+    "libraryGalleryImportExplainerButton": "Alege clipuri",
+    "libraryGalleryImportTitle": "Adaugă din galerie",
+    "libraryGalleryImportItemWaiting": "În așteptare…",
+    "libraryGalleryImportItemChecking": "Se verifică…",
+    "libraryGalleryImportItemAdded": "Adăugat la clipurile tale",
+    "libraryGalleryImportItemAlreadyInLibrary": "Este deja în clipurile tale",
+    "libraryGalleryImportItemNotVerified": "Nu am putut confirma că a fost filmat cu Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Nu se poate verifica acum. Încearcă din nou mai târziu.",
+    "libraryGalleryImportDone": "Gata",
     "libraryNoClipsYetSubtitle": "Clipurile înregistrate apar aici",
     "libraryNoClipsYetTitle": "Încă nu ai clipuri",
     "libraryNoDraftsYetSubtitle": "Videoclipurile salvate ca ciornă apar aici",

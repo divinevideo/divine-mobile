@@ -2139,6 +2139,18 @@
             }
         }
     },
+    "libraryGalleryImportLabel": "Dodaj klipy z galerii",
+    "libraryGalleryImportExplainerTitle": "Przywróć swoje klipy",
+    "libraryGalleryImportExplainerSubtitle": "Możesz przywrócić tylko klipy nagrane kamerą Divine. Najpierw sprawdzamy każdy z nich przez C2PA, żeby nic innego nie trafiło do twoich klipów.",
+    "libraryGalleryImportExplainerButton": "Wybierz klipy",
+    "libraryGalleryImportTitle": "Dodaj z galerii",
+    "libraryGalleryImportItemWaiting": "Czeka…",
+    "libraryGalleryImportItemChecking": "Sprawdzanie…",
+    "libraryGalleryImportItemAdded": "Dodano do twoich klipów",
+    "libraryGalleryImportItemAlreadyInLibrary": "Już jest w twoich klipach",
+    "libraryGalleryImportItemNotVerified": "Nie udało się potwierdzić, że nagrano go w Divine",
+    "libraryGalleryImportItemCheckUnavailable": "Nie można teraz sprawdzić. Spróbuj ponownie później.",
+    "libraryGalleryImportDone": "Gotowe",
     "libraryNoClipsYetSubtitle": "Nagrane klipy wideo pojawią się tutaj",
     "libraryNoClipsYetTitle": "Brak klipów",
     "libraryNoDraftsYetSubtitle": "Wideo zapisane jako wersja robocza pojawi się tutaj",
