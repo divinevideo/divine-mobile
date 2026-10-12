@@ -76,6 +76,8 @@ const _secretKey =
 const _poolRelayUrl = 'wss://pool.example';
 const _indexerUrl = 'wss://indexer.example';
 const _inboxRelayUrl = 'wss://inbox.example';
+const _outboxRelayUrl = 'wss://outbox.example';
+const _busyOutsideUrl = 'wss://busy-outside.example';
 
 /// A [DmRepository] over a real [NostrClient] and relay pool: one pooled
 /// relay, and a [_ScriptedRelay] for each temp relay a read dials.
@@ -280,6 +282,69 @@ void main() {
           isNot(contains('not every relay settled')),
         ),
       );
+    },
+  );
+  test(
+    'a write-relay leg skipped for want of a query slot is logged as never '
+    'leaving this device, and still holds the invite (#10004, #7317)',
+    () async {
+      unawaited(LogCaptureService().clearAllLogs());
+      final h = await _harness();
+      final recipient = await h.nostr.ensurePublicKey();
+      // The recipient advertises a write relay outside the pool and the
+      // indexer, and no inbox list anywhere.
+      final relayList = (await h.nostr.nostrSigner.signEvent(
+        Event(recipient, EventKind.relayListMetadata, const [
+          ['r', _outboxRelayUrl],
+        ], ''),
+      ))!;
+
+      // Reads that ask only an outside relay hold every slot of the outside
+      // pool, so the indexer and write-relay legs cannot get one.
+      final busy = Future.wait([
+        for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+          h.client.readEvents(
+            [
+              Filter(kinds: const [EventKind.textNote]),
+            ],
+            useCache: false,
+            tempRelays: const [_busyOutsideUrl],
+            relayTypes: const [RelayType.temp],
+            timeout: const Duration(seconds: 8),
+          ),
+      ]);
+      final busyRelay = await _dialled(h.tempRelays, _busyOutsideUrl);
+      expect(busyRelay, isNotNull);
+      await busyRelay!.awaitReq(NostrClient.maxConcurrentQueries - 1);
+
+      final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
+      // The pool leg answers with the relay list and no inbox list.
+      final poolSub = await h.pooled.awaitReq(0);
+      await h.pooled.deliver(['EVENT', poolSub, relayList.toJson()]);
+      await h.pooled.deliver(['EOSE', poolSub]);
+
+      final inbox = await lookup;
+      expect(
+        h.tempRelays.keys.where((url) => url.startsWith(_outboxRelayUrl)),
+        isEmpty,
+        reason: 'the write-relay leg never reached the outbox relay',
+      );
+      expect(inbox.state, DmInboxResolution.unreadable);
+
+      final writeLeg = LogCaptureService()
+          .getRecentLogs()
+          .map((entry) => entry.message)
+          .where((message) => message.contains('on their write relays'))
+          .toList();
+      expect(writeLeg, hasLength(1));
+      expect(
+        writeLeg.single,
+        allOf(
+          contains('never left this device'),
+          isNot(contains('not every relay settled')),
+        ),
+      );
+      await busy;
     },
   );
 }

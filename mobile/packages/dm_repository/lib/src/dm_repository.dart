@@ -5007,22 +5007,26 @@ class DmRepository {
     final legTimeout = remaining > _dmInboxOutboxSettleMargin
         ? remaining - _dmInboxOutboxSettleMargin
         : Duration.zero;
-    final result = await _nostrClient
-        .queryEventsDetailed(
-          [
-            nostr_filter.Filter(
-              authors: [pubkey],
-              kinds: [EventKind.dmRelaysList],
-              limit: 1,
-            ),
-          ],
-          useCache: false,
-          tempRelays: targets,
-          relayTypes: const [RelayType.temp],
-          requireAllRelaysSettled: true,
-          timeout: legTimeout,
-        )
-        .timeout(remaining);
+    // Observed like the other legs, so a read the client skipped is logged as
+    // such rather than as relays that did not settle (#10004).
+    String? skippedReason;
+    final result = await NostrClient.observeSkippedReads(
+      () => _nostrClient.queryEventsDetailed(
+        [
+          nostr_filter.Filter(
+            authors: [pubkey],
+            kinds: [EventKind.dmRelaysList],
+            limit: 1,
+          ),
+        ],
+        useCache: false,
+        tempRelays: targets,
+        relayTypes: const [RelayType.temp],
+        requireAllRelaysSettled: true,
+        timeout: legTimeout,
+      ),
+      onSkipped: (reason) => skippedReason = reason,
+    ).timeout(remaining);
     final lists = [
       for (final event in result.events)
         if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
@@ -5043,7 +5047,10 @@ class DmRepository {
     if (result.noRelays || result.timedOut) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : 'not every relay settled';
+          : switch (skippedReason) {
+              final skipped? => 'a read never left this device: $skipped',
+              null => 'not every relay settled',
+            };
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '
