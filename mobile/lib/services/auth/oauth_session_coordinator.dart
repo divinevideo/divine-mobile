@@ -17,6 +17,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// unexpected errors leave it false.
 typedef _RefreshOutcome = ({KeycastSession? session, bool rejected});
 
+/// A shared refresh attempt and the signer that was live when it started.
+typedef _SharedRefresh = ({
+  Future<_RefreshOutcome> outcome,
+  KeycastRpc? startedBy,
+});
+
 /// Coordinates OAuth session refresh so concurrent callers never race on a
 /// one-time-use refresh token.
 ///
@@ -56,7 +62,7 @@ class OAuthSessionCoordinator {
   final void Function() _onRefreshRejected;
 
   Future<bool>? _pendingRefresh;
-  Future<_RefreshOutcome>? _pendingOAuthRefresh;
+  _SharedRefresh? _pendingOAuthRefresh;
 
   /// The last shared refresh whose stale rejection [refreshAccessToken]
   /// logged. Every 401 that joined it gets the same outcome, so this keeps the
@@ -141,7 +147,7 @@ class OAuthSessionCoordinator {
     final pending = _pendingOAuthRefresh;
     if (pending != null) {
       return _guardRefreshForCaller(
-        pending.then((outcome) => outcome.session),
+        pending.outcome.then((outcome) => outcome.session),
         expectedOwnerPubkey: expectedOwnerPubkey,
         timeout: timeout,
         storedSessionReader: storedSessionReader,
@@ -153,11 +159,11 @@ class OAuthSessionCoordinator {
       expectedOwnerPubkey: expectedOwnerPubkey,
       storedSessionReader: storedSessionReader,
       caller: caller,
-    ).then((outcome) => outcome.session);
+    ).outcome.then((outcome) => outcome.session);
   }
 
   /// Starts a new shared refresh attempt and claims the single-flight slot.
-  Future<_RefreshOutcome> _startRefresh({
+  _SharedRefresh _startRefresh({
     String? expectedOwnerPubkey,
     Future<KeycastSession?> Function()? storedSessionReader,
     String? caller,
@@ -186,11 +192,14 @@ class OAuthSessionCoordinator {
               // Only release the slot if it still holds this attempt — signOut
               // may have detached it and a fresh attempt may already be in
               // flight.
-              if (identical(_pendingOAuthRefresh, refresh)) {
+              if (identical(_pendingOAuthRefresh?.outcome, refresh)) {
                 _pendingOAuthRefresh = null;
               }
             });
-    return _pendingOAuthRefresh = refresh;
+    return _pendingOAuthRefresh = (
+      outcome: refresh,
+      startedBy: _currentRpcSigner(),
+    );
   }
 
   Future<_RefreshOutcome> _doRefreshSession({
@@ -345,12 +354,14 @@ class OAuthSessionCoordinator {
   /// token exchange.
   ///
   /// A rejected refresh runs `onRefreshRejected`, so the user is asked to sign
-  /// in again (#9943), but only while the signer that was live when this call
-  /// started still is. A rejection can be stale: `KeycastOAuth` returns the
-  /// same null when sign-out cleared storage mid-flight. Sign-out drops the
-  /// signer and every sign-in builds a new one, so a stale result never marks
-  /// the next session, even for the same account. An unreachable Keycast never
-  /// counts: the refresh token survives that for a later retry.
+  /// in again (#9943), but only when the signer that started the shared
+  /// refresh is the one this call started with and is still live. A rejection
+  /// can be stale: `KeycastOAuth` returns the same null when sign-out cleared
+  /// storage mid-flight, and a new sign-in's 401 can join a refresh the
+  /// previous signer started. Sign-out drops the signer and every sign-in
+  /// builds a new one, so a stale result never marks the next session, even
+  /// for the same account. An unreachable Keycast never counts: the refresh
+  /// token survives that for a later retry.
   ///
   /// Only the rejection that flips the session from live to expired runs
   /// `onRefreshRejected` and logs a warning. Once the refresh token is gone,
@@ -361,17 +372,19 @@ class OAuthSessionCoordinator {
     final refresh = _pendingOAuthRefresh ?? _startRefresh();
     final _RefreshOutcome outcome;
     try {
-      outcome = await refresh;
+      outcome = await refresh.outcome;
     } on OAuthNetworkException {
       return null;
     }
     if (!outcome.rejected) return outcome.session?.accessToken;
 
     final signerStillLive =
-        signerAtStart != null && identical(signerAtStart, _currentRpcSigner());
+        signerAtStart != null &&
+        identical(signerAtStart, refresh.startedBy) &&
+        identical(signerAtStart, _currentRpcSigner());
     if (!signerStillLive) {
-      if (!identical(_loggedStaleRefresh, refresh)) {
-        _loggedStaleRefresh = refresh;
+      if (!identical(_loggedStaleRefresh, refresh.outcome)) {
+        _loggedStaleRefresh = refresh.outcome;
         Log.info(
           'refreshAccessToken: refresh rejected for a signer that is no '
           'longer live — ignoring (stale, e.g. signed out mid-refresh)',

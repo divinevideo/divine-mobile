@@ -632,6 +632,30 @@ void main() {
         expect(rejections, isZero);
       });
 
+      test('ignores a rejection of the previous signer refresh for a new '
+          'signer that joined it', () async {
+        // Re-signing in to the same account replaces the signer without
+        // detaching the in-flight refresh, so the new session's first 401 can
+        // join the old session's refresh.
+        final gate = Completer<KeycastSession?>();
+        stubRefresh(() => gate.future);
+
+        final coordinator = build();
+        final previous = coordinator.refreshAccessToken();
+        currentSigner = _MockKeycastRpc();
+        final joined = coordinator.refreshAccessToken();
+        gate.complete(null);
+
+        expect(await previous, isNull);
+        expect(await joined, isNull);
+        expect(rejections, isZero);
+        verify(
+          () => oauthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).called(1);
+      });
+
       test('ignores a rejection that lands after sign-out', () async {
         final gate = Completer<KeycastSession?>();
         stubRefresh(() => gate.future);
