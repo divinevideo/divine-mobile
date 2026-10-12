@@ -500,14 +500,19 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         redrawWithEffects()
     }
 
-    /// Draws the last decoded frame again with the current frame effects, at
-    /// `timeUs`, or where they were last drawn over it. Never at the frame's
-    /// own time while it is held: earlier than the effects' newest frame,
-    /// that counts as a jump back and throws their earlier frames away.
-    private func redrawWithEffects(atUs timeUs: Int64? = nil) {
-        guard !isDisposed, let source = latestSourceBuffer,
-            let timeUs = timeUs ?? latestEffectsTimeUs
-        else { return }
+    /// Draws the last decoded frame again with the current frame effects,
+    /// where they were last drawn over it. Never at the frame's own time while
+    /// it is held: earlier than the effects' newest frame, that counts as a
+    /// jump back and throws their earlier frames away.
+    private func redrawWithEffects() {
+        guard let timeUs = latestEffectsTimeUs else { return }
+        redrawWithEffects(atUs: timeUs)
+    }
+
+    /// Draws the last decoded frame again with the current frame effects at
+    /// `timeUs`.
+    private func redrawWithEffects(atUs timeUs: Int64) {
+        guard !isDisposed, let source = latestSourceBuffer else { return }
         latestEffectsTimeUs = timeUs
         let shown = frameEffects.process(source, timeUs: timeUs)
         os_unfair_lock_lock(&pixelBufferLock)
@@ -532,15 +537,17 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         _ pixelBuffer: CVPixelBuffer, at itemTime: CMTime, frameTime: CMTime = .invalid
     ) {
         let time = frameTime.isValid ? frameTime : itemTime
-        let effectsTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime)
+        // What was drawn before this frame, so read ahead of the updates below.
+        let drawnUs = lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil
+        let drawTimeUs = effectsTimeUs(forFrameAt: time, shownAt: itemTime, drawnUs: drawnUs)
         lastDeliveredItemTime = itemTime
         nextStallRecoveryTime = 0
         latestSourceBuffer = pixelBuffer
         latestSourceTime = time
-        latestEffectsTimeUs = effectsTimeUs
+        latestEffectsTimeUs = drawTimeUs
         var shown = pixelBuffer
-        if frameEffects.isActive, let effectsTimeUs {
-            shown = frameEffects.process(pixelBuffer, timeUs: effectsTimeUs)
+        if frameEffects.isActive, let drawTimeUs {
+            shown = frameEffects.process(pixelBuffer, timeUs: drawTimeUs)
         }
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
@@ -615,13 +622,11 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// The time frame effects are drawn at over the frame from `frameTime`,
     /// shown at `itemTime` (see `HeldFrameEffects`).
     private func effectsTimeUs(
-        forFrameAt frameTime: CMTime, shownAt itemTime: CMTime
+        forFrameAt frameTime: CMTime, shownAt itemTime: CMTime, drawnUs: Int64?
     ) -> Int64? {
         guard let frameUs = frameTime.microseconds else { return nil }
         guard let itemUs = itemTime.microseconds else { return frameUs }
-        return HeldFrameEffects.timeUs(
-            frameUs: frameUs, itemUs: itemUs,
-            drawnUs: lastDeliveredItemTime.isValid ? latestEffectsTimeUs : nil)
+        return HeldFrameEffects.timeUs(frameUs: frameUs, itemUs: itemUs, drawnUs: drawnUs)
     }
 
     /// Keeps frame effects moving over a held frame while the output hands
