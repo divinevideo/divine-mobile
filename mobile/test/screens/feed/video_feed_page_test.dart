@@ -66,6 +66,20 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
   return announced;
 }
 
+void _failEveryAnnouncement(WidgetTester tester) {
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async => throw PlatformException(code: 'announce-failed'),
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+}
+
 VideoFeedSource _sourceFor(VideoFeedSourceType type) => switch (type) {
   VideoFeedSourceType.forYou => const VideoFeedSource.forYou(),
   VideoFeedSourceType.following => const VideoFeedSource.following(),
@@ -346,6 +360,28 @@ void main() {
       },
     );
 
+    Future<void> pumpRetapFeed(
+      WidgetTester tester,
+      HomeFeedRetapCubit retapCubit,
+    ) async {
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
+              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+              BlocProvider<VideoPlaybackStatusCubit>(
+                create: (_) => VideoPlaybackStatusCubit(),
+              ),
+              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+            ],
+            child: const VideoFeedView(),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
     testWidgets('home retap refreshes the feed and settles the retap cubit', (
       tester,
     ) async {
@@ -363,22 +399,7 @@ void main() {
       final retapCubit = HomeFeedRetapCubit();
       addTearDown(retapCubit.close);
 
-      await tester.pumpWidget(
-        testMaterialApp(
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
-              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
-              BlocProvider<VideoPlaybackStatusCubit>(
-                create: (_) => VideoPlaybackStatusCubit(),
-              ),
-              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
-            ],
-            child: const VideoFeedView(),
-          ),
-        ),
-      );
-      await tester.pump();
+      await pumpRetapFeed(tester, retapCubit);
 
       retapCubit.request();
       expect(retapCubit.state.isRefreshing, isTrue);
@@ -417,22 +438,7 @@ void main() {
         final retapCubit = HomeFeedRetapCubit();
         addTearDown(retapCubit.close);
 
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
-                BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
-                BlocProvider<VideoPlaybackStatusCubit>(
-                  create: (_) => VideoPlaybackStatusCubit(),
-                ),
-                BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
-              ],
-              child: const VideoFeedView(),
-            ),
-          ),
-        );
-        await tester.pump();
+        await pumpRetapFeed(tester, retapCubit);
 
         retapCubit.request();
         await tester.pump();
@@ -453,19 +459,7 @@ void main() {
       (tester) async {
         await LogCaptureService().clearAllLogs();
         addTearDown(LogCaptureService().clearAllLogs);
-        tester.binding.defaultBinaryMessenger
-            .setMockDecodedMessageHandler<Object?>(
-              SystemChannels.accessibility,
-              (message) async =>
-                  throw PlatformException(code: 'announce-failed'),
-            );
-        addTearDown(
-          () => tester.binding.defaultBinaryMessenger
-              .setMockDecodedMessageHandler<Object?>(
-                SystemChannels.accessibility,
-                null,
-              ),
-        );
+        _failEveryAnnouncement(tester);
         final video = createTestVideoEvent();
         final initialState = VideoFeedBlocState(
           status: VideoFeedStatus.success,
@@ -482,22 +476,7 @@ void main() {
         final retapCubit = HomeFeedRetapCubit();
         addTearDown(retapCubit.close);
 
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
-                BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
-                BlocProvider<VideoPlaybackStatusCubit>(
-                  create: (_) => VideoPlaybackStatusCubit(),
-                ),
-                BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
-              ],
-              child: const VideoFeedView(),
-            ),
-          ),
-        );
-        await tester.pump();
+        await pumpRetapFeed(tester, retapCubit);
 
         retapCubit.request();
         await tester.pump();
@@ -547,22 +526,7 @@ void main() {
         final retapCubit = HomeFeedRetapCubit();
         addTearDown(retapCubit.close);
 
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
-                BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
-                BlocProvider<VideoPlaybackStatusCubit>(
-                  create: (_) => VideoPlaybackStatusCubit(),
-                ),
-                BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
-              ],
-              child: const VideoFeedView(),
-            ),
-          ),
-        );
-        await tester.pump();
+        await pumpRetapFeed(tester, retapCubit);
 
         retapCubit.request();
         await tester.pump();
@@ -599,22 +563,7 @@ void main() {
       final retapCubit = HomeFeedRetapCubit();
       addTearDown(retapCubit.close);
 
-      await tester.pumpWidget(
-        testMaterialApp(
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
-              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
-              BlocProvider<VideoPlaybackStatusCubit>(
-                create: (_) => VideoPlaybackStatusCubit(),
-              ),
-              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
-            ],
-            child: const VideoFeedView(),
-          ),
-        ),
-      );
-      await tester.pump();
+      await pumpRetapFeed(tester, retapCubit);
 
       // Start the refresh; it cannot settle while the stream emits nothing.
       retapCubit.request();
