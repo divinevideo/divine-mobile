@@ -333,6 +333,15 @@ internal class DivineVideoPlayerInstance(
     /** Whether [clipAudioLoopRestart] is waiting to run. */
     private var clipAudioLoopRestartPending = false
 
+    /**
+     * Bumped by every equalizer change and by [releaseClipAudioLoop], so a
+     * reshaped loop that lands after either is dropped: the newest wins.
+     */
+    private var clipAudioReshapeGeneration = 0
+
+    /** Runs once the equalizer has rested; see [handleSetClipEqualizers]. */
+    private val clipAudioLoopReshape = Runnable { reshapeClipAudioLoop() }
+
     /** Set while a loop decode runs on [metadataExecutor]. */
     private var clipAudioDecoding = false
 
@@ -1078,6 +1087,9 @@ internal class DivineVideoPlayerInstance(
                     clipStartUs,
                     remoteSourceFactory,
                     equalizer,
+                    // Only an editing surface changes a clip's equalizer, and
+                    // the raw decode is too much heap to hold per feed tile.
+                    retainDecoded = bufferProfile == BufferProfile.FULL,
                 )
                 mainHandler.post {
                     if (generation != clipAudioGeneration) {
@@ -1158,7 +1170,11 @@ internal class DivineVideoPlayerInstance(
      * seam, because there is none mid-lap. ExoPlayer's audio renderer is only
      * switched off once it is silent.
      */
-    private inner class ClipAudioTakeover(val loop: ClipAudioLoopTrack) : Runnable {
+    private inner class ClipAudioTakeover(
+        val loop: ClipAudioLoopTrack,
+        /** The loop being replaced; null when ExoPlayer's audio is. */
+        val from: ClipAudioLoopTrack? = null,
+    ) : Runnable {
         val startedNanos = System.nanoTime()
         private var fadeStep = -1
 
@@ -1207,7 +1223,11 @@ internal class DivineVideoPlayerInstance(
             val target = nominalPlayerVolume()
             val progress = fadeStep.toFloat() / TAKEOVER_FADE_STEPS
             loop.setVolume(target * progress)
-            exoPlayer.volume = target * (1f - progress)
+            if (from != null) {
+                from.setVolume(target * (1f - progress))
+            } else {
+                exoPlayer.volume = target * (1f - progress)
+            }
             if (fadeStep >= TAKEOVER_FADE_STEPS) {
                 finishClipAudioTakeover()
             } else {
@@ -1218,7 +1238,8 @@ internal class DivineVideoPlayerInstance(
 
     /**
      * Completes a takeover in progress at once: the loop has the sound from
-     * here on, at full level, and ExoPlayer's renderer is switched off.
+     * here on, at full level, and whatever it replaced is switched off —
+     * ExoPlayer's renderer, or the loop it was reshaped from.
      *
      * Also the way out when playback stops, the volume changes or the loop is
      * released mid-takeover — none of them can leave the two sounding at once.
@@ -1232,9 +1253,13 @@ internal class DivineVideoPlayerInstance(
             name = "DivineVideoPlayer.AudioLoop",
         )
         mainHandler.removeCallbacks(takeover)
-        setExoPlayerAudioEnabled(false)
         val target = nominalPlayerVolume()
-        player?.volume = target
+        if (takeover.from != null) {
+            takeover.from.release()
+        } else {
+            setExoPlayerAudioEnabled(false)
+            player?.volume = target
+        }
         takeover.loop.setVolume(target)
         if (player?.isPlaying == true) scheduleClipAudioSync()
     }
@@ -1310,7 +1335,12 @@ internal class DivineVideoPlayerInstance(
         clipAudioGeneration++
         clipAudioPending = false
         clipAudioAwaitingLoad = false
-        clipAudioTakeover?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.removeCallbacks(clipAudioLoopReshape)
+        clipAudioReshapeGeneration++
+        clipAudioTakeover?.let {
+            mainHandler.removeCallbacks(it)
+            it.from?.release()
+        }
         clipAudioTakeover = null
         mainHandler.removeCallbacks(clipAudioSyncRunnable)
         clipAudioLoop?.release()
@@ -1470,9 +1500,13 @@ internal class DivineVideoPlayerInstance(
      * the loaded clips belongs to another composition and is ignored.
      *
      * A looping single clip plays its audio from PCM filtered when the loop
-     * was built, which cannot follow a drag. Its sound goes back to the player
-     * on the first change, and the loop is rebuilt with the new equalizer once
-     * [EQUALIZER_SETTLE_MS] pass without another.
+     * was built, which cannot follow a drag. The loop keeps the sound, since
+     * handing it back to the player stalls the picture and drops the sound
+     * while the player selects its tracks again; it is filtered again from
+     * its raw decode and swapped for the running one with a crossfade once
+     * [EQUALIZER_SETTLE_MS] pass without another change. A loop still
+     * decoding has not taken the sound from the player yet, so that one is
+     * simply built again.
      */
     private fun handleSetClipEqualizers(call: MethodCall, result: MethodChannel.Result) {
         val raw = call.argument<List<Any?>>("equalizers")
@@ -1484,7 +1518,13 @@ internal class DivineVideoPlayerInstance(
         clipEqualizer.equalizers = clipEqualizers
         val hasLoop = clipAudioLoop != null || clipAudioDecoding ||
             clipAudioPending || clipAudioAwaitingLoad
-        if (hasLoop && clipEqualizers.getOrNull(0) != clipAudioLoopEqualizer) {
+        if (clipAudioLoop != null) {
+            if (clipEqualizers.getOrNull(0) != clipAudioLoopEqualizer) {
+                clipAudioReshapeGeneration++
+                mainHandler.removeCallbacks(clipAudioLoopReshape)
+                mainHandler.postDelayed(clipAudioLoopReshape, EQUALIZER_SETTLE_MS)
+            }
+        } else if (hasLoop && clipEqualizers.getOrNull(0) != clipAudioLoopEqualizer) {
             releaseClipAudioLoop()
             scheduleClipAudioLoopRestart()
         } else if (clipAudioLoopRestartPending) {
@@ -1492,6 +1532,67 @@ internal class DivineVideoPlayerInstance(
             scheduleClipAudioLoopRestart()
         }
         result.success(null)
+    }
+
+    /**
+     * Filters the running loop's raw decode again with the equalizer that has
+     * come to rest, off the platform thread, and swaps the result in.
+     */
+    private fun reshapeClipAudioLoop() {
+        val loop = clipAudioLoop ?: return
+        val equalizer = clipEqualizers.getOrNull(0)
+        if (equalizer == clipAudioLoopEqualizer || metadataExecutor.isShutdown) return
+        val audioGeneration = clipAudioGeneration
+        val reshapeGeneration = clipAudioReshapeGeneration
+        runCatching {
+            metadataExecutor.execute {
+                val next = loop.reshaped(equalizer)
+                mainHandler.post {
+                    // A change back to the running loop's equalizer schedules
+                    // nothing, so it leaves the generation where it was.
+                    val current = audioGeneration == clipAudioGeneration &&
+                        reshapeGeneration == clipAudioReshapeGeneration &&
+                        clipAudioLoop === loop &&
+                        clipEqualizers.getOrNull(0) == equalizer
+                    if (!current) {
+                        next?.release()
+                    } else if (next == null) {
+                        // Nothing to filter again from; the player takes the
+                        // sound back, as it did before loops could reshape.
+                        releaseClipAudioLoop()
+                        startClipAudioLoop(lastClipsRaw, clipCount)
+                    } else {
+                        swapClipAudioLoop(loop, next, equalizer)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces [previous] with [next], the same clip filtered with
+     * [equalizer]. A playing player crosses over as [ClipAudioTakeover] does
+     * from ExoPlayer; a stopped one switches at once, and [onIsPlayingChanged]
+     * starts [next] against the picture.
+     */
+    private fun swapClipAudioLoop(
+        previous: ClipAudioLoopTrack,
+        next: ClipAudioLoopTrack,
+        equalizer: AudioEqualizer?,
+    ) {
+        finishClipAudioTakeover()
+        clipAudioLoopEqualizer = equalizer
+        next.setBoost(AudioSessionBoost.boostOf(clipVolume(0)))
+        clipAudioLoop = next
+        val exoPlayer = player
+        if (exoPlayer?.isPlaying != true) {
+            previous.release()
+            return
+        }
+        next.play(exoPlayer.currentPosition * 1000L, 0f)
+        val takeover = ClipAudioTakeover(next, from = previous)
+        clipAudioTakeover = takeover
+        mainHandler.post(takeover)
     }
 
     private fun scheduleClipAudioLoopRestart() {
@@ -2866,9 +2967,10 @@ internal class DivineVideoPlayerInstance(
 
         /**
          * How long a looping clip's equalizer has to stay unchanged before its
-         * audio loop is rebuilt with it. Each rebuild decodes the clip again,
-         * so not on every step of a drag; long enough to bridge the gaps
-         * between them, short enough that the loop is back by the next lap.
+         * audio loop is filtered again with it. Each pass re-filters the whole
+         * clip and builds a new [AudioTrack], so not on every step of a drag;
+         * long enough to bridge the gaps between them, short enough that the
+         * change is heard by the next lap.
          */
         private const val EQUALIZER_SETTLE_MS = 500L
 

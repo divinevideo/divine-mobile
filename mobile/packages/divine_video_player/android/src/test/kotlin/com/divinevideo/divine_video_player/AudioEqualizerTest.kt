@@ -239,6 +239,19 @@ class AudioEqualizerTest {
         assertTrue(pcm.contentEquals(shortArrayOf(1000, -1000, 30000)))
     }
 
+    @Test
+    fun `an equalized copy leaves the decode raw so a flat curve restores it`() {
+        val raw = ShortArray(9600) { (8000 * sin(2 * PI * 60.0 * it / 48000)).toInt().toShort() }
+        val original = raw.copyOf()
+
+        val boosted = EqualizerPcm.equalized(raw, 1, 48000, bassBoost(12.0))
+        val flat = EqualizerPcm.equalized(raw, 1, 48000, null)
+
+        assertTrue(raw.contentEquals(original))
+        assertTrue(!boosted.contentEquals(original))
+        assertTrue(flat.contentEquals(original))
+    }
+
     /** A 100 Hz tone at 0.2, peaking at every multiple of 4800 samples. */
     private fun tone(samples: IntRange): FloatArray =
         samples.map { (0.2 * cos(2 * PI * 100.0 * it / 48000)).toFloat() }.toFloatArray()

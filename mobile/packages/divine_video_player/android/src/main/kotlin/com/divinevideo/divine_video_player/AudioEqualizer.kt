@@ -335,6 +335,14 @@ internal object EqualizerPcm {
         }
     }
 
+    /** [apply] on a copy, leaving [samples] as they are. */
+    fun equalized(
+        samples: ShortArray,
+        channels: Int,
+        sampleRate: Int,
+        equalizer: AudioEqualizer?,
+    ): ShortArray = samples.copyOf().also { apply(it, channels, sampleRate, equalizer) }
+
     /** [sample] as 16-bit PCM, rounded and clamped. */
     fun toShort(sample: Float): Short =
         (sample * SHORT_SCALE).roundToInt()
