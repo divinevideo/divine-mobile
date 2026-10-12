@@ -4,6 +4,9 @@ import 'package:analytics/analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/app_providers.dart';
+
+import '../helpers/recording_consumption_analytics.dart';
 
 class _RecordingSink implements AnalyticsEventSink {
   final userIds = <String?>[];
@@ -84,6 +87,37 @@ void main() {
       expect(sink.userIds, isEmpty);
       expect(crashIds, isEmpty);
     });
+  });
+
+  group('consumptionAnalyticsTrackerProvider', () {
+    test(
+      'follows the governed service when it is replaced',
+      () async {
+        final first = RecordingConsumptionAnalytics();
+        final second = RecordingConsumptionAnalytics();
+        addTearDown(first.dispose);
+        addTearDown(second.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            analyticsServiceProvider.overrideWithValue(first),
+          ],
+        );
+        addTearDown(container.dispose);
+        final tracker = container.read(consumptionAnalyticsTrackerProvider);
+        await tracker.followAdded();
+        container.updateOverrides([
+          analyticsServiceProvider.overrideWithValue(second),
+        ]);
+        await container.pump();
+        await tracker.followAdded();
+        expect(first.parameters, [
+          {'action': 'follow_added'},
+        ]);
+        expect(second.parameters, [
+          {'action': 'follow_added'},
+        ]);
+      },
+    );
   });
 
   group('pageLoadHistoryProvider', () {

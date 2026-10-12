@@ -56,6 +56,8 @@ import 'package:openvine/widgets/video_feed_item/video_interactions_bloc_key.dar
 import 'package:openvine/widgets/video_feed_item/video_interactions_restriction_listener.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
 
+import 'package:uuid/uuid.dart';
+
 class FeedVideos extends ConsumerStatefulWidget {
   const FeedVideos({
     required this.videos,
@@ -151,10 +153,14 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   final Set<String> _revealedContentWarningVideoIds = <String>{};
   late final ConsumptionAnalyticsTracker _consumptionAnalytics;
   final Set<String> _seenVideoIds = {};
+  late String _feedSessionId;
+  late String _analyticsSessionBoundary;
   int? _programmaticActivationIndex;
 
   void _resetSeenVideos() {
     _seenVideoIds.clear();
+    _feedSessionId = const Uuid().v4();
+    _analyticsSessionBoundary = _consumptionAnalytics.sessionBoundary;
     if (widget.currentIndex >= 0 &&
         widget.currentIndex < widget.videos.length) {
       _seenVideoIds.add(widget.videos[widget.currentIndex].id);
@@ -231,7 +237,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   ) => _retryFeedItem(_feedKey.currentState, index, httpHeaders);
 
   void _skipPooledVideoAt(int index) {
-    unawaited(_animateToPage(index + 1));
+    unawaited(_feedKey.currentState?.animateToPage(index + 1));
   }
 
   @override
@@ -386,6 +392,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
           _resumeAutoAdvanceAfterSwipe();
+          if (_analyticsSessionBoundary !=
+              _consumptionAnalytics.sessionBoundary) {
+            _resetSeenVideos();
+          }
           final isProgrammaticActivation =
               index == widget.currentIndex ||
               index == _programmaticActivationIndex;
@@ -396,6 +406,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             unawaited(
               _consumptionAnalytics.feedScrolled(
                 trafficSource: widget.trafficSource,
+                feedSessionId: _feedSessionId,
                 depth: _seenVideoIds.length,
                 sourceDetail: widget.sourceDetail,
               ),
@@ -548,6 +559,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               onSuppressAutoAdvance: _suppressAutoAdvance,
               onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
               onSkipToNextVideo: () => _skipPooledVideoAt(index),
+              onAutomaticSkipToNextVideo: () =>
+                  unawaited(_animateToPage(index + 1)),
             ),
           );
         },
@@ -567,6 +580,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.contentWarningRevealed,
     required this.onContentWarningRevealed,
     required this.onSkipToNextVideo,
+    required this.onAutomaticSkipToNextVideo,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
   });
@@ -593,6 +607,7 @@ class _Overlay extends ConsumerStatefulWidget {
   final VoidCallback onContentWarningRevealed;
 
   final VoidCallback onSkipToNextVideo;
+  final VoidCallback onAutomaticSkipToNextVideo;
 
   final VoidCallback? onSuppressAutoAdvance;
 
@@ -1189,7 +1204,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
           videoId: video.id,
           isActive: widget.isActive,
           isAutoAdvanceActive: effectiveAutoActive,
-          onSkipBrokenVideo: _skipToNextVideo,
+          onSkipBrokenVideo: widget.onAutomaticSkipToNextVideo,
           confirmAndMarkMissing: deadMediaGuard == null
               ? null
               : () => deadMediaGuard.confirmAndMarkMissing(

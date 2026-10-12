@@ -386,7 +386,6 @@ class VideoInteractionsBloc
           unawaited(
             _consumptionAnalytics.reactionSent(
               targetVideoId: _eventId,
-              targetPubkey: _authorPubkey,
             ),
           );
         }

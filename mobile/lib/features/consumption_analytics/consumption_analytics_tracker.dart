@@ -1,157 +1,110 @@
-// ABOUTME: GA4 events for video consumption and engagement behavior.
-// ABOUTME: Keeps analytics delivery best-effort and separate from product actions.
+// ABOUTME: Governed feed-depth and engagement analytics without relationship identity.
+// ABOUTME: Keeps delivery best-effort and separate from product actions.
 
-import 'package:analytics/analytics.dart';
-import 'package:models/models.dart';
+import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/services/analytics_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Records best-effort video consumption and engagement events.
+/// Records deliberate feed navigation and confirmed engagement.
 ///
-/// Delivery failures are absorbed so analytics never changes product actions.
-/// Feed types use the normalized `for_you`, `following`, `list`, `new_vines`,
-/// `classics`, `popular`, and `featured` vocabulary.
+/// Playback is owned by the existing governed playback tracker. Consent and
+/// identity boundaries are enforced by [AnalyticsService] for every event.
 class ConsumptionAnalyticsTracker {
-  /// Creates a tracker backed by [analytics].
-  ConsumptionAnalyticsTracker({
-    required AnalyticsEventSink analytics,
-    bool Function()? isEnabled,
-  }) : _analytics = analytics,
-       _isEnabled = isEnabled ?? _enabledByDefault;
+  /// Creates a tracker backed by the governed analytics service.
+  ConsumptionAnalyticsTracker({required AnalyticsService Function() analytics})
+    : _analytics = analytics;
 
-  final AnalyticsEventSink _analytics;
-  final bool Function() _isEnabled;
+  final AnalyticsService Function() _analytics;
 
-  static bool _enabledByDefault() => true;
+  /// Changes whenever the governed analytics identity or session changes.
+  String get sessionBoundary => _analytics().productAnalyticsSessionId;
 
-  /// Records that playback started for [video] at [position].
-  Future<void> videoStarted({
-    required VideoEvent video,
-    required ViewTrafficSource trafficSource,
-    required int position,
-    String? sourceDetail,
-  }) => _log('video_started', {
-    'video_id': video.id,
-    'author_pubkey': video.pubkey,
-    'feed_type': _feedType(trafficSource, sourceDetail),
-    'position_in_feed': position,
-    'is_archive': video.isOriginalVine ? 1 : 0,
-  });
-
-  /// Records a playback session that completed or looped.
-  Future<void> videoCompleted({
-    required String videoId,
-    required int watchMs,
-    required double pctWatched,
-    required int loops,
-  }) => _log('video_completed', {
-    'video_id': videoId,
-    'watch_ms': watchMs,
-    'pct_watched': pctWatched,
-    'loops': loops,
-  });
-
-  /// Records a playback session that ended before completion.
-  Future<void> videoSkipped({
-    required String videoId,
-    required int watchMs,
-    required int position,
-  }) => _log('video_skipped', {
-    'video_id': videoId,
-    'watch_ms': watchMs,
-    'position_in_feed': position,
-  });
-
-  /// Records a real user swipe at the unique-video [depth] for one feed session.
+  /// Records distinct items deliberately reached in one feed session.
+  ///
+  /// The initial item contributes to [depth]. Swipes and explicit Skip taps
+  /// emit events; automatic navigation does not increase depth.
   Future<void> feedScrolled({
     required ViewTrafficSource trafficSource,
+    required String feedSessionId,
     required int depth,
     String? sourceDetail,
-  }) => _log('feed_scrolled', {
-    'feed_type': _feedType(trafficSource, sourceDetail),
-    'depth': depth,
-  });
+  }) => _record(
+    () => _analytics().recordFeedDepth(
+      feedSessionId: feedSessionId,
+      feedType: _feedType(trafficSource, sourceDetail),
+      depth: depth,
+    ),
+  );
 
   /// Records a successfully published reaction.
-  Future<void> reactionSent({
-    required String targetVideoId,
-    required String targetPubkey,
-  }) => _targetEvent(
-    'reaction_sent',
-    targetVideoId: targetVideoId,
-    targetPubkey: targetPubkey,
+  Future<void> reactionSent({required String targetVideoId}) => _engagement(
+    ProductAnalyticsV2EngagementAction.reactionSent,
+    targetVideoId,
   );
 
   /// Records a successfully published comment.
-  Future<void> commentSent({
-    required String targetVideoId,
-    required String targetPubkey,
-  }) => _targetEvent(
-    'comment_sent',
-    targetVideoId: targetVideoId,
-    targetPubkey: targetPubkey,
+  Future<void> commentSent({required String targetVideoId}) => _engagement(
+    ProductAnalyticsV2EngagementAction.commentSent,
+    targetVideoId,
   );
 
   /// Records share intent when the share action is tapped.
-  Future<void> shareTapped({
-    required String targetVideoId,
-    required String targetPubkey,
-  }) => _targetEvent(
-    'share_tapped',
-    targetVideoId: targetVideoId,
-    targetPubkey: targetPubkey,
+  Future<void> shareTapped({required String targetVideoId}) => _engagement(
+    ProductAnalyticsV2EngagementAction.shareTapped,
+    targetVideoId,
   );
 
-  /// Records a confirmed follow.
+  /// Records a confirmed follow without the followed account's identity.
   ///
-  /// [targetVideoId] is present only when the follow originated from a video's
-  /// author overlay. Profile, list, and notification follows omit it.
-  Future<void> followAdded({
-    required String targetPubkey,
-    String? targetVideoId,
-  }) => _log('follow_added', {
-    'target_pubkey': targetPubkey,
-    'target_video_id': ?targetVideoId,
-  });
+  /// Video-originated follows include [targetVideoId]; other surfaces omit it.
+  Future<void> followAdded({String? targetVideoId}) => _engagement(
+    ProductAnalyticsV2EngagementAction.followAdded,
+    targetVideoId,
+  );
 
-  String _feedType(ViewTrafficSource trafficSource, String? sourceDetail) {
-    if (trafficSource == ViewTrafficSource.home) {
-      return switch (sourceDetail) {
-        'foryou' => 'for_you',
-        'following' => 'following',
-        'list' => 'list',
-        'new' => 'new_vines',
-        'classic' => 'classics',
-        _ => trafficSource.tagValue,
+  Future<void> _engagement(
+    ProductAnalyticsV2EngagementAction action,
+    String? contentId,
+  ) => _record(
+    () => _analytics().recordEngagement(action: action, contentId: contentId),
+  );
+
+  ProductAnalyticsV2FeedType _feedType(
+    ViewTrafficSource source,
+    String? detail,
+  ) {
+    if (source == ViewTrafficSource.home) {
+      return switch (detail) {
+        'foryou' => ProductAnalyticsV2FeedType.forYou,
+        'following' => ProductAnalyticsV2FeedType.following,
+        'list' => ProductAnalyticsV2FeedType.list,
+        'new' => ProductAnalyticsV2FeedType.newVines,
+        'classic' => ProductAnalyticsV2FeedType.classics,
+        _ => ProductAnalyticsV2FeedType.home,
       };
     }
-
-    return switch (trafficSource) {
-      ViewTrafficSource.discoveryNew => 'new_vines',
-      ViewTrafficSource.discoveryClassic => 'classics',
-      ViewTrafficSource.discoveryForYou => 'for_you',
-      ViewTrafficSource.discoveryPopular => 'popular',
-      ViewTrafficSource.discoveryFeatured => 'featured',
-      _ => trafficSource.tagValue,
+    return switch (source) {
+      ViewTrafficSource.home => ProductAnalyticsV2FeedType.home,
+      ViewTrafficSource.discoveryNew => ProductAnalyticsV2FeedType.newVines,
+      ViewTrafficSource.discoveryClassic => ProductAnalyticsV2FeedType.classics,
+      ViewTrafficSource.discoveryForYou => ProductAnalyticsV2FeedType.forYou,
+      ViewTrafficSource.discoveryPopular => ProductAnalyticsV2FeedType.popular,
+      ViewTrafficSource.discoveryFeatured =>
+        ProductAnalyticsV2FeedType.featured,
+      ViewTrafficSource.profile => ProductAnalyticsV2FeedType.profile,
+      ViewTrafficSource.share => ProductAnalyticsV2FeedType.share,
+      ViewTrafficSource.search => ProductAnalyticsV2FeedType.search,
+      ViewTrafficSource.unknown => ProductAnalyticsV2FeedType.unknown,
     };
   }
 
-  Future<void> _targetEvent(
-    String name, {
-    required String targetVideoId,
-    required String targetPubkey,
-  }) => _log(name, {
-    'target_video_id': targetVideoId,
-    'target_pubkey': targetPubkey,
-  });
-
-  Future<void> _log(String name, Map<String, Object> parameters) async {
+  Future<void> _record(Future<String?> Function() record) async {
     try {
-      if (!_isEnabled()) return;
-      await _analytics.logEvent(name: name, parameters: parameters);
+      await record();
     } catch (error) {
       Log.warning(
-        'Failed to record $name analytics: $error',
+        'Failed to record consumption analytics: $error',
         name: 'ConsumptionAnalyticsTracker',
         category: LogCategory.system,
       );

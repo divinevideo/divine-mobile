@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -418,9 +417,7 @@ void main() {
           video: video,
           isActive: isActive,
           clock: () => now,
-          consumptionAnalytics: ConsumptionAnalyticsTracker(
-            analytics: consumptionSink,
-          ),
+          legacyAnalytics: consumptionSink,
         ),
       );
 
@@ -428,20 +425,10 @@ void main() {
       isActive.value = false;
       await tester.pump();
 
-      expect(consumptionSink.eventNames, ['video_started', 'video_skipped']);
-
-      expect(consumptionSink.paramsFor('video_started'), {
-        'video_id': 'video_id',
-        'author_pubkey': 'creator_pubkey',
-        'feed_type': 'home',
-        'position_in_feed': 0,
-        'is_archive': 0,
-      });
-      expect(consumptionSink.paramsFor('video_skipped'), {
-        'video_id': 'video_id',
-        'watch_ms': 1100,
-        'position_in_feed': 0,
-      });
+      expect(consumptionSink.eventNames, isEmpty);
+      expect(analyticsService.playbackSessions, hasLength(1));
+      expect(analyticsService.playbackSessions.single.watchedMs, 1100);
+      expect(analyticsService.playbackSessions.single.completed, isFalse);
 
       final viewEndEvents = _viewEndEvents(analyticsService);
       expect(viewEndEvents, hasLength(1));
@@ -461,7 +448,7 @@ void main() {
     });
 
     testWidgets(
-      'consumption completion falls back to the current controller duration',
+      'governed playback falls back to the current controller duration',
       (tester) async {
         final consumptionSink = _RecordingEventSink();
         final isActive = ValueNotifier(true);
@@ -480,9 +467,7 @@ void main() {
             video: video,
             isActive: isActive,
             clock: () => now,
-            consumptionAnalytics: ConsumptionAnalyticsTracker(
-              analytics: consumptionSink,
-            ),
+            legacyAnalytics: consumptionSink,
           ),
         );
 
@@ -497,16 +482,13 @@ void main() {
         isActive.value = false;
         await tester.pump();
 
-        expect(consumptionSink.eventNames, [
-          'video_started',
-          'video_completed',
-        ]);
-        expect(consumptionSink.paramsFor('video_completed'), {
-          'video_id': 'video_id',
-          'watch_ms': 5000,
-          'pct_watched': 100.0,
-          'loops': 1,
-        });
+        expect(consumptionSink.eventNames, isEmpty);
+        expect(analyticsService.playbackSessions, hasLength(1));
+        final playback = analyticsService.playbackSessions.single;
+        expect(playback.durationMs, 5000);
+        expect(playback.watchedMs, 5000);
+        expect(playback.loopCount, 1);
+        expect(playback.completed, isTrue);
 
         isActive.dispose();
         video.dispose();
@@ -1152,18 +1134,15 @@ Widget _buildTracker({
   required DivineVideoPlayerController controller,
   required bool isActive,
   required DateTime Function() clock,
-  ConsumptionAnalyticsTracker? consumptionAnalytics,
+  AnalyticsEventSink? legacyAnalytics,
 }) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
-      consumptionAnalyticsTrackerProvider.overrideWithValue(
-        consumptionAnalytics ??
-            ConsumptionAnalyticsTracker(
-              analytics: const NoOpAnalyticsEventSink(),
-            ),
+      analyticsEventSinkProvider.overrideWithValue(
+        legacyAnalytics ?? const NoOpAnalyticsEventSink(),
       ),
     ],
     child: Directionality(
@@ -1192,18 +1171,15 @@ Widget _buildTrackerHarness({
   required ValueListenable<bool> isActive,
   required DateTime Function() clock,
   ValueListenable<bool>? isFeedVisible,
-  ConsumptionAnalyticsTracker? consumptionAnalytics,
+  AnalyticsEventSink? legacyAnalytics,
 }) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
-      consumptionAnalyticsTrackerProvider.overrideWithValue(
-        consumptionAnalytics ??
-            ConsumptionAnalyticsTracker(
-              analytics: const NoOpAnalyticsEventSink(),
-            ),
+      analyticsEventSinkProvider.overrideWithValue(
+        legacyAnalytics ?? const NoOpAnalyticsEventSink(),
       ),
     ],
     child: Directionality(
@@ -1232,10 +1208,6 @@ Widget _buildTrackerHarness({
 
 class _RecordingEventSink extends NoOpAnalyticsEventSink {
   final eventNames = <String>[];
-  final _parameters = <String, Map<String, Object>>{};
-
-  /// Parameters of the most recent event named [name].
-  Map<String, Object> paramsFor(String name) => _parameters[name]!;
 
   @override
   Future<void> logEvent({
@@ -1243,7 +1215,6 @@ class _RecordingEventSink extends NoOpAnalyticsEventSink {
     required Map<String, Object> parameters,
   }) async {
     eventNames.add(name);
-    _parameters[name] = parameters;
   }
 }
 

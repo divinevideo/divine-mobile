@@ -102,7 +102,6 @@ void main() {
       when(
         () => mockConsumptionAnalytics.commentSent(
           targetVideoId: any(named: 'targetVideoId'),
-          targetPubkey: any(named: 'targetPubkey'),
         ),
       ).thenAnswer((_) async {});
     });
@@ -267,7 +266,6 @@ void main() {
           verify(
             () => mockConsumptionAnalytics.commentSent(
               targetVideoId: validId('root'),
-              targetPubkey: validId('author'),
             ),
           ).called(1);
         },
@@ -452,7 +450,6 @@ void main() {
           verifyNever(
             () => mockConsumptionAnalytics.commentSent(
               targetVideoId: any(named: 'targetVideoId'),
-              targetPubkey: any(named: 'targetPubkey'),
             ),
           );
         },

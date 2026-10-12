@@ -130,7 +130,9 @@ class ShareActionButton extends StatelessWidget {
         unawaited(
           ProviderScope.containerOf(context, listen: false)
               .read(consumptionAnalyticsTrackerProvider)
-              .shareTapped(targetVideoId: video.id, targetPubkey: video.pubkey),
+              .shareTapped(
+                targetVideoId: video.id,
+              ),
         );
         Log.info(
           'Share button tapped for ${video.id}',

@@ -18,6 +18,7 @@ import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -44,6 +45,7 @@ import 'package:user_ranking/user_ranking.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/recording_consumption_analytics.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -242,6 +244,47 @@ void main() {
     });
 
     group('share menu', () {
+      testWidgets('records governed share intent without blocking the sheet', (
+        tester,
+      ) async {
+        final pending = Completer<void>();
+        final analytics = RecordingConsumptionAnalytics(
+          pending: pending.future,
+        );
+        addTearDown(analytics.dispose);
+        final sink = _RecordingAnalyticsSink();
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(body: ShareActionButton(video: testVideo)),
+            additionalOverrides: [
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+              analyticsEventSinkProvider.overrideWithValue(sink),
+            ],
+            mockAuthService: createMockAuthService(),
+            mockProfileRepository: mockProfileRepository,
+          ),
+        );
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Share with'), findsOneWidget);
+        expect(analytics.eventNames, ['engagement_recorded']);
+        expect(analytics.parameters.single, {
+          'action': 'share_tapped',
+          'content_id': testVideo.id,
+        });
+        expect(
+          sink.events.where((event) => event.name == 'share_tapped'),
+          isEmpty,
+        );
+        pending.complete();
+        await tester.pump();
+      });
+
       testWidgets('shows Share with section', (tester) async {
         final mockAuth = createMockAuthService();
 
@@ -619,11 +662,7 @@ void main() {
 
             expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
             expect(find.text(l10n.shareSheetCrosspost), findsNothing);
-            expect(sink.events.map((event) => event.name), ['share_tapped']);
-            expect(sink.events.single.parameters, {
-              'target_video_id': testVideo.id,
-              'target_pubkey': testVideo.pubkey,
-            });
+            expect(sink.events, isEmpty);
           },
         );
 
@@ -646,11 +685,11 @@ void main() {
                 crosspostingApiClientProvider.overrideWithValue(client),
               ],
             );
-            expect(sink.events.map((event) => event.name), ['share_tapped']);
+            expect(sink.events, isEmpty);
             final actions = find.byType(ListView).last;
             await tester.drag(actions, const Offset(-500, 0));
             await tester.pumpAndSettle();
-            expect(sink.events, hasLength(2));
+            expect(sink.events, hasLength(1));
             expect(sink.events.last.name, 'crosspost_cta_shown');
             expect(sink.events.last.parameters, {
               'surface': 'share_sheet',
@@ -660,7 +699,7 @@ void main() {
             await tester.pumpAndSettle();
             await tester.drag(actions, const Offset(-500, 0));
             await tester.pumpAndSettle();
-            expect(sink.events, hasLength(2));
+            expect(sink.events, hasLength(1));
             verifyNever(client.getConnections);
           },
         );
@@ -689,7 +728,6 @@ void main() {
             await tester.tap(find.text(l10n.shareSheetCrosspost));
             await tester.pump();
             expect(sink.events.map((event) => event.name), [
-              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
@@ -711,16 +749,13 @@ void main() {
               () => goRouter.push<void>(any(), extra: any(named: 'extra')),
             );
             expect(sink.events.map((event) => event.name), [
-              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
             expect(
-              sink.events
-                  .skip(1)
-                  .every(
-                    (event) => event.parameters['cta'] == 'crosspost_row',
-                  ),
+              sink.events.every(
+                (event) => event.parameters['cta'] == 'crosspost_row',
+              ),
               isTrue,
             );
           },
@@ -780,11 +815,10 @@ void main() {
                 crosspostingApiClientProvider.overrideWithValue(client),
               ],
             );
-            expect(sink.events.map((event) => event.name), ['share_tapped']);
+            expect(sink.events, isEmpty);
             await tester.tap(find.text(l10n.shareSheetCrosspost));
             await tester.pumpAndSettle();
             expect(sink.events.map((event) => event.name), [
-              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
@@ -819,7 +853,7 @@ void main() {
             ],
           );
 
-          expect(sink.events, hasLength(2));
+          expect(sink.events, hasLength(1));
           expect(sink.events.last.name, 'crosspost_cta_shown');
           expect(
             sink.events.last.parameters,
@@ -882,16 +916,13 @@ void main() {
               () => goRouter.push<void>(RoutePaths.crosspostingSettings),
             ).called(1);
             expect(sink.events.map((event) => event.name), [
-              'share_tapped',
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
             ]);
             expect(
-              sink.events
-                  .skip(1)
-                  .every(
-                    (event) => event.parameters['cta'] == 'crosspost_row',
-                  ),
+              sink.events.every(
+                (event) => event.parameters['cta'] == 'crosspost_row',
+              ),
               isTrue,
             );
           },
