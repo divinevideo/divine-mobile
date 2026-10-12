@@ -148,7 +148,14 @@ void main() {
           final router = GoRouter.of(
             tester.element(find.byType(Scaffold).first),
           );
-          router.push(profilePath);
+          var initialProfileRoutePopped = false;
+          final initialProfileRoute = router.push<void>(profilePath).then((_) {
+            initialProfileRoutePopped = true;
+          });
+          addTearDown(() async {
+            if (!initialProfileRoutePopped && router.canPop()) router.pop();
+            await initialProfileRoute;
+          });
           await pumpUntilSettled(tester);
           logPhase('Pushed to User A profile: $profilePath');
 
@@ -208,6 +215,7 @@ void main() {
           // Go back from User A's profile
           router.pop();
           await pumpUntilSettled(tester);
+          await initialProfileRoute;
 
           await tapBottomNavTab(tester, 'explore_tab');
           await pumpUntilSettled(tester);
@@ -217,7 +225,16 @@ void main() {
           // ProfileFeedCubit. If the repository serves an instant cached reseed,
           // the cubit follows it with a skip-cache refresh, so the deleted video is
           // removed once Funnelcake filters it.
-          router.push(profilePath);
+          var refreshedProfileRoutePopped = false;
+          final refreshedProfileRoute = router.push<void>(profilePath).then((
+            _,
+          ) {
+            refreshedProfileRoutePopped = true;
+          });
+          addTearDown(() async {
+            if (!refreshedProfileRoutePopped && router.canPop()) router.pop();
+            await refreshedProfileRoute;
+          });
           await pumpUntilSettled(tester, maxSeconds: 15);
           logPhase('Back on User A profile');
 
@@ -247,6 +264,10 @@ void main() {
                 'filters deleted videos via deleted_events_set.',
           );
           logPhase('Deleted video disappeared after re-navigation');
+
+          router.pop();
+          await pumpUntilSettled(tester);
+          await refreshedProfileRoute;
 
           // ── Cleanup ──
           drainAsyncErrors(tester);
