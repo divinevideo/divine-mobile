@@ -2,7 +2,6 @@
 // ABOUTME: Displays a masonry grid of video clip thumbnails with selection support
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,6 +10,8 @@ import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/clip_category_actions.dart';
 import 'package:openvine/widgets/library/clip_category_chips.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/library/trashed_clips_list.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Tab widget displaying a grid of saved clips.
 ///
@@ -290,7 +292,12 @@ class _FilterContent extends StatelessWidget {
           );
           return;
         }
-        _showClipPreview(context, clip);
+        runDetached(
+          _showClipPreview(context, clip),
+          'open saved clip preview',
+          logName: 'ClipsTab',
+          category: LogCategory.ui,
+        );
       },
     );
   }
@@ -520,10 +527,11 @@ class _MasonryLayout extends StatelessWidget {
         context.read<ClipsLibraryBloc>().add(
           ClipsLibraryGridColumnsChanged(columns),
         );
-        SemanticsService.sendAnnouncement(
-          View.of(context),
+        announceDetached(
+          context,
           context.l10n.libraryGridSizeColumns(columns),
-          Directionality.of(context),
+          description: 'announce clip grid column count',
+          logName: 'ClipsTab',
         );
       },
       builder: (context, columns, controller) => DragSelectRegion(
