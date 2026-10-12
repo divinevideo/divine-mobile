@@ -22,7 +22,34 @@ enum VideoFrameEffectsTests {
 
     decodingFromAnAssetThatFailsCompletesTheFill()
     heldFramesAreDrawnAtTheClocksTime()
+    heldFramesAreRedrawnOnlyOnceHeldAndDue()
     print("VideoFrameEffectsTests passed")
+  }
+
+  /// With nothing new from the output, effects are drawn again over the frame
+  /// on screen, but not before it counts as held and not on every tick.
+  private static func heldFramesAreRedrawnOnlyOnceHeldAndDue() {
+    let heldUs: Int64 = 1_000_000
+    let after = HeldFrameEffects.afterUs
+    let interval = HeldFrameEffects.intervalUs
+
+    // A frame still inside the time any ordinary frame stands is not held.
+    precondition(
+      HeldFrameEffects.redrawTimeUs(
+        heldUs: heldUs, drawnUs: heldUs, nowUs: heldUs + after - 1) == nil)
+    // The moment it is, effects are drawn at the clock's time.
+    precondition(
+      HeldFrameEffects.redrawTimeUs(
+        heldUs: heldUs, drawnUs: heldUs, nowUs: heldUs + after) == heldUs + after)
+
+    // Drawn a moment ago over a held frame: wait out the spacing.
+    let drawnUs = heldUs + 3 * after
+    precondition(
+      HeldFrameEffects.redrawTimeUs(
+        heldUs: heldUs, drawnUs: drawnUs, nowUs: drawnUs + interval - 1) == nil)
+    precondition(
+      HeldFrameEffects.redrawTimeUs(
+        heldUs: heldUs, drawnUs: drawnUs, nowUs: drawnUs + interval) == drawnUs + interval)
   }
 
   /// A still is one sample lasting its whole length. Drawn at its own time,

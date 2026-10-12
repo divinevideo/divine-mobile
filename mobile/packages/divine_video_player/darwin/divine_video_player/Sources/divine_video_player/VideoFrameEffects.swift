@@ -488,6 +488,14 @@ enum HeldFrameEffects {
     if let drawnUs, frameUs < drawnUs, itemUs >= drawnUs { return itemUs }
     return frameUs
   }
+
+  /// The time to draw effects at again over the frame from `heldUs`, last
+  /// drawn at `drawnUs`, with the clock at `nowUs`; `nil` while it is too
+  /// soon, either for the frame to count as held or since the last draw.
+  static func redrawTimeUs(heldUs: Int64, drawnUs: Int64, nowUs: Int64) -> Int64? {
+    guard nowUs - heldUs >= afterUs, nowUs - drawnUs >= intervalUs else { return nil }
+    return nowUs
+  }
 }
 
 extension CMTime {

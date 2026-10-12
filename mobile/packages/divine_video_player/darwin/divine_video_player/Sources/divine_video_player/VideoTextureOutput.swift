@@ -631,10 +631,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             let heldUs = latestSourceTime.microseconds,
             let drawnUs = latestEffectsTimeUs,
             let nowUs = itemTime.microseconds,
-            nowUs - heldUs >= HeldFrameEffects.afterUs,
-            nowUs - drawnUs >= HeldFrameEffects.intervalUs
+            let redrawUs = HeldFrameEffects.redrawTimeUs(
+                heldUs: heldUs, drawnUs: drawnUs, nowUs: nowUs)
         else { return }
-        redrawWithEffects(atUs: nowUs)
+        redrawWithEffects(atUs: redrawUs)
     }
 
     /// Breaks the "playing but frozen" deadlock where `AVPlayerItemVideoOutput`
