@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:image_metadata_stripper/image_metadata_stripper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 // ABOUTME: Mobile-only image attachment picker for bug reports.
@@ -109,10 +109,11 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
     widget.onChanged(List.unmodifiable(_images));
 
     if (mounted) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
+      announceDetached(
+        context,
         context.l10n.bugReportImagesCount(_images.length, widget.maxImages),
-        Directionality.of(context),
+        description: 'announce bug report attachment count',
+        logName: 'ImageAttachmentPicker',
       );
     }
   }
@@ -142,10 +143,11 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
     widget.onChanged(List.unmodifiable(_images));
 
     if (mounted) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
+      announceDetached(
+        context,
         context.l10n.bugReportImagesCount(_images.length, widget.maxImages),
-        Directionality.of(context),
+        description: 'announce bug report attachment count',
+        logName: 'ImageAttachmentPicker',
       );
     }
   }
