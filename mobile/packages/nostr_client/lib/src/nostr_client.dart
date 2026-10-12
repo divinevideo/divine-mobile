@@ -1978,11 +1978,11 @@ class NostrClient {
   /// Such a read takes its slot from [_outsidePoolQueryPool] instead of
   /// [_queryPool]. The main pool exists to keep a burst of one-shot REQs from
   /// tripping a pooled relay's concurrent-REQ limit, and this read sends those
-  /// relays nothing, so queueing it behind feed reads only starves it. A recipient-inbox lookup's 2s indexer leg got 1s to win
-  /// a slot right after a publish, was skipped, and held the collaborator
-  /// invite pending (#10004). A temp relay that IS a pool member resolves to
-  /// the pooled socket (see [_hasRelayOutsidePool]), so naming one keeps the
-  /// whole read in the pool.
+  /// relays nothing, so queueing it behind feed reads only starves it. A
+  /// recipient-inbox lookup's 2s indexer leg got 1s to win a slot right after
+  /// a publish, was skipped, and held the collaborator invite pending (#10004).
+  /// A temp relay that IS a pool member resolves to the pooled socket (see
+  /// [_hasRelayOutsidePool]), so naming one keeps the whole read in the pool.
   ///
   /// The only reads that land there today are DmRepository's kind-10050
   /// legs, one REQ per relay per recipient. A group send resolves every
