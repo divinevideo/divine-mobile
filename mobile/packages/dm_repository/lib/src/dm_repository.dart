@@ -10152,9 +10152,10 @@ class DmRepository {
             : newest.content,
         lastMessageTimestamp: newest.createdAt,
         lastMessageSenderPubkey: newest.senderPubkey,
-        // Read state follows the room these were shown in: a reply the user
-        // has not seen there is still unread where it lands.
-        isRead: room.isRead,
+        // Unread wins: what the user had not seen, in the room or here, is
+        // still unread. Applied only when the newest reply moved becomes the
+        // latest message here, as for any message that arrives late.
+        isRead: room.isRead && (existing?.isRead ?? true),
         currentUserHasSent: existing?.currentUserHasSent ?? false,
         ownerPubkey: ownerPubkey,
         dmProtocol: 'nip17',

@@ -250,6 +250,9 @@ void main() {
 
   Event hello() => message(author: _alice, pTags: [_owner], content: 'hello');
 
+  /// The user's own message to Alice, as another of their devices sent it.
+  Event myHello() => message(author: _owner, pTags: [_alice], content: 'hello');
+
   /// Alice answering [parent] in the one-to-one while also tagging Bob.
   Event ccBob(Event parent, {String content = 'cc bob', int after = 1}) =>
       message(
@@ -417,6 +420,93 @@ void main() {
       expect(oneToOne?.lastMessageContent, equals('cc bob'));
       expect(oneToOne?.lastMessageTimestamp, equals(_sentAt + 1));
       expect(oneToOne?.isRead, isFalse);
+    });
+
+    test('leaves the one-to-one unread when it was read in the room but an '
+        'earlier message there was not', () async {
+      await deliver(
+        message(
+          author: _alice,
+          pTags: [_owner],
+          content: 'earlier',
+          createdAt: _sentAt - 10,
+        ),
+        authorSecret: _aliceSecret,
+      );
+      final parent = hello();
+      await deliver(ccBob(parent), authorSecret: _aliceSecret);
+      await conversationsDao.markAsRead(wideRoomId, ownerPubkey: _owner);
+
+      await deliver(parent, authorSecret: _aliceSecret);
+
+      expect(
+        await conversations(),
+        equals('1:1(alice,me)=[cc bob; earlier; hello]'),
+      );
+      final oneToOne = await conversationsDao.getConversation(
+        oneToOneId,
+        ownerPubkey: _owner,
+      );
+      expect(oneToOne?.isRead, isFalse);
+    });
+
+    test("is unread in the one-to-one when it answers the user's own "
+        'message and was not read in the room', () async {
+      final parent = myHello();
+      await deliver(ccBob(parent), authorSecret: _aliceSecret);
+
+      await deliver(parent, authorSecret: _ownerSecret);
+
+      expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
+      final oneToOne = await conversationsDao.getConversation(
+        oneToOneId,
+        ownerPubkey: _owner,
+      );
+      expect(oneToOne?.isRead, isFalse);
+    });
+
+    test("is read in the one-to-one when it answers the user's own message "
+        'and was read in the room', () async {
+      final parent = myHello();
+      await deliver(ccBob(parent), authorSecret: _aliceSecret);
+      await conversationsDao.markAsRead(wideRoomId, ownerPubkey: _owner);
+
+      await deliver(parent, authorSecret: _ownerSecret);
+
+      expect(await conversations(), equals('1:1(alice,me)=[cc bob; hello]'));
+      final oneToOne = await conversationsDao.getConversation(
+        oneToOneId,
+        ownerPubkey: _owner,
+      );
+      expect(oneToOne?.isRead, isTrue);
+    });
+
+    test('is read in a conversation it opens when it was read in the '
+        'room', () async {
+      final parent = hello();
+      final reply = ccBob(parent);
+      final bobAnswers = message(
+        author: _bob,
+        pTags: [_owner, _alice],
+        content: 'bob here',
+        replyTo: reply.id,
+        createdAt: reply.createdAt + 1,
+      );
+      await deliver(bobAnswers, authorSecret: _bobSecret);
+      await deliver(reply, authorSecret: _aliceSecret);
+      await conversationsDao.markAsRead(wideRoomId, ownerPubkey: _owner);
+
+      await deliver(parent, authorSecret: _aliceSecret);
+
+      expect(
+        await conversations(),
+        equals('1:1(alice,me)=[cc bob; hello] | 1:1(bob,me)=[bob here]'),
+      );
+      final withBob = await conversationsDao.getConversation(
+        _id([_owner, _bob]),
+        ownerPubkey: _owner,
+      );
+      expect(withBob?.isRead, isTrue);
     });
 
     test('tells whoever is showing the room where its messages went', () async {
