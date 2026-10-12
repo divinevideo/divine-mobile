@@ -467,8 +467,9 @@ final class VideoFrameEffectProcessor {
 /// frame of it. Drawn at the still's own time, they stood still with it.
 enum HeldFrameEffects {
   /// How long a frame may stand while the clock runs before effects take the
-  /// clock's time. Longer than the gap between two frames of any footage, so
-  /// a frame of ordinary video keeps its own time.
+  /// clock's time. Footage at 17 fps or more replaces its frames inside it
+  /// and keeps their own time. A slow-motion clip, or a frame the decoder is
+  /// late with, stands longer and is treated like a still.
   static let afterUs: Int64 = 60_000
 
   /// Spacing of redraws over a held frame the output hands over nothing new
