@@ -26,16 +26,20 @@ final localAudioImportServiceProvider = Provider<LocalAudioImportService>(
   (ref) => LocalAudioImportService(),
 );
 
+/// Opens the platform picker for one audio file to import.
+final audioFilePickerServiceProvider = Provider<AudioFilePickerService>(
+  (_) => const AudioFilePickerService(),
+);
+
 /// Builds the platform audio picker for the supported import formats.
 ///
 /// The caller passes the localized type-group label, since the provider has
 /// no `BuildContext`.
 final audioImportFilePickerProvider =
     Provider<AudioImportFilePicker Function(String label)>((ref) {
+      final picker = ref.watch(audioFilePickerServiceProvider);
       return (label) => () async {
-        final file = await const AudioFilePickerService().pickAudioFile(
-          typeGroupLabel: label,
-        );
+        final file = await picker.pickAudioFile(typeGroupLabel: label);
         if (file == null || file.path.isEmpty) return null;
         return AudioImportPickedFile(path: file.path, name: file.name);
       };
