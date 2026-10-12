@@ -149,6 +149,19 @@ void main() {
       verify(() => mockBloc.add(const UsernameRechecked())).called(1);
     });
 
+    testWidgets('Contact support link opens $UsernameReservedDialog', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildIndicatorWithBloc(UsernameStatus.reserved));
+      expect(find.byType(UsernameReservedDialog), findsNothing);
+
+      await tester.tap(find.text(l10n.profileSetupContactSupport));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(UsernameReservedDialog), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('shows error message when network error', (tester) async {
       await tester.pumpWidget(
         buildIndicator(
