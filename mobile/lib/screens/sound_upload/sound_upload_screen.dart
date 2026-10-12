@@ -10,9 +10,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, UserProfile;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/sound_upload/sound_upload_cubit.dart';
-import 'package:openvine/constants/audio_picker_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart'
+    show audioFilePickerServiceProvider;
 import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -48,6 +49,7 @@ class SoundUploadScreen extends ConsumerWidget {
     final pubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
     final publisher = ref.watch(localAudioEventPublisherProvider);
     final importService = ref.watch(localAudioImportServiceProvider);
+    final audioFilePicker = ref.watch(audioFilePickerServiceProvider);
     return BlocProvider<SoundUploadCubit>(
       key: ValueKey((pubkey, publisher)),
       create: (_) {
@@ -63,7 +65,13 @@ class SoundUploadScreen extends ConsumerWidget {
               (pubkey == null ? '' : UserProfile.defaultDisplayNameFor(pubkey)),
         );
       },
-      child: SoundUploadView(pickAudioFile: pickAudioFile),
+      child: SoundUploadView(
+        pickAudioFile:
+            pickAudioFile ??
+            () => audioFilePicker.pickAudioFile(
+              typeGroupLabel: context.l10n.audioPickerTypeGroup,
+            ),
+      ),
     );
   }
 }
@@ -73,12 +81,13 @@ class SoundUploadScreen extends ConsumerWidget {
 class SoundUploadView extends StatefulWidget {
   @visibleForTesting
   const SoundUploadView({
-    this.pickAudioFile,
+    required this.pickAudioFile,
     @visibleForTesting this.audioService,
     super.key,
   });
 
-  final Future<XFile?> Function()? pickAudioFile;
+  /// Opens the platform audio picker.
+  final Future<XFile?> Function() pickAudioFile;
 
   /// Preview player; tests inject a fake so no platform player is created.
   final AudioPlaybackService? audioService;
@@ -124,15 +133,13 @@ class _SoundUploadViewState extends State<SoundUploadView> {
 
   Future<void> _pickFile() async {
     await _stopPreview();
-    final picker =
-        widget.pickAudioFile ??
-        () => openFile(
-          acceptedTypeGroups: [
-            audioPickerTypeGroup(label: context.l10n.audioPickerTypeGroup),
-          ],
-          initialDirectory: audioPickerInitialDirectory(),
-        );
-    final file = await picker();
+    final XFile? file;
+    try {
+      file = await widget.pickAudioFile();
+    } catch (e, stackTrace) {
+      if (mounted) context.read<SoundUploadCubit>().pickFailed(e, stackTrace);
+      return;
+    }
     if (!mounted || file == null || file.path.isEmpty) return;
     await context.read<SoundUploadCubit>().importFile(
       sourcePath: file.path,

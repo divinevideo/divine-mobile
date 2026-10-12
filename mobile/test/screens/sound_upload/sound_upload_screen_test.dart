@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -516,6 +517,25 @@ void main() {
 
         expect(find.text(l10n.videoEditorAudioImportFailed), findsOneWidget);
         expect(find.byKey(const Key('sound_upload_pick_file')), findsOneWidget);
+      });
+
+      testWidgets('reports a file the picker could not copy', (tester) async {
+        await pumpUpload(
+          tester,
+          pickAudioFile: () async =>
+              throw PlatformException(code: 'copy_failed'),
+        );
+
+        await pickFile(tester);
+
+        expect(find.text(l10n.videoEditorAudioImportFailed), findsOneWidget);
+        expect(find.byKey(const Key('sound_upload_pick_file')), findsOneWidget);
+        verifyNever(
+          () => importService.importAudioFile(
+            sourcePath: any(named: 'sourcePath'),
+            displayName: any(named: 'displayName'),
+          ),
+        );
       });
 
       testWidgets('blocks back navigation while publishing', (tester) async {

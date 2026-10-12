@@ -2,6 +2,7 @@
 // ABOUTME: credit's creator pubkey, and the publish lifecycle.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
@@ -85,6 +86,38 @@ void main() {
   }
 
   group(SoundUploadCubit, () {
+    group('pickFailed', () {
+      blocTest<SoundUploadCubit, SoundUploadState>(
+        'reports a file the picker could not hand over',
+        build: buildCubit,
+        act: (cubit) => cubit.pickFailed(
+          PlatformException(code: 'copy_failed'),
+          StackTrace.empty,
+        ),
+        expect: () => const [
+          SoundUploadState(failure: SoundUploadFailure.importFailed),
+        ],
+        errors: () => [isA<PlatformException>()],
+      );
+
+      blocTest<SoundUploadCubit, SoundUploadState>(
+        'reports the same pick failure twice in a row',
+        build: buildCubit,
+        seed: () => const SoundUploadState(
+          failure: SoundUploadFailure.importFailed,
+        ),
+        act: (cubit) => cubit.pickFailed(
+          PlatformException(code: 'copy_failed'),
+          StackTrace.empty,
+        ),
+        expect: () => const [
+          SoundUploadState(),
+          SoundUploadState(failure: SoundUploadFailure.importFailed),
+        ],
+        errors: () => [isA<PlatformException>()],
+      );
+    });
+
     group('importFile', () {
       blocTest<SoundUploadCubit, SoundUploadState>(
         'copies the file and seeds an own-work credit for the publisher',

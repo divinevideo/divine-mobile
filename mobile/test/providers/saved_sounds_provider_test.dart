@@ -1,4 +1,4 @@
-// ABOUTME: Tests the wiring of savedSoundsServiceProvider.
+// ABOUTME: Tests the wiring of savedSoundsServiceProvider and the audio picker.
 // ABOUTME: Pins the account bucket and the documents path the service reads.
 
 import 'dart:async';
@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -15,12 +16,16 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockAudioFilePickerService extends Mock
+    implements AudioFilePickerService {}
 
 void main() {
   group(savedSoundsServiceProvider, () {
@@ -142,6 +147,26 @@ void main() {
               'the life of the install (#8025)',
         );
       });
+    });
+  });
+
+  group('audioImportFilePickerProvider', () {
+    test('picks through the app audio picker with the given label', () async {
+      final picker = _MockAudioFilePickerService();
+      when(
+        () => picker.pickAudioFile(typeGroupLabel: 'Audio'),
+      ).thenAnswer((_) async => XFile('/cache/audio_picks/Song.mp3'));
+      final container = ProviderContainer(
+        overrides: [audioFilePickerServiceProvider.overrideWithValue(picker)],
+      );
+      addTearDown(container.dispose);
+
+      final picked = await container.read(audioImportFilePickerProvider)(
+        'Audio',
+      )();
+
+      expect(picked?.path, equals('/cache/audio_picks/Song.mp3'));
+      expect(picked?.name, equals('Song.mp3'));
     });
   });
 }

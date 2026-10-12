@@ -17,8 +17,10 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -52,6 +54,9 @@ Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
+
+class _MockAudioFilePickerService extends Mock
+    implements AudioFilePickerService {}
 
 /// A playback service that answers every call the selection overlay makes,
 /// so a test can assert on selection rather than on playback plumbing.
@@ -109,6 +114,7 @@ void main() {
       List<String>? relaySearches,
       AudioEvent? consentSound,
       bool? consentResult,
+      AudioFilePickerService? audioFilePicker,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -145,6 +151,8 @@ void main() {
                 return sound.id != consentSound?.id || (consentResult ?? true);
               },
             ),
+            if (audioFilePicker != null)
+              audioFilePickerServiceProvider.overrideWithValue(audioFilePicker),
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
             ),
@@ -201,6 +209,31 @@ void main() {
 
         expect(find.text('Import audio'), findsOneWidget);
         expect(find.byIcon(Icons.upload_file), findsOneWidget);
+      });
+
+      testWidgets('imports through the app audio picker', (tester) async {
+        final picker = _MockAudioFilePickerService();
+        when(
+          () => picker.pickAudioFile(
+            typeGroupLabel: any(named: 'typeGroupLabel'),
+          ),
+        ).thenAnswer((_) async => null);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            audioFilePicker: picker,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Import audio'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => picker.pickAudioFile(
+            typeGroupLabel: any(named: 'typeGroupLabel'),
+          ),
+        ).called(1);
       });
 
       testWidgets('renders $AudioCategoryBar with all category chips', (

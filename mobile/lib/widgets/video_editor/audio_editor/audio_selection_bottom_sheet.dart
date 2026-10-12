@@ -9,11 +9,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VineSound;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
-import 'package:openvine/constants/audio_picker_extensions.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -337,12 +337,9 @@ class _AudioSelectionBottomSheetState
   Future<void> _importAudio() async {
     final picker =
         widget.pickAudioFile ??
-        () => openFile(
-          acceptedTypeGroups: [
-            audioPickerTypeGroup(label: context.l10n.audioPickerTypeGroup),
-          ],
-          initialDirectory: audioPickerInitialDirectory(),
-        );
+        () => ref
+            .read(audioFilePickerServiceProvider)
+            .pickAudioFile(typeGroupLabel: context.l10n.audioPickerTypeGroup);
 
     try {
       final file = await picker();
