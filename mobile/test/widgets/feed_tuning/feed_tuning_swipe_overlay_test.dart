@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -259,11 +260,12 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('a failing haptic channel still tunes without an error', (
+    testWidgets('a failing haptic channel still tunes and logs the failure', (
       tester,
     ) async {
       mockPlatformChannel(tester, failHaptics: true);
       final tuned = await pumpOverlay(tester);
+      await LogCaptureService().clearAllLogs();
 
       await tester.drag(
         find.byType(FeedTuningSwipeOverlay),
@@ -274,6 +276,21 @@ void main() {
       expect(selectionClicks(), hasLength(1));
       expect(tuned, [FeedTuningDirection.more]);
       expect(tester.takeException(), isNull);
+
+      // Matched anywhere: the capture is a process-global ring buffer shared
+      // by every suite in a merged isolate, so `.last` is not stable.
+      final errors = LogCaptureService().getRecentLogs(
+        minLevel: LogLevel.error,
+      );
+      expect(
+        errors.map((entry) => entry.message),
+        contains(
+          allOf(
+            contains('Failed to play feed tuning threshold haptic'),
+            contains('haptics-unavailable'),
+          ),
+        ),
+      );
     });
   });
 
