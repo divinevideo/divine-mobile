@@ -116,36 +116,39 @@ void main() {
     });
   });
 
-  testWidgets('announces when pasted text is truncated', (tester) async {
-    final limitMessage = lookupAppLocalizations(
-      const Locale('en'),
-    ).supportFieldLimitReached;
-    final announcements = <String>[];
-    tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
-      SystemChannels.accessibility,
-      (message) async {
-        final data = message! as Map<Object?, Object?>;
-        if (data['type'] == 'announce') {
-          final payload = data['data']! as Map<Object?, Object?>;
-          announcements.add(payload['message']! as String);
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger
+  group('text truncation', () {
+    testWidgets('announces when pasted text is truncated', (tester) async {
+      final limitMessage = lookupAppLocalizations(
+        const Locale('en'),
+      ).supportFieldLimitReached;
+      final announcements = <String>[];
+      tester.binding.defaultBinaryMessenger
           .setMockDecodedMessageHandler<Object?>(
             SystemChannels.accessibility,
-            null,
-          ),
-    );
+            (message) async {
+              final data = message! as Map<Object?, Object?>;
+              if (data['type'] == 'announce') {
+                final payload = data['data']! as Map<Object?, Object?>;
+                announcements.add(payload['message']! as String);
+              }
+              return null;
+            },
+          );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
 
-    await tester.pumpWidget(buildSubject());
-    await tester.enterText(find.byType(TextField), 'x' * 101);
-    await tester.pump();
+      await tester.pumpWidget(buildSubject());
+      await tester.enterText(find.byType(TextField), 'x' * 101);
+      await tester.pump();
 
-    expect(controller.text, hasLength(100));
-    expect(find.text(limitMessage), findsOneWidget);
-    expect(announcements, [limitMessage]);
+      expect(controller.text, hasLength(100));
+      expect(find.text(limitMessage), findsOneWidget);
+      expect(announcements, [limitMessage]);
+    });
   });
 }
