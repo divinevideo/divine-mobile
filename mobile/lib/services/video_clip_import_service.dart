@@ -385,10 +385,17 @@ class VideoClipImportService {
       }
       // Saving over a trashed row leaves it in the trash, so the clip would
       // be reported as added while staying out of sight.
-      await _clipLibraryService.restore(clipId);
-      return VideoClipImportSuccess(
-        await _clipLibraryService.getClipById(clipId) ?? existing,
-      );
+      final restored = await _clipLibraryService.restore(clipId);
+      final clip = restored
+          ? await _clipLibraryService.getClipById(clipId)
+          : null;
+      // The trash can be emptied or the clip trashed again during import.
+      if (clip == null || clip.deletedAt != null) {
+        return const VideoClipImportFailure(
+          VideoClipImportFailureReason.saveFailed,
+        );
+      }
+      return VideoClipImportSuccess(clip);
     }
 
     final importedAt = _now();

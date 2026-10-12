@@ -1390,4 +1390,68 @@ void main() {
       expect(docsDir.listSync().whereType<File>(), isEmpty);
     });
   });
+
+  group('verified clip restore failures', () {
+    for (final fromGallery in [false, true]) {
+      final origin = fromGallery ? 'gallery' : 'DM';
+      for (final failure in [
+        'not restored',
+        'deleted after restore',
+        'trashed again',
+      ]) {
+        test('$origin import fails when the clip is $failure', () async {
+          final clipId = fromGallery
+              ? 'gallery_clip_${_ownerPubkey}_$_receivedClipHash'
+              : 'dm_clip_${_messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}';
+          final trashed = DivineVideoClip(
+            id: clipId,
+            video: EditorVideo.file('${docsDir.path}/$clipId.mp4'),
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime.utc(2026, 4, 27),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            deletedAt: DateTime.utc(2026, 4, 28),
+          );
+          when(() => clipLibraryService.ownerPubkey).thenReturn(_ownerPubkey);
+          when(() => clipLibraryService.getAllClips())
+              .thenAnswer((_) async => []);
+          var lookupCount = 0;
+          when(() => clipLibraryService.getClipById(clipId))
+              .thenAnswer((_) async {
+                lookupCount++;
+                return lookupCount == 1 || failure == 'trashed again'
+                    ? trashed
+                    : null;
+              });
+          when(() => clipLibraryService.belongsToAnotherAccount(clipId))
+              .thenAnswer((_) async => false);
+          when(() => clipLibraryService.restore(clipId))
+              .thenAnswer((_) async => failure != 'not restored');
+          final service = buildService();
+
+          final result = fromGallery
+              ? await service.importGalleryClip(
+                  source: sourceVideo,
+                  c2paManifestId: _c2paManifestId,
+                )
+              : await service.importReceivedClip(
+                  source: sourceVideo,
+                  messageId: _messageId,
+                  senderPubkey: _senderPubkey,
+                  c2paManifestId: _c2paManifestId,
+                );
+
+          expect(
+            result,
+            isA<VideoClipImportFailure>().having(
+              (result) => result.reason,
+              'reason',
+              VideoClipImportFailureReason.saveFailed,
+            ),
+          );
+          verifyNever(() => clipLibraryService.saveClip(any()));
+        });
+      }
+    }
+  });
 }
