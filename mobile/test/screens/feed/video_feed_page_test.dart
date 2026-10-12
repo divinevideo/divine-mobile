@@ -479,6 +479,7 @@ void main() {
         await pumpRetapFeed(tester, retapCubit);
 
         retapCubit.request();
+        expect(retapCubit.state.isRefreshing, isTrue);
         await tester.pump();
         feedStates.add(initialState);
         await tester.pump();
@@ -486,9 +487,12 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(retapCubit.state.isRefreshing, isFalse);
-        final log = LogCaptureService().getRecentLogs().singleWhere(
-          (entry) => entry.name == 'VideoFeedPage',
-        );
+        final logs = LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.name == 'VideoFeedPage')
+            .toList();
+        expect(logs, hasLength(1));
+        final log = logs.single;
         expect(log.level, LogLevel.error);
         expect(
           log.message,
