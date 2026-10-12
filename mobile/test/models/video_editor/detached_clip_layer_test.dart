@@ -900,5 +900,111 @@ void main() {
         expect(interactionOf(original)!['enableRotate'], isFalse);
       });
     });
+
+    group('withRestoredDetachedClipExportMeta', () {
+      final placedMeta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+      final keyedMeta = DetachedClipLayerData.withChromaKey(
+        placedMeta,
+        const ClipChromaKey(key: ChromaKey.blueScreen()),
+      )!;
+
+      Map<String, dynamic> placedReference() => WidgetLayer(
+        id: 'layer-1',
+        widget: const SizedBox.shrink(),
+        meta: placedMeta,
+        exportConfigs: WidgetLayerExportConfigs(
+          id: 'layer-1',
+          meta: placedMeta,
+        ),
+      ).toMap();
+
+      test('restores a green screen applied after the clip was placed', () {
+        // What pro_image_editor before 14.11.1 wrote: the layer placed in the
+        // first entry, keyed in the second, moved in the third. The keying
+        // diff carries `meta` but no `exportConfigs`.
+        final history = <String, dynamic>{
+          'version': '6.5.0',
+          'position': 2,
+          'references': {'layer-1': placedReference()},
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+            {
+              'layers': [
+                {'id': 'layer-1', 'meta': keyedMeta},
+              ],
+            },
+            {
+              'layers': [
+                {'id': 'layer-1', 'x': 12.0},
+              ],
+            },
+          ],
+        };
+        final loadedMeta = <Map<String, dynamic>?>[];
+
+        final imported = ImportStateHistory.fromMap(
+          DetachedClipLayerData.withRestoredDetachedClipExportMeta(history),
+          configs: ImportEditorConfigs(
+            widgetLoader: (_, {meta}) {
+              loadedMeta.add(meta);
+              return const SizedBox.shrink();
+            },
+          ),
+        );
+
+        expect(loadedMeta, [placedMeta, keyedMeta, keyedMeta]);
+        final restored = imported.stateHistory.last.layers.single;
+        expect(
+          DetachedClipLayerData.hasChromaKey(
+            DetachedClipLayerData.metaOf(restored),
+          ),
+          isTrue,
+        );
+        expect(restored.offset.dx, 12);
+        expect(
+          ((history['history'] as List)[1] as Map)['layers'],
+          [
+            {'id': 'layer-1', 'meta': keyedMeta},
+          ],
+          reason: "the caller's history is left as it was",
+        );
+      });
+
+      test('returns a history whose export meta is current as it came', () {
+        // Runs on every draft load; one saved with the fixed package writes
+        // the export configs into the diff and has nothing to restore.
+        final history = <String, dynamic>{
+          'references': {'layer-1': placedReference()},
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+            {
+              'layers': [
+                {
+                  'id': 'layer-1',
+                  'meta': keyedMeta,
+                  'exportConfigs': {'id': 'layer-1', 'meta': keyedMeta},
+                },
+              ],
+            },
+          ],
+        };
+
+        expect(
+          DetachedClipLayerData.withRestoredDetachedClipExportMeta(history),
+          same(history),
+        );
+      });
+    });
   });
 }
