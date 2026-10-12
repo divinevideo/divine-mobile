@@ -578,9 +578,12 @@ class DivineVideoPlayerController {
   /// Replaces the equalizers of the loaded clips without reloading them, one
   /// entry per clip passed to [setClips]; `null` plays a clip unchanged.
   ///
-  /// Cheap enough to follow an equalizer control while it is dragged; ignored
-  /// when [equalizers] does not have one entry per loaded clip. Native only,
-  /// and only on players created with [VideoBufferProfile.full].
+  /// Cheap enough to follow an equalizer control while it is dragged, except
+  /// for a single looping clip on Android: its sound is filtered again once
+  /// the equalizer has rested for about half a second, so the new curve is
+  /// heard then rather than during the drag. Ignored when [equalizers] does
+  /// not have one entry per loaded clip. Native only, and only on players
+  /// created with [VideoBufferProfile.full].
   Future<void> setClipEqualizers(List<AudioEqualizer?> equalizers) async {
     _ensureInitialized();
     if (_isWebBackend || _isLinuxBackend) return;
