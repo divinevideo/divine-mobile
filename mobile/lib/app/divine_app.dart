@@ -44,6 +44,7 @@ import 'package:openvine/startup/app_composition_root.dart';
 import 'package:openvine/startup/app_side_effects.dart';
 import 'package:openvine/startup/divine_material_app.dart';
 import 'package:openvine/startup/startup_splash_release_controller.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -143,7 +144,6 @@ bool shouldSuspendDownloadsAtLaunch(AppLifecycleState? state) =>
 class _DivineAppState extends ConsumerState<DivineApp>
     with WidgetsBindingObserver {
   bool _backgroundInitDone = false;
-  StreamSubscription<void>? _shakeSubscription;
   StreamSubscription<NotificationTapEvent>? _notificationTapSubscription;
   ProviderSubscription<AsyncValue<AccountDeletionAttempt?>>?
   _deletionAttemptSubscription;
@@ -280,9 +280,13 @@ class _DivineAppState extends ConsumerState<DivineApp>
     _memoryObserverClock.stop();
     _splashReleaseController.dispose();
     _deletionAttemptSubscription?.close();
-    _notificationTapSubscription?.cancel();
+    runDetached(
+      _notificationTapSubscription?.cancel() ?? Future<void>.value(),
+      'cancel notification tap subscription',
+      logName: 'DivineApp',
+      category: LogCategory.system,
+    );
     unawaited(_quickActionsCoordinator?.dispose());
-    _shakeSubscription?.cancel();
     super.dispose();
   }
 
@@ -412,12 +416,22 @@ class _DivineAppState extends ConsumerState<DivineApp>
 
     // Initialize the deep link service for video content
     final deepLinkService = ref.read(deepLinkServiceProvider);
-    deepLinkService.initialize();
+    runDetached(
+      deepLinkService.initialize(),
+      'initialize deep-link service',
+      logName: 'DeepLinkHandler',
+      category: LogCategory.ui,
+    );
 
     // Route local notification taps (background-built via flutter_local_notifications)
     // through the same deep-link stream so the build() listener handles navigation.
     final container = ProviderScope.containerOf(context);
-    _notificationTapSubscription?.cancel();
+    runDetached(
+      _notificationTapSubscription?.cancel() ?? Future<void>.value(),
+      'replace notification tap subscription',
+      logName: 'DeepLinkHandler',
+      category: LogCategory.system,
+    );
     _notificationTapSubscription = ref
         .read(notificationServiceProvider)
         .notificationTapStream
