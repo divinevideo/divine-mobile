@@ -25,7 +25,7 @@
 # 8 - PUBLISH_TO_GITHUB is configured via build inputs (dropdown) when starting builds
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
 #     and, with RELEASE_CHANNEL=PRODUCTION, publish that release to Zapstore
-#   - RELEASE_CHANNEL defaults to BETA; choose PRODUCTION only after this version is live in both stores
+#   - RELEASE_CHANNEL defaults to BETA; ready direct releases can publish independently of store rollout
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
 # 9 - Android publishing reads the service account from environment variable
@@ -980,7 +980,7 @@ workflows:
           - STAGING
           - POC
       RELEASE_CHANNEL:
-        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
+        description: Use BETA while testing. Promote tested artifacts with reviewed notes via --promote-from for GitHub Latest, independently of store rollout. Do not rebuild to promote.
         type: choice
         default: BETA
         options:
@@ -1118,7 +1118,7 @@ workflows:
           - STAGING
           - POC
       RELEASE_CHANNEL:
-        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
+        description: Use BETA while testing. Promote tested artifacts with reviewed notes via --promote-from for GitHub Latest, independently of store rollout. Do not rebuild to promote.
         type: choice
         default: BETA
         options:
@@ -1384,7 +1384,7 @@ workflows:
           - STAGING
           - POC
       RELEASE_CHANNEL:
-        description: GitHub release channel; PRODUCTION sets Latest and triggers update prompts. Run only after this version is available to all users in App Store and Google Play.
+        description: GitHub release channel; publish ready direct downloads independently of store rollout. PRODUCTION sets Latest; existing clients may prompt before their store has the update.
         type: choice
         default: BETA
         options:

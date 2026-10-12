@@ -53,30 +53,44 @@ each job’s checked-out SHA before publication; a moving branch name alone does
 not identify a candidate. If the build launcher cannot select that commit, stop
 and use a launcher that can; do not rebuild from a newer main under the same tag.
 
-### Store availability before Production
+### Publish each distribution channel when it is ready
 
-Keep `RELEASE_CHANNEL=BETA` while building, testing, submitting for store review,
-or advancing a staged rollout. Run `RELEASE_CHANNEL=PRODUCTION` only after this
-version is live in both App Store and Google Play and available to all users
-who can receive the update prompt. Internal testing, approval without release,
-and a partial staged rollout do not satisfy this requirement. This applies to
-all three platform workflows, including macOS.
+GitHub direct downloads, Zapstore, App Store and Google Play are independent
+release channels. A tested production-backend APK can ship as a stable GitHub
+release with finished release notes before either store approves or completes
+its rollout. Store review, internal testing and staged rollout do not block
+GitHub Production publication, promotion or retries. The same independence
+applies to macOS direct downloads.
 
-Stable GitHub publication automatically updates Latest, which drives in-app
-update prompts for every install source, including store installs. The release
-owner must verify store availability before starting Production; automation
-does not query the stores or coordinate their rollouts. The same prerequisite
-applies to a production retry and `--promote-from`.
+Use `RELEASE_CHANNEL=BETA` while a candidate is still being tested. Once the
+release owner accepts that candidate for direct distribution and its notes are
+reviewed, promote its original production-backend artifacts on GitHub without
+rebuilding. Publish to Zapstore through the signed manual command when that
+channel is ready. Independently promote the original store artifacts through
+App Store Connect and Play Console and verify each store's rollout there.
+GitHub publication does not establish or change store availability.
 
-Build and submit the candidate using BETA first, promote the original store
-artifacts through App Store Connect and Play Console, verify availability, then
-promote the tested production-backend beta on GitHub without rebuilding as
-described below, then publish the stable release to Zapstore with the signed
-manual command. Do not start another iOS or Android build with PRODUCTION:
+Record the candidate source SHA, available downloads, and each channel's
+verified availability in the release handoff. If a store or platform is still
+pending, say so plainly in the release notes; do not describe a direct release
+as available in every store. An Android release need not wait for an iOS or
+macOS artifact. Add later platform artifacts only from the same candidate,
+using the publisher's digest checks.
+
+**Current update-prompt limitation:** stable GitHub publication updates Latest.
+The shipped update checker reads that version for every install source, then
+opens the install source's own download URL. It does not check that store's
+available version. Store users may therefore see a prompt before their store
+has the update. Record that limitation when channels differ; it is not a veto
+on direct downloads. Update availability should ultimately be checked per
+installation channel. This policy change does not change shipped clients.
+
+Do not start another iOS or Android build merely to promote a tested beta:
 iOS preflight rejects a version already live in the store, and Android would
 create and upload another build rather than promote the tested artifacts.
-Only macOS can use a new Production build after that availability check.
-Publication retries reuse the original files; they are not new store builds.
+Use `--promote-from` below. Publication retries reuse the original files;
+they are not new store builds. A new macOS Production build can publish its
+own ready artifact independently of the stores.
 
 Production publishing uses GitHub’s automatic Latest selection instead of
 forcing its own release over a concurrently published newer version. Latest is
@@ -100,9 +114,9 @@ Play promotion remain explicit store operations.
 ## Retry publication with the original files
 
 Download and preserve the failed job's original signed artifacts from Codemagic.
-Do not run the build again. For a production retry, first verify the store
-availability prerequisite above. In an isolated checkout of that job's **exact source
-commit**, with its reviewed notes and matching pubspec version, run:
+Do not run the build again. For a production retry, verify the direct-release
+readiness requirements above. In an isolated checkout of that job's **exact
+source commit**, with its reviewed notes and matching pubspec version, run:
 
 ```sh
 python3 mobile/scripts/publish_github_release.py \
@@ -126,9 +140,10 @@ existing signing environment and `--skip-certificate-linking` option.
 
 ## Promote a tested beta without rebuilding
 
-Once release notes for that beta’s version have been reviewed and committed
-and the original store artifacts are live and available to all users in both
-stores, run this from a checkout containing the publisher and those notes:
+Once the beta has passed testing for the platforms being published, the release
+owner accepts it for direct distribution, and its release notes have been
+reviewed and committed, run this from a checkout containing the publisher and
+those notes. Store approval and rollout are independent:
 
 ```sh
 python3 mobile/scripts/publish_github_release.py \
@@ -139,11 +154,12 @@ python3 mobile/scripts/publish_github_release.py \
 The command verifies the beta source tag, downloads its existing assets, checks
 all digests, and publishes those exact files under the stable version tag. The
 notes must describe **that beta’s source**, even if this checkout is newer.
-Ensure every intended platform has uploaded before promotion. Later platforms
-can be promoted again from the same beta: identical assets are skipped.
+Verify the artifacts for the platforms being published are present before
+promotion. Other platforms need not delay them. Later platforms can be promoted
+again from the same beta: identical assets are skipped.
 
-This command promotes GitHub only. The original artifacts must already have
-completed release in App Store Connect and Play Console before running it. For Zapstore, publish the resulting
+This command promotes GitHub only; it does not require or perform store
+promotion. For Zapstore, publish the resulting
 stable GitHub release through the existing signed Zapstore tooling; do not
 rebuild Android merely to trigger a store publication. Never promote a staging
 or POC beta to production.
