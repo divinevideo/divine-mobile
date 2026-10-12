@@ -206,7 +206,7 @@ class FeatureRequestActions extends StatelessWidget {
         userPubkey: userPubkey,
       ),
       'submit feature request',
-      logName: 'FeatureRequestScreen',
+      logName: 'FeatureRequestActions',
       category: LogCategory.system,
     );
   }
