@@ -159,6 +159,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(UsernameReservedDialog), findsOneWidget);
+      expect(
+        tester
+            .widget<UsernameReservedDialog>(find.byType(UsernameReservedDialog))
+            .username,
+        equals('testuser'),
+      );
       expect(tester.takeException(), isNull);
     });
 
