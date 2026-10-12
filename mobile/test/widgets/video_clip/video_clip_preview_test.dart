@@ -22,6 +22,7 @@ import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 import 'package:openvine/widgets/video_clip/video_clip_preview.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/divine_video_player_channel.dart';
 import '../../helpers/go_router.dart';
@@ -99,6 +100,22 @@ void main() {
       targetAspectRatio: .vertical,
       originalAspectRatio: 9 / 16,
     );
+
+    late LogCaptureService logCapture;
+
+    setUp(() async {
+      logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+    });
+
+    tearDown(() async {
+      await logCapture.clearAllLogs();
+    });
+
+    List<String> previewLogs() => [
+      for (final entry in logCapture.getRecentLogs())
+        if (entry.name == 'VideoClipPreview') entry.message,
+    ];
 
     Widget buildTestWidget({
       DivineVideoClip? clip,
@@ -242,8 +259,6 @@ void main() {
     testWidgets('contains a clip source that fails to resolve to a file', (
       tester,
     ) async {
-      installMockDivineVideoPlayer();
-
       // Content URIs resolve only on Android, so `safeFilePath` rejects here
       // before the player exists.
       await tester.pumpWidget(
@@ -256,9 +271,150 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(tester.takeException(), isNull);
+      expect(
+        previewLogs(),
+        contains(startsWith('Failed to initialize clip preview player')),
+      );
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       verifyNever(() => mockGoRouter.pop<Object?>(any()));
     }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+    group('releasing the native player', () {
+      String createVideoFile() {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_preview_release',
+        );
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        return (File(
+          '${tempDir.path}/video.mp4',
+        )..writeAsBytesSync(const [0])).path;
+      }
+
+      /// Records every call on the channel shared by all players.
+      ///
+      /// `dispose` rejects when [failDispose] is set.
+      List<MethodCall> recordSharedPlayerCalls({bool failDispose = false}) {
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (
+                call,
+              ) async {
+                calls.add(call);
+                if (call.method == 'create') {
+                  return <String, Object?>{'textureId': 1};
+                }
+                if (call.method == 'dispose' && failDispose) {
+                  throw PlatformException(code: 'dispose_failed');
+                }
+                return null;
+              },
+            );
+        return calls;
+      }
+
+      Iterable<MethodCall> disposeCalls(List<MethodCall> calls) =>
+          calls.where((call) => call.method == 'dispose');
+
+      Future<void> pumpPreview(WidgetTester tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            clip: testClip.copyWith(video: EditorVideo.file(createVideoFile())),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      /// Lets a native release, and the logging of its failure, finish.
+      ///
+      /// `dispose` hops the real event loop, which a fake-async pump never
+      /// drives, and a rejection then resumes in the fake zone. Alternating
+      /// the two lets it cross back and forth until the failure is logged.
+      Future<void> settleRelease(WidgetTester tester) async {
+        for (var round = 0; round < 5; round++) {
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        }
+      }
+
+      Future<Object?> failSetup(MethodCall call) async {
+        if (call.method == 'setClips') {
+          throw PlatformException(code: 'setup_failed');
+        }
+        return null;
+      }
+
+      testWidgets('disposes the native player when the sheet is dismissed', (
+        tester,
+      ) async {
+        final sharedCalls = recordSharedPlayerCalls();
+        final playerCalls = <String>[];
+        installMockDivineVideoPlayer(
+          onMethodCall: (call) async {
+            playerCalls.add(call.method);
+            return null;
+          },
+        );
+
+        await pumpPreview(tester);
+
+        expect(playerCalls, contains('play'));
+        expect(disposeCalls(sharedCalls), isEmpty);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await settleRelease(tester);
+
+        expect(disposeCalls(sharedCalls), hasLength(1));
+      });
+
+      testWidgets('logs a failed release on dismissal without leaking it', (
+        tester,
+      ) async {
+        recordSharedPlayerCalls(failDispose: true);
+        installMockDivineVideoPlayer();
+
+        await pumpPreview(tester);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await settleRelease(tester);
+
+        expect(tester.takeException(), isNull);
+        expect(
+          previewLogs(),
+          contains(startsWith('Failed to dispose clip preview player')),
+        );
+      });
+
+      testWidgets('disposes a player whose native setup failed', (
+        tester,
+      ) async {
+        final sharedCalls = recordSharedPlayerCalls();
+        installMockDivineVideoPlayer(onMethodCall: failSetup);
+
+        await pumpPreview(tester);
+        await settleRelease(tester);
+
+        expect(tester.takeException(), isNull);
+        expect(previewLogs(), contains('Clip preview player failed to load'));
+        expect(disposeCalls(sharedCalls), hasLength(1));
+      });
+
+      testWidgets('logs a failed release of a player that never loaded', (
+        tester,
+      ) async {
+        recordSharedPlayerCalls(failDispose: true);
+        installMockDivineVideoPlayer(onMethodCall: failSetup);
+
+        await pumpPreview(tester);
+        await settleRelease(tester);
+
+        expect(tester.takeException(), isNull);
+        expect(
+          previewLogs(),
+          contains(startsWith('Failed to dispose failed clip preview player')),
+        );
+      });
+    });
 
     testWidgets('renders delete button when onDelete is provided', (
       tester,
