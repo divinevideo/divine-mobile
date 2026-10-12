@@ -280,16 +280,12 @@ class _DivineAppState extends ConsumerState<DivineApp>
     _memoryObserverClock.stop();
     _splashReleaseController.dispose();
     _deletionAttemptSubscription?.close();
-    final notificationTapCancellation = _notificationTapSubscription?.cancel();
-    if (notificationTapCancellation != null) {
-      runDetached(
-        notificationTapCancellation,
-        'cancel notification tap subscription',
-        logName: 'DivineApp',
-        category: LogCategory.system,
-      );
-      _notificationTapSubscription = null;
-    }
+    runDetached(
+      _notificationTapSubscription?.cancel() ?? Future<void>.value(),
+      'cancel notification tap subscription',
+      logName: 'DivineApp',
+      category: LogCategory.system,
+    );
     unawaited(_quickActionsCoordinator?.dispose());
     super.dispose();
   }
@@ -430,17 +426,12 @@ class _DivineAppState extends ConsumerState<DivineApp>
     // Route local notification taps (background-built via flutter_local_notifications)
     // through the same deep-link stream so the build() listener handles navigation.
     final container = ProviderScope.containerOf(context);
-    final previousNotificationTapCancellation = _notificationTapSubscription
-        ?.cancel();
-    if (previousNotificationTapCancellation != null) {
-      runDetached(
-        previousNotificationTapCancellation,
-        'replace notification tap subscription',
-        logName: 'DivineApp',
-        category: LogCategory.system,
-      );
-      _notificationTapSubscription = null;
-    }
+    runDetached(
+      _notificationTapSubscription?.cancel() ?? Future<void>.value(),
+      'replace notification tap subscription',
+      logName: 'DivineApp',
+      category: LogCategory.system,
+    );
     _notificationTapSubscription = ref
         .read(notificationServiceProvider)
         .notificationTapStream
