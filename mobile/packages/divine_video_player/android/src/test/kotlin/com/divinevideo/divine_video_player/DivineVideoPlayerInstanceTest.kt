@@ -1792,6 +1792,75 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+    @Test
+    fun `a loop with nothing to filter again gives the sound back and decodes anew`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            installReshapableLoop(loop, mockk(relaxed = true))
+            every { loop.reshaped(any()) } returns null
+            val disabled = captureAudioTrackDisables()
+            val decoded = mutableListOf<AudioEqualizer?>()
+            every {
+                ClipAudioLoopTrack.create(
+                    any(), any(), any(), any(), any(), captureNullable(decoded),
+                    retainDecoded = any(),
+                )
+            } returns null
+
+            instance.onMethodCall(equalizersCall(6.0), mockk(relaxed = true))
+            runScheduledReshape().forEach { it.run() }
+
+            // A loop that kept no raw decode has nothing to filter again, so
+            // the old one goes, ExoPlayer's audio is back, and the clip is
+            // decoded again with the curve that came to rest.
+            verify(exactly = 1) { loop.release() }
+            assertEquals(false, disabled.last())
+            assertEquals(6.0, decoded.single()?.bands?.single()?.gainDb)
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a full player's loop keeps its raw decode for reshaping`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = any()) } returns null
+            presentDuration(3_000L)
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = true) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a feed player's loop does not keep its raw decode`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = any()) } returns null
+            presentDuration(3_000L)
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            val feed = feedInstance()
+            feed.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            feed.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // A pooled feed player never gets an equalizer change, and a second
+            // copy of its PCM on the heap would only cost memory.
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = false) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
     /**
      * An instance whose metadata thread is [executor] — held, so a loop decode
      * queued behind a stalled read cannot run until the test lets it.
