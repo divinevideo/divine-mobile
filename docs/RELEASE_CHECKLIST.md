@@ -96,15 +96,16 @@ section 7).
 - [ ] Verify the current release notes and tester notes are ready. Follow [release notes and channels](../release-notes/README.md) for reviewed copy, Codemagic beta/production selection, and promotion without rebuilding.
 - [ ] Cut the release through the Codemagic `android-build` workflow: it publishes the signed, Shorebird-enabled AAB to Play's **internal testing** track. Do not rebuild for broader distribution; promote that exact Play artifact after internal testing passes.
 - [ ] Verify the new release is live on the internal testing track in Play Console and available to internal testers.
-- [ ] Promote the artifact deliberately in Play Console — internal testing to broader testing or production — with a staged production rollout, verifying each hop, and advance the staged rollout to 100% or record why it is being held. This promotion is the Play release decision; the Codemagic build does not promote a Play track. GitHub Production publication is separate and must wait for store availability.
+- [ ] Promote the artifact deliberately in Play Console — internal testing to broader testing or production — with a staged production rollout, verifying each hop, and advance the staged rollout to 100% or record why it is being held. This promotion is the Play release decision; the Codemagic build does not promote a Play track. GitHub Production publication is independent and may happen before store rollout.
 - [ ] `./deploy_android.sh` uploads a plain `flutter build` AAB, not a Shorebird release, so its binaries cannot be patched. Use it only for throwaway manual test lanes, never as the production release path.
 
 ## 8. GitHub Production Publication
 
-- [ ] Use `RELEASE_CHANNEL=BETA` for the store-review candidate; keep Production off during review and staged rollout.
-- [ ] Verify this version is live in **both App Store and Google Play**, available to all users who receive update prompts. Internal testing, approval without release, and a partial rollout are not sufficient.
-- [ ] After that verification, use `--promote-from` to publish the tested iOS/Android beta's original artifacts without rebuilding, then perform manual Zapstore publication. Only macOS can use a new `RELEASE_CHANNEL=PRODUCTION` build for this version. Publication retries reuse original files, not new store builds. Follow [the publication runbook](../release-notes/README.md).
-- [ ] Record the store-availability verification with the candidate source SHA. GitHub stable publication automatically selects Latest and triggers in-app update prompts for store installs too; the publisher does not check store availability.
+- [ ] Use `RELEASE_CHANNEL=BETA` while testing the candidate. Once accepted for direct distribution, GitHub Production publication does not wait for store review or rollout.
+- [ ] Verify the candidate source SHA, tested artifacts for the platforms being published, and reviewed release notes. APK publication need not wait for iOS or macOS.
+- [ ] Use `--promote-from` to publish the tested beta's original artifacts without rebuilding, then perform manual Zapstore publication when ready. A new macOS `RELEASE_CHANNEL=PRODUCTION` build can publish independently. Publication retries reuse original files, not new store builds. Follow [the publication runbook](../release-notes/README.md).
+- [ ] Record each channel's verified availability with the candidate source SHA. State pending stores/platforms in the release notes; GitHub Latest does not prove store availability.
+- [ ] Account for the current client limitation: GitHub Latest still drives store-install update prompts, so prompts can precede store availability. Record this when channels differ; it does not block direct downloads. The policy does not change existing clients.
 
 ## 9. Final Sign-Off
 
