@@ -194,11 +194,38 @@ void main() {
       expect(ctaY, lessThan(emailCardY));
       expect(ctaY, lessThan(caseCardY));
     });
+
+    // 375x667 is the smallest phone the iOS 16 minimum supports, and 1.3x text
+    // is a common accessibility setting. With the contact action below the
+    // reference cards it sat past the fold here, so reaching it meant scrolling.
+    testWidgets('keeps the contact action on screen on a small phone with '
+        'larger text', (tester) async {
+      await _pumpUnder13Support(
+        tester,
+        surfaceSize: const Size(375, 667),
+        textScale: 1.3,
+      );
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MinorAccountReviewUnder13SupportScreen)),
+      );
+      final cta = find.text(l10n.authOpenEmailApp);
+
+      expect(cta, findsOneWidget);
+      expect(
+        tester.getRect(cta).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(Scrollable).first).bottom),
+      );
+    });
   });
 }
 
-Future<void> _pumpUnder13Support(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(800, 1600));
+Future<void> _pumpUnder13Support(
+  WidgetTester tester, {
+  Size surfaceSize = const Size(800, 1600),
+  double textScale = 1,
+}) async {
+  await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await tester.pumpWidget(
@@ -221,10 +248,16 @@ Future<void> _pumpUnder13Support(WidgetTester tester) async {
           );
         }),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: MinorAccountReviewUnder13SupportScreen(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const MinorAccountReviewUnder13SupportScreen(),
       ),
     ),
   );
