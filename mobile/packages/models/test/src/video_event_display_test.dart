@@ -131,6 +131,20 @@ void main() {
         equals('First\n\nSecond'),
       );
     });
+
+    test('strips a very long run of trailing chip hashtags quickly', () {
+      final video = build(
+        content: 'Caption ${List.filled(20000, '#a').join(' ')}',
+        hashtags: const ['a'],
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final description = video.chipCaptionDescription;
+      stopwatch.stop();
+
+      expect(description, equals('Caption'));
+      expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+    });
   });
 
   group('VideoEvent.captionTitle', () {

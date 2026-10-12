@@ -1196,22 +1196,31 @@ class VideoEvent {
     displayContent,
   );
 
-  static final _trailingHashtag = RegExp(r'(?:^|\s)#([^\s#]+)\s*$');
+  static final _lineToken = RegExp(r'\S+');
+  static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
   String _withoutTrailingChipHashtags(String text) {
     final chips = {for (final tag in allHashtags) tag.toLowerCase()};
     final lines = <String>[];
     for (final line in text.split('\n')) {
+      final tokens = _lineToken.allMatches(line).toList();
+      var keep = tokens.length;
+      while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, chips)) {
+        keep--;
+      }
       var kept = line;
-      while (true) {
-        final match = _trailingHashtag.firstMatch(kept);
-        if (match == null || !chips.contains(match[1]!.toLowerCase())) break;
-        kept = kept.substring(0, match.start);
+      if (keep < tokens.length) {
+        kept = keep == 0 ? '' : line.substring(0, tokens[keep - 1].end);
       }
       if (kept.trim().isEmpty && line.trim().isNotEmpty) continue;
       lines.add(kept.trimRight());
     }
     return lines.join('\n').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  }
+
+  static bool _isChipHashtag(String token, Set<String> chips) {
+    final match = _hashtagToken.firstMatch(token);
+    return match != null && chips.contains(match[1]!.toLowerCase());
   }
 
   /// Zalgo-safe embedded author name for display.
