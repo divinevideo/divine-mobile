@@ -2,6 +2,7 @@
 // ABOUTME: states, and editing interactions using a mocked cubit.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../../helpers/go_router.dart';
 import '../../helpers/test_helpers.dart';
 
 class _MockCubit extends MockCubit<SubtitleEditorState>
@@ -104,6 +106,28 @@ Stream<List<TimelineFrame>> noFrames({
   required Duration duration,
   required double devicePixelRatio,
 }) => const Stream.empty();
+
+/// Screen-reader announcements sent while the test runs, in order.
+List<Object?> captureAnnouncements(WidgetTester tester) {
+  final announced = <Object?>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      if (message is Map && message['type'] == 'announce') {
+        announced.add((message['data'] as Map?)?['message']);
+      }
+      return null;
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return announced;
+}
 
 void main() {
   late _MockCubit cubit;
@@ -663,6 +687,42 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.subtitleEditorSaveError), findsNothing);
+    });
+  });
+
+  group('save success', () {
+    testWidgets('announces and confirms the save, then returns the video', (
+      tester,
+    ) async {
+      final goRouter = MockGoRouter();
+      final announced = captureAnnouncements(tester);
+      final updatedVideo = _video();
+      whenListen(
+        cubit,
+        Stream<SubtitleEditorState>.fromIterable([
+          SubtitleEditorState(
+            status: SubtitleEditorStatus.success,
+            updatedVideo: updatedVideo,
+          ),
+        ]),
+        initialState: const SubtitleEditorState(),
+      );
+
+      await tester.pumpWidget(
+        MockGoRouterProvider(goRouter: goRouter, child: pump()),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(announced, [l10n.subtitleEditorSaveSuccess]);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text(l10n.subtitleEditorSaveSuccess),
+        ),
+        findsOneWidget,
+      );
+      verify(() => goRouter.pop<VideoEvent>(updatedVideo)).called(1);
     });
   });
 
