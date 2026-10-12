@@ -100,9 +100,10 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
         _resolved = video;
         _resolveFailed = video == null;
       });
-    } catch (error, stackTrace) {
+    } catch (_) {
       if (mounted) setState(() => _resolveFailed = true);
-      Error.throwWithStackTrace(error, stackTrace);
+      // runDetached logs the failure and reports the reportable ones.
+      rethrow;
     }
   }
 
