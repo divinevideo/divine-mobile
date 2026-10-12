@@ -319,9 +319,11 @@ void main() {
       ) async {
         await openPicker(tester);
 
+        // "Hashtags" and "Vines" meet only at a line break, which a
+        // single-line field would delete.
         await tester.enterText(
           find.byType(TextField).last,
-          'General Hashtags\n#Vines\n#vine\u00a0#FunnyVine',
+          'General Hashtags\nVines\n#vine\u00a0#FunnyVine',
         );
         await tester.pump();
 
@@ -329,7 +331,7 @@ void main() {
           expect(find.text(tag), findsOneWidget);
         }
         expect(find.text('funnyvine'), findsOneWidget);
-        expect(find.textContaining('vinesvine'), findsNothing);
+        expect(find.textContaining('hashtagsvines'), findsNothing);
 
         await tester.pump(const Duration(milliseconds: 400));
       });
