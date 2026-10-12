@@ -111,6 +111,34 @@ enum VideoFrameEffectsTests {
     precondition(
       HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_010_000, drawnUs: nil)
         == 1_000_000)
+    // So is one behind what was drawn while the clock is behind it too, a
+    // seek back: the effects have to start over, not carry on from the clock.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_010_000, drawnUs: 5_000_000)
+        == 1_000_000)
+
+    // A frame is held from the moment it is `afterUs` late, not a microsecond
+    // before.
+    let after = HeldFrameEffects.afterUs
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_000_000 + after - 1, drawnUs: nil)
+        == 1_000_000)
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 1_000_000, itemUs: 1_000_000 + after, drawnUs: nil)
+        == 1_000_000 + after)
+
+    // Behind the last draw, the clock takes over once it has caught up with
+    // that draw, not before.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 3_000_000, itemUs: 3_020_000, drawnUs: 3_020_000)
+        == 3_020_000)
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 3_000_000, itemUs: 3_019_999, drawnUs: 3_020_000)
+        == 3_000_000)
+    // A frame at exactly the last draw is not behind it.
+    precondition(
+      HeldFrameEffects.timeUs(frameUs: 3_000_000, itemUs: 3_030_000, drawnUs: 3_000_000)
+        == 3_000_000)
   }
 
   /// A decode that fails reports an invalid time for the frame it could not
