@@ -89,7 +89,7 @@ final class LiveApiServiceProvider
   }
 }
 
-String _$liveApiServiceHash() => r'649a35ab4a7c409884287a7a74b8cce70ffeb8ff';
+String _$liveApiServiceHash() => r'92a9aac69cf1015acf1069c9076320bb3e8734b0';
 
 @ProviderFor(liveKitRoomService)
 final liveKitRoomServiceProvider = LiveKitRoomServiceProvider._();

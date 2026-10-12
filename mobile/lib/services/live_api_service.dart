@@ -27,6 +27,9 @@ class LiveApiService {
 
   final http.Client _client;
   final String _baseUrl;
+
+  /// Base URL every live API request is resolved against.
+  String get baseUrl => _baseUrl;
   final Nip98AuthService? _nip98AuthService;
 
   Future<LiveRoomDraftResponse> createRoomDraft({
