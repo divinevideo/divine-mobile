@@ -2,18 +2,32 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
+import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/scroll.dart';
 import '../helpers/url_launcher_test_double.dart';
+
+typedef _NextStepCase = ({
+  String description,
+  SuspectedAgeBand ageBand,
+  MinorReviewResolutionType resolution,
+  bool parentSupportLabel,
+  String expectedPath,
+});
 
 void main() {
   group('MinorAccountReviewScreen', () {
@@ -696,7 +710,186 @@ void main() {
         );
       },
     );
+
+    group('next step navigation', () {
+      late MockGoRouter goRouter;
+      late LogCaptureService logCapture;
+
+      setUp(() async {
+        goRouter = MockGoRouter();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+      });
+
+      tearDown(() async {
+        await logCapture.clearAllLogs();
+      });
+
+      const cases = <_NextStepCase>[
+        (
+          description: 'an under-13 case, even when a parent video is allowed',
+          ageBand: SuspectedAgeBand.under13,
+          resolution: MinorReviewResolutionType.parentVideoOrEmail,
+          parentSupportLabel: true,
+          expectedPath: MinorAccountReviewUnder13SupportScreen.path,
+        ),
+        (
+          description: 'a 13-15 case that only allows support email',
+          ageBand: SuspectedAgeBand.age13To15,
+          resolution: MinorReviewResolutionType.supportEmailOnly,
+          parentSupportLabel: true,
+          expectedPath: MinorAccountReviewUnder13SupportScreen.path,
+        ),
+        (
+          description: 'a 13-15 case that allows a parent video or email',
+          ageBand: SuspectedAgeBand.age13To15,
+          resolution: MinorReviewResolutionType.parentVideoOrEmail,
+          parentSupportLabel: false,
+          expectedPath: MinorAccountReviewParentContactScreen.path,
+        ),
+        (
+          description: 'a 13-15 case that only allows a support review',
+          ageBand: SuspectedAgeBand.age13To15,
+          resolution: MinorReviewResolutionType.supportReviewOnly,
+          parentSupportLabel: false,
+          expectedPath: SupportCenterScreen.path,
+        ),
+        (
+          description: 'a 13-15 case with an unknown resolution',
+          ageBand: SuspectedAgeBand.age13To15,
+          resolution: MinorReviewResolutionType.unknown,
+          parentSupportLabel: false,
+          expectedPath: SupportCenterScreen.path,
+        ),
+      ];
+
+      for (final nextStep in cases) {
+        testWidgets(
+          'pushes the matching next step for ${nextStep.description}',
+          (
+            tester,
+          ) async {
+            await _pumpReview(
+              tester,
+              goRouter: goRouter,
+              reviewCase: _reviewCase(
+                ageBand: nextStep.ageBand,
+                resolution: nextStep.resolution,
+              ),
+            );
+            final l10n = AppLocalizations.of(
+              tester.element(find.byType(MinorAccountReviewScreen)),
+            );
+            final label = nextStep.parentSupportLabel
+                ? l10n.minorAccountReviewParentSupportInstructions
+                : l10n.minorAccountReviewContinue;
+
+            await scrollUntilTappable(
+              tester,
+              find.text(label),
+              200,
+              scrollable: find.byType(Scrollable),
+            );
+            await tester.tap(find.text(label));
+            await tester.pump();
+
+            final pushedLocations = verify(
+              () =>
+                  goRouter.push<void>(captureAny(), extra: any(named: 'extra')),
+            ).captured;
+            expect(pushedLocations, equals([nextStep.expectedPath]));
+          },
+        );
+      }
+
+      testWidgets('logs a failed next step push instead of leaking it', (
+        tester,
+      ) async {
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+        await _pumpReview(
+          tester,
+          goRouter: goRouter,
+          reviewCase: _reviewCase(
+            ageBand: SuspectedAgeBand.age13To15,
+            resolution: MinorReviewResolutionType.parentVideoOrEmail,
+          ),
+        );
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MinorAccountReviewScreen)),
+        );
+
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewContinue),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(find.text(l10n.minorAccountReviewContinue));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final logs = logCapture.getRecentLogs();
+        expect(logs, hasLength(1));
+        expect(logs.single.level, LogLevel.error);
+        expect(logs.single.name, 'MinorAccountReviewScreen');
+        expect(logs.single.category, LogCategory.ui);
+        expect(
+          logs.single.message,
+          'Failed to open next account review step: Exception: route failed',
+        );
+      });
+    });
   });
+}
+
+MinorReviewCase _reviewCase({
+  required SuspectedAgeBand ageBand,
+  required MinorReviewResolutionType resolution,
+}) {
+  return MinorReviewCase(
+    id: 'case-navigation',
+    state: MinorReviewCaseState.restrictedPendingUserResponse,
+    suspectedAgeBand: ageBand,
+    allowedResolution: resolution,
+    instructions: const MinorReviewInstructions(
+      title: 'Account review required',
+      body: 'We need parental consent information.',
+    ),
+    supportEmail: 'support@divine.video',
+  );
+}
+
+Future<void> _pumpReview(
+  WidgetTester tester, {
+  required MockGoRouter goRouter,
+  required MinorReviewCase reviewCase,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+          return MinorAccountReviewStatus(
+            restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+            currentCase: reviewCase,
+          );
+        }),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MockGoRouterProvider(
+          goRouter: goRouter,
+          child: const MinorAccountReviewScreen(),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpRestrictedReview(
