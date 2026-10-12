@@ -240,16 +240,21 @@ library gets a muted check mark and "Already in your clips".
   an `a` tag, after the same media-server lookup as a received clip. Otherwise
   every account the verified history names is credited except the one whose
   library it goes into, so an own recording comes back without a credit and an
-  edit of a friend's clip still credits the friend. The same rule now applies
-  to received clips: nobody is credited as the source of their own footage.
+  edit of a friend's clip still credits the friend. The publisher credit
+  follows the same rule, so an own post comes back without a credit too. The
+  same rule now applies to received clips: nobody is credited as the source of
+  their own footage.
 - **Footage the library already holds is not added twice.** A clip outside
   the trash whose proof record names the same C2PA manifest, such as the
   recording the copy was saved from, a received clip or an earlier import,
   makes the row read "Already in your clips". A manifest's label is unique to
   the signing that wrote it, so the same label means the same signed footage.
-- **The id comes from the file's SHA-256** (`gallery_clip_<sha256>`). An
-  earlier import of the same file that is in the trash is restored rather than
-  copied again; saving over a trashed row would leave it in the trash.
+- **The id comes from the account and the file's SHA-256**
+  (`gallery_clip_<owner pubkey>_<sha256>`). Clips share one table across the
+  accounts on a device, so a second account importing the same file gets its
+  own clip. An earlier import of the same file that is in this library's trash
+  is restored rather than copied again; saving over a trashed row would leave
+  it in the trash. Neither import restores another account's trashed clip.
 - **The import outlives its page.** `GalleryClipImportCubit` belongs to the
   library, not the page, so leaving the page keeps the check running, each
   clip that passes shows up in the grid as it is added, and the import action

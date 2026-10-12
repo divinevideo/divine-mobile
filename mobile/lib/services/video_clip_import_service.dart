@@ -274,17 +274,18 @@ class VideoClipImportService {
   /// Nobody sent it, so it credits only what its signed history and the
   /// media server say: whoever published it when the file is a post already
   /// published on Divine, and otherwise every account in
-  /// [contributorPubkeys] other than the one whose library it goes into. An
-  /// account's own recording therefore comes back without a credit. When it
-  /// cannot be told whether the file is a published post, the import fails
-  /// with [VideoClipImportFailureReason.sourceLookupFailed].
+  /// [contributorPubkeys]. The account whose library it goes into is never
+  /// credited, so its own recording or post comes back without a credit.
+  /// When it cannot be told whether the file is a published post, the import
+  /// fails with [VideoClipImportFailureReason.sourceLookupFailed].
   ///
   /// Footage the library already holds is not added twice: a clip outside
   /// the trash signed with [c2paManifestId], such as the recording the
   /// gallery copy was saved from or an earlier import of it, is returned with
   /// [VideoClipImportSuccess.alreadyInLibrary] set. The clip's id is derived
-  /// from the file's SHA-256, so an earlier import of the same file that is
-  /// in the trash is restored rather than copied again.
+  /// from the file's SHA-256 and the library's account, so an earlier import
+  /// of the same file into this library that is in the trash is restored
+  /// rather than copied again.
   ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importGalleryClip({
@@ -311,9 +312,15 @@ class VideoClipImportService {
       return VideoClipImportSuccess(inLibrary, alreadyInLibrary: true);
     }
 
+    // Clips share one table across the accounts on this device, so the id
+    // names the library too: another account importing the same file gets
+    // its own clip instead of finding this one.
+    final owner = _clipLibraryService.ownerPubkey;
     return _importVerifiedClip(
       source: source,
-      clipId: 'gallery_clip_$videoHash',
+      clipId: owner == null
+          ? 'gallery_clip_$videoHash'
+          : 'gallery_clip_${owner}_$videoHash',
       videoHash: videoHash,
       c2paManifestId: c2paManifestId,
       contributorPubkeys: contributorPubkeys,
@@ -345,11 +352,12 @@ class VideoClipImportService {
 
   /// Copies a clip that passed the C2PA check into the library as [clipId].
   ///
-  /// A clip already saved under [clipId] is returned as it is, and one in the
-  /// trash is restored, since bringing it back is what was asked for. The
-  /// first credit goes to whoever published the file when it is a post
-  /// already published on Divine, and to [senderPubkey] otherwise; every
-  /// other account in [contributorPubkeys] follows, except the library's own.
+  /// A clip already saved under [clipId] is returned as it is, and one in this
+  /// library's trash is restored, since bringing it back is what was asked
+  /// for. The first credit goes to whoever published the file when it is a
+  /// post already published on Divine, and to [senderPubkey] otherwise; every
+  /// other account in [contributorPubkeys] follows. The library's own account
+  /// is never credited.
   ///
   /// [videoHash] is [source]'s SHA-256 when the caller already computed it.
   Future<VideoClipImportResult> _importVerifiedClip({
@@ -370,7 +378,9 @@ class VideoClipImportService {
 
     final existing = await _clipLibraryService.getClipById(clipId);
     if (existing != null) {
-      if (existing.deletedAt == null) {
+      // Another account's trash is not this library's to restore.
+      if (existing.deletedAt == null ||
+          await _clipLibraryService.belongsToAnotherAccount(clipId)) {
         return VideoClipImportSuccess(existing, alreadyInLibrary: true);
       }
       // Saving over a trashed row leaves it in the trash, so the clip would
@@ -450,7 +460,7 @@ class VideoClipImportService {
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
         sourceCredits: [
-          if (author != null)
+          if (author != null && author != owner)
             models.ClipSourceCredit(
               authorPubkey: author,
               eventId: post?.id,

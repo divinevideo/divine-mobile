@@ -941,6 +941,9 @@ void main() {
           () => clipLibraryService.getClipById(messageClipId),
         ).thenAnswer((_) async => lookups.removeAt(0));
         when(
+          () => clipLibraryService.belongsToAnotherAccount(messageClipId),
+        ).thenAnswer((_) async => false);
+        when(
           () => clipLibraryService.restore(messageClipId),
         ).thenAnswer((_) async => true);
         final service = buildService();
@@ -959,6 +962,46 @@ void main() {
               .having((r) => r.alreadyInLibrary, 'alreadyInLibrary', isFalse),
         );
         verify(() => clipLibraryService.restore(messageClipId)).called(1);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+
+    test(
+      "leaves another account's trashed clip from the same message alone",
+      () async {
+        final othersClip = DivineVideoClip(
+          id: messageClipId,
+          video: EditorVideo.file('${docsDir.path}/$messageClipId.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 4, 27),
+          targetAspectRatio: models.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+          deletedAt: DateTime.utc(2026, 4, 28),
+        );
+        when(
+          () => clipLibraryService.getClipById(messageClipId),
+        ).thenAnswer((_) async => othersClip);
+        when(
+          () => clipLibraryService.belongsToAnotherAccount(messageClipId),
+        ).thenAnswer((_) async => true);
+        final service = buildService();
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportSuccess>().having(
+            (r) => r.alreadyInLibrary,
+            'alreadyInLibrary',
+            isTrue,
+          ),
+        );
+        verifyNever(() => clipLibraryService.restore(any()));
         verifyNever(() => clipLibraryService.saveClip(any()));
       },
     );
@@ -1049,7 +1092,7 @@ void main() {
   });
 
   group('importGalleryClip', () {
-    const galleryClipId = 'gallery_clip_$_receivedClipHash';
+    const galleryClipId = 'gallery_clip_${_ownerPubkey}_$_receivedClipHash';
 
     setUp(() {
       when(
@@ -1068,33 +1111,40 @@ void main() {
       bitrate: 0,
     );
 
-    test('saves a copy that carries the proof, named by its hash', () async {
-      final service = buildService(
-        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
-      );
+    test(
+      'saves a copy that carries the proof, named by account and hash',
+      () async {
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
 
-      final result = await service.importGalleryClip(
-        source: sourceVideo,
-        c2paManifestId: _c2paManifestId,
-      );
+        final result = await service.importGalleryClip(
+          source: sourceVideo,
+          c2paManifestId: _c2paManifestId,
+        );
 
-      final clip = (result as VideoClipImportSuccess).clip;
-      expect(clip.id, equals(galleryClipId));
-      expect(clip.video!.file!.path, startsWith(docsDir.path));
-      expect(File(clip.video!.file!.path).existsSync(), isTrue);
-      expect(sourceVideo.existsSync(), isTrue);
-      expect(clip.duration, equals(const Duration(milliseconds: 5800)));
-      expect(clip.targetAspectRatio, equals(models.AspectRatio.vertical));
-      expect(
-        models.NativeProofData.fromJson(
-          jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
-        ),
-        isA<models.NativeProofData>()
-            .having((p) => p.videoHash, 'videoHash', _receivedClipHash)
-            .having((p) => p.c2paManifestId, 'c2paManifestId', _c2paManifestId),
-      );
-      verify(() => clipLibraryService.saveClip(clip)).called(1);
-    });
+        final clip = (result as VideoClipImportSuccess).clip;
+        expect(clip.id, equals(galleryClipId));
+        expect(clip.video!.file!.path, startsWith(docsDir.path));
+        expect(File(clip.video!.file!.path).existsSync(), isTrue);
+        expect(sourceVideo.existsSync(), isTrue);
+        expect(clip.duration, equals(const Duration(milliseconds: 5800)));
+        expect(clip.targetAspectRatio, equals(models.AspectRatio.vertical));
+        expect(
+          models.NativeProofData.fromJson(
+            jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
+          ),
+          isA<models.NativeProofData>()
+              .having((p) => p.videoHash, 'videoHash', _receivedClipHash)
+              .having(
+                (p) => p.c2paManifestId,
+                'c2paManifestId',
+                _c2paManifestId,
+              ),
+        );
+        verify(() => clipLibraryService.saveClip(clip)).called(1);
+      },
+    );
 
     test('brings an own recording back without a credit', () async {
       final service = buildService(
@@ -1156,6 +1206,58 @@ void main() {
       expect(clip.sourceEventId, equals(post.id));
       expect(clip.sourceAddressableId, equals(post.addressableId));
     });
+
+    test('does not credit the importing account for its own post', () async {
+      final resolver = _MockPublishedClipSourceResolver();
+      final post = _video(
+        id: 'own-post-event-id',
+        pubkey: _ownerPubkey,
+        vineId: 'own-post-d-tag',
+      );
+      when(() => resolver.resolve(_receivedClipHash)).thenAnswer(
+        (_) async => PublishedClipSource(ownerPubkey: post.pubkey, video: post),
+      );
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        publishedSourceResolver: resolver,
+      );
+
+      final result = await service.importGalleryClip(
+        source: sourceVideo,
+        c2paManifestId: _c2paManifestId,
+        contributorPubkeys: [_senderPubkey],
+      );
+
+      final clip = (result as VideoClipImportSuccess).clip;
+      expect(
+        clip.sourceCredits.map((credit) => credit.authorPubkey),
+        equals([_senderPubkey]),
+      );
+    });
+
+    test(
+      'names the clip by its hash alone in a library with no account',
+      () async {
+        const unownedClipId = 'gallery_clip_$_receivedClipHash';
+        when(() => clipLibraryService.ownerPubkey).thenReturn(null);
+        when(
+          () => clipLibraryService.getClipById(unownedClipId),
+        ).thenAnswer((_) async => null);
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importGalleryClip(
+          source: sourceVideo,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          (result as VideoClipImportSuccess).clip.id,
+          equals(unownedClipId),
+        );
+      },
+    );
 
     test('returns the clip already imported from the same file', () async {
       final service = buildService(
@@ -1236,6 +1338,9 @@ void main() {
         when(
           () => clipLibraryService.getClipById(galleryClipId),
         ).thenAnswer((_) async => lookups.removeAt(0));
+        when(
+          () => clipLibraryService.belongsToAnotherAccount(galleryClipId),
+        ).thenAnswer((_) async => false);
         when(
           () => clipLibraryService.restore(galleryClipId),
         ).thenAnswer((_) async => true);

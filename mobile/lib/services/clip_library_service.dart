@@ -263,6 +263,19 @@ class ClipLibraryService {
     return _tryParseClipRow(row, documentsPath, label: 'clip');
   }
 
+  /// Whether the clip [id] is stored for an account other than this
+  /// library's owner.
+  ///
+  /// Clips share one table across the accounts on a device, keyed by id
+  /// alone, so a clip [getClipById] finds may belong to another account.
+  /// A clip with no owner predates per-account libraries and is shared.
+  Future<bool> belongsToAnotherAccount(String id) async {
+    final owner = ownerPubkey;
+    if (owner == null) return false;
+    final rowOwner = (await _clipsDao.getClipById(id))?.ownerPubkey;
+    return rowOwner != null && rowOwner != owner;
+  }
+
   /// Notes [sha256] as the hash the camera wrote the recording [fileName]
   /// with on the library entry of the clip [clipId], so the recording can
   /// still be signed later (see `DivineVideoClip.recordingSha256`).
