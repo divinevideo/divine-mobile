@@ -235,10 +235,8 @@ const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 /// that stayed silent and a read the client skipped on this device (no
 /// query-pool slot reached it in time) report the same flag. Blaming the
 /// relays sent support looking for a relay fault behind a local queue
-/// (#10004). Such a read ends with a "Query ended" relay diagnostic carrying
-/// the reason, so the line points there instead of guessing. Those lines are
-/// rate-limited, so under a burst the one wanted may be folded into a
-/// suppression count.
+/// (#10004). The client files a "Query ended" diagnostic for every such read,
+/// with the reason, so the line points there instead of guessing.
 const String _dmInboxLegDidNotSettle =
     'a leg did not settle: a relay was silent or the read never left this '
     'device, and its "Query ended" relay diagnostic says which';
