@@ -237,6 +237,46 @@ void main() {
             'a queue snapshot taken before the row was finalized',
       );
     });
+
+    test('keeps showing an invite while a banner Retry re-sends it', () async {
+      final emissions = <List<PendingCollaboratorInviteGroup>>[];
+      final sub = repository.watchPendingCollaboratorInviteGroups().listen(
+        emissions.add,
+      );
+      addTearDown(sub.cancel);
+
+      final inFlight = await startInviteInFlight();
+      publishes.single.complete(
+        const NIP17SendResult.failure(
+          'frame written, no OK',
+          retryablePending: true,
+        ),
+      );
+      await inFlight.send;
+      await pumpEventQueue();
+      final banner = emissions.last;
+      expect(pendingInviteIds(banner), equals({inFlight.rumorId}));
+
+      final retry = repository.retryPendingCollaboratorInvites(
+        banner.single.invites,
+      );
+      await pumpEventQueue();
+      expect(publishes, hasLength(2), reason: 'the Retry is on the wire');
+      expect(
+        pendingInviteIds(emissions.last),
+        equals({inFlight.rumorId}),
+        reason:
+            'a recovery is not an original send: hiding the invite would '
+            'tear down the banner that reports the Retry result',
+      );
+
+      publishes.last.complete(delivered(inFlight.rumorId));
+      final summary = await retry;
+      await pumpEventQueue();
+
+      expect(summary.successCount, 1);
+      expect(pendingInviteIds(emissions.last), isEmpty);
+    });
   });
 
   group('a retry overlapping the first send joins it (#10005)', () {
