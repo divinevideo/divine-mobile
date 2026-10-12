@@ -13,6 +13,8 @@ import 'package:openvine/blocs/subtitle_editor/subtitle_editor_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/subtitle_repository_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/subtitle_repository.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_resolver.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -782,5 +785,72 @@ void main() {
       final errorLogs = logCapture.getRecentLogs(minLevel: LogLevel.error);
       expect(errorLogs.map((log) => log.message), contains(contains(videoId)));
     });
+
+    group('crash reporting', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
+      testWidgets('reports a programming error thrown by the lookup', (
+        tester,
+      ) async {
+        const videoId =
+            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        final resolver = _FakeVideoEventResolver(
+          null,
+          error: StateError('resolver invariant'),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SubtitleEditorScreen(videoId: videoId),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+      });
+    });
   });
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
