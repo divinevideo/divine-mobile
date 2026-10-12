@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/services/watermark_download_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/retry_after_settings_on_resume.dart';
 
@@ -43,10 +44,19 @@ class _SaveOriginalProgressSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SaveOriginalProgressCubit(
-        service: ref.read(watermarkDownloadServiceProvider),
-        video: video,
-      )..start(),
+      create: (_) {
+        final cubit = SaveOriginalProgressCubit(
+          service: ref.read(watermarkDownloadServiceProvider),
+          video: video,
+        );
+        runDetached(
+          cubit.start(),
+          'start saving original video',
+          logName: 'SaveOriginalProgressSheet',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: _SaveOriginalProgressView(ref: ref),
     );
   }

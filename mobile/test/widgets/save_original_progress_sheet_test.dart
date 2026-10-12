@@ -14,6 +14,7 @@ import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:permissions_service/permissions_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockWatermarkDownloadService extends Mock
     implements WatermarkDownloadService {}
@@ -46,6 +47,8 @@ void main() {
     mockService = _MockWatermarkDownloadService();
     mockPermissions = _MockPermissionsService();
   });
+
+  tearDown(LogCaptureService().clearAllLogs);
 
   Widget buildTestWidget({required VideoEvent video}) {
     return ProviderScope(
@@ -82,6 +85,31 @@ void main() {
   }
 
   group('showSaveOriginalSheet', () {
+    testWidgets('logs a rejected download instead of leaking its future', (
+      tester,
+    ) async {
+      await LogCaptureService().clearAllLogs();
+      when(
+        () => mockService.downloadOriginal(
+          video: any(named: 'video'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) => Future.error(StateError('download failed')));
+
+      await tester.pumpWidget(buildTestWidget(video: _createTestVideo()));
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      final log = LogCaptureService().getRecentLogs().singleWhere(
+        (entry) => entry.name == 'SaveOriginalProgressSheet',
+      );
+      expect(log.level, LogLevel.error);
+      expect(log.message, contains('Failed to start saving original video'));
+      expect(log.message, contains('Bad state: download failed'));
+    });
+
     testWidgets('shows progress indicator while downloading', (tester) async {
       // Use a Completer that never completes (no timer involved)
       final neverComplete = Completer<WatermarkDownloadResult>();
