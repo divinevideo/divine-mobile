@@ -2,6 +2,7 @@
 // ABOUTME: states, and editing interactions using a mocked cubit.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,8 @@ import 'package:openvine/blocs/subtitle_editor/subtitle_editor_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/subtitle_repository_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/subtitle_repository.dart';
@@ -20,9 +23,12 @@ import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_resolver.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
+import 'package:unified_logger/unified_logger.dart';
 
+import '../../helpers/go_router.dart';
 import '../../helpers/test_helpers.dart';
 
 class _MockCubit extends MockCubit<SubtitleEditorState>
@@ -31,9 +37,10 @@ class _MockCubit extends MockCubit<SubtitleEditorState>
 class _MockSubtitleRepository extends Mock implements SubtitleRepository {}
 
 class _FakeVideoEventResolver implements VideoEventResolver {
-  _FakeVideoEventResolver(this.video);
+  _FakeVideoEventResolver(this.video, {this.error});
 
   final VideoEvent? video;
+  final Object? error;
   final resolvedIds = <String>[];
   final allowOwnContentBypassValues = <bool>[];
   final requireRawTagsValues = <bool>[];
@@ -48,6 +55,8 @@ class _FakeVideoEventResolver implements VideoEventResolver {
     resolvedIds.add(eventId);
     allowOwnContentBypassValues.add(allowOwnContentBypass);
     requireRawTagsValues.add(requireRawTags);
+    final failure = error;
+    if (failure != null) throw failure;
     return video;
   }
 }
@@ -97,6 +106,28 @@ Stream<List<TimelineFrame>> noFrames({
   required Duration duration,
   required double devicePixelRatio,
 }) => const Stream.empty();
+
+/// Screen-reader announcements sent while the test runs, in order.
+List<Object?> captureAnnouncements(WidgetTester tester) {
+  final announced = <Object?>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      if (message is Map && message['type'] == 'announce') {
+        announced.add((message['data'] as Map?)?['message']);
+      }
+      return null;
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return announced;
+}
 
 void main() {
   late _MockCubit cubit;
@@ -659,6 +690,42 @@ void main() {
     });
   });
 
+  group('save success', () {
+    testWidgets('announces and confirms the save, then returns the video', (
+      tester,
+    ) async {
+      final goRouter = MockGoRouter();
+      final announced = captureAnnouncements(tester);
+      final updatedVideo = _video();
+      whenListen(
+        cubit,
+        Stream<SubtitleEditorState>.fromIterable([
+          SubtitleEditorState(
+            status: SubtitleEditorStatus.success,
+            updatedVideo: updatedVideo,
+          ),
+        ]),
+        initialState: const SubtitleEditorState(),
+      );
+
+      await tester.pumpWidget(
+        MockGoRouterProvider(goRouter: goRouter, child: pump()),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(announced, [l10n.subtitleEditorSaveSuccess]);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text(l10n.subtitleEditorSaveSuccess),
+        ),
+        findsOneWidget,
+      );
+      verify(() => goRouter.pop<VideoEvent>(updatedVideo)).called(1);
+    });
+  });
+
   group(SubtitleEditorScreen, () {
     testWidgets('resolves video by id when no prefetched route extra exists', (
       tester,
@@ -722,5 +789,128 @@ void main() {
       expect(resolver.resolvedIds, [videoId]);
       expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
     });
+
+    testWidgets('shows route error and observes resolver failures', (
+      tester,
+    ) async {
+      const videoId =
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+      final resolver = _FakeVideoEventResolver(
+        null,
+        error: StateError('resolver failed'),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SubtitleEditorScreen(videoId: videoId),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(resolver.resolvedIds, [videoId]);
+      expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('logs a failed lookup with the full video id', (tester) async {
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final resolver = _FakeVideoEventResolver(
+        null,
+        error: StateError('resolver failed'),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SubtitleEditorScreen(videoId: videoId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final errorLogs = logCapture.getRecentLogs(minLevel: LogLevel.error);
+      expect(errorLogs.map((log) => log.message), contains(contains(videoId)));
+    });
+
+    group('crash reporting', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
+      testWidgets('reports a programming error thrown by the lookup', (
+        tester,
+      ) async {
+        const videoId =
+            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        final resolver = _FakeVideoEventResolver(
+          null,
+          error: StateError('resolver invariant'),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SubtitleEditorScreen(videoId: videoId),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+      });
+    });
   });
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }

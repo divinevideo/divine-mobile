@@ -3,7 +3,6 @@
 // ABOUTME: for the timing and a list of text fields for the wording.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +19,8 @@ import 'package:openvine/providers/subtitle_timeline_thumbnail_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
 
@@ -77,22 +78,33 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
         widget.prefetched!.nostrEventTags.isNotEmpty) {
       _resolved = widget.prefetched;
     } else {
-      _resolve();
+      runDetached(
+        _resolve(),
+        'resolve video ${widget.videoId} for subtitle editing',
+        logName: 'SubtitleEditorScreen',
+        category: LogCategory.video,
+      );
     }
   }
 
   Future<void> _resolve() async {
-    final resolver = ref.read(videoEventResolverProvider);
-    final video = await resolver.resolveById(
-      widget.videoId,
-      allowOwnContentBypass: true,
-      requireRawTags: true,
-    );
-    if (!mounted) return;
-    setState(() {
-      _resolved = video;
-      _resolveFailed = video == null;
-    });
+    try {
+      final resolver = ref.read(videoEventResolverProvider);
+      final video = await resolver.resolveById(
+        widget.videoId,
+        allowOwnContentBypass: true,
+        requireRawTags: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resolved = video;
+        _resolveFailed = video == null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _resolveFailed = true);
+      // runDetached logs the failure and reports the reportable ones.
+      rethrow;
+    }
   }
 
   @override
@@ -114,8 +126,19 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
     final loadFrames = ref.watch(subtitleTimelineFrameLoaderProvider);
     return BlocProvider<SubtitleEditorCubit>(
       key: ObjectKey(repository),
-      create: (_) =>
-          SubtitleEditorCubit(repository: repository, video: video)..load(),
+      create: (_) {
+        final cubit = SubtitleEditorCubit(
+          repository: repository,
+          video: video,
+        );
+        runDetached(
+          cubit.load(),
+          'load subtitle cues for video ${video.id}',
+          logName: 'SubtitleEditorScreen',
+          category: LogCategory.video,
+        );
+        return cubit;
+      },
       child: SubtitleEditorView(video: video, loadFrames: loadFrames),
     );
   }
@@ -157,10 +180,11 @@ class SubtitleEditorView extends StatelessWidget {
         listenWhen: (previous, current) => previous.status != current.status,
         listener: (context, state) {
           if (state.status == SubtitleEditorStatus.success) {
-            SemanticsService.sendAnnouncement(
-              View.of(context),
+            announceDetached(
+              context,
               l10n.subtitleEditorSaveSuccess,
-              Directionality.of(context),
+              description: 'announce subtitle save success',
+              logName: 'SubtitleEditorScreen',
             );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.subtitleEditorSaveSuccess)),
