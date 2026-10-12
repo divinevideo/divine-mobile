@@ -170,6 +170,9 @@ class NostrClient {
   /// fetches) a high-volume screen triggers, so the app can't trip a relay's
   /// "too many concurrent REQs" limit. Override in tests before the first
   /// query. Backed by a [Pool] from `package:pool`.
+  ///
+  /// Sizes both query pools: the one for reads that ask the pool's own
+  /// relays, and the one for reads that ask only relays outside it.
   @visibleForTesting
   static int maxConcurrentQueries = 6;
 
@@ -186,6 +189,15 @@ class NostrClient {
   );
 
   late final Pool _queryPool = Pool(maxConcurrentQueries);
+
+  /// The query pool for reads that ask only relays outside [_queryPool]'s
+  /// relays (see [_asksOnlyRelaysOutsidePool]).
+  ///
+  /// Kept apart so those reads never queue behind feed reads (#10004), and
+  /// sized like [_queryPool] for the same reason that one exists: a group send
+  /// resolves every member's DM inbox at once against the same indexer, and
+  /// an unbounded burst could trip that relay's concurrent-REQ limit too.
+  late final Pool _outsidePoolQueryPool = Pool(maxConcurrentQueries);
 
   /// The signer used by this client for event signing and NIP-44 encryption.
   ///
@@ -984,9 +996,9 @@ class NostrClient {
   /// capped read.
   ///
   /// A read that asks only temp relays ([relayTypes] of just
-  /// [RelayType.temp]), none of them a pool member, skips the query pool: it
-  /// neither waits for a slot nor holds one, so a caller fanning such reads
-  /// out bounds its own concurrency.
+  /// [RelayType.temp]), none of them a pool member, takes its slot from a
+  /// separate query pool of the same size, so it never queues behind reads of
+  /// the pool's own relays but a burst of such reads is still bounded.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsDetailed(
     List<Filter> filters, {
@@ -1245,8 +1257,8 @@ class NostrClient {
     Duration overrunBackstop() =>
         remainingTimeout() + _websocketLegOverrunGrace;
 
-    Future<QueryResult> runPooledWebSocketQuery() async {
-      final acquisition = _queryPool.request();
+    Future<QueryResult> runPooledWebSocketQuery(Pool pool) async {
+      final acquisition = pool.request();
       PoolResource resource;
       try {
         resource = await acquisition.timeout(remainingPreparationTime());
@@ -1272,10 +1284,13 @@ class NostrClient {
     // independent of `useQueryPool`: dispose() can run during the awaits
     // above, and `_queryPool.close()` flips `isClosed` before `_isDisposed`
     // is set (dispose() closes the pool first), so it's a reliable
-    // dispose-in-progress sentinel for both paths. The non-pooled path
-    // (`queryUsers`, `useQueryPool: false`) matters here too: a query that
-    // fell through after `_nostr.close()` would re-open fresh WebSockets to
-    // the NIP-50 search relays and leak temp relays nothing would clean up.
+    // dispose-in-progress sentinel for every path. That includes reads bound
+    // for [_outsidePoolQueryPool], which dispose() closes only after this one,
+    // so a read that passes this check never finds its own pool closed. The
+    // non-pooled path (`queryUsers`, `useQueryPool: false`) matters here too:
+    // a query that fell through after `_nostr.close()` would re-open fresh
+    // WebSockets to the NIP-50 search relays and leak temp relays nothing
+    // would clean up.
     // This check-then-call has no await before the query, so it closes the
     // race rather than narrowing it. See #5952.
     // What a read the relay pool never finished hands back, overwritten by
@@ -1299,10 +1314,12 @@ class NostrClient {
       timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
-        network =
-            useQueryPool &&
-                !_asksOnlyRelaysOutsidePool(effectiveTempRelays, relayTypes)
-            ? await runPooledWebSocketQuery()
+        network = useQueryPool
+            ? await runPooledWebSocketQuery(
+                _asksOnlyRelaysOutsidePool(effectiveTempRelays, relayTypes)
+                    ? _outsidePoolQueryPool
+                    : _queryPool,
+              )
             : await runWebSocketQuery().timeout(overrunBackstop());
       } on _QueryPoolWaitExpired {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
@@ -1958,21 +1975,19 @@ class NostrClient {
   /// Whether a read over [tempRelays] and [relayTypes] asks no relay the pool
   /// owns: it asks temp relays alone, and none of them is a pool member.
   ///
-  /// Such a read skips the query pool. The pool exists to keep a burst of
-  /// one-shot REQs from tripping a pooled relay's concurrent-REQ limit, and
-  /// this read sends those relays nothing, so queueing it behind feed reads
-  /// only starves it. A recipient-inbox lookup's 2s indexer leg got 1s to win
+  /// Such a read takes its slot from [_outsidePoolQueryPool] instead of
+  /// [_queryPool]. The main pool exists to keep a burst of one-shot REQs from
+  /// tripping a pooled relay's concurrent-REQ limit, and this read sends those
+  /// relays nothing, so queueing it behind feed reads only starves it. A recipient-inbox lookup's 2s indexer leg got 1s to win
   /// a slot right after a publish, was skipped, and held the collaborator
   /// invite pending (#10004). A temp relay that IS a pool member resolves to
   /// the pooled socket (see [_hasRelayOutsidePool]), so naming one keeps the
   /// whole read in the pool.
   ///
-  /// The only reads this frees today are DmRepository's kind-10050 legs, one
-  /// REQ per relay per recipient. A group send resolves every member at
-  /// once, so the indexer now takes one REQ per member together where the
-  /// pool used to admit six at a time. Any caller that fans temp-only reads
-  /// out to one outside relay gets no throttle from here and must bound its
-  /// own concurrency.
+  /// The only reads that land there today are DmRepository's kind-10050
+  /// legs, one REQ per relay per recipient. A group send resolves every
+  /// member at once against the same indexer, which is why they still share
+  /// a bounded pool rather than going unthrottled.
   bool _asksOnlyRelaysOutsidePool(
     List<String>? tempRelays,
     List<int> relayTypes,
@@ -2524,7 +2539,10 @@ class NostrClient {
     _nostr.beginClose();
     await closeAllSubscriptions();
     await _relayManager.dispose();
-    await _queryPool.close();
+    // [_queryPool] first: its `isClosed` is the sentinel `_read` checks
+    // before requesting a slot from either pool.
+    final mainPoolClosed = _queryPool.close();
+    await Future.wait([mainPoolClosed, _outsidePoolQueryPool.close()]);
     _nostr.close();
     _verifyWorker?.close();
     _verifyWorker = null;

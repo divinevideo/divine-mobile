@@ -181,7 +181,8 @@ const _pooledRelayUrl = 'wss://pool.example';
 
 /// A client whose one pooled relay holds every query slot with a read it never
 /// answers, plus a [_ScriptedRelay] for each temp relay a read dials.
-/// `disallowed` relays fail the environment lock.
+/// `disallowed` relays fail the environment lock. With `saturate` false the
+/// pool is left empty.
 ///
 /// The occupying reads end on their own deadline, [holdFor], so a test must
 /// await `occupants` before it ends.
@@ -197,6 +198,7 @@ Future<
 _saturatedPool({
   required Duration holdFor,
   Set<String> disallowed = const {},
+  bool saturate = true,
 }) async {
   final tempRelays = <String, _ScriptedRelay>{};
   final nostr = Nostr(
@@ -219,6 +221,15 @@ _saturatedPool({
     relayManager: relayManager,
   );
   addTearDown(client.dispose);
+  if (!saturate) {
+    return (
+      client: client,
+      nostr: nostr,
+      pooled: pooled,
+      tempRelays: tempRelays,
+      occupants: Future<void>.value(),
+    );
+  }
   final occupants = Future.wait([
     for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
       client.readEvents([_textNotes()], useCache: false, timeout: holdFor),
@@ -1525,6 +1536,55 @@ void main() {
         expect(result.noRelays, isFalse);
         expect(_tempRelayFor(setup.tempRelays, lockedOut), isNull);
         await setup.occupants;
+      },
+    );
+
+    test(
+      'reads that ask only relays outside the pool are bounded by their own '
+      'pool',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor, saturate: false);
+        // Outside-only reads the indexer never answers fill every slot their
+        // pool has, the way a group send's inbox lookups would.
+        final outsideOccupants = Future.wait([
+          for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+            setup.client.readEvents(
+              [inboxList()],
+              useCache: false,
+              tempRelays: const [indexerUrl],
+              relayTypes: const [RelayType.temp],
+              timeout: holdFor,
+            ),
+        ]);
+        await pumpEventQueue();
+        final indexer = _tempRelayFor(setup.tempRelays, indexerUrl)!;
+        await indexer.awaitReq(NostrClient.maxConcurrentQueries - 1);
+
+        final waiting = await setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+
+        expect(waiting.timedOut, isTrue);
+        expect(
+          indexer.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+          reason: 'no slot arrived, so the indexer must not take another REQ',
+        );
+
+        // Feed reads still have the main pool to themselves.
+        final feed = setup.client.readEvents(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(milliseconds: 300),
+        );
+        await setup.pooled.awaitReq(0);
+        await feed;
+        await outsideOccupants;
       },
     );
 
