@@ -13004,5 +13004,6 @@
   "messagesRoomDiscardDraft": "Discard draft",
   "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."},
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
-  "minorAccountReviewVideoSubmittedTitle": "Video submitted"
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted",
+  "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users."
 }

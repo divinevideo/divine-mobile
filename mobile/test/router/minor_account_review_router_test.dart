@@ -13,6 +13,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/app_router.dart';
@@ -119,7 +120,7 @@ class _StubRepository implements MinorAccountReviewRepository {
 
   @override
   Future<void> submitParentConsent({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
@@ -617,6 +618,49 @@ void main() {
         MinorAccountReviewParentContactScreen.path,
       );
     });
+
+    testWidgets(
+      'allows an unrestricted account to start recording before a consent case exists',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            ...routerOverrides(),
+            relayStatisticsBridgeProvider.overrideWith((ref) {}),
+            relayConnectionStatusBridgeProvider.overrideWith((ref) {}),
+            relaySetChangeBridgeProvider.overrideWith((ref) {}),
+            relayListDirtyPublishBridgeProvider.overrideWith((ref) {}),
+            contactListDirtyBroadcastBridgeProvider.overrideWith((ref) {}),
+            blocklistSyncBridgeProvider.overrideWith((ref) {}),
+            blockedFollowReconcilerProvider.overrideWith((ref) {}),
+            nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => MinorAccountReviewStatus.active(),
+            ),
+            minorConsentWakelockProvider.overrideWithValue((_) async {}),
+            minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
+            permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
+            minorAccountReviewRepositoryProvider.overrideWithValue(
+              _StubRepository(),
+            ),
+            isFeatureEnabledProvider(
+              FeatureFlag.minorConsentInAppRecording,
+            ).overrideWithValue(true),
+          ],
+        );
+        registerContainerTearDown(tester, container);
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+        final router = container.read(goRouterProvider);
+        router.go(MinorAccountReviewRecordConsentScreen.path);
+        await tester.pump();
+
+        expect(
+          router.routeInformationProvider.value.uri.toString(),
+          MinorAccountReviewRecordConsentScreen.path,
+        );
+      },
+    );
 
     testWidgets('allows record consent route while restricted', (tester) async {
       final container = ProviderContainer(

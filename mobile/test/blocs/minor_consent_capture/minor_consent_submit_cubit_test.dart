@@ -36,7 +36,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
 
   @override
   Future<void> submitParentConsent({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,

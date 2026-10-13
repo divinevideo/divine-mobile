@@ -55,14 +55,28 @@ class MinorAccountReviewRepository {
   /// [localReceipt] is the copy written into the developer override when one
   /// is simulating this case locally; see [_completedLocally].
   Future<void> submitParentConsent({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
   }) async {
-    if (await _completedLocally(caseId, localReceipt)) return;
+    var submissionCaseId = caseId;
+    if (submissionCaseId == null) {
+      final status = MinorAccountReviewStatus.fromJson(
+        await _apiService.startGreenlight(),
+      );
+      final reviewCase = status.currentCase;
+      if (reviewCase == null ||
+          reviewCase.id.isEmpty ||
+          reviewCase.suspectedAgeBand != SuspectedAgeBand.age13To15 ||
+          !reviewCase.allowsParentVideoOrEmail) {
+        throw const ApiException('Greenlight review case is unavailable');
+      }
+      submissionCaseId = reviewCase.id;
+    }
+    if (await _completedLocally(submissionCaseId, localReceipt)) return;
     await _apiService.submitMinorAccountReviewParentConsent(
-      caseId: caseId,
+      caseId: submissionCaseId,
       email: email,
       videoPath: videoPath,
     );

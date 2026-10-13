@@ -12,6 +12,7 @@ import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart
 import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
@@ -34,6 +35,52 @@ void main() {
         ).thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
+    });
+
+    testWidgets('an enabled recording flag opens the Greenlight age guidance', (
+      tester,
+    ) async {
+      when(() => mockPrefs.getBool('ff_minorConsentInAppRecording'))
+          .thenReturn(true);
+      when(() => mockPrefs.containsKey('ff_minorConsentInAppRecording'))
+          .thenReturn(true);
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const FeatureFlagScreen()),
+          GoRoute(
+            path: MinorAccountReviewScreen.welcomePath,
+            builder: (_, _) => const MinorAccountReviewScreen(
+              entryPoint: MinorAccountReviewEntryPoint.welcome,
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(FeatureFlag.minorConsentInAppRecording.displayName),
+        400,
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(FeatureFlagScreen)),
+      );
+      await tester.ensureVisible(find.text(l10n.authMinAgeNotice));
+      await tester.tap(find.text(l10n.authMinAgeNotice));
+      await tester.pumpAndSettle();
+      expect(find.byType(MinorAccountReviewScreen), findsOneWidget);
+      expect(find.text(l10n.minorAccountReviewTeenCta), findsOneWidget);
+      expect(find.text(l10n.minorAccountReviewUnder13Cta), findsOneWidget);
     });
 
     testWidgets('should provide complete feature flag management workflow', (

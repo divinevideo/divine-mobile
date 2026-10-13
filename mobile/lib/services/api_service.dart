@@ -88,6 +88,32 @@ class ApiService {
     }
   }
 
+  /// Starts or resumes the existing private Greenlight review for this account.
+  Future<Map<String, dynamic>> startGreenlight() async {
+    final uri = Uri.parse(
+      '$_relayManagerBaseUrl/v1/minor-review-cases/greenlight',
+    );
+    const body = '{}';
+    final response = await _request(
+      () async => _client.post(
+        uri,
+        headers: await _getHeaders(
+          url: uri.toString(),
+          method: HttpMethod.post,
+          payload: body,
+        ),
+        body: body,
+      ),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw ApiException(
+        'Could not start Greenlight review',
+        statusCode: response.statusCode,
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   /// Submit parent contact email for an open minor-account review case.
   Future<void> submitMinorAccountReviewParentContact({
     required String caseId,

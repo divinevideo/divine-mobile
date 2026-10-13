@@ -6,7 +6,9 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 
@@ -55,7 +57,7 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                   body:
                       '${context.l10n.minorAccountReviewParentConsentHonestyBody}'
                       '\n\n'
-                      '${context.l10n.minorAccountReviewParentConsentBody}',
+                      '${canRecordInApp ? context.l10n.minorAccountReviewRecordConsentBody : context.l10n.minorAccountReviewParentConsentBody}',
                   backgroundColor: context.vineColors.inverseSurface,
                   borderColor: context.vineColors.inverseOnSurface,
                   textColor: context.vineColors.inverseOnSurface,
@@ -80,12 +82,32 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                 _ChecklistCard(
                   title: context.l10n.minorAccountReviewParentConsentPrivacy,
                   items: [
-                    context.l10n.minorAccountReviewParentConsentNeverPost,
+                    if (canRecordInApp)
+                      context.l10n.minorAccountReviewRecordConsentPrivacyBody
+                    else
+                      context.l10n.minorAccountReviewParentConsentNeverPost,
                     context.l10n.minorAccountReviewParentConsentDoNotSave,
                     context.l10n.minorAccountReviewParentConsentOneMove,
                   ],
                 ),
                 const SizedBox(height: 24),
+                ListTile(
+                  title: Text(
+                    FeatureFlag.minorConsentInAppRecording.displayName,
+                  ),
+                  trailing: DivineSwitch(
+                    value: canRecordInApp,
+                    onChanged: (enabled) async {
+                      await ref
+                          .read(featureFlagServiceProvider)
+                          .setFlag(
+                            FeatureFlag.minorConsentInAppRecording,
+                            enabled,
+                          );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (canRecordInApp) ...[
                   DivineButton(
                     label:
@@ -115,6 +137,19 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
   }
 
   Future<void> _emailSupport(BuildContext context, WidgetRef ref) async {
+    String? caseId;
+    if (composeEmail == null) {
+      final status = ref.read(currentMinorAccountReviewStatusProvider).value;
+      final reviewCase = status?.currentCase;
+      caseId = reviewCase?.id;
+      if (status?.isRestricted == true &&
+          reviewCase?.allowsParentVideoOrEmail == true &&
+          reviewCase?.state ==
+              MinorReviewCaseState.restrictedPendingUserResponse) {
+        await context.push<void>(MinorAccountReviewParentContactScreen.path);
+        return;
+      }
+    }
     final MinorAccountReviewComposeEmail composer =
         composeEmail ??
         ref.read(minorAccountReviewSupportEmailComposerProvider);
@@ -122,7 +157,10 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
       await composer(
         toEmail: AppConstants.supportEmail,
         subject: context.l10n.minorAccountReviewParentConsentEmailSubject,
-        body: context.l10n.minorAccountReviewParentConsentEmailBody,
+        body: [
+          context.l10n.minorAccountReviewParentConsentEmailBody,
+          if (caseId != null) context.l10n.minorAccountReviewCaseId(caseId),
+        ].join('\n\n'),
         sharePositionOrigin: shareAnchorForContext(context),
       );
     } catch (_) {

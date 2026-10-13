@@ -9,12 +9,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/scroll.dart';
 
@@ -84,7 +86,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
 
   @override
   Future<void> submitParentConsent({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
@@ -122,6 +124,185 @@ List<Override> _recordingEnabledOverrides({bool enabled = true}) => [
 
 void main() {
   group('MinorAccountReviewParentConsentScreen', () {
+    testWidgets(
+      'a family can opt into recording from the consent explanation',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MinorAccountReviewParentConsentScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          findsNothing,
+        );
+        await scrollUntilTappable(
+          tester,
+          find.byType(DivineSwitch),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(find.byType(DivineSwitch));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          findsOneWidget,
+        );
+        expect(prefs.getBool('ff_minorConsentInAppRecording'), isTrue);
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentPrivacyBody),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(l10n.minorAccountReviewParentConsentBody),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'a voluntary case keeps its email fallback after an interrupted upload',
+      (tester) async {
+        String? capturedEmailBody;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording)
+                  .overrideWithValue(true),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => const MinorAccountReviewStatus(
+                  restrictionStatus: AccountRestrictionStatus.active,
+                  currentCase: MinorReviewCase(
+                    id: 'application-1',
+                    state: MinorReviewCaseState.openReported,
+                    suspectedAgeBand: SuspectedAgeBand.age13To15,
+                    allowedResolution:
+                        MinorReviewResolutionType.parentVideoOrEmail,
+                    instructions: MinorReviewInstructions(title: '', body: ''),
+                    supportEmail: 'support@example.com',
+                  ),
+                ),
+              ),
+              minorAccountReviewSupportEmailComposerProvider.overrideWithValue(
+                ({
+                  required toEmail,
+                  required subject,
+                  required String body,
+                  sharePositionOrigin,
+                }) async {
+                  // Capture the exact fallback rather than replacing navigation.
+                  capturedEmailBody = body;
+                },
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MinorAccountReviewParentConsentScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MinorAccountReviewParentConsentScreen)),
+        );
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          capturedEmailBody,
+          contains(l10n.minorAccountReviewParentConsentEmailBody),
+        );
+        expect(capturedEmailBody, contains('application-1'));
+      },
+    );
+
+    testWidgets(
+      'an already restricted consent case keeps its email fallback after an interrupted upload',
+      (tester) async {
+        String? capturedEmailBody;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording)
+                  .overrideWithValue(true),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => const MinorAccountReviewStatus(
+                  restrictionStatus:
+                      AccountRestrictionStatus.restrictedMinorReview,
+                  currentCase: MinorReviewCase(
+                    id: 'application-1',
+                    state:
+                        MinorReviewCaseState.restrictedPendingParentalConsent,
+                    suspectedAgeBand: SuspectedAgeBand.age13To15,
+                    allowedResolution:
+                        MinorReviewResolutionType.parentVideoOrEmail,
+                    instructions: MinorReviewInstructions(title: '', body: ''),
+                    supportEmail: 'support@example.com',
+                  ),
+                ),
+              ),
+              minorAccountReviewSupportEmailComposerProvider.overrideWithValue(
+                ({
+                  required toEmail,
+                  required subject,
+                  required String body,
+                  sharePositionOrigin,
+                }) async {
+                  // Capture the exact fallback rather than replacing navigation.
+                  capturedEmailBody = body;
+                },
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MinorAccountReviewParentConsentScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MinorAccountReviewParentConsentScreen)),
+        );
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          capturedEmailBody,
+          contains(l10n.minorAccountReviewParentConsentEmailBody),
+        );
+        expect(capturedEmailBody, contains('application-1'));
+      },
+    );
+
     testWidgets('opens support email with prepared subject and body', (
       tester,
     ) async {

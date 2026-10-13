@@ -6363,5 +6363,6 @@
   "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
   "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።",
   "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
-  "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል"
+  "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል",
+  "minorAccountReviewRecordConsentPrivacyBody": "ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።"
 }

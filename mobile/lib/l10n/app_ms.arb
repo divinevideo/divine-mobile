@@ -7614,5 +7614,6 @@
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
-  "minorAccountReviewVideoSubmittedTitle": "Video dihantar"
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain."
 }
