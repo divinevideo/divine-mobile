@@ -24,6 +24,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -31,8 +32,10 @@ import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
@@ -224,17 +227,23 @@ void main() {
       ).thenAnswer((_) => const Stream<ContentPolicyState>.empty());
     });
 
-    Future<FullscreenFeedBloc> pumpProfileAt(
-      WidgetTester tester,
-      int index,
-    ) async {
-      final location = ProfileScreenRouter.pathForIndex(_npub, index);
+    /// Pumps [ProfileScreenRouter] at [location]. With [navigation], the
+    /// screen resolves its navigator to that mock instead of the real router.
+    Future<void> pumpProfileRoute(
+      WidgetTester tester, {
+      required String location,
+      required String path,
+      MockGoRouter? navigation,
+    }) async {
+      const profile = ProfileScreenRouter();
       final router = GoRouter(
         initialLocation: location,
         routes: [
           GoRoute(
-            path: ProfileScreenRouter.pathWithIndex,
-            builder: (_, _) => const ProfileScreenRouter(),
+            path: path,
+            builder: (_, _) => navigation == null
+                ? profile
+                : MockGoRouterProvider(goRouter: navigation, child: profile),
           ),
         ],
       );
@@ -295,10 +304,73 @@ void main() {
       });
       await tester.pump();
       await tester.pump();
+    }
 
+    Future<FullscreenFeedBloc> pumpProfileAt(
+      WidgetTester tester,
+      int index,
+    ) async {
+      await pumpProfileRoute(
+        tester,
+        location: ProfileScreenRouter.pathForIndex(_npub, index),
+        path: ProfileScreenRouter.pathWithIndex,
+      );
       final content = tester.element(find.byType(FullscreenFeedContent));
       return content.read<FullscreenFeedBloc>();
     }
+
+    testWidgets('the Library button opens the clips route', (tester) async {
+      final navigation = MockGoRouter();
+      when(() => navigation.push<void>(any())).thenAnswer((_) async {});
+
+      await pumpProfileRoute(
+        tester,
+        location: ProfileScreenRouter.pathForNpub(_npub),
+        path: ProfileScreenRouter.pathWithNpub,
+        navigation: navigation,
+      );
+      await tester.tap(find.byKey(const Key('library-button')));
+      await tester.pump();
+
+      verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('logs a rejected clips navigation instead of leaking it', (
+      tester,
+    ) async {
+      await LogCaptureService().clearAllLogs();
+      addTearDown(LogCaptureService().clearAllLogs);
+      final navigation = MockGoRouter();
+      when(
+        () => navigation.push<void>(any()),
+      ).thenAnswer((_) => Future<void>.error(Exception('push-failed')));
+
+      await pumpProfileRoute(
+        tester,
+        location: ProfileScreenRouter.pathForNpub(_npub),
+        path: ProfileScreenRouter.pathWithNpub,
+        navigation: navigation,
+      );
+      await tester.tap(find.byKey(const Key('library-button')));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final logs = LogCaptureService()
+          .getRecentLogs()
+          .where((entry) => entry.message.contains('open profile clips'))
+          .toList();
+      expect(logs, hasLength(1));
+      final log = logs.single;
+      expect(log.name, 'ProfileScreenRouter');
+      expect(log.level, LogLevel.error);
+      expect(log.message, contains('push-failed'));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 3));
+    });
 
     testWidgets('index 0 in the URL opens the first video', (tester) async {
       final bloc = await pumpProfileAt(tester, 0);
