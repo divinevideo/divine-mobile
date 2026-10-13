@@ -14,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
+import 'package:openvine/blocs/supporter/public_supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -411,50 +412,53 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
             enabled: showIdentitySkeleton,
             enableSwitchAnimation: true,
             effect: vineSkeletonEffectOf(context),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Centered avatar with action label pill
-                Center(
-                  child: _ProfileAvatarWithColor(
-                    imageUrl: profilePictureUrl,
-                    userIdHex: widget.userIdHex,
-                    showSkeleton: showIdentitySkeleton,
-                    profileColor: profileColor,
-                    pendingActions: pendingActions,
-                    showSupporterTreatment: supporterHaloPreview,
-                    opensSupporterLightbox: !widget.isOwnProfile,
-                    onActionTap: pendingActions.isEmpty
-                        ? null
-                        : pendingActions.first ==
-                              ProfileActionType.accountRestricted
-                        ? () => context.push(RoutePaths.accountStatus)
-                        : () => _showActionsSheet(
-                            context,
-                            pendingActions,
-                            secureAccountPromptDismissal,
-                          ),
-                  ),
-                ),
-
-                // Name, NIP-05, and bio. Horizontal inset lives on the
-                // children so the badge row can scroll edge-to-edge.
-                Padding(
-                  padding: const EdgeInsets.only(top: 32, bottom: 16),
-                  child: _ProfileNameAndBio(
-                    profile: effectiveProfile,
-                    userIdHex: widget.userIdHex,
-                    about: about,
-                    displayNameHint: displayNameHint,
-                    isVanished: isVanished,
-                    accentColor: profileColor,
-                    isOwnProfile: widget.isOwnProfile,
-                    monetizationLinks: monetizationLinksForCurrentStorefront(
-                      effectiveProfile?.enabledMonetizationLinks ?? const [],
+            child: _PublicSupporterScope(
+              pubkey: widget.userIdHex,
+              enabled: !isVanished,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Centered avatar with action label pill
+                  Center(
+                    child: _ProfileAvatarWithColor(
+                      imageUrl: profilePictureUrl,
+                      userIdHex: widget.userIdHex,
+                      showSkeleton: showIdentitySkeleton,
+                      profileColor: profileColor,
+                      pendingActions: pendingActions,
+                      opensSupporterLightbox: !widget.isOwnProfile,
+                      onActionTap: pendingActions.isEmpty
+                          ? null
+                          : pendingActions.first ==
+                                ProfileActionType.accountRestricted
+                          ? () => context.push(RoutePaths.accountStatus)
+                          : () => _showActionsSheet(
+                              context,
+                              pendingActions,
+                              secureAccountPromptDismissal,
+                            ),
                     ),
                   ),
-                ),
-              ],
+
+                  // Name, NIP-05, and bio. Horizontal inset lives on the
+                  // children so the badge row can scroll edge-to-edge.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32, bottom: 16),
+                    child: _ProfileNameAndBio(
+                      profile: effectiveProfile,
+                      userIdHex: widget.userIdHex,
+                      about: about,
+                      displayNameHint: displayNameHint,
+                      isVanished: isVanished,
+                      accentColor: profileColor,
+                      isOwnProfile: widget.isOwnProfile,
+                      monetizationLinks: monetizationLinksForCurrentStorefront(
+                        effectiveProfile?.enabledMonetizationLinks ?? const [],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (!widget.isOwnProfile) ...[

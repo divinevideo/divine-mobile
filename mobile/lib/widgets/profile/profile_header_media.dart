@@ -441,7 +441,6 @@ class _ProfileAvatarWithColor extends StatelessWidget {
     required this.imageUrl,
     required this.userIdHex,
     required this.showSkeleton,
-    required this.showSupporterTreatment,
     this.profileColor,
     this.pendingActions = const [],
     this.opensSupporterLightbox = false,
@@ -467,9 +466,6 @@ class _ProfileAvatarWithColor extends StatelessWidget {
   /// Called when the label or avatar is tapped.
   final VoidCallback? onActionTap;
 
-  /// Whether to surround the avatar with the supporter halo and wings.
-  final bool showSupporterTreatment;
-
   /// Whether a tap opens the supporter lightbox, where the halo and wings fly
   /// along with the avatar, instead of the plain photo lightbox.
   final bool opensSupporterLightbox;
@@ -487,6 +483,9 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         size: avatarSize,
       );
       final hasAvatar = imageUrl != null && imageUrl!.isNotEmpty;
+      // Public status arrives after the header renders; the halo and wings
+      // fade in around the avatar, which stays put.
+      final showSupporterTreatment = _isPublicSupporter(context);
       Widget tappableAvatar({void Function(Animation<double>)? onOpened}) {
         if (!hasAvatar) return avatarWidget;
         return GestureDetector(
@@ -519,6 +518,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
           : showSupporterTreatment
           ? SupporterHaloWings(
               avatarSize: avatarSize,
+              fadeIn: true,
               builder: (context, trackCover) =>
                   tappableAvatar(onOpened: trackCover),
             )

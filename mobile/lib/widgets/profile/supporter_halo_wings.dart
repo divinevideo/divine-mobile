@@ -7,13 +7,6 @@ import 'package:flutter/widgets.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-// TODO(#9914): Prototype switch. Replace with real supporter status before
-// this ships; for now `--dart-define=SUPPORTER_HALO_PREVIEW=true` forces the
-// treatment on the signed-in user's own profile.
-const bool supporterHaloPreview = bool.fromEnvironment(
-  'SUPPORTER_HALO_PREVIEW',
-);
-
 /// Called with the animation of a route that lifts the avatar away, such as
 /// the avatar lightbox, so the halo and wings can follow it out and back.
 typedef TrackCoveringTransition = void Function(Animation<double> transition);
@@ -29,10 +22,16 @@ class SupporterHaloWings extends StatefulWidget {
     required this.avatarSize,
     required this.builder,
     this.sparkles,
+    this.fadeIn = false,
     super.key,
   });
 
   final double avatarSize;
+
+  /// Whether the halo and wings fade in when this first appears, rather than
+  /// being there from the start. Set where supporter status arrives after the
+  /// avatar is already on screen; left off where the group flies in whole.
+  final bool fadeIn;
 
   /// When set, twinkling sparkles surround the group, faded in by this value.
   /// Used where the supporter status is the subject, such as its lightbox.
@@ -66,6 +65,7 @@ abstract class _Geometry {
 /// Motion amplitudes. Kept small: the avatar should breathe, not flap.
 abstract class _Motion {
   static const Duration period = Duration(milliseconds: 3000);
+  static const Duration reveal = Duration(milliseconds: 300);
   static const double haloBobFraction = 3 / 144;
   static const double haloTiltRadians = 2.5 * math.pi / 180;
 
@@ -102,10 +102,17 @@ _sparkles = [
 ];
 
 class _SupporterHaloWingsState extends State<SupporterHaloWings>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: _Motion.period,
+  );
+
+  /// Opacity of the halo and wings, below 1 only while fading in.
+  late final AnimationController _reveal = AnimationController(
+    vsync: this,
+    duration: _Motion.reveal,
+    value: widget.fadeIn ? 0 : 1,
   );
   late final AppLifecycleListener _lifecycle;
   final Key _visibilityKey = UniqueKey();
@@ -136,6 +143,13 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_reveal.isDismissed) {
+      if (context.reduceMotion) {
+        _reveal.value = 1;
+      } else {
+        _reveal.forward();
+      }
+    }
     _sync();
   }
 
@@ -171,6 +185,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
   @override
   void dispose() {
     _lifecycle.dispose();
+    _reveal.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -226,6 +241,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: wingWidth,
                   height: wingHeight,
                   child: _CoverFade(
+                    reveal: _reveal,
                     cover: _cover,
                     // The avatar's centre, in this wing's own coordinates.
                     origin: Offset(outset + size / 2, size / 2 - wingTop),
@@ -242,6 +258,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: wingWidth,
                   height: wingHeight,
                   child: _CoverFade(
+                    reveal: _reveal,
                     cover: _cover,
                     origin: Offset(
                       wingWidth - outset - size / 2,
@@ -269,6 +286,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: haloWidth,
                   height: haloHeight,
                   child: _CoverFade(
+                    reveal: _reveal,
                     cover: _cover,
                     origin: Offset(
                       haloWidth / 2,
@@ -373,7 +391,8 @@ class _Group implements _PartTransform {
   Alignment get origin => Alignment.center;
 }
 
-/// Hides a halo or wing while the avatar is lifted away by [cover].
+/// Fades a halo or wing in with [reveal], and hides it while the avatar is
+/// lifted away by [cover].
 ///
 /// It fades and draws in toward the avatar as the avatar takes off, and
 /// returns only as the avatar lands, so neither is left floating around an
@@ -381,6 +400,7 @@ class _Group implements _PartTransform {
 /// is interrupted or swiped back.
 class _CoverFade extends StatelessWidget {
   const _CoverFade({
+    required this.reveal,
     required this.cover,
     required this.origin,
     required this.child,
@@ -394,6 +414,8 @@ class _CoverFade extends StatelessWidget {
 
   static const double _hiddenScale = 0.85;
 
+  /// Fades the part in when supporter status arrives after the avatar.
+  final Animation<double> reveal;
   final Animation<double>? cover;
   final Offset origin;
   final Widget child;
@@ -401,26 +423,29 @@ class _CoverFade extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cover = this.cover;
-    if (cover == null) return child;
+    if (cover == null) return FadeTransition(opacity: reveal, child: child);
     final reduceMotion = context.reduceMotion;
-    return AnimatedBuilder(
-      animation: cover,
-      builder: (context, child) {
-        final hidden = reduceMotion
-            ? (cover.value > 0 ? 1.0 : 0.0)
-            : (cover.status == AnimationStatus.reverse ? _land : _leave)
-                  .transform(cover.value);
-        final scale = 1 - (1 - _hiddenScale) * hidden;
-        return Opacity(
-          opacity: 1 - hidden,
-          child: Transform(
-            origin: origin,
-            transform: Matrix4.diagonal3Values(scale, scale, 1),
-            child: child,
-          ),
-        );
-      },
-      child: child,
+    return FadeTransition(
+      opacity: reveal,
+      child: AnimatedBuilder(
+        animation: cover,
+        builder: (context, child) {
+          final hidden = reduceMotion
+              ? (cover.value > 0 ? 1.0 : 0.0)
+              : (cover.status == AnimationStatus.reverse ? _land : _leave)
+                    .transform(cover.value);
+          final scale = 1 - (1 - _hiddenScale) * hidden;
+          return Opacity(
+            opacity: 1 - hidden,
+            child: Transform(
+              origin: origin,
+              transform: Matrix4.diagonal3Values(scale, scale, 1),
+              child: child,
+            ),
+          );
+        },
+        child: child,
+      ),
     );
   }
 }

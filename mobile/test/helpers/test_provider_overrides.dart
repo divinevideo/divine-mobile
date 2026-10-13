@@ -37,6 +37,7 @@ import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/services/og_diviner_eligibility_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -430,6 +431,7 @@ List<Override> getStandardTestOverrides({
   ModerationLabelService? mockModerationLabelService,
   FollowRepository? mockFollowRepository,
   UserRankingSignalsLoader? rankingSignalsLoader,
+  SupporterApiClient? supporterApiClient,
 }) {
   final mockPrefs = mockSharedPreferences ?? createMockSharedPreferences();
   final mockAuth = mockAuthService ?? createMockAuthService();
@@ -459,7 +461,7 @@ List<Override> getStandardTestOverrides({
     documentsPathProvider.overrideWithValue('/documents'),
     // Profile badges must not start HTTP requests or a native store connection
     // in unrelated widget tests. Dedicated supporter tests supply their own API.
-    supporterApiClientProvider.overrideWithValue(null),
+    supporterApiClientProvider.overrideWithValue(supporterApiClient),
     entitlementValidatorProvider.overrideWithValue(StubEntitlementValidator()),
     // Analytics has its own focused tests. Other widget tests must not create
     // its transport, timers, or session listeners as an incidental side effect.

@@ -31,6 +31,7 @@ import 'package:openvine/features/monetization/monetization_storefront_policy.da
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -45,6 +46,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
+import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
@@ -56,6 +58,7 @@ import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_s
 import 'package:openvine/widgets/profile/profile_header_widget.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
+import 'package:openvine/widgets/profile/supporter_halo_wings.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/supporter_membership.dart';
@@ -65,6 +68,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:verifier_client/verifier_client.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../helpers/finders.dart';
 import '../../helpers/go_router.dart';
@@ -88,6 +92,8 @@ class _MockOtherProfileBloc
 class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
     implements BackgroundPublishBloc {}
+
+class _MockSupporterApiClient extends Mock implements SupporterApiClient {}
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
@@ -209,6 +215,15 @@ class MockAuthService extends Mock implements AuthService {
   @override
   Stream<AuthState> get authStateStream =>
       Stream.value(AuthState.authenticated);
+
+  @override
+  Stream<AuthRpcCapability> get authRpcCapabilityStream => const Stream.empty();
+
+  @override
+  AuthRpcCapability get authRpcCapability => AuthRpcCapability.unavailable;
+
+  @override
+  bool get canPublishNostrWritesNow => false;
 
   @override
   bool get hasExpiredOAuthSession => expiredOAuthSession.value;
@@ -387,6 +402,7 @@ void main() {
       bool eligibilityIsLoading = false,
       Nip05VerificationStatus verificationStatus =
           Nip05VerificationStatus.verified,
+      SupporterApiClient? supporterClient,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -486,13 +502,17 @@ void main() {
 
       final scoped = ProviderScope(
         overrides: [
-          // Membership has separate account/lifecycle coverage.
-          supporterApiConfiguredProvider.overrideWithValue(false),
+          // Membership has separate account/lifecycle coverage; a supporter
+          // client is only wired in by the public supporter status tests.
+          supporterApiConfiguredProvider.overrideWithValue(
+            supporterClient != null,
+          ),
           ...getStandardTestOverrides(
             mockNostrService: mockNostrClient,
             mockSharedPreferences: sharedPreferences,
             mockNip05VerificationService: createMockNip05VerificationService(),
             mockFollowRepository: mockFollowRepository,
+            supporterApiClient: supporterClient,
           ),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
           if ((profile ?? suppliedProfile)?.nip05 case final String claim)
@@ -659,8 +679,8 @@ void main() {
       }
 
       testWidgets(
-        'shows the ${ownProfile ? 'private membership chip' : 'public supporter badge'} '
-        'on ${ownProfile ? 'your own' : "someone else's"} profile',
+        '${ownProfile ? 'shows' : 'hides'} the private membership chip on '
+        '${ownProfile ? 'your own' : "someone else's"} profile',
         (tester) async {
           // The private chip reads the signed-in account's membership, so on
           // anyone else's profile it would show the viewer's status, not theirs.
@@ -676,10 +696,6 @@ void main() {
           expect(
             find.byType(SupporterMembership),
             ownProfile ? findsOneWidget : findsNothing,
-          );
-          expect(
-            find.byType(PublicSupporterBadge),
-            ownProfile ? findsNothing : findsOneWidget,
           );
         },
       );
@@ -699,10 +715,143 @@ void main() {
           await tester.pump();
 
           expect(find.byType(SupporterMembership), findsNothing);
-          expect(find.byType(PublicSupporterBadge), findsNothing);
+          expect(find.byType(SupporterHaloWings), findsNothing);
         },
       );
     }
+
+    group('public supporter status', () {
+      const supporterPicture = 'https://example.com/supporter.jpg';
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      late Duration visibilityInterval;
+
+      // The halo pauses off-screen; a zero interval keeps its visibility
+      // detector from leaving a timer behind when the tree is torn down.
+      setUp(() {
+        visibilityInterval =
+            VisibilityDetectorController.instance.updateInterval;
+        VisibilityDetectorController.instance.updateInterval = Duration.zero;
+      });
+
+      tearDown(() {
+        VisibilityDetectorController.instance.updateInterval =
+            visibilityInterval;
+      });
+
+      SupporterApiClient supporterClient({required bool isPublicSupporter}) {
+        final client = _MockSupporterApiClient();
+        when(
+          () => client.fetchPublicRecognition(any()),
+        ).thenAnswer((_) async => isPublicSupporter);
+        return client;
+      }
+
+      Future<void> pumpHeader(
+        WidgetTester tester, {
+        required bool isOwnProfile,
+        required bool isPublicSupporter,
+      }) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: isOwnProfile,
+            suppliedProfile: createTestProfile(
+              displayName: 'Ivy',
+              picture: supporterPicture,
+            ),
+            supporterClient: supporterClient(
+              isPublicSupporter: isPublicSupporter,
+            ),
+            // Holds the halo still so the tree can settle.
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      group('renders', () {
+        for (final isOwnProfile in [true, false]) {
+          final whose = isOwnProfile ? 'your own' : "someone else's";
+
+          testWidgets('shows the halo and wings on $whose public supporter '
+              'profile', (tester) async {
+            await pumpHeader(
+              tester,
+              isOwnProfile: isOwnProfile,
+              isPublicSupporter: true,
+            );
+
+            expect(find.byType(SupporterHaloWings), findsOneWidget);
+          });
+
+          testWidgets('shows no halo on $whose profile without public '
+              'supporter status', (tester) async {
+            await pumpHeader(
+              tester,
+              isOwnProfile: isOwnProfile,
+              isPublicSupporter: false,
+            );
+
+            expect(find.byType(SupporterHaloWings), findsNothing);
+          });
+        }
+
+        testWidgets('no longer shows the old supporter label', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
+
+          expect(find.text(l10n.supporterBadgeLabel), findsNothing);
+        });
+      });
+
+      group('interactions', () {
+        testWidgets("tapping another supporter's avatar opens the supporter "
+            'view', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
+
+          await tester.tap(find.byType(UserAvatar));
+          // The pushed route keeps the halo looping, so it never settles;
+          // the first frame only lays the route out offstage for the Hero.
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.text(l10n.supporterLightboxBody), findsOneWidget);
+        });
+
+        for (final (label, isOwnProfile, isPublicSupporter) in [
+          ("someone else's non-supporter avatar", false, false),
+          ('your own supporter avatar', true, true),
+        ]) {
+          testWidgets('tapping $label opens the photo lightbox', (
+            tester,
+          ) async {
+            await pumpHeader(
+              tester,
+              isOwnProfile: isOwnProfile,
+              isPublicSupporter: isPublicSupporter,
+            );
+
+            await tester.tap(find.byType(UserAvatar));
+            await tester.pumpAndSettle();
+
+            expect(
+              tester
+                  .widgetList<UserAvatar>(find.byType(UserAvatar))
+                  .where((avatar) => avatar.size == 288),
+              isNotEmpty,
+            );
+            expect(find.text(l10n.supporterLightboxBody), findsNothing);
+          });
+        }
+      });
+    });
 
     testWidgets('opens accepted NIP-58 badge details from profile header', (
       tester,

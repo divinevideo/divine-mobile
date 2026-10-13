@@ -64,11 +64,10 @@ class _ProfileNameAndBio extends StatelessWidget {
             ],
           ),
         ),
-        // The halo and wings replace the heart chips while previewing them.
-        if (!isVanished && isOwnProfile && !supporterHaloPreview)
-          const SupporterMembership(compact: true)
-        else if (!isVanished && !supporterHaloPreview)
-          PublicSupporterBadge(pubkey: userIdHex),
+        // Public supporter status shows as the halo and wings around the
+        // avatar; this chip is the owner's private entry to membership.
+        if (!isVanished && isOwnProfile)
+          const SupporterMembership(compact: true),
         Skeleton.keep(child: _ProfileBadgesBlock(userIdHex: userIdHex)),
         Padding(
           padding: inset,

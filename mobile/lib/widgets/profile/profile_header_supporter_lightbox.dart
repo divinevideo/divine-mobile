@@ -50,6 +50,7 @@ class _SupporterAvatarHero extends StatelessWidget {
           flightShuttleBuilder: _supporterShuttle(imageUrl, userIdHex),
           child: SupporterHaloWings(
             avatarSize: avatarSize,
+            fadeIn: true,
             builder: (_, _) => avatar,
           ),
         ),
@@ -144,55 +145,63 @@ class _SupporterLightbox extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              Positioned.fill(
-                child: Semantics(
-                  label: context.l10n.profileAvatarLightboxCloseSemanticLabel,
-                  button: true,
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  padding.top + 72,
-                  24,
-                  padding.bottom + 16,
-                ),
-                child: Column(
-                  children: [
-                    const Spacer(),
-                    _SupporterLightboxAvatar(
-                      imageUrl: imageUrl,
-                      userIdHex: userIdHex,
-                    ),
-                    const SizedBox(height: 30),
-                    FadeTransition(
-                      opacity: reveal,
-                      child: Column(
-                        children: [
-                          _SupporterLightboxHeadline(userIdHex: userIdHex),
-                          const SizedBox(height: 12),
-                          Text(
-                            context.l10n.supporterLightboxBody,
-                            textAlign: TextAlign.center,
-                            style: VineTheme.bodyLargeFont(
-                              color: colors.secondaryText,
+              // Scrolls only when short screens or large text overflow it.
+              CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    // Tapping the backdrop closes; the labelled close button
+                    // is the accessible route, so this stays out of semantics.
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      excludeFromSemantics: true,
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          padding.top + 72,
+                          24,
+                          padding.bottom + 16,
+                        ),
+                        child: Column(
+                          children: [
+                            const Spacer(),
+                            _SupporterLightboxAvatar(
+                              imageUrl: imageUrl,
+                              userIdHex: userIdHex,
                             ),
-                          ),
-                          const SizedBox(height: 32),
-                          const _SupporterBenefits(),
-                        ],
+                            const SizedBox(height: 30),
+                            FadeTransition(
+                              opacity: reveal,
+                              child: Column(
+                                children: [
+                                  _SupporterLightboxHeadline(
+                                    userIdHex: userIdHex,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    context.l10n.supporterLightboxBody,
+                                    textAlign: TextAlign.center,
+                                    style: VineTheme.bodyLargeFont(
+                                      color: colors.secondaryText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  const _SupporterBenefits(),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            FadeTransition(
+                              opacity: reveal,
+                              child: const _SupporterLightboxActions(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const Spacer(),
-                    FadeTransition(
-                      opacity: reveal,
-                      child: const _SupporterLightboxActions(),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               Positioned(
                 top: padding.top + 12,
@@ -444,5 +453,50 @@ class _SupporterMaybeLater extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Provides one [PublicSupporterCubit] for a profile, so everything in the
+/// header that reflects supporter status reads the same single request.
+///
+/// Only opted-in public recognition is used, for every profile including the
+/// viewer's own, so a profile looks the same to its owner as to everyone else.
+class _PublicSupporterScope extends ConsumerWidget {
+  const _PublicSupporterScope({
+    required this.pubkey,
+    required this.enabled,
+    required this.child,
+  });
+
+  final String pubkey;
+
+  /// False for a deleted account, which never shows supporter status.
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!enabled || !ref.watch(supporterApiConfiguredProvider)) return child;
+    final client = ref.watch(supporterApiClientProvider);
+    if (client == null) return child;
+    return BlocProvider(
+      key: ValueKey((client, pubkey)),
+      create: (_) {
+        final cubit = PublicSupporterCubit(client: client, pubkey: pubkey);
+        unawaited(cubit.load());
+        return cubit;
+      },
+      child: child,
+    );
+  }
+}
+
+/// Whether the profile in the nearest [_PublicSupporterScope] shows its
+/// supporter status publicly. False while loading and outside a scope.
+bool _isPublicSupporter(BuildContext context) {
+  try {
+    return context.select<PublicSupporterCubit, bool>((cubit) => cubit.state);
+  } on ProviderNotFoundException {
+    return false;
   }
 }

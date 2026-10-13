@@ -1,5 +1,4 @@
 // ABOUTME: Account-scoped supporter acknowledgement and discovery entry points.
-// ABOUTME: Public profile badges use only the opt-in public recognition endpoint.
 
 import 'dart:async';
 
@@ -8,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/supporter/public_supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -77,44 +75,6 @@ class SupporterMembership extends ConsumerWidget {
                 : context.l10n.supporterTileSubtitle,
           );
         },
-      ),
-    );
-  }
-}
-
-class PublicSupporterBadge extends ConsumerWidget {
-  const PublicSupporterBadge({required this.pubkey, super.key});
-
-  final String pubkey;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(supporterApiConfiguredProvider)) {
-      return const SizedBox.shrink();
-    }
-    final client = ref.watch(supporterApiClientProvider);
-    if (client == null) return const SizedBox.shrink();
-    return BlocProvider(
-      key: ValueKey((client, pubkey)),
-      create: (_) {
-        final cubit = PublicSupporterCubit(client: client, pubkey: pubkey);
-        unawaited(cubit.load());
-        return cubit;
-      },
-      child: BlocBuilder<PublicSupporterCubit, bool>(
-        builder: (context, visible) => visible
-            ? Material(
-                type: MaterialType.transparency,
-                child: Chip(
-                  avatar: DivineIcon(
-                    icon: DivineIconName.heart,
-                    size: 16,
-                    color: context.vineColors.primaryText,
-                  ),
-                  label: Text(context.l10n.supporterBadgeLabel),
-                ),
-              )
-            : const SizedBox.shrink(),
       ),
     );
   }
