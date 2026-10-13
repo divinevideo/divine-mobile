@@ -1760,6 +1760,7 @@ void main() {
       'wrong key leaves a grown-page-1 journal byte-for-byte intact',
       () async {
         _createGrownPageOneHotJournalFixture(dbPath, key: validKey);
+        _expectReadOnlyRollback(dbPath);
         final databaseBefore = File(dbPath).readAsBytesSync();
         final journalBefore = File('$dbPath-journal').readAsBytesSync();
         const wrongKey =
