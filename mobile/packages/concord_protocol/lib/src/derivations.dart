@@ -32,8 +32,16 @@ Uint8List concatBytes(List<Uint8List> parts) {
 }
 
 Uint8List u64be(int n) {
-  final out = ByteData(8)..setUint64(0, n);
-  return out.buffer.asUint8List();
+  if (n < 0) throw ArgumentError.value(n, 'n', 'must be unsigned');
+  // ByteData.setUint64 is unavailable on JavaScript; bitwise operations there
+  // also truncate to 32 bits. Division preserves the supported integer range.
+  final out = Uint8List(8);
+  var remaining = n;
+  for (var i = 7; i >= 0; i--) {
+    out[i] = remaining % 256;
+    remaining ~/= 256;
+  }
+  return out;
 }
 
 String sha256Hex(String input) => sha256.convert(utf8.encode(input)).toString();

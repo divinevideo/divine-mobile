@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:concord_protocol/concord_protocol.dart';
-import 'package:concord_repository/concord_repository.dart';
+import 'package:concord_repository/src/sealed_transport.dart';
 import 'package:test/test.dart';
 
 String _readFixture() {
@@ -74,6 +74,8 @@ void main() {
       expect(wrap['kind'], 1059);
       expect(wrap['pubkey'], stream.pubkey);
       final opened = await openWrap(
+        expectedChannelId: channelId,
+        expectedEpoch: 0,
         wrap: wrap,
         streamSeedHex: stream.seedHex,
         streamPubkey: stream.pubkey,
@@ -82,6 +84,8 @@ void main() {
       expect(opened['author'], alice['pubkey']);
       await expectLater(
         openWrap(
+          expectedChannelId: channelId,
+          expectedEpoch: 0,
           wrap: {...wrap, 'pubkey': alice['pubkey']},
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,

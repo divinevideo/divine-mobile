@@ -66,7 +66,9 @@ class CommunityListFragment {
       CommunityListFragment.fromJson(jsonDecode(s) as Map<String, dynamic>);
   final Map<String, dynamic> raw;
   int get kind => (raw['kind'] as num?)?.toInt() ?? 0;
-  String get communityId {
+
+  /// Decimal fragment coordinate from the d tag; entries hold community ids.
+  String get fragmentIndex {
     for (final t in (raw['tags'] as List? ?? [])) {
       if (t is List && t.length > 1 && t[0] == 'd') return '${t[1]}';
     }

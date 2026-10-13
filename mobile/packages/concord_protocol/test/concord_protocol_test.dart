@@ -197,8 +197,14 @@ void main() {
           targetId: 'a',
           createdAt: 3,
           body: 'edited',
+          actor: 'u',
         ),
-        ControlEvent(type: ControlType.delete, targetId: 'b', createdAt: 4),
+        ControlEvent(
+          type: ControlType.delete,
+          targetId: 'b',
+          createdAt: 4,
+          actor: 'u',
+        ),
         ControlEvent(
           type: ControlType.reaction,
           targetId: 'a',

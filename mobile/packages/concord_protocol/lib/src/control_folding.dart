@@ -23,7 +23,7 @@ FoldedThread foldControls(
     switch (c.type) {
       case ControlType.edit:
         final m = byId[c.targetId];
-        if (m != null && c.body != null) {
+        if (m != null && c.actor == m.author && c.body != null) {
           byId[c.targetId] = ChatMessage(
             id: m.id,
             channelId: m.channelId,
@@ -36,7 +36,9 @@ FoldedThread foldControls(
           );
         }
       case ControlType.delete:
-        byId.remove(c.targetId);
+        if (byId[c.targetId]?.author == c.actor) {
+          byId.remove(c.targetId);
+        }
       case ControlType.reaction:
         if (c.emoji != null) {
           final tally = reactions.putIfAbsent(c.targetId, () => {});

@@ -64,13 +64,16 @@ int _paddedLen(int len) {
 }
 
 Future<String> nip44Encrypt(String plaintext, Uint8List convKey) async {
+  final plainBytes = utf8.encode(plaintext);
+  if (plainBytes.isEmpty || plainBytes.length > 65535) {
+    throw ArgumentError('nip44: plaintext must contain 1..65535 UTF-8 bytes');
+  }
   final nonce = Uint8List(32);
   final rnd = Random.secure();
   for (var i = 0; i < 32; i++) {
     nonce[i] = rnd.nextInt(256);
   }
   final keys = _messageKeys(convKey, nonce);
-  final plainBytes = utf8.encode(plaintext);
   final padded = Uint8List(2 + _paddedLen(plainBytes.length));
   ByteData.sublistView(padded).setUint16(0, plainBytes.length);
   padded.setRange(2, 2 + plainBytes.length, plainBytes);
@@ -176,6 +179,7 @@ Future<Map<String, dynamic>> wrapSeal({
   required Map<String, dynamic> seal,
   required String streamSeedHex,
   required String streamPubkey,
+  int? expiresAt,
 }) async {
   final conv = conversationKey(streamSeedHex, streamPubkey);
   final ephemeralSecret = bytesToHex(
@@ -185,53 +189,171 @@ Future<Map<String, dynamic>> wrapSeal({
   return _signEvent(
     secretHex: streamSeedHex,
     kind: 1059,
-    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    createdAt: seal['created_at'] as int,
     tags: [
       ['p', schnorr.getPublicKey(ephemeralSecret)],
+      if (expiresAt != null) ['expiration', '$expiresAt'],
     ],
     content: content,
   );
 }
 
+final _hex32 = RegExp(r'^[0-9a-f]{64}$');
+final _hex64 = RegExp(r'^[0-9a-f]{128}$');
+final _decimal = RegExp(r'^(0|[1-9][0-9]*)$');
+
+Map<String, dynamic> _decodeEvent(String encoded) {
+  final value = jsonDecode(encoded);
+  if (value is! Map<String, dynamic>) {
+    throw const FormatException('concord: event must be an object');
+  }
+  return value;
+}
+
+List<List<String>> _validateEvent(
+  Map<String, dynamic> event, {
+  required bool signed,
+}) {
+  final pubkey = event['pubkey'];
+  final id = event['id'];
+  final kind = event['kind'];
+  final createdAt = event['created_at'];
+  final sig = event['sig'];
+  final tags = event['tags'];
+  if (pubkey is! String ||
+      !_hex32.hasMatch(pubkey) ||
+      id is! String ||
+      !_hex32.hasMatch(id) ||
+      kind is! int ||
+      kind < 0 ||
+      kind > 65535 ||
+      createdAt is! int ||
+      createdAt < 0 ||
+      event['content'] is! String ||
+      tags is! List ||
+      (signed && (sig is! String || !_hex64.hasMatch(sig))) ||
+      (!signed && event.containsKey('sig'))) {
+    throw const FormatException('concord: malformed event');
+  }
+  final result = <List<String>>[];
+  for (final tag in tags) {
+    if (tag is! List || tag.isEmpty || tag.any((value) => value is! String)) {
+      throw const FormatException('concord: malformed tag');
+    }
+    result.add(tag.cast<String>());
+  }
+  return result;
+}
+
+void _verifyEvent(
+  Map<String, dynamic> event,
+  List<List<String>> tags,
+  String layer,
+) {
+  final id = computeEventId(
+    pubkey: event['pubkey'] as String,
+    createdAt: event['created_at'] as int,
+    kind: event['kind'] as int,
+    tags: tags,
+    content: event['content'] as String,
+  );
+  if (id != event['id'] ||
+      !schnorr.verify(
+        event['pubkey'] as String,
+        id,
+        event['sig'] as String,
+      )) {
+    throw FormatException('concord: bad-$layer-signature');
+  }
+}
+
+void _validateChatTags(
+  List<List<String>> tags,
+  String expectedChannelId,
+  int expectedEpoch,
+) {
+  final channels = tags.where((tag) => tag.first == 'channel').toList();
+  final epochs = tags.where((tag) => tag.first == 'epoch').toList();
+  if (channels.length != 1 ||
+      channels.single.length != 2 ||
+      channels.single[1] != expectedChannelId ||
+      !_hex32.hasMatch(channels.single[1]) ||
+      epochs.length != 1 ||
+      epochs.single.length != 2 ||
+      epochs.single[1] != '$expectedEpoch' ||
+      expectedEpoch < 0) {
+    throw const FormatException('concord: channel-epoch-binding');
+  }
+  for (final tag in tags) {
+    // CORD-01 defines canonical decimal strings; CORD-02 bounds ms.
+    if (const {
+      'epoch',
+      'ms',
+      'k',
+      'K',
+      'expiration',
+      'timer',
+    }.contains(tag.first)) {
+      if (tag.length != 2 ||
+          !_decimal.hasMatch(tag[1]) ||
+          (tag.first == 'ms' && (int.tryParse(tag[1]) ?? 1000) > 999)) {
+        throw const FormatException('concord: malformed numeric tag');
+      }
+    }
+    if (const {'e', 'E', 'p', 'P', 'q'}.contains(tag.first) &&
+        (tag.length < 2 || !_hex32.hasMatch(tag[1]))) {
+      throw const FormatException('concord: malformed reference tag');
+    }
+  }
+}
+
+/// Opens a Chat-plane wrap, authenticating every layer and its channel/epoch.
+/// Control-plane plaintext seals use a different context and are not accepted.
 Future<Map<String, dynamic>> openWrap({
   required Map<String, dynamic> wrap,
   required String streamSeedHex,
   required String streamPubkey,
+  required String expectedChannelId,
+  required int expectedEpoch,
 }) async {
+  final wrapTags = _validateEvent(wrap, signed: true);
   if (wrap['kind'] != 1059) {
     throw const FormatException('concord: bad-wrap-kind');
   }
   if (wrap['pubkey'] != streamPubkey) {
     throw const FormatException('concord: wrap author is not stream');
   }
+  final recipients = wrapTags.where((tag) => tag.first == 'p').toList();
+  if (recipients.length != 1 ||
+      recipients.single.length != 2 ||
+      !_hex32.hasMatch(recipients.single[1])) {
+    throw const FormatException('concord: malformed wrap tags');
+  }
+  for (final tag in wrapTags) {
+    if (tag.first != 'p' &&
+        !(tag.first == 'expiration' &&
+            tag.length == 2 &&
+            _decimal.hasMatch(tag[1]))) {
+      throw const FormatException('concord: malformed wrap tags');
+    }
+  }
+  _verifyEvent(wrap, wrapTags, 'wrap');
   final conv = conversationKey(streamSeedHex, streamPubkey);
-  final seal =
-      jsonDecode(await nip44Decrypt(wrap['content'] as String, conv))
-          as Map<String, dynamic>;
-  if (seal['kind'] != 20013 && seal['kind'] != 20014) {
+  final seal = _decodeEvent(
+    await nip44Decrypt(wrap['content'] as String, conv),
+  );
+  final sealTags = _validateEvent(seal, signed: true);
+  if (seal['kind'] != 20013) {
     throw const FormatException('concord: bad-seal-kind');
   }
-  final sealId = computeEventId(
-    pubkey: seal['pubkey'] as String,
-    createdAt: seal['created_at'] as int,
-    kind: seal['kind'] as int,
-    tags: (seal['tags'] as List)
-        .map((t) => (t as List).map((e) => '$e').toList())
-        .toList(),
-    content: seal['content'] as String,
-  );
-  if (sealId != seal['id'] ||
-      !schnorr.verify(
-        seal['pubkey'] as String,
-        sealId,
-        seal['sig'] as String,
-      )) {
-    throw const FormatException('concord: bad-seal-signature');
+  if (sealTags.isNotEmpty) {
+    throw const FormatException('concord: malformed seal tags');
   }
-  final rumorJson = seal['kind'] == 20013
-      ? await nip44Decrypt(seal['content'] as String, conv)
-      : seal['content'] as String;
-  final rumor = jsonDecode(rumorJson) as Map<String, dynamic>;
+  _verifyEvent(seal, sealTags, 'seal');
+  final rumor = _decodeEvent(
+    await nip44Decrypt(seal['content'] as String, conv),
+  );
+  final rumorTags = _validateEvent(rumor, signed: false);
   if (rumor['pubkey'] != seal['pubkey']) {
     throw const FormatException('concord: author-mismatch');
   }
@@ -239,14 +361,13 @@ Future<Map<String, dynamic>> openWrap({
     pubkey: rumor['pubkey'] as String,
     createdAt: rumor['created_at'] as int,
     kind: rumor['kind'] as int,
-    tags: (rumor['tags'] as List)
-        .map((t) => (t as List).map((e) => '$e').toList())
-        .toList(),
+    tags: rumorTags,
     content: rumor['content'] as String,
   );
   if (expectId != rumor['id']) {
     throw const FormatException('concord: bad-rumor-id');
   }
+  _validateChatTags(rumorTags, expectedChannelId, expectedEpoch);
   return {
     'rumorId': rumor['id'],
     'author': seal['pubkey'],
