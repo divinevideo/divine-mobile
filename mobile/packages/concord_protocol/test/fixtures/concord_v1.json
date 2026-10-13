@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "note": "TEST-ONLY synthetic identities; same JSON format consumed by web slice",
+  "streamId": {
+    "communityId": "community-test",
+    "channelId": "general",
+    "expected": "b990f2c333ac2133e1477ec2f2aca6cacdb2ab55677ad1d0182b81419009d69d"
+  },
+  "communityListFragment": {
+    "kind": 33302,
+    "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
+    "created_at": 1700000000,
+    "tags": [
+      [
+        "d",
+        "community-test"
+      ]
+    ],
+    "content": "",
+    "unknownFutureField": "preserved"
+  }
+}

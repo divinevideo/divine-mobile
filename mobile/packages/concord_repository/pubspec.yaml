@@ -1,0 +1,13 @@
+name: concord_repository
+description: Relay + account-scoped persistence for Concord chat (POC).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.11.0
+dependencies:
+  concord_protocol:
+    path: ../concord_protocol
+dev_dependencies:
+  test: ^1.26.3
+  very_good_analysis: ^10.0.0
