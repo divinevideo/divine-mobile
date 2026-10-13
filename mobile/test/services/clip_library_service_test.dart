@@ -1047,6 +1047,27 @@ void main() {
         expect(entry?.thumbnailPath, endsWith('take_thumb.jpg'));
       });
 
+      test(
+        'leaves an entry that plays another file by the time it is rewritten',
+        () async {
+          await service.saveClip(take('take', 'take.mp4'));
+          // The lookup finds entries by their file_path column, but the
+          // entry's data moved on to another file before the rewrite ran.
+          await database.clipsDao.rewriteClipData(
+            id: 'take',
+            rewrite: (_) => jsonEncode(take('take', 'moved.mp4').toJson()),
+          );
+
+          final updated = await service.recordLateProof(
+            fileName: 'take.mp4',
+            proof: lateProof,
+          );
+
+          expect(updated, 0);
+          expect(manifestOf(await service.getClipById('take')), isNull);
+        },
+      );
+
       test('takes the saved proof once the clip plays another file', () async {
         await service.saveClip(take('take', 'take.mp4'));
         await service.recordLateProof(fileName: 'take.mp4', proof: lateProof);
