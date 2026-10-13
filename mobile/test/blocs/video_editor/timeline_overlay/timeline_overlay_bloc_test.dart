@@ -2486,6 +2486,157 @@ void main() {
       ],
     );
 
+    group('stickers', () {
+      WidgetLayer stickerLayer(String id) {
+        final meta = StickerData(
+          assetPath: 'assets/stickers/$id.svg',
+          description: LocalizedText.single(id),
+          tags: const [],
+          packData: StickerPackData.fallback,
+        ).toJson();
+        return WidgetLayer(
+          id: id,
+          widget: const SizedBox(),
+          meta: meta,
+          exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
+        );
+      }
+
+      TimelineOverlayItem stickerItem(String id) => TimelineOverlayItem(
+        id: id,
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: const Duration(seconds: 3),
+        layer: stickerLayer(id),
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'start on a sticker selects stickers',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [stickerItem('s1'), drawItem('d1')],
+        ),
+        act: (bloc) =>
+            bloc.add(const TimelineOverlayLayerMultiSelectStarted('s1')),
+        expect: () => [
+          isA<TimelineOverlayState>()
+              .having((s) => s.multiSelectedLayerIds, 'selected', {'s1'})
+              .having(
+                (s) => s.layerMultiSelectKind,
+                'kind',
+                LayerMergeKind.sticker,
+              ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'toggle adds another sticker but never a drawing',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [stickerItem('s1'), stickerItem('s2'), drawItem('d1')],
+          isLayerMultiSelectMode: true,
+          multiSelectedLayerIds: const {'s1'},
+          layerMultiSelectKind: LayerMergeKind.sticker,
+        ),
+        act: (bloc) => bloc
+          ..add(const TimelineOverlayLayerMultiSelectToggled('d1'))
+          ..add(const TimelineOverlayLayerMultiSelectToggled('s2')),
+        expect: () => [
+          isA<TimelineOverlayState>().having(
+            (s) => s.multiSelectedLayerIds,
+            'selected',
+            {'s1', 's2'},
+          ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'a drawing selection does not take stickers',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [stickerItem('s1'), drawItem('d1')],
+          isLayerMultiSelectMode: true,
+          multiSelectedLayerIds: const {'d1'},
+          layerMultiSelectKind: LayerMergeKind.drawing,
+        ),
+        act: (bloc) =>
+            bloc.add(const TimelineOverlayLayerMultiSelectToggled('s1')),
+        expect: () => <TimelineOverlayState>[],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'cancel forgets the kind',
+        build: TimelineOverlayBloc.new,
+        seed: () => const TimelineOverlayState(
+          isLayerMultiSelectMode: true,
+          multiSelectedLayerIds: {'s1'},
+          layerMultiSelectKind: LayerMergeKind.sticker,
+        ),
+        act: (bloc) =>
+            bloc.add(const TimelineOverlayLayerMultiSelectCancelled()),
+        expect: () => [
+          isA<TimelineOverlayState>().having(
+            (s) => s.layerMultiSelectKind,
+            'kind',
+            isNull,
+          ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'items update keeps the selected stickers after an unrelated edit',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [stickerItem('s1'), stickerItem('s2')],
+          isLayerMultiSelectMode: true,
+          multiSelectedLayerIds: const {'s1', 's2'},
+          layerMultiSelectKind: LayerMergeKind.sticker,
+        ),
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: [stickerLayer('s1'), stickerLayer('s2'), paintLayer('d')],
+            filters: const [],
+            audioTracks: const [],
+            totalVideoDuration: const Duration(seconds: 3),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>()
+              .having((s) => s.isLayerMultiSelectMode, 'mode', isTrue)
+              .having((s) => s.multiSelectedLayerIds, 'selected', {'s1', 's2'})
+              .having(
+                (s) => s.layerMultiSelectKind,
+                'kind',
+                LayerMergeKind.sticker,
+              ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'items update after combining exits the mode and forgets the kind',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [stickerItem('s1'), stickerItem('s2')],
+          isLayerMultiSelectMode: true,
+          multiSelectedLayerIds: const {'s1', 's2'},
+          layerMultiSelectKind: LayerMergeKind.sticker,
+        ),
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: [stickerLayer('combined')],
+            filters: const [],
+            audioTracks: const [],
+            totalVideoDuration: const Duration(seconds: 3),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>()
+              .having((s) => s.isLayerMultiSelectMode, 'mode', isFalse)
+              .having((s) => s.layerMultiSelectKind, 'kind', isNull),
+        ],
+      );
+    });
+
     blocTest<TimelineOverlayBloc, TimelineOverlayState>(
       'items update exits mode once no selected id survives',
       build: TimelineOverlayBloc.new,

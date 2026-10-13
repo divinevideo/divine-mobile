@@ -97,13 +97,17 @@ class _LayerOverlayControls extends StatelessWidget {
     final isDetachedClip =
         layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
 
-    // Draw layers can be multi-selected and combined when the selected layer is
-    // itself a mergeable draw layer and at least two mergeable draw layers exist
-    // on the canvas.
-    final mergeableDrawLayerCount =
-        scope.editor?.activeLayers.where(isMergeableDrawLayer).length ?? 0;
-    final canMultiSelect =
-        isMergeableDrawLayer(layer) && mergeableDrawLayerCount >= 2;
+    // Drawings and stickers can be multi-selected and combined when the
+    // selected layer is itself mergeable and at least one more layer of its
+    // kind exists on the canvas.
+    final mergeKind = layerMergeKindOf(layer);
+    final mergeableCount = mergeKind == null
+        ? 0
+        : scope.editor?.activeLayers
+                  .where((l) => layerMergeKindOf(l) == mergeKind)
+                  .length ??
+              0;
+    final canMultiSelect = mergeableCount >= 2;
 
     // Rebuilt as the playhead reaches or leaves a keyframe, which fills the
     // keyframes action in.
@@ -116,8 +120,9 @@ class _LayerOverlayControls extends StatelessWidget {
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
             : null,
-        multiSelectSemanticLabel:
-            context.l10n.videoEditorLayerMultiSelectSemanticLabel,
+        multiSelectSemanticLabel: mergeKind == .sticker
+            ? context.l10n.videoEditorStickerMultiSelectSemanticLabel
+            : context.l10n.videoEditorLayerMultiSelectSemanticLabel,
         onSplit: () => _splitLayer(context: context),
         // The way back from Detach, for a detached clip only.
         onReattach: isDetachedClip
@@ -280,10 +285,10 @@ class _LayerOverlayControls extends StatelessWidget {
     editor.addHistory(layers: layers);
   }
 
-  /// Enters draw-layer multi-select mode, seeded with the tapped layer.
+  /// Enters layer multi-select mode, seeded with the tapped layer.
   ///
-  /// The user then toggles additional draw layers and combines the selection
-  /// via the multi-select control bar.
+  /// The user then toggles more layers of the same kind and combines the
+  /// selection via the multi-select control bar.
   void _startLayerMultiSelect({required BuildContext context}) {
     context.read<TimelineOverlayBloc>().add(
       TimelineOverlayLayerMultiSelectStarted(item.id),

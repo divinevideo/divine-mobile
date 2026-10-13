@@ -5331,6 +5331,12 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "Pilih berbilang pelekat",
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "Selesai memilih pelekat",
+  "videoEditorDeleteSelectedStickersSemanticLabel": "Padam pelekat dipilih",
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{Tiada pelekat dipilih} =1{1 pelekat dipilih} other{{count} pelekat dipilih}}",
+  "videoEditorCombineStickerLayersSemanticLabel": "Gabungkan pelekat dipilih menjadi satu lapisan",
+  "videoEditorStickerGroupLabel": "{count, plural, other{{count} pelekat}}",
   "videoEditorMergeLabel": "Gabungkan",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."

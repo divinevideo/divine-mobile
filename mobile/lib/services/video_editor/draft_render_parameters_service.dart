@@ -17,6 +17,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
@@ -219,6 +220,10 @@ class DraftRenderParametersService {
             // opens a decoder, unlike the canvas' live view.
             if (DetachedClipLayerData.isDetachedClipMeta(meta)) {
               return DetachedClipPoster(meta: meta);
+            }
+            if (StickerGroupData.isStickerGroupMeta(meta)) {
+              stickers.addAll(StickerGroupData.fromMeta(meta)?.stickers ?? []);
+              return videoEditorStickerWidgetLoader(id, meta: meta);
             }
             final sticker = StickerData.fromJson(meta);
             stickers.add(sticker);

@@ -10378,6 +10378,49 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Wybierz wiele naklejek';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Zakończ wybieranie naklejek';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Usuń wybrane naklejki';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Wybrano $count naklejki',
+      many: 'Wybrano $count naklejek',
+      few: 'Wybrano $count naklejki',
+      one: 'Wybrano 1 naklejkę',
+      zero: 'Nie wybrano naklejek',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Połącz wybrane naklejki w jedną warstwę';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count naklejki',
+      many: '$count naklejek',
+      few: '$count naklejki',
+      one: '1 naklejka',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Scal';
 
   @override

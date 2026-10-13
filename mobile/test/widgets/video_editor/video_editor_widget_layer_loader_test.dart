@@ -2,14 +2,18 @@
 // ABOUTME: detached clip and a sticker share one meta channel and must not be
 // ABOUTME: rebuilt as each other after an export/reopen.
 
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
+import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show
@@ -98,6 +102,45 @@ void main() {
       // Detached clips joined a channel stickers already owned; an older
       // draft's layers carry no kind marker at all and must still come back.
       expect(restored.widget, isA<VideoEditorSticker>());
+    });
+
+    test('rebuilds a combined sticker as the same group', () {
+      final group = StickerGroupData(
+        size: const Size(200, 100),
+        children: [
+          const StickerGroupChild(
+            sticker: _sticker,
+            center: Offset(50, 50),
+            size: Size(100, 100),
+            rotation: 0.3,
+          ),
+          StickerGroupChild(
+            sticker: StickerData.fromJson(_sticker.toJson()),
+            center: const Offset(150, 50),
+            size: const Size(80, 60),
+            flipX: true,
+          ),
+        ],
+      );
+      final meta = group.toMeta();
+      final layer = WidgetLayer(
+        width: 200,
+        widget: VideoEditorStickerGroup(group: group),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: 'group-1', meta: meta),
+      );
+      // A draft stores the history as JSON.
+      final stored = jsonDecode(
+        jsonEncode(_exportedHistory(layer)),
+      ) as Map<String, dynamic>;
+
+      final restored = _reopen(stored).single! as WidgetLayer;
+
+      expect(restored.widget, isA<VideoEditorStickerGroup>());
+      expect(
+        (restored.widget as VideoEditorStickerGroup).group.toJson(),
+        equals(group.toJson()),
+      );
     });
 
     test('falls back to the sticker loader for unknown meta', () {

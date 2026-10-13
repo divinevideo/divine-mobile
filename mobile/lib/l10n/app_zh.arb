@@ -5331,6 +5331,12 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "选择多个贴纸",
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "完成贴纸选择",
+  "videoEditorDeleteSelectedStickersSemanticLabel": "删除选中贴纸",
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{已选中 0 个贴纸} =1{已选中 1 个贴纸} other{已选中 {count} 个贴纸}}",
+  "videoEditorCombineStickerLayersSemanticLabel": "把选中的贴纸合并为一个图层",
+  "videoEditorStickerGroupLabel": "{count, plural, other{{count} 个贴纸}}",
   "videoEditorMergeLabel": "合并",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."

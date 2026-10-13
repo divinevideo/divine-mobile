@@ -17283,6 +17283,42 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{No drawings selected} =1{1 drawing selected} other{{count} drawings selected}}'**
   String videoEditorLayerMultiSelectCountLabel(int count);
 
+  /// Accessibility label for the button that starts sticker multi-select mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Select multiple stickers'**
+  String get videoEditorStickerMultiSelectSemanticLabel;
+
+  /// Accessibility label for the button that exits sticker multi-select mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Done selecting stickers'**
+  String get videoEditorStickerMultiSelectDoneSemanticLabel;
+
+  /// Accessibility label for the button that deletes the selected stickers in sticker multi-select mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected stickers'**
+  String get videoEditorDeleteSelectedStickersSemanticLabel;
+
+  /// Header shown in the sticker multi-select action bar reporting how many stickers are selected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No stickers selected} =1{1 sticker selected} other{{count} stickers selected}}'**
+  String videoEditorStickerMultiSelectCountLabel(int count);
+
+  /// Accessibility label for the button that combines the selected stickers into one sticker layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Combine selected stickers into one layer'**
+  String get videoEditorCombineStickerLayersSemanticLabel;
+
+  /// Timeline label of a sticker layer made by combining several stickers; count is how many stickers it holds.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 sticker} other{{count} stickers}}'**
+  String videoEditorStickerGroupLabel(int count);
+
   /// Label for the button that merges the selected clips into one.
   ///
   /// In en, this message translates to:

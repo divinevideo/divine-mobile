@@ -7,8 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart'
+    show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -37,6 +41,22 @@ PaintLayer _paintLayer(String id) => PaintLayer(
   ),
 );
 
+WidgetLayer _stickerLayer(String id, Offset offset) {
+  final meta = StickerData(
+    assetPath: 'assets/stickers/$id.svg',
+    description: LocalizedText.single(id),
+    tags: const [],
+    packData: StickerPackData.fallback,
+  ).toJson();
+  return WidgetLayer(
+    id: id,
+    widget: const SizedBox(),
+    offset: offset,
+    meta: meta,
+    exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
+  );
+}
+
 void main() {
   group(TimelineLayerMultiSelectControls, () {
     late _MockTimelineOverlayBloc overlayBloc;
@@ -51,7 +71,9 @@ void main() {
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
     });
 
-    Widget build() {
+    /// [canvas] stands in for the editor canvas: layers laid out there can be
+    /// measured, which combining stickers needs.
+    Widget build({List<Widget> canvas = const []}) {
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -77,7 +99,12 @@ void main() {
                 onOpenCaptions: () {},
                 onOpenEffects: () {},
                 editorOverride: editor,
-                child: const TimelineLayerMultiSelectControls(),
+                child: Column(
+                  children: [
+                    ...canvas,
+                    const TimelineLayerMultiSelectControls(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -222,6 +249,92 @@ void main() {
       await tester.pump();
 
       verifyNever(() => editor.addHistory(layers: any(named: 'layers')));
+    });
+
+    group('stickers', () {
+      testWidgets('shows the sticker count and sticker actions', (
+        tester,
+      ) async {
+        when(() => overlayBloc.state).thenReturn(
+          const TimelineOverlayState(
+            isLayerMultiSelectMode: true,
+            multiSelectedLayerIds: {'a', 'b', 'c'},
+            layerMultiSelectKind: LayerMergeKind.sticker,
+          ),
+        );
+
+        await tester.pumpWidget(build());
+
+        expect(
+          find.text(l10n.videoEditorStickerMultiSelectCountLabel(3)),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            l10n.videoEditorCombineStickerLayersSemanticLabel,
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            l10n.videoEditorDeleteSelectedStickersSemanticLabel,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('combine replaces the stickers and selects the result', (
+        tester,
+      ) async {
+        final a = _stickerLayer('a', const Offset(-50, 0));
+        final b = _stickerLayer('b', const Offset(50, 0));
+        when(() => overlayBloc.state).thenReturn(
+          const TimelineOverlayState(
+            isLayerMultiSelectMode: true,
+            multiSelectedLayerIds: {'a', 'b'},
+            layerMultiSelectKind: LayerMergeKind.sticker,
+          ),
+        );
+        when(() => editor.activeLayers).thenReturn([a, b]);
+        when(
+          () => editor.addHistory(layers: any(named: 'layers')),
+        ).thenAnswer((_) {});
+
+        await tester.pumpWidget(
+          build(
+            canvas: [
+              SizedBox(key: a.keyInternalSize, width: 40, height: 40),
+              SizedBox(key: b.keyInternalSize, width: 40, height: 40),
+            ],
+          ),
+        );
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoEditorCombineStickerLayersSemanticLabel,
+          ),
+        );
+        await tester.pump();
+
+        final layers =
+            verify(
+                  () => editor.addHistory(layers: captureAny(named: 'layers')),
+                ).captured.single
+                as List<Layer>;
+        final combined = layers.single as WidgetLayer;
+        expect(
+          StickerGroupData.fromMeta(combined.exportConfigs.meta)!.stickerCount,
+          2,
+        );
+        verifyNever(() => editor.mergeSelectedLayers());
+        verify(
+          () => overlayBloc.add(
+            const TimelineOverlayLayerMultiSelectCancelled(),
+          ),
+        ).called(1);
+        verify(
+          () => overlayBloc.add(TimelineOverlayItemSelected(combined.id)),
+        ).called(1);
+      });
     });
 
     testWidgets('done exits multi-select mode', (tester) async {

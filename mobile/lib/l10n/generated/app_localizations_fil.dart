@@ -10258,6 +10258,45 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Pumili ng maraming sticker';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Tapos nang pumili ng mga sticker';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Burahin ang mga napiling sticker';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sticker ang napili',
+      one: '$count sticker ang napili',
+      zero: 'Walang napiling sticker',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Pagsamahin ang mga napiling sticker sa isang layer';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sticker',
+      one: '$count sticker',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Pagsamahin';
 
   @override

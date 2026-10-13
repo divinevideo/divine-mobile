@@ -11,6 +11,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
@@ -53,8 +54,16 @@ String timelineOverlayItemLabel(
       isPixelateCensorLayer(layer) ? .pixelate : .blur,
     );
   }
+  if (_stickerGroupOf(layer) case final group?) {
+    return context.l10n.videoEditorStickerGroupLabel(group.stickerCount);
+  }
   return item.label;
 }
+
+/// The combined stickers [layer] shows, or `null` for any other layer.
+StickerGroupData? _stickerGroupOf(Layer? layer) => layer is WidgetLayer
+    ? StickerGroupData.fromMeta(layer.exportConfigs.meta ?? layer.meta)
+    : null;
 
 /// Visual representation of a single overlay item.
 class TimelineOverlayItemTile extends StatelessWidget {
@@ -381,7 +390,7 @@ class _StickerPreview extends StatelessWidget {
     final layer = item.layer as WidgetLayer?;
 
     StickerData? sticker;
-    if (layer?.meta != null) {
+    if (layer?.meta != null && _stickerGroupOf(layer) == null) {
       try {
         sticker = StickerData.fromJson(layer!.meta!);
       } catch (_) {
@@ -394,7 +403,7 @@ class _StickerPreview extends StatelessWidget {
             Localizations.localeOf(context).languageCode,
             packDisplayName: _packDisplayName(context, sticker),
           )
-        : item.label;
+        : timelineOverlayItemLabel(context, item);
 
     return OverflowBox(
       maxWidth: double.infinity,

@@ -970,9 +970,9 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   void _onOverlayItemTapped(TimelineOverlayItem item) {
     final bloc = context.read<TimelineOverlayBloc>();
 
-    // In draw-layer multi-select mode a tap toggles the layer's membership in
-    // the selection instead of single-selecting it. Non-mergeable items are
-    // ignored by the bloc handler.
+    // In layer multi-select mode a tap toggles the layer's membership in the
+    // selection instead of single-selecting it. Items that cannot join the
+    // selection are ignored by the bloc handler.
     if (bloc.state.isLayerMultiSelectMode) {
       bloc.add(TimelineOverlayLayerMultiSelectToggled(item.id));
       return;

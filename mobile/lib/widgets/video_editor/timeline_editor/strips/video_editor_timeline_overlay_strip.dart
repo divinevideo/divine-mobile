@@ -65,6 +65,7 @@ class TimelineOverlayStrip extends StatefulWidget {
     this.selectedItemId,
     this.isLayerMultiSelectMode = false,
     this.multiSelectedLayerIds = const {},
+    this.layerMultiSelectKind,
     this.snapPointsMs,
     this.onItemTapped,
     this.onItemMoved,
@@ -107,13 +108,16 @@ class TimelineOverlayStrip extends StatefulWidget {
   /// ID of the currently selected item (shows trim handles).
   final String? selectedItemId;
 
-  /// Whether the timeline is in draw-layer multi-select mode. While active,
-  /// tiles show a selection overlay and long-press drag is disabled.
+  /// Whether the timeline is in layer multi-select mode. While active, tiles
+  /// show a selection overlay and long-press drag is disabled.
   final bool isLayerMultiSelectMode;
 
   /// Layer ids currently selected for combining, used to render the per-tile
   /// selection state while [isLayerMultiSelectMode] is active.
   final Set<String> multiSelectedLayerIds;
+
+  /// The kind of layer being selected; tiles of any other kind are disabled.
+  final LayerMergeKind? layerMultiSelectKind;
 
   /// Edge positions (in ms) from other overlay items and clip
   /// boundaries. Used for cross-layer snap during drag and trim.
@@ -381,7 +385,9 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
   /// Resolves the per-tile multi-select visual state for [item].
   OverlayMultiSelectState _multiSelectStateFor(TimelineOverlayItem item) {
     if (!widget.isLayerMultiSelectMode) return OverlayMultiSelectState.none;
-    if (!isMergeableDrawLayer(item.layer)) {
+    final kind = layerMergeKindOf(item.layer);
+    final selectedKind = widget.layerMultiSelectKind;
+    if (kind == null || (selectedKind != null && kind != selectedKind)) {
       return OverlayMultiSelectState.disabled;
     }
     return widget.multiSelectedLayerIds.contains(item.id)

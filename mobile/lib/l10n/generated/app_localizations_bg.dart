@@ -10274,6 +10274,45 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Избор на няколко стикера';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Приключване на избора на стикери';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Изтриване на избраните стикери';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count избрани стикера',
+      one: '1 избран стикер',
+      zero: 'Няма избрани стикери',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Обедини избраните стикери в един слой';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count стикера',
+      one: '1 стикер',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Обедини';
 
   @override
