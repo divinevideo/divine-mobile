@@ -51,5 +51,63 @@ void main() {
       );
       expect(repo.timeline(now: 10).messages.single.body, 'hi');
     });
+    test(
+      'offline restart restores messages; interrupted publish retries',
+      () async {
+        final relay = _FakeRelay();
+        final store = InMemoryConcordStore('a' * 64);
+        final repo = ConcordRepository(
+          relay: relay,
+          store: store,
+          cipher: _Cipher(),
+        );
+        await repo.send(
+          communityId: 'c',
+          channelId: 'general',
+          author: 'a' * 64,
+          body: 'persisted',
+          createdAt: 1,
+        );
+        // Simulate restart with a fresh repository over the same store,
+        // plus an interrupted publish (msg persisted, never marked sent).
+        await store.put('msg:pending1', 'draft');
+        await store.put('meta:pending1', 'general|${'a' * 64}|2|');
+        final idx = await store.get('index');
+        await store.put('index', '$idx,pending1');
+        final restarted = ConcordRepository(
+          relay: relay,
+          store: store,
+          cipher: _Cipher(),
+        );
+        final pending = await restarted.restore();
+        expect(
+          restarted.timeline(now: 10).messages.map((m) => m.body),
+          containsAll(['persisted', 'draft']),
+        );
+        expect(pending, ['pending1']);
+        await restarted.retryPending();
+        expect(await store.get('sent:pending1'), '1');
+      },
+    );
+    test('purgeExpired drops expired messages from store index', () async {
+      final relay = _FakeRelay();
+      final store = InMemoryConcordStore('a' * 64);
+      final repo = ConcordRepository(
+        relay: relay,
+        store: store,
+        cipher: _Cipher(),
+      );
+      await repo.send(
+        communityId: 'c',
+        channelId: 'general',
+        author: 'a' * 64,
+        body: 'ephemeral',
+        createdAt: 1,
+        expiresAt: 5,
+      );
+      await repo.purgeExpired(now: 10);
+      expect(repo.timeline(now: 10).messages, isEmpty);
+      expect(await store.get('index'), '');
+    });
   });
 }
