@@ -5,3 +5,4 @@
 library;
 
 export 'src/concord_repository.dart';
+export 'src/websocket_relay.dart';

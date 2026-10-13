@@ -3,10 +3,53 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+class ChatCommunity {
+  const ChatCommunity(this.id, this.name, this.channels);
+  final String id;
+  final String name;
+  final List<String> channels;
+}
+
 class ChatState {
-  const ChatState({this.messages = const [], this.reactions = const {}});
+  const ChatState({
+    this.messages = const [],
+    this.reactions = const {},
+    this.communities = const [
+      ChatCommunity('community-test', 'Divine test community', [
+        'general',
+        'introductions',
+      ]),
+    ],
+    this.selectedCommunityId = 'community-test',
+    this.selectedChannelId = 'general',
+    this.threadRootId,
+    this.acceptedInvite = false,
+  });
   final List<ChatMessage> messages;
   final Map<String, Map<String, int>> reactions;
+  final List<ChatCommunity> communities;
+  final String selectedCommunityId;
+  final String selectedChannelId;
+  final String? threadRootId;
+  final bool acceptedInvite;
+
+  ChatState copyWith({
+    List<ChatMessage>? messages,
+    Map<String, Map<String, int>>? reactions,
+    String? selectedCommunityId,
+    String? selectedChannelId,
+    String? threadRootId,
+    bool clearThread = false,
+    bool? acceptedInvite,
+  }) => ChatState(
+    messages: messages ?? this.messages,
+    reactions: reactions ?? this.reactions,
+    communities: communities,
+    selectedCommunityId: selectedCommunityId ?? this.selectedCommunityId,
+    selectedChannelId: selectedChannelId ?? this.selectedChannelId,
+    threadRootId: clearThread ? null : (threadRootId ?? this.threadRootId),
+    acceptedInvite: acceptedInvite ?? this.acceptedInvite,
+  );
 }
 
 /// Cubit over [ConcordRepository]; reuses the active Divine session's
@@ -16,7 +59,44 @@ class ChatCubit extends Cubit<ChatState> {
   final ConcordRepository _repo;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
-    emit(ChatState(messages: t.messages, reactions: t.reactions));
+    emit(state.copyWith(messages: t.messages, reactions: t.reactions));
+  }
+
+  void selectChannel(String communityId, String channelId) {
+    emit(
+      state.copyWith(
+        selectedCommunityId: communityId,
+        selectedChannelId: channelId,
+        clearThread: true,
+      ),
+    );
+  }
+
+  void openThread(String rootId) => emit(state.copyWith(threadRootId: rootId));
+  void closeThread() => emit(state.copyWith(clearThread: true));
+
+  Future<void> react({
+    required String targetId,
+    required String emoji,
+    required int now,
+  }) async {
+    _repo.ingestControl(
+      ControlEvent(
+        type: ControlType.reaction,
+        targetId: targetId,
+        createdAt: now,
+        emoji: emoji,
+      ),
+    );
+    refresh(now: now);
+  }
+
+  List<ChatMessage> visibleMessages() {
+    final root = state.threadRootId;
+    if (root == null) return state.messages;
+    return state.messages
+        .where((m) => m.id == root || m.threadRootId == root)
+        .toList();
   }
 
   Future<void> send({
@@ -36,6 +116,8 @@ class ChatCubit extends Cubit<ChatState> {
     refresh(now: now);
   }
 
-  Future<void> acceptInvite(String communityId) =>
-      _repo.acceptInvite(communityId);
+  Future<void> acceptInvite(String communityId) async {
+    await _repo.acceptInvite(communityId);
+    emit(state.copyWith(acceptedInvite: true));
+  }
 }
