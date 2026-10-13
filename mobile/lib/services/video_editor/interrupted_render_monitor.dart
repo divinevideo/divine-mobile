@@ -183,6 +183,33 @@ class InterruptedRenderMonitor {
     }
   }
 
+  /// Keeps a marker on disk from now until the returned callback is called.
+  ///
+  /// For work that ends somewhere other than where it starts, such as the
+  /// layer capture pro_image_editor runs between the editor's done callback
+  /// and its completion callback, which no single future of the app spans.
+  /// Calling the callback again is harmless. A marker that is never closed is
+  /// reported on the next launch like any interrupted render, so every way
+  /// out of the work has to close it.
+  static void Function() begin({
+    required String taskId,
+    required String kind,
+    required Map<String, Object> details,
+  }) {
+    final done = Completer<void>();
+    unawaited(
+      track(
+        taskId: taskId,
+        kind: kind,
+        details: details,
+        operation: () => done.future,
+      ),
+    );
+    return () {
+      if (!done.isCompleted) done.complete();
+    };
+  }
+
   /// Refreshes every running render's marker right away.
   @visibleForTesting
   static Future<void> sampleActiveRendersForTesting() =>
