@@ -9943,6 +9943,44 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel => 'ብዙ ተለጣፊዎችን ይምረጡ';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'ተለጣፊዎችን መምረጥ ጨርስ';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'የተመረጡ ተለጣፊዎችን ሰርዝ';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ተለጣፊዎች ተመርጠዋል',
+      one: '$count ተለጣፊ ተመርጧል',
+      zero: 'ምንም ተለጣፊ አልተመረጠም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'የተመረጡ ተለጣፊዎችን ወደ አንድ ንብርብር አዋህድ';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ተለጣፊዎች',
+      one: '$count ተለጣፊ',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'አዋህድ';
 
   @override

@@ -17,6 +17,7 @@ class TimelineOverlayState extends Equatable {
     this.timelineMarkers = const [],
     this.isLayerMultiSelectMode = false,
     this.multiSelectedLayerIds = const {},
+    this.layerMultiSelectKind,
     this.captionsBurnIn = false,
   });
 
@@ -86,16 +87,23 @@ class TimelineOverlayState extends Equatable {
   /// Timeline marker positions used for visual guides and snapping.
   final List<Duration> timelineMarkers;
 
-  /// Whether the timeline is in draw-layer multi-select mode.
+  /// Whether the timeline is in layer multi-select mode.
   ///
-  /// While active, tapping a mergeable draw-layer overlay toggles its
-  /// membership in [multiSelectedLayerIds] instead of single-selecting it, and
-  /// the multi-select control bar (Combine / Done) replaces the per-layer one.
+  /// While active, tapping a layer overlay of [layerMultiSelectKind] toggles
+  /// its membership in [multiSelectedLayerIds] instead of single-selecting it,
+  /// and the multi-select control bar (Combine / Done) replaces the per-layer
+  /// one.
   final bool isLayerMultiSelectMode;
 
   /// The layer ids currently selected for combining. Only meaningful while
   /// [isLayerMultiSelectMode] is `true`.
   final Set<String> multiSelectedLayerIds;
+
+  /// Which kind of layer the multi-select combines — drawings or stickers.
+  ///
+  /// Taken from the layer multi-select started on; `null` outside
+  /// multi-select mode.
+  final LayerMergeKind? layerMultiSelectKind;
 
   /// Whether the caption track is burned into the video.
   ///
@@ -125,6 +133,8 @@ class TimelineOverlayState extends Equatable {
     List<Duration>? timelineMarkers,
     bool? isLayerMultiSelectMode,
     Set<String>? multiSelectedLayerIds,
+    LayerMergeKind? layerMultiSelectKind,
+    bool clearLayerMultiSelectKind = false,
     bool? captionsBurnIn,
   }) {
     return TimelineOverlayState(
@@ -156,6 +166,9 @@ class TimelineOverlayState extends Equatable {
           isLayerMultiSelectMode ?? this.isLayerMultiSelectMode,
       multiSelectedLayerIds:
           multiSelectedLayerIds ?? this.multiSelectedLayerIds,
+      layerMultiSelectKind: clearLayerMultiSelectKind
+          ? null
+          : (layerMultiSelectKind ?? this.layerMultiSelectKind),
       captionsBurnIn: captionsBurnIn ?? this.captionsBurnIn,
     );
   }
@@ -176,6 +189,7 @@ class TimelineOverlayState extends Equatable {
     timelineMarkers,
     isLayerMultiSelectMode,
     multiSelectedLayerIds,
+    layerMultiSelectKind,
     captionsBurnIn,
   ];
 }

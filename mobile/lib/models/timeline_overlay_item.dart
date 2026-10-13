@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Whether [layer] is a draw layer that can take part in a merge.
@@ -15,12 +16,41 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// [Layer.endTime]), or one carrying enter/leave animations or keyframes
 /// cannot be baked into a single static merged layer.
 bool isMergeableDrawLayer(Layer? layer) =>
-    layer is PaintLayer &&
-    !layer.isCensor &&
+    layer is PaintLayer && !layer.isCensor && _isStatic(layer);
+
+/// Whether [layer] is a sticker that can take part in a combine.
+///
+/// The same rule as [isMergeableDrawLayer]: a layer with its own timeline
+/// window, animations or keyframes cannot share one with other stickers. A
+/// sticker that is already a combination can be combined again.
+bool isMergeableStickerLayer(Layer? layer) =>
+    layer is WidgetLayer &&
+    isStickerLayerMeta(layer.exportConfigs.meta ?? layer.meta) &&
+    _isStatic(layer);
+
+bool _isStatic(Layer layer) =>
     layer.startTime == null &&
     layer.endTime == null &&
     layer.animations.isEmpty &&
     !layer.hasKeyframes;
+
+/// The kinds of layer the timeline's multi-select can combine. Only layers
+/// of the same kind combine with each other.
+enum LayerMergeKind {
+  /// Draw layers, combined into one `PaintLayer`.
+  drawing,
+
+  /// Sticker layers, combined into one sticker `WidgetLayer`.
+  sticker,
+}
+
+/// The [LayerMergeKind] [layer] can be combined as, or `null` when it cannot
+/// be combined at all.
+LayerMergeKind? layerMergeKindOf(Layer? layer) {
+  if (isMergeableDrawLayer(layer)) return .drawing;
+  if (isMergeableStickerLayer(layer)) return .sticker;
+  return null;
+}
 
 /// The type of overlay on the timeline.
 enum TimelineOverlayType {

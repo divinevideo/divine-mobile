@@ -2637,6 +2637,63 @@ void main() {
       );
 
       testWidgets(
+        'multi-select entry on a sticker starts a sticker selection',
+        (tester) async {
+          final stickerA = _buildStickerLayer('sticker-a');
+          final stickerB = _buildStickerLayer('sticker-b');
+          final drawA = _buildPaintLayer('draw-a');
+          when(
+            () => mockEditor.activeLayers,
+          ).thenReturn([stickerA, drawA, stickerB]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          const item = TimelineOverlayItem(
+            id: 'sticker-a',
+            type: TimelineOverlayType.layer,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorStickerMultiSelectSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verify(
+            () => overlayBloc.add(
+              const TimelineOverlayLayerMultiSelectStarted('sticker-a'),
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'multi-select entry is hidden for a sticker with only drawings beside it',
+        (tester) async {
+          final sticker = _buildStickerLayer('sticker-a');
+          final drawA = _buildPaintLayer('draw-a');
+          final drawB = _buildPaintLayer('draw-b');
+          when(
+            () => mockEditor.activeLayers,
+          ).thenReturn([sticker, drawA, drawB]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          const item = TimelineOverlayItem(
+            id: 'sticker-a',
+            type: TimelineOverlayType.layer,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+
+          expect(find.text(l10n.videoEditorMultiSelectLabel), findsNothing);
+        },
+      );
+
+      testWidgets(
         'multi-select entry is hidden when only one draw layer exists',
         (tester) async {
           final drawA = _buildPaintLayer('draw-a');
@@ -2656,6 +2713,21 @@ void main() {
       );
     });
   });
+}
+
+WidgetLayer _buildStickerLayer(String id) {
+  final meta = StickerData(
+    assetPath: 'assets/stickers/$id.svg',
+    description: LocalizedText.single(id),
+    tags: const [],
+    packData: StickerPackData.fallback,
+  ).toJson();
+  return WidgetLayer(
+    id: id,
+    widget: const SizedBox(),
+    meta: meta,
+    exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
+  );
 }
 
 PaintLayer _buildPaintLayer(String id) => PaintLayer(

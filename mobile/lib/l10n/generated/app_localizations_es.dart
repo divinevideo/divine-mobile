@@ -10277,6 +10277,47 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Seleccionar varios stickers';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Terminar de seleccionar stickers';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Eliminar los stickers seleccionados';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stickers seleccionados',
+      many: '$count de stickers seleccionados',
+      one: '1 sticker seleccionado',
+      zero: 'No hay stickers seleccionados',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Combina los stickers seleccionados en una capa';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stickers',
+      many: '$count de stickers',
+      one: '1 sticker',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Combinar';
 
   @override

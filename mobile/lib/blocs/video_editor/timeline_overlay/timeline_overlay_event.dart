@@ -301,10 +301,11 @@ class TimelineOverlayAllAudioVolumeChanged extends TimelineOverlayEvent {
   List<Object?> get props => [volume];
 }
 
-/// Enter draw-layer multi-select mode, seeded with [initialLayerId].
+/// Enter layer multi-select mode, seeded with [initialLayerId].
 ///
 /// Clears the single-item selection. The seed id is only added when it maps to
-/// an existing mergeable draw layer.
+/// an existing mergeable drawing or sticker, whose kind then decides which
+/// layers can join the selection.
 class TimelineOverlayLayerMultiSelectStarted extends TimelineOverlayEvent {
   const TimelineOverlayLayerMultiSelectStarted(this.initialLayerId);
 
@@ -314,10 +315,10 @@ class TimelineOverlayLayerMultiSelectStarted extends TimelineOverlayEvent {
   List<Object?> get props => [initialLayerId];
 }
 
-/// Toggle a draw layer's membership in the multi-select set.
+/// Toggle a layer's membership in the multi-select set.
 ///
 /// No-op when not in multi-select mode or when [layerId] is not a mergeable
-/// draw layer.
+/// layer of the kind being selected.
 class TimelineOverlayLayerMultiSelectToggled extends TimelineOverlayEvent {
   const TimelineOverlayLayerMultiSelectToggled(this.layerId);
 
@@ -327,7 +328,7 @@ class TimelineOverlayLayerMultiSelectToggled extends TimelineOverlayEvent {
   List<Object?> get props => [layerId];
 }
 
-/// Exit draw-layer multi-select mode and clear the selection.
+/// Exit layer multi-select mode and clear the selection.
 class TimelineOverlayLayerMultiSelectCancelled extends TimelineOverlayEvent {
   const TimelineOverlayLayerMultiSelectCancelled();
 }

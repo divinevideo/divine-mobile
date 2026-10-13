@@ -10096,6 +10096,45 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Birden fazla çıkartma seç';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Çıkartma seçimini bitir';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Seçili çıkartmaları sil';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count çıkartma seçildi',
+      one: '1 çıkartma seçildi',
+      zero: 'Hiç çıkartma seçilmedi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Seçili çıkartmaları tek katmanda birleştir';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count çıkartma',
+      one: '1 çıkartma',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Birleştir';
 
   @override

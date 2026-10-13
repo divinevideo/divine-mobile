@@ -10135,6 +10135,44 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Chọn nhiều nhãn dán';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Chọn nhãn dán xong';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Xóa các nhãn dán đã chọn';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã chọn $count nhãn dán',
+      one: 'Đã chọn 1 nhãn dán',
+      zero: 'Chưa chọn nhãn dán nào',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Kết hợp các nhãn dán đã chọn thành một lớp';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nhãn dán',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Ghép';
 
   @override

@@ -10180,6 +10180,45 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Välj flera klistermärken';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Klar med att välja klistermärken';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Ta bort valda klistermärken';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klistermärken valda',
+      one: '1 klistermärke valt',
+      zero: 'Inga klistermärken valda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Kombinera valda klistermärken till ett lager';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klistermärken',
+      one: '1 klistermärke',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Slå samman';
 
   @override

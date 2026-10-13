@@ -10092,6 +10092,44 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Pilih beberapa stiker';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Selesai memilih stiker';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Hapus stiker yang dipilih';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stiker dipilih',
+      one: '1 stiker dipilih',
+      zero: 'Tidak ada stiker dipilih',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Gabungkan stiker terpilih menjadi satu lapisan';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stiker',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Gabungkan';
 
   @override

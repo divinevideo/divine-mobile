@@ -5,10 +5,13 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show StickerData;
+import 'package:openvine/models/video_editor/sticker_group.dart';
+import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
 /// Rehydrates a [VideoEditorSticker] from a serialized
-/// [StickerData] map produced during state-history export.
+/// [StickerData] map produced during state-history export, or a
+/// [VideoEditorStickerGroup] from a combined sticker's meta.
 ///
 /// The fallback of `videoEditorWidgetLayerLoader`, the editor's
 /// `widgetLoader`, so sticker layers survive the editor's
@@ -19,6 +22,13 @@ Widget videoEditorStickerWidgetLoader(
   Map<String, dynamic>? meta,
 }) {
   if (meta == null) return const SizedBox.shrink();
+
+  if (StickerGroupData.isStickerGroupMeta(meta)) {
+    final group = StickerGroupData.fromMeta(meta);
+    return group == null
+        ? const SizedBox.shrink()
+        : VideoEditorStickerGroup(group: group);
+  }
 
   return VideoEditorSticker(
     sticker: StickerData.fromJson(meta),

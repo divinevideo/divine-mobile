@@ -10397,6 +10397,47 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Selectează mai multe stickere';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Termină selectarea stickerelor';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Șterge stickerele selectate';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de stickere selectate',
+      few: '$count stickere selectate',
+      one: '1 sticker selectat',
+      zero: 'Niciun sticker selectat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Combină stickerele selectate într-un singur strat';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de stickere',
+      few: '$count stickere',
+      one: '1 sticker',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Îmbină';
 
   @override

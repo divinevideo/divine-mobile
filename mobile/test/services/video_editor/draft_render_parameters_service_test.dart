@@ -6,15 +6,18 @@ import 'dart:ui' show ImageByteFormat;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide AspectRatio;
-import 'package:models/models.dart' show AspectRatio, AudioEvent;
+import 'package:models/models.dart'
+    show AspectRatio, AudioEvent, LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
@@ -429,6 +432,60 @@ void main() {
       expect(parameters!.capturedLayers, hasLength(1));
     });
 
+    test('rebuilds a combined sticker as its group', () async {
+      final stub = _StubLayerRasterizer();
+      addTearDown(stub.dispose);
+      final sticker = StickerData(
+        assetPath: 'assets/stickers/heart.svg',
+        description: LocalizedText.single('heart'),
+        tags: const [],
+        packData: StickerPackData.fallback,
+      );
+      final meta = StickerGroupData(
+        size: const Size(120, 60),
+        children: [
+          StickerGroupChild(
+            sticker: sticker,
+            center: const Offset(30, 30),
+            size: const Size(60, 60),
+          ),
+          StickerGroupChild(
+            sticker: sticker,
+            center: const Offset(90, 30),
+            size: const Size(60, 60),
+          ),
+        ],
+      ).toMeta();
+      final layer = WidgetLayer(
+        id: 'group-1',
+        width: 120,
+        widget: const SizedBox(),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: 'group-1', meta: meta),
+      );
+
+      await DraftRenderParametersService(rasterizer: stub).buildForDraft(
+        _draft(
+          editorEditingParameters: _persistedParameters(
+            bodySize: const Size(300, 500),
+          ),
+          editorStateHistory: {
+            'position': 0,
+            'history': [
+              {
+                'layers': [layer.toMap()],
+              },
+            ],
+          },
+        ),
+      );
+
+      // Read as a single sticker, the group's meta does not parse and the
+      // draft could not be published at all.
+      final restored = stub.capturedLayers!.single as WidgetLayer;
+      expect(restored.widget, isA<VideoEditorStickerGroup>());
+    });
+
     test('wraps text layers inside the bounds the editor canvas used', () async {
       // A landscape clip cropped to vertical: its body is wider than the video
       // the viewer sees, so a text layer has to wrap at the visible width, as
@@ -551,6 +608,7 @@ class _StubLayerRasterizer extends LayerRasterizer {
   final bool dropLayers;
 
   int? capturedLayerCount;
+  List<Layer>? capturedLayers;
   Size? editorBodySize;
   double? basePixelRatio;
   ProImageEditorConfigs? configs;
@@ -567,6 +625,7 @@ class _StubLayerRasterizer extends LayerRasterizer {
     Future<void> Function()? awaitContentReady,
   }) async {
     capturedLayerCount = layers.length;
+    capturedLayers = layers;
     this.editorBodySize = editorBodySize;
     this.basePixelRatio = basePixelRatio;
     this.configs = configs;

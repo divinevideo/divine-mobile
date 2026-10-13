@@ -10463,6 +10463,45 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'బహుళ స్టిక్కర్లను ఎంచుకోండి';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'స్టిక్కర్లను ఎంచుకోవడం పూర్తయింది';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'ఎంచుకున్న స్టిక్కర్లను తొలగించండి';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count స్టిక్కర్లు ఎంచుకోబడ్డాయి',
+      one: '1 స్టిక్కర్ ఎంచుకోబడింది',
+      zero: 'స్టిక్కర్లు ఏవీ ఎంచుకోబడలేదు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'ఎంచుకున్న స్టిక్కర్లను ఒక లేయర్‌గా కలపండి';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count స్టిక్కర్లు',
+      one: '1 స్టిక్కర్',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'విలీనం';
 
   @override

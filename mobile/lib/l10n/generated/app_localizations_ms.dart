@@ -10188,6 +10188,44 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'Pilih berbilang pelekat';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'Selesai memilih pelekat';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'Padam pelekat dipilih';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pelekat dipilih',
+      one: '1 pelekat dipilih',
+      zero: 'Tiada pelekat dipilih',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'Gabungkan pelekat dipilih menjadi satu lapisan';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pelekat',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'Gabungkan';
 
   @override

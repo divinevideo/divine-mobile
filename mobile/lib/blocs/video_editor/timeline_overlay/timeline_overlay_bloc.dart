@@ -260,18 +260,24 @@ class TimelineOverlayBloc
     );
 
     // Drop multi-selected layer ids that no longer exist or are no longer
-    // mergeable (e.g. after a merge, or an undo that restored an animation or
-    // timeline window) and exit multi-select mode once nothing valid remains
-    // selected.
+    // mergeable as the selected kind (e.g. after a merge, or an undo that
+    // restored an animation or timeline window) and exit multi-select mode
+    // once nothing valid remains selected.
+    final selectedKind = state.layerMultiSelectKind;
+    bool canStaySelected(TimelineOverlayItem item) {
+      final kind = layerMergeKindOf(item.layer);
+      return kind != null && (selectedKind == null || kind == selectedKind);
+    }
+
     final prunedMultiSelect = state.isLayerMultiSelectMode
         ? state.multiSelectedLayerIds
               .where(
-                (id) => newItems.any(
-                  (i) => i.id == id && isMergeableDrawLayer(i.layer),
-                ),
+                (id) => newItems.any((i) => i.id == id && canStaySelected(i)),
               )
               .toSet()
         : state.multiSelectedLayerIds;
+    final keepsMultiSelect =
+        state.isLayerMultiSelectMode && prunedMultiSelect.isNotEmpty;
 
     emit(
       state.copyWith(
@@ -286,9 +292,9 @@ class TimelineOverlayBloc
             ? state.audioTracksPlayerRevision + 1
             : state.audioTracksPlayerRevision,
         timelineMarkers: _clampMarkers(event.timelineMarkers, total),
-        isLayerMultiSelectMode:
-            state.isLayerMultiSelectMode && prunedMultiSelect.isNotEmpty,
+        isLayerMultiSelectMode: keepsMultiSelect,
         multiSelectedLayerIds: prunedMultiSelect,
+        clearLayerMultiSelectKind: !keepsMultiSelect,
         captionsBurnIn: event.captionTrack?.burnIn ?? false,
       ),
     );
@@ -506,16 +512,19 @@ class TimelineOverlayBloc
     TimelineOverlayLayerMultiSelectStarted event,
     Emitter<TimelineOverlayState> emit,
   ) {
-    final seedValid = state.items.any(
-      (i) => i.id == event.initialLayerId && isMergeableDrawLayer(i.layer),
-    );
+    final seed = state.items
+        .where((i) => i.id == event.initialLayerId)
+        .firstOrNull;
+    final kind = layerMergeKindOf(seed?.layer);
     emit(
       state.copyWith(
         isLayerMultiSelectMode: true,
         clearSelectedItemId: true,
-        multiSelectedLayerIds: seedValid
+        multiSelectedLayerIds: kind != null
             ? {event.initialLayerId}
             : const <String>{},
+        layerMultiSelectKind: kind,
+        clearLayerMultiSelectKind: kind == null,
       ),
     );
   }
@@ -525,16 +534,22 @@ class TimelineOverlayBloc
     Emitter<TimelineOverlayState> emit,
   ) {
     if (!state.isLayerMultiSelectMode) return;
-    final isMergeable = state.items.any(
-      (i) => i.id == event.layerId && isMergeableDrawLayer(i.layer),
-    );
-    if (!isMergeable) return;
+    final item = state.items.where((i) => i.id == event.layerId).firstOrNull;
+    final kind = layerMergeKindOf(item?.layer);
+    // A drawing never joins a sticker selection, nor the other way round.
+    final selectedKind = state.layerMultiSelectKind;
+    if (kind == null || (selectedKind != null && kind != selectedKind)) return;
 
     final selected = Set<String>.of(state.multiSelectedLayerIds);
     if (!selected.remove(event.layerId)) {
       selected.add(event.layerId);
     }
-    emit(state.copyWith(multiSelectedLayerIds: selected));
+    emit(
+      state.copyWith(
+        multiSelectedLayerIds: selected,
+        layerMultiSelectKind: kind,
+      ),
+    );
   }
 
   void _onLayerMultiSelectCancelled(
@@ -545,6 +560,7 @@ class TimelineOverlayBloc
       state.copyWith(
         isLayerMultiSelectMode: false,
         multiSelectedLayerIds: const <String>{},
+        clearLayerMultiSelectKind: true,
       ),
     );
   }

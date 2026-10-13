@@ -10141,6 +10141,51 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel => 'تحديد عدة ملصقات';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'إنهاء تحديد الملصقات';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'حذف الملصقات المحددة';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم تحديد $count ملصق',
+      many: 'تم تحديد $count ملصقًا',
+      few: 'تم تحديد $count ملصقات',
+      two: 'تم تحديد ملصقين',
+      one: 'تم تحديد ملصق واحد',
+      zero: 'لم يتم تحديد أي ملصق',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'دمج الملصقات المحددة في طبقة واحدة';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ملصق',
+      many: '$count ملصقًا',
+      few: '$count ملصقات',
+      two: 'ملصقان',
+      one: 'ملصق واحد',
+      zero: 'لا ملصقات',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'دمج';
 
   @override
