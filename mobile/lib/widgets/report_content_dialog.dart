@@ -359,9 +359,14 @@ class _ReportContentViewState extends State<_ReportContentView> {
   final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
-  /// The inline error under the form. Widget-local: it is already-localized
-  /// display text, which is exactly what must not live in cubit state.
+  /// The inline error for a failed submit, shown in the footer. Widget-local:
+  /// it is already-localized display text, which is exactly what must not
+  /// live in cubit state.
   String? _errorMessage;
+
+  /// Whether Report was tapped under Other with no note. Shown inside the
+  /// note box, beside the field it asks the reporter to fill in.
+  bool _noteRequired = false;
 
   /// Whether the reporter just tried to insert an image the report cannot
   /// carry. Held here, beside the other form state, so the one-shot notice
@@ -416,24 +421,34 @@ class _ReportContentViewState extends State<_ReportContentView> {
         currentBottom > 100) {
       _scrollWhenKeyboardOpens = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        // The note opens directly under the chosen card, so anchoring the
-        // card keeps the reason in view right above the field it qualifies.
-        final ctx = _selectedCardKey.currentContext;
-        if (ctx == null) return;
-        runDetached(
-          Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          ),
-          'scroll report details into view',
-          logName: 'ReportContentDialog',
-          category: LogCategory.ui,
-        );
+        if (mounted) _scrollNoteIntoView();
       });
     }
     _previousViewInsetsBottom = currentBottom;
+  }
+
+  /// Scrolls the note into view. Normally the chosen card goes to the top,
+  /// with its note right under it, so the reason stays in view above the
+  /// field it qualifies. While the missing-note error shows, the end of the
+  /// note box, where that error is, is kept visible instead: the box sits
+  /// low enough that pinning the card can push the error behind the footer.
+  void _scrollNoteIntoView({bool animate = true}) {
+    final (anchor, policy) = _noteRequired
+        ? (_detailsBoxKey, ScrollPositionAlignmentPolicy.keepVisibleAtEnd)
+        : (_selectedCardKey, ScrollPositionAlignmentPolicy.explicit);
+    final ctx = anchor.currentContext;
+    if (ctx == null) return;
+    runDetached(
+      Scrollable.ensureVisible(
+        ctx,
+        duration: animate ? const Duration(milliseconds: 250) : Duration.zero,
+        curve: Curves.easeOut,
+        alignmentPolicy: policy,
+      ),
+      'scroll report details into view',
+      logName: 'ReportContentDialog',
+      category: LogCategory.ui,
+    );
   }
 
   void _onReasonSelected(ContentFilterReason reason) {
@@ -441,6 +456,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() {
       _selectedReason = reason;
       _errorMessage = null;
+      _noteRequired = false;
     });
 
     // Other is the one reason whose note is required, so it takes the
@@ -488,31 +504,46 @@ class _ReportContentViewState extends State<_ReportContentView> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
-            child: submitted
-                ? const ReportConfirmationBody()
-                : _ReportFormBody(
-                    reasons: widget.reasons,
-                    subject: widget.subject,
-                    selectedReason: _selectedReason,
-                    onReasonSelected: _onReasonSelected,
-                    detailsController: _detailsController,
-                    detailsFocusNode: _detailsFocusNode,
-                    detailsFieldKey: _detailsFieldKey,
-                    selectedCardKey: _selectedCardKey,
-                    detailsBoxKey: _detailsBoxKey,
-                    onDetailsChanged: _onDetailsChanged,
-                    imageInsertionRejected: _imageInsertionRejected,
-                    onImageInserted: _onImageInsertionRejected,
-                  ),
+          child: NotificationListener<ScrollMetricsNotification>(
+            // The keyboard, the footer riding it, and the sheet growing for
+            // the note all shrink the viewport over several frames, after a
+            // scroll aimed at the old size has run. While the missing-note
+            // error shows, follow each change so it stays in view. A
+            // reporter's own scrolling does not send this notification.
+            onNotification: (_) {
+              if (_noteRequired) _scrollNoteIntoView(animate: false);
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
+              child: submitted
+                  ? const ReportConfirmationBody()
+                  : _ReportFormBody(
+                      reasons: widget.reasons,
+                      subject: widget.subject,
+                      selectedReason: _selectedReason,
+                      onReasonSelected: _onReasonSelected,
+                      detailsController: _detailsController,
+                      detailsFocusNode: _detailsFocusNode,
+                      detailsFieldKey: _detailsFieldKey,
+                      selectedCardKey: _selectedCardKey,
+                      detailsBoxKey: _detailsBoxKey,
+                      onDetailsChanged: _onDetailsChanged,
+                      imageInsertionRejected: _imageInsertionRejected,
+                      noteRequired: _noteRequired,
+                      onImageInserted: _onImageInsertionRejected,
+                    ),
+            ),
           ),
         ),
-        // The error rides the footer rather than the end of the scroll
-        // content: with the submit action pinned, the user can submit from
-        // any scroll offset, and an error appended below eleven reason cards
-        // lands off-screen — the tap would look like it did nothing.
+        // A failed submit's error rides the footer rather than the end of the
+        // scroll content: with the submit action pinned, the user can submit
+        // from any scroll offset, and an error appended below eleven reason
+        // cards lands off-screen — the tap would look like it did nothing.
+        // Other's missing note is the exception: its error sits in the note
+        // box, which is scrolled into view instead (see
+        // [_scrollNoteIntoView]).
         VineKeyboardAwareFooter(
           includeSafeArea: true,
           child: Padding(
@@ -545,9 +576,12 @@ class _ReportContentViewState extends State<_ReportContentView> {
   }
 
   void _onDetailsChanged() {
-    if (_errorMessage == null && !_imageInsertionRejected) return;
+    if (_errorMessage == null && !_noteRequired && !_imageInsertionRejected) {
+      return;
+    }
     setState(() {
       _errorMessage = null;
+      _noteRequired = false;
       _imageInsertionRejected = false;
     });
   }
@@ -557,8 +591,12 @@ class _ReportContentViewState extends State<_ReportContentView> {
     if (cubit.state.isSubmitting) return;
     if (_selectedReason == ContentFilterReason.other &&
         _detailsController.text.trim().isEmpty) {
-      setState(() {
-        _errorMessage = context.l10n.reportOtherRequiresDetails;
+      setState(() => _noteRequired = true);
+      _detailsFocusNode.requestFocus();
+      // The note box can sit behind the footer, so bring the error into view
+      // and the Report tap visibly did something.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollNoteIntoView();
       });
       return;
     }
@@ -645,6 +683,7 @@ class _ReportFormBody extends StatelessWidget {
     required this.detailsBoxKey,
     required this.onDetailsChanged,
     required this.imageInsertionRejected,
+    required this.noteRequired,
     required this.onImageInserted,
   });
 
@@ -671,6 +710,10 @@ class _ReportFormBody extends StatelessWidget {
   /// Whether the reporter tried to insert an image; drives the not-attached
   /// notice shown above the field.
   final bool imageInsertionRejected;
+
+  /// Whether Report was tapped under Other with no note; drives the error
+  /// shown under the field.
+  final bool noteRequired;
 
   /// Forwarded to the details field's content-insertion handler.
   final VoidCallback onImageInserted;
@@ -760,6 +803,10 @@ class _ReportFormBody extends StatelessWidget {
                         onChanged: onDetailsChanged,
                         onImageInserted: onImageInserted,
                       ),
+                      if (noteRequired)
+                        _InlineError(
+                          message: l10n.reportOtherRequiresDetails,
+                        ),
                     ],
                   ),
                 ),

@@ -756,6 +756,69 @@ void main() {
       },
     );
 
+    for (final keyboardAlreadyUp in [true, false]) {
+      testWidgets(
+        'Other with no note shows its error inside the note box, scrolled '
+        'into view above the Report button '
+        '(keyboard ${keyboardAlreadyUp ? 'already up' : 'opens after'})',
+        (tester) async {
+          // A real phone with the keyboard up: the note box under Other, the
+          // last card, sits behind the footer unless something scrolls it.
+          tester.view.physicalSize = const Size(412, 915);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+
+          await openBottomSheetReport(tester);
+          await tester.ensureVisible(find.text(l10n.reportReasonOther));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.reportReasonOther));
+          await tester.pumpAndSettle();
+          const keyboard = FakeViewPadding(bottom: 336);
+          if (keyboardAlreadyUp) {
+            tester.view.viewInsets = keyboard;
+            await tester.pumpAndSettle();
+          }
+
+          await tester.tap(
+            find.widgetWithText(DivineButton, l10n.reportSubmit),
+          );
+          await tester.pumpAndSettle();
+          if (!keyboardAlreadyUp) {
+            // The reporter had dismissed it; the tap focuses the note again.
+            tester.view.viewInsets = keyboard;
+            await tester.pumpAndSettle();
+          }
+
+          final error = find.text(l10n.reportOtherRequiresDetails);
+          expect(
+            find.descendant(
+              of: find.byType(SingleChildScrollView),
+              matching: error,
+            ),
+            findsOneWidget,
+            reason: 'the error is about the note, so it sits with the note',
+          );
+          final errorRect = tester.getRect(error);
+          expect(
+            errorRect.top,
+            greaterThanOrEqualTo(tester.getRect(find.byType(TextField)).bottom),
+            reason: 'under the field it asks the reporter to fill in',
+          );
+          expect(
+            errorRect.bottom,
+            lessThanOrEqualTo(
+              tester
+                  .getRect(find.widgetWithText(DivineButton, l10n.reportSubmit))
+                  .top,
+            ),
+            reason:
+                'visible above the pinned footer, or the Report tap looks like '
+                'it did nothing',
+          );
+        },
+      );
+    }
+
     testWidgets('the inline error announces its message once', (tester) async {
       final handle = tester.ensureSemantics();
 
@@ -984,6 +1047,28 @@ void main() {
         expect(sentNote(), visible.trim());
       },
     );
+
+    testWidgets('the missing-note error clears once the reporter types, '
+        'and when they pick another reason', (tester) async {
+      await setLargeSurface(tester);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await pick(tester, ContentFilterReason.other);
+      await submit(tester);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'w');
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reportOtherRequiresDetails), findsNothing);
+
+      await tester.enterText(find.byType(TextField), '');
+      await submit(tester);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+      await pick(tester, ContentFilterReason.spam);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsNothing);
+    });
 
     testWidgets(
       'switching reasons moves the note box itself, so its state comes '
