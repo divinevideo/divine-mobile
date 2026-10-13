@@ -110,28 +110,6 @@ PartitionedLayers partitionDetachedClipLayers(
   return (below: below, detached: detached, above: above);
 }
 
-/// The longest side, in pixels, a detached clip's layer image is captured at.
-///
-/// The export places a detached clip from its own video, so its captured image
-/// only ever stands in for media that cannot be read (see
-/// [partitionDetachedClipLayers]). Enough for a recognisable frame there.
-const double detachedClipCaptureExtent = 720;
-
-/// The pixel ratio a layer is captured at, for
-/// `ImageGenerationConfigs.layerCapturePixelRatio`.
-///
-/// Every layer keeps [pixelRatio] except a detached clip, which is held to
-/// [detachedClipCaptureExtent]. At full resolution its image grows with the
-/// square of the layer's scale: three clips scaled up over the frame took the
-/// capture on Next past 1.7 GB, and a memory kill took the app with it
-/// (#10071) — for images the export throws away.
-double capturePixelRatioForLayer(Layer layer, Size size, double pixelRatio) {
-  if (!DetachedClipLayerData.isDetachedClipLayer(layer)) return pixelRatio;
-  final longestSide = size.longestSide;
-  if (longestSide <= 0) return pixelRatio;
-  return math.min(pixelRatio, detachedClipCaptureExtent / longestSide);
-}
-
 /// The layer's **unrotated** layout box, recovered from the rotated bounding
 /// box `pro_image_editor` reports as `ExportedLayer.logicalSize`.
 ///
