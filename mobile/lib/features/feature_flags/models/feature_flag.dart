@@ -105,13 +105,14 @@ enum FeatureFlag {
         'Stays off outside reviewer builds (#10094).',
     audience: FeatureFlagAudience.internal,
   ),
+  // User-facing on purpose: the parent who needs this flow is on the
+  // restricted teen's device, so the opt-in lives in Settings → Feature
+  // Flags where they can reach it before a restriction lands. Off by
+  // default; the toggle alone changes nothing for an unrestricted account.
   minorConsentInAppRecording(
     'In-App Parent Consent Recording',
     'Let a parent record and submit a consent video in the app for a '
-        'Divine Greenlight account review. Off by default until the '
-        'relay-manager parent-consent route and its request-signing '
-        'contract ship.',
-    audience: FeatureFlagAudience.internal,
+        'Divine Greenlight account review.',
   );
 
   const FeatureFlag(
