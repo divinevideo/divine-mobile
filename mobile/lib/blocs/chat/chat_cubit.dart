@@ -26,7 +26,6 @@ class ChatState {
     this.selectedCommunityId = 'community-test',
     this.selectedChannelId = 'general',
     this.threadRootId,
-    this.acceptedInvite = false,
     this.sending = false,
     this.loading = false,
     this.sendFailed = false,
@@ -39,7 +38,6 @@ class ChatState {
   final String selectedCommunityId;
   final String selectedChannelId;
   final String? threadRootId;
-  final bool acceptedInvite;
   final bool sending;
   final bool loading;
   final bool sendFailed;
@@ -53,7 +51,6 @@ class ChatState {
     String? selectedChannelId,
     String? threadRootId,
     bool clearThread = false,
-    bool? acceptedInvite,
     bool? sending,
     bool? loading,
     bool? sendFailed,
@@ -66,7 +63,6 @@ class ChatState {
     selectedCommunityId: selectedCommunityId ?? this.selectedCommunityId,
     selectedChannelId: selectedChannelId ?? this.selectedChannelId,
     threadRootId: clearThread ? null : (threadRootId ?? this.threadRootId),
-    acceptedInvite: acceptedInvite ?? this.acceptedInvite,
     sending: sending ?? this.sending,
     loading: loading ?? this.loading,
     sendFailed: sendFailed ?? this.sendFailed,
@@ -160,22 +156,6 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
       emitIfOpen(state.copyWith(threadRootId: rootId));
   void closeThread() => emitIfOpen(state.copyWith(clearThread: true));
 
-  Future<void> react({
-    required String targetId,
-    required String emoji,
-    required int now,
-  }) async {
-    _repo.ingestControl(
-      ControlEvent(
-        type: ControlType.reaction,
-        targetId: targetId,
-        createdAt: now,
-        emoji: emoji,
-      ),
-    );
-    refresh(now: now);
-  }
-
   List<ChatMessage> visibleMessages() {
     final root = state.threadRootId;
     return state.messages
@@ -249,10 +229,5 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
       emitIfOpen(state.copyWith(sending: false));
     }
-  }
-
-  Future<void> acceptInvite(String communityId) async {
-    await _repo.acceptInvite(communityId);
-    emitIfOpen(state.copyWith(acceptedInvite: true));
   }
 }
