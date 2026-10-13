@@ -40,6 +40,25 @@ class NostrKeyUtils {
   /// bech32, and payloads other than 32 bytes are invalid.
   static bool isValidNsec(String nsec) => Nip19.isPrivateKey(nsec);
 
+  /// [input] with the artifacts of copying a private key removed.
+  ///
+  /// An `nsec1`, `ncryptsec1` or 64-character hex key loses its whitespace
+  /// and invisible characters and is lowercased: notes apps capitalise the
+  /// first letter and QR codes carry bech32 in uppercase, and neither
+  /// changes the key. Anything else, such as a `bunker://` URL with a
+  /// case-sensitive secret, is only trimmed.
+  static String normalizePrivateKeyInput(String input) {
+    final compact = input.replaceAll(_copyArtifacts, '').toLowerCase();
+    final isKey =
+        compact.startsWith('nsec1') ||
+        compact.startsWith('ncryptsec1') ||
+        _hexKey.hasMatch(compact);
+    return isKey ? compact : input.trim();
+  }
+
+  static final _copyArtifacts = RegExp(r'[\s​-‍⁠]');
+  static final _hexKey = RegExp(r'^[0-9a-f]{64}$');
+
   /// The full npub for [hexPubkey], or the hex itself when it cannot be
   /// encoded.
   ///

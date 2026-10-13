@@ -152,6 +152,32 @@ void main() {
     });
 
     group('import', () {
+      testWidgets('imports an nsec saved with a capitalised first letter', (
+        tester,
+      ) async {
+        when(
+          () => mockAuthService.importFromNsec(any()),
+        ).thenAnswer((_) async => AuthResult.failure('stubbed'));
+        when(() => mockAuthService.clearError()).thenReturn(null);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(
+            DivineAuthTextField,
+            l10n.keyImportKeyFieldLabel,
+          ),
+          'N${nsecKey.substring(1)}',
+        );
+        await tester.tap(find.text(l10n.authImportNostrKey));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.keyImportInvalidFormat), findsNothing);
+        verify(() => mockAuthService.importFromNsec(nsecKey)).called(1);
+      });
+
       testWidgets('does not render service exception text on failure', (
         tester,
       ) async {
