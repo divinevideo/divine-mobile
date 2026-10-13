@@ -2318,6 +2318,39 @@ void main() {
       expect(_privateSystemTemp(tempRoot).listSync(), hasLength(1));
     });
 
+    test('an unreadable mark on another snapshot does not hide this one', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      _failRestorePartWay(tempRoot, dbPath, validKey);
+      final systemTemp = _privateSystemTemp(tempRoot);
+      final owed = systemTemp.listSync().single as Directory;
+      final wholeCopy = File(p.join(owed.path, 'database')).readAsBytesSync();
+      final unreadable = Directory(
+        p.join(systemTemp.path, 'divine_hot_journal_recovery_unreadable'),
+      )..createSync();
+      final unreadableMarker = p.join(unreadable.path, 'restoring');
+      File(unreadableMarker).writeAsStringSync('elsewhere');
+      // Lists the unreadable snapshot first, whatever order the disk gives.
+      final listedTemp = _MockDirectory();
+      when(() => listedTemp.path).thenReturn(systemTemp.path);
+      when(
+        () => listedTemp.listSync(followLinks: false),
+      ).thenReturn([unreadable, owed]);
+      when(
+        listedTemp.resolveSymbolicLinksSync,
+      ).thenReturn(systemTemp.resolveSymbolicLinksSync());
+
+      IOOverrides.runZoned(
+        () => completeUnfinishedHotJournalRestore(databasePath: dbPath),
+        getSystemTempDirectory: () => listedTemp,
+        // The root zone has no overrides, so this does not call itself.
+        createFile: (path) => path == unreadableMarker
+            ? _unreadableFile(path)
+            : Zone.root.run(() => File(path)),
+      );
+
+      expect(File(dbPath).readAsBytesSync(), equals(wholeCopy));
+    });
+
     test('ignores a marked snapshot that has lost one of its files', () {
       _createHotJournalFixture(dbPath, key: validKey);
       _failRestorePartWay(tempRoot, dbPath, validKey);
@@ -2831,6 +2864,16 @@ File _unwritableFile(String path) {
 
 /// Runs one recovery whose replay fails and whose restore damages the live
 /// database before failing, the state a full volume or a kill can leave.
+File _unreadableFile(String path) {
+  final file = _MockFile();
+  when(() => file.path).thenReturn(path);
+  when(file.existsSync).thenReturn(true);
+  when(
+    file.readAsStringSync,
+  ).thenThrow(const FileSystemException('injected read failure'));
+  return file;
+}
+
 void _failRestorePartWay(Directory root, String dbPath, String key) {
   var configurations = 0;
   expect(

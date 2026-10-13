@@ -306,9 +306,15 @@ class _HotJournalSnapshot {
       String? identity;
       for (final directory in _snapshotDirectories()) {
         final marker = _restoreMarker(directory);
-        if (!marker.existsSync()) continue;
-        identity ??= _databaseIdentity(databasePath);
-        if (marker.readAsStringSync() != identity) continue;
+        try {
+          if (!marker.existsSync()) continue;
+          identity ??= _databaseIdentity(databasePath);
+          if (marker.readAsStringSync() != identity) continue;
+        } on FileSystemException {
+          // A mark that cannot be read cannot be matched; it must not hide
+          // the snapshots listed after it.
+          continue;
+        }
         final snapshot = _HotJournalSnapshot._(
           directory: directory,
           database: File(p.join(directory.path, 'database')),
@@ -322,8 +328,8 @@ class _HotJournalSnapshot {
         unfinished.add(snapshot);
       }
     } on FileSystemException {
-      // What cannot be listed or read cannot be put back, so the launch goes
-      // on as it would without this step.
+      // A temp directory that cannot be listed holds nothing that could be
+      // put back, so the launch goes on as it would without this step.
     }
     return unfinished;
   }
