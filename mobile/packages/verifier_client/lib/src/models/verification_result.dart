@@ -71,8 +71,11 @@ class VerificationResult extends Equatable {
   final String? canonicalProof;
 
   /// The account to publish instead of the one sent, when the verifier
-  /// confirmed the claim and tidied the account: a Mastodon `@user@server`
-  /// becomes `server/@user`, for example.
+  /// confirmed the claim under a different account string. It may be the
+  /// same account tidied (a Mastodon `@user@server` becomes `server/@user`)
+  /// or found on a different host: a Mastodon server whose handles use one
+  /// domain and whose website uses another is confirmed on the website's
+  /// domain, and that domain is returned.
   ///
   /// Null when the account sent was already in that form, on a rejection,
   /// and from deployments older than the field.

@@ -63,12 +63,14 @@ const _mastodon = VerifierPlatform(
 
 VerificationResult _result({
   required bool verified,
+  String platform = 'github',
+  String identity = 'octocat',
   String? code,
   String? canonicalProof,
   String? canonicalIdentity,
 }) => VerificationResult(
-  platform: 'github',
-  identity: 'octocat',
+  platform: platform,
+  identity: identity,
   verified: verified,
   checkedAt: 1,
   cached: false,
@@ -243,6 +245,8 @@ void main() {
           when(() => repository.verifyClaim(any())).thenAnswer(
             (_) async => _result(
               verified: true,
+              platform: 'tiktok',
+              identity: 'alice',
               canonicalProof: '7123456789012345678',
             ),
           );
@@ -282,6 +286,8 @@ void main() {
           when(() => repository.verifyClaim(any())).thenAnswer(
             (_) async => _result(
               verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
               canonicalIdentity: 'mastodon.example/@alice',
             ),
           );
@@ -304,6 +310,69 @@ void main() {
           expect(claim.identity, equals('mastodon.example/@alice'));
           expect(claim.proof, equals('110123'));
           expect(cubit.state.identity, equals('mastodon.example/@alice'));
+        },
+      );
+
+      // Claims that fail the server's text rules are dropped whenever the
+      // identity event is read, so publishing one would leave a tag nobody
+      // sees.
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the pasted proof when the returned one is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'tiktok',
+              identity: 'alice',
+              canonicalProof: '7123|456',
+            ),
+          );
+        },
+        build: () => build(_tiktok),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://vm.tiktok.com/ZMabc123/');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('alice'));
+          expect(claim.proof, equals('https://vm.tiktok.com/ZMabc123/'));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the typed account when the returned one is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
+              canonicalIdentity: 'mastodon.example/@al|ice',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('@alice@mastodon.example'));
+          expect(claim.proof, equals('110123'));
         },
       );
 
