@@ -20,26 +20,6 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/report_content_confirmation.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 
-/// Shows a [VineBottomSheet] for reporting content or a user.
-///
-/// Usage:
-/// ```dart
-/// await ReportContentDialog.show(context, video: video);
-/// await ReportContentDialog.showForMessage(
-///   context,
-///   messageId: message.id,
-///   senderPubkey: message.senderPubkey,
-/// );
-/// await ReportContentDialog.showForUser(
-///   context,
-///   userPubkey: pubkey,
-/// );
-/// await ReportContentDialog.showForComment(
-///   context,
-///   commentId: comment.id,
-///   authorPubkey: comment.authorPubkey,
-/// );
-/// ```
 /// The kinds of list that can be reported, with their NIP-51 event kinds.
 enum ReportedListKind {
   /// A people list: a NIP-51 follow set.
@@ -62,6 +42,26 @@ enum ReportedSubject {
   comment,
 }
 
+/// Shows a [VineBottomSheet] for reporting content or a user.
+///
+/// Usage:
+/// ```dart
+/// await ReportContentDialog.show(context, video: video);
+/// await ReportContentDialog.showForMessage(
+///   context,
+///   messageId: message.id,
+///   senderPubkey: message.senderPubkey,
+/// );
+/// await ReportContentDialog.showForUser(
+///   context,
+///   userPubkey: pubkey,
+/// );
+/// await ReportContentDialog.showForComment(
+///   context,
+///   commentId: comment.id,
+///   authorPubkey: comment.authorPubkey,
+/// );
+/// ```
 class ReportContentDialog extends ConsumerWidget {
   ReportContentDialog({
     super.key,
