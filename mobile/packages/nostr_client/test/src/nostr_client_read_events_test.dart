@@ -1505,6 +1505,51 @@ void main() {
       },
     );
 
+    test(
+      'an outside-only read queued for a slot when the client is disposed '
+      'ends on its own deadline without reaching the relay',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor, saturate: false);
+        final outsideOccupants = Future.wait([
+          for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+            setup.client.readEvents(
+              [inboxList()],
+              useCache: false,
+              tempRelays: const [indexerUrl],
+              relayTypes: const [RelayType.temp],
+              timeout: holdFor,
+            ),
+        ]);
+        await pumpEventQueue();
+        final indexer = _tempRelayFor(setup.tempRelays, indexerUrl)!;
+        await indexer.awaitReq(NostrClient.maxConcurrentQueries - 1);
+
+        final queued = setup.client.queryEventsDetailed(
+          [inboxList()],
+          useCache: false,
+          tempRelays: const [indexerUrl],
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: lookupTimeout,
+        );
+        await pumpEventQueue();
+        await setup.client.dispose();
+
+        final result = await queued.timeout(
+          lookupTimeout + const Duration(seconds: 1),
+          onTimeout: () => fail('a read queued at dispose must not hang'),
+        );
+        expect(result.timedOut, isTrue);
+        expect(result.events, isEmpty);
+        expect(
+          indexer.reqSubIds,
+          hasLength(NostrClient.maxConcurrentQueries),
+          reason: 'the queued read never got a slot, so it never sent a REQ',
+        );
+        await outsideOccupants;
+      },
+    );
+
     test('a temp read naming a pool member still waits for a slot', () async {
       final setup = await _saturatedPool(holdFor: holdFor);
 
