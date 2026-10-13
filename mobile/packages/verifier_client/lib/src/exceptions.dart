@@ -38,3 +38,55 @@ final class VerifierNetworkException extends VerifierClientException {
   const VerifierNetworkException(String message)
     : super(message, 'VerifierNetworkException');
 }
+
+/// Why the verifier refused to confirm a sign-in.
+enum SignInRefusal {
+  /// Expired, or not visible to the verifier yet; worth a brief retry.
+  notFound,
+
+  /// Already confirmed with a different event.
+  used,
+
+  /// Signed by a different account than the one that started the sign-in.
+  wrongAccount,
+
+  /// Started by a different client.
+  notYours,
+
+  /// The signed list doesn't carry this sign-in's claim.
+  claimMismatch,
+
+  /// The confirmation wasn't a signed linked-accounts list.
+  invalidEvent,
+
+  /// Anything else.
+  other;
+
+  /// Reads the verifier's `code`.
+  static SignInRefusal fromCode(Object? code) => switch (code) {
+    'signin_not_found' => notFound,
+    'signin_used' => used,
+    'signin_wrong_account' => wrongAccount,
+    'signin_not_yours' => notYours,
+    'signin_claim_mismatch' => claimMismatch,
+    'invalid_event' => invalidEvent,
+    _ => other,
+  };
+}
+
+/// The verifier refused to confirm a sign-in.
+final class SignInConfirmException extends VerifierClientException {
+  /// Creates a [SignInConfirmException]. The message never carries the code
+  /// or secret sent.
+  SignInConfirmException(this.statusCode, this.refusal)
+    : super(
+        'verifier refused the confirmation ($statusCode, ${refusal.name})',
+        'SignInConfirmException',
+      );
+
+  /// The HTTP status code.
+  final int statusCode;
+
+  /// Why it was refused.
+  final SignInRefusal refusal;
+}

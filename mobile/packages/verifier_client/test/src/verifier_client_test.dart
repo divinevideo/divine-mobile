@@ -452,6 +452,372 @@ void main() {
       );
     });
 
+    group('startSignIn', () {
+      test(
+        'posts the start with the start check and returns the provider page',
+        () async {
+          late http.Request sent;
+          final mock = MockClient((req) async {
+            sent = req;
+            return http.Response(
+              jsonEncode({'url': 'https://bsky.social/oauth/authorize?x=1'}),
+              200,
+            );
+          });
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: mock,
+          );
+
+          final url = await client.startSignIn(
+            platform: 'bluesky',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback?signin=abc',
+            startCheck: 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+            handle: ' alice.bsky.social ',
+          );
+
+          expect(
+            url,
+            equals(Uri.parse('https://bsky.social/oauth/authorize?x=1')),
+          );
+          expect(sent.method, equals('POST'));
+          expect(
+            sent.url.toString(),
+            equals('https://verifier.example/auth/bluesky/start'),
+          );
+          expect(sent.headers['content-type'], startsWith('application/json'));
+          expect(sent.url.query, isEmpty);
+          expect(
+            jsonDecode(sent.body),
+            equals({
+              'pubkey': _hex,
+              'return_url': 'https://divine.video/app/callback?signin=abc',
+              'start_check': 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+              'handle': 'alice.bsky.social',
+            }),
+          );
+        },
+      );
+
+      test('returns null when sign-in is not set up (503)', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async => http.Response('{"error":"not configured"}', 503),
+          ),
+        );
+        expect(
+          await client.startSignIn(
+            platform: 'twitter',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback',
+            startCheck: 'x' * 43,
+          ),
+          isNull,
+        );
+      });
+
+      test('throws other refusals as API errors', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async => http.Response('{"error":"bad return_url"}', 400),
+          ),
+        );
+        await expectLater(
+          client.startSignIn(
+            platform: 'twitter',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback',
+            startCheck: 'x' * 43,
+          ),
+          throwsA(
+            isA<VerifierApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              400,
+            ),
+          ),
+        );
+      });
+
+      test('refuses a provider page that is not https', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async =>
+                http.Response(jsonEncode({'url': 'javascript:alert(1)'}), 200),
+          ),
+        );
+        await expectLater(
+          client.startSignIn(
+            platform: 'twitter',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback',
+            startCheck: 'x' * 43,
+          ),
+          throwsA(isA<VerifierApiException>()),
+        );
+      });
+
+      test(
+        'throws a network error rather than opening anything when the '
+        'verifier cannot be reached',
+        () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => throw http.ClientException('down'),
+            ),
+          );
+          await expectLater(
+            client.startSignIn(
+              platform: 'twitter',
+              pubkey: _hex,
+              returnUrl: 'https://divine.video/app/callback',
+              startCheck: 'x' * 43,
+            ),
+            throwsA(isA<VerifierNetworkException>()),
+          );
+        },
+      );
+
+      test('needs a handle for bluesky', () {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((_) async => fail('no request')),
+        );
+        expect(
+          () => client.startSignIn(
+            platform: 'bluesky',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback',
+            startCheck: 'x' * 43,
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('refuses a platform without sign-in', () {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((_) async => fail('no request')),
+        );
+        expect(
+          () => client.startSignIn(
+            platform: 'github',
+            pubkey: _hex,
+            returnUrl: 'https://divine.video/app/callback',
+            startCheck: 'x' * 43,
+          ),
+          throwsArgumentError,
+        );
+      });
+    });
+
+    group('confirmSignIn', () {
+      final event = <String, dynamic>{'id': 'e' * 64, 'kind': 10011};
+
+      test('posts the code, the start secret and the signed event', () async {
+        late http.Request sent;
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((req) async {
+            sent = req;
+            return http.Response(
+              jsonEncode({
+                'linked': true,
+                'platform': 'twitter',
+                'identity': 'jack',
+              }),
+              200,
+            );
+          }),
+        );
+        final confirmed = await client.confirmSignIn(
+          code: 'C' * 43,
+          startSecret: 'S' * 43,
+          event: event,
+        );
+        expect(
+          confirmed,
+          equals(
+            const SignInConfirmation(platform: 'twitter', identity: 'jack'),
+          ),
+        );
+        expect(sent.method, equals('POST'));
+        expect(
+          sent.url.toString(),
+          equals('https://verifier.example/auth/confirm'),
+        );
+        expect(sent.headers['content-type'], startsWith('application/json'));
+        expect(
+          jsonDecode(sent.body),
+          equals({'code': 'C' * 43, 'start_secret': 'S' * 43, 'event': event}),
+        );
+      });
+
+      test('throws the refusal the verifier names', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode({'error': 'x', 'code': 'signin_used'}),
+              409,
+            ),
+          ),
+        );
+        await expectLater(
+          client.confirmSignIn(
+            code: 'C' * 43,
+            startSecret: 'S' * 43,
+            event: event,
+          ),
+          throwsA(
+            isA<SignInConfirmException>()
+                .having((e) => e.refusal, 'refusal', SignInRefusal.used)
+                .having((e) => e.statusCode, 'statusCode', 409),
+          ),
+        );
+      });
+
+      test('reads a refusal without a JSON body as other', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((_) async => http.Response('nope', 429)),
+        );
+        await expectLater(
+          client.confirmSignIn(
+            code: 'C' * 43,
+            startSecret: 'S' * 43,
+            event: event,
+          ),
+          throwsA(
+            isA<SignInConfirmException>()
+                .having((e) => e.refusal, 'refusal', SignInRefusal.other)
+                .having((e) => e.statusCode, 'statusCode', 429),
+          ),
+        );
+      });
+
+      test('treats a server error as an API error, not a refusal', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((_) async => http.Response('oops', 502)),
+        );
+        await expectLater(
+          client.confirmSignIn(
+            code: 'C' * 43,
+            startSecret: 'S' * 43,
+            event: event,
+          ),
+          throwsA(
+            isA<VerifierApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              502,
+            ),
+          ),
+        );
+      });
+
+      test('does not count a 200 that does not say linked', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'linked': false,
+                'platform': 'twitter',
+                'identity': 'jack',
+              }),
+              200,
+            ),
+          ),
+        );
+        await expectLater(
+          client.confirmSignIn(
+            code: 'C' * 43,
+            startSecret: 'S' * 43,
+            event: event,
+          ),
+          throwsA(
+            isA<SignInConfirmException>().having(
+              (e) => e.refusal,
+              'refusal',
+              SignInRefusal.other,
+            ),
+          ),
+        );
+      });
+
+      test(
+        'treats a success without the linked account as an API error',
+        () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => http.Response(
+                jsonEncode({'linked': true, 'platform': 'twitter'}),
+                200,
+              ),
+            ),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(isA<VerifierApiException>()),
+          );
+        },
+      );
+
+      test(
+        'throws a network error when the verifier cannot be reached',
+        () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => throw http.ClientException('down'),
+            ),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(isA<VerifierNetworkException>()),
+          );
+        },
+      );
+
+      test('never puts the code or secret in an exception message', () async {
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient(
+            (_) async =>
+                http.Response(jsonEncode({'code': 'signin_not_yours'}), 401),
+          ),
+        );
+        try {
+          await client.confirmSignIn(
+            code: 'C' * 43,
+            startSecret: 'S' * 43,
+            event: event,
+          );
+          fail('expected a refusal');
+        } on SignInConfirmException catch (e) {
+          expect(e.refusal, SignInRefusal.notYours);
+          expect(e.toString(), isNot(contains('C' * 43)));
+          expect(e.toString(), isNot(contains('S' * 43)));
+        }
+      });
+    });
+
     group('revokeOAuth', () {
       test('posts the claim and the NIP-98 event', () async {
         var called = false;

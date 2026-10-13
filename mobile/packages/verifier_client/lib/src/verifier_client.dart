@@ -11,6 +11,7 @@ import 'package:verifier_client/src/exceptions.dart';
 import 'package:verifier_client/src/models/identity_claim.dart';
 import 'package:verifier_client/src/models/verification_result.dart';
 import 'package:verifier_client/src/models/verifier_platform.dart';
+import 'package:verifier_client/src/signin_confirmation.dart';
 
 /// HTTP client for `https://verifier.divine.video`.
 ///
@@ -210,6 +211,119 @@ class VerifierClient {
     return target.scheme == 'https' ? target : null;
   }
 
+  /// Starts [platform]'s sign-in so the account owner can confirm it, and
+  /// returns the provider page to open.
+  ///
+  /// [startCheck] is [SignInSecrets.startCheckFor] of a secret the caller
+  /// keeps for [confirmSignIn]; it travels only in this request's body. The
+  /// verifier returns to [returnUrl] with `platform` and `identity`, and the
+  /// one-time code as `#oauth_confirm=<code>` (or in the query, if it is set
+  /// to).
+  ///
+  /// Returns null when this deployment has no sign-in for [platform] (503).
+  ///
+  /// Throws [ArgumentError] for a platform without sign-in, or Bluesky
+  /// without a handle; [VerifierApiException] for other refusals or a
+  /// provider page that isn't https; [VerifierTimeoutException] and
+  /// [VerifierNetworkException] as [verifyBatch] does.
+  Future<Uri?> startSignIn({
+    required String platform,
+    required String pubkey,
+    required String returnUrl,
+    required String startCheck,
+    String? handle,
+  }) async {
+    if (!VerifierPlatform.oauthPlatforms.contains(platform)) {
+      throw ArgumentError.value(
+        platform,
+        'platform',
+        'has no OAuth flow; supported: '
+            '${VerifierPlatform.oauthPlatforms.join(', ')}',
+      );
+    }
+    final bareHandle = handle?.trim() ?? '';
+    if (platform == 'bluesky' && bareHandle.isEmpty) {
+      throw ArgumentError.value(
+        handle,
+        'handle',
+        'is required to start the bluesky OAuth flow',
+      );
+    }
+    final body = jsonEncode(<String, String>{
+      'pubkey': pubkey,
+      'return_url': returnUrl,
+      'start_check': startCheck,
+      if (bareHandle.isNotEmpty) 'handle': bareHandle,
+    });
+    final Map<String, dynamic> json;
+    try {
+      json = await _post('/auth/$platform/start', body);
+    } on VerifierApiException catch (e) {
+      if (e.statusCode == 503) return null;
+      rethrow;
+    }
+    final url = json['url'];
+    final target = url is String ? Uri.tryParse(url) : null;
+    // The session has to land on the provider, not on whatever scheme a
+    // malformed answer happens to name.
+    if (target == null || target.scheme != 'https') {
+      throw const VerifierApiException(
+        200,
+        'verifier answered a sign-in start without an https url',
+      );
+    }
+    return target;
+  }
+
+  /// Asks the verifier to count a sign-in: [event] is the signed kind 10011
+  /// whose new claim carries [SignInSecrets.confirmBindingFor]. Send the same
+  /// [event] again after a lost answer; a re-signed one is refused as used.
+  ///
+  /// Throws [SignInConfirmException] for a refusal, [VerifierApiException]
+  /// for a server error or a success that doesn't name the linked account,
+  /// and the timeout and network exceptions as [verifyBatch].
+  Future<SignInConfirmation> confirmSignIn({
+    required String code,
+    required String startSecret,
+    required Map<String, dynamic> event,
+  }) async {
+    final body = jsonEncode(<String, dynamic>{
+      'code': code,
+      'start_secret': startSecret,
+      'event': event,
+    });
+    final res = await _fetch(_postRequest('/auth/confirm', body));
+    Map<String, dynamic>? json;
+    try {
+      json = jsonDecode(res.body) as Map<String, dynamic>;
+    } on Object {
+      json = null;
+    }
+    // Neither the code nor the secret goes into an exception message: they
+    // are what the verifier redeems.
+    if (res.statusCode >= 500) {
+      throw VerifierApiException(
+        res.statusCode,
+        'verifier returned ${res.statusCode}',
+      );
+    }
+    if (res.statusCode == 200 && json?['linked'] == true) {
+      final platform = json!['platform'];
+      final identity = json['identity'];
+      if (platform is! String || identity is! String) {
+        throw const VerifierApiException(
+          200,
+          'verifier confirmed a sign-in without naming the account',
+        );
+      }
+      return SignInConfirmation(platform: platform, identity: identity);
+    }
+    throw SignInConfirmException(
+      res.statusCode,
+      SignInRefusal.fromCode(json?['code']),
+    );
+  }
+
   /// Drops the verifier's cached OAuth verification for a claim.
   ///
   /// [nip98Event] must be a signed NIP-98 (kind 27235) event whose `u` tag is
@@ -265,31 +379,38 @@ class VerifierClient {
     return _send(() => _httpClient.get(uri));
   }
 
-  Future<Map<String, dynamic>> _post(String path, String body) {
+  Future<Map<String, dynamic>> _post(String path, String body) =>
+      _send(_postRequest(path, body));
+
+  Future<http.Response> Function() _postRequest(String path, String body) {
     final uri = _uriFor(path);
-    return _send(
-      () => _httpClient.post(
-        uri,
-        headers: const {'content-type': 'application/json'},
-        body: body,
-      ),
+    return () => _httpClient.post(
+      uri,
+      headers: const {'content-type': 'application/json'},
+      body: body,
     );
   }
 
   Future<Map<String, dynamic>> _send(
     Future<http.Response> Function() request,
   ) async {
+    final res = await _fetch(request);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw VerifierApiException(
+        res.statusCode,
+        'verifier returned ${res.statusCode}: ${res.body}',
+      );
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Sends [request] with the timeout, mapping transport failures to the
+  /// client's exceptions. Callers read the status themselves.
+  Future<http.Response> _fetch(
+    Future<http.Response> Function() request,
+  ) async {
     try {
-      final res = await request().timeout(_timeout);
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw VerifierApiException(
-          res.statusCode,
-          'verifier returned ${res.statusCode}: ${res.body}',
-        );
-      }
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    } on VerifierClientException {
-      rethrow;
+      return await request().timeout(_timeout);
     } on TimeoutException catch (e) {
       throw VerifierTimeoutException(e.toString());
     } on SocketException catch (e) {
