@@ -78,9 +78,14 @@ void recoverHotRollbackJournal({
 /// holds the only whole copy. This puts that copy back and releases the
 /// snapshot.
 ///
-/// Call it before anything reads or classifies the database. A marked
-/// snapshot always holds what the live files should contain, because nothing
-/// uses the database while one exists: this either clears the mark or throws.
+/// Call it before anything reads or classifies the database. A launch that
+/// finds a marked snapshot either clears the mark or throws, so the database
+/// is not used while a mark this can see exists.
+///
+/// A launch that cannot list the temp directory, or cannot read a mark, goes
+/// ahead without this step, because stopping there would refuse every launch
+/// on an unusable temp directory. A mark that outlived its restore would then
+/// be put back by a later launch, over newer data.
 ///
 /// Throws [DatabaseHotJournalRecoveryError] at
 /// [DatabaseHotJournalRecoveryStage.restoreSnapshot] when the copy cannot be
@@ -328,8 +333,8 @@ class _HotJournalSnapshot {
         unfinished.add(snapshot);
       }
     } on FileSystemException {
-      // A temp directory that cannot be listed holds nothing that could be
-      // put back, so the launch goes on as it would without this step.
+      // A temp directory that cannot be listed gives nothing that can be put
+      // back, so the launch goes on as it would without this step.
     }
     return unfinished;
   }
