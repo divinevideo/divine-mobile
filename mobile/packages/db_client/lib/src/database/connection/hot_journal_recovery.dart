@@ -30,17 +30,21 @@ const _restoreMarkerName = 'restoring';
 /// through an immutable view. That proves the existing key can decrypt the
 /// database before the writable connection is allowed to begin rollback.
 ///
-/// The database and journal are copied aside first when the copy can be made,
-/// and put back if the replay or its integrity check fails. A copy that cannot
-/// be made, for want of space or of a usable temp directory, does not stop the
-/// replay: SQLite keeps the journal until the rollback is flushed, so an
-/// interrupted replay repeats on the next launch, whereas refusing here would
-/// refuse on every launch. Without the copy, a replay whose integrity check
-/// then fails is not undone: the database stays rolled back and the journal
-/// is gone, so the next launch goes through the ordinary open.
+/// The database and journal are copied aside first when the copy can be made.
+/// A copy that cannot be made, for want of space or of a usable temp
+/// directory, does not stop the replay: SQLite keeps the journal until the
+/// rollback is flushed, so an interrupted replay repeats on the next launch,
+/// whereas refusing here would refuse on every launch.
+///
+/// A replay that fails while the journal is still there restores the
+/// database and journal from that copy, when there is one. Once SQLite has
+/// deleted the journal the rollback is done, so the replay is final even when
+/// the statement that ran it failed afterwards. The file is then checked with
+/// `PRAGMA quick_check`, and [HotJournalRecoveryResult.failedIntegrityCheck]
+/// tells the caller it is damaged.
 ///
 /// Throws [DatabaseHotJournalRecoveryError] naming the stage that stopped.
-void recoverHotRollbackJournal({
+HotJournalRecoveryResult recoverHotRollbackJournal({
   required String databasePath,
   required void Function(CommonDatabase db) configureEncryptedDatabase,
   @visibleForTesting
@@ -64,11 +68,28 @@ void recoverHotRollbackJournal({
       configureEncryptedDatabase: configureEncryptedDatabase,
     );
   } on DatabaseHotJournalRecoveryError {
+    // SQLite deletes the journal only once the rollback is on disk, so a
+    // missing journal means the statement failed afterwards, typically on a
+    // damaged schema. Restoring it would replay into that failure forever.
+    if (!File('$databasePath$rollbackJournalSuffix').existsSync()) {
+      return HotJournalRecoveryResult.failedIntegrityCheck;
+    }
     snapshot?.restore(databasePath, copy: restoreCopyForTesting);
     rethrow;
   } finally {
     snapshot?.dispose();
   }
+
+  // The file is now what any writable open would have made of it. Restoring
+  // the snapshot after a failed check only handed every later launch the same
+  // journal and the same verdict: a permanent db-journal-unrecovered screen.
+  return _recoveredDatabaseIsSound(
+        databasePath,
+        isPlaintext: isPlaintext,
+        configureEncryptedDatabase: configureEncryptedDatabase,
+      )
+      ? HotJournalRecoveryResult.sound
+      : HotJournalRecoveryResult.failedIntegrityCheck;
 }
 
 /// Finishes a restore that an earlier launch began and did not finish.
@@ -177,17 +198,6 @@ void _deleteSnapshotDirectory(Directory directory) {
   } on FileSystemException {
     // Left for the next sweep.
   }
-
-  // The file is now what any writable open would have made of it. Restoring
-  // the snapshot after a failed check only handed every later launch the same
-  // journal and the same verdict: a permanent db-journal-unrecovered screen.
-  return _recoveredDatabaseIsSound(
-        databasePath,
-        isPlaintext: isPlaintext,
-        configureEncryptedDatabase: configureEncryptedDatabase,
-      )
-      ? HotJournalRecoveryResult.sound
-      : HotJournalRecoveryResult.failedIntegrityCheck;
 }
 
 void _replayJournal(

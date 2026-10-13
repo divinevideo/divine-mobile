@@ -1894,7 +1894,9 @@ void main() {
             databasePath: dbPath,
             configureEncryptedDatabase: (database) {
               configurations += 1;
-              applyCipherKey(database, validKey);
+              // keyCipherDatabase reads no page, so the failure lands before
+              // SQLite starts the rollback.
+              keyCipherDatabase(database, validKey);
               if (configurations == 2) throw StateError('injected failure');
             },
           ),
