@@ -6,15 +6,25 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
 
+String _readFixture() {
+  var dir = Directory.current;
+  for (var i = 0; i < 8; i++) {
+    for (final rel in [
+      '../concord_protocol/test/fixtures/fixtures.json',
+      'packages/concord_protocol/test/fixtures/fixtures.json',
+      'test/fixtures/fixtures.json',
+    ]) {
+      final file = File('${dir.path}/$rel');
+      if (file.existsSync()) return file.readAsStringSync();
+    }
+    dir = dir.parent;
+  }
+  throw StateError('fixtures.json not found from ${Directory.current.path}');
+}
+
 void main() {
   test('sealed plane round-trips and rejects tampered wrap author', () async {
-    final fx =
-        jsonDecode(
-              File(
-                '../concord_protocol/test/fixtures/fixtures.json',
-              ).readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final fx = jsonDecode(_readFixture()) as Map<String, dynamic>;
     final alice = (fx['identities'] as Map)['alice'] as Map<String, dynamic>;
     final secrets = fx['secrets'] as Map<String, dynamic>;
     final channelId =
