@@ -10,6 +10,7 @@ abstract interface class RelayGateway {
 abstract interface class AccountScopedStore {
   Future<void> put(String key, String value);
   Future<String?> get(String key);
+  Future<void> remove(String key);
   Future<void> clearAccount();
 }
 
@@ -24,6 +25,8 @@ class InMemoryConcordStore implements AccountScopedStore {
   Future<void> put(String k, String v) async => _data[scoped(k)] = v;
   @override
   Future<String?> get(String k) async => _data[scoped(k)];
+  @override
+  Future<void> remove(String k) async => _data.remove(scoped(k));
   @override
   Future<void> clearAccount() async =>
       _data.removeWhere((k, _) => k.startsWith('concord:v1:$pubkey:'));
@@ -101,7 +104,18 @@ class ConcordRepository {
     if (index == null) return;
     final kept = <String>[];
     for (final id in index.split(',').where((e) => e.isNotEmpty)) {
-      if (_messages.any((m) => m.id == id)) kept.add(id);
+      final meta = (await store.get('meta:$id'))?.split('|');
+      final expiresAt = meta != null && meta.length > 3
+          ? int.tryParse(meta[3])
+          : null;
+      if (expiresAt == null || now < expiresAt) {
+        kept.add(id);
+        continue;
+      }
+      _pendingIds.remove(id);
+      for (final key in ['msg', 'meta', 'sent']) {
+        await store.remove('$key:$id');
+      }
     }
     await store.put('index', kept.join(','));
   }
