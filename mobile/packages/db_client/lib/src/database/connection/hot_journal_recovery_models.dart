@@ -1,7 +1,6 @@
 enum DatabaseHotJournalRecoveryStage {
   inspectHeader,
   validateCipherKey,
-  createSnapshot,
   replayJournal,
   validateIntegrity,
   restoreSnapshot,

@@ -35,8 +35,12 @@ QueryExecutor openConnection() {
       // A device whose cipher migration keeps deferring never reaches the
       // encrypted open, and it is exactly the device a legacy-migration
       // backup sits beside. The plaintext migration backup is deliberately
-      // not swept here: only a keyed open proves it is safe to drop.
-      setup: (_) => sweepPreservedDatabaseCopies(dbPath),
+      // not swept here: only a keyed open proves it is safe to drop. A
+      // recovery snapshot left in the temp directory needs no such proof.
+      setup: (_) {
+        sweepPreservedDatabaseCopies(dbPath);
+        sweepStrandedHotJournalSnapshots();
+      },
     );
   });
 }
@@ -89,6 +93,9 @@ QueryExecutor openEncryptedConnection({
         applyCipherKey(rawDb, rawKeyHex);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
+        // A launch killed after its journal was replayed leaves a snapshot
+        // and no hot journal, so no later recovery would find it.
+        sweepStrandedHotJournalSnapshots();
       },
     );
   });

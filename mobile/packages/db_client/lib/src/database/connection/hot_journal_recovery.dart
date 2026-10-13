@@ -5,6 +5,7 @@ import 'package:db_client/src/database/connection/database_integrity.dart';
 import 'package:db_client/src/database/connection/database_sidecars.dart';
 import 'package:db_client/src/database/connection/hot_journal_recovery_models.dart';
 import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqlite3/common.dart' show CommonDatabase;
 import 'package:sqlite3/sqlite3.dart';
 
@@ -14,6 +15,13 @@ const _sqliteCorrupt = 11;
 
 const _sqliteHeader = 'SQLite format 3\x00';
 
+// Shipped builds already left directories under this name, so it must not
+// change: [sweepStrandedHotJournalSnapshots] finds them by it.
+const _snapshotDirectoryPrefix = 'divine_hot_journal_recovery_';
+
+// Written into a snapshot when its restore begins.
+const _restoreMarkerName = 'restoring';
+
 /// Replays a hot rollback journal through SQLite without ever editing the
 /// journal directly.
 ///
@@ -21,13 +29,17 @@ const _sqliteHeader = 'SQLite format 3\x00';
 /// through an immutable view. That proves the existing key can decrypt the
 /// database before the writable connection is allowed to begin rollback.
 ///
-/// A replay that fails while the journal is still there restores the
-/// database and journal it started from. Once SQLite has deleted the journal
-/// the rollback is done, so the replay is final even when the statement that
-/// ran it failed afterwards. The file is then checked with
-/// `PRAGMA quick_check`, and [HotJournalRecoveryResult.failedIntegrityCheck]
-/// tells the caller it is damaged.
-HotJournalRecoveryResult recoverHotRollbackJournal({
+/// The database and journal are copied aside first when the copy can be made,
+/// and put back if the replay or its integrity check fails. A copy that cannot
+/// be made, for want of space or of a usable temp directory, does not stop the
+/// replay: SQLite keeps the journal until the rollback is flushed, so an
+/// interrupted replay repeats on the next launch, whereas refusing here would
+/// refuse on every launch. Without the copy, a replay whose integrity check
+/// then fails is not undone: the database stays rolled back and the journal
+/// is gone, so the next launch goes through the ordinary open.
+///
+/// Throws [DatabaseHotJournalRecoveryError] naming the stage that stopped.
+void recoverHotRollbackJournal({
   required String databasePath,
   required void Function(CommonDatabase db) configureEncryptedDatabase,
   @visibleForTesting
@@ -42,7 +54,8 @@ HotJournalRecoveryResult recoverHotRollbackJournal({
     );
   }
 
-  final snapshot = _HotJournalSnapshot.create(databasePath);
+  sweepStrandedHotJournalSnapshots();
+  final snapshot = _HotJournalSnapshot.tryCreate(databasePath);
   try {
     _replayJournal(
       databasePath,
@@ -50,16 +63,47 @@ HotJournalRecoveryResult recoverHotRollbackJournal({
       configureEncryptedDatabase: configureEncryptedDatabase,
     );
   } on DatabaseHotJournalRecoveryError {
-    // SQLite deletes the journal only once the rollback is on disk, so a
-    // missing journal means the statement failed afterwards, typically on a
-    // damaged schema. Restoring it would replay into that failure forever.
-    if (!File('$databasePath$rollbackJournalSuffix').existsSync()) {
-      return HotJournalRecoveryResult.failedIntegrityCheck;
-    }
-    snapshot.restore(databasePath, copy: restoreCopyForTesting);
+    snapshot?.restore(databasePath, copy: restoreCopyForTesting);
     rethrow;
   } finally {
-    snapshot.dispose();
+    snapshot?.dispose();
+  }
+}
+
+/// Deletes snapshot directories that interrupted recoveries left behind.
+///
+/// A launch killed between copying the database aside and deleting the copy
+/// strands a full-size copy in the temp directory, and nothing else removes
+/// it. The app runs recovery synchronously, before it opens any connection,
+/// so no directory it sweeps can still be in use.
+///
+/// A snapshot whose restore was interrupted is left alone: the restore
+/// overwrites the live files, so that snapshot may be the only whole copy.
+///
+/// Best effort: it never throws, because a temp directory that cannot be
+/// listed or an entry that cannot be deleted must not fail startup.
+void sweepStrandedHotJournalSnapshots() {
+  try {
+    for (final entity in Directory.systemTemp.listSync(followLinks: false)) {
+      if (entity is! Directory) continue;
+      if (!p.basename(entity.path).startsWith(_snapshotDirectoryPrefix)) {
+        continue;
+      }
+      if (File(p.join(entity.path, _restoreMarkerName)).existsSync()) continue;
+      _deleteSnapshotDirectory(entity);
+    }
+  } on FileSystemException {
+    // The temp directory is unusable, so there is nothing to sweep.
+  }
+}
+
+/// Best effort: a snapshot that cannot be removed now is left for
+/// [sweepStrandedHotJournalSnapshots], and must not fail the recovery.
+void _deleteSnapshotDirectory(Directory directory) {
+  try {
+    if (directory.existsSync()) directory.deleteSync(recursive: true);
+  } on FileSystemException {
+    // Left for the next sweep.
   }
 
   // The file is now what any writable open would have made of it. Restoring
@@ -185,11 +229,12 @@ class _HotJournalSnapshot {
   final File database;
   final File journal;
 
-  static _HotJournalSnapshot create(String databasePath) {
+  /// Returns null when the copy cannot be made.
+  static _HotJournalSnapshot? tryCreate(String databasePath) {
     Directory? directory;
     try {
       directory = Directory.systemTemp.createTempSync(
-        'divine_hot_journal_recovery_',
+        _snapshotDirectoryPrefix,
       );
       return _HotJournalSnapshot._(
         directory: directory,
@@ -199,12 +244,8 @@ class _HotJournalSnapshot {
         ).copySync('${directory.path}/journal'),
       );
     } on Object {
-      if (directory?.existsSync() ?? false) {
-        directory!.deleteSync(recursive: true);
-      }
-      throw const DatabaseHotJournalRecoveryError(
-        stage: DatabaseHotJournalRecoveryStage.createSnapshot,
-      );
+      if (directory != null) _deleteSnapshotDirectory(directory);
+      return null;
     }
   }
 
@@ -213,6 +254,7 @@ class _HotJournalSnapshot {
     required File Function(File source, String destination) copy,
   }) {
     try {
+      File(p.join(directory.path, _restoreMarkerName)).createSync();
       copy(journal, '$databasePath$rollbackJournalSuffix');
       copy(database, databasePath);
     } on Object catch (error) {
@@ -223,9 +265,7 @@ class _HotJournalSnapshot {
     }
   }
 
-  void dispose() {
-    if (directory.existsSync()) directory.deleteSync(recursive: true);
-  }
+  void dispose() => _deleteSnapshotDirectory(directory);
 }
 
 File _copyFile(File source, String destination) => source.copySync(destination);
