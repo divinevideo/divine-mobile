@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -14,6 +15,12 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 class _FakeBuildContext extends Fake implements BuildContext {}
 
 class _FakeGoRouterState extends Fake implements GoRouterState {}
+
+class _RoomRequest extends Fake implements GoRouterState {
+  _RoomRequest(this.uri);
+  @override
+  final Uri uri;
+}
 
 void main() {
   group('chatRedirectIfUnavailable', () {
@@ -69,6 +76,32 @@ void main() {
         await route.redirect!(_FakeBuildContext(), _FakeGoRouterState()),
         VideoFeedPage.pathForIndex(0),
       );
+    });
+
+    test('the /chat route hands the page the room it was asked for', () {
+      final routesProvider = Provider<List<RouteBase>>(chatRoutes);
+      final container = ProviderContainer(
+        overrides: [
+          featureFlagStateProvider.overrideWithValue({
+            FeatureFlag.concordChat: true,
+          }),
+          isDmRestrictedProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+      final route = container.read(routesProvider).single as GoRoute;
+
+      final page = route.builder!(
+        _FakeBuildContext(),
+        _RoomRequest(
+          Uri.parse(
+            '/chat?community=community-test&channel=introductions',
+          ),
+        ),
+      ) as ChatPage;
+
+      expect(page.communityId, 'community-test');
+      expect(page.channelId, 'introductions');
     });
   });
 }

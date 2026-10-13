@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -82,6 +83,59 @@ void main() {
         expect(find.byType(ChoiceChip), findsNothing);
       });
     }
+
+    testWidgets('tapping a room asks the router for that room', (tester) async {
+      Map<String, String>? opened;
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(_Auth('a' * 64)),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          featureFlagStateProvider.overrideWithValue({
+            FeatureFlag.concordChat: true,
+          }),
+          isDmRestrictedProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(
+              body: MessagesHomePage(direct: Text('direct-content')),
+            ),
+          ),
+          GoRoute(
+            path: '/chat',
+            name: 'chat',
+            builder: (_, state) {
+              opened = state.uri.queryParameters;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.messagesRooms));
+      await tester.pump();
+      await tester.tap(find.text('#introductions'));
+      await tester.pumpAndSettle();
+      expect(opened, {
+        'community': 'community-test',
+        'channel': 'introductions',
+      });
+    });
 
     testWidgets('auth teardown hides Rooms even before the key is cleared', (
       tester,

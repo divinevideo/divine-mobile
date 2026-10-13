@@ -2,8 +2,11 @@
 // ABOUTME: Recreating the service must restore only the selected account's view.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/messages_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _RefusingPreferences extends Mock implements SharedPreferences {}
 
 void main() {
   group(MessagesPreferenceService, () {
@@ -26,5 +29,14 @@ void main() {
         expect(restored.roomsSelected(second), isTrue);
       },
     );
+
+    test('reports a save the platform refused', () async {
+      final prefs = _RefusingPreferences();
+      when(() => prefs.setBool(any(), any())).thenAnswer((_) async => false);
+      await expectLater(
+        MessagesPreferenceService(prefs).selectRooms('a' * 64, selected: true),
+        throwsStateError,
+      );
+    });
   });
 }
