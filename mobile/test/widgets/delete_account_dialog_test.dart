@@ -1539,6 +1539,63 @@ void main() {
       expect(find.text('Bug report form'), findsOneWidget);
     });
 
+    testWidgets('a rejected screen-reader announcement does not escape', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(
+        const AccountDeletionRecoveryException(
+          'Deletion attempt request failed (404)',
+          stage: AccountDeletionRecoveryStage.coordinatorAttempt,
+          statusCode: 404,
+          indicatesMissingCoordinatorRoute: true,
+        ),
+      );
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            (_) async => throw PlatformException(code: 'announce-failed'),
+          );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(_englishL10n().deleteAccountDeletionUnavailable),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       'a missing coordinator route shows unavailable even when a name is owned',
       (tester) async {
