@@ -20,6 +20,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey;
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -46,11 +47,14 @@ class AuthServiceChannelMocks {
   /// Reported by the native `existAndroidNostrSigner` probe (NIP-55 Amber).
   bool androidSignerInstalled = true;
 
+  /// Makes every secure-storage write fail, as a broken Android Keystore does.
+  bool failWrites = false;
+
   /// Installs the secure-storage, capability, and native-signer channel mocks
   /// AuthService reaches during sign-in / restore.
   factory AuthServiceChannelMocks.install() {
     final mocks = AuthServiceChannelMocks._();
-    _installSecureStorageHandlers(mocks.secureStorage);
+    _installSecureStorageHandlers(mocks);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_androidPluginChannel, (call) async {
           if (call.method == 'existAndroidNostrSigner') {
@@ -76,13 +80,20 @@ class AuthServiceChannelMocks {
         .setMockMethodCallHandler(_androidPluginChannel, null);
   }
 
-  static void _installSecureStorageHandlers(Map<String, String> store) {
+  static void _installSecureStorageHandlers(AuthServiceChannelMocks mocks) {
+    final store = mocks.secureStorage;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       ..setMockMethodCallHandler(_secureStorageChannel, (call) async {
         switch (call.method) {
           case 'read':
             return store[call.arguments['key'] as String?];
           case 'write':
+            if (mocks.failWrites) {
+              throw PlatformException(
+                code: 'Exception encountered',
+                message: 'javax.crypto.BadPaddingException: BAD_DECRYPT',
+              );
+            }
             final key = call.arguments['key'] as String?;
             final value = call.arguments['value'] as String?;
             if (key != null && value != null) store[key] = value;
@@ -142,10 +153,12 @@ AuthService buildTestAuthService({
   AuthUrlLauncher? launchAuthUrl,
   KeycastOAuth? oauthClient,
   Future<void> Function(String pubkeyHex)? preFetchFollowing,
+  CrashReporter? crashReporter,
 }) {
   return AuthService(
     backgroundActivityManager: BackgroundActivityManager(),
     userDataCleanupService: cleanupService,
+    crashReporter: crashReporter,
     keyStorage: SecureKeyStorage(
       securityConfig: const SecurityConfig(requireHardwareBacked: false),
     ),

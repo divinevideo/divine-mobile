@@ -23,6 +23,7 @@ import 'package:openvine/models/auth_service_callbacks.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/auth_user_profile.dart';
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/models/key_import_failed_exception.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -53,6 +54,7 @@ export 'package:openvine/models/auth_service_callbacks.dart';
 export 'package:openvine/models/auth_state.dart';
 export 'package:openvine/models/auth_user_profile.dart';
 export 'package:openvine/models/authentication_source.dart';
+export 'package:openvine/models/key_import_failed_exception.dart';
 // Discovery callback contracts moved with the orchestrator (#4741); external
 // consumers (NostrService wiring) keep importing them from this facade.
 export 'package:openvine/services/auth/relay_discovery_orchestrator.dart'
@@ -2289,52 +2291,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Import identity from nsec (bech32 private key)
-  Future<AuthResult> importFromNsec(String nsec) async {
-    Log.debug(
-      'Importing identity from nsec to secure storage',
-      name: 'AuthService',
-      category: LogCategory.auth,
-    );
-
-    _setAuthState(AuthState.authenticating);
-    _lastError = null;
-
-    try {
-      // Validate nsec format
-      if (!NostrKeyUtils.isValidNsec(nsec)) {
-        throw Exception('Invalid nsec format');
-      }
-
-      // Import keys into secure storage
-      final keyContainer = await _keyStorage.importFromNsec(nsec);
-
-      // Set up user session
-      await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
-
-      Log.info(
-        'Identity imported to secure storage successfully',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.debug(
-        '📱 Public key: ${pubkeyForLogs(keyContainer.npub)}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-
-      return AuthResult.success(keyContainer);
-    } catch (e) {
-      Log.error(
-        'Failed to import identity: $e',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      _lastError = 'Failed to import identity: $e';
-      _setAuthState(AuthState.unauthenticated);
-
-      return AuthResult.failure(_lastError!);
-    }
-  }
+  Future<AuthResult> importFromNsec(String nsec) => _importLocalKey(
+    label: 'identity',
+    invalidFormat: 'Invalid nsec format',
+    isValid: NostrKeyUtils.isValidNsec(nsec),
+    store: () => _keyStorage.importFromNsec(nsec),
+    secrets: () => [nsec, NostrKeyUtils.decode(nsec)],
+    reason: 'importFromNsec',
+  );
 
   /// Import identity from an ncryptsec1 encrypted private key (NIP-49).
   ///
@@ -2363,49 +2327,64 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Import identity from hex private key
-  Future<AuthResult> importFromHex(String privateKeyHex) async {
+  Future<AuthResult> importFromHex(String privateKeyHex) => _importLocalKey(
+    label: 'from hex',
+    invalidFormat: 'Invalid private key format',
+    isValid: NostrKeyUtils.isValidKey(privateKeyHex),
+    store: () => _keyStorage.importFromHex(privateKeyHex),
+    secrets: () => [privateKeyHex],
+    reason: 'importFromHex',
+  );
+
+  /// Stores a local private key and signs in with it.
+  ///
+  /// A key that fails [isValid] is the user's to fix and is not reported. A
+  /// valid key that cannot be stored or signed in with is reported, because
+  /// the user only sees a generic failure. [secrets] are cut out of that
+  /// report first: an error can echo the key it was handed.
+  Future<AuthResult> _importLocalKey({
+    required String label,
+    required String invalidFormat,
+    required bool isValid,
+    required Future<SecureKeyContainer> Function() store,
+    required List<String> Function() secrets,
+    required String reason,
+  }) async {
     Log.debug(
-      'Importing identity from hex to secure storage',
+      'Importing $label to secure storage',
       name: 'AuthService',
       category: LogCategory.auth,
     );
-
     _setAuthState(AuthState.authenticating);
     _lastError = null;
 
+    if (!isValid) {
+      _lastError = 'Failed to import $label: $invalidFormat';
+      Log.warning(_lastError!, name: 'AuthService', category: LogCategory.auth);
+      _setAuthState(AuthState.unauthenticated);
+      return AuthResult.failure(_lastError!);
+    }
+
     try {
-      // Validate hex format
-      if (!NostrKeyUtils.isValidKey(privateKeyHex)) {
-        throw Exception('Invalid private key format');
-      }
-
-      // Import keys into secure storage
-      final keyContainer = await _keyStorage.importFromHex(privateKeyHex);
-
-      // Set up user session
+      final keyContainer = await store();
       await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
 
       Log.info(
-        'Identity imported from hex to secure storage successfully',
+        'Imported $label as ${pubkeyForLogs(keyContainer.npub)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
-      Log.debug(
-        '📱 Public key: ${pubkeyForLogs(keyContainer.npub)}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-
       return AuthResult.success(keyContainer);
-    } catch (e) {
-      Log.error(
-        'Failed to import from hex: $e',
-        name: 'AuthService',
-        category: LogCategory.auth,
+    } catch (e, stack) {
+      _lastError = 'Failed to import $label: $e';
+      Log.error(_lastError!, name: 'AuthService', category: LogCategory.auth);
+      _reportAuthError(
+        KeyImportFailedException.redacting(e, secrets()),
+        stack,
+        reason: reason,
+        logMessage: 'Key import failed after validation: $reason',
       );
-      _lastError = 'Failed to import from hex: $e';
       _setAuthState(AuthState.unauthenticated);
-
       return AuthResult.failure(_lastError!);
     }
   }
@@ -3886,11 +3865,19 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       }
     } // end else (no prior storage error)
 
-    // Step 3: Genuinely no keys — fresh install, wait for onboarding
-    Log.info(
-      'No existing secure keys found, staying unauthenticated for onboarding.',
+    // Step 3: No keys. A fresh install never gets here — it has no persisted
+    // auth source — so a session this device signed in with has lost its key
+    // and the user is signed out with nothing on screen to say why.
+    Log.warning(
+      'Persisted local-key session has no stored key, signing out.',
       name: 'AuthService',
       category: LogCategory.auth,
+    );
+    _reportAuthError(
+      StateError('Persisted local-key session has no stored key'),
+      StackTrace.current,
+      reason: '_checkExistingAuth no stored key',
+      logMessage: 'Persisted local-key session has no stored key',
     );
     _setAuthState(AuthState.unauthenticated);
   }
