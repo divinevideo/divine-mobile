@@ -109,5 +109,49 @@ void main() {
       expect(repo.timeline(now: 10).messages, isEmpty);
       expect(await store.get('index'), '');
     });
+    test('purgeExpired removes the expired message rows', () async {
+      final store = InMemoryConcordStore('a' * 64);
+      final repo = ConcordRepository(
+        relay: _FakeRelay(),
+        store: store,
+        cipher: _Cipher(),
+      );
+      await repo.send(
+        communityId: 'c',
+        channelId: 'general',
+        author: 'a' * 64,
+        body: 'ephemeral',
+        createdAt: 1,
+        expiresAt: 5,
+      );
+      final id = repo.timeline(now: 1).messages.single.id;
+      expect(await store.get('msg:$id'), 'ephemeral');
+      await repo.purgeExpired(now: 10);
+      for (final key in ['msg', 'meta', 'sent']) {
+        expect(await store.get('$key:$id'), isNull, reason: key);
+      }
+    });
+    test('purgeExpired before restore keeps unexpired messages', () async {
+      final store = InMemoryConcordStore('a' * 64);
+      await ConcordRepository(
+        relay: _FakeRelay(),
+        store: store,
+        cipher: _Cipher(),
+      ).send(
+        communityId: 'c',
+        channelId: 'general',
+        author: 'a' * 64,
+        body: 'kept',
+        createdAt: 1,
+      );
+      final restarted = ConcordRepository(
+        relay: _FakeRelay(),
+        store: store,
+        cipher: _Cipher(),
+      );
+      await restarted.purgeExpired(now: 10);
+      await restarted.restore();
+      expect(restarted.timeline(now: 10).messages.single.body, 'kept');
+    });
   });
 }
