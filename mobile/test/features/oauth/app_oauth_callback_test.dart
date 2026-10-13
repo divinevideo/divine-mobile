@@ -181,4 +181,65 @@ void main() {
       );
     });
   });
+
+  group('the verifier sign-in code', () {
+    const code = 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
+
+    test('keeps a code sent after the # as a query value', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?signin=abc&platform=bluesky'
+        '#oauth_confirm=$code',
+      );
+      expect(uri.hasFragment, isFalse);
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+      expect(uri.queryParameters['signin'], equals('abc'));
+    });
+
+    test('prefers the code after the # to one in the query', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?oauth_confirm=old'
+        '#oauth_confirm=$code',
+      );
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+    });
+
+    test('still reads a code sent in the query', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?signin=abc&oauth_confirm=$code',
+      );
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+    });
+
+    test('reads the code next to a provider junk fragment', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?signin=abc'
+        '#oauth_confirm=$code&_=_',
+      );
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+    });
+
+    test('takes no code from a fragment that does not decode', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?signin=abc#oauth_confirm=%E0',
+      );
+      expect(uri.hasFragment, isFalse);
+      expect(uri.queryParameters, equals({'signin': 'abc'}));
+    });
+
+    test('keeps repeated query keys when it adds the code', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?a=1&a=2#oauth_confirm=$code',
+      );
+      expect(uri.queryParametersAll['a'], equals(['1', '2']));
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+    });
+
+    test('drops a junk fragment with no code, as before', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?code=k#_=_',
+      );
+      expect(uri.hasFragment, isFalse);
+      expect(uri.queryParameters, equals({'code': 'k'}));
+    });
+  });
 }
