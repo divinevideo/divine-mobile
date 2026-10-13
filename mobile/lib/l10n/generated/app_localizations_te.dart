@@ -13803,4 +13803,20 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get messagesDirect => 'నేరుగా';
+
+  @override
+  String get messagesRooms => 'గదులు';
+
+  @override
+  String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.';
+
+  @override
+  String get messagesNoRooms => 'ఇంకా గదులు లేవు';
 }

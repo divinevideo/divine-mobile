@@ -13438,4 +13438,20 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'أترك هذا هنا.';
+
+  @override
+  String get messagesDirect => 'مباشرة';
+
+  @override
+  String get messagesRooms => 'الغرف';
+
+  @override
+  String get messagesPublicTestRooms => 'غرف اختبار عامة';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.';
+
+  @override
+  String get messagesNoRooms => 'لا توجد غرف بعد';
 }

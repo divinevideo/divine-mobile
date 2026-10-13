@@ -1,13 +1,10 @@
 // MPL-2.0
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
-import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 
@@ -18,21 +15,10 @@ List<RouteBase> chatRoutes(Ref ref) => [
     path: ChatScreen.path,
     name: 'chat',
     redirect: (_, _) => chatRedirectIfUnavailable(ref),
-    builder: (ctx, st) {
-      final auth = ref.read(authServiceProvider);
-      return BlocProvider(
-        create: (_) => ChatCubit(
-          pocStreamForChannel: pocStreamKeyFor,
-          sealedAuthor: auth.currentPublicKeyHex ?? '',
-          buildConcordRepository(
-            pubkey: auth.currentPublicKeyHex,
-            signer: auth.currentIdentity,
-            streamPubkey: auth.currentPublicKeyHex ?? '',
-          ),
-        ),
-        child: const ChatScreen(),
-      );
-    },
+    builder: (ctx, st) => ChatPage(
+      communityId: st.uri.queryParameters['community'],
+      channelId: st.uri.queryParameters['channel'],
+    ),
   ),
 ];
 

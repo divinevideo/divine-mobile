@@ -13574,4 +13574,21 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get messagesDirect => 'Direkta';
+
+  @override
+  String get messagesRooms => 'Mga silid';
+
+  @override
+  String get messagesPublicTestRooms =>
+      'Mga pampublikong silid para sa pagsubok';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.';
+
+  @override
+  String get messagesNoRooms => 'Wala pang mga silid';
 }

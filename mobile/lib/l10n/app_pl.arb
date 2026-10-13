@@ -5041,5 +5041,10 @@
   "ideasTitleFive": "Bez wielkich wyjaśnień",
   "ideasDescriptionFive": "Po prostu chcę się podzielić.",
   "ideasTitleSix": "Odrobina dzisiaj",
-  "ideasDescriptionSix": "Zostawiam to tutaj."
+  "ideasDescriptionSix": "Zostawiam to tutaj.",
+  "messagesDirect": "Bezpośrednie",
+  "messagesRooms": "Pokoje",
+  "messagesPublicTestRooms": "Publiczne pokoje testowe",
+  "messagesPublicTestDisclosure": "Te pokoje testowe są publiczne. Każdy, kto ma dostęp, może czytać Twoje wiadomości.",
+  "messagesNoRooms": "Nie ma jeszcze pokoi"
 }

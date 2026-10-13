@@ -13586,4 +13586,20 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get messagesDirect => 'Лични';
+
+  @override
+  String get messagesRooms => 'Стаи';
+
+  @override
+  String get messagesPublicTestRooms => 'Публични тестови стаи';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.';
+
+  @override
+  String get messagesNoRooms => 'Все още няма стаи';
 }

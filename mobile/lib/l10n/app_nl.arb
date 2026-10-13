@@ -5041,5 +5041,10 @@
   "ideasTitleFive": "Geen grote uitleg",
   "ideasDescriptionFive": "Wilde het gewoon delen.",
   "ideasTitleSix": "Een beetje van vandaag",
-  "ideasDescriptionSix": "Dit laat ik hier achter."
+  "ideasDescriptionSix": "Dit laat ik hier achter.",
+  "messagesDirect": "Direct",
+  "messagesRooms": "Kamers",
+  "messagesPublicTestRooms": "Openbare testkamers",
+  "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
+  "messagesNoRooms": "Nog geen kamers"
 }

@@ -5165,5 +5165,10 @@
   "ideasTitleFive": "Без много обяснения",
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
-  "ideasDescriptionSix": "Оставям това тук."
+  "ideasDescriptionSix": "Оставям това тук.",
+  "messagesDirect": "Лични",
+  "messagesRooms": "Стаи",
+  "messagesPublicTestRooms": "Публични тестови стаи",
+  "messagesPublicTestDisclosure": "Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.",
+  "messagesNoRooms": "Все още няма стаи"
 }

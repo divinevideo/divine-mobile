@@ -13463,4 +13463,20 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get messagesDirect => 'Direkt';
+
+  @override
+  String get messagesRooms => 'Rum';
+
+  @override
+  String get messagesPublicTestRooms => 'Offentliga testrum';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.';
+
+  @override
+  String get messagesNoRooms => 'Inga rum ännu';
 }

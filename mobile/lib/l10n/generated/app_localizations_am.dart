@@ -13120,4 +13120,20 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get messagesDirect => 'ቀጥታ';
+
+  @override
+  String get messagesRooms => 'ክፍሎች';
+
+  @override
+  String get messagesPublicTestRooms => 'ይፋዊ የሙከራ ክፍሎች';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።';
+
+  @override
+  String get messagesNoRooms => 'ገና ምንም ክፍሎች የሉም';
 }

@@ -12811,4 +12811,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get messagesDirect => '다이렉트';
+
+  @override
+  String get messagesRooms => '채팅방';
+
+  @override
+  String get messagesPublicTestRooms => '공개 테스트 채팅방';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      '이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.';
+
+  @override
+  String get messagesNoRooms => '아직 채팅방이 없어요';
 }

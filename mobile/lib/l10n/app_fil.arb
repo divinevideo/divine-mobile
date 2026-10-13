@@ -4040,5 +4040,10 @@
   "ideasTitleFive": "Walang mahabang paliwanag",
   "ideasDescriptionFive": "Gusto ko lang magbahagi.",
   "ideasTitleSix": "Kaunti mula sa araw na ito",
-  "ideasDescriptionSix": "Iiwan ko ito rito."
+  "ideasDescriptionSix": "Iiwan ko ito rito.",
+  "messagesDirect": "Direkta",
+  "messagesRooms": "Mga silid",
+  "messagesPublicTestRooms": "Mga pampublikong silid para sa pagsubok",
+  "messagesPublicTestDisclosure": "Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.",
+  "messagesNoRooms": "Wala pang mga silid"
 }

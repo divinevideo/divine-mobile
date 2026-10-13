@@ -31,6 +31,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/message_requests/message_requests_page.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/message_requests_banner.dart';
+import 'package:openvine/screens/inbox/messages/messages_home_page.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_actions_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_tile.dart';
@@ -190,7 +191,9 @@ class _InboxViewState extends ConsumerState<InboxView>
                     messages: _messagesActivated
                         ? KeyedSubtree(
                             key: ValueKey('messages-$currentPubkey'),
-                            child: const _MessagesContent(),
+                            child: const MessagesHomePage(
+                              direct: _MessagesContent(),
+                            ),
                           )
                         : const SizedBox.shrink(),
                   ),

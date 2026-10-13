@@ -13622,4 +13622,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Das lasse ich hier.';
+
+  @override
+  String get messagesDirect => 'Direkt';
+
+  @override
+  String get messagesRooms => 'Räume';
+
+  @override
+  String get messagesPublicTestRooms => 'Öffentliche Testräume';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Diese Testräume sind öffentlich. Alle mit Zugang können deine Nachrichten lesen.';
+
+  @override
+  String get messagesNoRooms => 'Noch keine Räume';
 }

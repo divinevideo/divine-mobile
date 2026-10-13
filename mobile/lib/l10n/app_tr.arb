@@ -5041,5 +5041,10 @@
   "ideasTitleFive": "Uzun açıklama yok",
   "ideasDescriptionFive": "Sadece paylaşmak istedim.",
   "ideasTitleSix": "Bugünden bir parça",
-  "ideasDescriptionSix": "Bunu buraya bırakıyorum."
+  "ideasDescriptionSix": "Bunu buraya bırakıyorum.",
+  "messagesDirect": "Doğrudan",
+  "messagesRooms": "Odalar",
+  "messagesPublicTestRooms": "Herkese açık test odaları",
+  "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
+  "messagesNoRooms": "Henüz oda yok"
 }

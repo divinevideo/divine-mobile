@@ -13529,4 +13529,20 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+
+  @override
+  String get messagesDirect => 'Direct';
+
+  @override
+  String get messagesRooms => 'Kamers';
+
+  @override
+  String get messagesPublicTestRooms => 'Openbare testkamers';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.';
+
+  @override
+  String get messagesNoRooms => 'Nog geen kamers';
 }

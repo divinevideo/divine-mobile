@@ -6811,5 +6811,10 @@
   "ideasTitleFive": "无需太多解释",
   "ideasDescriptionFive": "只是想分享。",
   "ideasTitleSix": "今天的一小段",
-  "ideasDescriptionSix": "把这个留在这里。"
+  "ideasDescriptionSix": "把这个留在这里。",
+  "messagesDirect": "私信",
+  "messagesRooms": "聊天室",
+  "messagesPublicTestRooms": "公开测试聊天室",
+  "messagesPublicTestDisclosure": "这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。",
+  "messagesNoRooms": "暂无聊天室"
 }

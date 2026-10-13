@@ -5041,5 +5041,10 @@
   "ideasTitleFive": "Sin grandes explicaciones",
   "ideasDescriptionFive": "Solo quería compartirlo.",
   "ideasTitleSix": "Un poquito de hoy",
-  "ideasDescriptionSix": "Lo dejo por aquí."
+  "ideasDescriptionSix": "Lo dejo por aquí.",
+  "messagesDirect": "Directos",
+  "messagesRooms": "Salas",
+  "messagesPublicTestRooms": "Salas públicas de prueba",
+  "messagesPublicTestDisclosure": "Estas salas de prueba son públicas. Cualquiera con acceso puede leer tus mensajes.",
+  "messagesNoRooms": "Todavía no hay salas"
 }

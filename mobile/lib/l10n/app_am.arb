@@ -5141,5 +5141,10 @@
   "ideasTitleFive": "ያለ ረጅም ማብራሪያ",
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
-  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።"
+  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "messagesDirect": "ቀጥታ",
+  "messagesRooms": "ክፍሎች",
+  "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
+  "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
+  "messagesNoRooms": "ገና ምንም ክፍሎች የሉም"
 }

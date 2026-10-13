@@ -5,9 +5,9 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 
-/// Native (non-WebView) community chat: community/channel lists,
-/// timeline, composer, thread view, reactions, invite acceptance.
+/// Native conversation for the internal Concord POC selected from Messages.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
   static const path = '/chat';
@@ -17,11 +17,9 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
-  final _inviteController = TextEditingController();
   @override
   void dispose() {
     _controller.dispose();
-    _inviteController.dispose();
     super.dispose();
   }
 
@@ -34,93 +32,25 @@ class _ChatScreenState extends State<ChatScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              state.threadRootId == null ? 'Community chat' : 'Thread',
+              '#${state.selectedChannelId}',
             ),
             leading: state.threadRootId == null
                 ? null
                 : DivineIconButton(
                     icon: DivineIconName.arrowLeft,
-                    semanticLabel: 'Back',
+                    semanticLabel: context.l10n.commonBack,
                     onPressed: cubit.closeThread,
                   ),
           ),
-          drawer: Drawer(
-            child: ListView(
-              children: [
-                const DrawerHeader(child: Text('Communities')),
-                for (final c in state.communities) ...[
-                  ListTile(title: Text(c.name), subtitle: Text(c.id)),
-                  for (final ch in c.channels)
-                    ListTile(
-                      leading: const Text('#'),
-                      title: Text(ch),
-                      selected:
-                          state.selectedCommunityId == c.id &&
-                          state.selectedChannelId == ch,
-                      onTap: () {
-                        cubit.selectChannel(c.id, ch);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                ],
-                const Divider(),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextField(
-                    controller: _inviteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Invite (community id)',
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: DivineButton(
-                    onPressed: () {
-                      final id = _inviteController.text.trim();
-                      if (id.isEmpty) return;
-                      unawaited(cubit.acceptInvite(id));
-                    },
-                    label: state.acceptedInvite
-                        ? 'Invite accepted'
-                        : 'Accept invite',
-                  ),
-                ),
-              ],
-            ),
-          ),
           body: Column(
             children: [
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (final c in state.communities)
-                      for (final ch in c.channels)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 6,
-                          ),
-                          child: ChoiceChip(
-                            label: Text('#$ch'),
-                            selected:
-                                state.selectedCommunityId == c.id &&
-                                state.selectedChannelId == ch,
-                            onSelected: (_) => cubit.selectChannel(c.id, ch),
-                          ),
-                        ),
-                  ],
-                ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(context.l10n.messagesPublicTestDisclosure),
               ),
               Expanded(
                 child: messages.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Nothing looping yet. Go find your people.',
-                        ),
-                      )
+                    ? Center(child: Text(context.l10n.inboxEmptyTitle))
                     : ListView.builder(
                         itemCount: messages.length,
                         itemBuilder: (context, i) {
@@ -132,19 +62,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               r == null ? m.author : '$r',
                             ),
                             onTap: () => cubit.openThread(m.id),
-                            trailing: DivineIconButton(
-                              icon: DivineIconName.heart,
-                              semanticLabel: 'React',
-                              onPressed: () => unawaited(
-                                cubit.react(
-                                  targetId: m.id,
-                                  emoji: '❤️',
-                                  now:
-                                      DateTime.now().millisecondsSinceEpoch ~/
-                                      1000,
-                                ),
-                              ),
-                            ),
                           );
                         },
                       ),
@@ -154,14 +71,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Message',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.profileMessageLabel,
                       ),
                     ),
                   ),
                   DivineIconButton(
                     icon: DivineIconName.paperPlaneTilt,
-                    semanticLabel: 'Send message',
+                    semanticLabel: context.l10n.dmMessageSendLabel,
                     onPressed: () {
                       final text = _controller.text.trim();
                       if (text.isEmpty) return;

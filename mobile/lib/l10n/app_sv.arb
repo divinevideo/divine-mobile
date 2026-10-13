@@ -5041,5 +5041,10 @@
   "ideasTitleFive": "Ingen stor förklaring",
   "ideasDescriptionFive": "Ville bara dela.",
   "ideasTitleSix": "Lite av idag",
-  "ideasDescriptionSix": "Lämnar det här."
+  "ideasDescriptionSix": "Lämnar det här.",
+  "messagesDirect": "Direkt",
+  "messagesRooms": "Rum",
+  "messagesPublicTestRooms": "Offentliga testrum",
+  "messagesPublicTestDisclosure": "Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.",
+  "messagesNoRooms": "Inga rum ännu"
 }
