@@ -2,6 +2,7 @@
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 
 class ChatCommunity {
   const ChatCommunity(this.id, this.name, this.channels);
@@ -54,16 +55,16 @@ class ChatState {
 
 /// Cubit over [ConcordRepository]; reuses the active Divine session's
 /// repository (injected), so no new login/keypair flow exists here.
-class ChatCubit extends Cubit<ChatState> {
+class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   ChatCubit(this._repo) : super(const ChatState());
   final ConcordRepository _repo;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
-    emit(state.copyWith(messages: t.messages, reactions: t.reactions));
+    emitIfOpen(state.copyWith(messages: t.messages, reactions: t.reactions));
   }
 
   void selectChannel(String communityId, String channelId) {
-    emit(
+    emitIfOpen(
       state.copyWith(
         selectedCommunityId: communityId,
         selectedChannelId: channelId,
@@ -72,8 +73,9 @@ class ChatCubit extends Cubit<ChatState> {
     );
   }
 
-  void openThread(String rootId) => emit(state.copyWith(threadRootId: rootId));
-  void closeThread() => emit(state.copyWith(clearThread: true));
+  void openThread(String rootId) =>
+      emitIfOpen(state.copyWith(threadRootId: rootId));
+  void closeThread() => emitIfOpen(state.copyWith(clearThread: true));
 
   Future<void> react({
     required String targetId,
@@ -118,6 +120,6 @@ class ChatCubit extends Cubit<ChatState> {
 
   Future<void> acceptInvite(String communityId) async {
     await _repo.acceptInvite(communityId);
-    emit(state.copyWith(acceptedInvite: true));
+    emitIfOpen(state.copyWith(acceptedInvite: true));
   }
 }

@@ -38,8 +38,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             leading: state.threadRootId == null
                 ? null
-                : IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                : DivineIconButton(
+                    icon: DivineIconName.arrowLeft,
+                    semanticLabel: 'Back',
                     onPressed: cubit.closeThread,
                   ),
           ),
@@ -51,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ListTile(title: Text(c.name), subtitle: Text(c.id)),
                   for (final ch in c.channels)
                     ListTile(
-                      leading: const Icon(Icons.tag),
+                      leading: const Text('#'),
                       title: Text(ch),
                       selected:
                           state.selectedCommunityId == c.id &&
@@ -74,17 +75,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ElevatedButton(
+                  child: DivineButton(
                     onPressed: () {
                       final id = _inviteController.text.trim();
                       if (id.isEmpty) return;
                       unawaited(cubit.acceptInvite(id));
                     },
-                    child: Text(
-                      state.acceptedInvite
-                          ? 'Invite accepted'
-                          : 'Accept invite',
-                    ),
+                    label: state.acceptedInvite
+                        ? 'Invite accepted'
+                        : 'Accept invite',
                   ),
                 ),
               ],
@@ -133,9 +132,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               r == null ? m.author : '$r',
                             ),
                             onTap: () => cubit.openThread(m.id),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.favorite_border),
-                              tooltip: 'React',
+                            trailing: DivineIconButton(
+                              icon: DivineIconName.heart,
+                              semanticLabel: 'React',
                               onPressed: () => unawaited(
                                 cubit.react(
                                   targetId: m.id,
