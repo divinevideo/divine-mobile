@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/geo_blocked_screen.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class GeoBlockingGate extends ConsumerStatefulWidget {
@@ -25,7 +26,12 @@ class _GeoBlockingGateState extends ConsumerState<GeoBlockingGate> {
   @override
   void initState() {
     super.initState();
-    _checkGeoBlocking();
+    runDetached(
+      _checkGeoBlocking(),
+      'check geo-blocking status',
+      logName: 'GeoBlockingGate',
+      category: LogCategory.system,
+    );
   }
 
   Future<void> _checkGeoBlocking() async {

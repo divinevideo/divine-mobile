@@ -13,12 +13,10 @@ discarded_futures|lib/screens/other_profile_screen.dart	1
 discarded_futures|lib/screens/profile_screen_router.dart	1
 discarded_futures|lib/screens/profile_setup/view/profile_setup_view.dart	2
 discarded_futures|lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
-discarded_futures|lib/screens/relay_diagnostic_screen.dart	1
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/web_auth_screen.dart	1
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/delete_account_dialog.dart	2
-discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
