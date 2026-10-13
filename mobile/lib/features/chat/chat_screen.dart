@@ -4,11 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 
 /// Native conversation for the internal Concord POC selected from Messages.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
-  static const path = '/chat';
+  static const String path = RoutePaths.chat;
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
