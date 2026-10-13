@@ -56,8 +56,19 @@ class ChatState {
 /// Cubit over [ConcordRepository]; reuses the active Divine session's
 /// repository (injected), so no new login/keypair flow exists here.
 class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
-  ChatCubit(this._repo) : super(const ChatState());
+  ChatCubit(
+    this._repo, {
+    this.pocStreamForChannel,
+    this.sealedAuthor = '',
+  }) : super(const ChatState());
   final ConcordRepository _repo;
+
+  /// Signed-in pubkey used as sealed rumor author (session identity).
+  final String sealedAuthor;
+
+  /// Resolves the POC stream key for a channel (held keys replace this
+  /// once kind-33302 sync loads them). Null disables sealed sending.
+  final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
     emitIfOpen(state.copyWith(messages: t.messages, reactions: t.reactions));
@@ -108,13 +119,29 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     required String body,
     required int now,
   }) async {
-    await _repo.send(
-      communityId: communityId,
-      channelId: channelId,
-      author: author,
-      body: body,
-      createdAt: now,
-    );
+    final stream = pocStreamForChannel?.call(channelId);
+    final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
+    if (_repo.sealedTransport != null &&
+        stream != null &&
+        effectiveAuthor.isNotEmpty) {
+      await _repo.sendSealedMessage(
+        channelId: channelId,
+        author: effectiveAuthor,
+        body: body,
+        createdAt: now,
+        ms: now % 1000,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+      );
+    } else {
+      await _repo.send(
+        communityId: communityId,
+        channelId: channelId,
+        author: author,
+        body: body,
+        createdAt: now,
+      );
+    }
     refresh(now: now);
   }
 

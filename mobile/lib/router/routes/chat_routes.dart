@@ -17,6 +17,8 @@ List<RouteBase> chatRoutes(Ref ref) => [
       final auth = ref.read(authServiceProvider);
       return BlocProvider(
         create: (_) => ChatCubit(
+          pocStreamForChannel: pocStreamKeyFor,
+          sealedAuthor: auth.currentPublicKeyHex ?? '',
           buildConcordRepository(
             pubkey: auth.currentPublicKeyHex,
             signer: auth.currentIdentity,

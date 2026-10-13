@@ -253,3 +253,30 @@ Future<Map<String, dynamic>> openWrap({
     'rumor': rumor,
   };
 }
+
+/// Async author signer port: the app binds this to the active Divine
+/// session identity (Keycast/local/external); packages never hold keys.
+typedef SealSigner =
+    Future<Map<String, dynamic>> Function(
+      Map<String, dynamic> template,
+    );
+
+Future<Map<String, dynamic>> sealRumorWithSigner({
+  required Map<String, dynamic> rumor,
+  required int sealKind,
+  required String streamSeedHex,
+  required String streamPubkey,
+  required SealSigner signer,
+}) async {
+  final conv = conversationKey(streamSeedHex, streamPubkey);
+  final rumorJson = jsonEncode(rumor);
+  final content = sealKind == 20013
+      ? await nip44Encrypt(rumorJson, conv)
+      : rumorJson;
+  return signer({
+    'kind': sealKind,
+    'content': content,
+    'tags': <List<String>>[],
+    'created_at': rumor['created_at'],
+  });
+}
