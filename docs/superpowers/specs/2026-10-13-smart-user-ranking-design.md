@@ -44,9 +44,9 @@ The loader reads these signals:
 |---|---|---|
 | Last interaction | `DmRepository.watchAcceptedConversations()`, taking its first emission: `lastMessageTimestamp` of each 1:1 conversation where `currentUserHasSent` | This covers shares as well, since a share is sent as a DM. Group conversations are ignored. `VideoSharingService.recentlySharedWith` is in-memory, capped at 10, and reset on restart, so it is *not* a ranking source. It only keeps its existing job of showing the current session's shares at the front of the share sheet. |
 | You follow | `FollowRepository.followingPubkeys` | Already in memory. |
-| Follows you / mutual | The persisted my-followers snapshot, read **cache-only** | `relationshipTo` only knows followers after a network fetch. The loader therefore needs a new `FollowRepository.readCachedMyFollowers()` that reads the `CacheSync` entry with `CacheFetchPolicy.cacheOnly`. When nothing is cached, "follows you" stays unknown and scores as absent. It never counts against the person. |
+| Follows you / mutual | The local social graph (§5) | Computed on the device each time it is read: "follows you" is membership in the local follower set, and "mutual" is "you follow them" plus "they follow you". Nothing ever stores a mutual flag, so following someone new who already follows you makes them a mutual straight away. Before the first sync, "follows you" is unknown and scores as absent. It never counts against the person. |
 | Verified NIP-05 | `Nip05VerificationsDao.getValidVerifications(pubkeys)`, batched | Only a *verified* handle scores. A claimed handle is just text that anyone can write into their profile. Ranking never triggers a new verification. |
-| Video count | `ProfileStatsDao` `videoCount`, falling back to `UserProfile.restVideoCount` | Absent when neither is cached. |
+| Video count | `ProfileStatsDao` `videoCount`, falling back to `UserProfile.restVideoCount` | Absent when neither is cached. Kept fresh by the background refresh in §5. |
 | Last posted | A new batched `NostrEventsDao` query: newest cached video event per author, using the kinds in `NIP71VideoKinds.getAllVideoKinds()` | Best-effort, because the event cache is pruned. |
 
 The loader drops the viewer's own pubkey and blocked accounts (through
@@ -131,14 +131,95 @@ The shared indicator line is extracted from `SearchUserTile` into a reusable
 widget, which the DM picker, follow lists and pickers then use. The share
 sheet's horizontal avatar row stays as it is: it has no room for a text line.
 
-### 5. Performance
+### 5. Caching, latency and server cost
 
-All reads are local: one batched Drift read per signal type over the candidate
-set, plus an `O(n log n)` sort. The list draws from the existing cache-first
-path straight away. Nothing re-sorts after first paint (see §3). The loader
-runs inside the BLoC's existing load handler, after the cache-first read and
-before the first `ready` emit, so the list never draws in the old order and
-then jumps to the new one.
+The goal: a ranked list appears as fast as an unranked one, keeps working
+offline, and adds next to no server load.
+
+**Opening a list makes no network call.** Every signal is read from durable
+local storage. The extra local work per open is a handful of batched Drift
+reads over the candidate set, plus a sort. Target: ranking adds less than
+50 ms to a list load on a mid-range phone with 5,000 follows. This is measured
+with a benchmark run on a seeded database, not asserted in CI. Nothing
+re-sorts after first paint (see §3). The loader runs inside the BLoC's
+existing load handler, after the cache-first read and before the first `ready`
+emit, so the list never draws in the old order and then jumps to the new one.
+
+**The social graph lives on the device.** Your following list is already
+local: it is your own kind 3 contact list, which `FollowRepository` persists
+and syncs. Your followers list becomes local too, in a new durable Drift table.
+Every relationship question is answered by computing it from those two local
+sets. Nothing waits on the network, and no server ever decides who is a
+mutual.
+
+- **New table `my_followers`** in `db_client`, with columns `owner_pubkey`,
+  `follower_pubkey`, `followed_at` (nullable) and `last_seen_at`. The primary
+  key is `(owner_pubkey, follower_pubkey)`. It is a real Drift migration with a
+  schema snapshot, as `data_foundation.md` requires. Its retention policy,
+  written in the table's doc comment: one row per follower, bounded by the
+  account's follower count. Rows are pruned by the full reconcile below and
+  deleted for an account by the account-cleanup path. An account switch
+  clears the departing owner's rows through `UserDataCleanupService`, scoped
+  by owner.
+- **`FollowRepository` loads the set at initialization** into the in-memory
+  follower list it already keeps (`_cachedMyFollowersPubkeys`), so
+  `relationshipTo` answers correctly from a cold start. Today that list is only
+  filled after a network fetch. This also fixes the cold-start under-claiming
+  documented at `follow_repository.dart:488` for every screen that shows
+  social proof, not just ranked lists.
+- **"Mutual" is computed, never stored:** `isFollowing(x)` plus membership in
+  the follower set. Follows and unfollows you make take effect immediately,
+  because the following side is already live in memory.
+
+**Keeping the follower set current, cheaply:**
+
+| Step | When | What it fetches |
+|---|---|---|
+| Seed | Once, when the table has no rows for this owner | The existing three-source follower fetch (API, relays, indexers), written in full |
+| Incremental | On app foreground or when a ranked list opens, at most once every 15 minutes, and only while online | One relay query: `kinds: [3], #p: [me], since: <high-water mark minus a skew margin>`. It returns only the contact lists that changed since the last sync and still include you, which is usually none. New authors are added; known ones get `last_seen_at` bumped. |
+| Full reconcile | When the last full sync is more than 7 days old, or whenever the followers screen does a full fetch anyway | The existing fetch. The table is replaced with the result, which is the only way to see unfollows, because a contact list that drops you no longer matches `#p: [me]`. |
+
+Everything runs in the background after first paint and never blocks a list.
+One sync runs at a time. A failed sync keeps the existing rows. Results apply
+on the next open, so visible rows never move (§3). Between full reconciles,
+someone who unfollowed you can still read as "follows you" for up to a week.
+That is the same staleness class the current union-of-sources code already
+has (`follow_repository.dart:492`), and it only costs a small ranking boost.
+
+The server cost goes down, not up. Today every followers-screen open past the
+30-second TTL triggers the full three-source fetch. With the local graph, a
+typical day costs a few incremental relay queries that return little or
+nothing, plus one full fetch a week.
+
+**Other signals:**
+
+| Signal | Store | Lifetime | How it refreshes |
+|---|---|---|---|
+| Last interaction | Drift `conversations` (existing) | Durable | Updates as DMs arrive. Never fetched for ranking. |
+| Verified NIP-05 | Drift `nip05_verifications` (existing) | That table's own expiry | Existing verification flow. Ranking never starts a verification. |
+| Video count | Drift `profile_stats` (existing) | Durable | A background refresh covers only the top 100 ranked candidates whose `cachedAt` is more than 7 days old. It goes in batches through the existing `/api/users/bulk` endpoint, which already returns a video count. If that path does not already write `profile_stats`, it is changed to. Results apply on the next open. |
+| Last posted | Drift `event` cache (existing) | Best-effort, since the cache is pruned | Not refreshed for ranking. |
+
+**Optional server help (not required to ship):**
+
+- Add `last_video_at` to the `/api/users/bulk` stats in divine-funnelcake.
+  Funnelcake knows every author's real latest post, while the phone's event
+  cache is partial. The app would store it in a new nullable `profile_stats`
+  column (a Drift migration) and prefer it over the event-cache query, which
+  would make the "Posted" label reliable.
+- Paging the funnelcake followers endpoint by `since` would let the weekly
+  reconcile download only the changes, instead of the whole list. That
+  matters only for accounts with very many followers.
+
+**Not changed here: the 30-second `_profileListCacheTtl`.** That constant
+(`follow_repository.dart:372`, there since `cache_sync` landed) also hurts the
+followers and following screens. `cache_sync` deletes expired entries when
+they are read (`cache_dao_impl.dart:52`), so after 30 seconds those screens
+lose their cached copy and wait on the network. Raising it is not a one-line
+fix: `watchOthersFollowersCached` uses `cacheFirst`, where a longer TTL means
+no refresh at all, and the follower-count freshness check at line 1117 reuses
+the same constant. It deserves its own issue and its own change. This design
+avoids depending on it.
 
 ## Tests
 
@@ -149,9 +230,27 @@ then jumps to the new one.
   NIP-05 rows, stats and video events produce the expected signals. It
   excludes the viewer and blocked accounts, ignores group conversations, and
   makes no network call (verified against the repository mocks).
-- `FollowRepository.readCachedMyFollowers` (strict-coverage package): it
-  returns the cached snapshot, returns nothing on a cache miss, and never
-  fetches.
+- `my_followers` table (`db_client`): the migration test against the
+  committed schema snapshot; owner-scoped reads and writes; deleting one
+  owner's rows leaves other owners' rows alone.
+- Local social graph in `FollowRepository` (strict-coverage package):
+  - at initialization, `relationshipTo` answers from the persisted set with
+    no fetch;
+  - mutual follows the following set live: following someone who is in the
+    follower set makes them a mutual with no sync;
+  - the seed runs only when the table is empty;
+  - the incremental query uses the high-water mark and adds new authors;
+  - the full reconcile replaces the set and so removes unfollowers;
+  - the 15-minute and 7-day intervals are honored;
+  - a failed sync keeps the existing rows;
+  - concurrent sync calls share one fetch.
+- Account switch: `UserDataCleanupService` clears the departing owner's
+  `my_followers` rows.
+- Video-count refresh: only stale rows among the top 100 candidates are
+  requested, in batches. Fresh rows are not requested. Results never reorder
+  a list that is already on screen.
+- Latency benchmark: ranking 5,000 seeded follows stays under the §5 budget.
+  This is a benchmark harness, not a CI assertion.
 - The new `NostrEventsDao` newest-video-per-author query: one row per author,
   and only `NIP71VideoKinds` video kinds count.
 - BLoC tests for share sheet, DM picker, search, follow lists and the people-list
@@ -170,9 +269,10 @@ then jumps to the new one.
 
 ## Out of scope
 
-- Any server-side "last active" field, or any other new backend support.
-- Persisting a ranking snapshot or a per-account interaction table. The design
-  only reads existing stores, so it adds no account-boundary cleanup.
+- Required backend changes. The two funnelcake additions in §5 are optional.
+- Persisting the computed ranking itself. It is cheap to recompute on every
+  open, and a stored ranking would just be one more thing to go stale.
+- Fixing the 30-second follower cache TTL (§5). That needs its own issue.
 - Ordering the feed, notifications, or any other list that isn't a list of
   users.
 - Other users' following and followers screens.
@@ -191,9 +291,13 @@ These are the changes from the first draft, checked against `main` at
    10, and empty after a restart (`video_sharing_service.dart:182`,
    `:503`). Shares are DMs, so conversation recency is the durable source.
 3. **Mutual follows were not available locally.** `relationshipTo` only knows
-   followers after a network fetch (`follow_repository.dart:488`). The fix is
-   a cache-only read of the persisted snapshot. When nothing is cached, the
-   signal is absent rather than treated as "not a follower".
+   followers after a network fetch (`follow_repository.dart:488`). A first
+   revision proposed a cache-only read of the existing followers entry. That
+   entry expires after 30 seconds, and expired entries are deleted when read,
+   so the read would almost always have come back empty. The fix is now a
+   local social graph: a durable follower table, kept current by incremental
+   relay queries, with "mutual" computed on the device whenever it is read
+   (§5).
 4. **The draft scored a NIP-05 handle just for being present.** A claimed
    handle is spoofable, so now only a verified handle scores. Display still
    follows `resolveUserIdentifierLine`'s existing safety rule.
