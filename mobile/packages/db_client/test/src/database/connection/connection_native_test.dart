@@ -1703,6 +1703,43 @@ void main() {
     );
 
     test(
+      'hands a replay whose quick_check throws to corruption recovery',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          key: validKey,
+          beforeTransaction: _pointTableRootAtIndexPage,
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.encryptedButCorrupt);
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        final replayed = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+        try {
+          keyCipherDatabase(replayed, validKey);
+          expect(
+            () => replayed.select('PRAGMA quick_check;'),
+            throwsA(
+              isA<SqliteException>().having(
+                (error) => error.resultCode,
+                'resultCode',
+                11,
+              ),
+            ),
+            reason: 'this damage has to make the check throw, not list rows',
+          );
+        } finally {
+          replayed.close();
+        }
+      },
+    );
+
+    test(
       'recovers a journal whose commit died after page 1 grew the file',
       () async {
         _createGrownPageOneHotJournalFixture(dbPath, key: validKey);
@@ -2061,6 +2098,26 @@ void _orphanIndexPages(Database source) {
     )
     ..execute('PRAGMA writable_schema = ON;')
     ..execute("DELETE FROM sqlite_master WHERE name = 'orphaned_value';")
+    ..execute('PRAGMA writable_schema = OFF;');
+}
+
+/// Points a table at an index b-tree. The schema still loads, so the journal
+/// replays, but `PRAGMA quick_check` then throws `SQLITE_CORRUPT` instead of
+/// listing what it found.
+void _pointTableRootAtIndexPage(Database source) {
+  source
+    ..execute('CREATE TABLE misrooted (value INTEGER);')
+    ..execute('CREATE INDEX misrooted_value ON misrooted (value);')
+    ..execute(
+      'WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n '
+      'WHERE x < 3000) INSERT INTO misrooted SELECT x FROM n;',
+    )
+    ..execute('PRAGMA writable_schema = ON;')
+    ..execute(
+      'UPDATE sqlite_master SET rootpage = (SELECT rootpage FROM '
+      "sqlite_master WHERE name = 'misrooted_value') "
+      "WHERE name = 'misrooted';",
+    )
     ..execute('PRAGMA writable_schema = OFF;');
 }
 
