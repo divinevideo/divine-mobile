@@ -6462,6 +6462,63 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryGalleryImportDone => 'ተጠናቋል';
 
   @override
+  String get librarySaveSelectedClipsTooltip => 'የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።',
+      one: '1 ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'ዝርዝሮች';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'ያለ ማረጋገጫ ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'ማረጋገጫው አሁን ሊታከል አልቻለም፣ ምናልባት ከመስመር ውጭ ስለነበሩ ይሆናል። ማረጋገጫ ያለው ቅጂ ለማስቀመጥ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'የስቶፕ ሞሽን ክሊፖች ከፎቶዎች የተሠሩ ናቸው፣ ፎቶዎች ደግሞ ማረጋገጫ መያዝ አይችሉም።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'ይህ የDivine ስሪት ለክሊፖች ማረጋገጫ ማከል አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'ይህ ክሊፕ ማረጋገጫ የለውም፣ Divine ደግሞ በኋላ ሊያክልለት አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'ከማረጋገጫው ጋር ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveSigning => 'ለክሊፖችዎ ማረጋገጫ እየታከለ ነው…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'ክሊፕ $current ከ$total እየተቀመጠ ነው…',
+      one: 'ክሊፕዎ እየተቀመጠ ነው…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

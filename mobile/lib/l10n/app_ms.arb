@@ -3336,6 +3336,18 @@
   "libraryGalleryImportItemNotVerified": "Tidak dapat mengesahkan klip ini dirakam dengan Divine",
   "libraryGalleryImportItemCheckUnavailable": "Tidak dapat disemak sekarang. Cuba lagi nanti.",
   "libraryGalleryImportDone": "Selesai",
+  "librarySaveSelectedClipsTooltip": "Simpan klip yang dipilih ke galeri anda",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.} other{{count} klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.}}",
+  "libraryClipsSavedWithoutProofDetails": "Butiran",
+  "libraryGallerySaveWarningTitle": "Disimpan tanpa bukti",
+  "libraryGallerySaveWarningIntro": "Hanya klip yang ada bukti dirakam dengan Divine boleh kembali dari galeri anda. Salinan klip-klip ini disimpan tanpa bukti itu.",
+  "libraryGallerySaveWarningSigningUnavailable": "Buktinya tidak dapat ditambah sekarang, mungkin kerana anda di luar talian. Cuba lagi untuk menyimpan salinan yang ada buktinya.",
+  "libraryGallerySaveWarningStopMotion": "Klip stop-motion dibuat daripada foto, dan foto tidak boleh membawa bukti.",
+  "libraryGallerySaveWarningSigningUnsupported": "Versi Divine ini tidak dapat menambah bukti pada klip.",
+  "libraryGallerySaveWarningNoProof": "Klip ini tiada bukti, dan Divine tidak dapat menambahnya kemudian.",
+  "libraryGallerySaveWarningSavedWithProof": "Disimpan dengan buktinya",
+  "libraryGallerySaveSigning": "Menambah bukti pada klip anda…",
+  "libraryGallerySaveProgress": "{total, plural, =1{Menyimpan klip anda…} other{Menyimpan klip {current} daripada {total}…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 klip dipadam} other{{count} klip dipadam}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

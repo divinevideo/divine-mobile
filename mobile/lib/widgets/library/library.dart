@@ -3,6 +3,7 @@
 
 export 'clip_category_actions.dart';
 export 'clip_category_chips.dart';
+export 'clip_gallery_save.dart';
 export 'clips_tab.dart';
 export 'draft_status_badge.dart';
 export 'drafts_tab.dart';

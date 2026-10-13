@@ -6265,6 +6265,61 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryGalleryImportDone => '完了';
 
   @override
+  String get librarySaveSelectedClipsTooltip => '選択したクリップをギャラリーに保存';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを証明なしで保存しました。このため、クリップに戻すことはできません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '詳細';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '証明なしで保存済み';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ギャラリーから戻せるのは、Divineで撮影したことを証明できるクリップだけです。これらのクリップのコピーは証明なしで保存されました。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'オフラインだったなどの理由で、今は証明を追加できませんでした。もう一度試すと、証明付きのコピーを保存できます。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'ストップモーションのクリップは写真から作られていて、写真には証明を付けられません。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'このバージョンのDivineでは、クリップに証明を追加できません。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'このクリップには証明がなく、Divineで後から追加することもできません。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '証明付きで保存しました';
+
+  @override
+  String get libraryGallerySaveSigning => 'クリップに証明を追加しています…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件中$current件目のクリップを保存しています…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

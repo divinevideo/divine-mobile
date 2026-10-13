@@ -6699,6 +6699,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryGalleryImportDone => 'Done';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Save selected clips to your gallery';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count clips were saved without their proof, so they can\'t come back into your clips.',
+      one: '1 clip was saved without its proof, so it can\'t come back into your clips.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Details';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Saved without proof';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Only clips with proof that they were shot with Divine can come back from your gallery. The copies of these clips were saved without it.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Its proof couldn\'t be added just now, maybe because you were offline. Try again to save a copy with it.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stop-motion clips are made from photos, which can\'t carry proof.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'This version of Divine can\'t add proof to clips.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'This clip has no proof, and Divine can\'t add it afterwards.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Saved with its proof';
+
+  @override
+  String get libraryGallerySaveSigning => 'Adding proof to your clips…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Saving clip $current of $total…',
+      one: 'Saving your clip…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

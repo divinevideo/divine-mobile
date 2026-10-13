@@ -6540,6 +6540,65 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryGalleryImportDone => 'Tamam';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Seçili klipleri galerine kaydet';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count klip kanıtı olmadan kaydedildi, bu yüzden kliplerine geri dönemez.',
+      one: '1 klip kanıtı olmadan kaydedildi, bu yüzden kliplerine geri dönemez.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Ayrıntılar';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Kanıtsız kaydedildi';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Galerinden yalnızca Divine ile çekildiğini kanıtlayan klipler geri dönebilir. Bu kliplerin kopyaları bu kanıt olmadan kaydedildi.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Kanıtı şu an eklenemedi, belki çevrimdışı olduğun için. Kanıtlı bir kopya kaydetmek için tekrar dene.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stop motion klipler fotoğraflardan oluşur ve fotoğraflar kanıt taşıyamaz.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine\'ın bu sürümü kliplere kanıt ekleyemiyor.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Bu klibin kanıtı yok ve Divine sonradan ekleyemez.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Kanıtıyla kaydedildi';
+
+  @override
+  String get libraryGallerySaveSigning => 'Kliplerine kanıt ekleniyor…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Klip $current/$total kaydediliyor…',
+      one: 'Klibin kaydediliyor…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

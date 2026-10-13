@@ -6226,6 +6226,61 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryGalleryImportDone => '完成';
 
   @override
+  String get librarySaveSelectedClipsTooltip => '将所选片段保存到相册';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+      one: '1 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '详情';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '已保存但没有证明';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      '只有能证明是用 Divine 拍摄的片段才能从相册找回。这些片段的副本保存时没有附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      '暂时无法添加证明，可能是因为你当时处于离线状态。重试即可保存一份带证明的副本。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion => '定格动画片段由照片组成，照片无法附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      '此版本的 Divine 无法为片段添加证明。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof => '这个片段没有证明，Divine 也无法事后添加。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '已连同证明一起保存';
+
+  @override
+  String get libraryGallerySaveSigning => '正在为你的片段添加证明…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '正在保存第 $current 个片段，共 $total 个…',
+      one: '正在保存你的片段…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

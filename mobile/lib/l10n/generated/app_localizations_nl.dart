@@ -6639,6 +6639,66 @@ class AppLocalizationsNl extends AppLocalizations {
   String get libraryGalleryImportDone => 'Klaar';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Geselecteerde clips opslaan in je galerij';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count clips zijn zonder bewijs opgeslagen, dus die kunnen niet terug naar je clips.',
+      one: '1 clip is zonder bewijs opgeslagen, dus die kan niet terug naar je clips.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Details';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Zonder bewijs opgeslagen';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Alleen clips met bewijs dat ze met Divine zijn gefilmd, kunnen terugkomen uit je galerij. De kopieën van deze clips zijn zonder dat bewijs opgeslagen.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Het bewijs kon nu niet worden toegevoegd, misschien omdat je offline was. Probeer het nog eens om een kopie met bewijs op te slaan.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stopmotionclips bestaan uit foto\'s, en die kunnen geen bewijs dragen.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Deze versie van Divine kan geen bewijs aan clips toevoegen.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Deze clip heeft geen bewijs, en Divine kan het achteraf niet toevoegen.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Opgeslagen met bewijs';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Bewijs wordt aan je clips toegevoegd…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Clip $current van $total wordt opgeslagen…',
+      one: 'Je clip wordt opgeslagen…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

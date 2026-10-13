@@ -414,6 +414,111 @@ class NativeProofModeService {
     Iterable<DivineVideoClip> clips, {
     Iterable<C2paEditSource> otherSources = const [],
   }) async {
+    final unsigned = await _signOwnRecordingPaths(
+      clips,
+      otherSources: otherSources,
+    );
+    return unsigned.isNotEmpty;
+  }
+
+  /// Signs the app's own clips among [clips] that are still without a C2PA
+  /// manifest, so they can leave the app with their proof (#10064).
+  ///
+  /// Recordings, and the recordings an edit was made from, are signed as
+  /// camera captures (see [signOwnRecordings]). An edit the app rendered but
+  /// could not sign then, such as one saved to the library offline, is signed
+  /// as an edit of its [DivineVideoClip.derivedFrom] sources. It qualifies
+  /// only while its file still hashes to the hash its ProofMode proof
+  /// recorded when it was rendered, so nothing else is signed as an edit.
+  ///
+  /// Returns the ids of the clips that qualify but are still unsigned
+  /// afterwards, for example offline: signing them again later can succeed.
+  /// A failure on one clip is logged and does not stop the others.
+  static Future<Set<String>> signOwnClips(List<DivineVideoClip> clips) async {
+    final unsignedRecordings = await _signOwnRecordingPaths(clips);
+    final pending = <String>{};
+    C2paSigningService? signingService;
+    C2paSigningService signer() => signingService ??=
+        c2paSigningServiceFactoryOverride?.call() ?? C2paSigningService();
+    for (final clip in clips) {
+      final sources = clip.signingSources ?? const <C2paEditSource>[];
+      if (sources.any((source) => unsignedRecordings.contains(source.path))) {
+        // An edit of a recording that is still unsigned cannot be signed yet.
+        pending.add(clip.id);
+        continue;
+      }
+      if (!await _signOwnEdit(clip, signer)) pending.add(clip.id);
+    }
+    return pending;
+  }
+
+  /// Signs [clip] as an edit of its [DivineVideoClip.derivedFrom] sources
+  /// when it is an edit the app rendered and left unsigned.
+  ///
+  /// Returns false only when it qualifies and is still unsigned afterwards.
+  static Future<bool> _signOwnEdit(
+    DivineVideoClip clip,
+    C2paSigningService Function() signer,
+  ) async {
+    final sources = clip.derivedFrom;
+    final path = clip.video?.file?.path;
+    final renderedHash = _renderedHashOf(clip);
+    if (sources == null ||
+        sources.isEmpty ||
+        path == null ||
+        renderedHash == null) {
+      return true;
+    }
+    try {
+      final file = File(path);
+      if (!file.existsSync()) return true;
+      final manifest = await signer().readManifest(path);
+      if (manifest?.activeManifest != null) return true;
+      final hash = await generateSha256FileHash(path);
+      if (hash.toLowerCase() != renderedHash) return true;
+      Log.info(
+        '🔐 Signing edit "$path" that was left unsigned',
+        name: 'NativeProofModeService',
+        category: LogCategory.video,
+      );
+      final proof = await proofFile(file, derivedFrom: sources);
+      // Footage without a camera proof among its sources never gets one.
+      return proof?.c2paManifestId != null ||
+          (proof?.unattestedSources ?? false);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not sign edit "$path" late: $error',
+        name: 'NativeProofModeService',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// The hash, lower-cased, that [clip]'s ProofMode proof recorded for its
+  /// file, or null when it has no readable proof.
+  static String? _renderedHashOf(DivineVideoClip clip) {
+    final json = clip.proofManifestJson;
+    if (json == null) return null;
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is! Map<String, dynamic>) return null;
+      return NativeProofData.fromJson(decoded).videoHash.toLowerCase();
+    } on Object {
+      // A proof record that does not parse names no hash.
+      return null;
+    }
+  }
+
+  /// Signs the recordings among [clips]' sources and [otherSources] that are
+  /// still unsigned (see [signOwnRecordings]), and returns the paths of those
+  /// that qualify but are still unsigned afterwards.
+  static Future<Set<String>> _signOwnRecordingPaths(
+    Iterable<DivineVideoClip> clips, {
+    Iterable<C2paEditSource> otherSources = const [],
+  }) async {
     // Split halves and edits of one recording name the same file, and not
     // every one of them carries its hash.
     final carriedHashes = <String, Set<String>>{};
@@ -430,7 +535,7 @@ class NativeProofModeService {
 
     C2paSigningService? signingService;
     Map<String, Set<String>>? knownHashes;
-    var leftUnsigned = false;
+    final leftUnsigned = <String>{};
     for (final MapEntry(key: path, value: carried) in carriedHashes.entries) {
       try {
         final file = File(path);
@@ -453,7 +558,7 @@ class NativeProofModeService {
           category: LogCategory.video,
         );
         final proof = await proofFile(file);
-        if (proof?.c2paManifestId == null) leftUnsigned = true;
+        if (proof?.c2paManifestId == null) leftUnsigned.add(path);
       } on Exception catch (error, stackTrace) {
         Log.warning(
           'Could not sign recording "$path" late: $error',
@@ -462,7 +567,7 @@ class NativeProofModeService {
           error: error,
           stackTrace: stackTrace,
         );
-        leftUnsigned = true;
+        leftUnsigned.add(path);
       }
     }
     return leftUnsigned;
@@ -756,9 +861,10 @@ class NativeProofModeService {
   /// Streams [filePath] through SHA-256 and returns the hex digest. Runs on a
   /// background isolate (see [generateSha256FileHash]).
   static Future<String> _sha256OfFile(String filePath) async {
-    final digest = await File(
-      filePath,
-    ).openRead().transform(crypto.sha256).first;
+    final digest = await File(filePath)
+        .openRead()
+        .transform(crypto.sha256)
+        .first;
     return digest.toString();
   }
 

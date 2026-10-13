@@ -6613,6 +6613,66 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryGalleryImportDone => 'Selesai';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Simpan klip yang dipilih ke galeri anda';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
+      one: '1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Butiran';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Disimpan tanpa bukti';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Hanya klip yang ada bukti dirakam dengan Divine boleh kembali dari galeri anda. Salinan klip-klip ini disimpan tanpa bukti itu.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Buktinya tidak dapat ditambah sekarang, mungkin kerana anda di luar talian. Cuba lagi untuk menyimpan salinan yang ada buktinya.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Klip stop-motion dibuat daripada foto, dan foto tidak boleh membawa bukti.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Versi Divine ini tidak dapat menambah bukti pada klip.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Klip ini tiada bukti, dan Divine tidak dapat menambahnya kemudian.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Disimpan dengan buktinya';
+
+  @override
+  String get libraryGallerySaveSigning => 'Menambah bukti pada klip anda…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Menyimpan klip $current daripada $total…',
+      one: 'Menyimpan klip anda…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

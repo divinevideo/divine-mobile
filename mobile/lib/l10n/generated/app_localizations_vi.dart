@@ -6575,6 +6575,66 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryGalleryImportDone => 'Xong';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Lưu các clip đã chọn vào thư viện ảnh';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Đã lưu $count clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.',
+      one: 'Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Chi tiết';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Đã lưu không có bằng chứng';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Chỉ những clip có bằng chứng được quay bằng Divine mới có thể quay lại từ thư viện ảnh. Bản sao của các clip này đã được lưu mà không có bằng chứng đó.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Hiện chưa thêm được bằng chứng, có thể vì bạn đang ngoại tuyến. Thử lại để lưu một bản sao có bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clip stop-motion được tạo từ ảnh, mà ảnh thì không thể mang bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Phiên bản Divine này không thể thêm bằng chứng vào clip.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Clip này không có bằng chứng, và Divine không thể thêm vào sau.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Đã lưu kèm bằng chứng';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Đang thêm bằng chứng vào clip của bạn…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đang lưu clip $current/$total…',
+      one: 'Đang lưu clip của bạn…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

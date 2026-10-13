@@ -6772,6 +6772,71 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryGalleryImportDone => 'Gotowe';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Zapisz wybrane klipy w galerii';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Zapisano $count klipów bez ich dowodu, więc nie mogą wrócić do twoich klipów.',
+      many:
+          'Zapisano $count klipów bez ich dowodu, więc nie mogą wrócić do twoich klipów.',
+      few:
+          'Zapisano $count klipy bez ich dowodu, więc nie mogą wrócić do twoich klipów.',
+      one: 'Zapisano 1 klip bez jego dowodu, więc nie może wrócić do twoich klipów.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Szczegóły';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Zapisane bez dowodu';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Z galerii mogą wrócić tylko klipy z dowodem, że nagrano je w Divine. Kopie tych klipów zapisano bez niego.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Nie udało się teraz dodać dowodu, może dlatego, że nie było połączenia. Spróbuj ponownie, żeby zapisać kopię z dowodem.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Klipy poklatkowe składają się ze zdjęć, które nie mogą mieć dowodu.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Ta wersja Divine nie może dodawać dowodu do klipów.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Ten klip nie ma dowodu, a Divine nie może go dodać później.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Zapisano z dowodem';
+
+  @override
+  String get libraryGallerySaveSigning => 'Dodawanie dowodu do twoich klipów…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Zapisywanie klipu $current z $total…',
+      many: 'Zapisywanie klipu $current z $total…',
+      few: 'Zapisywanie klipu $current z $total…',
+      one: 'Zapisywanie klipu…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

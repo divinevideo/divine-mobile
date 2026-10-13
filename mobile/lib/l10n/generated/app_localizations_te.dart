@@ -6812,6 +6812,66 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryGalleryImportDone => 'పూర్తయింది';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'ఎంచుకున్న క్లిప్‌లను మీ గ్యాలరీలో సేవ్ చేయండి';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count క్లిప్‌లు వాటి రుజువు లేకుండా సేవ్ అయ్యాయి, కాబట్టి అవి మీ క్లిప్‌లలోకి తిరిగి రాలేవు.',
+      one: '1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'వివరాలు';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'రుజువు లేకుండా సేవ్ అయ్యాయి';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Divineతో చిత్రీకరించినట్లు రుజువు ఉన్న క్లిప్‌లు మాత్రమే మీ గ్యాలరీ నుండి తిరిగి రాగలవు. ఈ క్లిప్‌ల కాపీలు ఆ రుజువు లేకుండా సేవ్ అయ్యాయి.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'దీని రుజువును ఇప్పుడు జోడించలేకపోయాం, బహుశా మీరు ఆఫ్‌లైన్‌లో ఉన్నందుకు కావచ్చు. రుజువు ఉన్న కాపీని సేవ్ చేయడానికి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'స్టాప్-మోషన్ క్లిప్‌లు ఫోటోలతో తయారవుతాయి, ఫోటోలు రుజువును మోయలేవు.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine యొక్క ఈ వెర్షన్ క్లిప్‌లకు రుజువును జోడించలేదు.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'ఈ క్లిప్‌కు రుజువు లేదు, Divine దాన్ని తర్వాత జోడించలేదు.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'దాని రుజువుతో సేవ్ అయింది';
+
+  @override
+  String get libraryGallerySaveSigning => 'మీ క్లిప్‌లకు రుజువు జోడిస్తున్నాం…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$totalలో క్లిప్ $currentని సేవ్ చేస్తున్నాం…',
+      one: 'మీ క్లిప్‌ను సేవ్ చేస్తున్నాం…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

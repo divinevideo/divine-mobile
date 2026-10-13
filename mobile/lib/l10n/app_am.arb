@@ -2550,6 +2550,18 @@
     "libraryGalleryImportItemNotVerified": "በDivine መቀረጹን ማረጋገጥ አልተቻለም",
     "libraryGalleryImportItemCheckUnavailable": "አሁን ማረጋገጥ አልተቻለም። ቆይተው እንደገና ይሞክሩ።",
     "libraryGalleryImportDone": "ተጠናቋል",
+    "librarySaveSelectedClipsTooltip": "የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።} other{{count} ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።}}",
+    "libraryClipsSavedWithoutProofDetails": "ዝርዝሮች",
+    "libraryGallerySaveWarningTitle": "ያለ ማረጋገጫ ተቀምጧል",
+    "libraryGallerySaveWarningIntro": "ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።",
+    "libraryGallerySaveWarningSigningUnavailable": "ማረጋገጫው አሁን ሊታከል አልቻለም፣ ምናልባት ከመስመር ውጭ ስለነበሩ ይሆናል። ማረጋገጫ ያለው ቅጂ ለማስቀመጥ እንደገና ይሞክሩ።",
+    "libraryGallerySaveWarningStopMotion": "የስቶፕ ሞሽን ክሊፖች ከፎቶዎች የተሠሩ ናቸው፣ ፎቶዎች ደግሞ ማረጋገጫ መያዝ አይችሉም።",
+    "libraryGallerySaveWarningSigningUnsupported": "ይህ የDivine ስሪት ለክሊፖች ማረጋገጫ ማከል አይችልም።",
+    "libraryGallerySaveWarningNoProof": "ይህ ክሊፕ ማረጋገጫ የለውም፣ Divine ደግሞ በኋላ ሊያክልለት አይችልም።",
+    "libraryGallerySaveWarningSavedWithProof": "ከማረጋገጫው ጋር ተቀምጧል",
+    "libraryGallerySaveSigning": "ለክሊፖችዎ ማረጋገጫ እየታከለ ነው…",
+    "libraryGallerySaveProgress": "{total, plural, =1{ክሊፕዎ እየተቀመጠ ነው…} other{ክሊፕ {current} ከ{total} እየተቀመጠ ነው…}}",
     "libraryClipsDeletedCount": "{count, plural, =1{{count} ክሊፕ ተሰርዟል} other{{count} ክሊፖች ተሰርዘዋል}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {

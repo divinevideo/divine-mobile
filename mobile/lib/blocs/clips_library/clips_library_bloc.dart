@@ -1,5 +1,5 @@
 // ABOUTME: BLoC for managing saved video clips in the library
-// ABOUTME: Handles loading, selection, deletion, and gallery export
+// ABOUTME: Handles loading, selection, deletion, trash and categories
 
 import 'dart:async';
 
@@ -10,10 +10,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_library_service.dart';
-import 'package:openvine/services/gallery_save_service.dart';
-import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show RenderCanceledException;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -22,17 +18,16 @@ part 'clips_library_state.dart';
 
 /// BLoC for managing saved video clips in the library.
 ///
-/// Loads clips from [ClipLibraryService], manages selection state,
-/// handles deletion, and exports to gallery via [GallerySaveService].
+/// Loads clips from [ClipLibraryService], manages selection state, and
+/// handles deletion. Saving clips to the gallery is `ClipGallerySaveCubit`'s
+/// job, since it outlives the library.
 class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
   ClipsLibraryBloc({
     required ClipLibraryService clipLibraryService,
-    required GallerySaveService gallerySaveService,
     required SharedPreferences sharedPreferences,
     this.clipTypeFilter = LibraryClipTypeFilter.all,
     bool allowsMixedClipTypes = false,
   }) : _clipLibraryService = clipLibraryService,
-       _gallerySaveService = gallerySaveService,
        _sharedPreferences = sharedPreferences,
        super(
          ClipsLibraryState(
@@ -50,7 +45,6 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     on<ClipsLibraryDragSelectionEnded>(_onDragSelectionEnded);
     on<ClipsLibraryDeleteSelected>(_onDeleteSelected, transformer: droppable());
     on<ClipsLibraryDeleteClip>(_onDeleteClip, transformer: droppable());
-    on<ClipsLibrarySaveToGallery>(_onSaveToGallery, transformer: droppable());
     on<ClipsLibrarySortChanged>(_onSortChanged);
     on<ClipsLibraryGridColumnsChanged>(
       _onGridColumnsChanged,
@@ -93,7 +87,6 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
   static const _sortPrefsKey = 'library_clip_sort';
 
   final ClipLibraryService _clipLibraryService;
-  final GallerySaveService _gallerySaveService;
   final SharedPreferences _sharedPreferences;
 
   /// Restricts which clip types this library instance loads. Set by the
@@ -500,98 +493,6 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       addError(e, stackTrace);
       emit(state.copyWith(status: ClipsLibraryStatus.error));
     }
-  }
-
-  Future<void> _onSaveToGallery(
-    ClipsLibrarySaveToGallery event,
-    Emitter<ClipsLibraryState> emit,
-  ) async {
-    if (state.selectedClipIds.isEmpty) return;
-
-    emit(
-      state.copyWith(
-        status: ClipsLibraryStatus.savingToGallery,
-        clearGallerySaveResult: true,
-      ),
-    );
-
-    final clipsToSave = state.selectedClips;
-    final clipCount = clipsToSave.length;
-
-    Log.info(
-      '📚 Saving $clipCount clips to gallery',
-      name: 'ClipsLibraryBloc',
-      category: LogCategory.video,
-    );
-
-    var successCount = 0;
-    var failureCount = 0;
-
-    for (final clip in clipsToSave) {
-      DivineVideoClip? materialized;
-      try {
-        // Stop-motion clips render their mp4 on demand before saving.
-        try {
-          materialized = await StopMotionRenderService.materialize(clip);
-        } on RenderCanceledException {
-          materialized = null;
-        }
-        if (materialized == null) {
-          failureCount++;
-          continue;
-        }
-        final result = await _gallerySaveService.saveVideoToGallery(
-          materialized.requireVideo,
-        );
-
-        switch (result) {
-          case GallerySaveSuccess():
-            successCount++;
-          case GallerySavePermissionDenied():
-            // Stop immediately on permission denied
-            emit(
-              state.copyWith(
-                status: ClipsLibraryStatus.loaded,
-                lastGallerySaveResult:
-                    const GallerySaveResultPermissionDenied(),
-              ),
-            );
-            return;
-          case GallerySaveFailure():
-            failureCount++;
-        }
-      } catch (e, s) {
-        // Matrix-NO: GallerySaveService is documented as never throwing
-        // (returns result objects). This catch is defensive against the
-        // contract drifting; when-in-doubt classification applies.
-        addError(e, s);
-        emit(
-          state.copyWith(
-            status: ClipsLibraryStatus.loaded,
-            lastGallerySaveResult: const GallerySaveResultError(),
-          ),
-        );
-        return;
-      } finally {
-        await StopMotionRenderService.cleanupMaterializedOutput(
-          sourceClip: clip,
-          materializedClip: materialized,
-        );
-      }
-    }
-
-    // Clear selection after saving
-    emit(
-      state.copyWith(
-        status: ClipsLibraryStatus.loaded,
-        selectedClipIds: const {},
-        selectedDuration: Duration.zero,
-        lastGallerySaveResult: GallerySaveResultSuccess(
-          successCount: successCount,
-          failureCount: failureCount,
-        ),
-      ),
-    );
   }
 
   Future<void> _onClipsChanged(

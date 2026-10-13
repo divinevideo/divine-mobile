@@ -1,5 +1,5 @@
 // ABOUTME: Events for ClipsLibraryBloc - managing saved video clips
-// ABOUTME: Supports loading, selection, deletion, and gallery export
+// ABOUTME: Supports loading, selection, deletion, trash and categories
 
 part of 'clips_library_bloc.dart';
 
@@ -121,11 +121,6 @@ final class ClipsLibraryDeleteClip extends ClipsLibraryEvent {
 
   @override
   List<Object?> get props => [clip];
-}
-
-/// Event to save selected clips to gallery.
-final class ClipsLibrarySaveToGallery extends ClipsLibraryEvent {
-  const ClipsLibrarySaveToGallery();
 }
 
 /// Event to change the active clip sort order. The new sort is

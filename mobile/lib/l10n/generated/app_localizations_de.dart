@@ -6694,6 +6694,67 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryGalleryImportDone => 'Fertig';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Ausgewählte Clips in deiner Galerie speichern';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Clips wurden ohne ihren Nachweis gespeichert und können deshalb nicht zurück in deine Clips.',
+      one: '1 Clip wurde ohne seinen Nachweis gespeichert und kann deshalb nicht zurück in deine Clips.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Details';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Ohne Nachweis gespeichert';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Aus deiner Galerie kommen nur Clips zurück, die nachweisen, dass sie mit Divine gedreht wurden. Diese Clips wurden ohne diesen Nachweis gespeichert.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Der Nachweis konnte gerade nicht hinzugefügt werden, vielleicht weil du offline warst. Versuch es nochmal, um eine Kopie mit Nachweis zu speichern.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stop-Motion-Clips bestehen aus Fotos, und die können keinen Nachweis tragen.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Diese Version von Divine kann Clips keinen Nachweis hinzufügen.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Dieser Clip hat keinen Nachweis, und Divine kann ihn nicht nachträglich hinzufügen.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Mit Nachweis gespeichert';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Deine Clips bekommen ihren Nachweis…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Clip $current von $total wird gespeichert…',
+      one: 'Dein Clip wird gespeichert…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
