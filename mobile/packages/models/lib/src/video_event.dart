@@ -1191,36 +1191,42 @@ class VideoEvent {
   /// itself once nothing else is left on it. The Vine archive import repeats
   /// the caption's hashtags on a line of their own, so the raw description
   /// would show them as text twice above the chips. Hashtags inside a
-  /// sentence stay, since removing them would break the sentence. A caption
-  /// with nothing to drop is returned trimmed and otherwise as written.
+  /// sentence stay, since removing them would break the sentence. A dropped
+  /// line between two blank lines takes one of them along; everything else
+  /// is returned trimmed and otherwise as written.
   late final String chipCaptionDescription = _withoutTrailingChipHashtags(
     displayContent,
   );
 
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
-  static final _blankLineRun = RegExp(r'\n{3,}');
 
   String _withoutTrailingChipHashtags(String text) {
     final chips = {for (final tag in allHashtags) tag.toLowerCase()};
     final lines = <String>[];
-    var stripped = false;
+    var lastKeptBlank = false;
+    var dropBlankLine = false;
     for (final line in text.split('\n')) {
       final tokens = _lineToken.allMatches(line).toList();
       var keep = tokens.length;
       while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, chips)) {
         keep--;
       }
-      var kept = line;
-      if (keep < tokens.length) {
-        kept = keep == 0 ? '' : line.substring(0, tokens[keep - 1].end);
-        stripped = true;
+      if (keep == 0 && tokens.isNotEmpty) {
+        dropBlankLine = lastKeptBlank;
+        continue;
       }
-      if (kept.trim().isEmpty && line.trim().isNotEmpty) continue;
-      lines.add(kept.trimRight());
+      if (dropBlankLine && tokens.isEmpty) {
+        dropBlankLine = false;
+        continue;
+      }
+      dropBlankLine = false;
+      lastKeptBlank = tokens.isEmpty;
+      lines.add(
+        keep < tokens.length ? line.substring(0, tokens[keep - 1].end) : line,
+      );
     }
-    if (!stripped) return text.trim();
-    return lines.join('\n').replaceAll(_blankLineRun, '\n\n').trim();
+    return lines.join('\n').trim();
   }
 
   static bool _isChipHashtag(String token, Set<String> chips) {

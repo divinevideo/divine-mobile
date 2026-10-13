@@ -132,6 +132,26 @@ void main() {
       );
     });
 
+    test('keeps the blank line after a dropped line that follows text', () {
+      expect(
+        build(
+          content: 'First\n#glenn\n\nSecond',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond'),
+      );
+    });
+
+    test('keeps blank lines that no dropped line left behind', () {
+      expect(
+        build(
+          content: 'First\n\n#glenn\nSecond\n\n\n\nThird #glenn',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond\n\n\n\nThird'),
+      );
+    });
+
     test('leaves a caption with no removable hashtag as written', () {
       expect(
         build(
