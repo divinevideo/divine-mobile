@@ -6463,8 +6463,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get librarySortVerticalFirst => 'Önce dikey';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Geri alınamaz. Galerine kaydedilen kopyalar orada kalır.';
+  String get libraryDeleteClipsWarning => 'Geri alınamaz.';
 
   @override
   String get libraryPreparingVideo => 'Video hazırlanıyor...';
@@ -6636,7 +6635,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Klip önce çöp kutusuna gider, yani hâlâ geri yükleyebilirsin. Galerine kaydedilen kopyalar orada kalır.';
+      'Klip önce çöp kutusuna gider, yani hâlâ geri yükleyebilirsin.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6665,14 +6664,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Galerinde içerik kimlik bilgileri olmadan. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Henüz galerinde değil. İçerik kimlik bilgilerini alır almaz oraya kopyalanır; bunun için internet bağlantısı gerekir.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Galerindeki kopyanın içerik kimlik bilgileri yok, bu yüzden kliplerine geri gelemez.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

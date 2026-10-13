@@ -6621,8 +6621,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get librarySortVerticalFirst => 'Vertical First';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'This can\'t be undone. Copies saved to your gallery stay there.';
+  String get libraryDeleteClipsWarning => 'This can\'t be undone.';
 
   @override
   String get libraryPreparingVideo => 'Preparing video...';
@@ -6797,7 +6796,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'It goes to the trash first, so you can still restore it. Copies saved to your gallery stay there.';
+      'It goes to the trash first, so you can still restore it.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6826,14 +6825,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'In your gallery without content credentials. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Not in your gallery yet. It\'s copied there once it has its content credentials, which needs an internet connection.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'The copy in your gallery has no content credentials, so it can\'t come back to your clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

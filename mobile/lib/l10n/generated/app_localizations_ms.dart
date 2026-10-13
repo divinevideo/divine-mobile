@@ -6536,7 +6536,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Tindakan ini tidak boleh dibatalkan. Salinan yang disimpan dalam galeri anda kekal di sana.';
+      'Tindakan ini tidak boleh dibatalkan.';
 
   @override
   String get libraryPreparingVideo => 'Menyediakan video...';
@@ -6711,7 +6711,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Klip masuk ke tong sampah dahulu, jadi anda masih boleh memulihkannya. Salinan yang disimpan dalam galeri anda kekal di sana.';
+      'Klip masuk ke tong sampah dahulu, jadi anda masih boleh memulihkannya.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6740,14 +6740,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Dalam galeri anda tanpa kelayakan kandungan. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Belum ada dalam galeri anda. Ia disalin ke sana sebaik sahaja ia mempunyai kelayakan kandungan, yang memerlukan sambungan internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Salinan dalam galeri anda tiada kelayakan kandungan, jadi ia tidak boleh kembali ke klip anda.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

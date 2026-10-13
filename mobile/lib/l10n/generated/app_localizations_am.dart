@@ -6385,8 +6385,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get librarySortVerticalFirst => 'ቁመት በመጀመሪያ';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'ይህ እርምጃ ሊቀለበስ አይችልም። በጋለሪዎ የተቀመጡ ቅጂዎች እዚያው ይቆያሉ።';
+  String get libraryDeleteClipsWarning => 'ይህ እርምጃ ሊቀለበስ አይችልም።';
 
   @override
   String get libraryPreparingVideo => 'ቪዲዮ በማዘጋጀት ላይ...';
@@ -6557,7 +6556,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'ክሊፑ መጀመሪያ ወደ ቆሻሻ መጣያው ይሄዳል፣ ስለዚህ አሁንም መመለስ ይችላሉ። በጋለሪዎ የተቀመጡ ቅጂዎች እዚያው ይቆያሉ።';
+      'ክሊፑ መጀመሪያ ወደ ቆሻሻ መጣያው ይሄዳል፣ ስለዚህ አሁንም መመለስ ይችላሉ።';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6586,14 +6585,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'ያለ የይዘት መታወቂያዎች በጋለሪዎ ውስጥ አለ። $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'ገና በጋለሪዎ ውስጥ የለም። የይዘት መታወቂያዎችን እንዳገኘ ወደዚያ ይገለበጣል፤ ለዚህም የበይነመረብ ግንኙነት ያስፈልጋል።';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'በጋለሪዎ ያለው ቅጂ የይዘት መታወቂያዎች የሉትም፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

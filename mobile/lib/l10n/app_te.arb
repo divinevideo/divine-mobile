@@ -3883,7 +3883,7 @@
   "librarySortShortestClip": "చిన్నదైన క్లిప్",
   "librarySortSquareFirst": "స్క్వేర్ మొదట",
   "librarySortVerticalFirst": "వర్టికల్ ఫస్ట్",
-  "libraryDeleteClipsWarning": "ఈ చర్య రద్దు చేయబడదు. మీ గ్యాలరీలో సేవ్ చేసిన కాపీలు అక్కడే ఉంటాయి.",
+  "libraryDeleteClipsWarning": "ఈ చర్య రద్దు చేయబడదు.",
   "libraryPreparingVideo": "వీడియోని సిద్ధం చేస్తోంది...",
   "libraryCreateVideo": "వీడియోని సృష్టించండి ({count})",
   "@libraryCreateVideo": {
@@ -4004,7 +4004,7 @@
   },
   "libraryDeleteClipTitle": "క్లిప్‌ను తొలగించండి",
   "libraryDeleteClipMessage": "మీరు ఖచ్చితంగా ఈ క్లిప్‌ని తొలగించాలనుకుంటున్నారా?",
-  "libraryDeleteClipTrashNote": "క్లిప్ ముందుగా ట్రాష్‌లోకి వెళ్తుంది, కాబట్టి మీరు దాన్ని ఇంకా పునరుద్ధరించవచ్చు. మీ గ్యాలరీలో సేవ్ చేసిన కాపీలు అక్కడే ఉంటాయి.",
+  "libraryDeleteClipTrashNote": "క్లిప్ ముందుగా ట్రాష్‌లోకి వెళ్తుంది, కాబట్టి మీరు దాన్ని ఇంకా పునరుద్ధరించవచ్చు.",
   "libraryClipDuration": "{seconds}సె",
   "@libraryClipDuration": {
     "description": "Compact clip duration shown in the library trash row. {seconds} is already formatted with two decimal places, e.g. '5.73'.",
@@ -4027,8 +4027,6 @@
   "videoClipArchivedSemanticLabel": "ఆర్కైవ్ చేయబడింది. {label}",
   "videoClipBackupPendingSemanticLabel": "ఇంకా మీ గ్యాలరీలో లేదు. {label}",
   "videoClipBackupUnsignedSemanticLabel": "కంటెంట్ ఆధారాలు లేకుండా మీ గ్యాలరీలో ఉంది. {label}",
-  "videoClipBackupPendingNote": "ఇంకా మీ గ్యాలరీలో లేదు. కంటెంట్ ఆధారాలు లభించిన వెంటనే అక్కడికి కాపీ అవుతుంది, దీనికి ఇంటర్నెట్ కనెక్షన్ అవసరం.",
-  "videoClipBackupUnsignedNote": "మీ గ్యాలరీలోని కాపీకి కంటెంట్ ఆధారాలు లేవు, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.",
   "@videoClipArchivedSemanticLabel": {
     "description": "Accessibility label for an archived clip thumbnail shown inside a category. Wraps the clip's own label.",
     "placeholders": {

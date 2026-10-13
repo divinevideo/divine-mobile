@@ -4339,7 +4339,7 @@
   "librarySortShortestClip": "Shortest Clip",
   "librarySortSquareFirst": "Square First",
   "librarySortVerticalFirst": "Vertical First",
-  "libraryDeleteClipsWarning": "This can't be undone. Copies saved to your gallery stay there.",
+  "libraryDeleteClipsWarning": "This can't be undone.",
   "libraryPreparingVideo": "Preparing video...",
   "libraryCreateVideo": "Create Video ({count})",
   "@libraryCreateVideo": {
@@ -4496,9 +4496,9 @@
   },
   "libraryDeleteClipTitle": "Delete Clip",
   "libraryDeleteClipMessage": "Are you sure you want to delete this clip?",
-  "libraryDeleteClipTrashNote": "It goes to the trash first, so you can still restore it. Copies saved to your gallery stay there.",
+  "libraryDeleteClipTrashNote": "It goes to the trash first, so you can still restore it.",
   "@libraryDeleteClipTrashNote": {
-    "description": "Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored; copies the user saved to the device gallery, by hand or through the recording backup, are not deleted."
+    "description": "Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored, so the prompt must not say its files are gone for good."
   },
   "libraryClipDuration": "{seconds}s",
   "@libraryClipDuration": {
@@ -4545,14 +4545,6 @@
         "type": "String"
       }
     }
-  },
-  "videoClipBackupPendingNote": "Not in your gallery yet. It's copied there once it has its content credentials, which needs an internet connection.",
-  "@videoClipBackupPendingNote": {
-    "description": "Shown under a clip in its preview when its recording is not in the gallery yet. The copy waits for the recording's C2PA content credentials, which need an internet connection."
-  },
-  "videoClipBackupUnsignedNote": "The copy in your gallery has no content credentials, so it can't come back to your clips.",
-  "@videoClipBackupUnsignedNote": {
-    "description": "Shown under a clip in its preview when its gallery copy has no C2PA content credentials, for example from a build that cannot sign, so the gallery import would reject it."
   },
   "videoClipStopMotionSemanticLabel": "Stop-motion clip, {frames}",
   "@videoClipStopMotionSemanticLabel": {

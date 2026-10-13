@@ -6538,8 +6538,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get librarySortVerticalFirst => 'پہلے عمودی';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'یہ کارروائی واپس نہیں ہو سکتی۔ آپ کی گیلری میں محفوظ کاپیاں وہیں رہیں گی۔';
+  String get libraryDeleteClipsWarning => 'یہ کارروائی واپس نہیں ہو سکتی۔';
 
   @override
   String get libraryPreparingVideo => 'ویڈیو تیار ہو رہی ہے...';
@@ -6714,7 +6713,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔ آپ کی گیلری میں محفوظ کاپیاں وہیں رہیں گی۔';
+      'کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6743,14 +6742,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'آپ کی گیلری میں مواد اسناد کے بغیر۔ $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'ابھی آپ کی گیلری میں نہیں۔ مواد اسناد ملتے ہی یہ وہاں کاپی ہو جائے گی، جس کے لیے انٹرنیٹ کنکشن درکار ہے۔';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'آپ کی گیلری میں موجود کاپی میں مواد اسناد نہیں ہیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

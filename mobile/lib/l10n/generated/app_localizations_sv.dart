@@ -6524,8 +6524,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get librarySortVerticalFirst => 'Vertikala först';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Det går inte att ångra. Kopior i ditt galleri finns kvar där.';
+  String get libraryDeleteClipsWarning => 'Det går inte att ångra.';
 
   @override
   String get libraryPreparingVideo => 'Förbereder video...';
@@ -6700,7 +6699,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Klippet hamnar först i papperskorgen, så du kan fortfarande återställa det. Kopior i ditt galleri finns kvar där.';
+      'Klippet hamnar först i papperskorgen, så du kan fortfarande återställa det.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6729,14 +6728,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'I ditt galleri utan innehållsuppgifter. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Inte i ditt galleri än. Den kopieras dit när den har fått sina innehållsuppgifter, vilket kräver en internetanslutning.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Kopian i ditt galleri saknar innehållsuppgifter, så den kan inte komma tillbaka till dina klipp.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

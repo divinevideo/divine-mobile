@@ -6700,8 +6700,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticalele mai întâi';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Nu se poate anula. Copiile salvate în galeria ta rămân acolo.';
+  String get libraryDeleteClipsWarning => 'Nu se poate anula.';
 
   @override
   String get libraryPreparingVideo => 'Se pregătește videoclipul...';
@@ -6875,7 +6874,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Clipul ajunge mai întâi în coș, așa că îl poți restaura în continuare. Copiile salvate în galeria ta rămân acolo.';
+      'Clipul ajunge mai întâi în coș, așa că îl poți restaura în continuare.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6904,14 +6903,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'În galeria ta fără acreditări de conținut. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Încă nu e în galeria ta. Ajunge acolo imediat ce are acreditările de conținut, iar pentru asta e nevoie de o conexiune la internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Copia din galeria ta nu are acreditări de conținut, așa că nu poate reveni în clipurile tale.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

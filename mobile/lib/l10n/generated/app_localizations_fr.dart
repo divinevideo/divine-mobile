@@ -6622,8 +6622,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticaux d\'abord';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Action irréversible. Les copies enregistrées dans ta galerie y restent.';
+  String get libraryDeleteClipsWarning => 'Action irréversible.';
 
   @override
   String get libraryPreparingVideo => 'Préparation de la vidéo...';
@@ -6799,7 +6798,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Il passe d\'abord par la corbeille, tu peux donc encore le restaurer. Les copies enregistrées dans ta galerie y restent.';
+      'Il passe d\'abord par la corbeille, tu peux donc encore le restaurer.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6828,14 +6827,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Dans ta galerie sans Content Credentials. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Pas encore dans ta galerie. La copie y sera ajoutée dès que l\'enregistrement aura ses Content Credentials, ce qui nécessite une connexion internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'La copie dans ta galerie n\'a pas de Content Credentials, elle ne peut donc pas revenir dans tes clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

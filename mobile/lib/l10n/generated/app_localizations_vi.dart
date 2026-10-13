@@ -6497,8 +6497,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get librarySortVerticalFirst => 'Dọc trước';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Không thể hoàn tác thao tác này. Các bản sao đã lưu trong thư viện ảnh của bạn vẫn còn đó.';
+  String get libraryDeleteClipsWarning => 'Không thể hoàn tác thao tác này.';
 
   @override
   String get libraryPreparingVideo => 'Đang chuẩn bị video...';
@@ -6673,7 +6672,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Clip sẽ vào thùng rác trước, nên bạn vẫn có thể khôi phục. Các bản sao đã lưu trong thư viện ảnh của bạn vẫn còn đó.';
+      'Clip sẽ vào thùng rác trước, nên bạn vẫn có thể khôi phục.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6702,14 +6701,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Có trong thư viện ảnh của bạn nhưng không có chứng nhận nội dung. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Chưa có trong thư viện ảnh của bạn. Bản sao sẽ được lưu vào đó khi có chứng nhận nội dung, việc này cần kết nối internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Bản sao trong thư viện ảnh của bạn không có chứng nhận nội dung, nên không thể đưa trở lại clip của bạn.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

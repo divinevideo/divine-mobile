@@ -6211,7 +6211,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get librarySortVerticalFirst => '세로형 먼저';
 
   @override
-  String get libraryDeleteClipsWarning => '되돌릴 수 없어요. 갤러리에 저장된 사본은 그대로 남아요.';
+  String get libraryDeleteClipsWarning => '되돌릴 수 없어요.';
 
   @override
   String get libraryPreparingVideo => '동영상 준비 중...';
@@ -6379,8 +6379,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryDeleteClipMessage => '이 클립을 삭제할까요?';
 
   @override
-  String get libraryDeleteClipTrashNote =>
-      '클립은 먼저 휴지통으로 이동하므로 아직 복원할 수 있어요. 갤러리에 저장된 사본은 그대로 남아요.';
+  String get libraryDeleteClipTrashNote => '클립은 먼저 휴지통으로 이동하므로 아직 복원할 수 있어요.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6409,14 +6408,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return '콘텐츠 자격 증명 없이 갤러리에 있어요. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      '아직 갤러리에 없어요. 콘텐츠 자격 증명이 생기면 갤러리로 복사돼요. 이를 위해 인터넷 연결이 필요해요.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      '갤러리의 사본에 콘텐츠 자격 증명이 없어서 클립으로 다시 가져올 수 없어요.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

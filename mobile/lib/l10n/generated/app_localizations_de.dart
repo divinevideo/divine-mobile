@@ -6617,7 +6617,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Das kann nicht rückgängig gemacht werden. Kopien in deiner Galerie bleiben dort.';
+      'Das kann nicht rückgängig gemacht werden.';
 
   @override
   String get libraryPreparingVideo => 'Video wird vorbereitet …';
@@ -6794,7 +6794,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Der Clip kommt zuerst in den Papierkorb, du kannst ihn also noch wiederherstellen. Kopien in deiner Galerie bleiben dort.';
+      'Der Clip kommt zuerst in den Papierkorb, du kannst ihn also noch wiederherstellen.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6823,14 +6823,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'In deiner Galerie ohne Content Credentials. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Noch nicht in deiner Galerie. Die Kopie kommt dorthin, sobald die Aufnahme ihre Content Credentials hat. Dafür braucht es eine Internetverbindung.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Die Kopie in deiner Galerie hat keine Content Credentials und kann deshalb nicht zurück in deine Clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

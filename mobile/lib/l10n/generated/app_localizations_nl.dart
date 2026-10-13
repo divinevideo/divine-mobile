@@ -6562,7 +6562,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Dit kan niet ongedaan worden gemaakt. Kopieën in je galerij blijven daar staan.';
+      'Dit kan niet ongedaan worden gemaakt.';
 
   @override
   String get libraryPreparingVideo => 'Video voorbereiden...';
@@ -6739,7 +6739,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'De clip gaat eerst naar de prullenbak, dus je kunt hem nog terugzetten. Kopieën in je galerij blijven daar staan.';
+      'De clip gaat eerst naar de prullenbak, dus je kunt hem nog terugzetten.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6768,14 +6768,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'In je galerij zonder content credentials. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Nog niet in je galerij. De kopie komt daar zodra de opname zijn content credentials heeft, en daarvoor is een internetverbinding nodig.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'De kopie in je galerij heeft geen content credentials en kan daarom niet terug naar je clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

@@ -6692,8 +6692,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get librarySortVerticalFirst => 'Najpierw pionowe';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Tego nie cofniesz. Kopie zapisane w galerii zostają na miejscu.';
+  String get libraryDeleteClipsWarning => 'Tego nie cofniesz.';
 
   @override
   String get libraryPreparingVideo => 'Przygotowywanie wideo...';
@@ -6874,7 +6873,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Klip najpierw trafia do kosza, więc wciąż możesz go przywrócić. Kopie zapisane w galerii zostają na miejscu.';
+      'Klip najpierw trafia do kosza, więc wciąż możesz go przywrócić.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6903,14 +6902,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'W twojej galerii bez poświadczeń treści. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Jeszcze nie ma w twojej galerii. Kopia trafi tam, gdy nagranie dostanie poświadczenia treści, a do tego potrzebne jest połączenie z internetem.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Kopia w twojej galerii nie ma poświadczeń treści, więc nie może wrócić do twoich klipów.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

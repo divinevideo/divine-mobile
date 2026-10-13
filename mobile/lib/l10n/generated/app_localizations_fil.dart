@@ -6574,8 +6574,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get librarySortVerticalFirst => 'Unahin ang patayo';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Hindi na ito mababawi. Mananatili sa gallery mo ang mga kopyang naka-save doon.';
+  String get libraryDeleteClipsWarning => 'Hindi na ito mababawi.';
 
   @override
   String get libraryPreparingVideo => 'Hinahanda ang video...';
@@ -6751,7 +6750,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Mapupunta muna ang clip sa trash, kaya puwede mo pa itong i-restore. Mananatili sa gallery mo ang mga kopyang naka-save doon.';
+      'Mapupunta muna ang clip sa trash, kaya puwede mo pa itong i-restore.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6780,14 +6779,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Nasa gallery mo nang walang content credentials. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Wala pa sa gallery mo. Makokopya ito roon kapag may content credentials na, at kailangan nito ng internet connection.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Walang content credentials ang kopya sa gallery mo, kaya hindi na ito maibabalik sa clips mo.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

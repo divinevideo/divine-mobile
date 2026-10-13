@@ -6190,8 +6190,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get librarySortVerticalFirst => '縦長を先に';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'この操作は取り消せません。ギャラリーに保存したコピーはそのまま残ります。';
+  String get libraryDeleteClipsWarning => 'この操作は取り消せません。';
 
   @override
   String get libraryPreparingVideo => '動画を準備しています…';
@@ -6358,8 +6357,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDeleteClipMessage => 'このクリップを削除しますか？';
 
   @override
-  String get libraryDeleteClipTrashNote =>
-      'クリップはまずゴミ箱に移動するため、まだ復元できます。ギャラリーに保存したコピーはそのまま残ります。';
+  String get libraryDeleteClipTrashNote => 'クリップはまずゴミ箱に移動するため、まだ復元できます。';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6388,14 +6386,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'コンテンツ認証情報なしでギャラリーに保存済み。$label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'まだギャラリーにありません。コンテンツ認証情報が付くとギャラリーにコピーされます。それにはインターネット接続が必要です。';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'ギャラリーのコピーにはコンテンツ認証情報がないため、クリップに戻すことはできません。';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

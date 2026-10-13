@@ -6511,8 +6511,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get librarySortVerticalFirst => 'العمودي أولاً';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'لا يمكن التراجع. تبقى النسخ المحفوظة في معرض الصور كما هي.';
+  String get libraryDeleteClipsWarning => 'لا يمكن التراجع.';
 
   @override
   String get libraryPreparingVideo => 'جاري تجهيز الفيديو...';
@@ -6685,7 +6684,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'يُنقل المقطع إلى سلة المهملات أولًا، لذا يمكن استعادته. تبقى النسخ المحفوظة في معرض الصور كما هي.';
+      'يُنقل المقطع إلى سلة المهملات أولًا، لذا يمكن استعادته.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6714,14 +6713,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'في معرض الصور دون بيانات اعتماد المحتوى. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'ليس في معرض الصور بعد. يُنسخ إليه بمجرد حصوله على بيانات اعتماد المحتوى، وهذا يتطلب اتصالاً بالإنترنت.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'النسخة الموجودة في معرض الصور لا تحمل بيانات اعتماد المحتوى، لذا لا يمكن إعادتها إلى مقاطعك.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

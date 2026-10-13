@@ -6732,8 +6732,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get librarySortVerticalFirst => 'వర్టికల్ ఫస్ట్';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'ఈ చర్య రద్దు చేయబడదు. మీ గ్యాలరీలో సేవ్ చేసిన కాపీలు అక్కడే ఉంటాయి.';
+  String get libraryDeleteClipsWarning => 'ఈ చర్య రద్దు చేయబడదు.';
 
   @override
   String get libraryPreparingVideo => 'వీడియోని సిద్ధం చేస్తోంది...';
@@ -6912,7 +6911,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'క్లిప్ ముందుగా ట్రాష్‌లోకి వెళ్తుంది, కాబట్టి మీరు దాన్ని ఇంకా పునరుద్ధరించవచ్చు. మీ గ్యాలరీలో సేవ్ చేసిన కాపీలు అక్కడే ఉంటాయి.';
+      'క్లిప్ ముందుగా ట్రాష్‌లోకి వెళ్తుంది, కాబట్టి మీరు దాన్ని ఇంకా పునరుద్ధరించవచ్చు.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6941,14 +6940,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'కంటెంట్ ఆధారాలు లేకుండా మీ గ్యాలరీలో ఉంది. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'ఇంకా మీ గ్యాలరీలో లేదు. కంటెంట్ ఆధారాలు లభించిన వెంటనే అక్కడికి కాపీ అవుతుంది, దీనికి ఇంటర్నెట్ కనెక్షన్ అవసరం.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'మీ గ్యాలరీలోని కాపీకి కంటెంట్ ఆధారాలు లేవు, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

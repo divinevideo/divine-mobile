@@ -299,8 +299,8 @@ is offered on Android and iOS only.
   whose signing still fails ends the pass; the rest wait for the next.
 - **Unsignable takes are copied and flagged.** A build that cannot sign, or a
   take without a capture proof, is copied as it is (`savedUnsigned`). The
-  gallery import rejects such a copy, so the library marks the clip, and its
-  preview says why. A take still waiting is marked too.
+  gallery import rejects such a copy, so the library marks the clip. A take
+  still waiting is marked too.
 - **The state lives on the library entry** (`DivineVideoClip.galleryBackup`,
   naming the recording file). Only `ClipLibraryService.setGalleryBackup`
   changes it, and a save of an older copy keeps what the entry holds, so a
@@ -309,8 +309,7 @@ is offered on Android and iOS only.
   so a chroma-key bake or any later edit never replaces it, and a chroma-key
   take is backed up as it was shot, without its backdrop.
 - **Deleting a clip in Divine leaves its copy.** Trash, the 30-day purge and
-  "delete forever" only touch the app's file, and the delete prompts say that
-  copies saved to the gallery stay. A take put in the trash before
+  "delete forever" only touch the app's file. A take put in the trash before
   its copy was written waits until it is restored.
 - **What is backed up.** New camera recordings only, from the moment the
   setting is on. Stop-motion stills are not: they are never signed and the

@@ -6152,7 +6152,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get librarySortVerticalFirst => '竖屏优先';
 
   @override
-  String get libraryDeleteClipsWarning => '此操作无法撤销。保存到相册中的副本会保留。';
+  String get libraryDeleteClipsWarning => '此操作无法撤销。';
 
   @override
   String get libraryPreparingVideo => '正在准备视频...';
@@ -6319,7 +6319,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDeleteClipMessage => '确定要删除这个片段吗？';
 
   @override
-  String get libraryDeleteClipTrashNote => '片段会先进入回收站，你仍然可以恢复它。保存到相册中的副本会保留。';
+  String get libraryDeleteClipTrashNote => '片段会先进入回收站，你仍然可以恢复它。';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6348,12 +6348,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return '已保存到你的相册，但没有内容凭证。$label';
   }
-
-  @override
-  String get videoClipBackupPendingNote => '尚未保存到你的相册。获得内容凭证后会复制到相册，这需要网络连接。';
-
-  @override
-  String get videoClipBackupUnsignedNote => '你相册中的副本没有内容凭证，因此无法找回到你的片段库。';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

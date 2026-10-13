@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -328,10 +327,6 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
                         ),
                       ),
 
-                    if (widget.clip.galleryBackup case final backup?
-                        when backup.needsAttention)
-                      _GalleryBackupNote(status: backup.status),
-
                     // Action buttons row
                     _ActionButtonsRow(
                       isSaving: _isSaving,
@@ -344,26 +339,6 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Says why a recording's gallery backup is flagged in the library.
-class _GalleryBackupNote extends StatelessWidget {
-  const _GalleryBackupNote({required this.status});
-
-  final ClipGalleryBackupStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      status == ClipGalleryBackupStatus.pending
-          ? context.l10n.videoClipBackupPendingNote
-          : context.l10n.videoClipBackupUnsignedNote,
-      textAlign: TextAlign.center,
-      style: VineTheme.bodyMediumFont(
-        color: context.vineColors.onSurfaceVariant,
       ),
     );
   }

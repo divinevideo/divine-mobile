@@ -6456,8 +6456,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get librarySortVerticalFirst => 'Vertikal terlebih dahulu';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Tindakan ini tidak bisa dibatalkan. Salinan yang tersimpan di galerimu tetap ada.';
+  String get libraryDeleteClipsWarning => 'Tindakan ini tidak bisa dibatalkan.';
 
   @override
   String get libraryPreparingVideo => 'Menyiapkan video...';
@@ -6630,7 +6629,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Klip masuk ke sampah dulu, jadi kamu masih bisa memulihkannya. Salinan yang tersimpan di galerimu tetap ada.';
+      'Klip masuk ke sampah dulu, jadi kamu masih bisa memulihkannya.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6659,14 +6658,6 @@ class AppLocalizationsId extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'Ada di galerimu tanpa kredensial konten. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Belum ada di galerimu. Salinannya disimpan ke sana setelah rekaman punya kredensial konten, dan itu memerlukan koneksi internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Salinan di galerimu tidak punya kredensial konten, jadi tidak bisa kembali ke klipmu.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

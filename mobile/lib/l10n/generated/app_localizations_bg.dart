@@ -6588,8 +6588,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get librarySortVerticalFirst => 'Първо вертикални';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Това не може да бъде отменено. Копията в галерията ти остават там.';
+  String get libraryDeleteClipsWarning => 'Това не може да бъде отменено.';
 
   @override
   String get libraryPreparingVideo => 'Видеоклипът се подготвя...';
@@ -6772,7 +6771,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Клипът първо отива в кошчето, така че още можеш да го възстановиш. Копията в галерията ти остават там.';
+      'Клипът първо отива в кошчето, така че още можеш да го възстановиш.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6801,14 +6800,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'В галерията ти без удостоверения за съдържание. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Още не е в галерията ти. Копира се там, щом получи удостоверенията си за съдържание, а за това е нужна интернет връзка.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'Копието в галерията ти няма удостоверения за съдържание, затова не може да се върне в клиповете ти.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

@@ -6588,8 +6588,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticales primero';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'No se puede deshacer. Las copias guardadas en tu galería se quedan ahí.';
+  String get libraryDeleteClipsWarning => 'No se puede deshacer.';
 
   @override
   String get libraryPreparingVideo => 'Preparando video...';
@@ -6766,7 +6765,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get libraryDeleteClipTrashNote =>
-      'Primero va a la papelera, así que todavía podés restaurarlo. Las copias guardadas en tu galería se quedan ahí.';
+      'Primero va a la papelera, así que todavía podés restaurarlo.';
 
   @override
   String libraryClipDuration(String seconds) {
@@ -6795,14 +6794,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String videoClipBackupUnsignedSemanticLabel(String label) {
     return 'En tu galería sin credenciales de contenido. $label';
   }
-
-  @override
-  String get videoClipBackupPendingNote =>
-      'Todavía no está en tu galería. Se copia ahí cuando tenga sus credenciales de contenido, y para eso hace falta conexión a internet.';
-
-  @override
-  String get videoClipBackupUnsignedNote =>
-      'La copia en tu galería no tiene credenciales de contenido, así que no puede volver a tus clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {

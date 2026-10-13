@@ -11170,7 +11170,7 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDeleteClipsWarning.
   ///
   /// In en, this message translates to:
-  /// **'This can\'t be undone. Copies saved to your gallery stay there.'**
+  /// **'This can\'t be undone.'**
   String get libraryDeleteClipsWarning;
 
   /// No description provided for @libraryPreparingVideo.
@@ -11425,10 +11425,10 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this clip?'**
   String get libraryDeleteClipMessage;
 
-  /// Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored; copies the user saved to the device gallery, by hand or through the recording backup, are not deleted.
+  /// Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored, so the prompt must not say its files are gone for good.
   ///
   /// In en, this message translates to:
-  /// **'It goes to the trash first, so you can still restore it. Copies saved to your gallery stay there.'**
+  /// **'It goes to the trash first, so you can still restore it.'**
   String get libraryDeleteClipTrashNote;
 
   /// Compact clip duration shown in the library trash row. {seconds} is already formatted with two decimal places, e.g. '5.73'.
@@ -11466,18 +11466,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In your gallery without content credentials. {label}'**
   String videoClipBackupUnsignedSemanticLabel(String label);
-
-  /// Shown under a clip in its preview when its recording is not in the gallery yet. The copy waits for the recording's C2PA content credentials, which need an internet connection.
-  ///
-  /// In en, this message translates to:
-  /// **'Not in your gallery yet. It\'s copied there once it has its content credentials, which needs an internet connection.'**
-  String get videoClipBackupPendingNote;
-
-  /// Shown under a clip in its preview when its gallery copy has no C2PA content credentials, for example from a build that cannot sign, so the gallery import would reject it.
-  ///
-  /// In en, this message translates to:
-  /// **'The copy in your gallery has no content credentials, so it can\'t come back to your clips.'**
-  String get videoClipBackupUnsignedNote;
 
   /// Accessibility label for a stop-motion clip thumbnail. {frames} is the already-localized frame count from videoEditorStopMotionFramesCount. Replaces the duration label, which is a misleading value for stop-motion and is hidden visually for the same reason.
   ///
