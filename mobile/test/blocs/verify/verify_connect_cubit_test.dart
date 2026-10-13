@@ -376,6 +376,39 @@ void main() {
         },
       );
 
+      // The returned values describe one confirmed claim, so a valid account
+      // is not mixed with the proof as sent.
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the whole claim as sent when one returned value is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
+              canonicalIdentity: 'mastodon.example/@alice',
+              canonicalProof: '110|123',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('@alice@mastodon.example'));
+          expect(claim.proof, equals('110123'));
+        },
+      );
+
       blocTest<VerifyConnectCubit, VerifyConnectState>(
         'publishes nothing when the proof does not check out',
         build: () => build(_github),
