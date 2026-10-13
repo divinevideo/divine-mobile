@@ -2572,9 +2572,10 @@ void main() {
         final first = _makeVideo();
         final second = _makeVideo(id: 'b' * 64);
         final third = _makeVideo(id: 'c' * 64);
+        final fourth = _makeVideo(id: 'd' * 64);
         await _pumpFeedVideos(
           tester,
-          videos: [first, second, third],
+          videos: [first, second, third, fourth],
           additionalOverrides: [
             consumptionAnalyticsTrackerProvider.overrideWithValue(
               ConsumptionAnalyticsTracker(analytics: () => analytics),
@@ -2605,6 +2606,19 @@ void main() {
         expect(
           analytics.events.last.parameters['feed_session_id'],
           isNot(signedInSession),
+        );
+        feed.onActiveVideoChanged?.call(third, 2);
+        await tester.pump();
+        expect(analytics.events.last.parameters['depth'], 3);
+        final disabledSession =
+            analytics.events.last.parameters['feed_session_id'];
+        await analytics.setAnalyticsEnabled(true);
+        feed.onActiveVideoChanged?.call(fourth, 3);
+        await tester.pump();
+        expect(analytics.events.last.parameters['depth'], 2);
+        expect(
+          analytics.events.last.parameters['feed_session_id'],
+          isNot(disabledSession),
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 4));
