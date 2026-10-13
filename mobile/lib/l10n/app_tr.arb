@@ -5110,5 +5110,6 @@
   "soundReadySave": "Seslerim’e kaydet",
   "soundRequestSaved": "Kaydedildi",
   "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
-  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi"
+  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi",
+  "minorAccountReviewRecordConsentPrivacyBody": "Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz."
 }

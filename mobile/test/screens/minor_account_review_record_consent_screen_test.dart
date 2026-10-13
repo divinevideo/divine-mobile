@@ -50,7 +50,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
 
   @override
   Future<void> submitParentConsent({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
@@ -502,6 +502,69 @@ void main() {
   });
 
   group('MinorConsentSubmitView', () {
+    testWidgets('allows submitting a consent recording before a case exists', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final repository = _FakeRepository();
+      var fallbackTapped = false;
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            minorAccountReviewOverrideServiceProvider.overrideWithValue(
+              MinorAccountReviewOverrideService(prefs: prefs),
+            ),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => MinorAccountReviewStatus.active(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MinorConsentSubmitView(
+                videoPath: '/tmp/consent.mp4',
+                onUseEmailFallback: () => fallbackTapped = true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextFormField),
+        'parent@example.com',
+      );
+      await tester.tap(
+        find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.submittedCaseId, isNull);
+      expect(repository.submittedEmail, 'parent@example.com');
+      expect(repository.submittedVideoPath, '/tmp/consent.mp4');
+      expect(
+        find.text(l10n.minorAccountReviewVideoSubmittedTitle),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.minorAccountReviewVideoSubmittedBody),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          l10n.minorAccountReviewSubmissionReceivedBody('parent@example.com'),
+        ),
+        findsNothing,
+      );
+      expect(fallbackTapped, isFalse);
+    });
     testWidgets('submits the accepted clip with the confirmed email', (
       tester,
     ) async {

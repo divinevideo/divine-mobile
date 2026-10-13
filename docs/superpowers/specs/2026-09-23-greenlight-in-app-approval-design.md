@@ -18,6 +18,18 @@
 >   camera's default 1080p and 8 Mbps, a full clip is about 60 MB, so
 >   "oversize cannot occur" does not hold.
 
+> **Self-start integration (October 2026).** Families can opt into recording
+> in Experimental Features and open the existing Greenlight age guidance from
+> that flag, or opt in on the parent-consent explanation while restricted.
+> Recording is available to an authenticated account before it has a review
+> case. On submission, the repository starts or resumes an owned case via
+> `POST /v1/minor-review-cases/greenlight`, then uses the existing private
+> parent-consent upload. A voluntary application does not itself restrict or
+> approve the account. An existing unreviewed report keeps its provenance;
+> the worker records `greenlight_requested_at` rather than replacing the report.
+> The age bands, eligibility, human review, and existing email fallback remain
+> the same Greenlight policy; no 16–17 protection or consent policy is added.
+
 ---
 
 ## Context

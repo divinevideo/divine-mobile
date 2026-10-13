@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
@@ -10,6 +11,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/screens/minor_account_review_screen.dart';
 
 class FeatureFlagScreen extends ConsumerWidget {
   const FeatureFlagScreen({super.key});
@@ -66,39 +68,54 @@ class FeatureFlagScreen extends ConsumerWidget {
               // tap anything but its bounds centre. Inside the Card the
               // identifier merges with the tile, which carries both the tap
               // and (via `toggled`) the on/off state the E2E flow asserts.
-              return Card(
-                clipBehavior: .hardEdge,
-                margin: const .only(bottom: 12.0),
-                child: Semantics(
-                  identifier: flag == FeatureFlag.accountSwitching
-                      ? SemanticIds.featureFlagAccountSwitching
-                      : null,
-                  toggled: isEnabled,
-                  child: ListTile(
-                    contentPadding: const .fromLTRB(16, 0, 12, 0),
-                    title: Text(
-                      flag.displayName,
-                      style: VineTheme.titleMediumFont(
-                        color: context.vineColors.primaryText,
+              return Column(
+                children: [
+                  Card(
+                    clipBehavior: .hardEdge,
+                    margin: const .only(bottom: 12.0),
+                    child: Semantics(
+                      identifier: flag == FeatureFlag.accountSwitching
+                          ? SemanticIds.featureFlagAccountSwitching
+                          : null,
+                      toggled: isEnabled,
+                      child: ListTile(
+                        contentPadding: const .fromLTRB(16, 0, 12, 0),
+                        title: Text(
+                          flag.displayName,
+                          style: VineTheme.titleMediumFont(
+                            color: context.vineColors.primaryText,
+                          ),
+                        ),
+                        subtitle: Text(
+                          flag.description,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.onSurfaceVariant,
+                          ),
+                        ),
+                        trailing: DivineSwitch(
+                          value: isEnabled,
+                          onChanged: (value) async {
+                            await service.setFlag(flag, value);
+                          },
+                        ),
+                        onTap: () async {
+                          await service.setFlag(flag, !isEnabled);
+                        },
                       ),
                     ),
-                    subtitle: Text(
-                      flag.description,
-                      style: VineTheme.bodySmallFont(
-                        color: context.vineColors.onSurfaceVariant,
-                      ),
-                    ),
-                    trailing: DivineSwitch(
-                      value: isEnabled,
-                      onChanged: (value) async {
-                        await service.setFlag(flag, value);
-                      },
-                    ),
-                    onTap: () async {
-                      await service.setFlag(flag, !isEnabled);
-                    },
                   ),
-                ),
+                  if (flag == FeatureFlag.minorConsentInAppRecording &&
+                      isEnabled)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                      child: DivineButton(
+                        label: context.l10n.authMinAgeNotice,
+                        expanded: true,
+                        onPressed: () =>
+                            context.push(MinorAccountReviewScreen.welcomePath),
+                      ),
+                    ),
+                ],
               );
             },
           ),

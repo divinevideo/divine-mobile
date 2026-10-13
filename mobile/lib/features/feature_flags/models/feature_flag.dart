@@ -100,10 +100,8 @@ enum FeatureFlag {
         'Stays off outside reviewer builds (#10094).',
     audience: FeatureFlagAudience.internal,
   ),
-  // User-facing on purpose: the parent who needs this flow is on the
-  // restricted teen's device, so the opt-in lives in Settings → Feature
-  // Flags where they can reach it before a restriction lands. Off by
-  // default; the toggle alone changes nothing for an unrestricted account.
+  // User-facing: families can start the existing Greenlight consent flow from
+  // Experimental Features, or opt in while already in account review.
   minorConsentInAppRecording(
     'In-App Parent Consent Recording',
     'Let a parent record and submit a consent video in the app for a '

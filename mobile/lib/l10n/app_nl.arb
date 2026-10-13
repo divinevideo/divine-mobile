@@ -5110,5 +5110,6 @@
   "soundReadySave": "Opslaan in Mijn geluiden",
   "soundRequestSaved": "Opgeslagen",
   "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
-  "minorAccountReviewVideoSubmittedTitle": "Video ingediend"
+  "minorAccountReviewVideoSubmittedTitle": "Video ingediend",
+  "minorAccountReviewRecordConsentPrivacyBody": "Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld."
 }

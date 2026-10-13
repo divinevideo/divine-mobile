@@ -10127,5 +10127,6 @@
     "description": "Sound request DM flow: Saved"
   },
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
-  "minorAccountReviewVideoSubmittedTitle": "Video submitted"
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted",
+  "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users."
 }

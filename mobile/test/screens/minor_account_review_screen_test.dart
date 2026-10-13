@@ -13,7 +13,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
@@ -764,7 +763,7 @@ void main() {
           ageBand: SuspectedAgeBand.age13To15,
           resolution: MinorReviewResolutionType.parentVideoOrEmail,
           parentSupportLabel: false,
-          expectedPath: MinorAccountReviewParentContactScreen.path,
+          expectedPath: MinorAccountReviewParentConsentScreen.path,
         ),
         (
           description: 'a 13-15 case that only allows a support review',

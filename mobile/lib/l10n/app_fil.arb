@@ -4116,5 +4116,6 @@
   "soundReadySave": "I-save sa Mga Tunog Ko",
   "soundRequestSaved": "Na-save",
   "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
-  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video"
+  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video",
+  "minorAccountReviewRecordConsentPrivacyBody": "Pribadong ipinapadala ang iyong video sa mga team ng Suporta at Tiwala at Kaligtasan ng Divine para suriin. Hindi ito inilalathala o ibinabahagi sa ibang mga user."
 }
