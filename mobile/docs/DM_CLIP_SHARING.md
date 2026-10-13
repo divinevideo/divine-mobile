@@ -124,6 +124,11 @@ it. Binding credits to their manifest is tracked in #9981.
 The check runs entirely on the device. The private clip is never sent
 anywhere to be checked, and remote manifests and OCSP are never fetched.
 
+Footage signed by other C2PA cameras, such as a phone that signs its own
+recordings, is not admitted. The reasons, and the rules that would apply if
+that changes, are in
+[C2PA_EXTERNAL_CAPTURE_SIGNERS.md](C2PA_EXTERNAL_CAPTURE_SIGNERS.md).
+
 The sender runs the same check before uploading, so a clip the recipient could
 never add is not sent, after first signing any of their own recordings left
 unsigned. That check is a convenience only: when it cannot run, the clip is
