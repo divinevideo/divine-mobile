@@ -2160,3 +2160,18 @@ class ScheduledPosts extends Table {
   @override
   Set<Column> get primaryKey => {eventId};
 }
+
+/// Account-scoped Concord ciphertext and delivery metadata.
+///
+/// Values must contain sealed events or non-secret delivery metadata only.
+/// The scope identifies the relay and channel; account deletion spans scopes.
+@DataClassName('ConcordStoreRow')
+class ConcordStoreEntries extends Table {
+  TextColumn get account => text()();
+  TextColumn get scope => text()();
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {account, scope, key};
+}

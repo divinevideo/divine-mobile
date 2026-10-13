@@ -1,5 +1,6 @@
 export 'clip_categories_dao.dart';
 export 'clips_dao.dart';
+export 'concord_store_dao.dart';
 export 'conversations_dao.dart';
 export 'direct_messages_dao.dart';
 export 'dm_reactions_dao.dart';

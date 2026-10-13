@@ -32,8 +32,32 @@ void main() {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 22);
     });
 
+    test(
+      'v21 migrates to v22 with writable account-scoped chat storage',
+      () async {
+        final schema = await verifier.schemaAt(22);
+        final db = AppDatabase(schema.newConnection());
+        await verifier.migrateAndValidate(db, 22);
+        await db.concordStoreDao.put(
+          account: 'a' * 64,
+          scope: 'relay/channel',
+          key: 'wrap',
+          value: 'ciphertext',
+        );
+        expect(
+          await db.concordStoreDao.get(
+            account: 'a' * 64,
+            scope: 'relay/channel',
+            key: 'wrap',
+          ),
+          'ciphertext',
+        );
+        await db.close();
+      },
+    );
+
     test('v22 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(22);
+      final schema = await verifier.schemaAt(21);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 22);
       await db.close();

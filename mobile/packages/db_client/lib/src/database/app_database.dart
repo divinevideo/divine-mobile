@@ -95,6 +95,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedCaptionStyles,
     SavedTitleStyles,
     ScheduledPosts,
+    ConcordStoreEntries,
   ],
   daos: [
     UserProfilesDao,
@@ -130,6 +131,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedCaptionStylesDao,
     SavedTitleStylesDao,
     ScheduledPostsDao,
+    ConcordStoreDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -266,6 +268,7 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 22 && to >= 22) {
         await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
+        await m.createTable(concordStoreEntries);
       }
     },
     beforeOpen: (details) async {
