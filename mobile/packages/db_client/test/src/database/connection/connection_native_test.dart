@@ -1685,12 +1685,26 @@ void main() {
           },
         );
         _expectReadOnlyRollback(dbPath);
+        bool? replayedFilePassedQuickCheck;
 
         final outcome = await migratePlaintextToEncrypted(
           rawKeyHex: validKey,
           databasePath: dbPath,
+          onHotJournalRecoveryCompletedForTesting: () {
+            final replayed = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+            try {
+              replayedFilePassedQuickCheck = databaseQuickCheckPasses(replayed);
+            } finally {
+              replayed.close();
+            }
+          },
         );
 
+        expect(
+          replayedFilePassedQuickCheck,
+          isFalse,
+          reason: 'the replayed file has to fail the check the rekey heals',
+        );
         expect(
           outcome,
           CipherMigrationOutcome.migrated,
