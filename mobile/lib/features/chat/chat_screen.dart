@@ -87,41 +87,55 @@ class _ChatScreenState extends State<ChatScreen> {
                         },
                       ),
               ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      enabled:
-                          !state.sending && !state.loading && !state.loadFailed,
-                      decoration: InputDecoration(
-                        hintText: context.l10n.profileMessageLabel,
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          enabled:
+                              !state.sending &&
+                              !state.loading &&
+                              !state.loadFailed,
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.newline,
+                          textCapitalization: TextCapitalization.sentences,
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: context.l10n.profileMessageLabel,
+                          ),
+                        ),
                       ),
-                    ),
+                      DivineIconButton(
+                        icon: DivineIconName.paperPlaneTilt,
+                        semanticLabel: context.l10n.dmMessageSendLabel,
+                        onPressed:
+                            state.sending || state.loading || state.loadFailed
+                            ? null
+                            : () async {
+                                final text = _controller.text.trim();
+                                if (text.isEmpty) return;
+                                final accepted = await context
+                                    .read<ChatCubit>()
+                                    .send(
+                                      communityId: state.selectedCommunityId,
+                                      channelId: state.selectedChannelId,
+                                      author: '',
+                                      body: text,
+                                      nowMilliseconds:
+                                          DateTime.now().millisecondsSinceEpoch,
+                                    );
+                                if (mounted && accepted) _controller.clear();
+                              },
+                      ),
+                    ],
                   ),
-                  DivineIconButton(
-                    icon: DivineIconName.paperPlaneTilt,
-                    semanticLabel: context.l10n.dmMessageSendLabel,
-                    onPressed:
-                        state.sending || state.loading || state.loadFailed
-                        ? null
-                        : () async {
-                            final text = _controller.text.trim();
-                            if (text.isEmpty) return;
-                            final accepted = await context
-                                .read<ChatCubit>()
-                                .send(
-                                  communityId: state.selectedCommunityId,
-                                  channelId: state.selectedChannelId,
-                                  author: '',
-                                  body: text,
-                                  nowMilliseconds:
-                                      DateTime.now().millisecondsSinceEpoch,
-                                );
-                            if (mounted && accepted) _controller.clear();
-                          },
-                  ),
-                ],
+                ),
               ),
             ],
           ),
