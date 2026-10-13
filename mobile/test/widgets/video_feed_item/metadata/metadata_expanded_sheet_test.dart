@@ -507,6 +507,28 @@ void main() {
       },
     );
 
+    testWidgetsWithSurfaceSize(
+      'shows an original Vine hashtag caption only as chips',
+      (tester) async {
+        final video = _makeVideo(
+          title: '#windowsxp #glenn',
+          content:
+              '#windowsxp #glenn\n\nOriginal stats: 3 loops - 2 likes'
+              '\n\n#windowsxp #glenn',
+          hashtags: const ['windowsxp', 'glenn'],
+          rawTags: const {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(child: MetadataExpandedSheet(video: video)),
+        );
+
+        expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
+        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(find.text('windowsxp'), findsOneWidget);
+      },
+    );
+
     testWidgetsWithSurfaceSize('trims blank lines around the description', (
       tester,
     ) async {
