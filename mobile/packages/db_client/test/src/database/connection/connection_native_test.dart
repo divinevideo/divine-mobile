@@ -1552,6 +1552,32 @@ void main() {
       },
     );
 
+    test(
+      'wrong key leaves a hot journal intact when no snapshot can be made',
+      () async {
+        _createHotJournalFixture(dbPath, key: validKey);
+        final databaseBefore = File(dbPath).readAsBytesSync();
+        final journalBefore = File('$dbPath-journal').readAsBytesSync();
+        const wrongKey =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+        final outcome = await _withUnusableSystemTemp(
+          tempRoot,
+          () => migratePlaintextToEncrypted(
+            rawKeyHex: wrongKey,
+            databasePath: dbPath,
+          ),
+        );
+
+        expect(outcome, equals(CipherMigrationOutcome.alreadyEncrypted));
+        expect(File(dbPath).readAsBytesSync(), equals(databaseBefore));
+        expect(
+          File('$dbPath-journal').readAsBytesSync(),
+          equals(journalBefore),
+        );
+      },
+    );
+
     test('a replay that fails without a snapshot can be retried', () {
       _createHotJournalFixture(dbPath, key: validKey);
       var configurations = 0;
