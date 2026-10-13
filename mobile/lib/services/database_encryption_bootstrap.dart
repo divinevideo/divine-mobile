@@ -200,8 +200,9 @@ class DatabaseEncryptionBootstrap {
   /// * [DatabaseHotJournalRecoveryError] when SQLite found a rollback journal
   ///   but could not safely replay it under the existing key, or replayed it
   ///   and could not run the integrity check afterwards. A replay that
-  ///   succeeds into a damaged encrypted file is salvaged like any corrupt
-  ///   database; a damaged plaintext one goes through the migration.
+  ///   succeeds into a damaged encrypted file is kept when it still opens and
+  ///   salvaged when it does not; a damaged plaintext one goes through the
+  ///   migration.
   ///
   /// Must run before the first `AppDatabase` open.
   Future<String?> resolveCipherKey() async {
@@ -248,11 +249,17 @@ class DatabaseEncryptionBootstrap {
         // A runtime corruption report from a previous session bypasses the
         // probe: it is reactive by design and already failed to see this
         // corruption once, so asking it again would just clear the database and
-        // strand the user on it for another session. A journal replay that
-        // failed its integrity check bypasses it for the same reason.
-        if (outcome == CipherMigrationOutcome.alreadyEncrypted &&
-            !await _hasPendingCorruptionRecovery() &&
+        // strand the user on it for another session.
+        if (!await _hasPendingCorruptionRecovery() &&
             await _canOpenEncryptedDatabase(key)) {
+          // A replayed journal that failed quick_check is kept like any
+          // database whose damage the probe cannot see: salvage keeps only the
+          // local-only tables, so it would lose more than the damage does.
+          if (outcome == CipherMigrationOutcome.encryptedButCorrupt) {
+            await _reportRecovery(
+              'kept a database whose journal replay failed quick_check',
+            );
+          }
           return (key, true);
         }
         // The key either no longer opens the DB (stale) or opens it but
