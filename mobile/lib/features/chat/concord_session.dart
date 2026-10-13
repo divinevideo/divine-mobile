@@ -13,9 +13,8 @@ const String concordRelayUrl = String.fromEnvironment(
   defaultValue: 'wss://relay.staging.dvines.org',
 );
 
-/// POC stream key until kind-33302-held community keys are loaded:
-/// deterministic per channel, public by construction. Real private
-/// channels must use held channel keys instead (mirrors web pocStreamKey).
+/// Deterministic public POC stream key. Real communities and private
+/// channels are unsupported by this session.
 GroupKey pocStreamKeyFor(String channelId) {
   final secret = sha256.convert(utf8.encode('concord-poc-stream:$channelId'));
   return groupKey('concord/channel', secret.toString(), '00' * 32, epoch: 0);

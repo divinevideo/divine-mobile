@@ -66,8 +66,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   /// Signed-in pubkey used as sealed rumor author (session identity).
   final String sealedAuthor;
 
-  /// Resolves the POC stream key for a channel (held keys replace this
-  /// once kind-33302 sync loads them). Null disables sealed sending.
+  /// Resolves only the public POC stream key. Real membership is not supported.
   final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
@@ -122,10 +121,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     required String body,
     required int now,
   }) async {
-    // Held kind-33302 keys win (private channels especially); the
-    // labeled POC key is only the fallback for unheld communities.
-    final stream =
-        _repo.heldStreamKey(channelId) ?? pocStreamForChannel?.call(channelId);
+    final stream = pocStreamForChannel?.call(channelId);
     final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
     if (_repo.sealedTransport != null &&
         stream != null &&

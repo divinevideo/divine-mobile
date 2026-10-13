@@ -8,8 +8,9 @@ approval or evidence of a working community. Discord remains canonical.
 Backend PR: https://github.com/divinevideo/divine-mobile/pull/10093
 Backend inspected at `60908610be5eba45c67b273a08e871b15bb3d1e1`.
 Messages UI inspected at `f15caa847faf5d518d70c1e76e86c6a90b9f92fa`.
-The backend owner must integrate the UI into the combined feature PR before
-its checks can validate the complete feature. No stacked PR is required.
+The UI and backend are combined in PR #10093. After the backend session
+failed, Rabble authorized the UI session to finish integration and validation.
+No stacked PR is required.
 
 The Messages UI provides Direct / Rooms behind the disabled-by-default
 `concordChat` gate. Its catalog is an explicitly public test community. It
@@ -39,8 +40,12 @@ Observed runtime gaps in this revision:
 - Expiry helpers exist, but no app lifecycle invokes purge. Receiver-side
   CORD-08 expiry cannot wait for phase-2 timer controls.
 
-These are backend integration dependencies. This checklist does not modify
-another session's backend branch or claim those features are implemented.
+The held-key path described above was removed during integration in response
+to review: it selected channels without community scope and accepted stale
+list fragments. A local reproduction downgraded root epoch 2 to 1. This PR
+now supports only the labeled public POC streams; it does not ingest lists or
+resolve held private keys. Real Community List sync remains a release gate.
+Other runtime gaps above remain explicit POC limitations.
 
 ## Relay evidence and required contract
 

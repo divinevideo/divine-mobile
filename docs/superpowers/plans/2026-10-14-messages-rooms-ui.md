@@ -3,12 +3,12 @@
 Goal: integrate the approved Messages navigation with the existing internal
 Concord POC, retaining its disabled-by-default gate and protected-account gate.
 Spec: ../specs/2026-10-13-messages-rooms-design.md.
-Execution: implement in this session; no backend ownership changes.
+Execution: implement in this session. Rabble subsequently authorized this
+session to finish the combined PR after the backend provider failed.
 
-Dependency: origin/feat/concord-mobile-chat at 60908610be, included locally for
-integration testing. The backend owner retains PR #10093. UI changes remain in
-separate commits for that owner to integrate into the combined feature PR; do
-not push their branch or open a stacked/duplicate feature PR.
+Dependency: origin/feat/concord-mobile-chat at 60908610be, included for
+integration testing. Publish the combined UI/backend through existing PR
+#10093, preserving both remote backend fixes. No stacked or duplicate PR.
 
 - [x] Test and implement account-scoped Direct / Rooms preference and Cubit.
 - [x] Test and implement a Messages host that keeps both lists mounted, hides
@@ -53,8 +53,8 @@ permissions, delivery/retry semantics, received-message persistence, expiry,
 read/mention state and moderation. The current fixed POC room catalog must be
 replaced with verified repository snapshots before public launch.
 
-Integrate the UI commit into the existing Concord feature PR. Do not
-cherry-pick the local dependency merge commit: that PR already contains the
-Concord dependency. Do not create a stacked or duplicate feature PR. The other
-session retains ownership of its branch and PR; this session has not pushed
-that branch, posted to that PR, merged, or deployed anything.
+The combined PR uses the validated Messages UI branch, which contains the
+remote backend head as an ancestor. The backend session's five local picks
+contain the same UI/docs; they must not be applied a second time. The unfinished
+held-key path was removed per the reviewer's offered option because real
+Community List sync is absent. Public POC behavior and the disabled gate remain.

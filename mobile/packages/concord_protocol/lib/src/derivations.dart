@@ -236,45 +236,6 @@ String hexToB64url(String hex) => bytesToB64url(hexToBytes(hex));
 bool isB64url32(String s) =>
     s.length == 43 && RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(s);
 
-String b64urlToHex(String s) {
-  final padded = s.padRight((s.length + 3) ~/ 4 * 4, '=');
-  return bytesToHex(base64Url.decode(padded));
-}
-
-/// Resolves the live stream key for a channel from kind-33302-held
-/// material (base64url-43 fields). A held channel `key` means private
-/// (per-channel epoch); otherwise derive from community_root.
-GroupKey? streamKeyFromListEntry(
-  Map<String, dynamic> entry,
-  String channelIdB64,
-) {
-  final current = entry['current'] as Map<String, dynamic>?;
-  if (current == null) return null;
-  final channels = (current['channels'] as List? ?? [])
-      .cast<Map<String, dynamic>>();
-  Map<String, dynamic>? channel;
-  for (final c in channels) {
-    if (c['id'] == channelIdB64) channel = c;
-  }
-  if (channel == null) return null;
-  final channelIdHex = b64urlToHex(channel['id'] as String);
-  final key = channel['key'] as String?;
-  if (key != null) {
-    return groupKey(
-      'concord/channel',
-      b64urlToHex(key),
-      channelIdHex,
-      epoch: (channel['epoch'] as num).toInt(),
-    );
-  }
-  return groupKey(
-    'concord/channel',
-    b64urlToHex(current['community_root'] as String),
-    channelIdHex,
-    epoch: (current['root_epoch'] as num).toInt(),
-  );
-}
-
 /// Legacy POC stream id retained only for old fixture readability; spec
 /// channels are addressed by derived channel pubkeys, not this hash.
 String deriveStreamId(String communityId, String channelId) => sha256

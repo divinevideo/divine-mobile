@@ -144,36 +144,6 @@ void main() {
       expect(hexToB64url(d['communityId'] as String), entry['community_id']);
     });
 
-    test('held 33302 keys resolve public and private stream keys', () {
-      final f =
-          jsonDecode(_readFixture('fixtures.json')) as Map<String, dynamic>;
-      final list = f['communityList33302'] as Map<String, dynamic>;
-      final entry = (list['entries'] as List).first as Map<String, dynamic>;
-      final current = entry['current'] as Map<String, dynamic>;
-      final firstChannel =
-          (current['channels'] as List).first as Map<String, dynamic>;
-      final channelId = firstChannel['id'] as String;
-      final pub = streamKeyFromListEntry(entry, channelId);
-      final derivations = f['derivations'] as Map<String, dynamic>;
-      expect(
-        pub?.pubkey,
-        (derivations['publicChannel'] as Map<String, dynamic>)['pubkey'],
-      );
-      final privEntry = jsonDecode(jsonEncode(entry)) as Map<String, dynamic>;
-      final ch =
-          ((privEntry['current'] as Map)['channels'] as List).first
-              as Map<String, dynamic>;
-      ch['key'] = hexToB64url(
-        (f['secrets'] as Map<String, dynamic>)['channelKey'] as String,
-      );
-      ch['epoch'] = 1;
-      final priv = streamKeyFromListEntry(privEntry, channelId);
-      expect(
-        priv?.pubkey,
-        (derivations['privateChannel'] as Map<String, dynamic>)['pubkey'],
-      );
-      expect(streamKeyFromListEntry(entry, hexToB64url('ab' * 32)), isNull);
-    });
     test('legacy v1 fixture still readable; unknown fields preserved', () {
       final f =
           jsonDecode(_readFixture('concord_v1.json')) as Map<String, dynamic>;
