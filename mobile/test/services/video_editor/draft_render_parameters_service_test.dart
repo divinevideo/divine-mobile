@@ -517,10 +517,11 @@ void main() {
     });
 
     test(
-      'captures detached clips as small as the editor canvas does',
+      'captures layers at a bounded resolution as the editor canvas does',
       () async {
-        // A detached clip's image is thrown away by the export; at full
-        // resolution three scaled-up clips cost gigabytes (#10071).
+        // A detached clip's image is thrown away by the export, and only the
+        // part of a layer scaled far past the frame is ever seen; at full
+        // resolution three of either cost gigabytes (#10071, #10100).
         final stub = _StubLayerRasterizer();
         addTearDown(stub.dispose);
 
