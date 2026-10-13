@@ -1756,9 +1756,18 @@ void main() {
 
         expect(skipped.timedOut, isTrue);
         expect(reasons, [contains('no query-pool slot arrived')]);
+        await setup.occupants;
+      },
+    );
 
-        // The listener is diagnostics: one that throws leaves the read's
-        // answer as it was.
+    test(
+      'a skipped-read observer that throws leaves the read its answer',
+      () async {
+        final setup = await _saturatedPool(
+          holdFor: const Duration(milliseconds: 300),
+        );
+
+        // The listener is diagnostics, so its failure stays out of the read.
         final despiteThrow = await NostrClient.observeSkippedReads(
           () => setup.client.queryEventsDetailed(
             [inboxList()],
@@ -1770,9 +1779,19 @@ void main() {
           ),
           onSkipped: (_) => throw StateError('listener'),
         );
-        expect(despiteThrow.timedOut, isTrue);
 
-        // A read that reached a relay is not reported, however it ended.
+        expect(despiteThrow.timedOut, isTrue);
+        expect(despiteThrow.events, isEmpty);
+        await setup.occupants;
+      },
+    );
+
+    test(
+      'does not tell an observer about a read that reached a relay',
+      () async {
+        final setup = await _saturatedPool(holdFor: holdFor, saturate: false);
+        final reasons = <String>[];
+
         final sent = NostrClient.observeSkippedReads(
           () => setup.client.queryEventsDetailed(
             [inboxList()],
@@ -1787,9 +1806,9 @@ void main() {
         await pumpEventQueue();
         final indexer = _tempRelayFor(setup.tempRelays, indexerUrl)!;
         await indexer.deliver(['EOSE', await indexer.awaitReq(0)]);
+
         expect((await sent).timedOut, isFalse);
-        expect(reasons, hasLength(1));
-        await setup.occupants;
+        expect(reasons, isEmpty);
       },
     );
 
