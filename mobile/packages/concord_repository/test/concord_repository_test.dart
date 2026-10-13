@@ -37,7 +37,7 @@ void main() {
         body: 'hi',
         createdAt: 1,
       );
-      expect(relay.published.single['kind'], streamEnvelopeKind);
+      expect(relay.published.single['kind'], streamWrapKind);
       await repo.acceptInvite('c');
       expect(await repo.hasAcceptedInvite('c'), isTrue);
       final storeB = InMemoryConcordStore('b' * 64);
