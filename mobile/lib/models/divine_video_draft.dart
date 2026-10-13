@@ -203,14 +203,16 @@ class DivineVideoDraft {
       sourceDraftId: json['sourceDraftId'] as String?,
       proofManifestJson: json['proofManifestJson'] as String?,
       // Expanded after the paths resolve, so the resolver walks each shared
-      // meta once too. The rotation lift runs here, where every draft is
-      // read, rather than where the editor mounts it.
+      // meta once too. The detached-clip repairs run here, where every draft
+      // is read, rather than where the editor mounts it.
       editorStateHistory: expandEditorStateHistory(
-        DetachedClipLayerData.withRotatableDetachedClips(
-          resolveAudioPaths(
-            (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
-            documentsPath,
-            useOriginalPath: useOriginalPath,
+        DetachedClipLayerData.withRestoredDetachedClipExportMeta(
+          DetachedClipLayerData.withRotatableDetachedClips(
+            resolveAudioPaths(
+              (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
+              documentsPath,
+              useOriginalPath: useOriginalPath,
+            ),
           ),
         ),
       ),

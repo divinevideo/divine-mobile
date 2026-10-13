@@ -336,12 +336,15 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         for name in ('ios-build', 'android-build'):
             with self.subTest(workflow=name):
                 description = workflows[name]['inputs']['RELEASE_CHANNEL']['description']
-                self.assertIn('Use BETA for store builds', description)
+                self.assertIn('Use BETA while testing', description)
+                self.assertIn('independently of store rollout', description)
                 self.assertIn('--promote-from', description)
-                self.assertIn('Do not rebuild with PRODUCTION', description)
+                self.assertIn('Do not rebuild to promote', description)
         root = CODEMAGIC_PATH.parent
         checklist = (root / 'docs' / 'RELEASE_CHECKLIST.md').read_text()
-        self.assertIn('Only macOS can use a new `RELEASE_CHANNEL=PRODUCTION` build', checklist)
+        self.assertIn('GitHub Production publication does not wait for store review or rollout', checklist)
+        self.assertIn('APK publication need not wait for iOS or macOS', checklist)
+        self.assertIn('original artifacts without rebuilding', checklist)
         for path in ('AGENTS.md', 'README.md'):
             self.assertIn('manual Zapstore publication', (root / path).read_text())
 
