@@ -114,6 +114,11 @@ Future<String> nip44Decrypt(String payload, Uint8List convKey) async {
     secretKey: crypto.SecretKey(keys['chacha']!),
   );
   final len = ByteData.sublistView(Uint8List.fromList(plain)).getUint16(0);
+  // NIP-44 unpad: the length prefix must be nonzero and the padded size
+  // must be exactly what that length pads to.
+  if (len == 0 || plain.length != 2 + _paddedLen(len)) {
+    throw const FormatException('nip44: bad padding');
+  }
   return utf8.decode(plain.sublist(2, 2 + len));
 }
 
