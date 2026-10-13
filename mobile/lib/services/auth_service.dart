@@ -2581,7 +2581,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       if (e is AccountActivationRetiredException) {
         return AuthResult.failure('Failed to import identity: $e');
       }
-      final reportedError = e is UserDataCleanupException ? e.cause ?? e : e;
+      // Native key-storage errors need diagnostics. Other cleanup causes can
+      // contain private rows and must retain their safe wrapper.
+      final reportedError =
+          e is UserDataCleanupException && e.cause is SecureKeyStorageException
+          ? e.cause!
+          : e;
       final failure = KeyImportFailedException.redacting(
         reportedError,
         secrets(),
