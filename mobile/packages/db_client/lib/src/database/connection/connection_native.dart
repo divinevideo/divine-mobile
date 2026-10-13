@@ -36,10 +36,10 @@ QueryExecutor openConnection() {
       // encrypted open, and it is exactly the device a legacy-migration
       // backup sits beside. The plaintext migration backup is deliberately
       // not swept here: only a keyed open proves it is safe to drop. A
-      // recovery snapshot left in the temp directory needs no such proof.
+      // recovery snapshot left behind needs no such proof.
       setup: (_) {
         sweepPreservedDatabaseCopies(dbPath);
-        sweepStrandedHotJournalSnapshots();
+        sweepStrandedHotJournalSnapshots(dbPath);
       },
     );
   });
@@ -95,7 +95,7 @@ QueryExecutor openEncryptedConnection({
         sweepPreservedDatabaseCopies(dbPath);
         // A launch killed after its journal was replayed leaves a snapshot
         // and no hot journal, so no later recovery would find it.
-        sweepStrandedHotJournalSnapshots();
+        sweepStrandedHotJournalSnapshots(dbPath);
       },
     );
   });
@@ -570,8 +570,8 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   _rawKeyLiteral(rawKeyHex); // validate shape up front (never embeds the key)
 
   final dbPath = databasePath ?? await getSharedDatabasePath();
-  // Until an unfinished restore is completed the live file may be truncated,
-  // and everything below reads it.
+  // Until an unfinished restore is completed the live files are not the ones
+  // to read, and everything below reads them.
   completeUnfinishedHotJournalRestore(databasePath: dbPath);
   final encryptedPath = '$dbPath$_migratingSuffix';
 
@@ -1184,6 +1184,9 @@ void _moveSidecars({
 
 @visibleForTesting
 void deleteDatabaseAndSidecars(String dbPath) {
+  // First, so that a kill part-way cannot leave a copy to be put back in
+  // place of the database being deleted.
+  discardHotJournalCopies(dbPath);
   for (final suffix in const ['', ...databaseSidecarSuffixes]) {
     final file = File('$dbPath$suffix');
     if (file.existsSync()) file.deleteSync();
@@ -1211,6 +1214,9 @@ void _preserveDatabaseCopy({
 }) {
   final anchor = anchorPath ?? fromPath;
   final backupPath = nextPreservedDatabaseCopyPath(anchor, suffix: suffix);
+  // First, so that a kill part-way cannot leave a copy to be put back over
+  // whatever takes the place of the database being set aside.
+  discardHotJournalCopies(fromPath);
   File(fromPath).renameSync(backupPath);
   _moveSidecars(
     fromPath: fromPath,
