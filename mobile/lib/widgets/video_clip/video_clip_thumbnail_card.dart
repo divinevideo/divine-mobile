@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
@@ -77,6 +78,12 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
         widget.showDurationBadge && !widget.clip.isStopMotion;
 
     final l10n = context.l10n;
+    // Only a backup that is not done yet, or is done without proof, is
+    // flagged; a finished one is the normal case and stays quiet.
+    final backupStatus = switch (widget.clip.galleryBackup) {
+      final backup? when backup.needsAttention => backup.status,
+      _ => null,
+    };
     // A stop-motion clip's playback length is a tiny, misleading value, which
     // is why the duration badge is hidden for it. Announcing that same number
     // would leak to screen readers exactly what the UI withholds, so describe
@@ -90,12 +97,19 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
         : l10n.videoClipSemanticLabel(
             widget.clip.duration.toFormattedSeconds(),
           );
+    final labelWithBackup = switch (backupStatus) {
+      ClipGalleryBackupStatus.pending =>
+        l10n.videoClipBackupPendingSemanticLabel(label),
+      ClipGalleryBackupStatus.savedUnsigned =>
+        l10n.videoClipBackupUnsignedSemanticLabel(label),
+      ClipGalleryBackupStatus.saved || null => label,
+    };
 
     return Semantics(
       container: true,
       label: widget.showArchivedBadge
-          ? l10n.videoClipArchivedSemanticLabel(label)
-          : label,
+          ? l10n.videoClipArchivedSemanticLabel(labelWithBackup)
+          : labelWithBackup,
       value: _isSelected
           // The badge shows the pick order, which decides the order clips are
           // stitched into, so announce it rather than letting the badge's bare
@@ -138,12 +152,15 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
 
                     /// Stop-motion marker + still count and the archived
                     /// marker - top left
-                    if (widget.clip.isStopMotion || widget.showArchivedBadge)
+                    if (widget.clip.isStopMotion ||
+                        widget.showArchivedBadge ||
+                        backupStatus != null)
                       _TopLeftBadges(
                         frameCount: widget.clip.isStopMotion
                             ? widget.clip.stopMotionFrames?.length ?? 0
                             : null,
                         showArchived: widget.showArchivedBadge,
+                        backupStatus: backupStatus,
                       ),
 
                     /// Duration badge - bottom left. Hidden for stop-motion
@@ -235,9 +252,13 @@ class _TitleBadge extends StatelessWidget {
 }
 
 /// The badge row in the top-left corner: the stop-motion marker, the
-/// archived marker, or both side by side.
+/// archived marker and the gallery backup marker, side by side.
 class _TopLeftBadges extends StatelessWidget {
-  const _TopLeftBadges({required this.frameCount, required this.showArchived});
+  const _TopLeftBadges({
+    required this.frameCount,
+    required this.showArchived,
+    required this.backupStatus,
+  });
 
   /// Number of captured stills, or `null` when the clip is not a
   /// stop-motion recording and carries no stop-motion badge.
@@ -245,6 +266,9 @@ class _TopLeftBadges extends StatelessWidget {
 
   /// Whether the archived marker is part of the row.
   final bool showArchived;
+
+  /// The gallery backup state to flag, or `null` when there is none to flag.
+  final ClipGalleryBackupStatus? backupStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +281,38 @@ class _TopLeftBadges extends StatelessWidget {
         children: [
           if (frameCount case final count?) _StopMotionBadge(frameCount: count),
           if (showArchived) const _ArchivedBadge(),
+          if (backupStatus case final status?)
+            _GalleryBackupBadge(status: status),
         ],
+      ),
+    );
+  }
+}
+
+/// Flags a recording whose gallery backup is still waiting, or was saved
+/// without its C2PA credential and so cannot come back to the clips.
+class _GalleryBackupBadge extends StatelessWidget {
+  const _GalleryBackupBadge({required this.status});
+
+  final ClipGalleryBackupStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    // Decorative: the card's own label already announces the backup state.
+    return ExcludeSemantics(
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: VineTheme.scrim65,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: DivineIcon(
+          icon: status == ClipGalleryBackupStatus.pending
+              ? .clockCountdown
+              : .sealWarning,
+          color: VineTheme.lightText,
+          size: 14,
+        ),
       ),
     );
   }

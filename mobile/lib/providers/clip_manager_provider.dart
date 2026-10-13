@@ -15,6 +15,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
+import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
@@ -433,6 +435,21 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
           category: .video,
         );
       }
+
+      // The take's signing settled, so its gallery backup can start (#10067).
+      // Detached: the gallery is no part of the editor's work.
+      runDetached(
+        ref
+            .read(recordingGalleryBackupServiceProvider)
+            .backUpRecording(
+              clipId: clip.id,
+              recordingPath: videoFile.path,
+              proof: proofData,
+            ),
+        'back up the recording of clip ${clip.id}',
+        logName: 'ClipManagerNotifier',
+        category: .video,
+      );
     } catch (e, stackTrace) {
       Log.error(
         '❌ Failed to generate proof for clip ${clip.id}: $e',

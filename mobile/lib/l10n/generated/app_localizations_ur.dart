@@ -6539,7 +6539,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'یہ کارروائی واپس نہیں ہو سکتی۔ ویڈیو فائلیں آپ کی ڈیوائس سے مستقل طور پر ہٹا دی جائیں گی۔';
+      'یہ کارروائی واپس نہیں ہو سکتی۔ آپ کی گیلری میں محفوظ کاپیاں وہیں رہیں گی۔';
 
   @override
   String get libraryPreparingVideo => 'ویڈیو تیار ہو رہی ہے...';
@@ -6713,6 +6713,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کیا آپ واقعی یہ کلپ حذف کرنا چاہتے ہیں؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔ آپ کی گیلری میں محفوظ کاپیاں وہیں رہیں گی۔';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6729,6 +6733,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'آرکائیو شدہ۔ $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ابھی آپ کی گیلری میں نہیں۔ $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'آپ کی گیلری میں مواد اسناد کے بغیر۔ $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'ابھی آپ کی گیلری میں نہیں۔ مواد اسناد ملتے ہی یہ وہاں کاپی ہو جائے گی، جس کے لیے انٹرنیٹ کنکشن درکار ہے۔';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'آپ کی گیلری میں موجود کاپی میں مواد اسناد نہیں ہیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11575,6 +11597,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے';
+
+  @override
+  String get settingsBackUpRecordings => 'ریکارڈنگز کا گیلری میں بیک اپ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -6623,7 +6623,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Action irréversible. Les fichiers vidéo seront définitivement supprimés de ton appareil.';
+      'Action irréversible. Les copies enregistrées dans ta galerie y restent.';
 
   @override
   String get libraryPreparingVideo => 'Préparation de la vidéo...';
@@ -6798,6 +6798,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Supprimer ce clip ?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Il passe d\'abord par la corbeille, tu peux donc encore le restaurer. Les copies enregistrées dans ta galerie y restent.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6814,6 +6818,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Archivé. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Pas encore dans ta galerie. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Dans ta galerie sans Content Credentials. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Pas encore dans ta galerie. La copie y sera ajoutée dès que l\'enregistrement aura ses Content Credentials, ce qui nécessite une connexion internet.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'La copie dans ta galerie n\'a pas de Content Credentials, elle ne peut donc pas revenir dans tes clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11754,6 +11776,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'L\'enregistrement démarre en maintenant appuyé et s\'arrête en relâchant';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'Sauvegarder les enregistrements dans ta galerie';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Garde une copie de chaque nouvel enregistrement dans ta galerie. Les autres apps et les sauvegardes photo dans le cloud peuvent la voir.';
 
   @override
   String uploadPublishedCountMessage(int count) {

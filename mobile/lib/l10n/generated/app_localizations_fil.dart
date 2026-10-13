@@ -6575,7 +6575,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Hindi na ito mababawi. Permanenteng maaalis sa device mo ang mga video file.';
+      'Hindi na ito mababawi. Mananatili sa gallery mo ang mga kopyang naka-save doon.';
 
   @override
   String get libraryPreparingVideo => 'Hinahanda ang video...';
@@ -6750,6 +6750,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Sigurado ka bang gusto mong burahin ang clip na ito?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Mapupunta muna ang clip sa trash, kaya puwede mo pa itong i-restore. Mananatili sa gallery mo ang mga kopyang naka-save doon.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6766,6 +6770,24 @@ class AppLocalizationsFil extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Naka-archive. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Wala pa sa gallery mo. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Nasa gallery mo nang walang content credentials. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Wala pa sa gallery mo. Makokopya ito roon kapag may content credentials na, at kailangan nito ng internet connection.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Walang content credentials ang kopya sa gallery mo, kaya hindi na ito maibabalik sa clips mo.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11676,6 +11698,14 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Magsisimulang mag-record kapag pinindot nang matagal at titigil kapag inalis';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'I-back up ang mga recording sa gallery';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Nagse-save ng kopya ng bawat bagong recording sa gallery mo. Makikita ito roon ng ibang app at ng mga cloud photo backup.';
 
   @override
   String uploadPublishedCountMessage(int count) {

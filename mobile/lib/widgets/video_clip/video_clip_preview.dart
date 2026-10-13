@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -31,7 +32,12 @@ Route<void> videoClipPreviewRoute({
 }) {
   return PageRouteBuilder<void>(
     opaque: false,
-    pageBuilder: (_, _, _) => VideoClipPreview(clip: clip, onDelete: onDelete),
+    // A bare route has no Material above it, and its text would fall back to
+    // the yellow double underline.
+    pageBuilder: (_, _, _) => Material(
+      type: MaterialType.transparency,
+      child: VideoClipPreview(clip: clip, onDelete: onDelete),
+    ),
     transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(opacity: animation, child: child);
     },
@@ -322,6 +328,10 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
                         ),
                       ),
 
+                    if (widget.clip.galleryBackup case final backup?
+                        when backup.needsAttention)
+                      _GalleryBackupNote(status: backup.status),
+
                     // Action buttons row
                     _ActionButtonsRow(
                       isSaving: _isSaving,
@@ -334,6 +344,26 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Says why a recording's gallery backup is flagged in the library.
+class _GalleryBackupNote extends StatelessWidget {
+  const _GalleryBackupNote({required this.status});
+
+  final ClipGalleryBackupStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      status == ClipGalleryBackupStatus.pending
+          ? context.l10n.videoClipBackupPendingNote
+          : context.l10n.videoClipBackupUnsignedNote,
+      textAlign: TextAlign.center,
+      style: VineTheme.bodyMediumFont(
+        color: context.vineColors.onSurfaceVariant,
       ),
     );
   }

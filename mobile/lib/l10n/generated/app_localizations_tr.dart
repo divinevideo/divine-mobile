@@ -6464,7 +6464,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Geri alınamaz. Video dosyaları cihazından kalıcı olarak silinir.';
+      'Geri alınamaz. Galerine kaydedilen kopyalar orada kalır.';
 
   @override
   String get libraryPreparingVideo => 'Video hazırlanıyor...';
@@ -6635,6 +6635,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Bu klibi silmek istiyor musun?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip önce çöp kutusuna gider, yani hâlâ geri yükleyebilirsin. Galerine kaydedilen kopyalar orada kalır.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds sn';
   }
@@ -6651,6 +6655,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arşivlendi. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Henüz galerinde değil. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Galerinde içerik kimlik bilgileri olmadan. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Henüz galerinde değil. İçerik kimlik bilgilerini alır almaz oraya kopyalanır; bunun için internet bağlantısı gerekir.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Galerindeki kopyanın içerik kimlik bilgileri yok, bu yüzden kliplerine geri gelemez.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11493,6 +11515,13 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Basılı tuttuğunuzda kayıt başlar, bıraktığınızda durur';
+
+  @override
+  String get settingsBackUpRecordings => 'Kayıtları galeriye yedekle';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Her yeni kaydın bir kopyasını galerine kaydeder. Diğer uygulamalar ve buluttaki fotoğraf yedekleri onu orada görebilir.';
 
   @override
   String uploadPublishedCountMessage(int count) {

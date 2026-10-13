@@ -6589,7 +6589,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'No se puede deshacer. Los archivos de video se eliminarán permanentemente de tu dispositivo.';
+      'No se puede deshacer. Las copias guardadas en tu galería se quedan ahí.';
 
   @override
   String get libraryPreparingVideo => 'Preparando video...';
@@ -6765,6 +6765,10 @@ class AppLocalizationsEs extends AppLocalizations {
       '¿Seguro que quieres eliminar este clip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Primero va a la papelera, así que todavía podés restaurarlo. Las copias guardadas en tu galería se quedan ahí.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6781,6 +6785,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Archivado. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Todavía no está en tu galería. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'En tu galería sin credenciales de contenido. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Todavía no está en tu galería. Se copia ahí cuando tenga sus credenciales de contenido, y para eso hace falta conexión a internet.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'La copia en tu galería no tiene credenciales de contenido, así que no puede volver a tus clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11694,6 +11716,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'La grabación empieza al mantener pulsado y se detiene al soltar';
+
+  @override
+  String get settingsBackUpRecordings => 'Respaldar grabaciones en tu galería';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Guarda una copia de cada grabación nueva en tu galería. Otras apps y los respaldos de fotos en la nube pueden verla ahí.';
 
   @override
   String uploadPublishedCountMessage(int count) {

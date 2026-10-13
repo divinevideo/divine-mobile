@@ -6562,7 +6562,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Dit kan niet ongedaan worden gemaakt. De videobestanden worden permanent van je apparaat verwijderd.';
+      'Dit kan niet ongedaan worden gemaakt. Kopieën in je galerij blijven daar staan.';
 
   @override
   String get libraryPreparingVideo => 'Video voorbereiden...';
@@ -6738,6 +6738,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Weet je zeker dat je deze clip wilt verwijderen?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'De clip gaat eerst naar de prullenbak, dus je kunt hem nog terugzetten. Kopieën in je galerij blijven daar staan.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6754,6 +6758,24 @@ class AppLocalizationsNl extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Gearchiveerd. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Nog niet in je galerij. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'In je galerij zonder content credentials. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Nog niet in je galerij. De kopie komt daar zodra de opname zijn content credentials heeft, en daarvoor is een internetverbinding nodig.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'De kopie in je galerij heeft geen content credentials en kan daarom niet terug naar je clips.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11635,6 +11657,13 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Opname start wanneer je ingedrukt houdt en stopt wanneer je loslaat';
+
+  @override
+  String get settingsBackUpRecordings => 'Opnames back-uppen naar je galerij';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Zet een kopie van elke nieuwe opname in je galerij. Andere apps en fotoback-ups in de cloud kunnen die daar zien.';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -6525,7 +6525,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Det går inte att ångra. Videofilerna tas bort permanent från enheten.';
+      'Det går inte att ångra. Kopior i ditt galleri finns kvar där.';
 
   @override
   String get libraryPreparingVideo => 'Förbereder video...';
@@ -6699,6 +6699,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Vill du ta bort det här klippet?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klippet hamnar först i papperskorgen, så du kan fortfarande återställa det. Kopior i ditt galleri finns kvar där.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6715,6 +6719,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arkiverad. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Inte i ditt galleri än. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'I ditt galleri utan innehållsuppgifter. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Inte i ditt galleri än. Den kopieras dit när den har fått sina innehållsuppgifter, vilket kräver en internetanslutning.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Kopian i ditt galleri saknar innehållsuppgifter, så den kan inte komma tillbaka till dina klipp.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11578,6 +11600,14 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Inspelning startar när du håller inne och stannar när du släpper';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'Säkerhetskopiera inspelningar till galleriet';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Sparar en kopia av varje ny inspelning i ditt galleri. Andra appar och fotosäkerhetskopior i molnet kan se den där.';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -7,6 +7,7 @@ import 'package:db_client/db_client.dart';
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_category.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -111,7 +112,8 @@ class ClipLibraryService {
   /// Save a clip to the library. Updates existing clip if ID matches.
   ///
   /// A recording hash the entry holds for a file [clip] still plays is kept
-  /// when [clip] carries none (see [rememberRecordingHash]).
+  /// when [clip] carries none (see [rememberRecordingHash]), and so is the
+  /// entry's gallery backup state (see [setGalleryBackup]).
   Future<void> saveClip(DivineVideoClip clip) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
@@ -127,10 +129,14 @@ class ClipLibraryService {
       final existingAutosaveRow = existingLibraryRow == null
           ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
           : null;
-      final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
-      final saved = keptHash == null
-          ? clip
-          : clip.copyWith(recordingSha256: keptHash);
+      final stored = await _storedClip(existingLibraryRow);
+      final saved = clip.copyWith(
+        recordingSha256: _recordingHashKeptFor(clip, stored),
+        // The entry owns this state. A copy read before a backup step landed
+        // would otherwise put an older step back, and a recording would be
+        // copied to the gallery twice.
+        galleryBackup: stored?.galleryBackup,
+      );
 
       await _clipsDao.upsertClip(
         id: clip.id,
@@ -359,31 +365,74 @@ class ClipLibraryService {
     return hashes;
   }
 
-  /// The recording hash [row] holds for a file [clip] still plays, when
+  /// The clip [row] stores, or `null` when there is no row or it is corrupt.
+  Future<DivineVideoClip?> _storedClip(ClipRow? row) async {
+    if (row == null) return null;
+    try {
+      return DivineVideoClip.fromJson(
+        json.decode(row.data) as Map<String, dynamic>,
+        await getDocumentsPath(),
+      );
+    } catch (_) {
+      // A corrupt row has nothing to keep; the save replaces it.
+      return null;
+    }
+  }
+
+  /// The recording hash [stored] holds for a file [clip] still plays, when
   /// [clip] carries none itself.
   ///
   /// [clip] can be a copy read before [rememberRecordingHash] noted the hash,
   /// such as one asset recovery or a chroma-key bake saves back. Saving it as
   /// it is would drop the hash again.
-  Future<String?> _recordingHashKeptFor(
+  String? _recordingHashKeptFor(
     DivineVideoClip clip,
-    ClipRow? row,
-  ) async {
-    if (row == null || clip.recordingSha256 != null) return null;
-    final DivineVideoClip stored;
-    try {
-      stored = DivineVideoClip.fromJson(
-        json.decode(row.data) as Map<String, dynamic>,
-        await getDocumentsPath(),
-      );
-    } catch (_) {
-      // A corrupt row has no hash to keep; the save replaces it.
-      return null;
-    }
+    DivineVideoClip? stored,
+  ) {
+    if (stored == null || clip.recordingSha256 != null) return null;
     final hash = stored.recordingSha256;
     if (hash == null) return null;
     final files = _recordingFileNames(stored);
     return _recordingFileNames(clip).any(files.contains) ? hash : null;
+  }
+
+  /// Sets the gallery backup state of the library entry [clipId] to
+  /// [backup], or clears it when [backup] is `null` (#10067).
+  ///
+  /// A clip deleted since is not brought back, and a trashed one keeps the
+  /// state, so a restore picks the backup up again.
+  ///
+  /// Returns whether the entry was updated. Never throws.
+  Future<bool> setGalleryBackup({
+    required String clipId,
+    required ClipGalleryBackup? backup,
+  }) async {
+    try {
+      final documentsPath = await getDocumentsPath();
+      return await _clipsDao.rewriteClipData(
+        id: clipId,
+        rewrite: (data) {
+          final clip = DivineVideoClip.fromJson(
+            json.decode(data) as Map<String, dynamic>,
+            documentsPath,
+          );
+          if (clip.galleryBackup == backup) return null;
+          final updated = backup == null
+              ? clip.copyWith(clearGalleryBackup: true)
+              : clip.copyWith(galleryBackup: backup);
+          return json.encode(updated.toJson());
+        },
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to note the gallery backup of library clip $clipId',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// The files [clip]'s recording hash can describe: its video, or the raw

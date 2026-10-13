@@ -6693,7 +6693,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Tego nie cofniesz. Pliki wideo zostaną trwale usunięte z urządzenia.';
+      'Tego nie cofniesz. Kopie zapisane w galerii zostają na miejscu.';
 
   @override
   String get libraryPreparingVideo => 'Przygotowywanie wideo...';
@@ -6873,6 +6873,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Na pewno usunąć ten klip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip najpierw trafia do kosza, więc wciąż możesz go przywrócić. Kopie zapisane w galerii zostają na miejscu.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6889,6 +6893,24 @@ class AppLocalizationsPl extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Zarchiwizowano. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Jeszcze nie ma w twojej galerii. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'W twojej galerii bez poświadczeń treści. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Jeszcze nie ma w twojej galerii. Kopia trafi tam, gdy nagranie dostanie poświadczenia treści, a do tego potrzebne jest połączenie z internetem.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Kopia w twojej galerii nie ma poświadczeń treści, więc nie może wrócić do twoich klipów.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11797,6 +11819,13 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Nagrywanie rozpoczyna się po przytrzymaniu i zatrzymuje się po zwolnieniu';
+
+  @override
+  String get settingsBackUpRecordings => 'Kopia nagrań w galerii';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Zapisuje kopię każdego nowego nagrania w galerii. Inne aplikacje i kopie zapasowe zdjęć w chmurze mogą ją tam zobaczyć.';
 
   @override
   String uploadPublishedCountMessage(int count) {

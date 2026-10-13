@@ -6512,7 +6512,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'لا يمكن التراجع. ستُزال ملفات الفيديو نهائيًا من جهازك.';
+      'لا يمكن التراجع. تبقى النسخ المحفوظة في معرض الصور كما هي.';
 
   @override
   String get libraryPreparingVideo => 'جاري تجهيز الفيديو...';
@@ -6684,6 +6684,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'هل تريد حذف هذا المقطع؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'يُنقل المقطع إلى سلة المهملات أولًا، لذا يمكن استعادته. تبقى النسخ المحفوظة في معرض الصور كما هي.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds ث';
   }
@@ -6700,6 +6704,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'مؤرشف. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ليس في معرض الصور بعد. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'في معرض الصور دون بيانات اعتماد المحتوى. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'ليس في معرض الصور بعد. يُنسخ إليه بمجرد حصوله على بيانات اعتماد المحتوى، وهذا يتطلب اتصالاً بالإنترنت.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'النسخة الموجودة في معرض الصور لا تحمل بيانات اعتماد المحتوى، لذا لا يمكن إعادتها إلى مقاطعك.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11526,6 +11548,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'يبدأ التسجيل عند الضغط المطوّل ويتوقف عند الإفراج';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'النسخ الاحتياطي للتسجيلات في معرض الصور';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.';
 
   @override
   String uploadPublishedCountMessage(int count) {

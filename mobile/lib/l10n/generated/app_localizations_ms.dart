@@ -6536,7 +6536,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Tindakan ini tidak boleh dibuat asal. Fail video akan dialih keluar secara kekal daripada peranti anda.';
+      'Tindakan ini tidak boleh dibatalkan. Salinan yang disimpan dalam galeri anda kekal di sana.';
 
   @override
   String get libraryPreparingVideo => 'Menyediakan video...';
@@ -6710,6 +6710,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Adakah anda pasti mahu memadam klip ini?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip masuk ke tong sampah dahulu, jadi anda masih boleh memulihkannya. Salinan yang disimpan dalam galeri anda kekal di sana.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6726,6 +6730,24 @@ class AppLocalizationsMs extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Diarkibkan. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Belum ada dalam galeri anda. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Dalam galeri anda tanpa kelayakan kandungan. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Belum ada dalam galeri anda. Ia disalin ke sana sebaik sahaja ia mempunyai kelayakan kandungan, yang memerlukan sambungan internet.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Salinan dalam galeri anda tiada kelayakan kandungan, jadi ia tidak boleh kembali ke klip anda.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11586,6 +11608,13 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Mula merakam apabila anda tekan dan tahan, kemudian berhenti apabila anda lepaskan';
+
+  @override
+  String get settingsBackUpRecordings => 'Sandarkan rakaman ke galeri';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Menyimpan salinan setiap rakaman baharu dalam galeri anda. Apl lain dan sandaran foto awan boleh melihatnya di sana.';
 
   @override
   String uploadPublishedCountMessage(int count) {

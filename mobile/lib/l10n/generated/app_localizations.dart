@@ -11170,7 +11170,7 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDeleteClipsWarning.
   ///
   /// In en, this message translates to:
-  /// **'This action cannot be undone. The video files will be permanently removed from your device.'**
+  /// **'This can\'t be undone. Copies saved to your gallery stay there.'**
   String get libraryDeleteClipsWarning;
 
   /// No description provided for @libraryPreparingVideo.
@@ -11425,6 +11425,12 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this clip?'**
   String get libraryDeleteClipMessage;
 
+  /// Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored; copies the user saved to the device gallery, by hand or through the recording backup, are not deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'It goes to the trash first, so you can still restore it. Copies saved to your gallery stay there.'**
+  String get libraryDeleteClipTrashNote;
+
   /// Compact clip duration shown in the library trash row. {seconds} is already formatted with two decimal places, e.g. '5.73'.
   ///
   /// In en, this message translates to:
@@ -11448,6 +11454,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Archived. {label}'**
   String videoClipArchivedSemanticLabel(String label);
+
+  /// Accessibility label for a library clip whose recording is not in the gallery yet, because it is waiting for its content credentials. Wraps the clip's own label.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in your gallery yet. {label}'**
+  String videoClipBackupPendingSemanticLabel(String label);
+
+  /// Accessibility label for a library clip whose recording was saved to the gallery without content credentials, so the copy cannot be brought back to the clips. Wraps the clip's own label.
+  ///
+  /// In en, this message translates to:
+  /// **'In your gallery without content credentials. {label}'**
+  String videoClipBackupUnsignedSemanticLabel(String label);
+
+  /// Shown under a clip in its preview when its recording is not in the gallery yet. The copy waits for the recording's C2PA content credentials, which need an internet connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in your gallery yet. It\'s copied there once it has its content credentials, which needs an internet connection.'**
+  String get videoClipBackupPendingNote;
+
+  /// Shown under a clip in its preview when its gallery copy has no C2PA content credentials, for example from a build that cannot sign, so the gallery import would reject it.
+  ///
+  /// In en, this message translates to:
+  /// **'The copy in your gallery has no content credentials, so it can\'t come back to your clips.'**
+  String get videoClipBackupUnsignedNote;
 
   /// Accessibility label for a stop-motion clip thumbnail. {frames} is the already-localized frame count from videoEditorStopMotionFramesCount. Replaces the duration label, which is a misleading value for stop-motion and is hidden visually for the same reason.
   ///
@@ -19478,6 +19508,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start recording when you press and hold, then stop when you release'**
   String get generalSettingsHoldToRecordSubtitle;
+
+  /// Title of the Create & Share setting that saves a copy of every new camera recording to the device gallery (#10067).
+  ///
+  /// In en, this message translates to:
+  /// **'Back up recordings to your gallery'**
+  String get settingsBackUpRecordings;
+
+  /// Subtitle of the gallery backup setting. Must say that other apps and cloud photo backups can see the copies in the gallery. Kept to about three lines; the delete dialogs say that gallery copies stay.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.'**
+  String get settingsBackUpRecordingsSubtitle;
 
   /// Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.
   ///

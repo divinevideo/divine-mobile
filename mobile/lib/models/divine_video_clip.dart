@@ -10,6 +10,7 @@ import 'package:models/models.dart'
     as model
     show AspectRatio, ClipSourceCredit, EqualizerSettings;
 import 'package:openvine/models/c2pa_edit_source.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
@@ -57,6 +58,7 @@ class DivineVideoClip {
     this.captureChromaKey,
     this.derivedFrom,
     this.recordingSha256,
+    this.galleryBackup,
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -269,6 +271,13 @@ class DivineVideoClip {
   /// changed since and is never signed as a capture. It is carried in
   /// [signingSources], so clips edited from this one keep it.
   final String? recordingSha256;
+
+  /// Where the gallery backup of the recording this library entry was
+  /// recorded as stands, when backing up new recordings is on (#10067).
+  ///
+  /// Owned by the library entry: only `ClipLibraryService.setGalleryBackup`
+  /// changes it, and a save of an older copy keeps what the entry holds.
+  final ClipGalleryBackup? galleryBackup;
 
   /// The files to name as this clip's sources when an edit of it is signed:
   /// [derivedFrom], or else the clip's own video file.
@@ -594,6 +603,8 @@ class DivineVideoClip {
     bool clearDerivedFrom = false,
     String? recordingSha256,
     bool clearRecordingSha256 = false,
+    ClipGalleryBackup? galleryBackup,
+    bool clearGalleryBackup = false,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
     // "replace the whole list with a single credit" — which silently drops the
@@ -671,6 +682,12 @@ class DivineVideoClip {
       recordingSha256: clearRecordingSha256
           ? null
           : (recordingSha256 ?? this.recordingSha256),
+      // The backup belongs to the take the library entry was recorded as. A
+      // split, duplicate or import of it is another clip with no backup of
+      // its own.
+      galleryBackup: isNewLogicalClip || clearGalleryBackup
+          ? null
+          : (galleryBackup ?? this.galleryBackup),
       sourceCredits: nextSourceCredits,
     );
   }
@@ -727,6 +744,7 @@ class DivineVideoClip {
       if (derivedFrom case final sources?)
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
+      if (galleryBackup case final backup?) 'galleryBackup': backup.toJson(),
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -886,6 +904,11 @@ class DivineVideoClip {
         useOriginalPath: useOriginalPath,
       ),
       recordingSha256: json['recordingSha256'] as String?,
+      galleryBackup: ClipGalleryBackup.fromJson(
+        json['galleryBackup'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,

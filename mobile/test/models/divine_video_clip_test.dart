@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/models/c2pa_edit_source.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -368,6 +369,49 @@ void main() {
       final restored = DivineVideoClip.fromJson(json, '/videos');
 
       expect(restored.chromaKey, isNull);
+      expect(restored.id, 'c1');
+    });
+  });
+
+  group('DivineVideoClip.galleryBackup', () {
+    const backup = ClipGalleryBackup(
+      status: ClipGalleryBackupStatus.pending,
+      recordingPath: '/videos/raw.mp4',
+    );
+
+    test('round-trips through JSON, resolving its recording', () {
+      final json = clip('/videos/clip.mp4')
+          .copyWith(galleryBackup: backup)
+          .toJson();
+
+      final restored = DivineVideoClip.fromJson(json, '/documents');
+
+      expect(
+        restored.galleryBackup,
+        const ClipGalleryBackup(
+          status: ClipGalleryBackupStatus.pending,
+          recordingPath: '/documents/raw.mp4',
+        ),
+      );
+    });
+
+    test('does not follow the clip into a new logical clip', () {
+      // A split or an import of a backed-up take is footage of its own; it
+      // must not show the take's backup or be backed up a second time.
+      final split = clip(
+        '/videos/clip.mp4',
+      ).copyWith(galleryBackup: backup).copyWith(id: 'c2');
+
+      expect(split.galleryBackup, isNull);
+    });
+
+    test('drops an unreadable state instead of failing the whole clip', () {
+      final json = clip('/videos/clip.mp4').toJson()
+        ..['galleryBackup'] = {'status': 'unknown', 'recording': 'raw.mp4'};
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+
+      expect(restored.galleryBackup, isNull);
       expect(restored.id, 'c1');
     });
   });

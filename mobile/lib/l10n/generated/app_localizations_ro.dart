@@ -6701,7 +6701,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Nu se poate anula. Fișierele video vor fi eliminate definitiv de pe dispozitiv.';
+      'Nu se poate anula. Copiile salvate în galeria ta rămân acolo.';
 
   @override
   String get libraryPreparingVideo => 'Se pregătește videoclipul...';
@@ -6874,6 +6874,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Ștergi acest clip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Clipul ajunge mai întâi în coș, așa că îl poți restaura în continuare. Copiile salvate în galeria ta rămân acolo.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6890,6 +6894,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arhivat. $label';
   }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Încă nu e în galeria ta. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'În galeria ta fără acreditări de conținut. $label';
+  }
+
+  @override
+  String get videoClipBackupPendingNote =>
+      'Încă nu e în galeria ta. Ajunge acolo imediat ce are acreditările de conținut, iar pentru asta e nevoie de o conexiune la internet.';
+
+  @override
+  String get videoClipBackupUnsignedNote =>
+      'Copia din galeria ta nu are acreditări de conținut, așa că nu poate reveni în clipurile tale.';
 
   @override
   String videoClipStopMotionSemanticLabel(String frames) {
@@ -11817,6 +11839,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Înregistrarea începe când ții apăsat și se oprește când eliberezi';
+
+  @override
+  String get settingsBackUpRecordings => 'Salvează înregistrările în galerie';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.';
 
   @override
   String uploadPublishedCountMessage(int count) {

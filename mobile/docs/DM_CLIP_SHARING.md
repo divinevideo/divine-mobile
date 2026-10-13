@@ -212,8 +212,10 @@ recipient is asked to try again rather than credit the wrong person.
 
 ## Back from the gallery
 
-Saving a clip to the gallery, from the clip library or from a received video's
-save button, writes the clip's exact file, so the copy keeps its manifest. The
+Saving a clip to the gallery, from the clip library, from a received video's
+save button or through the backup of new recordings (see
+[Backing up new recordings](#backing-up-new-recordings)), writes the clip's
+exact file, so the copy keeps its manifest. The
 clips tab's **Add clips from your gallery** action brings such copies back:
 it opens the system picker with multiple selection, and every picked video
 goes through the same C2PA check before
@@ -263,6 +265,62 @@ library gets a muted check mark and "Already in your clips".
 The action is offered on Android and iOS only, and not in the library picker
 the editor and the DM composer open, which only adds clips already in the
 library.
+
+## Backing up new recordings
+
+Settings → Create & Share → **Back up recordings to your gallery** (#10067)
+saves a copy of every new camera recording to the gallery, so the phone's own
+backup keeps it and the gallery import above can bring it back after a lost
+phone, a reinstall or cleared app data. It is off by default: clips are
+private until posted, and a copy in the gallery is visible to other apps with
+media access and to cloud photo backups, which the setting says. Turning it on
+asks for the gallery permission right there, since the copies are written in
+the background, where a prompt would come out of nowhere. Like the import, it
+is offered on Android and iOS only.
+
+- **A copy on both platforms.** The app keeps its own file and the gallery
+  gets a copy (`RecordingGalleryBackupService`), the way WhatsApp's "Save to
+  Camera Roll" works on iOS. Storing a recording only once was considered:
+  Android could keep the take in a MediaStore folder and the library point at
+  it, but iOS has no path into Photos at all, only an asset to export on use.
+  Either way the library would depend on files the user can delete or edit in
+  another app, and every clip path in the library, drafts and edit sources
+  would have to learn about them. The copy costs storage instead: each
+  backed-up take is on the device twice.
+- **Only signed copies, so they can come back.** The copy is written once the
+  take's capture signing settled. A take signed at capture is copied right
+  away. One whose signing failed, for example offline, waits as
+  `pending` and is signed late, the same way a DM send signs it
+  (`NativeProofModeService.signOwnRecordings`, so only a file still matching
+  the hash the camera wrote is signed as a capture), then copied. Pending
+  backups are finished at startup, when the app comes back to the foreground,
+  and after each new take that was signed, once the account's signer can sign
+  (a late signature without it would lack the creator binding). One recording
+  whose signing still fails ends the pass; the rest wait for the next.
+- **Unsignable takes are copied and flagged.** A build that cannot sign, or a
+  take without a capture proof, is copied as it is (`savedUnsigned`). The
+  gallery import rejects such a copy, so the library marks the clip, and its
+  preview says why. A take still waiting is marked too.
+- **The state lives on the library entry** (`DivineVideoClip.galleryBackup`,
+  naming the recording file). Only `ClipLibraryService.setGalleryBackup`
+  changes it, and a save of an older copy keeps what the entry holds, so a
+  take is never copied twice. A split, duplicate or import of a take is a
+  clip of its own and has no backup state. The copy is of the camera's file,
+  so a chroma-key bake or any later edit never replaces it, and a chroma-key
+  take is backed up as it was shot, without its backdrop.
+- **Deleting a clip in Divine leaves its copy.** Trash, the 30-day purge and
+  "delete forever" only touch the app's file, and the delete prompts say that
+  copies saved to the gallery stay. A take put in the trash before
+  its copy was written waits until it is restored.
+- **What is backed up.** New camera recordings only, from the moment the
+  setting is on. Stop-motion stills are not: they are never signed and the
+  gallery import only takes videos. Received, imported and edited clips are
+  not either. The setting is per device, like the gallery; the backups follow
+  whichever account recorded them, and a pending one is finished while that
+  account is signed in.
+- **Where the copy goes.** Through the same `GallerySaveService` as every
+  other gallery save: `Pictures/Divine` on Android and the Camera Roll on iOS,
+  which keeps the add-only Photos permission.
 
 ## Limits
 
