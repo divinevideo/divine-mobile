@@ -6850,6 +6850,9 @@
   "videoMetadataTagsPickerSearchHint": "ట్యాగ్‌లను శోధించండి లేదా జోడించండి",
   "videoMetadataTagsPickerEmptyHint": "వ్యక్తులు మీ వీడియోను కనుగొనడంలో సహాయపడటానికి ట్యాగ్‌లను జోడించండి",
   "videoMetadataTagsPickerNoResults": "సరిపోలే ట్యాగ్‌లు లేవు",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా {max} అక్షరం వరకు ఉండవచ్చు.} other{హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా {max} అక్షరాల వరకు ఉండవచ్చు.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{మీరు గరిష్టంగా {max} హ్యాష్‌ట్యాగ్ జోడించవచ్చు.} other{మీరు గరిష్టంగా {max} హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} అక్షరంలో {count}} other{{max} అక్షరాలలో {count}}}",
   "videoMetadataTagsPickerAddTag": "\"# జోడించండి{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

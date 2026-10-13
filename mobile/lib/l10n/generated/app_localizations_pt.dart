@@ -11642,6 +11642,42 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Sem tags correspondentes';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'As hashtags podem ter até $max caracteres.',
+      many: 'As hashtags podem ter até $max de caracteres.',
+      one: 'As hashtags podem ter até $max caractere.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Você pode adicionar até $max hashtags.',
+      many: 'Você pode adicionar até $max de hashtags.',
+      one: 'Você pode adicionar até $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count de $max caracteres',
+      many: '$count de $max de caracteres',
+      one: '$count de $max caractere',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adicionar «#$tag»';
   }

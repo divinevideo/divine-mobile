@@ -11663,6 +11663,39 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Няма съвпадащи тагове';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Хаштаговете могат да са до $max знака.',
+      one: 'Хаштаговете могат да са до $max знак.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Можеш да добавиш до $max хаштага.',
+      one: 'Можеш да добавиш до $max хаштаг.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count от $max знака',
+      one: '$count от $max знак',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Добавяне на „#$tag\"';
   }

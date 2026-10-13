@@ -3757,6 +3757,9 @@
     "videoMetadataTagsPickerSearchHint": "Cari atau tambahkan tag",
     "videoMetadataTagsPickerEmptyHint": "Tambahkan tag agar orang menemukan videomu",
     "videoMetadataTagsPickerNoResults": "Tidak ada tag yang cocok",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag bisa sampai {max} karakter.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Kamu bisa menambahkan hingga {max} hashtag.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count} dari {max} karakter}}",
     "videoMetadataTagsPickerAddTag": "Tambahkan \"#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

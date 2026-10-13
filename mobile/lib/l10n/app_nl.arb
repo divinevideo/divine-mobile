@@ -3757,6 +3757,9 @@
     "videoMetadataTagsPickerSearchHint": "Tags zoeken of toevoegen",
     "videoMetadataTagsPickerEmptyHint": "Voeg tags toe zodat anderen je video ontdekken",
     "videoMetadataTagsPickerNoResults": "Geen overeenkomende tags",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags mogen maximaal {max} teken lang zijn.} other{Hashtags mogen maximaal {max} tekens lang zijn.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Je kunt maximaal {max} hashtag toevoegen.} other{Je kunt maximaal {max} hashtags toevoegen.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} van {max} teken} other{{count} van {max} tekens}}",
     "videoMetadataTagsPickerAddTag": "«#{tag}» toevoegen",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

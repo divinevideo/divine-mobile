@@ -136,6 +136,22 @@ void main() {
       );
     });
 
+    test('leaves a hashtag over the length limit as plain text', () {
+      final pastedList = 'vine' * 20;
+      final spans = LinkifiedTextSpanBuilder(
+        text: '#$pastedList #funny',
+        defaultStyle: defaultStyle,
+        linkStyle: linkStyle,
+        onHashtagTap: (_) {},
+      ).build();
+
+      expect(spans.tappableSpans.map((span) => span.text), equals(['#funny']));
+      expect(
+        spans.map((span) => span.toPlainText()).join(),
+        equals('#$pastedList #funny'),
+      );
+    });
+
     test('routes plain mentions to profile when a mention pubkey matches', () {
       const alicePubkey =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:db_client/db_client.dart' show ClipsDao, DraftsDao;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show
@@ -378,49 +379,34 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     final cleanedDescription = trimmedDescription.characters
         .take(VideoEditorConstants.descriptionLimit)
         .toString();
-    const tagLimit = VideoEditorConstants.tagLimit;
 
     // Only extract hashtags when text changes, not when tags are manually edited
     final Set<String> allTags;
     if (tags != null) {
       // User manually edited tags - use only what they provided
-      allTags = tags
-          .map((tag) => tag.replaceAll(RegExp('[^a-zA-Z0-9]'), ''))
-          .where((tag) => tag.isNotEmpty)
-          .take(tagLimit)
-          .toSet();
+      allTags = HashtagExtractor.normalizeVideoHashtags(tags).toSet();
     } else {
       // Text changed - compare old and new hashtags to only update changed ones
       final hashtagPattern = RegExp('#([a-zA-Z0-9]+)(?![a-zA-Z0-9])');
-
-      // Extract hashtags from OLD text
-      final oldText = '${state.title} ${state.description}';
-      final oldHashtags = hashtagPattern
-          .allMatches(oldText)
+      Set<String> extract(String text) => hashtagPattern
+          .allMatches(text)
           .map((m) => m.group(1))
           .whereType<String>()
-          .where((tag) => tag.isNotEmpty)
+          .map(HashtagExtractor.normalizeVideoHashtag)
+          .nonNulls
           .toSet();
 
-      // Extract hashtags from NEW text
-      final newText = '$rawTitle $rawDescription';
-      final newHashtags = hashtagPattern
-          .allMatches(newText)
-          .map((m) => m.group(1))
-          .whereType<String>()
-          .where((tag) => tag.isNotEmpty)
-          .toSet();
+      final oldHashtags = extract('${state.title} ${state.description}');
+      final newHashtags = extract('$rawTitle $rawDescription');
 
       // Find which hashtags were removed and which were added
       final removedHashtags = oldHashtags.difference(newHashtags);
       final addedHashtags = newHashtags.difference(oldHashtags);
 
       // Update tags: remove old ones, add new ones, keep manually added tags
-      allTags = state.tags
-          .difference(removedHashtags)
-          .union(addedHashtags)
-          .take(tagLimit)
-          .toSet();
+      allTags = HashtagExtractor.normalizeVideoHashtags(
+        state.tags.difference(removedHashtags).union(addedHashtags),
+      ).toSet();
     }
 
     // Calculate total size in bytes (UTF-8 encoded)
@@ -835,7 +821,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       allowAudioReuse: video.allowAudioReuse,
       title: video.title ?? '',
       description: content,
-      tags: video.hashtags.toSet(),
+      // Older events can carry mixed-case or over-long tags, and caption
+      // hashtag extraction compares against normalized ones.
+      tags: HashtagExtractor.normalizeVideoHashtags(video.hashtags).toSet(),
       contentWarnings: video.contentWarningLabels
           .map(ContentLabel.fromValue)
           .whereType<ContentLabel>()
@@ -1279,7 +1267,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     state = state.copyWith(
       title: draft.title,
       description: draft.description,
-      tags: draft.hashtags,
+      tags: HashtagExtractor.normalizeVideoHashtags(draft.hashtags).toSet(),
       allowAudioReuse: draft.allowAudioReuse,
       audioShareAttribution: draft.audioShareAttribution,
       shareReplyToFeed: draft.shareReplyToFeed,

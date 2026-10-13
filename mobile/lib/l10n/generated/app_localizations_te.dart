@@ -11863,6 +11863,39 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'సరిపోలే ట్యాగ్‌లు లేవు';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా $max అక్షరాల వరకు ఉండవచ్చు.',
+      one: 'హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా $max అక్షరం వరకు ఉండవచ్చు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు.',
+      one: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్ జోడించవచ్చు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max అక్షరాలలో $count',
+      one: '$max అక్షరంలో $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"# జోడించండి$tag\"';
   }

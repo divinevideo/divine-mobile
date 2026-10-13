@@ -3757,6 +3757,9 @@
     "videoMetadataTagsPickerSearchHint": "タグを検索または追加",
     "videoMetadataTagsPickerEmptyHint": "タグを追加して動画を見つけてもらおう",
     "videoMetadataTagsPickerNoResults": "一致するタグがありません",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, other{ハッシュタグは{max}文字までです。}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{ハッシュタグは{max}個まで追加できます。}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{max}文字中{count}文字}}",
     "videoMetadataTagsPickerAddTag": "「#{tag}」を追加",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

@@ -5,7 +5,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -417,14 +416,9 @@ void main() {
       });
     });
 
-    group('Integration with HashtagExtractor', () {
-      testWidgets('uses HashtagExtractor for hashtag detection', (
-        tester,
-      ) async {
+    group('multiple hashtags', () {
+      testWidgets('renders each hashtag as its own link', (tester) async {
         const textWithHashtags = 'Multiple #test #hashtags here';
-        final expectedHashtags = HashtagExtractor.extractHashtags(
-          textWithHashtags,
-        );
 
         await tester.pumpWidget(
           const MaterialApp(
@@ -441,11 +435,10 @@ void main() {
             .where((span) => span.recognizer != null)
             .toList();
 
-        expect(clickableSpans.length, expectedHashtags.length);
-
-        for (int i = 0; i < expectedHashtags.length; i++) {
-          expect(clickableSpans[i].text, '#${expectedHashtags[i]}');
-        }
+        expect(clickableSpans.map((span) => span.text), [
+          '#test',
+          '#hashtags',
+        ]);
       });
     });
   });

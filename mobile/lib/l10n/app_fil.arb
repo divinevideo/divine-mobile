@@ -2756,6 +2756,9 @@
     "videoMetadataTagsPickerSearchHint": "Maghanap o magdagdag ng tag",
     "videoMetadataTagsPickerEmptyHint": "Magdagdag ng tag para matuklasan ang video mo",
     "videoMetadataTagsPickerNoResults": "Walang tugmang tag",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hanggang {max} character lang ang hashtag.} other{Hanggang {max} character lang ang hashtag.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Hanggang {max} hashtag lang ang puwede mong idagdag.} other{Hanggang {max} hashtag lang ang puwede mong idagdag.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} sa {max} character} other{{count} sa {max} character}}",
     "videoMetadataTagsPickerAddTag": "Idagdag ang \"#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

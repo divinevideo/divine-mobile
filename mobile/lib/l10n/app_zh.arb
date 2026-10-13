@@ -5867,6 +5867,9 @@
   "videoMetadataTagsPickerSearchHint": "搜索或添加标签",
   "videoMetadataTagsPickerEmptyHint": "添加标签，让更多人发现你的视频",
   "videoMetadataTagsPickerNoResults": "没有匹配的标签",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, other{话题标签最多 {max} 个字符。}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{最多可以添加 {max} 个话题标签。}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} 个字符}}",
   "videoMetadataTagsPickerAddTag": "添加“#{tag}”",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

@@ -7894,6 +7894,36 @@
   "videoMetadataTagsPickerSearchHint": "Search or add tags",
   "videoMetadataTagsPickerEmptyHint": "Add tags to help people discover your video",
   "videoMetadataTagsPickerNoResults": "No matching tags",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags can be up to {max} character.} other{Hashtags can be up to {max} characters.}}",
+  "@videoMetadataTagsPickerTagTooLong": {
+    "description": "Helper under the tags picker field when a hashtag is at or over the length limit.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}",
+  "@videoMetadataTagsPickerTagLimitReached": {
+    "description": "Helper under the tags picker field once a video has the maximum number of hashtags.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}",
+  "@videoMetadataTagsPickerCharacterCount": {
+    "description": "Screen-reader label for the tags picker character counter, which is shown visually as count/max.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "videoMetadataTagsPickerAddTag": "Add \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

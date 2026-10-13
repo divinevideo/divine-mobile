@@ -19437,6 +19437,24 @@ abstract class AppLocalizations {
   /// **'No matching tags'**
   String get videoMetadataTagsPickerNoResults;
 
+  /// Helper under the tags picker field when a hashtag is at or over the length limit.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{Hashtags can be up to {max} character.} other{Hashtags can be up to {max} characters.}}'**
+  String videoMetadataTagsPickerTagTooLong(int max);
+
+  /// Helper under the tags picker field once a video has the maximum number of hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}'**
+  String videoMetadataTagsPickerTagLimitReached(int max);
+
+  /// Screen-reader label for the tags picker character counter, which is shown visually as count/max.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}'**
+  String videoMetadataTagsPickerCharacterCount(int count, int max);
+
   /// No description provided for @videoMetadataTagsPickerAddTag.
   ///
   /// In en, this message translates to:

@@ -3757,6 +3757,9 @@
     "videoMetadataTagsPickerSearchHint": "Pesquisar ou adicionar tags",
     "videoMetadataTagsPickerEmptyHint": "Adiciona tags para que outros descubram o teu vídeo",
     "videoMetadataTagsPickerNoResults": "Sem tags correspondentes",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{As hashtags podem ter até {max} caractere.} many{As hashtags podem ter até {max} de caracteres.} other{As hashtags podem ter até {max} caracteres.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Você pode adicionar até {max} hashtag.} many{Você pode adicionar até {max} de hashtags.} other{Você pode adicionar até {max} hashtags.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} de {max} caractere} many{{count} de {max} de caracteres} other{{count} de {max} caracteres}}",
     "videoMetadataTagsPickerAddTag": "Adicionar «#{tag}»",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

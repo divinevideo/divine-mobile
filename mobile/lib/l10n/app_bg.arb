@@ -3881,6 +3881,9 @@
     "videoMetadataTagsPickerSearchHint": "Търсене или добавяне на тагове",
     "videoMetadataTagsPickerEmptyHint": "Добавете тагове, за да открият хората вашето видео",
     "videoMetadataTagsPickerNoResults": "Няма съвпадащи тагове",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Хаштаговете могат да са до {max} знак.} other{Хаштаговете могат да са до {max} знака.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Можеш да добавиш до {max} хаштаг.} other{Можеш да добавиш до {max} хаштага.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} от {max} знак} other{{count} от {max} знака}}",
     "videoMetadataTagsPickerAddTag": "Добавяне на „#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

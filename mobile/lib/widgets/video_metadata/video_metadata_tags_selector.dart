@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/tags_picker/tags_picker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -225,15 +226,20 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
               color: context.vineColors.surfaceContainer,
               borderRadius: BorderRadius.circular(_searchInputBorderRadius),
             ),
+            // Not single-line on purpose: Flutter deletes line breaks from a
+            // single-line field before any formatter runs, which glued every
+            // pasted list into one giant tag. The formatter below turns them
+            // into separators instead, and return still submits via `done`.
             child: TextField(
               controller: _searchController,
+              keyboardType: TextInputType.text,
               textInputAction: TextInputAction.done,
+              minLines: 1,
+              maxLines: 2,
               autofocus: true,
               autocorrect: false,
               enableSuggestions: false,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9 ,]')),
-              ],
+              inputFormatters: const [HashtagInputFormatter()],
               onSubmitted: _addTag,
               cursorColor: context.vineColors.accentPositive,
               style: VineTheme.bodyLargeFont(
@@ -270,6 +276,8 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
             ),
           ),
         ),
+
+        _TagInputHint(controller: _searchController),
 
         BlocSelector<TagsPickerBloc, TagsPickerState, Set<String>>(
           selector: (s) => s.selectedTags,
@@ -323,7 +331,7 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
         Expanded(
           child: BlocBuilder<TagsPickerBloc, TagsPickerState>(
             builder: (context, state) {
-              if (state.query.isEmpty) {
+              if (state.query.isEmpty || state.isAtTagLimit) {
                 if (state.selectedTags.isEmpty) {
                   return const _EmptyState();
                 }
@@ -379,6 +387,114 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
 
         SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
       ],
+    );
+  }
+}
+
+/// Keeps the tags field to what a hashtag can contain.
+///
+/// Every separator [HashtagExtractor.separatorPattern] knows — line breaks,
+/// tabs, non-breaking and other Unicode spaces, commas and `#` — becomes a
+/// single space, so a pasted list splits into separate tags. Any other
+/// character is dropped, and typing past [HashtagExtractor.maxHashtagLength]
+/// in the current tag is ignored.
+@visibleForTesting
+class HashtagInputFormatter extends TextInputFormatter {
+  /// Creates the formatter.
+  const HashtagInputFormatter();
+
+  static final _disallowed = RegExp('[^a-zA-Z0-9 ]');
+
+  static String _clean(String text) => text
+      .replaceAll(HashtagExtractor.separatorPattern, ' ')
+      .replaceAll(_disallowed, '');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = _clean(newValue.text);
+    final isTyping = newValue.text.length == oldValue.text.length + 1;
+    if (isTyping &&
+        text.split(' ').last.length > HashtagExtractor.maxHashtagLength) {
+      return oldValue;
+    }
+    if (text == newValue.text) return newValue;
+
+    final selection = newValue.selection;
+    final offset = selection.isValid
+        ? _clean(newValue.text.substring(0, selection.extentOffset)).length
+        : text.length;
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
+}
+
+/// Explains the hashtag limits under the field: a character counter for the
+/// tag being typed once it gets long, and a helper line when a tag is too
+/// long or the video already has the maximum number of tags.
+class _TagInputHint extends StatelessWidget {
+  const _TagInputHint({required this.controller});
+
+  static const _counterThreshold = 40;
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final (isAtTagLimit, notice) = context.select(
+      (TagsPickerBloc bloc) => (bloc.state.isAtTagLimit, bloc.state.notice),
+    );
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        final length = value.text.trim().length;
+        const max = HashtagExtractor.maxHashtagLength;
+        final l10n = context.l10n;
+        final helper = isAtTagLimit
+            ? l10n.videoMetadataTagsPickerTagLimitReached(
+                HashtagExtractor.maxHashtagsPerVideo,
+              )
+            : notice == TagsPickerNotice.tagTooLong || length >= max
+            ? l10n.videoMetadataTagsPickerTagTooLong(max)
+            : null;
+        final showCounter = !isAtTagLimit && length >= _counterThreshold;
+        if (helper == null && !showCounter) return const SizedBox.shrink();
+
+        final style = VineTheme.bodySmallFont(
+          color: context.vineColors.onSurfaceMuted,
+        );
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(32, 0, 32, 8),
+          child: Row(
+            spacing: 8,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: helper == null
+                    ? const SizedBox.shrink()
+                    : Semantics(
+                        liveRegion: true,
+                        child: Text(helper, style: style),
+                      ),
+              ),
+              if (showCounter)
+                Semantics(
+                  label: l10n.videoMetadataTagsPickerCharacterCount(
+                    length,
+                    max,
+                  ),
+                  child: ExcludeSemantics(
+                    child: Text('$length/$max', style: style),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

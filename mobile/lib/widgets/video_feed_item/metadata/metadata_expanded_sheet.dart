@@ -169,7 +169,7 @@ class _OverviewSection extends ConsumerWidget {
         final hasBadges =
             video.shouldShowProofModeBadge || video.shouldShowNotDivineBadge;
         final hasTags =
-            video.categories.isNotEmpty || video.allHashtags.isNotEmpty;
+            video.categories.isNotEmpty || video.displayableHashtags.isNotEmpty;
 
         final titleCluster = <Widget>[
           if (hasTitle)

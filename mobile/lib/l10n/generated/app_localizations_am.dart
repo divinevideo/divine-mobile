@@ -11265,6 +11265,39 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'ተዛማጅ መለያዎች የሉም';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ሃሽታጎች እስከ $max ቁምፊዎች ሊኖራቸው ይችላሉ።',
+      one: 'ሃሽታጎች እስከ $max ቁምፊ ሊኖራቸው ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'እስከ $max ሃሽታጎች ማከል ይችላሉ።',
+      one: 'እስከ $max ሃሽታግ ማከል ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ከ$max ቁምፊዎች $count',
+      one: 'ከ$max ቁምፊ $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ያክሉ';
   }

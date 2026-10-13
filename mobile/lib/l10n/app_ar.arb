@@ -3757,6 +3757,9 @@
     "videoMetadataTagsPickerSearchHint": "ابحث أو أضف وسوماً",
     "videoMetadataTagsPickerEmptyHint": "أضف وسوماً ليكتشف الآخرون فيديوك",
     "videoMetadataTagsPickerNoResults": "لا توجد وسوم مطابقة",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, zero{يمكن أن يصل طول الوسم إلى {max} حرف.} one{يمكن أن يصل طول الوسم إلى {max} حرف.} two{يمكن أن يصل طول الوسم إلى {max} حرفين.} few{يمكن أن يصل طول الوسم إلى {max} أحرف.} many{يمكن أن يصل طول الوسم إلى {max} حرفًا.} other{يمكن أن يصل طول الوسم إلى {max} حرف.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, zero{يمكنك إضافة ما يصل إلى {max} وسم.} one{يمكنك إضافة ما يصل إلى {max} وسم.} two{يمكنك إضافة ما يصل إلى {max} وسمين.} few{يمكنك إضافة ما يصل إلى {max} وسوم.} many{يمكنك إضافة ما يصل إلى {max} وسمًا.} other{يمكنك إضافة ما يصل إلى {max} وسم.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, zero{{count} من {max} حرف} one{{count} من {max} حرف} two{{count} من {max} حرفين} few{{count} من {max} أحرف} many{{count} من {max} حرفًا} other{{count} من {max} حرف}}",
     "videoMetadataTagsPickerAddTag": "إضافة \"#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {

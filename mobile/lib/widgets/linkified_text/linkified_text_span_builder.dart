@@ -4,6 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart' show WidgetSpan;
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/constants/mention_pattern.dart';
@@ -191,8 +192,15 @@ class LinkifiedTextSpanBuilder {
         final urlSpans = _buildUrlSpans(matchedUrl, heartBudget);
         heartBudget -= urlSpans.whereType<WidgetSpan>().length;
         spans.addAll(urlSpans);
-      } else if (hashtag != null) {
+      } else if (hashtag != null &&
+          HashtagExtractor.isWithinLengthLimit(hashtag)) {
         spans.add(_buildHashtagSpan(hashtag));
+      } else if (hashtag != null) {
+        // Too long to be a real hashtag (usually a pasted list), so it
+        // stays plain text rather than opening an empty feed.
+        final run = _plainSpans('#$hashtag', heartBudget);
+        heartBudget -= run.whereType<WidgetSpan>().length;
+        spans.addAll(run);
       } else if (nostrId != null) {
         final (reference, trailing) = _splitDecodableNostrReference(nostrId);
         spans.add(_buildNostrReferenceSpan(reference));

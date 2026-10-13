@@ -1,9 +1,12 @@
 // ABOUTME: Covers the chrome the hashtag feed owns when it is not embedded:
 // ABOUTME: its app-bar title and the pull-to-refresh wiring on its grid.
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
@@ -94,6 +97,28 @@ void main() {
       // FeedRefreshControl is only inserted when the grid is given an
       // onRefresh, so its presence is what proves the screen wired one.
       expect(find.byType(FeedRefreshControl), findsOneWidget);
+    });
+
+    testWidgets('cuts an over-long hashtag off in the empty state', (
+      tester,
+    ) async {
+      when(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: any(named: 'hashtag'),
+        ),
+      ).thenAnswer((_) async => const HashtagFeedVideosResult.success([]));
+      final pastedList = 'VineHashtagsMasterList' * 40;
+
+      await pumpScreen(tester, pastedList);
+
+      final title = find.text(
+        lookupAppLocalizations(
+          const Locale('en'),
+        ).hashtagFeedEmptyTitle(pastedList),
+      );
+      expect(title, findsOneWidget);
+      final paragraph = tester.renderObject<RenderParagraph>(title);
+      expect(paragraph.didExceedMaxLines, isTrue);
     });
   });
 }
