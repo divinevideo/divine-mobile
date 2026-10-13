@@ -11,7 +11,7 @@ import 'package:http/testing.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Nip19, generatePrivateKey;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Nip19, generatePrivateKey;
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -20,6 +20,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/shared_channel_override.dart';
 
@@ -1673,5 +1674,216 @@ void main() {
         );
       },
     );
+
+    group('mid-session 401 with a failed refresh (#9943)', () {
+      // Keycast's answer to every RPC once it no longer recognises the access
+      // token, as in the device log on #9943.
+      http.Client revokedTokenKeycast() => MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'error': 'Invalid or expired token. Please log in again.',
+          }),
+          401,
+        ),
+      );
+
+      void stubRefresh(Future<KeycastSession?> Function() answer) => when(
+        () => mockOAuthClient.refreshSession(
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).thenAnswer((_) => answer());
+
+      void verifyRefreshRanOnce() => verify(
+        () => mockOAuthClient.refreshSession(
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).called(1);
+
+      /// A Divine login account with no key on the device, restored at startup
+      /// from a locally unexpired access token that Keycast has since revoked.
+      /// Every signing call goes to Keycast and gets a 401.
+      Future<(AuthService, KeycastSession)> arrangeKeycastOnlyAccount() async {
+        SharedPreferences.setMockInitialValues({
+          'authentication_source': 'divineOAuth',
+          'tos_accepted': true,
+        });
+        final session = KeycastSession(
+          bunkerUrl: 'https://login.divine.video/api/nostr',
+          accessToken: 'revoked_token',
+          expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          refreshToken: 'refresh_token',
+          userPubkey: SecureKeyContainer.fromPrivateKeyHex(
+            generatePrivateKey(),
+          ).publicKeyHex,
+        );
+        secureStorage['keycast_session'] = jsonEncode(session.toJson());
+        secureStorage['keycast_refresh_token'] = session.refreshToken!;
+        when(
+          () => mockOAuthClient.getSession(),
+        ).thenAnswer((_) async => session);
+        stubRefresh(() async => null);
+        when(() => mockOAuthClient.logout()).thenAnswer((_) async {});
+
+        final authService = createAuthService();
+        // Restore builds the production signer, which takes its HTTP client
+        // from this zone.
+        await http.runWithClient(
+          () => runIgnoringMockedHttpErrors(authService.initialize),
+          revokedTokenKeycast,
+        );
+        expect(authService.authState, equals(AuthState.authenticated));
+        expect(authService.hasExpiredOAuthSession, isFalse);
+        return (authService, session);
+      }
+
+      Future<Event?> signNote(AuthService authService) =>
+          authService.createAndSignEvent(kind: 1, content: 'hello');
+
+      test('a refused refresh flags the session expired and notifies '
+          'expired-session listeners while the user stays signed in', () async {
+        final (authService, _) = await arrangeKeycastOnlyAccount();
+        final expired = authService.expiredOAuthSessionListenable;
+        final notified = <bool>[];
+        void record() => notified.add(expired.value);
+        expired.addListener(record);
+        addTearDown(() => expired.removeListener(record));
+
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+
+        verifyRefreshRanOnce();
+        expect(authService.hasExpiredOAuthSession, isTrue);
+        expect(notified, equals([true]));
+        expect(
+          authService.authState,
+          equals(AuthState.authenticated),
+          reason: 'The user stays in the app; the prompt asks them to sign in',
+        );
+      });
+
+      test(
+        'concurrent 401s share one refresh and flip the flag once',
+        () async {
+          final (authService, _) = await arrangeKeycastOnlyAccount();
+          final expired = authService.expiredOAuthSessionListenable;
+          final notified = <bool>[];
+          void record() => notified.add(expired.value);
+          expired.addListener(record);
+          addTearDown(() => expired.removeListener(record));
+
+          final results = await Future.wait([
+            for (var i = 0; i < 3; i++) signNote(authService),
+          ]);
+          await pumpEventQueue();
+
+          expect(results, everyElement(isNull));
+          verifyRefreshRanOnce();
+          expect(notified, equals([true]));
+        },
+      );
+
+      test('a sign-in clears the flag, and a later refusal raises it and '
+          'warns again', () async {
+        final (authService, session) = await arrangeKeycastOnlyAccount();
+        final expired = authService.expiredOAuthSessionListenable;
+        final notified = <bool>[];
+        void record() => notified.add(expired.value);
+        expired.addListener(record);
+        addTearDown(() => expired.removeListener(record));
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        int warnings() => logs
+            .getRecentLogs()
+            .where((e) => e.message.contains('marking the OAuth session'))
+            .length;
+
+        expect(await signNote(authService), isNull);
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+        expect(warnings(), equals(1));
+
+        // Keycast revokes the new session too, so its signer also gets 401s.
+        await http.runWithClient(
+          () => runIgnoringMockedHttpErrors(
+            () => authService.signInWithDivineOAuth(
+              session.copyWith(accessToken: 'second_token'),
+            ),
+          ),
+          revokedTokenKeycast,
+        );
+        expect(authService.hasExpiredOAuthSession, isFalse);
+
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+
+        expect(notified, equals([true, false, true]));
+        expect(warnings(), equals(2));
+      });
+
+      test('an unreachable Keycast leaves the session alone', () async {
+        final (authService, _) = await arrangeKeycastOnlyAccount();
+        when(
+          () => mockOAuthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenThrow(OAuthNetworkException('Refresh request failed: HTTP 503'));
+
+        expect(await signNote(authService), isNull);
+        await pumpEventQueue();
+
+        verifyRefreshRanOnce();
+        expect(
+          authService.hasExpiredOAuthSession,
+          isFalse,
+          reason: 'An outage must not ask every user to sign in again',
+        );
+      });
+
+      test('a rejection that lands after sign-out does not mark the signed-out '
+          'session expired', () async {
+        final (authService, _) = await arrangeKeycastOnlyAccount();
+        final refreshGate = Completer<KeycastSession?>();
+        stubRefresh(() => refreshGate.future);
+
+        await runIgnoringMockedHttpErrors(() async {
+          final signing = signNote(authService);
+          await pumpEventQueue();
+          await authService.signOut();
+          refreshGate.complete(null);
+          await signing;
+          await pumpEventQueue();
+        });
+
+        verifyRefreshRanOnce();
+        expect(authService.authState, equals(AuthState.unauthenticated));
+        expect(authService.hasExpiredOAuthSession, isFalse);
+      });
+
+      test('a rejection that lands after signing out and back in to the same '
+          'account does not mark the new session expired', () async {
+        final (authService, session) = await arrangeKeycastOnlyAccount();
+        final refreshGate = Completer<KeycastSession?>();
+        stubRefresh(() => refreshGate.future);
+
+        await runIgnoringMockedHttpErrors(() async {
+          final signing = signNote(authService);
+          await pumpEventQueue();
+          await authService.signOut();
+          await authService.signInWithDivineOAuth(
+            session.copyWith(accessToken: 'fresh_token'),
+          );
+          // KeycastOAuth answers the outgoing session's refresh with null once
+          // sign-out has cleared its storage, the same as a refusal.
+          refreshGate.complete(null);
+          await signing;
+          await pumpEventQueue();
+        });
+
+        verifyRefreshRanOnce();
+        expect(authService.authState, equals(AuthState.authenticated));
+        expect(authService.currentPublicKeyHex, equals(session.userPubkey));
+        expect(authService.hasExpiredOAuthSession, isFalse);
+      });
+    });
   });
 }

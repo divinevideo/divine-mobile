@@ -8,6 +8,21 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Outcome of one shared refresh attempt.
+///
+/// [rejected] is true when `KeycastOAuth.refreshSession` returned no usable
+/// session without throwing: Keycast refused the refresh token, none was left
+/// to use, or sign-out cleared storage while the request was in flight.
+/// Unreachable-server failures throw [OAuthNetworkException] instead, and
+/// unexpected errors leave it false.
+typedef _RefreshOutcome = ({KeycastSession? session, bool rejected});
+
+/// A shared refresh attempt and the signer that was live when it started.
+typedef _SharedRefresh = ({
+  Future<_RefreshOutcome> outcome,
+  KeycastRpc? startedBy,
+});
+
 /// Coordinates OAuth session refresh so concurrent callers never race on a
 /// one-time-use refresh token.
 ///
@@ -15,7 +30,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// collaborators this one is STATEFUL: it owns the two single-flight futures
 /// ([_pendingOAuthRefresh]/[_pendingRefresh]) — process-lifetime concurrency
 /// state, not per-call snapshots. The facade retains ownership of the
-/// `_hasExpiredOAuthSession` flag (written by restore orchestration) and all
+/// `_hasExpiredOAuthSession` flag (written by restore orchestration, and by a
+/// rejected mid-session refresh through the `onRefreshRejected` port) and all
 /// result application (rebuilding the signer, `signInWithDivineOAuth`), reached
 /// here through the injected ports so behavior is preserved exactly.
 class OAuthSessionCoordinator {
@@ -25,11 +41,15 @@ class OAuthSessionCoordinator {
     required Duration expiredSessionRefreshTimeout,
     required String? Function() currentPubkeyFallback,
     required bool Function() hasExpiredSession,
+    required KeycastRpc? Function() currentRpcSigner,
+    required void Function() onRefreshRejected,
   }) : _oauthClient = oauthClient,
        _oauthRefreshTimeout = oauthRefreshTimeout,
        _expiredSessionRefreshTimeout = expiredSessionRefreshTimeout,
        _currentPubkeyFallback = currentPubkeyFallback,
-       _hasExpiredSession = hasExpiredSession;
+       _hasExpiredSession = hasExpiredSession,
+       _currentRpcSigner = currentRpcSigner,
+       _onRefreshRejected = onRefreshRejected;
 
   final KeycastOAuth? _oauthClient;
   final Duration _oauthRefreshTimeout;
@@ -37,8 +57,17 @@ class OAuthSessionCoordinator {
   final String? Function() _currentPubkeyFallback;
   final bool Function() _hasExpiredSession;
 
+  /// The signed-in session's Keycast signer, or null when signed out.
+  final KeycastRpc? Function() _currentRpcSigner;
+  final void Function() _onRefreshRejected;
+
   Future<bool>? _pendingRefresh;
-  Future<KeycastSession?>? _pendingOAuthRefresh;
+  _SharedRefresh? _pendingOAuthRefresh;
+
+  /// The last shared refresh whose stale rejection [refreshAccessToken]
+  /// logged. Every 401 that joined it gets the same outcome, so this keeps the
+  /// log to one line per refresh rather than one per caller.
+  Future<_RefreshOutcome>? _loggedStaleRefresh;
 
   /// Runs [attempt] under an outer single-flight, bounded by
   /// [expiredSessionRefreshTimeout], to silently refresh an expired OAuth
@@ -118,7 +147,7 @@ class OAuthSessionCoordinator {
     final pending = _pendingOAuthRefresh;
     if (pending != null) {
       return _guardRefreshForCaller(
-        pending,
+        pending.outcome.then((outcome) => outcome.session),
         expectedOwnerPubkey: expectedOwnerPubkey,
         timeout: timeout,
         storedSessionReader: storedSessionReader,
@@ -126,7 +155,20 @@ class OAuthSessionCoordinator {
       );
     }
 
-    late final Future<KeycastSession?> refresh;
+    return _startRefresh(
+      expectedOwnerPubkey: expectedOwnerPubkey,
+      storedSessionReader: storedSessionReader,
+      caller: caller,
+    ).outcome.then((outcome) => outcome.session);
+  }
+
+  /// Starts a new shared refresh attempt and claims the single-flight slot.
+  _SharedRefresh _startRefresh({
+    String? expectedOwnerPubkey,
+    Future<KeycastSession?> Function()? storedSessionReader,
+    String? caller,
+  }) {
+    late final Future<_RefreshOutcome> refresh;
     refresh =
         _doRefreshSession(
               expectedOwnerPubkey: expectedOwnerPubkey,
@@ -150,20 +192,24 @@ class OAuthSessionCoordinator {
               // Only release the slot if it still holds this attempt — signOut
               // may have detached it and a fresh attempt may already be in
               // flight.
-              if (identical(_pendingOAuthRefresh, refresh)) {
+              if (identical(_pendingOAuthRefresh?.outcome, refresh)) {
                 _pendingOAuthRefresh = null;
               }
             });
-    return _pendingOAuthRefresh = refresh;
+    return _pendingOAuthRefresh = (
+      outcome: refresh,
+      startedBy: _currentRpcSigner(),
+    );
   }
 
-  Future<KeycastSession?> _doRefreshSession({
+  Future<_RefreshOutcome> _doRefreshSession({
     String? expectedOwnerPubkey,
     Future<KeycastSession?> Function()? storedSessionReader,
     String? caller,
   }) async {
+    const notRefreshed = (session: null, rejected: false);
     final oauthClient = _oauthClient;
-    if (oauthClient == null) return null;
+    if (oauthClient == null) return notRefreshed;
     try {
       if (expectedOwnerPubkey != null &&
           storedSessionReader != null &&
@@ -172,12 +218,24 @@ class OAuthSessionCoordinator {
             storedSessionReader,
             caller,
           )) {
-        return null;
+        return notRefreshed;
       }
 
       final pubkey = expectedOwnerPubkey ?? _currentPubkeyFallback();
       final refreshed = await oauthClient.refreshSession(userPubkey: pubkey);
-      if (refreshed == null || !refreshed.hasRpcAccess) return null;
+      // A null result without an exception means there was no refresh token
+      // to use, Keycast refused it (KeycastOAuth deletes a refused token), or
+      // sign-out cleared storage mid-flight. Debug only: with the refresh
+      // token gone this runs on every 401, and refreshAccessToken warns once
+      // when the session actually expires.
+      if (refreshed == null || !refreshed.hasRpcAccess) {
+        Log.debug(
+          '_refreshOAuthSession: no session — refresh token refused or gone',
+          name: 'OAuthSessionCoordinator',
+          category: LogCategory.auth,
+        );
+        return (session: null, rejected: true);
+      }
 
       Log.info(
         '_refreshOAuthSession: succeeded '
@@ -185,7 +243,7 @@ class OAuthSessionCoordinator {
         name: 'OAuthSessionCoordinator',
         category: LogCategory.auth,
       );
-      return refreshed;
+      return (session: refreshed, rejected: false);
     } on OAuthNetworkException {
       rethrow;
     } catch (e) {
@@ -194,7 +252,7 @@ class OAuthSessionCoordinator {
         name: 'OAuthSessionCoordinator',
         category: LogCategory.auth,
       );
-      return null;
+      return notRefreshed;
     }
   }
 
@@ -291,17 +349,59 @@ class OAuthSessionCoordinator {
   /// [TokenRefreshCallback] passed to [KeycastRpc] so it can recover from
   /// mid-session 401s without caller involvement.
   ///
-  /// Delegates to [refreshSession] which deduplicates concurrent callers —
-  /// multiple in-flight RPC 401s and app-resume refresh all share a single
-  /// refresh token exchange.
+  /// Shares the single-flight refresh with [refreshSession], so multiple
+  /// in-flight RPC 401s and app-resume refresh all share a single refresh
+  /// token exchange.
+  ///
+  /// A rejected refresh runs `onRefreshRejected`, so the user is asked to sign
+  /// in again (#9943), but only when the signer that started the shared
+  /// refresh is the one this call started with and is still live. A rejection
+  /// can be stale: `KeycastOAuth` returns the same null when sign-out cleared
+  /// storage mid-flight, and a new sign-in's 401 can join a refresh the
+  /// previous signer started. Sign-out drops the signer and every sign-in
+  /// builds a new one, so a stale result never marks the next session, even
+  /// for the same account. An unreachable Keycast never counts: the refresh
+  /// token survives that for a later retry.
+  ///
+  /// Only the rejection that flips the session from live to expired runs
+  /// `onRefreshRejected` and logs a warning. Once the refresh token is gone,
+  /// every later 401 starts a new refresh that fails within a millisecond, so
+  /// anything per refresh would log once per failed RPC.
   Future<String?> refreshAccessToken() async {
-    final KeycastSession? refreshed;
+    final signerAtStart = _currentRpcSigner();
+    final refresh = _pendingOAuthRefresh ?? _startRefresh();
+    final _RefreshOutcome outcome;
     try {
-      refreshed = await refreshSession();
+      outcome = await refresh.outcome;
     } on OAuthNetworkException {
       return null;
     }
-    return refreshed?.accessToken;
+    if (!outcome.rejected) return outcome.session?.accessToken;
+
+    final signerStillLive =
+        signerAtStart != null &&
+        identical(signerAtStart, refresh.startedBy) &&
+        identical(signerAtStart, _currentRpcSigner());
+    if (!signerStillLive) {
+      if (!identical(_loggedStaleRefresh, refresh.outcome)) {
+        _loggedStaleRefresh = refresh.outcome;
+        Log.info(
+          'refreshAccessToken: refresh rejected for a signer that is no '
+          'longer live — ignoring (stale, e.g. signed out mid-refresh)',
+          name: 'OAuthSessionCoordinator',
+          category: LogCategory.auth,
+        );
+      }
+    } else if (!_hasExpiredSession()) {
+      Log.warning(
+        'refreshAccessToken: refresh rejected — marking the OAuth session '
+        'expired so the user is asked to sign in again',
+        name: 'OAuthSessionCoordinator',
+        category: LogCategory.auth,
+      );
+      _onRefreshRejected();
+    }
+    return null;
   }
 
   /// Returns an access token only when the stored OAuth session belongs to

@@ -19,6 +19,7 @@ import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -314,6 +315,25 @@ class CurrentAuthRpcCapability extends _$CurrentAuthRpcCapability {
     });
     ref.onDispose(subscription.cancel);
     return authService.authRpcCapability;
+  }
+}
+
+/// Whether the Divine OAuth session expired and needs a fresh sign-in, kept in
+/// sync with [AuthService.expiredOAuthSessionListenable].
+///
+/// Watch this instead of reading [AuthService.hasExpiredOAuthSession] beside
+/// [currentAuthStateProvider]. A refused mid-session refresh flips the flag
+/// while auth state stays `authenticated`, and re-emitting an equal auth state
+/// notifies no watcher (#9943).
+@Riverpod(keepAlive: true)
+class HasExpiredOAuthSession extends _$HasExpiredOAuthSession {
+  @override
+  bool build() {
+    final expired = ref
+        .watch(authServiceProvider)
+        .expiredOAuthSessionListenable;
+    listenForProviderLifetime(ref, expired, () => state = expired.value);
+    return expired.value;
   }
 }
 

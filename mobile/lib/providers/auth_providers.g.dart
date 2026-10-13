@@ -550,6 +550,89 @@ abstract class _$CurrentAuthRpcCapability extends $Notifier<AuthRpcCapability> {
   }
 }
 
+/// Whether the Divine OAuth session expired and needs a fresh sign-in, kept in
+/// sync with [AuthService.expiredOAuthSessionListenable].
+///
+/// Watch this instead of reading [AuthService.hasExpiredOAuthSession] beside
+/// [currentAuthStateProvider]. A refused mid-session refresh flips the flag
+/// while auth state stays `authenticated`, and re-emitting an equal auth state
+/// notifies no watcher (#9943).
+
+@ProviderFor(HasExpiredOAuthSession)
+final hasExpiredOAuthSessionProvider = HasExpiredOAuthSessionProvider._();
+
+/// Whether the Divine OAuth session expired and needs a fresh sign-in, kept in
+/// sync with [AuthService.expiredOAuthSessionListenable].
+///
+/// Watch this instead of reading [AuthService.hasExpiredOAuthSession] beside
+/// [currentAuthStateProvider]. A refused mid-session refresh flips the flag
+/// while auth state stays `authenticated`, and re-emitting an equal auth state
+/// notifies no watcher (#9943).
+final class HasExpiredOAuthSessionProvider
+    extends $NotifierProvider<HasExpiredOAuthSession, bool> {
+  /// Whether the Divine OAuth session expired and needs a fresh sign-in, kept in
+  /// sync with [AuthService.expiredOAuthSessionListenable].
+  ///
+  /// Watch this instead of reading [AuthService.hasExpiredOAuthSession] beside
+  /// [currentAuthStateProvider]. A refused mid-session refresh flips the flag
+  /// while auth state stays `authenticated`, and re-emitting an equal auth state
+  /// notifies no watcher (#9943).
+  HasExpiredOAuthSessionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'hasExpiredOAuthSessionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$hasExpiredOAuthSessionHash();
+
+  @$internal
+  @override
+  HasExpiredOAuthSession create() => HasExpiredOAuthSession();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$hasExpiredOAuthSessionHash() =>
+    r'4a901534c91f27a84e62b5952814f26744a49331';
+
+/// Whether the Divine OAuth session expired and needs a fresh sign-in, kept in
+/// sync with [AuthService.expiredOAuthSessionListenable].
+///
+/// Watch this instead of reading [AuthService.hasExpiredOAuthSession] beside
+/// [currentAuthStateProvider]. A refused mid-session refresh flips the flag
+/// while auth state stays `authenticated`, and re-emitting an equal auth state
+/// notifies no watcher (#9943).
+
+abstract class _$HasExpiredOAuthSession extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Provider that fetches the list of known accounts from the auth service.
 ///
 /// Invalidate this provider after sign-in or sign-out to refresh the list.

@@ -157,6 +157,7 @@ void main() {
   List<Override> baseOverrides() => [
     sharedPreferencesProvider.overrideWithValue(sharedPreferences),
     authServiceProvider.overrideWithValue(authService),
+    hasExpiredOAuthSessionProvider.overrideWithValue(false),
     currentAuthStateProvider.overrideWithValue(AuthState.unauthenticated),
     audioSharingPreferenceServiceProvider.overrideWithValue(
       audioSharingService,

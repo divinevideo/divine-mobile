@@ -145,6 +145,11 @@ MockAuthService createMockAuthService({
       .thenReturn(AuthRpcCapability.unavailable);
   when(() => mockAuth.authRpcCapabilityStream)
       .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+  // hasExpiredOAuthSessionProvider listens here; unstubbed it throws type
+  // 'Null' is not a subtype of type 'ValueListenable<bool>'.
+  when(
+    () => mockAuth.expiredOAuthSessionListenable,
+  ).thenReturn(ValueNotifier(false));
 
   // The crossposter client reads its bearer token here, so any widget that
   // mounts the share sheet reaches it. Unstubbed it returns null rather than a
