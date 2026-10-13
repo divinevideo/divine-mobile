@@ -6131,5 +6131,6 @@
   "notificationFromDivine": "Från Divine",
   "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt.",
   "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
-  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats"
+  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats",
+  "minorAccountReviewRecordConsentPrivacyBody": "Din video skickas privat till Divines team för support samt tillit och säkerhet för granskning. Den publiceras inte och delas inte med andra användare."
 }

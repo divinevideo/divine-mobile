@@ -6248,5 +6248,6 @@
   "notificationFromDivine": "От Divine",
   "announcementUnavailable": "Това съобщение вече не е налично.",
   "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
-  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено"
+  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено",
+  "minorAccountReviewRecordConsentPrivacyBody": "Видеото ви се изпраща поверително до екипите за поддръжка и доверие и безопасност на Divine за преглед. То не се публикува и не се споделя с други потребители."
 }

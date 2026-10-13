@@ -6184,5 +6184,6 @@
   "notificationFromDivine": "ከDivine",
   "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።",
   "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
-  "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል"
+  "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል",
+  "minorAccountReviewRecordConsentPrivacyBody": "ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።"
 }

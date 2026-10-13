@@ -541,11 +541,24 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
 
   if (authState == AuthState.authenticated &&
       reviewStatus?.isRestricted != true &&
-      (isReviewRoute ||
-          isParentContactRoute ||
-          isRecordConsentRoute ||
-          isUnder13SupportRoute)) {
+      (isReviewRoute || isParentContactRoute || isUnder13SupportRoute)) {
     return VideoFeedPage.pathForIndex(0);
+  }
+
+  // Consent is available for a voluntary Greenlight application as well as
+  // an existing restriction. The repository creates an owned case on submit.
+  if (authState == AuthState.authenticated && isRecordConsentRoute) {
+    final reviewCase = reviewStatus?.currentCase;
+    if (reviewCase != null && !reviewCase.allowsParentVideoOrEmail) {
+      return reviewCase.isUnder13Path
+          ? MinorAccountReviewUnder13SupportScreen.path
+          : SupportCenterScreen.path;
+    }
+    if (!ref.read(
+      isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
+    )) {
+      return MinorAccountReviewParentConsentScreen.path;
+    }
   }
 
   if (authState == AuthState.authenticated &&
@@ -558,14 +571,6 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       if (!reviewCase.allowsParentVideoOrEmail) {
         return MinorAccountReviewUnder13SupportScreen.path;
       }
-    }
-    // In-app recording stays dark until its upload route ships; a stale link
-    // or deep link lands on the email / private-link consent path instead.
-    if (isRecordConsentRoute &&
-        !ref.read(
-          isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
-        )) {
-      return MinorAccountReviewParentConsentScreen.path;
     }
 
     if (!isReviewRoute &&

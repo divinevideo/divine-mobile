@@ -6131,5 +6131,6 @@
   "notificationFromDivine": "Divineからのお知らせ",
   "announcementUnavailable": "このお知らせは現在ご覧いただけません。",
   "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
-  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました"
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
+  "minorAccountReviewRecordConsentPrivacyBody": "動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。"
 }

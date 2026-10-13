@@ -5677,5 +5677,6 @@
   "notificationFromDivine": "Divine의 소식",
   "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다.",
   "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요.",
-  "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료"
+  "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료",
+  "minorAccountReviewRecordConsentPrivacyBody": "동영상은 검토를 위해 Divine 지원 및 신뢰·안전 팀에 비공개로 전송됩니다. 공개되거나 다른 사용자와 공유되지 않습니다."
 }
