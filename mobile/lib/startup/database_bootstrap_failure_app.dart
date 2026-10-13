@@ -566,8 +566,18 @@ DatabaseBootstrapDiagnosis databaseBootstrapDiagnosis(Object error) {
 }
 
 /// The short diagnostic code for [error], as rendered on the failure screen.
-String databaseBootstrapDiagnosticCode(Object error) =>
-    databaseBootstrapDiagnosis(error).code;
+///
+/// A hot-journal failure also names the recovery stage that stopped, because
+/// that one code covers several unrelated causes and a screenshot is often
+/// the only report. The stage is an enum name, so it carries no path, SQL
+/// text or key material.
+String databaseBootstrapDiagnosticCode(Object error) {
+  final code = databaseBootstrapDiagnosis(error).code;
+  if (error is DatabaseHotJournalRecoveryError) {
+    return '$code:${error.stage.name}';
+  }
+  return code;
+}
 
 class _DebugErrorDetails extends StatelessWidget {
   const _DebugErrorDetails({required this.error, required this.stack});
