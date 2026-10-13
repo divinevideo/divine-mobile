@@ -319,57 +319,59 @@ void main() {
       return content.read<FullscreenFeedBloc>();
     }
 
-    testWidgets('the Library button opens the clips route', (tester) async {
-      final navigation = MockGoRouter();
-      when(() => navigation.push<void>(any())).thenAnswer((_) async {});
+    group('Library button', () {
+      testWidgets('opens the clips route', (tester) async {
+        final navigation = MockGoRouter();
+        when(() => navigation.push<void>(any())).thenAnswer((_) async {});
 
-      await pumpProfileRoute(
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          navigation: navigation,
+        );
+        await tester.tap(find.byKey(const Key('library-button')));
+        await tester.pump();
+
+        verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('logs a rejected clips navigation instead of leaking it', (
         tester,
-        location: ProfileScreenRouter.pathForNpub(_npub),
-        path: ProfileScreenRouter.pathWithNpub,
-        navigation: navigation,
-      );
-      await tester.tap(find.byKey(const Key('library-button')));
-      await tester.pump();
+      ) async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final navigation = MockGoRouter();
+        when(
+          () => navigation.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.error(Exception('push-failed')));
 
-      verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          navigation: navigation,
+        );
+        await tester.tap(find.byKey(const Key('library-button')));
+        await tester.pump();
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
-    });
+        expect(tester.takeException(), isNull);
+        final logs = LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.message.contains('open profile clips'))
+            .toList();
+        expect(logs, hasLength(1));
+        final log = logs.single;
+        expect(log.name, 'ProfileScreenRouter');
+        expect(log.level, LogLevel.error);
+        expect(log.message, contains('push-failed'));
 
-    testWidgets('logs a rejected clips navigation instead of leaking it', (
-      tester,
-    ) async {
-      await LogCaptureService().clearAllLogs();
-      addTearDown(LogCaptureService().clearAllLogs);
-      final navigation = MockGoRouter();
-      when(
-        () => navigation.push<void>(any()),
-      ).thenAnswer((_) => Future<void>.error(Exception('push-failed')));
-
-      await pumpProfileRoute(
-        tester,
-        location: ProfileScreenRouter.pathForNpub(_npub),
-        path: ProfileScreenRouter.pathWithNpub,
-        navigation: navigation,
-      );
-      await tester.tap(find.byKey(const Key('library-button')));
-      await tester.pump();
-
-      expect(tester.takeException(), isNull);
-      final logs = LogCaptureService()
-          .getRecentLogs()
-          .where((entry) => entry.message.contains('open profile clips'))
-          .toList();
-      expect(logs, hasLength(1));
-      final log = logs.single;
-      expect(log.name, 'ProfileScreenRouter');
-      expect(log.level, LogLevel.error);
-      expect(log.message, contains('push-failed'));
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
     });
 
     testWidgets('index 0 in the URL opens the first video', (tester) async {
