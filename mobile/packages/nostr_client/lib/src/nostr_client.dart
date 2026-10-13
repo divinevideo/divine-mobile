@@ -1290,6 +1290,14 @@ class NostrClient {
         unawaited(acquisition.then((resource) => resource.release()));
         throw const _QueryPoolWaitExpired();
       }
+      // dispose() can run while this read is queued, and a closed `Pool`
+      // still hands a queued request its slot. Asking the relays now would
+      // put a REQ on a client that is tearing down and hold dispose() for
+      // the whole read, so it ends as a read that found the pool closed.
+      if (_queryPool.isClosed) {
+        resource.release();
+        throw const _QueryPoolClosedWhileQueued();
+      }
       try {
         return await runWebSocketQuery().timeout(overrunBackstop());
       } finally {
@@ -1322,6 +1330,8 @@ class NostrClient {
     // decides who owes the read its one `queryCompletion` line.
     String? skippedReason;
     bool? timedOutOverride;
+    const poolClosedReason =
+        'the query pool closed mid-call, so the read was skipped';
     if (_queryPool.isClosed) {
       // Nothing was asked of the relays here, which is a different thing from
       // their having nothing. A display read is content to fall back on cache;
@@ -1330,9 +1340,7 @@ class NostrClient {
       // That split is what `timedOut` has always carried here, and it is the
       // one place it and `endedBy` disagree on purpose: the read itself never
       // ran, whoever was asking.
-      skippedReason =
-          'the query pool closed mid-call, so the read was '
-          'skipped';
+      skippedReason = poolClosedReason;
       timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
@@ -1343,6 +1351,10 @@ class NostrClient {
                     : _queryPool,
               )
             : await runWebSocketQuery().timeout(overrunBackstop());
+      } on _QueryPoolClosedWhileQueued {
+        // Nothing was asked here either, so it answers as the check above.
+        skippedReason = poolClosedReason;
+        timedOutOverride = requireAllRelaysSettled;
       } on _QueryPoolWaitExpired {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
         // an inactivity timer reset on every acquire and release, so a busy
@@ -2657,6 +2669,12 @@ class NostrClient {
 /// relay pool never saw the read and owes no line for it.
 class _QueryPoolWaitExpired implements Exception {
   const _QueryPoolWaitExpired();
+}
+
+/// The query pool closed while the read was queued for a slot, so the read
+/// ends without asking a relay.
+class _QueryPoolClosedWhileQueued implements Exception {
+  const _QueryPoolClosedWhileQueued();
 }
 
 const _invalidRelayCountSentinels = {
