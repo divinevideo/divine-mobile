@@ -26,6 +26,8 @@ class _ScriptedRelay extends Relay {
   /// Subscription ids of the `REQ`s this relay was sent, in order.
   final List<String> reqSubIds = [];
 
+  final _reqSent = StreamController<void>.broadcast();
+
   @override
   Future<bool> doConnect() async {
     relayStatus.connected = ClientConnected.connected;
@@ -46,6 +48,7 @@ class _ScriptedRelay extends Relay {
   }) async {
     if (message.isNotEmpty && message[0] == 'REQ' && message.length > 1) {
       reqSubIds.add(message[1] as String);
+      _reqSent.add(null);
     }
     return true;
   }
@@ -55,19 +58,27 @@ class _ScriptedRelay extends Relay {
     if (result is Future) await result;
   }
 
-  /// Waits, in real time, for the pool to register the [index]th `REQ`.
+  /// Waits for the pool to send, then register, the [index]th `REQ`.
+  ///
+  /// The pool saves a query only once its `send` resolves, so after the frame
+  /// arrives the event queue is drained until the registration lands.
   Future<String> awaitReq(
     int index, {
     Duration within = const Duration(seconds: 6),
   }) async {
-    final giveUp = DateTime.now().add(within);
-    while (DateTime.now().isBefore(giveUp)) {
-      if (reqSubIds.length > index && checkQuery(reqSubIds[index])) {
-        return reqSubIds[index];
+    while (reqSubIds.length <= index) {
+      try {
+        await _reqSent.stream.first.timeout(within);
+      } on TimeoutException {
+        fail('$url never received REQ #$index');
       }
-      await Future<void>.delayed(const Duration(milliseconds: 5));
     }
-    fail('$url never received REQ #$index');
+    final subId = reqSubIds[index];
+    for (var attempt = 0; attempt < 400 && !checkQuery(subId); attempt++) {
+      await pumpEventQueue();
+    }
+    if (!checkQuery(subId)) fail('$url never registered REQ #$index');
+    return subId;
   }
 }
 
@@ -88,14 +99,21 @@ Future<
     Nostr nostr,
     _ScriptedRelay pooled,
     Map<String, _ScriptedRelay> tempRelays,
+    Stream<_ScriptedRelay> dialled,
   })
 >
 _harness() async {
   final tempRelays = <String, _ScriptedRelay>{};
+  final dialled = StreamController<_ScriptedRelay>.broadcast();
+  addTearDown(dialled.close);
   final nostr = Nostr(
     LocalNostrSigner(_secretKey),
     [],
-    (url) => tempRelays.putIfAbsent(url, () => _ScriptedRelay(url)),
+    (url) => tempRelays.putIfAbsent(url, () {
+      final relay = _ScriptedRelay(url);
+      dialled.add(relay);
+      return relay;
+    }),
   );
   final pooled = _ScriptedRelay(_poolRelayUrl);
   expect(await nostr.relayPool.add(pooled), isTrue);
@@ -121,6 +139,7 @@ _harness() async {
     nostr: nostr,
     pooled: pooled,
     tempRelays: tempRelays,
+    dialled: dialled.stream,
   );
 }
 
@@ -149,17 +168,20 @@ Future<({Future<void> ended})> _saturatePool(
 /// [within].
 Future<_ScriptedRelay?> _dialled(
   Map<String, _ScriptedRelay> tempRelays,
+  Stream<_ScriptedRelay> dialled,
   String url, {
   Duration within = const Duration(seconds: 1),
 }) async {
-  final giveUp = DateTime.now().add(within);
-  while (DateTime.now().isBefore(giveUp)) {
-    for (final entry in tempRelays.entries) {
-      if (entry.key.startsWith(url)) return entry.value;
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 5));
+  for (final entry in tempRelays.entries) {
+    if (entry.key.startsWith(url)) return entry.value;
   }
-  return null;
+  try {
+    return await dialled
+        .firstWhere((relay) => relay.url.startsWith(url))
+        .timeout(within);
+  } on TimeoutException {
+    return null;
+  }
 }
 
 void main() {
@@ -192,7 +214,7 @@ void main() {
         // The indexer has the list, if the leg reaches it while the feed reads
         // still hold the pool. A leg queued behind them is skipped unsent, and
         // the lookup's outcome below is what shows it.
-        final indexer = await _dialled(h.tempRelays, _indexerUrl);
+        final indexer = await _dialled(h.tempRelays, h.dialled, _indexerUrl);
         if (indexer != null) {
           final indexerSub = await indexer.awaitReq(0);
           await indexer.deliver(['EVENT', indexerSub, inboxList.toJson()]);
@@ -244,7 +266,7 @@ void main() {
 
         final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
         // The indexer answers, and has no list.
-        final indexer = await _dialled(h.tempRelays, _indexerUrl);
+        final indexer = await _dialled(h.tempRelays, h.dialled, _indexerUrl);
         expect(indexer, isNotNull);
         await indexer!.deliver(['EOSE', await indexer.awaitReq(0)]);
 
@@ -314,7 +336,11 @@ void main() {
               timeout: const Duration(seconds: 8),
             ),
         ]);
-        final busyRelay = await _dialled(h.tempRelays, _busyOutsideUrl);
+        final busyRelay = await _dialled(
+          h.tempRelays,
+          h.dialled,
+          _busyOutsideUrl,
+        );
         expect(busyRelay, isNotNull);
         await busyRelay!.awaitReq(NostrClient.maxConcurrentQueries - 1);
 
