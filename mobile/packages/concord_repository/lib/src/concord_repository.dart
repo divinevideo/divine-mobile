@@ -251,6 +251,32 @@ class ConcordRepository {
     );
   }
 
+  /// Kind-33302 Community List document held for this account (merged
+  /// fragments, unknown fields preserved by the protocol merge).
+  Map<String, dynamic>? heldListDoc;
+
+  set ingestListDoc(Map<String, dynamic> doc) => heldListDoc = doc;
+
+  /// Resolves the held stream key for a channel (by held id or name)
+  /// from [heldListDoc]; null when the list does not hold it, in which
+  /// case callers fall back to the labeled POC key.
+  GroupKey? heldStreamKey(String channelNameOrId) {
+    final doc = heldListDoc;
+    if (doc == null) return null;
+    for (final raw in (doc['entries'] as List? ?? [])) {
+      final entry = Map<String, dynamic>.from(raw as Map);
+      final channels = (entry['current'] as Map?)?['channels'] as List? ?? [];
+      for (final c in channels) {
+        final channel = Map<String, dynamic>.from(c as Map);
+        if (channel['name'] == channelNameOrId ||
+            channel['id'] == channelNameOrId) {
+          return streamKeyFromListEntry(entry, channel['id'] as String);
+        }
+      }
+    }
+    return null;
+  }
+
   void ingestControl(ControlEvent c) => _controls.add(c);
   FoldedThread timeline({required int now}) =>
       foldControls(_messages, _controls, now: now);
