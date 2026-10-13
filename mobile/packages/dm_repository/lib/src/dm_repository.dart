@@ -4695,22 +4695,8 @@ class DmRepository {
       // the list was written can neither confirm it nor see a list held only
       // there (#8433).
       //
-      // A leg the client skipped without asking any relay — no query slot
-      // reached it in time — reports `timedOut` just as one a relay left
-      // unsettled does, so each leg says which it was, keyed by its place in
-      // the list (#10004).
-      final skippedLegs = <int, String>{};
-      var legCount = 0;
-      Future<T> leg<T>(Future<T> Function() read) {
-        final index = legCount++;
-        return NostrClient.observeSkippedReads(
-          read,
-          onSkipped: (reason) => skippedLegs[index] = reason,
-        );
-      }
-
       final queryFutures = [
-        leg(
+        _observedLeg(
           () => _nostrClient.queryEventsDetailed(
             filter,
             useCache: !requireAuthoritative,
@@ -4722,7 +4708,7 @@ class DmRepository {
           ),
         ),
         if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
-          leg(
+          _observedLeg(
             () => _nostrClient.queryEventsDetailed(
               filter,
               useCache: false,
@@ -4733,7 +4719,7 @@ class DmRepository {
             ),
           ),
         if (advertisedRelay != null)
-          leg(
+          _observedLeg(
             () => _nostrClient.queryEventsDetailed(
               filter,
               useCache: false,
@@ -4744,9 +4730,10 @@ class DmRepository {
             ),
           ),
       ];
-      final results = await Future.wait(queryFutures).timeout(
+      final legs = await Future.wait(queryFutures).timeout(
         inboxResolutionBudget,
       );
+      final results = [for (final leg in legs) leg.read];
       final events = [for (final result in results) ...result.events];
       // The advertised leg, when asked, is queued last.
       final advertisedEvents = advertisedRelay == null
@@ -4779,8 +4766,8 @@ class DmRepository {
       // their own strict read — see [_drainOwnInboxRelays].
       final noRelayAnswered = results.any((result) => result.noRelays);
       final unsettledLegs = [
-        for (var i = 0; i < results.length; i++)
-          if (results[i].timedOut) i,
+        for (final leg in legs)
+          if (leg.read.timedOut) leg,
       ];
       if (noRelayAnswered || unsettledLegs.isNotEmpty) {
         absentOrFailed = _OwnDmInboxState.failed;
@@ -4791,11 +4778,8 @@ class DmRepository {
         inconclusiveReason = noRelayAnswered
             ? 'no relay took the REQ'
             : {
-                for (final index in unsettledLegs)
-                  if (skippedLegs[index] case final reason?)
-                    'a read never left this device: $reason'
-                  else
-                    'not every relay settled',
+                for (final leg in unsettledLegs)
+                  _unsettledLegReason(leg.skippedReason),
               }.join('; ');
       } else {
         absentOrFailed = _OwnDmInboxState.absent;
@@ -4945,6 +4929,29 @@ class DmRepository {
     return (state: _OwnDmInboxState.failed, relays: null);
   }
 
+  /// Runs one kind-10050 lookup leg, keeping why the client skipped it when
+  /// it did.
+  ///
+  /// A leg the client skipped without asking any relay — no query slot
+  /// reached it in time — reports `timedOut` just as one a relay left
+  /// unsettled does, so this is what tells the two apart (#10004).
+  Future<({T read, String? skippedReason})> _observedLeg<T>(
+    Future<T> Function() read,
+  ) async {
+    String? skippedReason;
+    final result = await NostrClient.observeSkippedReads(
+      read,
+      onSkipped: (reason) => skippedReason = reason,
+    );
+    return (read: result, skippedReason: skippedReason);
+  }
+
+  /// Why a leg that did not settle was inconclusive, for the log line.
+  static String _unsettledLegReason(String? skippedReason) =>
+      skippedReason == null
+      ? 'not every relay settled'
+      : 'a read never left this device: $skippedReason';
+
   /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
   /// the pool and indexer legs returned no inbox list but did return the
   /// recipient's NIP-65 list.
@@ -5007,10 +5014,7 @@ class DmRepository {
     final legTimeout = remaining > _dmInboxOutboxSettleMargin
         ? remaining - _dmInboxOutboxSettleMargin
         : Duration.zero;
-    // Observed like the other legs, so a read the client skipped is logged as
-    // such rather than as relays that did not settle (#10004).
-    String? skippedReason;
-    final result = await NostrClient.observeSkippedReads(
+    final leg = await _observedLeg(
       () => _nostrClient.queryEventsDetailed(
         [
           nostr_filter.Filter(
@@ -5025,8 +5029,8 @@ class DmRepository {
         requireAllRelaysSettled: true,
         timeout: legTimeout,
       ),
-      onSkipped: (reason) => skippedReason = reason,
     ).timeout(remaining);
+    final result = leg.read;
     final lists = [
       for (final event in result.events)
         if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
@@ -5047,10 +5051,7 @@ class DmRepository {
     if (result.noRelays || result.timedOut) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : switch (skippedReason) {
-              final skipped? => 'a read never left this device: $skipped',
-              null => 'not every relay settled',
-            };
+          : _unsettledLegReason(leg.skippedReason);
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '
