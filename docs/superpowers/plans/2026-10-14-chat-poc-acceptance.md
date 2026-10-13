@@ -55,13 +55,17 @@ Remaining boundaries:
 
 ### Finding the rooms in a review build
 
-The flag remains internal and off by default. In the latest PR preview, enable
-developer mode by tapping the app version seven times on the main Settings
-screen. Then open **App preferences → Experimental Features**, scroll to the
-bottom, and enable **Concord Chat (POC)**. Return to **Messages → Rooms** to see
-`#general` and `#introductions`. This exact path was verified in the browser;
-the flag is not listed under Developer Options. A new preview origin has its
-own preferences and may require enabling it again.
+PR #10093's web preview builds with `FF_CONCORD_CHAT=true`, so signed-in
+reviewers can open **Messages → Rooms** immediately and see `#general` and
+`#introductions`. No developer mode or settings change is needed. The override
+is scoped to this PR number in `mobile_pr_preview_build.yml`; other previews
+and production builds retain the off-by-default flag. Protected-account
+restrictions still apply.
+
+For local reviewer builds, pass `--dart-define=FF_CONCORD_CHAT=true`. The
+internal settings override remains available under **App preferences →
+Experimental Features** after enabling developer mode, but is not part of
+the PR review flow. Each preview URL has separate local preferences.
 
 ## Relay evidence and required contract
 

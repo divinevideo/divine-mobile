@@ -9,6 +9,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "mobile/**"
+      - ".github/workflows/mobile_pr_preview_build.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -47,6 +48,9 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web preview
+        env:
+          # Show Rooms immediately in this POC's review build (#10093).
+          FF_CONCORD_CHAT: ${{ github.event.pull_request.number == 10093 }}
         run: |
           flutter build web \
             --release \
@@ -55,21 +59,30 @@ jobs:
             --pwa-strategy=none \
             --dart-define=BACKEND_URL=https://api.divine.video \
             --dart-define=ENVIRONMENT=production \
+            --dart-define="FF_CONCORD_CHAT=$FF_CONCORD_CHAT" \
             --no-source-maps
 
       - name: Check web bundle file sizes
         run: bash scripts/check_web_bundle_file_size.sh build/web
 
       - name: Bundle preview artifact
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           tar -C build -czf pr-web-preview-site.tar.gz web
-          cat > pr-web-preview-metadata.json <<EOF
-          {
-            "pr_number": "${{ github.event.pull_request.number }}",
-            "head_ref": "${{ github.event.pull_request.head.ref }}",
-            "head_sha": "${{ github.event.pull_request.head.sha }}"
-          }
-          EOF
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open("pr-web-preview-metadata.json", "w") as output:
+              json.dump({
+                  "pr_number": os.environ["PR_NUMBER"],
+                  "head_ref": os.environ["PR_HEAD_REF"],
+                  "head_sha": os.environ["PR_HEAD_SHA"],
+              }, output)
+          PY
 
       - name: Upload preview artifact
         uses: actions/upload-artifact@v7
