@@ -2008,19 +2008,25 @@ class NostrClient {
     return allowed.isEmpty ? null : allowed;
   }
 
+  /// A test for whether a relay address is one of the pool's own relays.
+  ///
+  /// Compared on normalized URLs, since the pool stores them that way and a
+  /// trailing slash must not make a pool member look like an outsider.
+  bool Function(String url) _poolMembership() {
+    final pooled = _relayManager.configuredRelays.toSet();
+    return (url) => pooled.contains(normalizeRelayUrl(url) ?? url);
+  }
+
   /// Whether [tempRelays] names at least one relay the pool does not own.
   ///
   /// Only such a relay can answer a fan-out while every pooled relay is
   /// disconnected: `RelayPool` hands a temp address that matches a pool
   /// member to the pooled relay object rather than opening a socket of its
-  /// own. Compared on normalized URLs, since the pool stores them that way
-  /// and a trailing slash must not make a pool member look like an outsider.
+  /// own.
   bool _hasRelayOutsidePool(List<String>? tempRelays) {
     if (tempRelays == null || tempRelays.isEmpty) return false;
-    final pooled = _relayManager.configuredRelays.toSet();
-    return tempRelays.any(
-      (url) => !pooled.contains(normalizeRelayUrl(url) ?? url),
-    );
+    final isPoolMember = _poolMembership();
+    return tempRelays.any((url) => !isPoolMember(url));
   }
 
   /// Whether a read over [tempRelays] and [relayTypes] asks no relay the pool
@@ -2054,10 +2060,8 @@ class NostrClient {
         relayTypes.any((type) => type != RelayType.temp)) {
       return false;
     }
-    final pooled = _relayManager.configuredRelays.toSet();
-    return tempRelays.every(
-      (url) => !pooled.contains(normalizeRelayUrl(url) ?? url),
-    );
+    final isPoolMember = _poolMembership();
+    return tempRelays.every((url) => !isPoolMember(url));
   }
 
   /// Removes a relay connection.
