@@ -52,11 +52,13 @@ The ranking has two parts, and neither is a long-lived singleton.
   Flutter in it. It gets its own CI workflow at the default 100% coverage
   floor, as `check_package_ci_floor.sh` requires.
 - **`UserRankingSignalsLoader`** (`mobile/lib/services/user_ranking/`). It is
-  constructor-injected with the repositories it reads and gathers the signals
-  for a candidate set in one batched pass. Each BLoC that needs it gets its
-  own instance (built in the BLoC's `BlocProvider.create`, keyed on its
-  repositories as `state_management.md` requires). It is not a Riverpod
-  singleton and keeps no cached snapshot between opens. It ships with a
+  constructor-injected with the repositories and DAOs it reads, and gathers
+  the signals for a candidate set in one batched pass. It holds no state and
+  keeps no cached snapshot between opens. It reaches BLoCs through a
+  non-keepAlive Riverpod provider that `ref.watch`es those repositories, so a
+  repository swap after an auth change yields a new loader. Bridged screens
+  include the loader in their `BlocProvider` `ValueKey`, as
+  `state_management.md` requires. It ships with a
   same-named test, as the untested-services floor requires.
 
 Signals are loaded **once, when the list opens**, from data already on the
