@@ -20,8 +20,9 @@ String _readFixture() {
   ];
   var dir = Directory.current;
   for (var i = 0; i < 6; i++) {
-    candidates.add('${dir.path}/packages/concord_protocol/$rel');
-    candidates.add('${dir.path}/$rel');
+    candidates
+      ..add('${dir.path}/packages/concord_protocol/$rel')
+      ..add('${dir.path}/$rel');
     dir = dir.parent;
   }
   for (final path in candidates) {
