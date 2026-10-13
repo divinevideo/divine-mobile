@@ -1,5 +1,6 @@
-// ABOUTME: Confirming a verifier sign-in (#113): the start secret, the values
-// ABOUTME: hashed from it, and what the verifier answers when it counts a link.
+// ABOUTME: Confirming a verifier sign-in (divinevideo/divine-mobile#10119):
+// ABOUTME: the start secret, the values hashed from it, and what the verifier
+// ABOUTME: answers when it counts a link.
 
 import 'dart:convert';
 import 'dart:math';
