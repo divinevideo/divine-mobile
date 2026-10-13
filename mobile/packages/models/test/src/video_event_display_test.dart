@@ -1,5 +1,5 @@
-// ABOUTME: Tests for VideoEvent.displayTitle and displayContent zalgo-safe
-// ABOUTME: getters, and for the constructor's UTF-16 well-formedness boundary.
+// ABOUTME: Tests for VideoEvent display getters: title, caption and content,
+// ABOUTME: author name, original date, and the UTF-16 well-formedness boundary.
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
