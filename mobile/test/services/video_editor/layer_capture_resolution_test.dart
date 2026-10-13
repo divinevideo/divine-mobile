@@ -108,7 +108,7 @@ void main() {
 
     test('measures a turned layer by the box around it', () {
       // Turned by 45°, the captured image is the box around the turned
-      // square: 2000 × √2 px on each side, not 2000.
+      // square, 2000 × √2 on each side before the pixel ratio, not 2000.
       const size = Size(2000, 2000);
       final ratio = capturePixelRatioForLayer(
         _stickerLayer(rotation: math.pi / 4),
