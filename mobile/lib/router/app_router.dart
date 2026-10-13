@@ -171,7 +171,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ...shellRoutes(),
       ...searchRoutes(),
       ...messagingRoutes(),
-      ...chatRoutes(),
+      ...chatRoutes(ref),
       ...accountDeletionRecoveryRoutes(),
       ...minorAccountReviewRoutes(),
       ...listsRoutes(ref),
