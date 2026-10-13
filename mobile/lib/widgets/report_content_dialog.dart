@@ -355,7 +355,18 @@ class _ReportContentViewState extends State<_ReportContentView> {
   final TextEditingController _detailsController = TextEditingController();
   final FocusNode _detailsFocusNode = FocusNode();
   final GlobalKey _detailsFieldKey = GlobalKey();
-  final GlobalKey _selectedCardKey = GlobalKey();
+
+  /// One key per reason card, kept for the form's life, so picking a reason
+  /// leaves every card the same element: the selection border animates and a
+  /// screen reader stays on the card it tapped. The selected one is the
+  /// anchor the note scrolls under.
+  final Map<ContentFilterReason, GlobalKey> _cardKeys = {};
+  GlobalKey _cardKey(ContentFilterReason reason) =>
+      _cardKeys.putIfAbsent(reason, GlobalKey.new);
+
+  /// The scroll viewport's height when its metrics last changed, so a change
+  /// can be told apart as the view shrinking (keyboard opening) or growing.
+  double? _lastViewportHeight;
   final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
@@ -433,10 +444,14 @@ class _ReportContentViewState extends State<_ReportContentView> {
   /// note box, where that error is, is kept visible instead: the box sits
   /// low enough that pinning the card can push the error behind the footer.
   void _scrollNoteIntoView({bool animate = true}) {
+    final selected = _selectedReason;
     final (anchor, policy) = _noteRequired
         ? (_detailsBoxKey, ScrollPositionAlignmentPolicy.keepVisibleAtEnd)
-        : (_selectedCardKey, ScrollPositionAlignmentPolicy.explicit);
-    final ctx = anchor.currentContext;
+        : (
+            selected == null ? null : _cardKey(selected),
+            ScrollPositionAlignmentPolicy.explicit,
+          );
+    final ctx = anchor?.currentContext;
     if (ctx == null) return;
     runDetached(
       Scrollable.ensureVisible(
@@ -508,10 +523,19 @@ class _ReportContentViewState extends State<_ReportContentView> {
             // The keyboard, the footer riding it, and the sheet growing for
             // the note all shrink the viewport over several frames, after a
             // scroll aimed at the old size has run. While the missing-note
-            // error shows, follow each change so it stays in view. A
-            // reporter's own scrolling does not send this notification.
-            onNotification: (_) {
-              if (_noteRequired) _scrollNoteIntoView(animate: false);
+            // error shows, follow each shrink so it stays in view. Only this
+            // view's own changes count, not the note field's inner scroll,
+            // and only shrinking: a view that grows, as when the keyboard
+            // closes, gives the reporter room and is no reason to move them.
+            // A reporter's own scrolling does not send this notification.
+            onNotification: (notification) {
+              if (notification.depth != 0) return false;
+              final height = notification.metrics.viewportDimension;
+              final last = _lastViewportHeight;
+              _lastViewportHeight = height;
+              if (_noteRequired && (last == null || height < last)) {
+                _scrollNoteIntoView(animate: false);
+              }
               return false;
             },
             child: SingleChildScrollView(
@@ -527,7 +551,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
                       detailsController: _detailsController,
                       detailsFocusNode: _detailsFocusNode,
                       detailsFieldKey: _detailsFieldKey,
-                      selectedCardKey: _selectedCardKey,
+                      cardKey: _cardKey,
                       detailsBoxKey: _detailsBoxKey,
                       onDetailsChanged: _onDetailsChanged,
                       imageInsertionRejected: _imageInsertionRejected,
@@ -591,7 +615,18 @@ class _ReportContentViewState extends State<_ReportContentView> {
     if (cubit.state.isSubmitting) return;
     if (_selectedReason == ContentFilterReason.other &&
         _detailsController.text.trim().isEmpty) {
-      setState(() => _noteRequired = true);
+      if (_noteRequired) {
+        // Already on screen, so its live region stays quiet. Say it again
+        // or a screen-reader user's repeat tap gets no answer at all.
+        announceDetached(
+          context,
+          context.l10n.reportOtherRequiresDetails,
+          description: 'announce the required report note again',
+          logName: 'ReportContentDialog',
+        );
+      } else {
+        setState(() => _noteRequired = true);
+      }
       _detailsFocusNode.requestFocus();
       // The note box can sit behind the footer, so bring the error into view
       // and the Report tap visibly did something.
@@ -679,7 +714,7 @@ class _ReportFormBody extends StatelessWidget {
     required this.detailsController,
     required this.detailsFocusNode,
     required this.detailsFieldKey,
-    required this.selectedCardKey,
+    required this.cardKey,
     required this.detailsBoxKey,
     required this.onDetailsChanged,
     required this.imageInsertionRejected,
@@ -695,9 +730,9 @@ class _ReportFormBody extends StatelessWidget {
   final FocusNode detailsFocusNode;
   final GlobalKey detailsFieldKey;
 
-  /// Follows the selected card, so it can be scrolled back into view once
-  /// the keyboard pushes the details field up.
-  final GlobalKey selectedCardKey;
+  /// The stable key of each reason card; the selected one is scrolled back
+  /// into view once the keyboard pushes the details field up.
+  final GlobalKey Function(ContentFilterReason reason) cardKey;
 
   /// Keeps the note box one element as it moves under a newly picked
   /// reason, so its state, such as the limit-reached notice, moves with it.
@@ -747,7 +782,7 @@ class _ReportFormBody extends StatelessWidget {
         const SizedBox(height: 16),
         for (final reason in reasons) ...[
           Padding(
-            key: reason == selectedReason ? selectedCardKey : ValueKey(reason),
+            key: cardKey(reason),
             padding: const EdgeInsets.only(bottom: 8),
             child: _ReasonCard(
               title: l10n.reportReasonTitle(reason),

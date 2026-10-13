@@ -819,6 +819,159 @@ void main() {
       );
     }
 
+    testWidgets(
+      'once the reporter scrolls away from the missing-note error, closing '
+      'the keyboard does not drag them back to it',
+      (tester) async {
+        tester.view.physicalSize = const Size(412, 915);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+        // Back up to re-read the reasons, then put the keyboard away.
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SingleChildScrollView),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(0);
+        await tester.pumpAndSettle();
+        tester.view.viewInsets = FakeViewPadding.zero;
+        await tester.pumpAndSettle();
+
+        expect(
+          position.pixels,
+          0,
+          reason:
+              'a bigger view gives the reporter room; it is no reason to '
+              'move them',
+        );
+      },
+    );
+
+    testWidgets(
+      "the note field's own scrolling does not move a reporter who scrolled "
+      'away from the missing-note error',
+      (tester) async {
+        tester.view.physicalSize = const Size(412, 915);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SingleChildScrollView),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(0);
+        await tester.pumpAndSettle();
+
+        // What the multiline field's inner scrollable sends as it resizes:
+        // a much smaller view, from below this form's own.
+        final fieldContext = tester.element(
+          find.descendant(
+            of: find.byType(TextField),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        ScrollMetricsNotification(
+          metrics: FixedScrollMetrics(
+            minScrollExtent: 0,
+            maxScrollExtent: 0,
+            pixels: 0,
+            viewportDimension: 24,
+            axisDirection: AxisDirection.down,
+            devicePixelRatio: 1,
+          ),
+          context: fieldContext,
+        ).dispatch(fieldContext);
+        await tester.pumpAndSettle();
+
+        expect(position.pixels, 0);
+      },
+    );
+
+    testWidgets(
+      'tapping Report again under Other with no note announces the error '
+      'again',
+      (tester) async {
+        final announcements = <String>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (Object? message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  final data = message['data'];
+                  if (data is Map) announcements.add('${data['message']}');
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+
+        await setLargeSurface(tester);
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+
+        final report = find.widgetWithText(DivineButton, l10n.reportSubmit);
+        await tester.tap(report);
+        await tester.pumpAndSettle();
+        expect(
+          announcements,
+          isNot(contains(l10n.reportOtherRequiresDetails)),
+          reason:
+              'the first time, the live region speaks; saying it twice '
+              'would read the error double',
+        );
+
+        await tester.tap(report);
+        await tester.pumpAndSettle();
+        expect(
+          announcements.where((m) => m == l10n.reportOtherRequiresDetails),
+          hasLength(1),
+          reason:
+              'the error is already on screen, so the live region stays '
+              'quiet; without this a repeat tap says nothing',
+        );
+      },
+    );
+
     testWidgets('the inline error announces its message once', (tester) async {
       final handle = tester.ensureSemantics();
 
@@ -1045,6 +1198,43 @@ void main() {
         await submit(tester);
 
         expect(sentNote(), visible.trim());
+      },
+    );
+
+    testWidgets(
+      'picking a reason keeps the same cards, so the selection animates and '
+      'a screen reader stays on the card it tapped',
+      (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        State<StatefulWidget> cardState(ContentFilterReason reason) =>
+            tester.state(
+              find
+                  .ancestor(
+                    of: find.text(l10n.reportReasonTitle(reason)),
+                    matching: find.byType(AnimatedContainer),
+                  )
+                  .first,
+            );
+
+        final spam = cardState(ContentFilterReason.spam);
+        final harassment = cardState(ContentFilterReason.harassment);
+
+        await pick(tester, ContentFilterReason.spam);
+        expect(identical(cardState(ContentFilterReason.spam), spam), isTrue);
+
+        await pick(tester, ContentFilterReason.harassment);
+        expect(
+          identical(cardState(ContentFilterReason.harassment), harassment),
+          isTrue,
+        );
+        expect(
+          identical(cardState(ContentFilterReason.spam), spam),
+          isTrue,
+          reason: 'the card that lost the selection is the same card too',
+        );
       },
     );
 
