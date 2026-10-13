@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:db_client/db_client.dart' show AppDatabase;
 import 'package:db_client/src/database/connection/connection_native.dart';
@@ -1545,7 +1546,7 @@ void main() {
       },
     );
 
-    test('failed replay restores the database and journal snapshot', () {
+    test('a replay that fails before the rollback keeps the journal', () {
       _createHotJournalFixture(dbPath, key: validKey);
       final databaseBefore = File(dbPath).readAsBytesSync();
       final journalBefore = File('$dbPath-journal').readAsBytesSync();
@@ -1556,7 +1557,9 @@ void main() {
           databasePath: dbPath,
           configureEncryptedDatabase: (database) {
             configurations += 1;
-            applyCipherKey(database, validKey);
+            // keyCipherDatabase reads no page, so the failure lands before
+            // SQLite starts the rollback.
+            keyCipherDatabase(database, validKey);
             if (configurations == 2) throw StateError('injected failure');
           },
         ),
@@ -1608,10 +1611,8 @@ void main() {
       );
     });
 
-    test('failed validation restores the database and journal snapshot', () {
+    test('a validation that cannot run keeps the replayed database', () {
       _createHotJournalFixture(dbPath, key: validKey);
-      final databaseBefore = File(dbPath).readAsBytesSync();
-      final journalBefore = File('$dbPath-journal').readAsBytesSync();
       var configurations = 0;
 
       expect(
@@ -1632,9 +1633,191 @@ void main() {
         ),
       );
 
-      expect(File(dbPath).readAsBytesSync(), databaseBefore);
-      expect(File('$dbPath-journal').readAsBytesSync(), journalBefore);
+      expect(
+        File('$dbPath-journal').existsSync(),
+        isFalse,
+        reason: 'a restored journal replays the same way on every launch',
+      );
+      expect(_hotJournalRowCount(dbPath, key: validKey), 1);
     });
+
+    test(
+      'hands a replay that fails quick_check to corruption recovery',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          key: validKey,
+          beforeTransaction: (source) {
+            source
+              ..execute('CREATE TABLE drafts (id TEXT PRIMARY KEY);')
+              ..execute("INSERT INTO drafts VALUES ('kept');");
+            _orphanIndexPages(source);
+          },
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.encryptedButCorrupt);
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        expect(
+          await salvageCorruptEncryptedDatabase(
+            rawKeyHex: validKey,
+            databasePath: dbPath,
+          ),
+          isTrue,
+        );
+        expect(_encryptedRowCount(dbPath, validKey, 'drafts'), 1);
+      },
+    );
+
+    test(
+      'migrates a plaintext replay that fails quick_check into a sound copy',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          beforeTransaction: (source) {
+            source
+              ..execute('CREATE TABLE drafts (id TEXT PRIMARY KEY);')
+              ..execute("INSERT INTO drafts VALUES ('kept');");
+            _orphanIndexPages(source);
+          },
+        );
+        _expectReadOnlyRollback(dbPath);
+        bool? replayedFilePassedQuickCheck;
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+          onHotJournalRecoveryCompletedForTesting: () {
+            final replayed = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+            try {
+              replayedFilePassedQuickCheck = databaseQuickCheckPasses(replayed);
+            } finally {
+              replayed.close();
+            }
+          },
+        );
+
+        expect(
+          replayedFilePassedQuickCheck,
+          isFalse,
+          reason: 'the replayed file has to fail the check the rekey heals',
+        );
+        expect(
+          outcome,
+          CipherMigrationOutcome.migrated,
+          reason: 'unreadable offers a reset that deletes plaintext outright',
+        );
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        expect(_encryptedRowCount(dbPath, validKey, 'drafts'), 1);
+        expect(_encryptedQuickCheckPasses(dbPath, validKey), isTrue);
+      },
+    );
+
+    test(
+      'hands a replay whose quick_check throws to corruption recovery',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          key: validKey,
+          beforeTransaction: _pointTableRootAtIndexPage,
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.encryptedButCorrupt);
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        final replayed = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+        try {
+          keyCipherDatabase(replayed, validKey);
+          expect(
+            () => replayed.select('PRAGMA quick_check;'),
+            throwsA(
+              isA<SqliteException>().having(
+                (error) => error.resultCode,
+                'resultCode',
+                11,
+              ),
+            ),
+            reason: 'this damage has to make the check throw, not list rows',
+          );
+        } finally {
+          replayed.close();
+        }
+      },
+    );
+
+    test(
+      'keeps a replay final when the schema read fails after the rollback',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          key: validKey,
+          beforeTransaction: _pointTableRootPastEndOfFile,
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.encryptedButCorrupt);
+        expect(
+          File('$dbPath-journal').existsSync(),
+          isFalse,
+          reason: 'a restored journal replays into the same failure forever',
+        );
+      },
+    );
+
+    test(
+      'recovers a journal whose commit died after page 1 grew the file',
+      () async {
+        _createGrownPageOneHotJournalFixture(dbPath, key: validKey);
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.alreadyEncrypted);
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        expect(_hotJournalRowCount(dbPath, key: validKey), 1);
+      },
+    );
+
+    test(
+      'wrong key leaves a grown-page-1 journal byte-for-byte intact',
+      () async {
+        _createGrownPageOneHotJournalFixture(dbPath, key: validKey);
+        _expectReadOnlyRollback(dbPath);
+        final databaseBefore = File(dbPath).readAsBytesSync();
+        final journalBefore = File('$dbPath-journal').readAsBytesSync();
+        const wrongKey =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+        expect(
+          await migratePlaintextToEncrypted(
+            rawKeyHex: wrongKey,
+            databasePath: dbPath,
+          ),
+          CipherMigrationOutcome.alreadyEncrypted,
+        );
+
+        expect(File(dbPath).readAsBytesSync(), databaseBefore);
+        expect(File('$dbPath-journal').readAsBytesSync(), journalBefore);
+      },
+    );
 
     test('restores the journal before attempting the database copy', () {
       _createHotJournalFixture(dbPath, key: validKey);
@@ -1912,7 +2095,11 @@ void main() {
   });
 }
 
-void _createHotJournalFixture(String targetPath, {String? key}) {
+void _createHotJournalFixture(
+  String targetPath, {
+  String? key,
+  void Function(Database source)? beforeTransaction,
+}) {
   final sourcePath = '$targetPath.source';
   File(sourcePath).parent.createSync(recursive: true);
   final source = sqlite3.open(sourcePath);
@@ -1923,8 +2110,9 @@ void _createHotJournalFixture(String targetPath, {String? key}) {
       ..execute('PRAGMA synchronous = FULL;')
       ..execute('PRAGMA cache_size = 1;')
       ..execute('CREATE TABLE hot_journal_rows (value BLOB NOT NULL);')
-      ..execute('INSERT INTO hot_journal_rows VALUES (zeroblob(1024));')
-      ..execute('BEGIN IMMEDIATE;');
+      ..execute('INSERT INTO hot_journal_rows VALUES (zeroblob(1024));');
+    beforeTransaction?.call(source);
+    source.execute('BEGIN IMMEDIATE;');
     for (var index = 0; index < 24; index += 1) {
       source.execute('INSERT INTO hot_journal_rows VALUES (zeroblob(65536));');
     }
@@ -1935,6 +2123,94 @@ void _createHotJournalFixture(String targetPath, {String? key}) {
     source
       ..execute('ROLLBACK;')
       ..close();
+    File(sourcePath).deleteSync();
+  }
+}
+
+/// Leaves pages no b-tree references. The database keeps working, but a fresh
+/// connection's `PRAGMA quick_check` reports them as never used.
+void _orphanIndexPages(Database source) {
+  source
+    ..execute('CREATE TABLE orphaned (value INTEGER);')
+    ..execute('CREATE INDEX orphaned_value ON orphaned (value);')
+    ..execute(
+      'WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n '
+      'WHERE x < 5000) INSERT INTO orphaned SELECT x FROM n;',
+    )
+    ..execute('PRAGMA writable_schema = ON;')
+    ..execute("DELETE FROM sqlite_master WHERE name = 'orphaned_value';")
+    ..execute('PRAGMA writable_schema = OFF;');
+}
+
+/// Points a table at an index b-tree. The schema still loads, so the journal
+/// replays, but `PRAGMA quick_check` then throws `SQLITE_CORRUPT` instead of
+/// listing what it found.
+void _pointTableRootAtIndexPage(Database source) {
+  source
+    ..execute('CREATE TABLE misrooted (value INTEGER);')
+    ..execute('CREATE INDEX misrooted_value ON misrooted (value);')
+    ..execute(
+      'WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n '
+      'WHERE x < 3000) INSERT INTO misrooted SELECT x FROM n;',
+    )
+    ..execute('PRAGMA writable_schema = ON;')
+    ..execute(
+      'UPDATE sqlite_master SET rootpage = (SELECT rootpage FROM '
+      "sqlite_master WHERE name = 'misrooted_value') "
+      "WHERE name = 'misrooted';",
+    )
+    ..execute('PRAGMA writable_schema = OFF;');
+}
+
+/// Points a table at a page past the end of the file. SQLite completes the
+/// rollback and deletes the journal, then fails to read the schema.
+void _pointTableRootPastEndOfFile(Database source) {
+  source
+    ..execute('CREATE TABLE misrooted_past_end (value INTEGER);')
+    ..execute('PRAGMA writable_schema = ON;')
+    ..execute(
+      'UPDATE sqlite_master SET rootpage = 999999 '
+      "WHERE name = 'misrooted_past_end';",
+    )
+    ..execute('PRAGMA writable_schema = OFF;');
+}
+
+/// The state a commit leaves when it is killed after writing page 1, which
+/// records the grown page count, and before the pages it appends: the file is
+/// shorter than page 1 claims, beside a journal of the original pages.
+void _createGrownPageOneHotJournalFixture(
+  String targetPath, {
+  required String key,
+}) {
+  final sourcePath = '$targetPath.source';
+  File(sourcePath).parent.createSync(recursive: true);
+  final source = sqlite3.open(sourcePath);
+  try {
+    applyCipherKey(source, key);
+    source
+      ..execute('PRAGMA journal_mode = DELETE;')
+      ..execute('PRAGMA synchronous = FULL;')
+      ..execute('CREATE TABLE hot_journal_rows (value BLOB NOT NULL);')
+      ..execute('INSERT INTO hot_journal_rows VALUES (zeroblob(1024));');
+    final pageSize = source.select('PRAGMA page_size;').single.values.single;
+    final original = File(sourcePath).readAsBytesSync();
+    source
+      ..execute('PRAGMA cache_size = 1;')
+      ..execute('BEGIN IMMEDIATE;');
+    for (var index = 0; index < 24; index += 1) {
+      source.execute('INSERT INTO hot_journal_rows VALUES (zeroblob(65536));');
+    }
+    final journal = File('$sourcePath-journal').readAsBytesSync();
+    source.execute('COMMIT;');
+    final committed = File(sourcePath).readAsBytesSync();
+    expect(committed.length, greaterThan(original.length));
+
+    File(targetPath).writeAsBytesSync(
+      Uint8List.fromList(original)..setRange(0, pageSize! as int, committed),
+    );
+    File('$targetPath-journal').writeAsBytesSync(journal);
+  } finally {
+    source.close();
     File(sourcePath).deleteSync();
   }
 }
@@ -2111,6 +2387,16 @@ int _encryptedRowCount(String path, String key, String table) {
   try {
     applyCipherKey(db, key);
     return db.select('SELECT count(*) AS c FROM "$table";').first['c'] as int;
+  } finally {
+    db.close();
+  }
+}
+
+bool _encryptedQuickCheckPasses(String path, String key) {
+  final db = sqlite3.open(path);
+  try {
+    applyCipherKey(db, key);
+    return databaseQuickCheckPasses(db);
   } finally {
     db.close();
   }

@@ -10,6 +10,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 const sqliteReadOnly = 8;
 const sqliteReadOnlyRollback = 776;
+const _sqliteCorrupt = 11;
 
 const _sqliteHeader = 'SQLite format 3\x00';
 
@@ -19,7 +20,14 @@ const _sqliteHeader = 'SQLite format 3\x00';
 /// Non-plaintext files must first open under [configureEncryptedDatabase]
 /// through an immutable view. That proves the existing key can decrypt the
 /// database before the writable connection is allowed to begin rollback.
-void recoverHotRollbackJournal({
+///
+/// A replay that fails while the journal is still there restores the
+/// database and journal it started from. Once SQLite has deleted the journal
+/// the rollback is done, so the replay is final even when the statement that
+/// ran it failed afterwards. The file is then checked with
+/// `PRAGMA quick_check`, and [HotJournalRecoveryResult.failedIntegrityCheck]
+/// tells the caller it is damaged.
+HotJournalRecoveryResult recoverHotRollbackJournal({
   required String databasePath,
   required void Function(CommonDatabase db) configureEncryptedDatabase,
   @visibleForTesting
@@ -41,17 +49,29 @@ void recoverHotRollbackJournal({
       isPlaintext: isPlaintext,
       configureEncryptedDatabase: configureEncryptedDatabase,
     );
-    _validateRecoveredDatabase(
-      databasePath,
-      isPlaintext: isPlaintext,
-      configureEncryptedDatabase: configureEncryptedDatabase,
-    );
   } on DatabaseHotJournalRecoveryError {
+    // SQLite deletes the journal only once the rollback is on disk, so a
+    // missing journal means the statement failed afterwards, typically on a
+    // damaged schema. Restoring it would replay into that failure forever.
+    if (!File('$databasePath$rollbackJournalSuffix').existsSync()) {
+      return HotJournalRecoveryResult.failedIntegrityCheck;
+    }
     snapshot.restore(databasePath, copy: restoreCopyForTesting);
     rethrow;
   } finally {
     snapshot.dispose();
   }
+
+  // The file is now what any writable open would have made of it. Restoring
+  // the snapshot after a failed check only handed every later launch the same
+  // journal and the same verdict: a permanent db-journal-unrecovered screen.
+  return _recoveredDatabaseIsSound(
+        databasePath,
+        isPlaintext: isPlaintext,
+        configureEncryptedDatabase: configureEncryptedDatabase,
+      )
+      ? HotJournalRecoveryResult.sound
+      : HotJournalRecoveryResult.failedIntegrityCheck;
 }
 
 void _replayJournal(
@@ -108,7 +128,14 @@ void _validateEncryptedDatabaseIgnoringJournal(
     ).replace(queryParameters: const {'immutable': '1'}).toString();
     database = sqlite3.open(uri, mode: OpenMode.readOnly, uri: true);
     configureEncryptedDatabase(database);
-    database.select('PRAGMA user_version;');
+    // A commit writes page 1, which records the grown page count, before the
+    // pages it appends. Killed in between, the file is shorter than page 1
+    // claims and SQLite rejects it as corrupt although the key decrypted it.
+    // Writable-schema mode takes the size from the file instead; a wrong key
+    // still fails page 1 itself with SQLITE_NOTADB.
+    database
+      ..execute('PRAGMA writable_schema = ON;')
+      ..select('PRAGMA user_version;');
   } on Object catch (error) {
     throw _recoveryError(
       DatabaseHotJournalRecoveryStage.validateCipherKey,
@@ -119,7 +146,12 @@ void _validateEncryptedDatabaseIgnoringJournal(
   }
 }
 
-void _validateRecoveredDatabase(
+/// Whether the replayed file passes `PRAGMA quick_check`.
+///
+/// A check that cannot run at all is not a verdict on the file, so it throws
+/// instead; the journal is already consumed, so the next launch classifies the
+/// file normally.
+bool _recoveredDatabaseIsSound(
   String databasePath, {
   required bool isPlaintext,
   required void Function(CommonDatabase db) configureEncryptedDatabase,
@@ -128,14 +160,11 @@ void _validateRecoveredDatabase(
   try {
     database = sqlite3.open(databasePath, mode: OpenMode.readOnly);
     if (!isPlaintext) configureEncryptedDatabase(database);
-    if (!databaseQuickCheckPasses(database)) {
-      throw const DatabaseHotJournalRecoveryError(
-        stage: DatabaseHotJournalRecoveryStage.validateIntegrity,
-      );
-    }
-  } on DatabaseHotJournalRecoveryError {
-    rethrow;
+    return databaseQuickCheckPasses(database);
   } on Object catch (error) {
+    if (error is SqliteException && error.resultCode == _sqliteCorrupt) {
+      return false;
+    }
     throw _recoveryError(
       DatabaseHotJournalRecoveryStage.validateIntegrity,
       error,

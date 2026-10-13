@@ -50,6 +50,7 @@ Future<bool> encryptedDatabaseKeyDecrypts({
 enum CipherMigrationOutcome {
   noDatabase,
   alreadyEncrypted,
+  encryptedButCorrupt,
   removedEmptyPlaintext,
   migrated,
   failed,
