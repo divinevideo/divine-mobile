@@ -180,6 +180,7 @@ void main() {
         supporterApiConfiguredProvider.overrideWithValue(false),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         authServiceProvider.overrideWithValue(authService),
+        hasExpiredOAuthSessionProvider.overrideWithValue(false),
         currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
         profileRepositoryProvider.overrideWithValue(null),
         profileReadRepositoryProvider.overrideWithValue(null),

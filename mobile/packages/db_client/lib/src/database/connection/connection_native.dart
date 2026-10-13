@@ -35,8 +35,12 @@ QueryExecutor openConnection() {
       // A device whose cipher migration keeps deferring never reaches the
       // encrypted open, and it is exactly the device a legacy-migration
       // backup sits beside. The plaintext migration backup is deliberately
-      // not swept here: only a keyed open proves it is safe to drop.
-      setup: (_) => sweepPreservedDatabaseCopies(dbPath),
+      // not swept here: only a keyed open proves it is safe to drop. A
+      // recovery snapshot left in the temp directory needs no such proof.
+      setup: (_) {
+        sweepPreservedDatabaseCopies(dbPath);
+        sweepStrandedHotJournalSnapshots();
+      },
     );
   });
 }
@@ -89,6 +93,9 @@ QueryExecutor openEncryptedConnection({
         applyCipherKey(rawDb, rawKeyHex);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
+        // A launch killed after its journal was replayed leaves a snapshot
+        // and no hot journal, so no later recovery would find it.
+        sweepStrandedHotJournalSnapshots();
       },
     );
   });
@@ -468,6 +475,13 @@ enum CipherMigrationOutcome {
   /// The existing database was already encrypted — nothing to do.
   alreadyEncrypted,
 
+  /// The existing database is encrypted and its hot rollback journal replayed
+  /// under the key, but the result fails `PRAGMA quick_check`, or SQLite could
+  /// not read its schema once the rollback was done. The caller opens it like
+  /// [alreadyEncrypted] and recovers it only when that fails, since a salvage
+  /// keeps only the local-only tables.
+  encryptedButCorrupt,
+
   /// An empty plaintext database was removed so a fresh encrypted one is
   /// created on first open.
   removedEmptyPlaintext,
@@ -543,7 +557,8 @@ class DatabaseClassificationException implements Exception {
 ///
 /// Throws [DatabaseClassificationException] when SQLite cannot safely identify
 /// the existing file format. Throws [DatabaseHotJournalRecoveryError] when a
-/// hot rollback journal cannot be safely replayed. Requires
+/// hot rollback journal cannot be safely replayed, or when a restore an earlier
+/// launch left unfinished cannot be completed. Requires
 /// SQLite3MultipleCiphers;
 /// returns [CipherMigrationOutcome.failed] when it is not linked, leaving the
 /// proven-readable plaintext source intact.
@@ -555,6 +570,9 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   _rawKeyLiteral(rawKeyHex); // validate shape up front (never embeds the key)
 
   final dbPath = databasePath ?? await getSharedDatabasePath();
+  // Until an unfinished restore is completed the live file may be truncated,
+  // and everything below reads it.
+  completeUnfinishedHotJournalRestore(databasePath: dbPath);
   final encryptedPath = '$dbPath$_migratingSuffix';
 
   // Resume an interrupted swap. A force-kill between renaming the plaintext
@@ -589,6 +607,8 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   )) {
     case _DbClassification.encrypted:
       return CipherMigrationOutcome.alreadyEncrypted;
+    case _DbClassification.encryptedButCorrupt:
+      return CipherMigrationOutcome.encryptedButCorrupt;
     case _DbClassification.corrupt:
       return CipherMigrationOutcome.unreadable;
     case _DbClassification.emptyPlaintext:
@@ -636,6 +656,10 @@ const _sqliteCorrupt = 11; // SQLITE_CORRUPT
 
 enum _DbClassification {
   encrypted,
+
+  /// Encrypted, and its hot journal replayed into a file that fails
+  /// `PRAGMA quick_check`.
+  encryptedButCorrupt,
   emptyPlaintext,
   populatedPlaintext,
 
@@ -668,8 +692,9 @@ _DbClassification _classifyDatabase(
       rethrow;
     }
 
+    final HotJournalRecoveryResult recovery;
     try {
-      recoverHotRollbackJournal(
+      recovery = recoverHotRollbackJournal(
         databasePath: dbPath,
         configureEncryptedDatabase: (database) =>
             keyCipherDatabase(database, rawKeyHex),
@@ -687,8 +712,9 @@ _DbClassification _classifyDatabase(
     }
     onRecoveryCompleted?.call();
 
+    final _DbClassification classification;
     try {
-      return _classifyDatabaseOnce(dbPath);
+      classification = _classifyDatabaseOnce(dbPath);
     } on DatabaseClassificationException catch (retryError) {
       if (retryError.extendedResultCode == sqliteReadOnlyRollback) {
         throw const DatabaseHotJournalRecoveryError(
@@ -698,6 +724,16 @@ _DbClassification _classifyDatabase(
       }
       rethrow;
     }
+    // Plaintext keeps its classification: migration rebuilds it through
+    // `VACUUM INTO` and quick_checks the copy before promoting it, and fails
+    // closed on damage it cannot copy. Reporting it corrupt instead would offer
+    // a reset that deletes plaintext outright, for a file the next launch
+    // migrates anyway once the journal is gone.
+    if (recovery == HotJournalRecoveryResult.sound ||
+        classification != _DbClassification.encrypted) {
+      return classification;
+    }
+    return _DbClassification.encryptedButCorrupt;
   }
 }
 

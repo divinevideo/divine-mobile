@@ -378,10 +378,29 @@ void main() {
       );
 
       expect(
-        databaseBootstrapDiagnosticCode(error),
-        equals('db-journal-unrecovered'),
+        databaseBootstrapDiagnosis(error),
+        equals(DatabaseBootstrapDiagnosis.hotJournalUnrecovered),
       );
       expect(databaseBootstrapDiagnosis(error).allowsLocalDatabaseReset, false);
+    });
+
+    test('names the recovery stage that stopped a hot journal', () {
+      expect(
+        databaseBootstrapDiagnosticCode(
+          const DatabaseHotJournalRecoveryError(
+            stage: DatabaseHotJournalRecoveryStage.validateIntegrity,
+          ),
+        ),
+        equals('db-journal-unrecovered:validateIntegrity'),
+      );
+      expect(
+        databaseBootstrapDiagnosticCode(
+          const DatabaseHotJournalRecoveryError(
+            stage: DatabaseHotJournalRecoveryStage.replayJournal,
+          ),
+        ),
+        equals('db-journal-unrecovered:replayJournal'),
+      );
     });
 
     test('falls back to the catch-all for unrecognized failures', () {
@@ -438,6 +457,12 @@ void main() {
       );
 
       expect(find.text(l10n.dbFailureAdviceHotJournal), findsOneWidget);
+      expect(
+        find.text(
+          l10n.dbFailureDiagnostic('db-journal-unrecovered:replayJournal'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text(l10n.dbFailureAdviceRestart), findsNothing);
       expect(find.text(l10n.dbFailureResetAction), findsNothing);
     });

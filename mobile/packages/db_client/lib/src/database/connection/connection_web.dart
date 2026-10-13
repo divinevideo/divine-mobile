@@ -79,6 +79,7 @@ Future<void> deleteSharedDatabase() async {}
 enum CipherMigrationOutcome {
   noDatabase,
   alreadyEncrypted,
+  encryptedButCorrupt,
   removedEmptyPlaintext,
   migrated,
   failed,

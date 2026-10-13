@@ -1086,6 +1086,66 @@ void main() {
       });
     });
 
+    group('hot journal replayed into a file failing quick_check', () {
+      const existing =
+          '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+
+      test(
+        'keeps the database and reports it when the probe opens it',
+        () async {
+          store[dbCipherKeyStorageKey] = existing;
+          var salvaged = false;
+          Object? recorded;
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.encryptedButCorrupt,
+            onDelete: () {},
+            canOpenEncryptedDatabase: (_) => true,
+            salvageDatabase: (_) {
+              salvaged = true;
+              return true;
+            },
+            onRecordRecovery: (error) => recorded = error,
+          );
+
+          final key = await bootstrap.resolveCipherKey();
+
+          expect(key, equals(existing));
+          expect(
+            salvaged,
+            isFalse,
+            reason: 'salvage keeps only the local-only tables',
+          );
+          expect(
+            recorded,
+            isA<DatabaseRecoveryEvent>().having(
+              (event) => event.reason,
+              'reason',
+              contains('quick_check'),
+            ),
+          );
+        },
+      );
+
+      test('salvages when the probe cannot open it', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        var salvaged = false;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.encryptedButCorrupt,
+          onDelete: () {},
+          canOpenEncryptedDatabase: (_) => false,
+          salvageDatabase: (_) {
+            salvaged = true;
+            return true;
+          },
+        );
+
+        final key = await bootstrap.resolveCipherKey();
+
+        expect(salvaged, isTrue);
+        expect(key, equals(existing), reason: 'salvage keeps the same key');
+      });
+    });
+
     test('backs up the unrecoverable DB on key loss (generated key + '
         'alreadyEncrypted)', () async {
       // Empty store => key is freshly generated, but an encrypted DB already

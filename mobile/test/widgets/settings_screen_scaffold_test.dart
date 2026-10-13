@@ -48,6 +48,11 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.isAnonymous).thenReturn(false);
       when(() => mockAuthService.hasExpiredOAuthSession).thenReturn(false);
+      // The settings row watches this; it reports whatever a test stubs
+      // for hasExpiredOAuthSession.
+      when(() => mockAuthService.expiredOAuthSessionListenable).thenAnswer(
+        (_) => ValueNotifier(mockAuthService.hasExpiredOAuthSession),
+      );
     });
 
     testWidgets('SettingsScreen has nav green AppBar', (tester) async {

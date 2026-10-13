@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_category.dart';
@@ -111,7 +112,9 @@ class ClipLibraryService {
   /// Save a clip to the library. Updates existing clip if ID matches.
   ///
   /// A recording hash the entry holds for a file [clip] still plays is kept
-  /// when [clip] carries none (see [rememberRecordingHash]).
+  /// when [clip] carries none (see [rememberRecordingHash]), and so is a
+  /// proof naming a C2PA manifest when [clip]'s names none (see
+  /// [recordLateProof]).
   Future<void> saveClip(DivineVideoClip clip) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
@@ -128,9 +131,16 @@ class ClipLibraryService {
           ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
           : null;
       final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
-      final saved = keptHash == null
+      final keptProof = await _lateProofKeptFor(
+        clip,
+        existingLibraryRow ?? existingAutosaveRow,
+      );
+      final saved = keptHash == null && keptProof == null
           ? clip
-          : clip.copyWith(recordingSha256: keptHash);
+          : clip.copyWith(
+              recordingSha256: keptHash,
+              proofManifestJson: keptProof,
+            );
 
       await _clipsDao.upsertClip(
         id: clip.id,
@@ -320,6 +330,69 @@ class ClipLibraryService {
     }
   }
 
+  /// Writes [proof] onto every entry whose video is the file [fileName], once
+  /// that file was signed after the fact, for example back online (see
+  /// `NativeProofModeService.signOwnRecordings`).
+  ///
+  /// Signing rewrote the file, so the proof the entries kept describes bytes
+  /// that are gone and names no C2PA manifest. The gallery import recognises a
+  /// clip it already holds by the manifest its proof names, so a copy saved
+  /// to the gallery would otherwise come back as a second clip. Library,
+  /// draft and trashed entries are all updated; an entry that moved on to
+  /// another file since is left alone.
+  ///
+  /// Returns how many entries were updated. Never throws.
+  Future<int> recordLateProof({
+    required String fileName,
+    required NativeProofData proof,
+  }) async {
+    try {
+      final proofJson = json.encode(proof);
+      final documentsPath = await getDocumentsPath();
+      var updated = 0;
+      for (final id in await _clipsDao.getClipIdsByFileName(
+        fileName,
+        ownerPubkey: ownerPubkey,
+      )) {
+        final rewritten = await _clipsDao.rewriteClipData(
+          id: id,
+          rewrite: (data) {
+            final DivineVideoClip clip;
+            try {
+              clip = DivineVideoClip.fromJson(
+                json.decode(data) as Map<String, dynamic>,
+                documentsPath,
+              );
+            } catch (_) {
+              // A corrupt entry is left as it is; the others still update.
+              return null;
+            }
+            final path = clip.video?.file?.path;
+            if (path == null ||
+                p.basename(path) != fileName ||
+                clip.proofManifestJson == proofJson) {
+              return null;
+            }
+            return json.encode(
+              clip.copyWith(proofManifestJson: proofJson).toJson(),
+            );
+          },
+        );
+        if (rewritten) updated++;
+      }
+      return updated;
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to record the late proof of $fileName on library clips',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return 0;
+    }
+  }
+
   /// The hashes the camera wrote this account's own recordings with, by file
   /// name, from every clip that names one: library, draft and trashed clips
   /// alike, and the sources of clips edited from them.
@@ -384,6 +457,52 @@ class ClipLibraryService {
     if (hash == null) return null;
     final files = _recordingFileNames(stored);
     return _recordingFileNames(clip).any(files.contains) ? hash : null;
+  }
+
+  /// The proof [row] holds for the file [clip] still plays when it names a
+  /// C2PA manifest and [clip]'s proof names none.
+  ///
+  /// [clip] can be a copy read before [recordLateProof] wrote the proof of
+  /// its file signed after the fact, such as one asset recovery saves back.
+  /// Saving it as it is would bring back the unsigned proof, and with it the
+  /// duplicate gallery import that proof exists to prevent.
+  Future<String?> _lateProofKeptFor(DivineVideoClip clip, ClipRow? row) async {
+    if (row == null || _proofManifestId(clip.proofManifestJson) != null) {
+      return null;
+    }
+    final DivineVideoClip stored;
+    try {
+      stored = DivineVideoClip.fromJson(
+        json.decode(row.data) as Map<String, dynamic>,
+        await getDocumentsPath(),
+      );
+    } catch (_) {
+      // A corrupt row has no proof to keep; the save replaces it.
+      return null;
+    }
+    final storedPath = stored.video?.file?.path;
+    final path = clip.video?.file?.path;
+    if (storedPath == null ||
+        path == null ||
+        p.basename(storedPath) != p.basename(path)) {
+      return null;
+    }
+    final storedProof = stored.proofManifestJson;
+    return _proofManifestId(storedProof) == null ? null : storedProof;
+  }
+
+  /// The C2PA manifest [proofJson] names, read the way the gallery import
+  /// matches it, if it parses and names one.
+  static String? _proofManifestId(String? proofJson) {
+    if (proofJson == null) return null;
+    try {
+      final decoded = json.decode(proofJson);
+      if (decoded is! Map<String, dynamic>) return null;
+      final manifestId = decoded['c2paManifestId'];
+      return manifestId is String ? manifestId : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   /// The files [clip]'s recording hash can describe: its video, or the raw

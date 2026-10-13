@@ -220,6 +220,7 @@ void main() {
         supporterApiConfiguredProvider.overrideWithValue(false),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         authServiceProvider.overrideWithValue(authService),
+        hasExpiredOAuthSessionProvider.overrideWithValue(false),
         deviceScopeProvider.overrideWithValue(deviceScope),
         currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
         // Null repository keeps profile reads offline, so the account header
