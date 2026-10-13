@@ -220,8 +220,9 @@ class _DeleteAllContentFormState extends State<_DeleteAllContentForm> {
               // Monospaced so the token reads as something to copy verbatim.
               Text(
                 c.requiredToken,
-                style: VineTheme.titleMediumFont(color: VineTheme.error)
-                    .copyWith(fontFamily: 'monospace'),
+                style: VineTheme.titleMediumFont(
+                  color: VineTheme.error,
+                ).copyWith(fontFamily: 'monospace'),
               ),
             ],
           ),
@@ -673,8 +674,9 @@ Future<void> executeAccountDeletion({
       dismissProgressSheet();
       if (context.mounted) {
         final text = context.l10n.deleteAccountReauthRequired;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(DivineSnackbarContainer.snackBar(text, error: true));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(DivineSnackbarContainer.snackBar(text, error: true));
         announceOutcome(text);
       }
       return;
