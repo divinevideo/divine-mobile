@@ -28,6 +28,7 @@ void main() {
   tearDown(() async {
     NativeProofModeService.c2paSigningServiceFactoryOverride = null;
     NativeProofModeService.recordingHashLookup = null;
+    NativeProofModeService.lateProofRecorder = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(proofModeChannel, null);
     await LogCaptureService().clearAllLogs();
@@ -472,6 +473,35 @@ void main() {
         expect(proofData?.unattestedSources, isFalse);
       });
 
+      test('records the proof of a recording it signs', () async {
+        c2paService.captureManifest = 'urn:c2pa:capture';
+        final recorded = <(String, model.NativeProofData)>[];
+        NativeProofModeService.lateProofRecorder = (path, proof) async =>
+            recorded.add((path, proof));
+
+        await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path, recordingSha256: recordingHash),
+        ]);
+
+        final (path, proof) = recorded.single;
+        expect(path, recording.path);
+        expect(proof.c2paManifestId, 'urn:c2pa:capture');
+      });
+
+      test('records nothing for a recording it could not sign', () async {
+        final recorded = <String>[];
+        NativeProofModeService.lateProofRecorder = (path, _) async =>
+            recorded.add(path);
+
+        final leftUnsigned = await NativeProofModeService.signOwnRecordings([
+          clipAt(recording.path, recordingSha256: recordingHash),
+        ]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+        expect(leftUnsigned, isTrue);
+        expect(recorded, isEmpty);
+      });
+
       test('leaves a recording that changed since alone', () async {
         await NativeProofModeService.signOwnRecordings([
           clipAt(recording.path, recordingSha256: 'f' * 64),
@@ -802,6 +832,9 @@ class _EditC2paSigningService extends C2paSigningService {
   C2paSigningFailureReason? editFailure;
   int signVideoInPlaceCallCount = 0;
 
+  /// The manifest a capture is signed with; null fails it, as offline.
+  String? captureManifest;
+
   @override
   Future<C2paSigningResult> signEditInPlace({
     required String outputPath,
@@ -832,7 +865,14 @@ class _EditC2paSigningService extends C2paSigningService {
     bool enableAdvancedCawgEmbedding = false,
   }) async {
     signVideoInPlaceCallCount += 1;
-    return C2paSigningResult(signedFilePath: videoPath, success: false);
+    final manifest = captureManifest;
+    return manifest == null
+        ? C2paSigningResult(signedFilePath: videoPath, success: false)
+        : C2paSigningResult(
+            signedFilePath: videoPath,
+            success: true,
+            manifest: ManifestStoreInfo(activeManifest: manifest),
+          );
   }
 
   @override

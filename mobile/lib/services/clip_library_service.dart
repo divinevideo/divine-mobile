@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_category.dart';
@@ -317,6 +318,69 @@ class ClipLibraryService {
         stackTrace: stackTrace,
       );
       return false;
+    }
+  }
+
+  /// Writes [proof] onto every entry whose video is the file [fileName], once
+  /// that file was signed after the fact, for example back online (see
+  /// `NativeProofModeService.signOwnRecordings`).
+  ///
+  /// Signing rewrote the file, so the proof the entries kept describes bytes
+  /// that are gone and names no C2PA manifest. The gallery import recognises a
+  /// clip it already holds by the manifest its proof names, so a copy saved
+  /// to the gallery would otherwise come back as a second clip. Library,
+  /// draft and trashed entries are all updated; an entry that moved on to
+  /// another file since is left alone.
+  ///
+  /// Returns how many entries were updated. Never throws.
+  Future<int> recordLateProof({
+    required String fileName,
+    required NativeProofData proof,
+  }) async {
+    try {
+      final proofJson = json.encode(proof);
+      final documentsPath = await getDocumentsPath();
+      var updated = 0;
+      for (final id in await _clipsDao.getClipIdsByFileName(
+        fileName,
+        ownerPubkey: ownerPubkey,
+      )) {
+        final rewritten = await _clipsDao.rewriteClipData(
+          id: id,
+          rewrite: (data) {
+            final DivineVideoClip clip;
+            try {
+              clip = DivineVideoClip.fromJson(
+                json.decode(data) as Map<String, dynamic>,
+                documentsPath,
+              );
+            } catch (_) {
+              // A corrupt entry is left as it is; the others still update.
+              return null;
+            }
+            final path = clip.video?.file?.path;
+            if (path == null ||
+                p.basename(path) != fileName ||
+                clip.proofManifestJson == proofJson) {
+              return null;
+            }
+            return json.encode(
+              clip.copyWith(proofManifestJson: proofJson).toJson(),
+            );
+          },
+        );
+        if (rewritten) updated++;
+      }
+      return updated;
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to record the late proof of $fileName on library clips',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return 0;
     }
   }
 

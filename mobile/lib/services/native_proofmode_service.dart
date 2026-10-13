@@ -59,6 +59,18 @@ class NativeProofModeService {
   /// the clips carry are used.
   static Future<Map<String, Set<String>>> Function()? recordingHashLookup;
 
+  /// Records the proof of a file signed after the fact, such as a recording
+  /// [signOwnRecordings] signs once the device is back online, on the clips
+  /// that play it.
+  ///
+  /// The proof those clips kept describes the file before it was signed, so
+  /// it names no C2PA manifest, and the gallery import could not tell that
+  /// a copy saved to the gallery is footage the library already holds.
+  /// Startup assigns this alongside [recordingHashLookup]. Unset, the proof
+  /// is recorded nowhere.
+  static Future<void> Function(String path, NativeProofData proof)?
+  lateProofRecorder;
+
   /// Generate native ProofMode proof for a video file.
   ///
   /// Returns [NativeProofData] if proof generation succeeds, null otherwise.
@@ -407,9 +419,10 @@ class NativeProofModeService {
   /// Only a file that still hashes to a hash the camera wrote it with
   /// qualifies: its [C2paEditSource.recordingSha256], or else one
   /// [recordingHashLookup] knows for its name. Anything edited, imported or
-  /// received since is never signed as a capture. Returns whether such a
-  /// recording is still unsigned afterwards. A failure on one recording is
-  /// logged and does not stop the others or the edit they are part of.
+  /// received since is never signed as a capture. The proof of each recording
+  /// it signs goes to [lateProofRecorder]. Returns whether such a recording
+  /// is still unsigned afterwards. A failure on one recording is logged and
+  /// does not stop the others or the edit they are part of.
   static Future<bool> signOwnRecordings(
     Iterable<DivineVideoClip> clips, {
     Iterable<C2paEditSource> otherSources = const [],
@@ -453,7 +466,11 @@ class NativeProofModeService {
           category: LogCategory.video,
         );
         final proof = await proofFile(file);
-        if (proof?.c2paManifestId == null) leftUnsigned = true;
+        if (proof == null || proof.c2paManifestId == null) {
+          leftUnsigned = true;
+        } else {
+          await _recordLateProof(path, proof);
+        }
       } on Exception catch (error, stackTrace) {
         Log.warning(
           'Could not sign recording "$path" late: $error',
@@ -466,6 +483,25 @@ class NativeProofModeService {
       }
     }
     return leftUnsigned;
+  }
+
+  /// Hands [proof] of the file at [path], signed late, to
+  /// [lateProofRecorder]. A failure is logged: the file is signed either way.
+  static Future<void> _recordLateProof(
+    String path,
+    NativeProofData proof,
+  ) async {
+    try {
+      await lateProofRecorder?.call(path, proof);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not record the proof of "$path" signed late: $error',
+        name: 'NativeProofModeService',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// The hashes [recordingHashLookup] knows, lower-cased, or none when it is
