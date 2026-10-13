@@ -122,10 +122,10 @@ void main() {
       );
     });
 
-    test('keeps blank lines between remaining paragraphs', () {
+    test('keeps one blank line between paragraphs around a dropped line', () {
       expect(
         build(
-          content: 'First\n\nSecond',
+          content: 'First\n\n#glenn\n\nSecond',
           hashtags: const ['glenn'],
         ).chipCaptionDescription,
         equals('First\n\nSecond'),
