@@ -15,6 +15,7 @@ import 'package:openvine/repositories/account_deletion_recovery_repository.dart'
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -219,9 +220,8 @@ class _DeleteAllContentFormState extends State<_DeleteAllContentForm> {
               // Monospaced so the token reads as something to copy verbatim.
               Text(
                 c.requiredToken,
-                style: VineTheme.titleMediumFont(
-                  color: VineTheme.error,
-                ).copyWith(fontFamily: 'monospace'),
+                style: VineTheme.titleMediumFont(color: VineTheme.error)
+                    .copyWith(fontFamily: 'monospace'),
               ),
             ],
           ),
@@ -484,7 +484,12 @@ Future<void> executeAccountDeletion({
   // Speak each delete outcome so screen-reader users hear the result the
   // snackbar shows visually. Mirrors the snackbar text at every outcome site.
   void announceOutcome(String message) {
-    SemanticsService.sendAnnouncement(view, message, textDirection);
+    runDetached(
+      SemanticsService.sendAnnouncement(view, message, textDirection),
+      'announce account deletion outcome',
+      logName: screenName,
+      category: LogCategory.auth,
+    );
   }
 
   // Captured before the first await so the post-sign-out catch can localize
@@ -590,7 +595,12 @@ Future<void> executeAccountDeletion({
         onActionPressed: offerSupport
             ? () {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                context.push(RoutePaths.supportReportBug);
+                runDetached(
+                  context.push<void>(RoutePaths.supportReportBug),
+                  'open support report after account deletion preparation failed',
+                  logName: screenName,
+                  category: LogCategory.auth,
+                );
               }
             : null,
       ),
@@ -663,9 +673,8 @@ Future<void> executeAccountDeletion({
       dismissProgressSheet();
       if (context.mounted) {
         final text = context.l10n.deleteAccountReauthRequired;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(DivineSnackbarContainer.snackBar(text, error: true));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(DivineSnackbarContainer.snackBar(text, error: true));
         announceOutcome(text);
       }
       return;
