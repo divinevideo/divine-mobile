@@ -17,8 +17,14 @@ class ConsumptionAnalyticsTracker {
 
   final AnalyticsService Function() _analytics;
 
-  /// Changes whenever the governed analytics identity or session changes.
-  String get sessionBoundary => _analytics().productAnalyticsSessionId;
+  /// Changes whenever the governed identity, session, or consent changes.
+  ///
+  /// Consent remains enforced by the service. Including its state here keeps
+  /// navigation performed while disabled out of the next enabled feed session.
+  String get sessionBoundary {
+    final analytics = _analytics();
+    return '${analytics.productAnalyticsSessionId}:${analytics.analyticsEnabled}';
+  }
 
   /// Records distinct items deliberately reached in one feed session.
   ///
