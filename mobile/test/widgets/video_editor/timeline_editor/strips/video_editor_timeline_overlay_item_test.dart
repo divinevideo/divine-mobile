@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -297,6 +298,54 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Fallback Label'), findsNothing);
+      });
+
+      testWidgets('names a combined sticker by how many it holds', (
+        tester,
+      ) async {
+        StickerGroupChild child(String name) => StickerGroupChild(
+          sticker: StickerData(
+            assetPath: 'assets/stickers/$name.png',
+            description: LocalizedText.single(name),
+            tags: const [],
+            packData: StickerPackData.fallback,
+          ),
+          center: const Offset(10, 10),
+          size: const Size(20, 20),
+        );
+        final group = StickerGroupData(
+          size: const Size(40, 20),
+          children: [child('a'), child('b'), child('c')],
+        );
+        final groupItem = TimelineOverlayItem(
+          id: 'group-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 3),
+          label: 'Sticker',
+          layer: buildStickerLayer(meta: group.toMeta()),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: TimelineOverlayItemTile(
+                item: groupItem,
+                width: 120,
+                height: 40,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        );
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(TimelineOverlayItemTile)),
+        );
+        expect(find.text(l10n.videoEditorStickerGroupLabel(3)), findsOneWidget);
+        expect(find.text('Sticker'), findsNothing);
       });
 
       testWidgets(

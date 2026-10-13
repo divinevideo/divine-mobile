@@ -9582,6 +9582,40 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel => '选择多个贴纸';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel => '完成贴纸选择';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel => '删除选中贴纸';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已选中 $count 个贴纸',
+      one: '已选中 1 个贴纸',
+      zero: '已选中 0 个贴纸',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel => '把选中的贴纸合并为一个图层';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个贴纸',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => '合并';
 
   @override

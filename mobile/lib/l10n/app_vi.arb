@@ -5331,6 +5331,12 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "Chọn nhiều nhãn dán",
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "Chọn nhãn dán xong",
+  "videoEditorDeleteSelectedStickersSemanticLabel": "Xóa các nhãn dán đã chọn",
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{Chưa chọn nhãn dán nào} =1{Đã chọn 1 nhãn dán} other{Đã chọn {count} nhãn dán}}",
+  "videoEditorCombineStickerLayersSemanticLabel": "Kết hợp các nhãn dán đã chọn thành một lớp",
+  "videoEditorStickerGroupLabel": "{count, plural, other{{count} nhãn dán}}",
   "videoEditorMergeLabel": "Ghép",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."

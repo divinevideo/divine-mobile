@@ -5331,6 +5331,12 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "کئی اسٹیکرز منتخب کریں",
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "اسٹیکرز کا انتخاب مکمل",
+  "videoEditorDeleteSelectedStickersSemanticLabel": "منتخب اسٹیکرز حذف کریں",
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{کوئی اسٹیکر منتخب نہیں} =1{1 اسٹیکر منتخب} other{{count} اسٹیکرز منتخب}}",
+  "videoEditorCombineStickerLayersSemanticLabel": "منتخب اسٹیکرز کو ایک لیئر میں ملائیں",
+  "videoEditorStickerGroupLabel": "{count, plural, one{1 اسٹیکر} other{{count} اسٹیکرز}}",
   "videoEditorMergeLabel": "ملائیں",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."

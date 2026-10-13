@@ -6170,6 +6170,12 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "బహుళ స్టిక్కర్లను ఎంచుకోండి",
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "స్టిక్కర్లను ఎంచుకోవడం పూర్తయింది",
+  "videoEditorDeleteSelectedStickersSemanticLabel": "ఎంచుకున్న స్టిక్కర్లను తొలగించండి",
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{స్టిక్కర్లు ఏవీ ఎంచుకోబడలేదు} =1{1 స్టిక్కర్ ఎంచుకోబడింది} other{{count} స్టిక్కర్లు ఎంచుకోబడ్డాయి}}",
+  "videoEditorCombineStickerLayersSemanticLabel": "ఎంచుకున్న స్టిక్కర్లను ఒక లేయర్‌గా కలపండి",
+  "videoEditorStickerGroupLabel": "{count, plural, one{1 స్టిక్కర్} other{{count} స్టిక్కర్లు}}",
   "videoEditorMergeLabel": "విలీనం",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."

@@ -10179,6 +10179,45 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel =>
+      'کئی اسٹیکرز منتخب کریں';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel =>
+      'اسٹیکرز کا انتخاب مکمل';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel =>
+      'منتخب اسٹیکرز حذف کریں';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count اسٹیکرز منتخب',
+      one: '1 اسٹیکر منتخب',
+      zero: 'کوئی اسٹیکر منتخب نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      'منتخب اسٹیکرز کو ایک لیئر میں ملائیں';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count اسٹیکرز',
+      one: '1 اسٹیکر',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => 'ملائیں';
 
   @override

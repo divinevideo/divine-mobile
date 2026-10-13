@@ -9698,6 +9698,41 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel => '여러 스티커 선택';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel => '스티커 선택 완료';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel => '선택한 스티커 삭제';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '스티커 $count개 선택됨',
+      one: '스티커 1개 선택됨',
+      zero: '선택된 스티커 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      '선택한 스티커를 하나의 레이어로 합치기';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '스티커 $count개',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => '병합';
 
   @override

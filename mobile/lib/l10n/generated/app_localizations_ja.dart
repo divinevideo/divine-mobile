@@ -9681,6 +9681,41 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get videoEditorStickerMultiSelectSemanticLabel => '複数のステッカーを選択';
+
+  @override
+  String get videoEditorStickerMultiSelectDoneSemanticLabel => 'ステッカーの選択を完了';
+
+  @override
+  String get videoEditorDeleteSelectedStickersSemanticLabel => '選択したステッカーを削除';
+
+  @override
+  String videoEditorStickerMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count枚のステッカーを選択中',
+      one: '1枚のステッカーを選択中',
+      zero: 'ステッカーが選択されていません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorCombineStickerLayersSemanticLabel =>
+      '選択したステッカーを1つのレイヤーに結合';
+
+  @override
+  String videoEditorStickerGroupLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ステッカー$count枚',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoEditorMergeLabel => '結合';
 
   @override

@@ -7130,6 +7130,40 @@
       }
     }
   },
+  "videoEditorStickerMultiSelectSemanticLabel": "Select multiple stickers",
+  "@videoEditorStickerMultiSelectSemanticLabel": {
+    "description": "Accessibility label for the button that starts sticker multi-select mode."
+  },
+  "videoEditorStickerMultiSelectDoneSemanticLabel": "Done selecting stickers",
+  "@videoEditorStickerMultiSelectDoneSemanticLabel": {
+    "description": "Accessibility label for the button that exits sticker multi-select mode."
+  },
+  "videoEditorDeleteSelectedStickersSemanticLabel": "Delete selected stickers",
+  "@videoEditorDeleteSelectedStickersSemanticLabel": {
+    "description": "Accessibility label for the button that deletes the selected stickers in sticker multi-select mode."
+  },
+  "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{No stickers selected} =1{1 sticker selected} other{{count} stickers selected}}",
+  "@videoEditorStickerMultiSelectCountLabel": {
+    "description": "Header shown in the sticker multi-select action bar reporting how many stickers are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoEditorCombineStickerLayersSemanticLabel": "Combine selected stickers into one layer",
+  "@videoEditorCombineStickerLayersSemanticLabel": {
+    "description": "Accessibility label for the button that combines the selected stickers into one sticker layer."
+  },
+  "videoEditorStickerGroupLabel": "{count, plural, one{1 sticker} other{{count} stickers}}",
+  "@videoEditorStickerGroupLabel": {
+    "description": "Timeline label of a sticker layer made by combining several stickers; count is how many stickers it holds.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoEditorMergeLabel": "Merge",
   "@videoEditorMergeLabel": {
     "description": "Label for the button that merges the selected clips into one."
