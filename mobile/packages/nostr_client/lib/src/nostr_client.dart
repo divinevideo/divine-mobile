@@ -1122,7 +1122,8 @@ class NostrClient {
   /// and test that builds one.
   ///
   /// Only reads started inside [body]'s own call chain report here; the
-  /// innermost observer wins when they nest.
+  /// innermost observer wins when they nest. A paged walk ([readAllEvents])
+  /// ends through its own exits and is not reported.
   static Future<T> observeSkippedReads<T>(
     Future<T> Function() body, {
     required void Function(String reason) onSkipped,
@@ -2043,14 +2044,16 @@ class NostrClient {
   ///
   /// The only reads that land there today are DmRepository's kind-10050
   /// legs: one slot per leg, each fanning out to its relays, and at most one
-  /// such leg per recipient at a time. A send resolves every recipient at
-  /// once against the same indexer, which is why they still share a bounded
-  /// pool rather than going unthrottled. Collaborator invites (at most 5)
-  /// fit in its [maxConcurrentQueries] slots. A group send to more members
-  /// than that queues, and with a slow indexer the queued legs can miss their
-  /// slot window and hold the send for a retry, as #10004 did before this
-  /// pool. Groups are behind a feature flag, so sizing for them is left to
-  /// that work.
+  /// such leg per lookup at a time. Lookups are not deduplicated, so a send
+  /// and a retry resolving the same recipient together hold a slot each. A
+  /// send resolves every recipient at once against the same indexer, which is
+  /// why they still share a bounded pool rather than going unthrottled.
+  /// Collaborator invites (at most 5) fit in its [maxConcurrentQueries] slots
+  /// while nothing else is resolving an inbox beside them. Past that the legs
+  /// queue, and with a slow indexer the queued ones can miss their slot
+  /// window and hold the send for a retry, as #10004 did before this pool. A
+  /// group send to more members is the plain case; groups are behind a
+  /// feature flag, so sizing for them is left to that work.
   bool _asksOnlyRelaysOutsidePool(
     List<String>? tempRelays,
     List<int> relayTypes,
