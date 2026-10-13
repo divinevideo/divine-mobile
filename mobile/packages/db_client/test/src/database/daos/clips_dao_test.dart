@@ -619,6 +619,62 @@ void main() {
       });
     });
 
+    group('getClipIdsByFileName', () {
+      Future<void> insertClip({
+        required String id,
+        required String filePath,
+        String? draftId,
+        String? ownerPubkey,
+      }) => dao.upsertClip(
+        id: id,
+        draftId: draftId,
+        orderIndex: 0,
+        durationMs: 3000,
+        recordedAt: DateTime(2023, 11, 14, 10),
+        filePath: filePath,
+        thumbnailPath: null,
+        data: '{}',
+        ownerPubkey: ownerPubkey,
+      );
+
+      test('returns every clip of the owner that plays the file', () async {
+        await insertClip(id: 'library', filePath: 'take.mp4', ownerPubkey: 'a');
+        await insertClip(
+          id: '$testDraftId:library',
+          draftId: testDraftId,
+          filePath: 'take.mp4',
+          ownerPubkey: 'a',
+        );
+        await insertClip(id: 'trashed', filePath: 'take.mp4', ownerPubkey: 'a');
+        await dao.softDeleteClip(
+          id: 'trashed',
+          deletedAt: DateTime(2023, 11, 15),
+        );
+        await insertClip(id: 'legacy', filePath: 'take.mp4');
+        await insertClip(id: 'other_file', filePath: 'b.mp4', ownerPubkey: 'a');
+        await insertClip(
+          id: 'other_account',
+          filePath: 'take.mp4',
+          ownerPubkey: 'b',
+        );
+
+        final ids = await dao.getClipIdsByFileName(
+          'take.mp4',
+          ownerPubkey: 'a',
+        );
+
+        expect(
+          ids,
+          unorderedEquals([
+            'library',
+            '$testDraftId:library',
+            'trashed',
+            'legacy',
+          ]),
+        );
+      });
+    });
+
     group('rewriteClipData', () {
       Future<void> insertClip(String id, String data) => dao.upsertClip(
         id: id,

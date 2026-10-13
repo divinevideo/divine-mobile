@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
@@ -112,9 +114,10 @@ void main() {
     DateTime? now,
     FileSha256Hasher? hashFile,
     PublishedClipSourceResolver? publishedSourceResolver,
+    ClipLibraryService? library,
   }) {
     return VideoClipImportService(
-      clipLibraryService: clipLibraryService,
+      clipLibraryService: library ?? clipLibraryService,
       getDocumentsPath: getDocumentsPath ?? () async => docsDir.path,
       downloadVideo:
           downloadVideo ??
@@ -1319,6 +1322,55 @@ void main() {
         expect(docsDir.listSync().whereType<File>(), isEmpty);
       },
     );
+
+    test('adds nothing when the library holds a recording signed late, '
+        'for example back online', () async {
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      final library = ClipLibraryService(
+        clipsDao: database.clipsDao,
+        draftsDao: database.draftsDao,
+        clipCategoriesDao: database.clipCategoriesDao,
+        ownerPubkey: _ownerPubkey,
+      );
+      // Recorded offline: its proof names no manifest until it is signed.
+      await library.saveClip(
+        DivineVideoClip(
+          id: 'recording',
+          video: EditorVideo.file('${docsDir.path}/recording.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 4, 20),
+          targetAspectRatio: models.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+          proofManifestJson: jsonEncode(
+            const models.NativeProofData(
+              videoHash: 'hash-before-signing',
+            ).toJson(),
+          ),
+        ),
+      );
+      await library.recordLateProof(
+        fileName: 'recording.mp4',
+        proof: const models.NativeProofData(
+          videoHash: 'hash-after-signing',
+          c2paManifestId: _c2paManifestId,
+        ),
+      );
+      final service = buildService(library: library);
+
+      final result = await service.importGalleryClip(
+        source: sourceVideo,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportSuccess>()
+            .having((r) => r.clip.id, 'clip id', 'recording')
+            .having((r) => r.alreadyInLibrary, 'alreadyInLibrary', isTrue),
+      );
+      expect(await library.getAllClips(), hasLength(1));
+    });
 
     test(
       'restores an earlier import of the same file from the trash',
