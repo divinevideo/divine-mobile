@@ -139,6 +139,39 @@ void main() {
         expect(result.canonicalIdentity, isNull);
       });
 
+      // A malformed field must not fail the parse: one bad result in a batch
+      // would otherwise fail loading every claim.
+      for (final (kind, wrong) in <(String, Object)>[
+        ('number', 7123456789),
+        ('map', <String, dynamic>{}),
+      ]) {
+        test('ignore a canonical_proof that is a $kind', () {
+          final result = VerificationResult.fromJson({
+            'platform': 'tiktok',
+            'identity': 'alice',
+            'verified': true,
+            'checked_at': 1,
+            'cached': false,
+            'canonical_proof': wrong,
+          });
+
+          expect(result.canonicalProof, isNull);
+        });
+
+        test('ignore a canonical_identity that is a $kind', () {
+          final result = VerificationResult.fromJson({
+            'platform': 'tiktok',
+            'identity': 'alice',
+            'verified': true,
+            'checked_at': 1,
+            'cached': false,
+            'canonical_identity': wrong,
+          });
+
+          expect(result.canonicalIdentity, isNull);
+        });
+      }
+
       test('are part of equality', () {
         VerificationResult withClean({String? proof, String? identity}) =>
             VerificationResult(

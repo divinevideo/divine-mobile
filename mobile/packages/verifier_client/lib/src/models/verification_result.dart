@@ -29,8 +29,8 @@ class VerificationResult extends Equatable {
       cached: json['cached'] as bool? ?? false,
       error: json['error'] as String?,
       code: json['code'] as String?,
-      canonicalProof: _nonEmpty(json['canonical_proof'] as String?),
-      canonicalIdentity: _nonEmpty(json['canonical_identity'] as String?),
+      canonicalProof: _nonEmptyString(json['canonical_proof']),
+      canonicalIdentity: _nonEmptyString(json['canonical_identity']),
     );
   }
 
@@ -92,5 +92,7 @@ class VerificationResult extends Equatable {
   ];
 }
 
-String? _nonEmpty(String? value) =>
-    value == null || value.isEmpty ? null : value;
+// A clean value is optional extra, so a malformed one is ignored rather than
+// failing the parse: in a batch that would fail every claim's result.
+String? _nonEmptyString(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;

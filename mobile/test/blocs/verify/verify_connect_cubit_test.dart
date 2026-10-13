@@ -268,6 +268,8 @@ void main() {
                     () => repository.publishClaim(captureAny()),
                   ).captured.single
                   as IdentityClaim;
+          expect(claim.pubkey, equals(_pubkey));
+          expect(claim.platform, equals('tiktok'));
           expect(claim.identity, equals('alice'));
           expect(claim.proof, equals('7123456789012345678'));
           expect(cubit.state.linkedClaim, equals(claim));
@@ -297,6 +299,8 @@ void main() {
                     () => repository.publishClaim(captureAny()),
                   ).captured.single
                   as IdentityClaim;
+          expect(claim.pubkey, equals(_pubkey));
+          expect(claim.platform, equals('mastodon'));
           expect(claim.identity, equals('mastodon.example/@alice'));
           expect(claim.proof, equals('110123'));
           expect(cubit.state.identity, equals('mastodon.example/@alice'));
