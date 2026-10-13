@@ -15,7 +15,9 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_preview_screen.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Shows a bottom sheet when a background upload fails.
 ///
@@ -73,7 +75,12 @@ Future<void> showUploadFailureSheet(
           actionLabel: context.l10n.contentWarningView,
           onActionPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            context.push(LibraryScreen.draftsPath);
+            runDetached(
+              context.push<void>(LibraryScreen.draftsPath),
+              'open drafts from upload failure',
+              logName: 'UploadFailureSheet',
+              category: LogCategory.video,
+            );
           },
         ),
       );
@@ -87,11 +94,21 @@ Future<void> showUploadFailureSheet(
           actionLabel: context.l10n.contentWarningView,
           onActionPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            context.push(LibraryScreen.draftsPath);
+            runDetached(
+              context.push<void>(LibraryScreen.draftsPath),
+              'open drafts from restricted upload',
+              logName: 'UploadFailureSheet',
+              category: LogCategory.video,
+            );
           },
         ),
       );
-      context.push(RoutePaths.accountStatus, extra: true);
+      runDetached(
+        context.push<void>(RoutePaths.accountStatus, extra: true),
+        'open account status for restricted upload',
+        logName: 'UploadFailureSheet',
+        category: LogCategory.video,
+      );
     case _:
       // Sheet was popped externally (e.g. during route transition).
       // Save to drafts silently so the user's content is preserved.
