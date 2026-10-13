@@ -1,0 +1,12 @@
+name: concord_protocol
+description: Pure Dart Concord community-chat protocol logic (POC, clean-room).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.11.0
+dependencies:
+  crypto: ^3.0.3
+dev_dependencies:
+  test: ^1.26.3
+  very_good_analysis: ^10.0.0

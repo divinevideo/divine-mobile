@@ -52,6 +52,8 @@ workspace:
   - packages/divine_quick_actions
   - packages/divine_status_client
   - packages/dm_repository
+  - packages/concord_protocol
+  - packages/concord_repository
   - packages/divine_video_player
   - packages/feed_repository
   - packages/feed_tuning_repository
@@ -188,6 +190,8 @@ dependencies:
   infinite_video_feed:
     path: packages/infinite_video_feed
   dm_repository:
+  concord_protocol:
+  concord_repository:
   visibility_detector: ^0.4.0+2 # Detect widget visibility for proper video control
   wakelock_plus: ^1.5.2 # Prevent screen timeout during active video recording
   image: ^4.1.7 # Image processing for GIF generation
