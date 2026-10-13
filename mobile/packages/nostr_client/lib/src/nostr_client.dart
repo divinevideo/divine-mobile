@@ -15,6 +15,7 @@ import 'package:nostr_client/src/social_publish_result.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/utils/hash_util.dart';
 import 'package:pool/pool.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The relay ended a live subscription before the client unsubscribed.
 class RelaySubscriptionRefusedException implements Exception {
@@ -1420,9 +1421,10 @@ class NostrClient {
         } on Object catch (e, st) {
           // Diagnostics only: the read already ended, and a listener that
           // throws must not turn its answer into an error.
-          log(
+          Log.warning(
             'A skipped-read listener threw',
             name: 'NostrClient',
+            category: LogCategory.relay,
             error: e,
             stackTrace: st,
           );

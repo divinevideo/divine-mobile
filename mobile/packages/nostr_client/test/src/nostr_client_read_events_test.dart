@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
@@ -1763,6 +1764,7 @@ void main() {
     test(
       'a skipped-read observer that throws leaves the read its answer',
       () async {
+        await LogCaptureService().clearAllLogs();
         final setup = await _saturatedPool(
           holdFor: const Duration(milliseconds: 300),
         );
@@ -1782,6 +1784,11 @@ void main() {
 
         expect(despiteThrow.timedOut, isTrue);
         expect(despiteThrow.events, isEmpty);
+        expect(
+          LogCaptureService().getRecentLogs().map((entry) => entry.message),
+          contains(contains('skipped-read listener threw')),
+          reason: 'the failure must reach the logs a support export carries',
+        );
         await setup.occupants;
       },
     );
