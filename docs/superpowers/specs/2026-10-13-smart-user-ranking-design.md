@@ -17,6 +17,31 @@ and why is listed in [Review notes](#review-notes-2026-10-14) at the end.
 
 ## Approved design
 
+### 0. Caching rule: never drop data because it is old
+
+Old data is still the best answer available until fresher data arrives. Show
+it straight away, fetch an update in the background, and update the screen
+when the update lands. A TTL decides *when to refresh*, never *when to delete*.
+Data is deleted for only three reasons:
+
+- a size or row cap (for example `cache_sync`'s 100 MB eviction of the oldest
+  entries);
+- a retention window measured in weeks, not minutes;
+- account cleanup.
+
+Today two stores break this rule, and fixing them is part of this work:
+
+- `cache_sync` deletes an expired entry the moment it is read
+  (`cache_dao_impl.dart:52`). After its TTL expires, a screen shows nothing and
+  waits for the network.
+- `ProfileStatsDao` drops rows older than five minutes
+  (`profileStatsCacheDuration`), both on read and in the startup cleanup, unless
+  they hold follower counts. That means video counts never survive long enough
+  to be ranked on.
+
+The C2PA trust-anchor bundle keeps refusing expired data on purpose. A stale
+trust root is a security decision, not a display one.
+
 ### 1. Shape: a pure scorer plus one signal loader
 
 The ranking has two parts, and neither is a long-lived singleton.
@@ -120,11 +145,15 @@ what search already ships:
   `socialProofFollowsYou` / `socialProofYouFollow`).
 - The video count uses the existing `searchUserVideoCount` key, formatted with
   `count_formatter`.
+- The follow-list sort menu needs one more new key, `followSortSmart`, for the
+  "Smart" option.
 - "Posted {time}" appears **only when the newest cached video is less than
   7 days old**. Because the event cache is partial, an old or missing date
   proves nothing about whether someone is active. The label only ever makes
   the positive claim, never "inactive". The time is formatted with
-  `time_formatter`. This is the only new ARB key. It is added to `app_en.arb`
+  `LocalizedTimeFormatter.formatRelativeVerbose`, which already produces "2h ago" through
+  existing keys. The label adds a single new key, `userRowPosted`
+  ("Posted {time}"). It is added to `app_en.arb`
   and every `app_*.arb` locale in the same change that renders it.
 
 The shared indicator line is extracted from `SearchUserTile` into a reusable
@@ -197,7 +226,7 @@ nothing, plus one full fetch a week.
 |---|---|---|---|
 | Last interaction | Drift `conversations` (existing) | Durable | Updates as DMs arrive. Never fetched for ranking. |
 | Verified NIP-05 | Drift `nip05_verifications` (existing) | That table's own expiry | Existing verification flow. Ranking never starts a verification. |
-| Video count | Drift `profile_stats` (existing) | Durable | A background refresh covers only the top 100 ranked candidates whose `cachedAt` is more than 7 days old. It goes in batches through the existing `/api/users/bulk` endpoint, which already returns a video count. If that path does not already write `profile_stats`, it is changed to. Results apply on the next open. |
+| Video count | Drift `profile_stats` (existing) | Durable: under §0, kept for 30 days rather than 5 minutes | A background refresh covers only the top 100 ranked candidates whose `cachedAt` is more than 7 days old. It goes in batches through the existing `/api/users/bulk` endpoint, which already returns a video count. If that path does not already write `profile_stats`, it is changed to. Results apply on the next open. |
 | Last posted | Drift `event` cache (existing) | Best-effort, since the cache is pruned | Not refreshed for ranking. |
 
 **Optional server help (not required to ship):**
@@ -211,15 +240,10 @@ nothing, plus one full fetch a week.
   reconcile download only the changes, instead of the whole list. That
   matters only for accounts with very many followers.
 
-**Not changed here: the 30-second `_profileListCacheTtl`.** That constant
-(`follow_repository.dart:372`, there since `cache_sync` landed) also hurts the
-followers and following screens. `cache_sync` deletes expired entries when
-they are read (`cache_dao_impl.dart:52`), so after 30 seconds those screens
-lose their cached copy and wait on the network. Raising it is not a one-line
-fix: `watchOthersFollowersCached` uses `cacheFirst`, where a longer TTL means
-no refresh at all, and the follower-count freshness check at line 1117 reuses
-the same constant. It deserves its own issue and its own change. This design
-avoids depending on it.
+**The 30-second `_profileListCacheTtl` stops hurting.** Under §0 it becomes
+a freshness window. The followers and following screens then show the saved
+list immediately and refresh it in the background, instead of waiting on the
+network after 30 seconds.
 
 ## Tests
 
@@ -272,7 +296,8 @@ avoids depending on it.
 - Required backend changes. The two funnelcake additions in §5 are optional.
 - Persisting the computed ranking itself. It is cheap to recompute on every
   open, and a stored ranking would just be one more thing to go stale.
-- Fixing the 30-second follower cache TTL (§5). That needs its own issue.
+- Changing the 30-second follower TTL value itself. Under §0 it only sets
+  how often to refresh.
 - Ordering the feed, notifications, or any other list that isn't a list of
   users.
 - Other users' following and followers screens.
@@ -314,8 +339,9 @@ These are the changes from the first draft, checked against `main` at
    only to promote people you know. The draft's empty-query ranked list was a
    new empty state that no surface asked for, so it is dropped.
 9. **The draft planned new strings that already exist.** Search already
-   ships social proof, the video count and NIP-05 strings. The only new string
-   is "Posted {time}".
+   ships social proof, the video count and NIP-05 strings, and relative times
+   already have keys. Only two new keys remain: `userRowPosted` and
+   `followSortSmart`.
 10. **"Large / moderate / mild" could not be tested.** The weights and decay
     half-lives are now concrete constants.
 11. **Indicators don't fit the share sheet.** The share sheet is a horizontal
