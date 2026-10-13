@@ -106,9 +106,12 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
 
   List<ChatMessage> visibleMessages() {
     final root = state.threadRootId;
-    if (root == null) return state.messages;
     return state.messages
-        .where((m) => m.id == root || m.threadRootId == root)
+        .where(
+          (m) =>
+              m.channelId == state.selectedChannelId &&
+              (root == null || m.id == root || m.threadRootId == root),
+        )
         .toList();
   }
 

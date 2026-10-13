@@ -5066,5 +5066,10 @@
   "ideasTitleFive": "説明はほどほどに",
   "ideasDescriptionFive": "ただシェアしたかっただけ。",
   "ideasTitleSix": "今日のかけら",
-  "ideasDescriptionSix": "ここに置いておきます。"
+  "ideasDescriptionSix": "ここに置いておきます。",
+  "messagesDirect": "ダイレクト",
+  "messagesRooms": "ルーム",
+  "messagesPublicTestRooms": "公開テストルーム",
+  "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
+  "messagesNoRooms": "まだルームはありません"
 }

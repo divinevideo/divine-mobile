@@ -13527,4 +13527,20 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Để điều này ở đây.';
+
+  @override
+  String get messagesDirect => 'Trực tiếp';
+
+  @override
+  String get messagesRooms => 'Phòng';
+
+  @override
+  String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.';
+
+  @override
+  String get messagesNoRooms => 'Chưa có phòng nào';
 }

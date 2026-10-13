@@ -12769,4 +12769,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get messagesDirect => '私信';
+
+  @override
+  String get messagesRooms => '聊天室';
+
+  @override
+  String get messagesPublicTestRooms => '公开测试聊天室';
+
+  @override
+  String get messagesPublicTestDisclosure => '这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。';
+
+  @override
+  String get messagesNoRooms => '暂无聊天室';
 }

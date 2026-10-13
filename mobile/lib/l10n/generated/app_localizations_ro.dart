@@ -13865,4 +13865,20 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Las asta aici.';
+
+  @override
+  String get messagesDirect => 'Directe';
+
+  @override
+  String get messagesRooms => 'Camere';
+
+  @override
+  String get messagesPublicTestRooms => 'Camere publice de test';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.';
+
+  @override
+  String get messagesNoRooms => 'Încă nu există camere';
 }

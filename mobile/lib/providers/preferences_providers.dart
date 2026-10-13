@@ -11,6 +11,7 @@ import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/hold_to_record_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/nostr_signature_verification_preference_service.dart';
 import 'package:openvine/services/recording_gallery_backup_preference_service.dart';
@@ -128,3 +129,8 @@ class LanguagePreferenceVersionNotifier
     return 0;
   }
 }
+
+/// Account-scoped Messages navigation preference; feature state stays in a Cubit.
+final messagesPreferenceServiceProvider = Provider<MessagesPreferenceService>(
+  (ref) => MessagesPreferenceService(ref.watch(sharedPreferencesProvider)),
+);

@@ -13511,4 +13511,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+
+  @override
+  String get messagesDirect => 'Doğrudan';
+
+  @override
+  String get messagesRooms => 'Odalar';
+
+  @override
+  String get messagesPublicTestRooms => 'Herkese açık test odaları';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.';
+
+  @override
+  String get messagesNoRooms => 'Henüz oda yok';
 }

@@ -5066,5 +5066,10 @@
   "ideasTitleFive": "Tanpa banyak penjelasan",
   "ideasDescriptionFive": "Cuma ingin berbagi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
-  "ideasDescriptionSix": "Kutinggalkan ini di sini."
+  "ideasDescriptionSix": "Kutinggalkan ini di sini.",
+  "messagesDirect": "Langsung",
+  "messagesRooms": "Ruang",
+  "messagesPublicTestRooms": "Ruang uji publik",
+  "messagesPublicTestDisclosure": "Ruang uji ini bersifat publik. Siapa pun yang memiliki akses dapat membaca pesanmu.",
+  "messagesNoRooms": "Belum ada ruang"
 }

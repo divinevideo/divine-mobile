@@ -22658,6 +22658,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// Messages Direct / Rooms navigation and internal public chat POC disclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get messagesDirect;
+
+  /// Messages Direct / Rooms navigation and internal public chat POC disclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms'**
+  String get messagesRooms;
+
+  /// Messages Direct / Rooms navigation and internal public chat POC disclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'Public test rooms'**
+  String get messagesPublicTestRooms;
+
+  /// Messages Direct / Rooms navigation and internal public chat POC disclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'These test rooms are public. Anyone with access can read your messages.'**
+  String get messagesPublicTestDisclosure;
+
+  /// Messages Direct / Rooms navigation and internal public chat POC disclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'No rooms yet'**
+  String get messagesNoRooms;
 }
 
 class _AppLocalizationsDelegate

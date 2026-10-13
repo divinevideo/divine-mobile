@@ -12922,4 +12922,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get messagesDirect => 'ダイレクト';
+
+  @override
+  String get messagesRooms => 'ルーム';
+
+  @override
+  String get messagesPublicTestRooms => '公開テストルーム';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。';
+
+  @override
+  String get messagesNoRooms => 'まだルームはありません';
 }

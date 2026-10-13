@@ -4612,5 +4612,10 @@
   "ideasTitleFive": "긴 설명 없이",
   "ideasDescriptionFive": "그냥 나누고 싶었어요.",
   "ideasTitleSix": "오늘의 한 조각",
-  "ideasDescriptionSix": "여기에 남겨 둘게요."
+  "ideasDescriptionSix": "여기에 남겨 둘게요.",
+  "messagesDirect": "다이렉트",
+  "messagesRooms": "채팅방",
+  "messagesPublicTestRooms": "공개 테스트 채팅방",
+  "messagesPublicTestDisclosure": "이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.",
+  "messagesNoRooms": "아직 채팅방이 없어요"
 }

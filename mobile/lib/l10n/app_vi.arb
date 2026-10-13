@@ -6830,5 +6830,10 @@
   "ideasTitleFive": "Không cần giải thích nhiều",
   "ideasDescriptionFive": "Chỉ muốn chia sẻ thôi.",
   "ideasTitleSix": "Một chút hôm nay",
-  "ideasDescriptionSix": "Để điều này ở đây."
+  "ideasDescriptionSix": "Để điều này ở đây.",
+  "messagesDirect": "Trực tiếp",
+  "messagesRooms": "Phòng",
+  "messagesPublicTestRooms": "Phòng thử nghiệm công khai",
+  "messagesPublicTestDisclosure": "Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.",
+  "messagesNoRooms": "Chưa có phòng nào"
 }

@@ -9937,5 +9937,25 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
+  },
+  "messagesDirect": "Direct",
+  "messagesRooms": "Rooms",
+  "messagesPublicTestRooms": "Public test rooms",
+  "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
+  "messagesNoRooms": "No rooms yet",
+  "@messagesDirect": {
+    "description": "Messages Direct / Rooms navigation and internal public chat POC disclosure."
+  },
+  "@messagesRooms": {
+    "description": "Messages Direct / Rooms navigation and internal public chat POC disclosure."
+  },
+  "@messagesPublicTestRooms": {
+    "description": "Messages Direct / Rooms navigation and internal public chat POC disclosure."
+  },
+  "@messagesPublicTestDisclosure": {
+    "description": "Messages Direct / Rooms navigation and internal public chat POC disclosure."
+  },
+  "@messagesNoRooms": {
+    "description": "Messages Direct / Rooms navigation and internal public chat POC disclosure."
   }
 }

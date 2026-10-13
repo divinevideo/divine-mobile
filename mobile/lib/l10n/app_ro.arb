@@ -5066,5 +5066,10 @@
   "ideasTitleFive": "Fără mari explicații",
   "ideasDescriptionFive": "Am vrut doar să împărtășesc.",
   "ideasTitleSix": "Un pic din ziua de azi",
-  "ideasDescriptionSix": "Las asta aici."
+  "ideasDescriptionSix": "Las asta aici.",
+  "messagesDirect": "Directe",
+  "messagesRooms": "Camere",
+  "messagesPublicTestRooms": "Camere publice de test",
+  "messagesPublicTestDisclosure": "Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.",
+  "messagesNoRooms": "Încă nu există camere"
 }
