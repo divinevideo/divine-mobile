@@ -364,9 +364,6 @@ class _ReportContentViewState extends State<_ReportContentView> {
   GlobalKey _cardKey(ContentFilterReason reason) =>
       _cardKeys.putIfAbsent(reason, GlobalKey.new);
 
-  /// The scroll viewport's height when its metrics last changed, so a change
-  /// can be told apart as the view shrinking (keyboard opening) or growing.
-  double? _lastViewportHeight;
   final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
@@ -386,6 +383,10 @@ class _ReportContentViewState extends State<_ReportContentView> {
   bool _imageInsertionRejected = false;
 
   bool _scrollWhenKeyboardOpens = false;
+
+  /// The scroll viewport's height when its metrics last changed, so a change
+  /// can be told apart as the view shrinking (keyboard opening) or growing.
+  double? _lastViewportHeight;
   double _previousViewInsetsBottom = 0;
 
   ScrollController get _scrollController =>
@@ -533,7 +534,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
               final height = notification.metrics.viewportDimension;
               final last = _lastViewportHeight;
               _lastViewportHeight = height;
-              if (_noteRequired && (last == null || height < last)) {
+              if (_noteRequired && last != null && height < last) {
                 _scrollNoteIntoView(animate: false);
               }
               return false;
