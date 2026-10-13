@@ -322,7 +322,10 @@ class ProfileScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     // No bottom nav here — the enclosing AppShell provides the shared
     // VineBottomNav for every tab (own-profile no longer bypasses the shell).
-    return Scaffold(backgroundColor: context.vineColors.surface, body: body);
+    return Scaffold(
+      backgroundColor: context.vineColors.surface,
+      body: body,
+    );
   }
 }
 
