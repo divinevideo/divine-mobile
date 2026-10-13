@@ -1,5 +1,6 @@
 // MPL-2.0
 import 'package:concord_protocol/concord_protocol.dart';
+import 'package:concord_repository/src/sealed_chat_transport.dart';
 
 abstract interface class RelayGateway {
   Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter);
@@ -33,10 +34,15 @@ class ConcordRepository {
     required this.relay,
     required this.store,
     required this.cipher,
+    this.sealedTransport,
   });
   final RelayGateway relay;
   final AccountScopedStore store;
   final StreamCipher cipher;
+
+  /// Live sealed-send transport (kind 1059 wraps). When present, sends
+  /// prefer it over the legacy synchronous envelope path.
+  final SealedChatTransport? sealedTransport;
   final _messages = <ChatMessage>[];
   final _controls = <ControlEvent>[];
   final _pendingIds = <String>[];
@@ -142,6 +148,93 @@ class ConcordRepository {
     await store.put('sent:$id', '1');
     _pendingIds.remove(id);
     return env;
+  }
+
+  /// Sends a kind-9 rumor through the sealed plane: the transport seals
+  /// it with the async session signer and publishes a kind-1059 wrap.
+  /// Persists before publish so an interrupted send stays recoverable.
+  Future<Map<String, dynamic>> sendSealedMessage({
+    required String channelId,
+    required String author,
+    required String body,
+    required int createdAt,
+    required int ms,
+    required String streamSeedHex,
+    required String streamPubkey,
+    int epoch = 0,
+    int? expiresAt,
+  }) async {
+    final transport = sealedTransport;
+    if (transport == null) {
+      throw StateError('sealed transport requires the active Divine signer');
+    }
+    final tags = <List<String>>[
+      ['channel', channelId],
+      ['epoch', '$epoch'],
+      ['ms', '$ms'],
+      if (expiresAt != null) ['expiration', '$expiresAt'],
+    ];
+    final id = computeEventId(
+      pubkey: author,
+      createdAt: createdAt,
+      kind: 9,
+      tags: tags,
+      content: body,
+    );
+    final rumor = <String, dynamic>{
+      'id': id,
+      'kind': 9,
+      'pubkey': author,
+      'created_at': createdAt,
+      'tags': tags,
+      'content': body,
+    };
+    _messages.add(
+      ChatMessage(
+        id: id,
+        channelId: channelId,
+        author: author,
+        body: body,
+        createdAt: createdAt,
+        expiresAt: expiresAt,
+      ),
+    );
+    await store.put('msg:$id', body);
+    await store.put(
+      'meta:$id',
+      '$channelId|$author|$createdAt|${expiresAt ?? ''}',
+    );
+    final index = await store.get('index');
+    await store.put(
+      'index',
+      [if (index != null && index.isNotEmpty) index, id].join(','),
+    );
+    _pendingIds.add(id);
+    final wrap = await transport.sendRumor(
+      rumor: rumor,
+      streamSeedHex: streamSeedHex,
+      streamPubkey: streamPubkey,
+    );
+    await store.put('sent:$id', '1');
+    _pendingIds.remove(id);
+    return wrap;
+  }
+
+  /// Opens a received kind-1059 wrap through the sealed transport.
+  Future<Map<String, dynamic>> openSealedIncoming({
+    required Map<String, dynamic> wrap,
+    required String streamSeedHex,
+    required String streamPubkey,
+  }) {
+    final transport = sealedTransport;
+    if (transport == null) {
+      throw StateError('sealed transport requires the active Divine signer');
+    }
+    return transport.openIncoming(
+      wrap: wrap,
+      streamSeedHex: streamSeedHex,
+      streamPubkey: streamPubkey,
+    );
   }
 
   void ingestControl(ControlEvent c) => _controls.add(c);

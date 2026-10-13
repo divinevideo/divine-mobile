@@ -1,37 +1,11 @@
 // MPL-2.0
+import 'dart:convert';
+
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:crypto/crypto.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
-
-/// StreamCipher backed by the active Divine session signer (Keycast /
-/// local / external). No new login, keypair, or token store: every call
-/// delegates to the identity the user already signed in with.
-class SignerStreamCipher implements StreamCipher {
-  SignerStreamCipher(this._signer, {required this.peerPubkey});
-  final NostrSigner _signer;
-
-  /// Stream pubkey used as the NIP-44 peer for envelope sealing.
-  final String peerPubkey;
-
-  @override
-  String seal(String plaintext, String streamId) =>
-      throw UnimplementedError('use sealAsync');
-  @override
-  String open(String ciphertext, String streamId) =>
-      throw UnimplementedError('use openAsync');
-
-  Future<String> sealAsync(String plaintext) async {
-    final out = await _signer.nip44Encrypt(peerPubkey, plaintext);
-    if (out == null) throw StateError('signer nip44 encrypt unavailable');
-    return out;
-  }
-
-  Future<String> openAsync(String ciphertext) async {
-    final out = await _signer.nip44Decrypt(peerPubkey, ciphertext);
-    if (out == null) throw StateError('signer nip44 decrypt unavailable');
-    return out;
-  }
-}
 
 /// POC relay endpoint (controlled local/POC relay; staging default).
 const String concordRelayUrl = String.fromEnvironment(
@@ -39,24 +13,12 @@ const String concordRelayUrl = String.fromEnvironment(
   defaultValue: 'wss://relay.staging.dvines.org',
 );
 
-/// Builds the chat repository bound to the live session: real WebSocket
-/// relay, account-scoped store keyed to the signed-in pubkey, and the
-/// session signer cipher. Falls back to in-memory POC wiring only when
-/// nobody is signed in (chat UI then shows its login gate upstream).
-ConcordRepository buildConcordRepository({
-  required String? pubkey,
-  required NostrSigner? signer,
-  required String streamPubkey,
-}) {
-  return ConcordRepository(
-    relay: WebSocketRelayGateway(concordRelayUrl),
-    store: InMemoryConcordStore(pubkey ?? 'anonymous'),
-    cipher: signer != null
-        ? _SyncCipherAdapter(
-            SignerStreamCipher(signer, peerPubkey: streamPubkey),
-          )
-        : _UnavailableCipher(),
-  );
+/// POC stream key until kind-33302-held community keys are loaded:
+/// deterministic per channel, public by construction. Real private
+/// channels must use held channel keys instead (mirrors web pocStreamKey).
+GroupKey pocStreamKeyFor(String channelId) {
+  final secret = sha256.convert(utf8.encode('concord-poc-stream:$channelId'));
+  return groupKey('concord/channel', secret.toString(), '00' * 32, epoch: 0);
 }
 
 class _UnavailableCipher implements StreamCipher {
@@ -68,18 +30,42 @@ class _UnavailableCipher implements StreamCipher {
       throw StateError('chat requires the active Divine signer');
 }
 
-/// StreamCipher is synchronous at the protocol port; the session signer
-/// is async, so sealing for live sends goes through [SignerStreamCipher]
-/// directly in the send path. This adapter only satisfies the port for
-/// read-side wiring and fails closed rather than identity-mapping.
-class _SyncCipherAdapter implements StreamCipher {
-  _SyncCipherAdapter(SignerStreamCipher _);
-  @override
-  String seal(String p, String s) => throw StateError(
-    'async signer seal required; use SignerStreamCipher.sealAsync',
-  );
-  @override
-  String open(String c, String s) => throw StateError(
-    'async signer open required; use SignerStreamCipher.openAsync',
+/// Builds the chat repository bound to the live session: real WebSocket
+/// relay, account-scoped store keyed to the signed-in pubkey, and a
+/// sealed transport whose author signer is the already signed-in Divine
+/// identity (Keycast/local/external). No new login, keypair, or token
+/// store is introduced. Signed-out wiring fails closed.
+ConcordRepository buildConcordRepository({
+  required String? pubkey,
+  required NostrSigner? signer,
+  required String streamPubkey,
+}) {
+  final relay = WebSocketRelayGateway(concordRelayUrl);
+  final sealed = signer != null && pubkey != null
+      ? SealedChatTransport(
+          relay: relay,
+          signer: (template) async {
+            final event = Event(
+              pubkey,
+              template['kind'] as int,
+              (template['tags'] as List)
+                  .map((t) => (t as List).map((e) => '$e').toList())
+                  .toList(),
+              template['content'] as String,
+              createdAt: template['created_at'] as int,
+            );
+            final signed = await signer.signEvent(event);
+            if (signed == null) {
+              throw StateError('session signer refused to sign chat seal');
+            }
+            return signed.toJson();
+          },
+        )
+      : null;
+  return ConcordRepository(
+    relay: relay,
+    store: InMemoryConcordStore(pubkey ?? 'anonymous'),
+    cipher: _UnavailableCipher(),
+    sealedTransport: sealed,
   );
 }
