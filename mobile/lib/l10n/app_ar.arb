@@ -5748,5 +5748,6 @@
   },
   "userRowPosted": "نُشر {time}",
   "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
-  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو"
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
+  "minorAccountReviewRecordConsentPrivacyBody": "يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين."
 }

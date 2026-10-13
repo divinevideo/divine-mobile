@@ -7049,5 +7049,6 @@
   },
   "userRowPosted": "发布于{time}",
   "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。",
-  "minorAccountReviewVideoSubmittedTitle": "视频已提交"
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交",
+  "minorAccountReviewRecordConsentPrivacyBody": "你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。"
 }

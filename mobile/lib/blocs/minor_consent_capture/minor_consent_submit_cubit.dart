@@ -83,7 +83,7 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
   /// writes when a case is being simulated locally; the repository decides
   /// whether that path applies.
   Future<void> submit({
-    required String caseId,
+    required String? caseId,
     required String email,
     required String videoPath,
     required MinorReviewInstructions localReceipt,

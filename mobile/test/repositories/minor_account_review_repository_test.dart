@@ -114,6 +114,64 @@ void main() {
     });
 
     group('submitParentConsent', () {
+      test(
+        'starts a real case before uploading a self-started consent video',
+        () async {
+          when(() => apiService.startGreenlight()).thenAnswer(
+            (_) async => {
+              'restriction': {'status': 'active'},
+              'minorReviewCase': {
+                'id': 'application-1',
+                'state': 'open_reported',
+                'suspectedAgeBand': 'age_13_15',
+                'allowedResolution': 'parent_video_or_email',
+              },
+            },
+          );
+          String? uploadedCase;
+          when(
+            () => apiService.submitMinorAccountReviewParentConsent(
+              caseId: any(named: 'caseId'),
+              email: any(named: 'email'),
+              videoPath: any(named: 'videoPath'),
+            ),
+          ).thenAnswer((invocation) async {
+            uploadedCase = invocation.namedArguments[#caseId] as String;
+          });
+          await repository.submitParentConsent(
+            caseId: null,
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+          );
+          expect(uploadedCase, 'application-1');
+        },
+      );
+
+      test(
+        'rejects an ineligible case returned by the start endpoint',
+        () async {
+          when(() => apiService.startGreenlight()).thenAnswer(
+            (_) async => {
+              'restriction': {'status': 'active'},
+              'minorReviewCase': {
+                'id': 'wrong-case',
+                'state': 'open_reported',
+                'suspectedAgeBand': 'under_13',
+                'allowedResolution': 'support_email_only',
+              },
+            },
+          );
+          await expectLater(
+            repository.submitParentConsent(
+              caseId: null,
+              email: 'parent@example.com',
+              videoPath: '/tmp/consent.mp4',
+            ),
+            throwsA(isA<ApiException>()),
+          );
+        },
+      );
+
       test('forwards caseId, email and videoPath to ApiService', () async {
         when(
           () => apiService.submitMinorAccountReviewParentConsent(

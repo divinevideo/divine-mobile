@@ -5748,5 +5748,6 @@
   },
   "userRowPosted": "Pubblicato {time}",
   "minorAccountReviewVideoSubmittedBody": "Il tuo video è stato inviato per la revisione.",
-  "minorAccountReviewVideoSubmittedTitle": "Video inviato"
+  "minorAccountReviewVideoSubmittedTitle": "Video inviato",
+  "minorAccountReviewRecordConsentPrivacyBody": "Il tuo video viene inviato privatamente ai team di assistenza e di fiducia e sicurezza di Divine per la revisione. Non viene pubblicato né condiviso con altri utenti."
 }

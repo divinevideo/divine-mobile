@@ -5748,5 +5748,6 @@
   },
   "userRowPosted": "Publicat {time}",
   "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
-  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis"
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis",
+  "minorAccountReviewRecordConsentPrivacyBody": "Videoclipul tău este trimis în privat echipelor de asistență și de încredere și siguranță ale Divine pentru verificare. Nu este publicat sau distribuit altor utilizatori."
 }

@@ -423,7 +423,7 @@ class _MinorConsentSubmitFormState
     super.dispose();
   }
 
-  void _submit(String caseId) {
+  void _submit(String? caseId) {
     if (!_formKey.currentState!.validate()) return;
     unawaited(
       context.read<MinorConsentSubmitCubit>().submit(
@@ -491,9 +491,7 @@ class _MinorConsentSubmitFormState
               ? l10n.minorAccountReviewSubmitting
               : l10n.minorAccountReviewRecordConsentSubmitCta,
           expanded: true,
-          onPressed: (isSubmitting || caseId == null)
-              ? null
-              : () => _submit(caseId),
+          onPressed: isSubmitting ? null : () => _submit(caseId),
         ),
         const SizedBox(height: 12),
         DivineButton(
