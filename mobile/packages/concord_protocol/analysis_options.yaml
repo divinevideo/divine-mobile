@@ -1,1 +1,7 @@
 include: package:very_good_analysis/analysis_options.yaml
+
+# POC slice: doc comments are tracked as follow-up polish; this relaxation
+# matches extracted repository-package precedent (e.g. badge_repository).
+linter:
+  rules:
+    public_member_api_docs: false

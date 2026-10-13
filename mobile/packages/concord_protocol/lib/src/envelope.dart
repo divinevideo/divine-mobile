@@ -18,6 +18,16 @@ class StreamEnvelope {
     required this.ciphertext,
     required this.createdAt,
   });
+  factory StreamEnvelope.seal(
+    StreamCipher c, {
+    required String streamId,
+    required String plaintext,
+    required int createdAt,
+  }) => StreamEnvelope(
+    streamId: streamId,
+    createdAt: createdAt,
+    ciphertext: c.seal(plaintext, streamId),
+  );
   final String streamId;
   final String ciphertext;
   final int createdAt;
@@ -30,16 +40,6 @@ class StreamEnvelope {
       ['stream', streamId],
     ],
   };
-  static StreamEnvelope seal(
-    StreamCipher c, {
-    required String streamId,
-    required String plaintext,
-    required int createdAt,
-  }) => StreamEnvelope(
-    streamId: streamId,
-    createdAt: createdAt,
-    ciphertext: c.seal(plaintext, streamId),
-  );
   String open(StreamCipher c) => c.open(ciphertext, streamId);
   String encode() => jsonEncode(toEventJson(''));
 }
