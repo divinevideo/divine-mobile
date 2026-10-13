@@ -1819,18 +1819,21 @@ void main() {
       var configurations = 0;
 
       expect(
-        () => recoverHotRollbackJournal(
-          databasePath: dbPath,
-          configureEncryptedDatabase: (database) {
-            configurations += 1;
-            keyCipherDatabase(database, validKey);
-            if (configurations == 2) {
-              throw SqliteException(
-                extendedResultCode: 778,
-                message: 'injected I/O failure',
-              );
-            }
-          },
+        () => _withPrivateSystemTemp(
+          tempRoot,
+          () => recoverHotRollbackJournal(
+            databasePath: dbPath,
+            configureEncryptedDatabase: (database) {
+              configurations += 1;
+              keyCipherDatabase(database, validKey);
+              if (configurations == 2) {
+                throw SqliteException(
+                  extendedResultCode: 778,
+                  message: 'injected I/O failure',
+                );
+              }
+            },
+          ),
         ),
         throwsA(
           isA<DatabaseHotJournalRecoveryError>()
