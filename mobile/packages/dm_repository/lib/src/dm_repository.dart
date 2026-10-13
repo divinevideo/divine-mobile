@@ -4694,38 +4694,46 @@ class DmRepository {
       // can remove the relay from the pool, and a read that never asks where
       // the list was written can neither confirm it nor see a list held only
       // there (#8433).
+      //
       final queryFutures = [
-        _nostrClient.queryEventsDetailed(
-          filter,
-          useCache: !requireAuthoritative,
-          requireAllRelaysSettled:
-              requireAuthoritative || source == _DmRelayListSource.remote,
-          timeout: requireAuthoritative
-              ? _ownDmInboxAuthoritativeTimeout
-              : _dmInboxQueryTimeout,
+        _observedLeg(
+          () => _nostrClient.queryEventsDetailed(
+            filter,
+            useCache: !requireAuthoritative,
+            requireAllRelaysSettled:
+                requireAuthoritative || source == _DmRelayListSource.remote,
+            timeout: requireAuthoritative
+                ? _ownDmInboxAuthoritativeTimeout
+                : _dmInboxQueryTimeout,
+          ),
         ),
         if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
-          _nostrClient.queryEventsDetailed(
-            filter,
-            useCache: false,
-            tempRelays: _dmInboxLookupRelays,
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: _dmInboxDiscoveryQueryTimeout,
+          _observedLeg(
+            () => _nostrClient.queryEventsDetailed(
+              filter,
+              useCache: false,
+              tempRelays: _dmInboxLookupRelays,
+              relayTypes: const [RelayType.temp],
+              requireAllRelaysSettled: true,
+              timeout: _dmInboxDiscoveryQueryTimeout,
+            ),
           ),
         if (advertisedRelay != null)
-          _nostrClient.queryEventsDetailed(
-            filter,
-            useCache: false,
-            tempRelays: [advertisedRelay],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: _ownDmInboxAuthoritativeTimeout,
+          _observedLeg(
+            () => _nostrClient.queryEventsDetailed(
+              filter,
+              useCache: false,
+              tempRelays: [advertisedRelay],
+              relayTypes: const [RelayType.temp],
+              requireAllRelaysSettled: true,
+              timeout: _ownDmInboxAuthoritativeTimeout,
+            ),
           ),
       ];
-      final results = await Future.wait(queryFutures).timeout(
+      final legs = await Future.wait(queryFutures).timeout(
         inboxResolutionBudget,
       );
+      final results = [for (final leg in legs) leg.read];
       final events = [for (final result in results) ...result.events];
       // The advertised leg, when asked, is queued last.
       final advertisedEvents = advertisedRelay == null
@@ -4757,14 +4765,22 @@ class DmRepository {
       // live with the guess; callers that latch something permanent must make
       // their own strict read — see [_drainOwnInboxRelays].
       final noRelayAnswered = results.any((result) => result.noRelays);
-      final didNotSettle = results.any((result) => result.timedOut);
-      if (noRelayAnswered || didNotSettle) {
+      final unsettledLegs = [
+        for (final leg in legs)
+          if (leg.read.timedOut) leg,
+      ];
+      if (noRelayAnswered || unsettledLegs.isNotEmpty) {
         absentOrFailed = _OwnDmInboxState.failed;
         // `noRelays` first: an offline device sets both flags, and reporting
-        // that as a timeout misreads it.
+        // that as a timeout misreads it. A skipped leg is still inconclusive
+        // — nothing was read — so it holds the send exactly as an unsettled
+        // relay does (#7317); only the log line tells them apart.
         inconclusiveReason = noRelayAnswered
             ? 'no relay took the REQ'
-            : 'not every relay settled';
+            : {
+                for (final leg in unsettledLegs)
+                  _unsettledLegReason(leg.skippedReason),
+              }.join('; ');
       } else {
         absentOrFailed = _OwnDmInboxState.absent;
       }
@@ -4913,6 +4929,29 @@ class DmRepository {
     return (state: _OwnDmInboxState.failed, relays: null);
   }
 
+  /// Runs one kind-10050 lookup leg, keeping why the client skipped it when
+  /// it did.
+  ///
+  /// A leg the client skipped without asking any relay — no query slot
+  /// reached it in time — reports `timedOut` just as one a relay left
+  /// unsettled does, so this is what tells the two apart (#10004).
+  Future<({T read, String? skippedReason})> _observedLeg<T>(
+    Future<T> Function() read,
+  ) async {
+    String? skippedReason;
+    final result = await NostrClient.observeSkippedReads(
+      read,
+      onSkipped: (reason) => skippedReason = reason,
+    );
+    return (read: result, skippedReason: skippedReason);
+  }
+
+  /// Why a leg that did not settle was inconclusive, for the log line.
+  static String _unsettledLegReason(String? skippedReason) =>
+      skippedReason == null
+      ? 'not every relay settled'
+      : 'a read never left this device: $skippedReason';
+
   /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
   /// the pool and indexer legs returned no inbox list but did return the
   /// recipient's NIP-65 list.
@@ -4975,22 +5014,23 @@ class DmRepository {
     final legTimeout = remaining > _dmInboxOutboxSettleMargin
         ? remaining - _dmInboxOutboxSettleMargin
         : Duration.zero;
-    final result = await _nostrClient
-        .queryEventsDetailed(
-          [
-            nostr_filter.Filter(
-              authors: [pubkey],
-              kinds: [EventKind.dmRelaysList],
-              limit: 1,
-            ),
-          ],
-          useCache: false,
-          tempRelays: targets,
-          relayTypes: const [RelayType.temp],
-          requireAllRelaysSettled: true,
-          timeout: legTimeout,
-        )
-        .timeout(remaining);
+    final leg = await _observedLeg(
+      () => _nostrClient.queryEventsDetailed(
+        [
+          nostr_filter.Filter(
+            authors: [pubkey],
+            kinds: [EventKind.dmRelaysList],
+            limit: 1,
+          ),
+        ],
+        useCache: false,
+        tempRelays: targets,
+        relayTypes: const [RelayType.temp],
+        requireAllRelaysSettled: true,
+        timeout: legTimeout,
+      ),
+    ).timeout(remaining);
+    final result = leg.read;
     final lists = [
       for (final event in result.events)
         if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
@@ -5011,7 +5051,7 @@ class DmRepository {
     if (result.noRelays || result.timedOut) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : 'not every relay settled';
+          : _unsettledLegReason(leg.skippedReason);
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '
