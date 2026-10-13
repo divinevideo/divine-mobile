@@ -157,6 +157,58 @@ void main() {
         expect(result.success, isFalse);
         expectNoKeyLeaked(authService, result, [nsec, privateKeyHex]);
       });
+
+      test(
+        'keeps a retained private cleanup cause off exposed surfaces',
+        () async {
+          final privateKeyHex = generatePrivateKey();
+          final nsec = Nip19.encodePrivateKey(privateKeyHex);
+          const privateFailure = 'private outgoing account row content';
+          const safeMessage = 'Could not claim account rows safely';
+          when(() => mockCleanupService.claimLegacyRows(any())).thenThrow(
+            UserDataCleanupException(
+              safeMessage,
+              StateError('$privateFailure: $nsec ($privateKeyHex)'),
+            ),
+          );
+          final authService = createAuthService();
+          addTearDown(authService.dispose);
+
+          final result = await authService.importFromNsec(nsec);
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+          expect(
+            authService.lastFailureReason,
+            AuthFailureReason.accountCleanupFailed,
+          );
+          expect(authService.isAuthenticated, isFalse);
+          expect(authService.currentIdentity, isNull);
+          expect(authService.committedAccountActivationReceipt, isNull);
+          expect(authService.takeFreshAccountListCreationPermit(), isNull);
+          expect(crashReporter.reported, hasLength(1));
+          expect(crashReporter.reported.single.reason, 'importFromNsec');
+          expect(
+            crashReporter.reported.single.error,
+            isA<KeyImportFailedException>(),
+          );
+          final surfaces = [
+            LogCaptureService()
+                .getRecentLogs()
+                .map((log) => log.message)
+                .join('\n'),
+            result.errorMessage ?? '',
+            authService.lastError ?? '',
+            crashReporter.reported.single.error.toString(),
+          ];
+          for (final surface in surfaces) {
+            for (final secret in [privateFailure, nsec, privateKeyHex]) {
+              expect(surface, isNot(contains(secret)));
+            }
+          }
+          expect(authService.lastError, contains(safeMessage));
+        },
+      );
     });
 
     group('importFromHex', () {
