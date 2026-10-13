@@ -255,7 +255,7 @@ class ConcordRepository {
   /// fragments, unknown fields preserved by the protocol merge).
   Map<String, dynamic>? heldListDoc;
 
-  set ingestListDoc(Map<String, dynamic> doc) => heldListDoc = doc;
+  void replaceHeldListDoc(Map<String, dynamic> doc) => heldListDoc = doc;
 
   /// Resolves the held stream key for a channel (by held id or name)
   /// from [heldListDoc]; null when the list does not hold it, in which
