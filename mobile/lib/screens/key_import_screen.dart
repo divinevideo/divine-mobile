@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -116,7 +117,7 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
                           errorText: _keyError,
                           onChanged: (value) {
                             final encrypted = Nip49.isEncryptedKey(
-                              value.trim(),
+                              NostrKeyUtils.normalizePrivateKeyInput(value),
                             );
                             setState(() {
                               _keyError = null;
@@ -187,17 +188,15 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
     );
   }
 
-  String? _validateKey(String value) {
-    if (value.trim().isEmpty) {
+  String? _validateKey(String keyText) {
+    if (keyText.isEmpty) {
       return context.l10n.keyImportKeyRequired;
     }
 
-    final trimmed = value.trim();
-
     // Check if it's a bunker URL
-    if (NostrRemoteSignerInfo.isBunkerUrl(trimmed)) {
+    if (NostrRemoteSignerInfo.isBunkerUrl(keyText)) {
       try {
-        NostrRemoteSignerInfo.parseBunkerUrl(trimmed);
+        NostrRemoteSignerInfo.parseBunkerUrl(keyText);
       } on InvalidBunkerRelayException {
         // Specifically flag the security-relevant rejection (#3362) so the
         // user understands why a ws:// non-loopback relay was refused.
@@ -209,16 +208,16 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
     }
 
     // ncryptsec1: encrypted private key (NIP-49) — password validated separately
-    if (Nip49.isEncryptedKey(trimmed)) {
+    if (Nip49.isEncryptedKey(keyText)) {
       return null;
     }
 
     // Check if it looks like a valid key format
-    if (!trimmed.startsWith('nsec') && trimmed.length != 64) {
+    if (!keyText.startsWith('nsec') && keyText.length != 64) {
       return context.l10n.keyImportInvalidFormat;
     }
 
-    if (trimmed.startsWith('nsec') && trimmed.length != 63) {
+    if (keyText.startsWith('nsec') && keyText.length != 63) {
       return context.l10n.keyImportInvalidNsecFormat;
     }
 
@@ -233,13 +232,14 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
   }
 
   Future<void> _importKey() async {
-    final keyError = _validateKey(_keyController.text);
+    final keyText = NostrKeyUtils.normalizePrivateKeyInput(
+      _keyController.text,
+    );
+    final keyError = _validateKey(keyText);
     if (keyError != null) {
       setState(() => _keyError = keyError);
       return;
     }
-
-    final keyText = _keyController.text.trim();
 
     if (Nip49.isEncryptedKey(keyText)) {
       final passwordError = _validatePassword(_passwordController.text);

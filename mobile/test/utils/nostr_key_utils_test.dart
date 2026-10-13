@@ -48,4 +48,35 @@ void main() {
       expect(NostrKeyUtils.isValidNsec(uppercaseNsec), isTrue);
     });
   });
+
+  group('NostrKeyUtils.normalizePrivateKeyInput', () {
+    final nsec = Nip19.encodePrivateKey(
+      '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa',
+    );
+
+    test('lowercases an nsec saved with a capitalised first letter', () {
+      final capitalised = 'N${nsec.substring(1)}';
+
+      expect(NostrKeyUtils.normalizePrivateKeyInput(capitalised), equals(nsec));
+    });
+
+    test('removes line breaks and zero-width characters inside a key', () {
+      final pasted =
+          ' ${nsec.substring(0, 20)}\u200D${nsec.substring(20, 30)}\n'
+          '${nsec.substring(30)}\u2060\u200B\n';
+
+      expect(NostrKeyUtils.normalizePrivateKeyInput(pasted), equals(nsec));
+    });
+
+    test('keeps the case of a bunker URL secret', () {
+      const bunkerUrl =
+          'bunker://3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d'
+          '?relay=wss://relay.example.com&secret=AbC123';
+
+      expect(
+        NostrKeyUtils.normalizePrivateKeyInput(' $bunkerUrl '),
+        equals(bunkerUrl),
+      );
+    });
+  });
 }

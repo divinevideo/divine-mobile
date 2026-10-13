@@ -15,6 +15,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/key_management/keycast_key_export_card.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class KeyManagementScreen extends ConsumerStatefulWidget {
@@ -210,7 +211,9 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
   }
 
   Future<void> _importKey(BuildContext context, nostrService) async {
-    final nsec = _importController.text.trim();
+    final nsec = NostrKeyUtils.normalizePrivateKeyInput(
+      _importController.text,
+    );
 
     if (nsec.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
