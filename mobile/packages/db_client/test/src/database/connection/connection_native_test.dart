@@ -1611,7 +1611,7 @@ void main() {
       expect(_hotJournalRowCount(dbPath, key: validKey), equals(1));
     });
 
-    test('removes snapshots stranded by interrupted recoveries', () {
+    test('removes stranded snapshots before making a new one', () {
       _createHotJournalFixture(dbPath, key: validKey);
       final systemTemp = _privateSystemTemp(tempRoot);
       for (final name in ['first', 'second']) {
@@ -1622,15 +1622,26 @@ void main() {
         )..createSync();
         File(p.join(stranded.path, 'database')).writeAsBytesSync(const [1]);
       }
+      List<String>? presentWhenCopying;
 
-      IOOverrides.runZoned(
+      _withSnapshotDirectory(
+        tempRoot,
+        (path) {
+          // On a full volume the stranded copies hold the space the new one
+          // needs, so they have to be gone before it is made.
+          presentWhenCopying = [
+            for (final entity in systemTemp.listSync()) p.basename(entity.path),
+          ];
+          return Zone.root.run(() => Directory(path));
+        },
         () => recoverHotRollbackJournal(
           databasePath: dbPath,
           configureEncryptedDatabase: (db) => keyCipherDatabase(db, validKey),
         ),
-        getSystemTempDirectory: () => systemTemp,
       );
 
+      // Only the new snapshot's own directory.
+      expect(presentWhenCopying, hasLength(1));
       expect(systemTemp.listSync(), isEmpty);
       expect(_hotJournalRowCount(dbPath, key: validKey), equals(1));
     });
