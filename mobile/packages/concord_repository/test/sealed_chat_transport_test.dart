@@ -59,67 +59,70 @@ String _readFixture() {
 }
 
 void main() {
-  test(
-    'SealedChatTransport publishes 1059 wraps and opens received wraps',
-    () async {
-      final fx = jsonDecode(_readFixture()) as Map<String, dynamic>;
-      final alice = (fx['identities'] as Map)['alice'] as Map<String, dynamic>;
-      final bob = (fx['identities'] as Map)['bob'] as Map<String, dynamic>;
-      final secrets = fx['secrets'] as Map<String, dynamic>;
-      final channelId =
-          ((fx['derivations'] as Map)['publicChannel'] as Map)['channelId']
-              as String;
-      final stream = publicChannelKey(
-        secrets['communityRoot'] as String,
-        channelId,
-        0,
-      );
-      final relay = _FakeRelay();
-      final aliceSigner = _signerFor(alice['secret'] as String);
-      final transport = SealedChatTransport(
-        relay: relay,
-        signer: (t) => _sign(aliceSigner, t),
-      );
-      final tags = [
-        ['channel', channelId],
-        ['epoch', '0'],
-        ['ms', '5'],
-      ];
-      final rumor = <String, dynamic>{
-        'id': computeEventId(
-          pubkey: alice['pubkey'] as String,
-          createdAt: 1700000200,
-          kind: 9,
-          tags: tags,
-          content: 'live sealed hello',
-        ),
-        'kind': 9,
-        'pubkey': alice['pubkey'],
-        'created_at': 1700000200,
-        'tags': tags,
-        'content': 'live sealed hello',
-      };
-      await transport.sendRumor(
-        rumor: rumor,
-        streamSeedHex: stream.seedHex,
-        streamPubkey: stream.pubkey,
-      );
-      expect(relay.published, hasLength(1));
-      expect(relay.published.single['kind'], 1059);
-      expect(relay.published.single['pubkey'], stream.pubkey);
+  group('sealed', () {
+    test(
+      'SealedChatTransport publishes 1059 wraps and opens received wraps',
+      () async {
+        final fx = jsonDecode(_readFixture()) as Map<String, dynamic>;
+        final alice =
+            (fx['identities'] as Map)['alice'] as Map<String, dynamic>;
+        final bob = (fx['identities'] as Map)['bob'] as Map<String, dynamic>;
+        final secrets = fx['secrets'] as Map<String, dynamic>;
+        final channelId =
+            ((fx['derivations'] as Map)['publicChannel'] as Map)['channelId']
+                as String;
+        final stream = publicChannelKey(
+          secrets['communityRoot'] as String,
+          channelId,
+          0,
+        );
+        final relay = _FakeRelay();
+        final aliceSigner = _signerFor(alice['secret'] as String);
+        final transport = SealedChatTransport(
+          relay: relay,
+          signer: (t) => _sign(aliceSigner, t),
+        );
+        final tags = [
+          ['channel', channelId],
+          ['epoch', '0'],
+          ['ms', '5'],
+        ];
+        final rumor = <String, dynamic>{
+          'id': computeEventId(
+            pubkey: alice['pubkey'] as String,
+            createdAt: 1700000200,
+            kind: 9,
+            tags: tags,
+            content: 'live sealed hello',
+          ),
+          'kind': 9,
+          'pubkey': alice['pubkey'],
+          'created_at': 1700000200,
+          'tags': tags,
+          'content': 'live sealed hello',
+        };
+        await transport.sendRumor(
+          rumor: rumor,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        expect(relay.published, hasLength(1));
+        expect(relay.published.single['kind'], 1059);
+        expect(relay.published.single['pubkey'], stream.pubkey);
 
-      // Bob (another signer) opens what Alice published.
-      final bobTransport = SealedChatTransport(
-        relay: _FakeRelay(),
-        signer: (t) => _sign(_signerFor(bob['secret'] as String), t),
-      );
-      final opened = await bobTransport.openIncoming(
-        wrap: relay.published.single,
-        streamSeedHex: stream.seedHex,
-        streamPubkey: stream.pubkey,
-      );
-      expect(opened['content'], 'live sealed hello');
-      expect(opened['author'], alice['pubkey']);
-    },
-  );
+        // Bob (another signer) opens what Alice published.
+        final bobTransport = SealedChatTransport(
+          relay: _FakeRelay(),
+          signer: (t) => _sign(_signerFor(bob['secret'] as String), t),
+        );
+        final opened = await bobTransport.openIncoming(
+          wrap: relay.published.single,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        expect(opened['content'], 'live sealed hello');
+        expect(opened['author'], alice['pubkey']);
+      },
+    );
+  });
 }
