@@ -249,12 +249,21 @@ class _HotJournalSnapshot {
     }
   }
 
+  /// Puts the snapshot back over the live files.
+  ///
+  /// A restore that cannot first be marked is skipped, touching nothing, so
+  /// the caller reports the stage that actually failed. The files are then
+  /// left as a recovery without a snapshot leaves them.
   void restore(
     String databasePath, {
     required File Function(File source, String destination) copy,
   }) {
     try {
       File(p.join(directory.path, _restoreMarkerName)).createSync();
+    } on FileSystemException {
+      return;
+    }
+    try {
       copy(journal, '$databasePath$rollbackJournalSuffix');
       copy(database, databasePath);
     } on Object catch (error) {

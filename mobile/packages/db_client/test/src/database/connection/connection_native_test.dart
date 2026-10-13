@@ -20,6 +20,8 @@ class _MockCipherDb extends Mock implements CommonDatabase {}
 
 class _MockDirectory extends Mock implements Directory {}
 
+class _MockFile extends Mock implements File {}
+
 void main() {
   group('prepareDatabaseFile', () {
     late Directory tempRoot;
@@ -1682,6 +1684,47 @@ void main() {
       expect(File('$dbPath-journal').readAsBytesSync(), equals(journalBefore));
     });
 
+    test('reports the failed stage when a restore cannot be marked', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      final restoredDestinations = <String>[];
+      var configurations = 0;
+
+      expect(
+        () => _withPrivateSystemTemp(
+          tempRoot,
+          () => IOOverrides.runZoned(
+            () => recoverHotRollbackJournal(
+              databasePath: dbPath,
+              configureEncryptedDatabase: (database) {
+                configurations += 1;
+                keyCipherDatabase(database, validKey);
+                if (configurations == 2) {
+                  throw StateError('injected replay failure');
+                }
+              },
+              restoreCopyForTesting: (source, destination) {
+                restoredDestinations.add(destination);
+                return source.copySync(destination);
+              },
+            ),
+            // The root zone has no overrides, so this does not call itself.
+            createFile: (path) => p.basename(path) == 'restoring'
+                ? _uncreatableFile(path)
+                : Zone.root.run(() => File(path)),
+          ),
+        ),
+        throwsA(
+          isA<DatabaseHotJournalRecoveryError>().having(
+            (error) => error.stage,
+            'stage',
+            DatabaseHotJournalRecoveryStage.replayJournal,
+          ),
+        ),
+      );
+
+      expect(restoredDestinations, isEmpty);
+    });
+
     test('completes when its snapshot cannot be deleted afterwards', () {
       _createHotJournalFixture(dbPath, key: validKey);
 
@@ -2563,6 +2606,15 @@ Directory _undeletableDirectory(String path) {
     () => directory.deleteSync(recursive: true),
   ).thenThrow(const FileSystemException('injected delete failure'));
   return directory;
+}
+
+File _uncreatableFile(String path) {
+  final file = _MockFile();
+  when(() => file.path).thenReturn(path);
+  when(
+    file.createSync,
+  ).thenThrow(const FileSystemException('injected create failure'));
+  return file;
 }
 
 void _expectReadOnlyRollback(String path) {
