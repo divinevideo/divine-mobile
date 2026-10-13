@@ -444,6 +444,42 @@ class IdentityClaimsRepository {
     );
   }
 
+  /// Starts [platform]'s sign-in so its owner can confirm it, and returns the
+  /// provider page to open, or null when this deployment has no sign-in for it.
+  ///
+  /// See `VerifierClient.startSignIn`.
+  Future<Uri?> startSignIn({
+    required String platform,
+    required String pubkey,
+    required String returnUrl,
+    required String startCheck,
+    String? handle,
+  }) {
+    return _verifierClient.startSignIn(
+      platform: platform,
+      pubkey: pubkey,
+      returnUrl: returnUrl,
+      startCheck: startCheck,
+      handle: handle,
+    );
+  }
+
+  /// Asks the verifier to count a sign-in, with the identity event [signClaim]
+  /// signed for it. Send the same [signed] again after a lost answer.
+  ///
+  /// See `VerifierClient.confirmSignIn`.
+  Future<SignInConfirmation> confirmSignIn({
+    required String code,
+    required String startSecret,
+    required SignedIdentityClaim signed,
+  }) {
+    return _verifierClient.confirmSignIn(
+      code: code,
+      startSecret: startSecret,
+      event: signed.eventJson,
+    );
+  }
+
   /// Links [claim] by writing it into the signer's kind-10011 identity event,
   /// and returns the `i` tags the published event carries.
   ///
@@ -465,19 +501,57 @@ class IdentityClaimsRepository {
   /// * [IdentityClaimPublishException] if the event cannot be signed, or no
   ///   relay confirms it.
   Future<List<List<String>>> publishClaim(IdentityClaim claim) async {
+    return publishSignedClaim(await signClaim(claim));
+  }
+
+  /// Builds and signs the identity event that links [claim], without
+  /// publishing it. [confirmBinding] goes on the new claim's tag as a fourth
+  /// value, for a sign-in the verifier confirms before it is published
+  /// (#10119).
+  ///
+  /// Throws the same exceptions as [publishClaim].
+  Future<SignedIdentityClaim> signClaim(
+    IdentityClaim claim, {
+    String? confirmBinding,
+  }) async {
     final base = await _currentIdentityEventBase(claim.pubkey, forWrite: true);
     final key = _identityKeyOf(claim);
-    // Linking again undoes an earlier unlink from this session.
-    _lastRemovedKeys[claim.pubkey]?.remove(key);
-    return _publishIdentityEvent(
+    final tags = [
+      for (final tag in base.tags)
+        if (_tagIdentityKeyOrNull(tag) != key) tag,
+      [
+        'i',
+        '${claim.platform}:${claim.identity}',
+        claim.proof,
+        ?confirmBinding,
+      ],
+    ];
+    final event = await _signIdentityEvent(
       claim.pubkey,
       content: base.content,
       after: base.source,
-      tags: [
-        for (final tag in base.tags)
-          if (_tagIdentityKeyOrNull(tag) != key) tag,
-        ['i', '${claim.platform}:${claim.identity}', claim.proof],
-      ],
+      tags: tags,
+    );
+    return SignedIdentityClaim._(
+      pubkey: claim.pubkey,
+      event: event,
+      tags: tags,
+      claimKey: key,
+    );
+  }
+
+  /// Publishes an identity event [signClaim] signed, and returns its `i` tags.
+  ///
+  /// Throws [IdentityClaimPublishException] if no relay confirms it.
+  Future<List<List<String>>> publishSignedClaim(
+    SignedIdentityClaim signed,
+  ) async {
+    // Linking again undoes an earlier unlink from this session.
+    _lastRemovedKeys[signed.pubkey]?.remove(signed.claimKey);
+    return _publishSignedIdentityEvent(
+      signed.pubkey,
+      signed.event,
+      signed.tags,
     );
   }
 
@@ -937,6 +1011,22 @@ class IdentityClaimsRepository {
   }
 
   /// Signs and publishes a kind-10011 event carrying [tags].
+  Future<List<List<String>>> _publishIdentityEvent(
+    String pubkey, {
+    required List<List<String>> tags,
+    required String content,
+    required _IdentitySource? after,
+  }) async {
+    final event = await _signIdentityEvent(
+      pubkey,
+      tags: tags,
+      content: content,
+      after: after,
+    );
+    return _publishSignedIdentityEvent(pubkey, event, tags);
+  }
+
+  /// Signs a kind-10011 event carrying [tags], without publishing it.
   ///
   /// [after] is the event this one replaces. Kind 10011 is replaceable, so the
   /// new event has to supersede it under NIP-01 ordering — and `created_at` is
@@ -948,7 +1038,7 @@ class IdentityClaimsRepository {
   /// [_refuseIfSnapshotIsNewer] then refuses forever. Dating the event one
   /// second past what it replaces removes the tie instead of picking a side
   /// (#7081).
-  Future<List<List<String>>> _publishIdentityEvent(
+  Future<Event> _signIdentityEvent(
     String pubkey, {
     required List<List<String>> tags,
     required String content,
@@ -971,8 +1061,16 @@ class IdentityClaimsRepository {
         'Could not sign the identity event',
       );
     }
+    return event;
+  }
 
-    final outcome = await deps.client.publishEventAwaitOk(event);
+  /// Publishes [event], which carries [tags], and mirrors its claims locally.
+  Future<List<List<String>>> _publishSignedIdentityEvent(
+    String pubkey,
+    Event event,
+    List<List<String>> tags,
+  ) async {
+    final outcome = await _writeDeps().client.publishEventAwaitOk(event);
     if (outcome.failed) {
       throw IdentityClaimPublishException(
         'No relay confirmed the identity event: ${outcome.summary}',
@@ -1301,4 +1399,30 @@ class IdentityClaimsRepository {
       return null;
     }
   }
+}
+
+/// An identity event signed for a claim but not yet published, so it can be
+/// confirmed with the verifier first and then published unchanged.
+class SignedIdentityClaim {
+  SignedIdentityClaim._({
+    required this.pubkey,
+    required this.event,
+    required this.tags,
+    required this.claimKey,
+  });
+
+  /// Whose identity event this is.
+  final String pubkey;
+
+  /// The signed event.
+  final Event event;
+
+  /// The tags it carries.
+  final List<List<String>> tags;
+
+  /// The `platform:identity` key of the claim it adds.
+  final String claimKey;
+
+  /// The event as the verifier receives it.
+  Map<String, dynamic> get eventJson => event.toJson();
 }

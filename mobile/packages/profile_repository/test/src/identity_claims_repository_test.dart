@@ -2072,6 +2072,165 @@ void main() {
       });
     });
 
+    group('confirmable sign-ins', () {
+      test(
+        'startSignIn passes everything through to the verifier client',
+        () async {
+          when(
+            () => client.startSignIn(
+              platform: any(named: 'platform'),
+              pubkey: any(named: 'pubkey'),
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: any(named: 'handle'),
+            ),
+          ).thenAnswer(
+            (_) async => Uri.parse('https://x.com/i/oauth2/authorize'),
+          );
+
+          expect(
+            await repo.startSignIn(
+              platform: 'twitter',
+              pubkey: _pubkey,
+              returnUrl: 'https://divine.video/app/callback?signin=abc',
+              startCheck: 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+            ),
+            equals(Uri.parse('https://x.com/i/oauth2/authorize')),
+          );
+          verify(
+            () => client.startSignIn(
+              platform: 'twitter',
+              pubkey: _pubkey,
+              returnUrl: 'https://divine.video/app/callback?signin=abc',
+              startCheck: 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'signClaim puts the binding on the new claim and publishes nothing',
+        () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'github:octocat', 'abc'],
+              ],
+            ),
+          ]);
+
+          final signed = await repo.signClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'jack',
+              proof: IdentityClaim.oauthProof,
+            ),
+            confirmBinding: 'y_rdmZDwlKYUcthysDgPyoiPWBwzgSafjaPHJ4JE1ZY',
+          );
+
+          expect(
+            signedTags!.last,
+            equals([
+              'i',
+              'twitter:jack',
+              'oauth',
+              'y_rdmZDwlKYUcthysDgPyoiPWBwzgSafjaPHJ4JE1ZY',
+            ]),
+          );
+          expect(signedTags!.first, equals(['i', 'github:octocat', 'abc']));
+          expect(signed.event.id, equals(_eventId(2)));
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'publishSignedClaim publishes exactly the event that was signed',
+        () async {
+          stubIdentityEvents([]);
+          final signed = await repo.signClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'jack',
+              proof: IdentityClaim.oauthProof,
+            ),
+            confirmBinding: 'b',
+          );
+
+          final tags = await repo.publishSignedClaim(signed);
+
+          final published =
+              verify(
+                    () => nostrClient.publishEventAwaitOk(captureAny()),
+                  ).captured.single
+                  as Event;
+          // The test signer gives every event the same id, so only identity
+          // tells the signed event apart from one signed again.
+          expect(published, same(signed.event));
+          expect(tags.last, equals(['i', 'twitter:jack', 'oauth', 'b']));
+        },
+      );
+
+      test('confirmSignIn sends the signed event as JSON', () async {
+        stubIdentityEvents([]);
+        final signed = await repo.signClaim(
+          const IdentityClaim(
+            pubkey: _pubkey,
+            platform: 'twitter',
+            identity: 'jack',
+            proof: IdentityClaim.oauthProof,
+          ),
+          confirmBinding: 'b',
+        );
+        when(
+          () => client.confirmSignIn(
+            code: any(named: 'code'),
+            startSecret: any(named: 'startSecret'),
+            event: any(named: 'event'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const SignInConfirmation(platform: 'twitter', identity: 'jack'),
+        );
+
+        await repo.confirmSignIn(
+          code: 'C' * 43,
+          startSecret: 'S' * 43,
+          signed: signed,
+        );
+
+        final sent =
+            verify(
+                  () => client.confirmSignIn(
+                    code: 'C' * 43,
+                    startSecret: 'S' * 43,
+                    event: captureAny(named: 'event'),
+                  ),
+                ).captured.single
+                as Map<String, dynamic>;
+        expect(sent['id'], equals(signed.event.id));
+      });
+
+      test('signClaim refuses when the signer declines', () async {
+        stubIdentityEvents([]);
+        signerRefuses = true;
+        await expectLater(
+          repo.signClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'jack',
+              proof: IdentityClaim.oauthProof,
+            ),
+          ),
+          throwsA(isA<IdentityClaimPublishException>()),
+        );
+      });
+    });
+
     group('publishClaim', () {
       test('appends the claim to the existing identity event', () async {
         stubIdentityEvents([

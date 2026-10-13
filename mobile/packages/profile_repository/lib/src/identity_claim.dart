@@ -4,6 +4,10 @@
 export 'package:verifier_client/verifier_client.dart'
     show
         IdentityClaim,
+        SignInConfirmException,
+        SignInConfirmation,
+        SignInRefusal,
+        SignInSecrets,
         VerificationResult,
         VerifierApiException,
         VerifierClient,
