@@ -21,7 +21,6 @@ discarded_futures|lib/widgets/delete_account_dialog.dart	2
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
-unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/screens/verify/verify_screen.dart	1
 unawaited_futures|lib/screens/video_recorder_screen.dart	1
