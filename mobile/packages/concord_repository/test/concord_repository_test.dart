@@ -72,6 +72,13 @@ void main() {
         // plus an interrupted publish (msg persisted, never marked sent).
         await store.put('msg:pending1', 'draft');
         await store.put('meta:pending1', 'general|${'a' * 64}|2|');
+        final pendingEnvelope = StreamEnvelope.seal(
+          _Cipher(),
+          streamId: deriveStreamId('c', 'general'),
+          plaintext: 'draft',
+          createdAt: 2,
+        ).toEventJson('a' * 64);
+        await store.put('outgoing:pending1', jsonEncode(pendingEnvelope));
         final idx = await store.get('index');
         await store.put('index', '$idx,pending1');
         final restarted = ConcordRepository(
@@ -87,6 +94,8 @@ void main() {
         expect(pending, ['pending1']);
         await restarted.retryPending();
         expect(await store.get('sent:pending1'), '1');
+        expect(relay.published, hasLength(2));
+        expect(relay.published.last, pendingEnvelope);
       },
     );
     test('purgeExpired drops expired messages from store index', () async {

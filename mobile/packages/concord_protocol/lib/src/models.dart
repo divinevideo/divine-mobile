@@ -12,6 +12,7 @@ class ChatMessage {
     required this.author,
     required this.body,
     required this.createdAt,
+    this.ms = 0,
     this.threadRootId,
     this.expiresAt,
     this.editedBody,
@@ -21,6 +22,7 @@ class ChatMessage {
   final String author;
   final String body;
   final int createdAt;
+  final int ms;
   final String? threadRootId;
   final int? expiresAt;
   final String? editedBody;
@@ -32,6 +34,7 @@ class ChatMessage {
     'author': author,
     'body': effectiveBody,
     'createdAt': createdAt,
+    'ms': ms,
     if (threadRootId != null) 'threadRootId': threadRootId,
     if (expiresAt != null) 'expiresAt': expiresAt,
   };
@@ -48,6 +51,8 @@ class ControlEvent {
     this.body,
     this.emoji,
     this.actor = '',
+    this.id = '',
+    this.ms = 0,
   });
   final ControlType type;
   final String targetId;
@@ -55,6 +60,8 @@ class ControlEvent {
   final String? body;
   final String? emoji;
   final String actor;
+  final String id;
+  final int ms;
 }
 
 /// Kind-33302 Community List fragment preserving unknown fields verbatim.

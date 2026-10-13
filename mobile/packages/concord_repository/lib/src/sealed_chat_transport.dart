@@ -15,15 +15,8 @@ class SealedChatTransport {
     required String streamSeedHex,
     required String streamPubkey,
   }) async {
-    final seal = await sealRumorWithSigner(
+    final wrap = await prepareRumor(
       rumor: rumor,
-      sealKind: 20013,
-      streamSeedHex: streamSeedHex,
-      streamPubkey: streamPubkey,
-      signer: signer,
-    );
-    final wrap = await wrapSeal(
-      seal: seal,
       streamSeedHex: streamSeedHex,
       streamPubkey: streamPubkey,
     );
@@ -31,12 +24,49 @@ class SealedChatTransport {
     return wrap;
   }
 
+  /// Creates the signed wrap so callers can persist it before publishing.
+  Future<Map<String, dynamic>> prepareRumor({
+    required Map<String, dynamic> rumor,
+    required String streamSeedHex,
+    required String streamPubkey,
+  }) async {
+    final seal = await sealRumorWithSigner(
+      rumor: rumor,
+      sealKind: 20013,
+      streamSeedHex: streamSeedHex,
+      streamPubkey: streamPubkey,
+      signer: signer,
+    );
+    final tags = (rumor['tags'] as List).cast<List<dynamic>>();
+    String? tag(String name) =>
+        tags.where((t) => t.length == 2 && t[0] == name).firstOrNull?[1]
+            as String?;
+    final wrap = await wrapSeal(
+      seal: seal,
+      expiresAt: int.tryParse(tag('expiration') ?? ''),
+      streamSeedHex: streamSeedHex,
+      streamPubkey: streamPubkey,
+    );
+    await openIncoming(
+      wrap: wrap,
+      streamSeedHex: streamSeedHex,
+      streamPubkey: streamPubkey,
+      expectedChannelId: tag('channel') ?? '',
+      expectedEpoch: int.tryParse(tag('epoch') ?? '') ?? -1,
+    );
+    return wrap;
+  }
+
   Future<Map<String, dynamic>> openIncoming({
     required Map<String, dynamic> wrap,
+    required String expectedChannelId,
+    required int expectedEpoch,
     required String streamSeedHex,
     required String streamPubkey,
   }) => openWrap(
     wrap: wrap,
+    expectedChannelId: expectedChannelId,
+    expectedEpoch: expectedEpoch,
     streamSeedHex: streamSeedHex,
     streamPubkey: streamPubkey,
   );

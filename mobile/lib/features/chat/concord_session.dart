@@ -13,11 +13,19 @@ const String concordRelayUrl = String.fromEnvironment(
   defaultValue: 'wss://relay.staging.dvines.org',
 );
 
-/// Deterministic public POC stream key. Real communities and private
-/// channels are unsupported by this session.
+/// Stable 32-byte identifier for a channel in the public POC catalog.
+String pocChannelIdFor(String channel) =>
+    sha256.convert(utf8.encode('concord-poc-channel:$channel')).toString();
+
+/// Deterministic public POC key; not a real community membership grant.
 GroupKey pocStreamKeyFor(String channelId) {
   final secret = sha256.convert(utf8.encode('concord-poc-stream:$channelId'));
-  return groupKey('concord/channel', secret.toString(), '00' * 32, epoch: 0);
+  return groupKey(
+    'concord/channel',
+    secret.toString(),
+    pocChannelIdFor(channelId),
+    epoch: 0,
+  );
 }
 
 class _UnavailableCipher implements StreamCipher {
@@ -37,7 +45,7 @@ class _UnavailableCipher implements StreamCipher {
 ConcordRepository buildConcordRepository({
   required String? pubkey,
   required NostrSigner? signer,
-  required String streamPubkey,
+  required AccountScopedStore store,
 }) {
   final relay = WebSocketRelayGateway(concordRelayUrl);
   final sealed = signer != null && pubkey != null
@@ -63,7 +71,7 @@ ConcordRepository buildConcordRepository({
       : null;
   return ConcordRepository(
     relay: relay,
-    store: InMemoryConcordStore(pubkey ?? 'anonymous'),
+    store: store,
     cipher: _UnavailableCipher(),
     sealedTransport: sealed,
   );

@@ -117,6 +117,8 @@ void main() {
         );
         final opened = await bobTransport.openIncoming(
           wrap: relay.published.single,
+          expectedChannelId: channelId,
+          expectedEpoch: 0,
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,
         );

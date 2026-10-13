@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,5 +40,69 @@ void main() {
         findsOneWidget,
       );
     });
+    for (final accepted in [false, true]) {
+      testWidgets('composer clears only when durably accepted: $accepted', (
+        tester,
+      ) async {
+        final cubit = _ChatCubit();
+        when(() => cubit.state).thenReturn(const ChatState());
+        when(cubit.visibleMessages).thenReturn([]);
+        whenListen(cubit, const Stream<ChatState>.empty());
+        when(
+          () => cubit.send(
+            communityId: any(named: 'communityId'),
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            nowMilliseconds: any(named: 'nowMilliseconds'),
+          ),
+        ).thenAnswer((_) async => accepted);
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'keep this draft');
+        await tester.tap(find.byType(DivineIconButton).last);
+        await tester.pump();
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          accepted ? '' : 'keep this draft',
+        );
+      });
+    }
+    testWidgets(
+      'failed initial loading disables the composer and offers retry',
+      (tester) async {
+        final cubit = _ChatCubit();
+        when(() => cubit.state).thenReturn(const ChatState(loadFailed: true));
+        when(cubit.visibleMessages).thenReturn([]);
+        whenListen(cubit, const Stream<ChatState>.empty());
+        when(cubit.start).thenAnswer((_) async {});
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+          isFalse,
+        );
+        await tester.tap(
+          find.text(lookupAppLocalizations(const Locale('en')).commonRetry),
+        );
+        verify(cubit.start).called(1);
+      },
+    );
   });
 }

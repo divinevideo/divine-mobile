@@ -26,6 +26,7 @@ void main() {
       );
       when(() => repository.timeline(now: 3))
           .thenReturn(FoldedThread([general, introduction], {}));
+      when(() => repository.pendingIds).thenReturn([]);
       final cubit = ChatCubit(repository)..refresh(now: 3);
       addTearDown(cubit.close);
       expect(cubit.visibleMessages(), [general]);

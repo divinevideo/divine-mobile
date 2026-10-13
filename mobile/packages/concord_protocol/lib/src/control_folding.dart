@@ -18,7 +18,7 @@ FoldedThread foldControls(
   final byId = <String, ChatMessage>{for (final m in base) m.id: m};
   final reactions = <String, Map<String, int>>{};
   final sorted = [...controls]
-    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    ..sort((a, b) => _order(a.createdAt, a.ms, a.id, b.createdAt, b.ms, b.id));
   for (final c in sorted) {
     switch (c.type) {
       case ControlType.edit:
@@ -30,6 +30,7 @@ FoldedThread foldControls(
             author: m.author,
             body: m.body,
             createdAt: m.createdAt,
+            ms: m.ms,
             threadRootId: m.threadRootId,
             expiresAt: m.expiresAt,
             editedBody: c.body,
@@ -47,6 +48,13 @@ FoldedThread foldControls(
     }
   }
   final messages = byId.values.where((m) => !m.isExpiredAt(now)).toList()
-    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    ..sort((a, b) => _order(a.createdAt, a.ms, a.id, b.createdAt, b.ms, b.id));
   return FoldedThread(messages, reactions);
+}
+
+int _order(int aTime, int aMs, String aId, int bTime, int bMs, String bId) {
+  final seconds = aTime.compareTo(bTime);
+  if (seconds != 0) return seconds;
+  final milliseconds = aMs.compareTo(bMs);
+  return milliseconds == 0 ? aId.compareTo(bId) : milliseconds;
 }

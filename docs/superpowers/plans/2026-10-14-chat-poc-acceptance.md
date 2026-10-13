@@ -17,35 +17,51 @@ The Messages UI provides Direct / Rooms behind the disabled-by-default
 reuses the current Divine account. It does not establish membership or staff
 permissions. UI widget tests are not evidence of relay interoperability.
 
-Observed runtime gaps in this revision:
+## Review fixes and remaining boundaries
 
-- `mobile/lib/features/chat/concord_session.dart` defaults to
-  wss://relay.staging.dvines.org, not the planned dedicated chat relay.
-- The Page/Cubit does not call `subscribeWraps` or ingest incoming relay
-  messages. Connect, subscribe, verify/decrypt, ingest, and emit need an
-  account/channel-scoped lifecycle, including cancellation and reconnect.
-- `mobile/packages/concord_repository/lib/src/websocket_relay.dart` writes
-  `EVENT` to the socket without awaiting its matching relay `OK`. It does not
-  handle `CLOSED`, `NOTICE`, `EOSE`, authentication, or reconnect as state.
-  A successful local send is therefore not proof of delivery.
-- The app binds `InMemoryConcordStore`. Package restore/retry tests do not
-  demonstrate persistence across app termination. The retry path also uses
-  the legacy cipher path, while the app supplies an unavailable legacy cipher.
-- The catalog and fallback keys are a deterministic public POC. Real invite
-  admission, membership/list loading, roster enforcement and key rotations
-  must replace that wiring before any real community is exposed.
-- Community List merging is currently a shallow entry merge; full CORD-02
-  fragment freshness, tombstones, unknown-field preservation and key-vault
-  semantics still need independent interoperability tests.
-- Expiry helpers exist, but no app lifecycle invokes purge. Receiver-side
-  CORD-08 expiry cannot wait for phase-2 timer controls.
+The combined PR now has a receiving lifecycle, verified channel/epoch-bound
+wrap ingestion, relay acknowledgements, failure/retry UI and subscription
+reconnection. The app stores encrypted wraps and pending delivery state in a
+new account/relay/channel-scoped Drift store. Retrying republishes the original
+signed wrap. It does not invoke the legacy cipher or ask the signer to sign
+again. Verified relay echoes also reconcile delivery after a lost acknowledgement.
 
-The held-key path described above was removed during integration in response
-to review: it selected channels without community scope and accepted stale
-list fragments. A local reproduction downgraded root epoch 2 to 1. This PR
-now supports only the labeled public POC streams; it does not ingest lists or
-resolve held private keys. Real Community List sync remains a release gate.
-Other runtime gaps above remain explicit POC limitations.
+Receiver expiry is enforced at ingest, display and periodic local purge. Outer
+wraps copy the signed expiration for NIP-40 relays. Delete tombstones do not
+expire. Timer controls and authoritative community timer state remain phase 2.
+
+Regression coverage includes rejected/lost acknowledgements, disconnects,
+restart replay, deduplication, expiry, interrupted startup, account isolation,
+failed initial reads, signer refusal and draft retention. Protocol validation,
+subsecond ordering and the browser transport have native and Chrome tests.
+These automated tests do not replace physical-device or independent-client
+acceptance below.
+
+Remaining boundaries:
+
+- The endpoint still defaults to wss://relay.staging.dvines.org. The dedicated
+  POC relay and its TLS/retention/moderation contract still need verification.
+- The catalog and keys are explicitly public test material. Real invite
+  admission, Community List sync, owner-rooted roster authority and rekeying
+  are not implemented by this PR. The incomplete held-key/list path was
+  removed using the reviewer's proposed option. `fragmentIndex` now names the
+  kind-33302 `d` coordinate accurately; it is not a community id.
+- Report/block/mute, thread composition, timer administration and a full
+  community lifecycle remain outside this POC. The unsupported local thread
+  action was removed from the screen.
+- The standalone relay transport remains intentional for the explicitly
+  configured POC relay. Shared NIP-44/relay adapters are an architectural
+  suggestion, not an interoperability prerequisite. Existing DMs are unchanged.
+
+### Finding the rooms in a review build
+
+The flag remains internal and off by default. In the latest PR preview, enable
+developer mode by tapping the app version seven times on the main Settings
+screen. Then open **App preferences → Experimental Features**, scroll to the
+bottom, and enable **Concord Chat (POC)**. Return to **Messages → Rooms** to see
+`#general` and `#introductions`. This exact path was verified in the browser;
+the flag is not listed under Developer Options. A new preview origin has its
+own preferences and may require enabling it again.
 
 ## Relay evidence and required contract
 
@@ -93,10 +109,13 @@ capacity and restart recovery on an isolated relay.
 
 - [ ] Integrate UI and backend into one PR targeting main; run combined CI.
 - [ ] Fix TLS and choose one explicit POC relay in both web and mobile builds.
-- [ ] Wire incoming subscriptions and matching publish acknowledgements;
+- [x] Wire incoming subscriptions and matching publish acknowledgements;
       show rejected/pending sends honestly and preserve failed-send drafts.
-- [ ] Bind durable account-scoped storage; test process-kill recovery, sealed
-      retry, deduplication, offline catch-up, socket loss and channel switching.
+      Verified through automated transport/repository/UI tests.
+- [x] Bind durable account-scoped storage; test database reopen, sealed retry,
+      deduplication, socket loss, account/room isolation and expiry.
+- [ ] Exercise process-kill recovery, background/resume and offline catch-up
+      on real devices and the deployed preview.
 - [ ] On physical iOS and Android plus web, exchange text in both directions;
       an independent receiving client must display each accepted message.
       Repeat with local and Keycast signers using the existing Divine login.

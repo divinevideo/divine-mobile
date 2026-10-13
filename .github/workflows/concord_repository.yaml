@@ -25,4 +25,24 @@ jobs:
     with:
       working_directory: "mobile/packages/concord_repository"
       flutter_version: "3.47.2"
-      min_coverage: 0
+      min_coverage: 90
+
+  browser:
+    name: Browser compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: mobile/packages/concord_repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Run protocol and transport tests in Chrome
+        run: dart test --platform chrome test/sealed_validation_test.dart test/sealed_outbox_test.dart test/websocket_relay_browser_test.dart

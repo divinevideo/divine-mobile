@@ -1,4 +1,6 @@
 // MPL-2.0
+import 'dart:async';
+
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,6 +27,11 @@ class ChatState {
     this.selectedChannelId = 'general',
     this.threadRootId,
     this.acceptedInvite = false,
+    this.sending = false,
+    this.loading = false,
+    this.sendFailed = false,
+    this.loadFailed = false,
+    this.pendingIds = const [],
   });
   final List<ChatMessage> messages;
   final Map<String, Map<String, int>> reactions;
@@ -33,6 +40,11 @@ class ChatState {
   final String selectedChannelId;
   final String? threadRootId;
   final bool acceptedInvite;
+  final bool sending;
+  final bool loading;
+  final bool sendFailed;
+  final bool loadFailed;
+  final List<String> pendingIds;
 
   ChatState copyWith({
     List<ChatMessage>? messages,
@@ -42,6 +54,11 @@ class ChatState {
     String? threadRootId,
     bool clearThread = false,
     bool? acceptedInvite,
+    bool? sending,
+    bool? loading,
+    bool? sendFailed,
+    bool? loadFailed,
+    List<String>? pendingIds,
   }) => ChatState(
     messages: messages ?? this.messages,
     reactions: reactions ?? this.reactions,
@@ -50,6 +67,11 @@ class ChatState {
     selectedChannelId: selectedChannelId ?? this.selectedChannelId,
     threadRootId: clearThread ? null : (threadRootId ?? this.threadRootId),
     acceptedInvite: acceptedInvite ?? this.acceptedInvite,
+    sending: sending ?? this.sending,
+    loading: loading ?? this.loading,
+    sendFailed: sendFailed ?? this.sendFailed,
+    loadFailed: loadFailed ?? this.loadFailed,
+    pendingIds: pendingIds ?? this.pendingIds,
   );
 }
 
@@ -60,8 +82,53 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this._repo, {
     this.pocStreamForChannel,
     this.sealedAuthor = '',
-  }) : super(const ChatState());
+    this.channelIdFor,
+    this.ownsRepository = false,
+  }) : super(ChatState(loading: ownsRepository));
   final ConcordRepository _repo;
+  final String Function(String channel)? channelIdFor;
+  final bool ownsRepository;
+  StreamSubscription<void>? _updates;
+  bool _starting = false;
+
+  Future<void> start() async {
+    if (_starting || isClosed) return;
+    _starting = true;
+    emitIfOpen(state.copyWith(loading: true, loadFailed: false));
+    _updates ??= _repo.changes.listen(
+      (_) {
+        refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
+      },
+      onError: (Object _, StackTrace _) {
+        emitIfOpen(state.copyWith(loadFailed: true));
+      },
+    );
+    final stream = pocStreamForChannel?.call(state.selectedChannelId);
+    try {
+      if (stream == null) throw StateError('missing channel key');
+      await _repo.startChannel(
+        channelId:
+            channelIdFor?.call(state.selectedChannelId) ??
+            state.selectedChannelId,
+        epoch: 0,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+      );
+      refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    } on Object {
+      emitIfOpen(state.copyWith(loadFailed: true));
+    } finally {
+      _starting = false;
+      emitIfOpen(state.copyWith(loading: false));
+    }
+  }
+
+  @override
+  Future<void> close() async {
+    await _updates?.cancel();
+    if (ownsRepository) await _repo.close();
+    return super.close();
+  }
 
   /// Signed-in pubkey used as sealed rumor author (session identity).
   final String sealedAuthor;
@@ -70,7 +137,13 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
-    emitIfOpen(state.copyWith(messages: t.messages, reactions: t.reactions));
+    emitIfOpen(
+      state.copyWith(
+        messages: t.messages,
+        reactions: t.reactions,
+        pendingIds: _repo.pendingIds,
+      ),
+    );
   }
 
   void selectChannel(String communityId, String channelId) {
@@ -108,43 +181,74 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     return state.messages
         .where(
           (m) =>
-              m.channelId == state.selectedChannelId &&
+              m.channelId ==
+                  (channelIdFor?.call(state.selectedChannelId) ??
+                      state.selectedChannelId) &&
               (root == null || m.id == root || m.threadRootId == root),
         )
         .toList();
   }
 
-  Future<void> send({
+  /// Returns whether the composer text was accepted into the durable outbox.
+  Future<bool> send({
     required String communityId,
     required String channelId,
     required String author,
     required String body,
-    required int now,
+    required int nowMilliseconds,
   }) async {
-    final stream = pocStreamForChannel?.call(channelId);
-    final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
-    if (_repo.sealedTransport != null &&
-        stream != null &&
-        effectiveAuthor.isNotEmpty) {
-      await _repo.sendSealedMessage(
-        channelId: channelId,
-        author: effectiveAuthor,
-        body: body,
-        createdAt: now,
-        ms: now % 1000,
-        streamSeedHex: stream.seedHex,
-        streamPubkey: stream.pubkey,
-      );
-    } else {
-      await _repo.send(
-        communityId: communityId,
-        channelId: channelId,
-        author: author,
-        body: body,
-        createdAt: now,
-      );
+    if (state.sending || state.loading || state.loadFailed || isClosed) {
+      return false;
+    }
+    final before = _repo.pendingIds.toSet();
+    final now = nowMilliseconds ~/ 1000;
+    emitIfOpen(state.copyWith(sending: true, sendFailed: false));
+    try {
+      final stream = pocStreamForChannel?.call(channelId);
+      final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
+      if (_repo.sealedTransport != null &&
+          stream != null &&
+          effectiveAuthor.isNotEmpty) {
+        await _repo.sendSealedMessage(
+          channelId: channelIdFor?.call(channelId) ?? channelId,
+          author: effectiveAuthor,
+          body: body,
+          createdAt: now,
+          ms: nowMilliseconds % 1000,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+      } else {
+        await _repo.send(
+          communityId: communityId,
+          channelId: channelId,
+          author: author,
+          body: body,
+          createdAt: now,
+        );
+      }
+      refresh(now: now);
+      return true;
+    } on Object {
+      emitIfOpen(state.copyWith(sendFailed: true));
+    } finally {
+      emitIfOpen(state.copyWith(sending: false));
     }
     refresh(now: now);
+    return _repo.pendingIds.any((id) => !before.contains(id));
+  }
+
+  Future<void> retry(String id) async {
+    if (state.sending || state.loading || state.loadFailed || isClosed) return;
+    emitIfOpen(state.copyWith(sending: true, sendFailed: false));
+    try {
+      await _repo.retryPending(messageId: id);
+    } on Object {
+      emitIfOpen(state.copyWith(sendFailed: true));
+    } finally {
+      refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
+      emitIfOpen(state.copyWith(sending: false));
+    }
   }
 
   Future<void> acceptInvite(String communityId) async {

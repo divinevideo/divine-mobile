@@ -1,6 +1,4 @@
 // MPL-2.0
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -48,6 +46,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Text(context.l10n.messagesPublicTestDisclosure),
               ),
+              if (state.loading) const LinearProgressIndicator(),
+              if (state.loadFailed) ...[
+                Text(context.l10n.dmConversationLoadError),
+                TextButton(
+                  onPressed: state.loading ? null : cubit.start,
+                  child: Text(context.l10n.commonRetry),
+                ),
+              ],
+              if (state.sendFailed) Text(context.l10n.dmSendFailedMessage),
               Expanded(
                 child: messages.isEmpty
                     ? Center(child: Text(context.l10n.inboxEmptyTitle))
@@ -59,9 +66,20 @@ class _ChatScreenState extends State<ChatScreen> {
                           return ListTile(
                             title: Text(m.effectiveBody),
                             subtitle: Text(
-                              r == null ? m.author : '$r',
+                              state.pendingIds.contains(m.id)
+                                  ? (state.sending
+                                        ? context.l10n.authSending
+                                        : context.l10n.dmStatusFailed)
+                                  : (r == null ? m.author : '$r'),
                             ),
-                            onTap: () => cubit.openThread(m.id),
+                            trailing: state.pendingIds.contains(m.id)
+                                ? TextButton(
+                                    onPressed: state.sending
+                                        ? null
+                                        : () => cubit.retry(m.id),
+                                    child: Text(context.l10n.dmSendFailedRetry),
+                                  )
+                                : null,
                           );
                         },
                       ),
@@ -71,6 +89,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      enabled:
+                          !state.sending && !state.loading && !state.loadFailed,
                       decoration: InputDecoration(
                         hintText: context.l10n.profileMessageLabel,
                       ),
@@ -79,20 +99,24 @@ class _ChatScreenState extends State<ChatScreen> {
                   DivineIconButton(
                     icon: DivineIconName.paperPlaneTilt,
                     semanticLabel: context.l10n.dmMessageSendLabel,
-                    onPressed: () {
-                      final text = _controller.text.trim();
-                      if (text.isEmpty) return;
-                      _controller.clear();
-                      unawaited(
-                        context.read<ChatCubit>().send(
-                          communityId: state.selectedCommunityId,
-                          channelId: state.selectedChannelId,
-                          author: '',
-                          body: text,
-                          now: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                        ),
-                      );
-                    },
+                    onPressed:
+                        state.sending || state.loading || state.loadFailed
+                        ? null
+                        : () async {
+                            final text = _controller.text.trim();
+                            if (text.isEmpty) return;
+                            final accepted = await context
+                                .read<ChatCubit>()
+                                .send(
+                                  communityId: state.selectedCommunityId,
+                                  channelId: state.selectedChannelId,
+                                  author: '',
+                                  body: text,
+                                  nowMilliseconds:
+                                      DateTime.now().millisecondsSinceEpoch,
+                                );
+                            if (mounted && accepted) _controller.clear();
+                          },
                   ),
                 ],
               ),

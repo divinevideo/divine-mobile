@@ -1,14 +1,18 @@
 // ABOUTME: Account-scoped dependency wiring for native Concord POC screens.
 // ABOUTME: Reuses the active signer and disposes UI state on account changes.
 
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
+import 'package:openvine/features/chat/concord_store.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/router/route_error_screen.dart';
 
 /// Selects only channels present in the current POC catalog.
@@ -43,16 +47,23 @@ class ChatPage extends ConsumerWidget {
         signer == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
+    final database = ref.watch(databaseProvider);
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId)),
       create: (_) => ChatCubit(
         buildConcordRepository(
           pubkey: pubkey,
           signer: signer,
-          streamPubkey: pubkey,
+          store: DriftConcordStore(
+            dao: database.concordStoreDao,
+            account: pubkey,
+            scope: '$concordRelayUrl/${channelId ?? 'general'}',
+          ),
         ),
         pocStreamForChannel: pocStreamKeyFor,
         sealedAuthor: pubkey,
+        channelIdFor: pocChannelIdFor,
+        ownsRepository: true,
       ),
       child: _ChatSelection(communityId: communityId, channelId: channelId),
     );
@@ -79,6 +90,7 @@ class _ChatSelectionState extends State<_ChatSelection> {
       communityId: widget.communityId,
       channelId: widget.channelId,
     );
+    if (_valid) unawaited(context.read<ChatCubit>().start());
   }
 
   @override

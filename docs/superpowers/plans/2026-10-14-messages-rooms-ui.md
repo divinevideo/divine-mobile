@@ -58,3 +58,16 @@ remote backend head as an ancestor. The backend session's five local picks
 contain the same UI/docs; they must not be applied a second time. The unfinished
 held-key path was removed per the reviewer's offered option because real
 Community List sync is absent. Public POC behavior and the disabled gate remain.
+
+
+## Review remediation
+
+Rabble subsequently requested the remaining review findings be addressed in
+this same PR. The session now binds a durable encrypted-wrap store, restores
+and subscribes to the selected room, surfaces unacknowledged messages with a
+retry action, preserves drafts when signing fails, and blocks sending after
+failed initial restoration. Room disposal cancels listeners, socket and expiry
+work. The milliseconds tag uses the actual subsecond remainder and channel
+bindings use full 32-byte ids. Protocol and transport validation have independent
+native and Chrome regression tests. The acceptance document records the exact
+preview toggle path and the remaining real-community/device rollout gates.
