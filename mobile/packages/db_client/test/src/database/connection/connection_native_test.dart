@@ -2869,8 +2869,6 @@ File _unwritableFile(String path) {
   return file;
 }
 
-/// Runs one recovery whose replay fails and whose restore damages the live
-/// database before failing, the state a full volume or a kill can leave.
 File _unreadableFile(String path) {
   final file = _MockFile();
   when(() => file.path).thenReturn(path);
@@ -2881,6 +2879,8 @@ File _unreadableFile(String path) {
   return file;
 }
 
+/// Runs one recovery whose replay fails and whose restore damages the live
+/// database before failing, the state a full volume or a kill can leave.
 void _failRestorePartWay(Directory root, String dbPath, String key) {
   var configurations = 0;
   expect(
