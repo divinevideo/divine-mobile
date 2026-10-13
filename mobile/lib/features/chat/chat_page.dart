@@ -10,9 +10,12 @@ import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 
 /// Selects only channels present in the current POC catalog.
@@ -41,7 +44,16 @@ class ChatPage extends ConsumerWidget {
     final auth = ref.watch(authServiceProvider);
     final pubkey = auth.currentPublicKeyHex;
     final signer = auth.currentIdentity;
-    if (!auth.isAuthenticated ||
+    // The route redirect only runs on entry. Watching the same two gates here
+    // closes a room that is already open when the flag or the account's
+    // messaging restriction changes underneath it.
+    final enabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.concordChat),
+    );
+    final restricted = ref.watch(isDmRestrictedProvider);
+    if (!enabled ||
+        restricted ||
+        !auth.isAuthenticated ||
         pubkey == null ||
         pubkey.isEmpty ||
         signer == null) {
