@@ -24,7 +24,8 @@ class MessagesHomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(currentAuthStateProvider);
-    final account = ref.watch(authServiceProvider).currentPublicKeyHex;
+    final auth = ref.watch(authServiceProvider);
+    final account = auth.isAuthenticated ? auth.currentPublicKeyHex : null;
     final enabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.concordChat),
     );

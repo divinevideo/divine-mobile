@@ -37,7 +37,10 @@ class ChatPage extends ConsumerWidget {
     final auth = ref.watch(authServiceProvider);
     final pubkey = auth.currentPublicKeyHex;
     final signer = auth.currentIdentity;
-    if (pubkey == null || pubkey.isEmpty || signer == null) {
+    if (!auth.isAuthenticated ||
+        pubkey == null ||
+        pubkey.isEmpty ||
+        signer == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
     return BlocProvider(
