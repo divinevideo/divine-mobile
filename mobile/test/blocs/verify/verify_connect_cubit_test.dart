@@ -50,15 +50,32 @@ const _youtube = VerifierPlatform(
   supported: true,
 );
 
-VerificationResult _result({required bool verified, String? code}) =>
-    VerificationResult(
-      platform: 'github',
-      identity: 'octocat',
-      verified: verified,
-      checkedAt: 1,
-      cached: false,
-      code: code,
-    );
+const _tiktok = VerifierPlatform(
+  key: 'tiktok',
+  label: 'TikTok',
+  supported: true,
+);
+const _mastodon = VerifierPlatform(
+  key: 'mastodon',
+  label: 'Mastodon',
+  supported: true,
+);
+
+VerificationResult _result({
+  required bool verified,
+  String? code,
+  String? canonicalProof,
+  String? canonicalIdentity,
+}) => VerificationResult(
+  platform: 'github',
+  identity: 'octocat',
+  verified: verified,
+  checkedAt: 1,
+  cached: false,
+  code: code,
+  canonicalProof: canonicalProof,
+  canonicalIdentity: canonicalIdentity,
+);
 
 void main() {
   group(VerifyConnectCubit, () {
@@ -217,6 +234,72 @@ void main() {
           expect(claim.proof, equals('abc'));
           // Handed back so the dashboard can render it straight away.
           expect(cubit.state.linkedClaim, equals(claim));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the post number the verifier returns, not the pasted link',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              canonicalProof: '7123456789012345678',
+            ),
+          );
+        },
+        build: () => build(_tiktok),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://vm.tiktok.com/ZMabc123/');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          // The verifier is asked about the link as pasted.
+          final checked =
+              verify(
+                    () => repository.verifyClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(checked.proof, equals('https://vm.tiktok.com/ZMabc123/'));
+
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('alice'));
+          expect(claim.proof, equals('7123456789012345678'));
+          expect(cubit.state.linkedClaim, equals(claim));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the account the verifier tidied, not the one typed',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              canonicalIdentity: 'mastodon.example/@alice',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('mastodon.example/@alice'));
+          expect(claim.proof, equals('110123'));
+          expect(cubit.state.identity, equals('mastodon.example/@alice'));
         },
       );
 

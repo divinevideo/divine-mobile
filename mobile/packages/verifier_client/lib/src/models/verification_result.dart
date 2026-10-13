@@ -15,6 +15,8 @@ class VerificationResult extends Equatable {
     required this.cached,
     this.error,
     this.code,
+    this.canonicalProof,
+    this.canonicalIdentity,
   });
 
   /// Parses a [VerificationResult] from the verifier API JSON shape.
@@ -27,6 +29,8 @@ class VerificationResult extends Equatable {
       cached: json['cached'] as bool? ?? false,
       error: json['error'] as String?,
       code: json['code'] as String?,
+      canonicalProof: _nonEmpty(json['canonical_proof'] as String?),
+      canonicalIdentity: _nonEmpty(json['canonical_identity'] as String?),
     );
   }
 
@@ -58,6 +62,22 @@ class VerificationResult extends Equatable {
   /// and must keep it for values a newer service invents.
   final String? code;
 
+  /// The proof to publish instead of the one sent, when the verifier
+  /// confirmed the claim and reduced the proof to a simpler stable form: a
+  /// TikTok share or photo link becomes its post number, for example.
+  ///
+  /// Null when the proof sent was already in that form, on a rejection, and
+  /// from deployments older than the field.
+  final String? canonicalProof;
+
+  /// The account to publish instead of the one sent, when the verifier
+  /// confirmed the claim and tidied the account: a Mastodon `@user@server`
+  /// becomes `server/@user`, for example.
+  ///
+  /// Null when the account sent was already in that form, on a rejection,
+  /// and from deployments older than the field.
+  final String? canonicalIdentity;
+
   @override
   List<Object?> get props => [
     platform,
@@ -67,5 +87,10 @@ class VerificationResult extends Equatable {
     cached,
     error,
     code,
+    canonicalProof,
+    canonicalIdentity,
   ];
 }
+
+String? _nonEmpty(String? value) =>
+    value == null || value.isEmpty ? null : value;

@@ -118,7 +118,18 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
       );
       return _fail(verifyErrorForCode(result.code));
     }
-    await _publish(claim);
+    // A verified answer can carry a cleaner form of what was sent: a TikTok
+    // share link reduced to its post number, or a Mastodon `@user@server`
+    // rewritten as `server/@user`. That form is what other readers of the
+    // claim can check, so it is what gets published.
+    await _publish(
+      IdentityClaim(
+        pubkey: claim.pubkey,
+        platform: claim.platform,
+        identity: result.canonicalIdentity ?? claim.identity,
+        proof: result.canonicalProof ?? claim.proof,
+      ),
+    );
   }
 
   /// Runs the platform's OAuth login, then publishes the claim it confirms.
