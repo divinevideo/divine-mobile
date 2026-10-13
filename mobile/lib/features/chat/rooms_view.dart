@@ -17,51 +17,57 @@ class RoomsView extends StatelessWidget {
   final void Function(String communityId, String channelId) onRoomSelected;
 
   @override
-  Widget build(BuildContext context) => ListView(
-    key: const PageStorageKey('messages-rooms'),
-    padding: const EdgeInsets.only(bottom: 24),
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.messagesPublicTestRooms,
-              style: VineTheme.titleMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(context.l10n.messagesPublicTestDisclosure),
-          ],
-        ),
-      ),
-      if (communities.isEmpty)
+  Widget build(BuildContext context) => Material(
+    // The Messages tab paints a coloured box behind this list. Without a
+    // Material of its own, each ListTile's ink is hidden by that box and the
+    // framework reports it on every build.
+    type: MaterialType.transparency,
+    child: ListView(
+      key: const PageStorageKey('messages-rooms'),
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(context.l10n.messagesNoRooms),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.messagesPublicTestRooms,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(context.l10n.messagesPublicTestDisclosure),
+            ],
+          ),
         ),
-      for (final community in communities) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Semantics(
-            header: true,
-            child: Text(
-              community.name,
-              style: VineTheme.titleMediumFont(
-                color: context.vineColors.primaryText,
+        if (communities.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(context.l10n.messagesNoRooms),
+          ),
+        for (final community in communities) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Semantics(
+              header: true,
+              child: Text(
+                community.name,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
               ),
             ),
           ),
-        ),
-        for (final channel in community.channels)
-          ListTile(
-            title: Text('#$channel'),
-            subtitle: Text(context.l10n.listVisibilityPublic),
-            onTap: () => onRoomSelected(community.id, channel),
-          ),
+          for (final channel in community.channels)
+            ListTile(
+              title: Text('#$channel'),
+              subtitle: Text(context.l10n.listVisibilityPublic),
+              onTap: () => onRoomSelected(community.id, channel),
+            ),
+        ],
       ],
-    ],
+    ),
   );
 }

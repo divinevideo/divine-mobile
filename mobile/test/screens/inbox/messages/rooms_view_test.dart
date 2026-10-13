@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
@@ -32,6 +33,31 @@ void main() {
       expect(find.text('Second'), findsOneWidget);
       await tester.tap(find.text('#general').last);
       expect(selected, ('two', 'general'));
+    });
+
+    testWidgets('rows draw cleanly on the coloured Messages surface', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            // The Messages tab hosts this list inside a coloured box.
+            body: ColoredBox(
+              color: VineTheme.surfaceBackground,
+              child: RoomsView(
+                communities: const [
+                  ChatCommunity('one', 'First', ['general']),
+                ],
+                onRoomSelected: (_, _) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('#general'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('empty list does not invent a join action or a room', (
