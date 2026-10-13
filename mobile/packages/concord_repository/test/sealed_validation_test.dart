@@ -281,7 +281,7 @@ void main() {
       for (final changes in <Map<String, dynamic>>[
         {'created_at': 1.5},
         {'created_at': -1},
-        {'kind': 9.0},
+        {'kind': 9.5},
         {'content': null},
         {'pubkey': _author.toUpperCase()},
         {
