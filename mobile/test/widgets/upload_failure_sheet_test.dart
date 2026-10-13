@@ -83,6 +83,37 @@ void main() {
         : MockGoRouterProvider(goRouter: goRouter, child: app);
   }
 
+  // Rejects only the push to [failingPath], so each navigation site can be
+  // checked on its own.
+  MockGoRouter buildGoRouter({String? failingPath}) {
+    final goRouter = MockGoRouter();
+    when(
+      () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+    ).thenAnswer((invocation) {
+      final location = invocation.positionalArguments.first as String;
+      return location == failingPath
+          ? Future<void>.error(Exception('push failed'))
+          : Future<void>.value();
+    });
+    return goRouter;
+  }
+
+  Future<void> openFailureSheet(
+    WidgetTester tester, {
+    required PublishErrorKind kind,
+    required MockGoRouter goRouter,
+  }) async {
+    final upload = BackgroundUpload(
+      draft: mockDraft,
+      progress: 1,
+      result: PublishError(kind),
+    );
+
+    await tester.pumpWidget(buildSubject(upload: upload, goRouter: goRouter));
+    await tester.tap(find.text('Open Sheet'));
+    await tester.pumpAndSettle();
+  }
+
   group('showUploadFailureSheet', () {
     group('renders', () {
       testWidgets('Upload Failed title', (tester) async {
@@ -358,6 +389,126 @@ void main() {
           ).called(1);
         },
       );
+
+      group('snackbar View action', () {
+        testWidgets('after Save to Drafts opens drafts and dismisses it', (
+          tester,
+        ) async {
+          final goRouter = buildGoRouter();
+          await openFailureSheet(
+            tester,
+            kind: PublishErrorKind.generic,
+            goRouter: goRouter,
+          );
+          await tester.tap(
+            find.text(l10n.uploadFailureSheetSaveToDraftsButton),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
+            findsOneWidget,
+          );
+
+          await tester.tap(find.text(l10n.contentWarningView));
+          await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+          expect(
+            find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
+            findsNothing,
+          );
+        });
+
+        testWidgets('after Account status opens drafts and dismisses it', (
+          tester,
+        ) async {
+          final goRouter = buildGoRouter();
+          await openFailureSheet(
+            tester,
+            kind: PublishErrorKind.accountRestricted,
+            goRouter: goRouter,
+          );
+          await tester.tap(
+            find.text(l10n.uploadFailureSheetAccountStatusButton),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
+            findsOneWidget,
+          );
+
+          await tester.tap(find.text(l10n.contentWarningView));
+          await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+          expect(
+            find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
+            findsNothing,
+          );
+        });
+      });
+
+      group('when navigation is rejected', () {
+        testWidgets('Account status push does not escape as an unhandled '
+            'error', (tester) async {
+          final goRouter = buildGoRouter(failingPath: RoutePaths.accountStatus);
+          await openFailureSheet(
+            tester,
+            kind: PublishErrorKind.accountRestricted,
+            goRouter: goRouter,
+          );
+
+          await tester.tap(
+            find.text(l10n.uploadFailureSheetAccountStatusButton),
+          );
+          await tester.pumpAndSettle();
+
+          verify(
+            () => goRouter.push<void>(RoutePaths.accountStatus, extra: true),
+          ).called(1);
+          expect(tester.takeException(), isNull);
+        });
+
+        testWidgets('View after Save to Drafts does not escape as an '
+            'unhandled error', (tester) async {
+          final goRouter = buildGoRouter(failingPath: RoutePaths.libraryDrafts);
+          await openFailureSheet(
+            tester,
+            kind: PublishErrorKind.generic,
+            goRouter: goRouter,
+          );
+          await tester.tap(
+            find.text(l10n.uploadFailureSheetSaveToDraftsButton),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.contentWarningView));
+          await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+          expect(tester.takeException(), isNull);
+        });
+
+        testWidgets('View after Account status does not escape as an '
+            'unhandled error', (tester) async {
+          final goRouter = buildGoRouter(failingPath: RoutePaths.libraryDrafts);
+          await openFailureSheet(
+            tester,
+            kind: PublishErrorKind.accountRestricted,
+            goRouter: goRouter,
+          );
+          await tester.tap(
+            find.text(l10n.uploadFailureSheetAccountStatusButton),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.contentWarningView));
+          await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+          expect(tester.takeException(), isNull);
+        });
+      });
     });
   });
 }
