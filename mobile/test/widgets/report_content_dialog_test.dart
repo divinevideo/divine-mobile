@@ -214,22 +214,44 @@ void main() {
       expect(find.text(l10n.reportReasonOtherSubtitle), findsOneWidget);
     });
 
-    testWidgets('the note box shows for every reason, optional except under '
-        'Other', (tester) async {
+    testWidgets('the note box opens under whichever reason is picked, '
+        'optional except under Other', (tester) async {
       await setLargeSurface(tester);
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text(l10n.reportDetailsOptional), findsOneWidget);
+      expect(
+        find.byType(TextField),
+        findsNothing,
+        reason: 'the note belongs to a reason, so none shows before one',
+      );
 
-      for (final reason in ContentFilterReason.values) {
+      const reasons = ContentFilterReason.values;
+      for (final (index, reason) in reasons.indexed) {
         await tester.tap(find.text(l10n.reportReasonTitle(reason)));
         await tester.pumpAndSettle();
 
         final isOther = reason == ContentFilterReason.other;
         expect(find.byType(TextField), findsOneWidget, reason: '$reason');
+
+        // Directly under the chosen card, so a reporter who picks a reason
+        // near the top of the list sees the note without scrolling for it.
+        final field = tester.getRect(find.byType(TextField));
+        final subtitle = l10n.reportReasonSubtitle(reason);
+        expect(
+          field.top,
+          greaterThan(tester.getRect(find.text(subtitle)).bottom),
+          reason: 'the note sits below the $reason card',
+        );
+        if (index + 1 < reasons.length) {
+          final next = l10n.reportReasonTitle(reasons[index + 1]);
+          expect(
+            field.bottom,
+            lessThan(tester.getRect(find.text(next)).top),
+            reason: 'the note sits above the card after $reason',
+          );
+        }
         expect(
           find.text(l10n.reportDetailsRequired),
           isOther ? findsOneWidget : findsNothing,
@@ -960,6 +982,39 @@ void main() {
         await submit(tester);
 
         expect(sentNote(), visible.trim());
+      },
+    );
+
+    testWidgets(
+      'switching reasons moves the note box itself, so its state comes '
+      'along: the keyboard and the limit-reached notice stay',
+      (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await pick(tester, ContentFilterReason.other);
+        await tester.enterText(
+          find.byType(TextField),
+          'a' * (BugReportConfig.maxFreeTextFieldLength + 1),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.supportFieldLimitReached), findsOneWidget);
+
+        await pick(tester, ContentFilterReason.spam);
+
+        expect(
+          find.text(l10n.supportFieldLimitReached),
+          findsOneWidget,
+          reason:
+              'the text is still at the limit, so rebuilding the box fresh '
+              'under the new reason must not drop the notice',
+        );
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText)).focusNode,
+          isA<FocusNode>().having((n) => n.hasFocus, 'hasFocus', isTrue),
+          reason: 'a reporter mid-sentence must not lose the keyboard',
+        );
       },
     );
   });

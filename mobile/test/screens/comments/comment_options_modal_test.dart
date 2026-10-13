@@ -233,6 +233,10 @@ void main() {
               reason: '$reason',
             );
           }
+          // The note opens under the reason the reporter picks.
+          expect(find.byType(TextField), findsNothing);
+          await tester.tap(find.text(l10n.reportReasonSpam));
+          await tester.pumpAndSettle();
           expect(find.byType(TextField), findsOneWidget);
         },
       );

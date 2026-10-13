@@ -355,7 +355,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
   final TextEditingController _detailsController = TextEditingController();
   final FocusNode _detailsFocusNode = FocusNode();
   final GlobalKey _detailsFieldKey = GlobalKey();
-  final GlobalKey _otherCardKey = GlobalKey();
+  final GlobalKey _selectedCardKey = GlobalKey();
   final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
@@ -417,13 +417,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
       _scrollWhenKeyboardOpens = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        // Under Other, anchor its card so the chosen reason stays in view
-        // directly above the field it requires. Any other reason may be far
-        // up the list, so the field's own box is anchored instead.
-        final anchor = _selectedReason == ContentFilterReason.other
-            ? _otherCardKey
-            : _detailsBoxKey;
-        final ctx = anchor.currentContext;
+        // The note opens directly under the chosen card, so anchoring the
+        // card keeps the reason in view right above the field it qualifies.
+        final ctx = _selectedCardKey.currentContext;
         if (ctx == null) return;
         runDetached(
           Scrollable.ensureVisible(
@@ -505,7 +501,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
                     detailsController: _detailsController,
                     detailsFocusNode: _detailsFocusNode,
                     detailsFieldKey: _detailsFieldKey,
-                    otherCardKey: _otherCardKey,
+                    selectedCardKey: _selectedCardKey,
                     detailsBoxKey: _detailsBoxKey,
                     onDetailsChanged: _onDetailsChanged,
                     imageInsertionRejected: _imageInsertionRejected,
@@ -645,7 +641,7 @@ class _ReportFormBody extends StatelessWidget {
     required this.detailsController,
     required this.detailsFocusNode,
     required this.detailsFieldKey,
-    required this.otherCardKey,
+    required this.selectedCardKey,
     required this.detailsBoxKey,
     required this.onDetailsChanged,
     required this.imageInsertionRejected,
@@ -660,12 +656,12 @@ class _ReportFormBody extends StatelessWidget {
   final FocusNode detailsFocusNode;
   final GlobalKey detailsFieldKey;
 
-  /// Anchors the "Other" card so it can be scrolled back into view once the
-  /// keyboard pushes the details field up.
-  final GlobalKey otherCardKey;
+  /// Follows the selected card, so it can be scrolled back into view once
+  /// the keyboard pushes the details field up.
+  final GlobalKey selectedCardKey;
 
-  /// Anchors the details box, scrolled into view in place of the "Other"
-  /// card when another reason is selected.
+  /// Keeps the note box one element as it moves under a newly picked
+  /// reason, so its state, such as the limit-reached notice, moves with it.
   final GlobalKey detailsBoxKey;
 
   /// Clears a pending validation error (and the image-rejection notice) as
@@ -706,9 +702,9 @@ class _ReportFormBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...reasons.map(
-          (reason) => Padding(
-            key: reason == ContentFilterReason.other ? otherCardKey : null,
+        for (final reason in reasons) ...[
+          Padding(
+            key: reason == selectedReason ? selectedCardKey : ValueKey(reason),
             padding: const EdgeInsets.only(bottom: 8),
             child: _ReasonCard(
               title: l10n.reportReasonTitle(reason),
@@ -717,54 +713,59 @@ class _ReportFormBody extends StatelessWidget {
               onTap: () => onReasonSelected(reason),
             ),
           ),
-        ),
-        // Shown for every reason, so every reporter can say why. The note is
-        // optional except under Other, which has no meaning without one.
-        // Always mounted, too, so text typed under one reason is still on
-        // screen, and is what gets sent, after switching to another.
-        const SizedBox(height: 4),
-        DecoratedBox(
-          key: detailsBoxKey,
-          decoration: BoxDecoration(
-            color: context.vineColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 4,
-              children: [
-                // The field announces this label itself (see
-                // [_CappedDetailsField]), so the visible copy is kept out of
-                // the tree rather than read twice.
-                ExcludeSemantics(
-                  child: Text(
-                    detailsLabel,
-                    style: VineTheme.labelSmallFont(
-                      color: context.vineColors.accentPositive,
-                    ),
+          // Opens under whichever reason is picked, so every reporter sees
+          // they can say why without scrolling for it. The note is optional
+          // except under Other, which has no meaning without one. The text
+          // lives in the shared controller, so a note typed under one reason
+          // is still on screen, and is what gets sent, after switching.
+          if (reason == selectedReason)
+            Padding(
+              key: detailsBoxKey,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.vineColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      // The field announces this label itself (see
+                      // [_CappedDetailsField]), so the visible copy is kept
+                      // out of the tree rather than read twice.
+                      ExcludeSemantics(
+                        child: Text(
+                          detailsLabel,
+                          style: VineTheme.labelSmallFont(
+                            color: context.vineColors.accentPositive,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        l10n.reportDetailsTextOnly,
+                        style: VineTheme.labelSmallFont(
+                          color: context.vineColors.onSurfaceVariant,
+                        ),
+                      ),
+                      if (imageInsertionRejected)
+                        const _ImageNotAttachedNotice(),
+                      _CappedDetailsField(
+                        label: detailsLabel,
+                        fieldKey: detailsFieldKey,
+                        controller: detailsController,
+                        focusNode: detailsFocusNode,
+                        onChanged: onDetailsChanged,
+                        onImageInserted: onImageInserted,
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  l10n.reportDetailsTextOnly,
-                  style: VineTheme.labelSmallFont(
-                    color: context.vineColors.onSurfaceVariant,
-                  ),
-                ),
-                if (imageInsertionRejected) const _ImageNotAttachedNotice(),
-                _CappedDetailsField(
-                  label: detailsLabel,
-                  fieldKey: detailsFieldKey,
-                  controller: detailsController,
-                  focusNode: detailsFocusNode,
-                  onChanged: onDetailsChanged,
-                  onImageInserted: onImageInserted,
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
+        ],
       ],
     );
   }
