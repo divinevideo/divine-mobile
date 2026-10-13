@@ -469,9 +469,10 @@ enum CipherMigrationOutcome {
   alreadyEncrypted,
 
   /// The existing database is encrypted and its hot rollback journal replayed
-  /// under the key, but the result fails `PRAGMA quick_check`. The caller must
-  /// recover it rather than trust an open probe that reads too little of the
-  /// file to see the damage.
+  /// under the key, but the result fails `PRAGMA quick_check`, or SQLite could
+  /// not read its schema once the rollback was done. The caller opens it like
+  /// [alreadyEncrypted] and recovers it only when that fails, since a salvage
+  /// keeps only the local-only tables.
   encryptedButCorrupt,
 
   /// An empty plaintext database was removed so a fresh encrypted one is

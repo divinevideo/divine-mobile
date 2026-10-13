@@ -1546,7 +1546,7 @@ void main() {
       },
     );
 
-    test('failed replay restores the database and journal snapshot', () {
+    test('a replay that fails before the rollback keeps the journal', () {
       _createHotJournalFixture(dbPath, key: validKey);
       final databaseBefore = File(dbPath).readAsBytesSync();
       final journalBefore = File('$dbPath-journal').readAsBytesSync();
@@ -1557,7 +1557,9 @@ void main() {
           databasePath: dbPath,
           configureEncryptedDatabase: (database) {
             configurations += 1;
-            applyCipherKey(database, validKey);
+            // keyCipherDatabase reads no page, so the failure lands before
+            // SQLite starts the rollback.
+            keyCipherDatabase(database, validKey);
             if (configurations == 2) throw StateError('injected failure');
           },
         ),
@@ -1750,6 +1752,30 @@ void main() {
         } finally {
           replayed.close();
         }
+      },
+    );
+
+    test(
+      'keeps a replay final when the schema read fails after the rollback',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          key: validKey,
+          beforeTransaction: _pointTableRootPastEndOfFile,
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(outcome, CipherMigrationOutcome.encryptedButCorrupt);
+        expect(
+          File('$dbPath-journal').existsSync(),
+          isFalse,
+          reason: 'a restored journal replays into the same failure forever',
+        );
       },
     );
 
@@ -2132,6 +2158,19 @@ void _pointTableRootAtIndexPage(Database source) {
       'UPDATE sqlite_master SET rootpage = (SELECT rootpage FROM '
       "sqlite_master WHERE name = 'misrooted_value') "
       "WHERE name = 'misrooted';",
+    )
+    ..execute('PRAGMA writable_schema = OFF;');
+}
+
+/// Points a table at a page past the end of the file. SQLite completes the
+/// rollback and deletes the journal, then fails to read the schema.
+void _pointTableRootPastEndOfFile(Database source) {
+  source
+    ..execute('CREATE TABLE misrooted_past_end (value INTEGER);')
+    ..execute('PRAGMA writable_schema = ON;')
+    ..execute(
+      'UPDATE sqlite_master SET rootpage = 999999 '
+      "WHERE name = 'misrooted_past_end';",
     )
     ..execute('PRAGMA writable_schema = OFF;');
 }

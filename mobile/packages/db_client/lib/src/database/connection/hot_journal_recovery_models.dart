@@ -13,12 +13,14 @@ enum HotJournalRecoveryResult {
   /// The journal replayed and the database passes `PRAGMA quick_check`.
   sound,
 
-  /// The journal replayed, but the database fails `PRAGMA quick_check`.
+  /// The journal replayed, but the database fails `PRAGMA quick_check`, or
+  /// SQLite could not read its schema once the rollback was done.
   ///
   /// The journal is consumed either way: replay is deterministic, so putting
   /// it back would only replay to the same file on every later launch. An
-  /// encrypted file goes to corruption recovery instead. A plaintext one
-  /// goes on to the migration, which rebuilds it and checks the copy.
+  /// encrypted file is opened like any other and recovered only if that
+  /// fails. A plaintext one goes on to the migration, which rebuilds it and
+  /// checks the copy.
   failedIntegrityCheck,
 }
 

@@ -21,10 +21,12 @@ const _sqliteHeader = 'SQLite format 3\x00';
 /// through an immutable view. That proves the existing key can decrypt the
 /// database before the writable connection is allowed to begin rollback.
 ///
-/// A failed replay restores the database and journal it started from. Once
-/// the replay succeeds, the journal is consumed and the file is checked with
-/// `PRAGMA quick_check`: [HotJournalRecoveryResult.failedIntegrityCheck]
-/// tells the caller to recover a damaged file rather than open it.
+/// A replay that fails while the journal is still there restores the
+/// database and journal it started from. Once SQLite has deleted the journal
+/// the rollback is done, so the replay is final even when the statement that
+/// ran it failed afterwards. The file is then checked with
+/// `PRAGMA quick_check`, and [HotJournalRecoveryResult.failedIntegrityCheck]
+/// tells the caller it is damaged.
 HotJournalRecoveryResult recoverHotRollbackJournal({
   required String databasePath,
   required void Function(CommonDatabase db) configureEncryptedDatabase,
@@ -48,6 +50,12 @@ HotJournalRecoveryResult recoverHotRollbackJournal({
       configureEncryptedDatabase: configureEncryptedDatabase,
     );
   } on DatabaseHotJournalRecoveryError {
+    // SQLite deletes the journal only once the rollback is on disk, so a
+    // missing journal means the statement failed afterwards, typically on a
+    // damaged schema. Restoring it would replay into that failure forever.
+    if (!File('$databasePath$rollbackJournalSuffix').existsSync()) {
+      return HotJournalRecoveryResult.failedIntegrityCheck;
+    }
     snapshot.restore(databasePath, copy: restoreCopyForTesting);
     rethrow;
   } finally {
