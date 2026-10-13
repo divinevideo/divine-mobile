@@ -1000,10 +1000,10 @@ class _CappedDetailsFieldState extends State<_CappedDetailsField> {
               onChanged: _onChanged,
               // Without a configuration Flutter advertises an empty mime-type
               // list, so Android refuses the insert itself and shows a system
-              // toast that vanishes and never mentions the report. Declaring the
-              // default image types moves that moment into the app, where the
-              // handler can answer it in our own words. #8223 chose not to hide
-              // the keyboard's image button, so it stays live.
+              // toast that vanishes and never mentions the report. Declaring
+              // the default image types moves that moment into the app, where
+              // the handler can answer it in our own words. #8223 chose not to
+              // hide the keyboard's image button, so it stays live.
               contentInsertionConfiguration: ContentInsertionConfiguration(
                 onContentInserted: (_) => widget.onImageInserted(),
               ),
