@@ -19,8 +19,8 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
-import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
+import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -298,8 +298,9 @@ class DraftRenderParametersService {
     try {
       // `configs` is deliberately left at the package default apart from
       // `textEditor.layerBounds` and `imageGeneration.layerCapturePixelRatio`,
-      // which holds a detached clip's poster to a small image, as the editor's
-      // own capture on Next does (#10071). Only a few values change how a
+      // which holds a layer scaled far past the frame, and a detached clip's
+      // poster, to a bounded image, as the editor's own capture on Next does
+      // (#10071). Only a few values change how a
       // layer *renders* rather than how it is edited — `textEditor.initFontSize`
       // (which scales text and emoji layers), `textEditor.layerBounds`
       // (where text lines wrap), `textEditor.style.leadingDistribution`,

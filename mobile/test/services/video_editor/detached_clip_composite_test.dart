@@ -699,46 +699,6 @@ void main() {
     });
   });
 
-  group('capturePixelRatioForLayer', () {
-    test('keeps the pixel ratio of a layer that is not a detached clip', () {
-      expect(
-        capturePixelRatioForLayer(
-          TextLayer(text: 'caption'),
-          const Size(1500, 300),
-          4.9,
-        ),
-        4.9,
-      );
-    });
-
-    test('holds a scaled-up detached clip to the capture extent', () {
-      // A clip scaled up past the frame: at the export ratio its image would be
-      // 7350 px on its longest side.
-      const size = Size(900, 1500);
-      final ratio = capturePixelRatioForLayer(
-        _detachedLayer(_clip()),
-        size,
-        4.9,
-      );
-
-      expect(
-        size.longestSide * ratio,
-        closeTo(detachedClipCaptureExtent, 1e-9),
-      );
-    });
-
-    test('keeps the pixel ratio of a detached clip already small enough', () {
-      expect(
-        capturePixelRatioForLayer(
-          _detachedLayer(_clip()),
-          const Size(80, 140),
-          4.9,
-        ),
-        4.9,
-      );
-    });
-  });
-
   group('unrotatedLayerBox', () {
     test('returns the bounds untouched when the layer is upright', () {
       expect(
