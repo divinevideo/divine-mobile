@@ -58,6 +58,11 @@ void main() {
       when(() => authService.isAuthenticated).thenReturn(true);
       when(() => authService.isAnonymous).thenReturn(false);
       when(() => authService.hasExpiredOAuthSession).thenReturn(false);
+      // The settings row watches this; it reports whatever a test stubs
+      // for hasExpiredOAuthSession.
+      when(() => authService.expiredOAuthSessionListenable).thenAnswer(
+        (_) => ValueNotifier(authService.hasExpiredOAuthSession),
+      );
       when(
         () => authService.authenticationSource,
       ).thenReturn(AuthenticationSource.automatic);

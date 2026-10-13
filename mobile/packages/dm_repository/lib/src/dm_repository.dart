@@ -1014,6 +1014,31 @@ class DmRepository {
   final Map<String, Future<NIP17SendResult>> _recoveriesInFlight =
       <String, Future<NIP17SendResult>>{};
 
+  /// Rumor ids whose ORIGINAL [sendMessage] attempt is still running. Its
+  /// queue row stays `pending` from enqueue until the attempt finalizes,
+  /// which the row alone cannot tell apart from a send that ended held and
+  /// needs the user, so [watchPendingCollaboratorInviteGroups] hides these
+  /// (#10005). Recoveries are deliberately not tracked: the banner's own
+  /// Retry is one, and hiding its invites mid-retry would tear down the
+  /// banner that reports the result.
+  final Set<String> _originalSendsInFlight = <String>{};
+
+  /// Fires when [_originalSendsInFlight] changes. App-scoped like
+  /// [_retryableWorkController]; never closed.
+  final StreamController<void> _originalSendsInFlightChanged =
+      StreamController<void>.broadcast();
+
+  void _setOriginalSendInFlight(String rumorId, {required bool inFlight}) {
+    if (inFlight) {
+      _originalSendsInFlight.add(rumorId);
+    } else {
+      _originalSendsInFlight.remove(rumorId);
+    }
+    if (!_originalSendsInFlightChanged.isClosed) {
+      _originalSendsInFlightChanged.add(null);
+    }
+  }
+
   /// Message retractions have their own result type, but need the same
   /// per-rumor join: a tap on Try again can race the background sweep.
   final Map<String, Future<DmMessageDeletionOutcome>>
@@ -1027,10 +1052,11 @@ class DmRepository {
   ///
   /// The queue row's finalization belongs to whichever caller RAN the
   /// attempt. A joiner receives an outcome the owner has already recorded
-  /// against the row — [_recoverFullSendLocked] finalizes every branch
-  /// inside its body — so a joiner that finalized again would charge one
-  /// underlying attempt twice (#8619). [sendGroupMessage] learns which side
-  /// it was on from a flag the closure sets when it actually runs.
+  /// against the row — [_recoverFullSendLocked] and [sendMessage]'s
+  /// registered attempt finalize every branch inside their bodies — so a
+  /// joiner that finalized again would charge one underlying attempt twice
+  /// (#8619). [sendGroupMessage] learns which side it was on from a flag the
+  /// closure sets when it actually runs.
   Future<NIP17SendResult> _joinOrStartRecovery(
     String key,
     Future<NIP17SendResult> Function() attempt,
@@ -5545,6 +5571,9 @@ class DmRepository {
   ///   so only the missing self-wrap is retried later.
   /// - Recipient publish failure: mark both wraps `failed` and leave
   ///   the row queued for replay.
+  ///
+  /// A [recoverFullSend] for the same rumor issued before this call returns
+  /// joins this attempt rather than publishing again.
   @useResult
   Future<NIP17SendResult> sendMessage({
     required String recipientPubkey,
@@ -5562,10 +5591,52 @@ class DmRepository {
     final refusal = prep.refusal;
     if (refusal != null) return refusal;
     final rumor = prep.rumor!;
-    final conversationId = prep.conversationId!;
-    final sendBatchId = prep.sendBatchId!;
-    final rumorTags = prep.rumorTags!;
-    final participants = prep.participants!;
+
+    // Register the attempt under the per-rumor recovery key, as the group
+    // send does for its publishes: a Retry or sweep recoverFullSend that
+    // lands while this send is in flight JOINS it instead of publishing a
+    // second recipient wrap of the same rumor (#10005).
+    //
+    // Unlike the group send, the key also spans finalization. A joiner must
+    // receive an outcome the owner has already recorded against the row (see
+    // [_joinOrStartRecovery]), and releasing the key before the row is
+    // finalized would let a retry republish a row whose attempt has already
+    // ended. The rumor carries a freshly minted batch token, so no recovery
+    // can hold this key first: the closure always runs here, and this call
+    // always owns the finalization.
+    return _joinOrStartRecovery('full:${rumor.id}', () async {
+      _setOriginalSendInFlight(rumor.id, inFlight: true);
+      try {
+        return await _publishPreparedSend(
+          rumor: rumor,
+          conversationId: prep.conversationId!,
+          sendBatchId: prep.sendBatchId!,
+          rumorTags: prep.rumorTags!,
+          participants: prep.participants!,
+          recipientPubkey: recipientPubkey,
+          content: content,
+          replyToId: replyToId,
+          skipNip04Fallback: skipNip04Fallback,
+        );
+      } finally {
+        _setOriginalSendInFlight(rumor.id, inFlight: false);
+      }
+    });
+  }
+
+  /// Publishes a rumor [sendMessage] has built and enqueued, then finalizes
+  /// its queue row by outcome. Runs under the rumor's recovery key.
+  Future<NIP17SendResult> _publishPreparedSend({
+    required Event rumor,
+    required String conversationId,
+    required String sendBatchId,
+    required List<List<String>> rumorTags,
+    required List<String> participants,
+    required String recipientPubkey,
+    required String content,
+    required String? replyToId,
+    required bool skipNip04Fallback,
+  }) async {
     final outgoingDao = _outgoingDmsDao;
 
     // Route the gift wrap to the recipient's NIP-17 DM inbox relays
@@ -6249,8 +6320,9 @@ class DmRepository {
   /// or the row belongs to a different account.
   ///
   /// When a recovery for the same rumor is already in flight (a manual
-  /// Resend racing the reconnect sweep), the call JOINS that attempt and
-  /// returns its outcome instead of publishing a duplicate.
+  /// Resend racing the reconnect sweep), or the original [sendMessage] is
+  /// still publishing it, the call JOINS that attempt and returns its outcome
+  /// instead of publishing a duplicate.
   ///
   /// [resetRetryBudget] zeroes the row's retry counter before dispatch. Pass
   /// `true` from the manual Resend path: each soft-unconfirmed attempt burns
@@ -6616,6 +6688,10 @@ class DmRepository {
   /// Watches the durable outgoing DM queue for collaborator invites whose
   /// recipient delivery still needs recovery.
   ///
+  /// An invite whose original [sendMessage] attempt is still running is left
+  /// out until that attempt ends: its row is `pending` either way, and only
+  /// a send that ended without delivering needs the user (#10005).
+  ///
   /// Returns an empty stream when the queue DAO is not wired or the
   /// repository has not been scoped to an authenticated owner yet.
   Stream<List<PendingCollaboratorInviteGroup>>
@@ -6626,41 +6702,73 @@ class DmRepository {
       return Stream.value(const <PendingCollaboratorInviteGroup>[]);
     }
 
-    return dao.watchAllForOwner(ownerPubkey).map((rows) {
-      final pending = rows
-          .map((row) => _tryParsePendingCollaboratorInvite(row, ownerPubkey))
-          .whereType<PendingCollaboratorInvite>()
-          .where((invite) => invite.requiresRecipientRecovery)
-          .toList(growable: false);
+    return Stream<List<PendingCollaboratorInviteGroup>>.multi((controller) {
+      void emit(List<OutgoingDm> rows) =>
+          controller.add(_groupPendingCollaboratorInvites(rows, ownerPubkey));
 
-      final grouped = <String, List<PendingCollaboratorInvite>>{};
-      for (final invite in pending) {
-        grouped.putIfAbsent(invite.videoAddress, () => []).add(invite);
-      }
-
-      final groups =
-          grouped.entries
-              .map((entry) {
-                final invites = entry.value.toList(growable: false)
-                  ..sort((a, b) => a.queuedAt.compareTo(b.queuedAt));
-                final first = invites.first;
-                return PendingCollaboratorInviteGroup(
-                  creatorPubkey: first.creatorPubkey,
-                  videoAddress: first.videoAddress,
-                  title: first.title,
-                  thumbnailUrl: first.thumbnailUrl,
-                  relayHint: first.relayHint,
-                  invites: invites,
-                );
-              })
-              .toList(growable: false)
-            ..sort(
-              (a, b) =>
-                  b.invites.first.queuedAt.compareTo(a.invites.first.queuedAt),
-            );
-
-      return groups;
+      final rowsSubscription = dao
+          .watchAllForOwner(ownerPubkey)
+          .listen(emit, onError: controller.addError, onDone: controller.close);
+      // A send starting or settling changes the answer without necessarily
+      // touching the queue. Re-read instead of regrouping the last watched
+      // snapshot: a send that just delivered has already deleted its row, but
+      // the watch has not re-run yet, so that snapshot would flash the invite
+      // as pending.
+      final inFlightSubscription = _originalSendsInFlightChanged.stream.listen((
+        _,
+      ) async {
+        try {
+          final rows = await dao.getAllForOwner(ownerPubkey);
+          if (!controller.isClosed) emit(rows);
+        } on Object catch (error, stackTrace) {
+          if (!controller.isClosed) controller.addError(error, stackTrace);
+        }
+      });
+      controller.onCancel = () => Future.wait([
+        rowsSubscription.cancel(),
+        inFlightSubscription.cancel(),
+      ]);
     });
+  }
+
+  List<PendingCollaboratorInviteGroup> _groupPendingCollaboratorInvites(
+    List<OutgoingDm> rows,
+    String ownerPubkey,
+  ) {
+    final pending = rows
+        .map((row) => _tryParsePendingCollaboratorInvite(row, ownerPubkey))
+        .whereType<PendingCollaboratorInvite>()
+        .where((invite) => invite.requiresRecipientRecovery)
+        .where((invite) => !_originalSendsInFlight.contains(invite.rumorId))
+        .toList(growable: false);
+
+    final grouped = <String, List<PendingCollaboratorInvite>>{};
+    for (final invite in pending) {
+      grouped.putIfAbsent(invite.videoAddress, () => []).add(invite);
+    }
+
+    final groups =
+        grouped.entries
+            .map((entry) {
+              final invites = entry.value.toList(growable: false)
+                ..sort((a, b) => a.queuedAt.compareTo(b.queuedAt));
+              final first = invites.first;
+              return PendingCollaboratorInviteGroup(
+                creatorPubkey: first.creatorPubkey,
+                videoAddress: first.videoAddress,
+                title: first.title,
+                thumbnailUrl: first.thumbnailUrl,
+                relayHint: first.relayHint,
+                invites: invites,
+              );
+            })
+            .toList(growable: false)
+          ..sort(
+            (a, b) =>
+                b.invites.first.queuedAt.compareTo(a.invites.first.queuedAt),
+          );
+
+    return groups;
   }
 
   /// Retries the given queued collaborator invites by replaying their original

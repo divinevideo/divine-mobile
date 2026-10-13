@@ -8,8 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/auth/oauth_session_coordinator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
+
+class _MockKeycastRpc extends Mock implements KeycastRpc {}
 
 KeycastSession _session({String? userPubkey, String accessToken = 'token'}) =>
     KeycastSession(
@@ -27,11 +30,15 @@ void main() {
     late _MockKeycastOAuth oauthClient;
     late bool hasExpired;
     late String? pubkeyFallback;
+    late KeycastRpc? currentSigner;
+    late int rejections;
 
     setUp(() {
       oauthClient = _MockKeycastOAuth();
       hasExpired = true;
       pubkeyFallback = 'fallback_pubkey';
+      currentSigner = _MockKeycastRpc();
+      rejections = 0;
     });
 
     OAuthSessionCoordinator build({bool nullClient = false}) =>
@@ -41,6 +48,11 @@ void main() {
           expiredSessionRefreshTimeout: expiredTimeout,
           currentPubkeyFallback: () => pubkeyFallback,
           hasExpiredSession: () => hasExpired,
+          currentRpcSigner: () => currentSigner,
+          onRefreshRejected: () {
+            rejections++;
+            hasExpired = true;
+          },
         );
 
     group('refreshSession', () {
@@ -405,26 +417,263 @@ void main() {
     });
 
     group('refreshAccessToken', () {
+      // A live session: the rejection below is what expires it.
+      setUp(() => hasExpired = false);
+
+      void stubRefresh(Future<KeycastSession?> Function() answer) => when(
+        () => oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+      ).thenAnswer((_) => answer());
+
       test('returns the access token of a successful refresh', () async {
-        when(
-          () =>
-              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
-        ).thenAnswer((_) async => _session(accessToken: 'fresh-token'));
+        stubRefresh(() async => _session(accessToken: 'fresh-token'));
 
         final token = await build().refreshAccessToken();
 
         expect(token, equals('fresh-token'));
+        expect(rejections, isZero);
       });
 
-      test('returns null when the refresh fails', () async {
-        when(
-          () =>
-              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
-        ).thenAnswer((_) async => null);
+      test('reports a rejection when Keycast refuses the refresh', () async {
+        // KeycastOAuth.refreshSession returns null without throwing when
+        // there is no refresh token left or Keycast refused it (and deleted
+        // it). Nothing can recover the session after that (#9943).
+        stubRefresh(() async => null);
 
         final token = await build().refreshAccessToken();
 
         expect(token, isNull);
+        expect(rejections, equals(1));
+      });
+
+      test('reports a rejection when the refreshed session has no RPC '
+          'access', () async {
+        stubRefresh(() async => const KeycastSession(bunkerUrl: 'bunker://x'));
+
+        final token = await build().refreshAccessToken();
+
+        expect(token, isNull);
+        expect(rejections, equals(1));
+      });
+
+      test('does not report a rejection when Keycast is unreachable', () async {
+        // Network errors, timeouts and 5xx keep the refresh token for a later
+        // retry. Treating them as a rejection would prompt every user to sign
+        // in again during a Keycast outage.
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenThrow(OAuthNetworkException('Refresh request failed: HTTP 503'));
+
+        final token = await build().refreshAccessToken();
+
+        expect(token, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('does not report a rejection when the refresh times out', () {
+        fakeAsync((async) {
+          stubRefresh(() => Completer<KeycastSession?>().future);
+          String? token = 'unset';
+
+          unawaited(
+            build().refreshAccessToken().then((value) => token = value),
+          );
+          async.elapse(oauthTimeout * 2);
+
+          expect(token, isNull);
+          expect(rejections, isZero);
+        });
+      });
+
+      test('does not report a rejection when the refresh fails '
+          'unexpectedly', () async {
+        when(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).thenThrow(Exception('unexpected'));
+
+        final token = await build().refreshAccessToken();
+
+        expect(token, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('marks the session once for callers that joined the in-flight '
+          'refresh', () async {
+        final gate = Completer<KeycastSession?>();
+        stubRefresh(() => gate.future);
+
+        final coordinator = build();
+        final first = coordinator.refreshAccessToken();
+        final joined = coordinator.refreshAccessToken();
+        gate.complete(null);
+        await Future.wait([first, joined]);
+
+        verify(
+          () =>
+              oauthClient.refreshSession(userPubkey: any(named: 'userPubkey')),
+        ).called(1);
+        expect(rejections, equals(1));
+      });
+
+      test('does not mark a session that is already expired', () async {
+        hasExpired = true;
+        stubRefresh(() async => null);
+
+        expect(await build().refreshAccessToken(), isNull);
+        expect(rejections, isZero);
+      });
+
+      group('rejection log', () {
+        const markedLine = 'marking the OAuth session expired';
+        const staleLine = 'signer that is no longer live';
+
+        int linesContaining(String text) => LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.message.contains(text))
+            .length;
+
+        int coordinatorWarnings() => LogCaptureService()
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .where((entry) => entry.name == 'OAuthSessionCoordinator')
+            .length;
+
+        setUp(() => LogCaptureService().clearAllLogs());
+
+        test('logs one line when many 401s share a rejected refresh', () async {
+          // Several in-flight RPCs 401 together and join one refresh. A line
+          // per caller would flood the log the way #9943's 401s did.
+          final gate = Completer<KeycastSession?>();
+          stubRefresh(() => gate.future);
+
+          final coordinator = build();
+          final callers = [
+            for (var i = 0; i < 3; i++) coordinator.refreshAccessToken(),
+          ];
+          gate.complete(null);
+          await Future.wait(callers);
+
+          expect(rejections, equals(1));
+          expect(linesContaining(markedLine), equals(1));
+          expect(linesContaining(staleLine), isZero);
+        });
+
+        test('logs one warning for serial refused refreshes while the session '
+            'stays expired', () async {
+          // Once the refresh token is gone each 401 starts its own refresh,
+          // which fails at once: #9943's device log had dozens a minute.
+          stubRefresh(() async => null);
+          final coordinator = build();
+
+          for (var i = 0; i < 3; i++) {
+            expect(await coordinator.refreshAccessToken(), isNull);
+          }
+
+          verify(
+            () => oauthClient.refreshSession(
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).called(3);
+          expect(rejections, equals(1));
+          expect(linesContaining(markedLine), equals(1));
+          expect(
+            coordinatorWarnings(),
+            equals(1),
+            reason: 'No warning per refresh, only the one that expires it',
+          );
+        });
+
+        test('warns again once a sign-in has cleared the flag', () async {
+          stubRefresh(() async => null);
+          final coordinator = build();
+
+          await coordinator.refreshAccessToken();
+          hasExpired = false;
+          await coordinator.refreshAccessToken();
+
+          expect(rejections, equals(2));
+          expect(linesContaining(markedLine), equals(2));
+        });
+
+        test('logs one stale line, and no marking line, when the signer is '
+            'gone', () async {
+          final gate = Completer<KeycastSession?>();
+          stubRefresh(() => gate.future);
+
+          final coordinator = build();
+          final callers = [
+            coordinator.refreshAccessToken(),
+            coordinator.refreshAccessToken(),
+          ];
+          currentSigner = null;
+          gate.complete(null);
+          await Future.wait(callers);
+
+          expect(rejections, isZero);
+          expect(linesContaining(staleLine), equals(1));
+          expect(linesContaining(markedLine), isZero);
+        });
+      });
+
+      test('ignores a rejection that lands after sign-out and a new sign-in '
+          'to the same account', () async {
+        // KeycastOAuth returns the same null when sign-out cleared storage
+        // while the request was in flight. The account is unchanged, but the
+        // session is new, so that stale result must not mark it expired.
+        final gate = Completer<KeycastSession?>();
+        stubRefresh(() => gate.future);
+
+        final pending = build().refreshAccessToken();
+        currentSigner = null;
+        currentSigner = _MockKeycastRpc();
+        gate.complete(null);
+
+        expect(await pending, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('ignores a rejection of the previous signer refresh for a new '
+          'signer that joined it', () async {
+        // Re-signing in to the same account replaces the signer without
+        // detaching the in-flight refresh, so the new session's first 401 can
+        // join the old session's refresh.
+        final gate = Completer<KeycastSession?>();
+        stubRefresh(() => gate.future);
+
+        final coordinator = build();
+        final previous = coordinator.refreshAccessToken();
+        currentSigner = _MockKeycastRpc();
+        final joined = coordinator.refreshAccessToken();
+        gate.complete(null);
+
+        expect(await previous, isNull);
+        expect(await joined, isNull);
+        expect(rejections, isZero);
+        verify(
+          () => oauthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).called(1);
+      });
+
+      test('ignores a rejection that lands after sign-out', () async {
+        final gate = Completer<KeycastSession?>();
+        stubRefresh(() => gate.future);
+
+        final pending = build().refreshAccessToken();
+        currentSigner = null;
+        gate.complete(null);
+
+        expect(await pending, isNull);
+        expect(rejections, isZero);
+      });
+
+      test('ignores a rejection for a caller with no live signer', () async {
+        currentSigner = null;
+        stubRefresh(() async => null);
+
+        expect(await build().refreshAccessToken(), isNull);
+        expect(rejections, isZero);
       });
     });
 

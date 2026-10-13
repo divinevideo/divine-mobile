@@ -8,6 +8,7 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -177,13 +178,16 @@ class _FakeCacheDao implements CacheDao {
 class MockAuthService extends Mock implements AuthService {
   MockAuthService({
     this.isAnonymousValue = false,
-    this.hasExpiredOAuthSessionValue = false,
+    bool hasExpiredOAuthSessionValue = false,
     this.isRpcUpgradeInProgressValue = false,
     this.tryRefreshResult = false,
-  });
+  }) : expiredOAuthSession = ValueNotifier(hasExpiredOAuthSessionValue);
 
   final bool isAnonymousValue;
-  final bool hasExpiredOAuthSessionValue;
+
+  /// Set its value to flip the flag while the header is mounted, as a refused
+  /// mid-session refresh does (#9943).
+  final ValueNotifier<bool> expiredOAuthSession;
   final bool isRpcUpgradeInProgressValue;
   final bool tryRefreshResult;
 
@@ -205,7 +209,11 @@ class MockAuthService extends Mock implements AuthService {
       Stream.value(AuthState.authenticated);
 
   @override
-  bool get hasExpiredOAuthSession => hasExpiredOAuthSessionValue;
+  bool get hasExpiredOAuthSession => expiredOAuthSession.value;
+
+  @override
+  ValueListenable<bool> get expiredOAuthSessionListenable =>
+      expiredOAuthSession;
 
   @override
   bool get isRpcUpgradeInProgress => isRpcUpgradeInProgressValue;
@@ -2953,6 +2961,34 @@ void main() {
             sharedPreferences: prefs,
           ),
         );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VineBottomSheetPrompt), findsOneWidget);
+      });
+
+      testWidgets('presents the session expired sheet when a refused refresh '
+          'expires the session while the profile is open', (tester) async {
+        // #9943: Keycast refuses a mid-session refresh. Auth state stays
+        // authenticated throughout, so only the flag itself can rebuild the
+        // header — the same service instance flips; nothing is re-pumped.
+        final testProfile = createTestProfile(displayName: 'Test User');
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final authService = MockAuthService();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: true,
+            profile: testProfile,
+            sharedPreferences: prefs,
+            authService: authService,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(VineBottomSheetPrompt), findsNothing);
+
+        authService.expiredOAuthSession.value = true;
         await tester.pumpAndSettle();
 
         expect(find.byType(VineBottomSheetPrompt), findsOneWidget);

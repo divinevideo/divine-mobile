@@ -346,6 +346,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final accountEnforced = ref.watch(isAccountEnforcedProvider);
     final authState = ref.watch(currentAuthStateProvider);
     final isAuthenticated = authState == AuthState.authenticated;
+    final hasExpiredOAuthSession = ref.watch(hasExpiredOAuthSessionProvider);
     final accountSwitchingEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.accountSwitching),
     );
@@ -383,8 +384,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       title: context.l10n.settingsSecureAccount,
                       onTap: () => context.push(SecureAccountScreen.path),
                     ),
-                  if (!authService.isAnonymous &&
-                      authService.hasExpiredOAuthSession)
+                  if (!authService.isAnonymous && hasExpiredOAuthSession)
                     DivineListTile(
                       icon: DivineIconName.arrowClockwise,
                       title: context.l10n.settingsSessionExpired,

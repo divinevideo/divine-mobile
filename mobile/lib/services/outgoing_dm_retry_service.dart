@@ -158,10 +158,13 @@ class OutgoingDmRetryService {
 
   /// Minimum age of a still-`pending` row before the interrupted-send arm
   /// may re-drive it. Must exceed the worst-case legitimately-in-flight
-  /// send, or a foreground/connectivity trigger fired during a live send
-  /// dispatches a concurrent duplicate publish of the same rumor. Receiver
-  /// dedup makes that safe but wasteful; the old value (the 2s
-  /// `initialDelay`) made it the common case.
+  /// send. A foreground/connectivity trigger fired while a live send holds
+  /// its recovery key joins that send ([DmRepository.recoverFullSend]), so
+  /// this sweep waits on it instead of retrying other rows. Once a send has
+  /// hit the publish backstop it has released the key while its abandoned
+  /// publish may still be running, and a re-drive then is a concurrent
+  /// duplicate publish of the same rumor. Receiver dedup makes that safe but
+  /// wasteful; the old value (the 2s `initialDelay`) made it the common case.
   ///
   /// Derived from the backstop rather than restated as a literal. It was
   /// previously hardcoded to 120s against a 90s backstop, and #6586 showed why
@@ -535,11 +538,12 @@ class OutgoingDmRetryService {
           // Min-age guard: if the row was recently enqueued, the
           // originating sendMessage call may still be in flight in this
           // process (inbox resolution + the derived publish backstop). Wait
-          // out that window before treating the row as interrupted, or a
-          // trigger fired mid-send dispatches a concurrent duplicate
-          // publish of the same rumor. Idempotent receiver dedup makes a
-          // false negative safe — it means a one-cycle delay, not data
-          // loss.
+          // out that window before treating the row as interrupted: a
+          // trigger fired mid-send joins that send and holds this sweep
+          // until it ends, or, once a timed-out send has released its key,
+          // publishes the same rumor a second time. Idempotent receiver
+          // dedup makes a false negative safe — it means a one-cycle delay,
+          // not data loss.
           final age = _now().difference(row.queuedAt);
           if (age < _interruptedMinAge) {
             skippedInterruptedTooYoung++;

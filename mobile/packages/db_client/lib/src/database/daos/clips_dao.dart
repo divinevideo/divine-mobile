@@ -169,6 +169,22 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// on the clip itself or on one of its sources.
   static const _recordingSha256JsonPrefix = '"recordingSha256":"';
 
+  /// The ids of the clips of [ownerPubkey] (plus legacy clips with no owner)
+  /// whose video is the file [fileName]: library, draft and trashed clips
+  /// alike.
+  Future<List<String>> getClipIdsByFileName(
+    String fileName, {
+    String? ownerPubkey,
+  }) {
+    final query = selectOnly(clips)
+      ..addColumns([clips.id])
+      ..where(
+        clips.filePath.equals(fileName) &
+            _ownedOrLegacy(clips.ownerPubkey, ownerPubkey),
+      );
+    return query.map((row) => row.read(clips.id)!).get();
+  }
+
   /// Replaces the `data` blob of the clip [id] with what [rewrite] returns
   /// for the current one, in one transaction so no other write lands between.
   ///

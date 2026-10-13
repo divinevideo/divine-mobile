@@ -35,8 +35,12 @@ QueryExecutor openConnection() {
       // A device whose cipher migration keeps deferring never reaches the
       // encrypted open, and it is exactly the device a legacy-migration
       // backup sits beside. The plaintext migration backup is deliberately
-      // not swept here: only a keyed open proves it is safe to drop.
-      setup: (_) => sweepPreservedDatabaseCopies(dbPath),
+      // not swept here: only a keyed open proves it is safe to drop. A
+      // recovery snapshot left in the temp directory needs no such proof.
+      setup: (_) {
+        sweepPreservedDatabaseCopies(dbPath);
+        sweepStrandedHotJournalSnapshots();
+      },
     );
   });
 }
@@ -89,6 +93,9 @@ QueryExecutor openEncryptedConnection({
         applyCipherKey(rawDb, rawKeyHex);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
+        // A launch killed after its journal was replayed leaves a snapshot
+        // and no hot journal, so no later recovery would find it.
+        sweepStrandedHotJournalSnapshots();
       },
     );
   });
@@ -550,7 +557,8 @@ class DatabaseClassificationException implements Exception {
 ///
 /// Throws [DatabaseClassificationException] when SQLite cannot safely identify
 /// the existing file format. Throws [DatabaseHotJournalRecoveryError] when a
-/// hot rollback journal cannot be safely replayed. Requires
+/// hot rollback journal cannot be safely replayed, or when a restore an earlier
+/// launch left unfinished cannot be completed. Requires
 /// SQLite3MultipleCiphers;
 /// returns [CipherMigrationOutcome.failed] when it is not linked, leaving the
 /// proven-readable plaintext source intact.
@@ -562,6 +570,9 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   _rawKeyLiteral(rawKeyHex); // validate shape up front (never embeds the key)
 
   final dbPath = databasePath ?? await getSharedDatabasePath();
+  // Until an unfinished restore is completed the live file may be truncated,
+  // and everything below reads it.
+  completeUnfinishedHotJournalRestore(databasePath: dbPath);
   final encryptedPath = '$dbPath$_migratingSuffix';
 
   // Resume an interrupted swap. A force-kill between renaming the plaintext

@@ -9,6 +9,7 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as models show AspectRatio;
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
@@ -969,6 +970,112 @@ void main() {
           'raw.mp4': {keyedTakeHash},
           'source.mp4': {editSourceHash},
         });
+      });
+    });
+
+    group('recordLateProof', () {
+      const unsignedProof = NativeProofData(videoHash: 'hash-before-signing');
+      const lateProof = NativeProofData(
+        videoHash: 'hash-after-signing',
+        c2paManifestId: 'urn:c2pa:late',
+      );
+
+      DivineVideoClip take(String id, String file) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/tmp/$file'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+        proofManifestJson: jsonEncode(unsignedProof),
+      );
+
+      String? manifestOf(DivineVideoClip? clip) => NativeProofData.fromJson(
+        jsonDecode(clip!.proofManifestJson!) as Map<String, dynamic>,
+      ).c2paManifestId;
+
+      test('writes the proof onto every entry that plays the file', () async {
+        final recording = take('take', 'take.mp4').copyWith(
+          libraryTitle: 'Beach',
+        );
+        await service.saveClip(recording);
+        await DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        ).saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [recording],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: '',
+          ),
+        );
+        await service.saveClip(take('other', 'other.mp4'));
+
+        final updated = await service.recordLateProof(
+          fileName: 'take.mp4',
+          proof: lateProof,
+        );
+
+        expect(updated, 2);
+        final entry = await service.getClipById('take');
+        expect(manifestOf(entry), 'urn:c2pa:late');
+        expect(entry?.libraryTitle, 'Beach');
+        expect(
+          manifestOf(
+            await service.getClipById(
+              '${VideoEditorConstants.autoSaveId}:take',
+            ),
+          ),
+          'urn:c2pa:late',
+        );
+        expect(manifestOf(await service.getClipById('other')), isNull);
+      });
+
+      test('keeps the proof when a copy read before it is saved', () async {
+        final recording = take('take', 'take.mp4');
+        await service.saveClip(recording);
+        await service.recordLateProof(fileName: 'take.mp4', proof: lateProof);
+
+        await service.saveClip(
+          recording.copyWith(thumbnailPath: '/tmp/take_thumb.jpg'),
+        );
+
+        final entry = await service.getClipById('take');
+        expect(manifestOf(entry), 'urn:c2pa:late');
+        expect(entry?.thumbnailPath, endsWith('take_thumb.jpg'));
+      });
+
+      test(
+        'leaves an entry that plays another file by the time it is rewritten',
+        () async {
+          await service.saveClip(take('take', 'take.mp4'));
+          // The lookup finds entries by their file_path column, but the
+          // entry's data moved on to another file before the rewrite ran.
+          await database.clipsDao.rewriteClipData(
+            id: 'take',
+            rewrite: (_) => jsonEncode(take('take', 'moved.mp4').toJson()),
+          );
+
+          final updated = await service.recordLateProof(
+            fileName: 'take.mp4',
+            proof: lateProof,
+          );
+
+          expect(updated, 0);
+          expect(manifestOf(await service.getClipById('take')), isNull);
+        },
+      );
+
+      test('takes the saved proof once the clip plays another file', () async {
+        await service.saveClip(take('take', 'take.mp4'));
+        await service.recordLateProof(fileName: 'take.mp4', proof: lateProof);
+
+        await service.saveClip(take('take', 'baked.mp4'));
+
+        expect(manifestOf(await service.getClipById('take')), isNull);
       });
     });
 

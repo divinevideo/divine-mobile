@@ -28,6 +28,7 @@ import 'package:openvine/startup/timed_startup_task.dart';
 import 'package:openvine/utils/library_audio_migration.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -70,15 +71,18 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Static signing utility: its creator-binding and recording-hash seams need
-  // the container, so they are assigned here rather than with the reporter
-  // seams in bootstrap. The clip library is read per call: it follows the
-  // signed-in account.
+  // Static signing utility: its creator-binding, recording-hash and late-proof
+  // seams need the container, so they are assigned here rather than with the
+  // reporter seams in bootstrap. The clip library is read per call: it
+  // follows the signed-in account.
   NativeProofModeService.creatorBindingFactory = container
       .read(c2paCreatorBindingFactoryProvider)
       .create;
   NativeProofModeService.recordingHashLookup = () =>
       container.read(clipLibraryServiceProvider).recordingHashesByFileName();
+  NativeProofModeService.lateProofRecorder = (path, proof) => container
+      .read(clipLibraryServiceProvider)
+      .recordLateProof(fileName: p.basename(path), proof: proof);
 
   await restorePendingEmailVerificationOnStartup(container);
 
