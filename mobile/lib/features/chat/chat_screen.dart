@@ -1,4 +1,7 @@
 // MPL-2.0
+import 'dart:async';
+
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
@@ -50,18 +53,21 @@ class _ChatScreenState extends State<ChatScreen> {
                   decoration: const InputDecoration(hintText: 'Message'),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.send),
+              DivineIconButton(
+                icon: DivineIconName.paperPlaneTilt,
+                semanticLabel: 'Send message',
                 onPressed: () {
                   final text = _controller.text.trim();
                   if (text.isEmpty) return;
                   _controller.clear();
-                  context.read<ChatCubit>().send(
-                    communityId: 'community-test',
-                    channelId: 'general',
-                    author: '',
-                    body: text,
-                    now: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                  unawaited(
+                    context.read<ChatCubit>().send(
+                      communityId: 'community-test',
+                      channelId: 'general',
+                      author: '',
+                      body: text,
+                      now: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                    ),
                   );
                 },
               ),
