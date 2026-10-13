@@ -84,8 +84,9 @@ class BuildConfiguration {
         return const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
             const bool.fromEnvironment('FF_CONCORD_CHAT');
       case FeatureFlag.minorConsentInAppRecording:
-        // Default OFF: the relay-manager parent-consent upload route does not
-        // exist yet, so a recorded clip could not be submitted.
+        // Default OFF: parents opt in from Settings → Feature Flags. A
+        // release build may pre-enable it with the dart-define once the
+        // rollout is approved; the route ships server-side either way.
         return const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
     }
   }
