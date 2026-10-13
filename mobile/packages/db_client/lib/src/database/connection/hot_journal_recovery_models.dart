@@ -16,8 +16,9 @@ enum HotJournalRecoveryResult {
   /// The journal replayed, but the database fails `PRAGMA quick_check`.
   ///
   /// The journal is consumed either way: replay is deterministic, so putting
-  /// it back would only replay to the same file on every later launch. The
-  /// caller hands the file to corruption recovery instead.
+  /// it back would only replay to the same file on every later launch. An
+  /// encrypted file goes to corruption recovery instead. A plaintext one
+  /// goes on to the migration, which rebuilds it and checks the copy.
   failedIntegrityCheck,
 }
 

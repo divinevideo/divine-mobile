@@ -198,8 +198,10 @@ class DatabaseEncryptionBootstrap {
   ///   the existing file format. Startup fails closed and preserves both the
   ///   database and cipher key for a later retry.
   /// * [DatabaseHotJournalRecoveryError] when SQLite found a rollback journal
-  ///   but could not safely replay it under the existing key. A replay that
-  ///   succeeds into a damaged file is salvaged like any corrupt database.
+  ///   but could not safely replay it under the existing key, or replayed it
+  ///   and could not run the integrity check afterwards. A replay that
+  ///   succeeds into a damaged encrypted file is salvaged like any corrupt
+  ///   database; a damaged plaintext one goes through the migration.
   ///
   /// Must run before the first `AppDatabase` open.
   Future<String?> resolveCipherKey() async {
