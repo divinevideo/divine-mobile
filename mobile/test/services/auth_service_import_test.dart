@@ -15,6 +15,7 @@ import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import 'support/auth_service_test_harness.dart';
 
@@ -54,9 +55,33 @@ void main() {
       channelMocks = AuthServiceChannelMocks.install();
       crashReporter = _RecordingCrashReporter();
       SharedPreferences.setMockInitialValues({kKnownAccountsKey: '[]'});
+      return LogCaptureService().clearAllLogs();
     });
 
     tearDown(AuthServiceChannelMocks.remove);
+
+    void expectNoKeyLeaked(
+      AuthService authService,
+      AuthResult result,
+      List<String> secrets,
+    ) {
+      final logged = LogCaptureService()
+          .getRecentLogs()
+          .map((log) => log.message)
+          .join('\n');
+      final surfaces = {
+        'log': logged,
+        'errorMessage': result.errorMessage ?? '',
+        'lastError': authService.lastError ?? '',
+        'crash report': crashReporter.reported.single.error.toString(),
+      };
+      expect(logged, contains('[redacted]'));
+      for (final MapEntry(:key, :value) in surfaces.entries) {
+        for (final secret in secrets) {
+          expect(value, isNot(contains(secret)), reason: key);
+        }
+      }
+    }
 
     AuthService createAuthService() => buildTestAuthService(
       cleanupService: mockCleanupService,
@@ -117,9 +142,39 @@ void main() {
         expect(error.toString(), isNot(contains(nsec)));
         expect(error.toString(), isNot(contains(privateKeyHex)));
       });
+
+      test('keeps an echoed key out of the log and the error', () async {
+        final privateKeyHex = generatePrivateKey();
+        final nsec = Nip19.encodePrivateKey(privateKeyHex);
+        channelMocks
+          ..failWrites = true
+          ..writeFailureMessage = 'cannot store $nsec ($privateKeyHex)';
+        final authService = createAuthService();
+        addTearDown(authService.dispose);
+
+        final result = await authService.importFromNsec(nsec);
+
+        expect(result.success, isFalse);
+        expectNoKeyLeaked(authService, result, [nsec, privateKeyHex]);
+      });
     });
 
     group('importFromHex', () {
+      test('keeps an echoed key out of the log and the error', () async {
+        final privateKeyHex = generatePrivateKey();
+        channelMocks
+          ..failWrites = true
+          ..writeFailureMessage = 'cannot store $privateKeyHex';
+        final authService = createAuthService();
+        addTearDown(authService.dispose);
+
+        final result = await authService.importFromHex(privateKeyHex);
+
+        expect(result.success, isFalse);
+        expect(crashReporter.reported.single.reason, equals('importFromHex'));
+        expectNoKeyLeaked(authService, result, [privateKeyHex]);
+      });
+
       test('imports a valid hex key into a LocalNostrIdentity', () async {
         final privateKeyHex = generatePrivateKey();
         final authService = createAuthService();

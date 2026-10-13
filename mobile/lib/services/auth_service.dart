@@ -2340,8 +2340,9 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   ///
   /// A key that fails [isValid] is the user's to fix and is not reported. A
   /// valid key that cannot be stored or signed in with is reported, because
-  /// the user only sees a generic failure. [secrets] are cut out of that
-  /// report first: an error can echo the key it was handed.
+  /// the user only sees a generic failure. [secrets] are cut out of the
+  /// error before it reaches the log, [lastError] or that report: an error
+  /// can echo the key it was handed.
   Future<AuthResult> _importLocalKey({
     required String label,
     required String invalidFormat,
@@ -2376,10 +2377,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       );
       return AuthResult.success(keyContainer);
     } catch (e, stack) {
-      _lastError = 'Failed to import $label: $e';
+      final failure = KeyImportFailedException.redacting(e, secrets());
+      _lastError = 'Failed to import $label: ${failure.message}';
       Log.error(_lastError!, name: 'AuthService', category: LogCategory.auth);
       _reportAuthError(
-        KeyImportFailedException.redacting(e, secrets()),
+        failure,
         stack,
         reason: reason,
         logMessage: 'Key import failed after validation: $reason',

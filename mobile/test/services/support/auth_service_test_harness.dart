@@ -50,6 +50,9 @@ class AuthServiceChannelMocks {
   /// Makes every secure-storage write fail, as a broken Android Keystore does.
   bool failWrites = false;
 
+  /// The platform message a failed write carries when [failWrites] is set.
+  String writeFailureMessage = 'javax.crypto.BadPaddingException: BAD_DECRYPT';
+
   /// Installs the secure-storage, capability, and native-signer channel mocks
   /// AuthService reaches during sign-in / restore.
   factory AuthServiceChannelMocks.install() {
@@ -91,7 +94,7 @@ class AuthServiceChannelMocks {
             if (mocks.failWrites) {
               throw PlatformException(
                 code: 'Exception encountered',
-                message: 'javax.crypto.BadPaddingException: BAD_DECRYPT',
+                message: mocks.writeFailureMessage,
               );
             }
             final key = call.arguments['key'] as String?;
