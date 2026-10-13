@@ -61,7 +61,9 @@ void main() {
     });
 
     test('removes line breaks and zero-width characters inside a key', () {
-      final pasted = ' ${nsec.substring(0, 30)}\n${nsec.substring(30)}\u200B\n';
+      final pasted =
+          ' ${nsec.substring(0, 20)}\u200D${nsec.substring(20, 30)}\n'
+          '${nsec.substring(30)}\u2060\u200B\n';
 
       expect(NostrKeyUtils.normalizePrivateKeyInput(pasted), equals(nsec));
     });

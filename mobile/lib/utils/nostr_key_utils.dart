@@ -56,7 +56,7 @@ class NostrKeyUtils {
     return isKey ? compact : input.trim();
   }
 
-  static final _copyArtifacts = RegExp(r'[\s​-‍⁠]');
+  static final _copyArtifacts = RegExp(r'[\s\u200B-\u200D\u2060]');
   static final _hexKey = RegExp(r'^[0-9a-f]{64}$');
 
   /// The full npub for [hexPubkey], or the hex itself when it cannot be
