@@ -712,15 +712,16 @@ _DbClassification _classifyDatabase(
       }
       rethrow;
     }
-    if (recovery == HotJournalRecoveryResult.sound) return classification;
-    return switch (classification) {
-      _DbClassification.encrypted => _DbClassification.encryptedButCorrupt,
-      // Removed anyway; a fresh database is created in its place.
-      _DbClassification.emptyPlaintext => _DbClassification.emptyPlaintext,
-      _DbClassification.encryptedButCorrupt ||
-      _DbClassification.populatedPlaintext ||
-      _DbClassification.corrupt => _DbClassification.corrupt,
-    };
+    // Plaintext keeps its classification: migration rebuilds it through
+    // `VACUUM INTO` and quick_checks the copy before promoting it, and fails
+    // closed on damage it cannot copy. Reporting it corrupt instead would offer
+    // a reset that deletes plaintext outright, for a file the next launch
+    // migrates anyway once the journal is gone.
+    if (recovery == HotJournalRecoveryResult.sound ||
+        classification != _DbClassification.encrypted) {
+      return classification;
+    }
+    return _DbClassification.encryptedButCorrupt;
   }
 }
 

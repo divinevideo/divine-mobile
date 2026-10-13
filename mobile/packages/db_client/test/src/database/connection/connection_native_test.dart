@@ -1673,6 +1673,36 @@ void main() {
     );
 
     test(
+      'migrates a plaintext replay that fails quick_check into a sound copy',
+      () async {
+        _createHotJournalFixture(
+          dbPath,
+          beforeTransaction: (source) {
+            source
+              ..execute('CREATE TABLE drafts (id TEXT PRIMARY KEY);')
+              ..execute("INSERT INTO drafts VALUES ('kept');");
+            _orphanIndexPages(source);
+          },
+        );
+        _expectReadOnlyRollback(dbPath);
+
+        final outcome = await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        );
+
+        expect(
+          outcome,
+          CipherMigrationOutcome.migrated,
+          reason: 'unreadable offers a reset that deletes plaintext outright',
+        );
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        expect(_encryptedRowCount(dbPath, validKey, 'drafts'), 1);
+        expect(_encryptedQuickCheckPasses(dbPath, validKey), isTrue);
+      },
+    );
+
+    test(
       'recovers a journal whose commit died after page 1 grew the file',
       () async {
         _createGrownPageOneHotJournalFixture(dbPath, key: validKey);
@@ -2246,6 +2276,16 @@ int _encryptedRowCount(String path, String key, String table) {
   try {
     applyCipherKey(db, key);
     return db.select('SELECT count(*) AS c FROM "$table";').first['c'] as int;
+  } finally {
+    db.close();
+  }
+}
+
+bool _encryptedQuickCheckPasses(String path, String key) {
+  final db = sqlite3.open(path);
+  try {
+    applyCipherKey(db, key);
+    return databaseQuickCheckPasses(db);
   } finally {
     db.close();
   }
