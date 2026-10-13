@@ -214,7 +214,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
         extra: [widget.pubkey],
       ),
       'open direct message from profile',
-      logName: 'OtherProfileScreen',
+      logName: 'OtherProfileView',
       category: LogCategory.ui,
     );
   }
