@@ -46,12 +46,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Text(context.l10n.messagesPublicTestDisclosure),
               ),
-              if (state.loading) const LinearProgressIndicator(),
+              if (state.loading) const DivineLinearProgressIndicator(),
               if (state.loadFailed) ...[
                 Text(context.l10n.dmConversationLoadError),
-                TextButton(
+                DivineButton(
                   onPressed: state.loading ? null : cubit.start,
-                  child: Text(context.l10n.commonRetry),
+                  label: context.l10n.commonRetry,
+                  type: DivineButtonType.link,
                 ),
               ],
               if (state.sendFailed) Text(context.l10n.dmSendFailedMessage),
@@ -73,11 +74,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                   : (r == null ? m.author : '$r'),
                             ),
                             trailing: state.pendingIds.contains(m.id)
-                                ? TextButton(
+                                ? DivineButton(
                                     onPressed: state.sending
                                         ? null
                                         : () => cubit.retry(m.id),
-                                    child: Text(context.l10n.dmSendFailedRetry),
+                                    label: context.l10n.dmSendFailedRetry,
+                                    type: DivineButtonType.link,
+                                    size: DivineButtonSize.small,
                                   )
                                 : null,
                           );
