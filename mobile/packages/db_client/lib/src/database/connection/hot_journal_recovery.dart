@@ -77,8 +77,9 @@ void recoverHotRollbackJournal({
 /// it. The app runs recovery synchronously, before it opens any connection,
 /// so no directory it sweeps can still be in use.
 ///
-/// A snapshot whose restore was interrupted is left alone: the restore
-/// overwrites the live files, so that snapshot may be the only whole copy.
+/// A snapshot whose restore was interrupted or failed is left alone: the
+/// restore overwrites the live files, so that snapshot may be the only whole
+/// copy.
 ///
 /// Best effort: it never throws, because a temp directory that cannot be
 /// listed or an entry that cannot be deleted must not fail startup.
@@ -229,6 +230,9 @@ class _HotJournalSnapshot {
   final File database;
   final File journal;
 
+  // Set when a restore failed after it began overwriting the live files.
+  var _keep = false;
+
   /// Returns null when the copy cannot be made.
   static _HotJournalSnapshot? tryCreate(String databasePath) {
     Directory? directory;
@@ -255,9 +259,20 @@ class _HotJournalSnapshot {
   }) {
     try {
       File(p.join(directory.path, _restoreMarkerName)).createSync();
+    } on Object catch (error) {
+      throw _recoveryError(
+        DatabaseHotJournalRecoveryStage.restoreSnapshot,
+        error,
+      );
+    }
+    try {
       copy(journal, '$databasePath$rollbackJournalSuffix');
       copy(database, databasePath);
     } on Object catch (error) {
+      // A copy that failed part-way may have left the live files damaged, so
+      // this snapshot may be the only whole copy. Its marker keeps it from
+      // the sweep.
+      _keep = true;
       throw _recoveryError(
         DatabaseHotJournalRecoveryStage.restoreSnapshot,
         error,
@@ -265,7 +280,9 @@ class _HotJournalSnapshot {
     }
   }
 
-  void dispose() => _deleteSnapshotDirectory(directory);
+  void dispose() {
+    if (!_keep) _deleteSnapshotDirectory(directory);
+  }
 }
 
 File _copyFile(File source, String destination) => source.copySync(destination);

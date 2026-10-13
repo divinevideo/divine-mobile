@@ -2105,6 +2105,51 @@ void main() {
       expect(File('$dbPath-journal').readAsBytesSync(), journalBefore);
     });
 
+    test('keeps the snapshot when restoring it fails part-way', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      final databaseBefore = File(dbPath).readAsBytesSync();
+      var configurations = 0;
+
+      expect(
+        () => _withPrivateSystemTemp(
+          tempRoot,
+          () => recoverHotRollbackJournal(
+            databasePath: dbPath,
+            configureEncryptedDatabase: (database) {
+              configurations += 1;
+              keyCipherDatabase(database, validKey);
+              if (configurations == 2) {
+                throw StateError('injected replay failure');
+              }
+            },
+            restoreCopyForTesting: (source, destination) {
+              if (destination == dbPath) {
+                File(dbPath).writeAsBytesSync(const [0]);
+                throw const FileSystemException('injected short write');
+              }
+              return source.copySync(destination);
+            },
+          ),
+        ),
+        throwsA(
+          isA<DatabaseHotJournalRecoveryError>().having(
+            (error) => error.stage,
+            'stage',
+            DatabaseHotJournalRecoveryStage.restoreSnapshot,
+          ),
+        ),
+      );
+
+      final snapshots = Directory(
+        p.join(tempRoot.path, 'tmp'),
+      ).listSync().whereType<Directory>().toList();
+      expect(snapshots, hasLength(1));
+      expect(
+        File(p.join(snapshots.single.path, 'database')).readAsBytesSync(),
+        databaseBefore,
+      );
+    });
+
     test('attempts hot-journal recovery at most once', () async {
       _createHotJournalFixture(dbPath, key: validKey);
       final savedJournal = File('$dbPath.saved-journal')
