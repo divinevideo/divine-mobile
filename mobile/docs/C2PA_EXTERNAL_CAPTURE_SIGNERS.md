@@ -23,7 +23,7 @@ Trusting the list would mean trusting every product those CAs certify:
 
 - The Conforming Products List has 142 generator records that sign video. 102 of them declare no key attestation.
 - The list includes generative video services: OpenAI, Runway, Luma, HeyGen, Stability AI and Google Flow.
-- A record can name source types its product may not claim (`disallowedSignals`), but only 45 of the 142 video records do, and none from before August 2026. For the other records, a claim that a video is a camera recording would rest on the product labelling itself honestly.
+- A record can name source types its product may not claim (`disallowedSignals`), but only 45 of the 142 video records bar a camera-recording claim, and none from before August 2026. For the other records, a claim that a video is a camera recording would rest on the product labelling itself honestly.
 - Anchors are per vendor, not per product. Google LLC holds the records for Pixel Camera, Pixel Studio, Google Flow, Google Photos and YouTube, while the Trust List names only Google's own CAs.
 
 **A curated list of capture products instead.** A product qualifies only when all of these hold:
@@ -72,7 +72,7 @@ So revocation happens per product, in the signer list: withdraw the entry, or ra
 
 Admitting other cameras breaks a promise the app makes today, so the copy has to change with it:
 
-- Every string that says a clip was shot with the Divine camera becomes a promise about verified camera recordings, in every locale: `dmClipChecking`, `dmClipNotVerified`, `dmClipSendNotVerified`, `libraryGalleryImportExplainerSubtitle`, `libraryGalleryImportItemNotVerified`, and the descriptions of the attach-menu entries.
+- Every string that says a clip was shot with the Divine camera becomes a promise about verified camera recordings, in every locale: `dmClipChecking`, `dmClipNotVerified`, `dmClipSendNotVerified`, `libraryGalleryImportExplainerSubtitle`, `libraryGalleryImportItemNotVerified`, and every translator description that says the same, such as those of the attach-menu entries and `libraryGalleryImportLabel`.
 - The proof record keeps the entry's display name. A clip from another camera then says so wherever it appears: "Captured with Pixel Camera" in the library and on a received DM clip. A Divine recording shows nothing extra.
 - A post keeps its Human-Made badge, because the footage is a hardware-attested camera recording and the edit is signed by ProofSign. Its provenance details name the capture product instead of implying the Divine camera. Today `getVerificationLevel` writes `verified_mobile` for every post that carries a C2PA manifest, so that tag needs the capture product next to it.
 
