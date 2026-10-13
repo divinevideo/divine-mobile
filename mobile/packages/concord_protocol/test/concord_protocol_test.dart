@@ -28,7 +28,9 @@ String _readFixture() {
     final file = File(path);
     if (file.existsSync()) return file.readAsStringSync();
   }
-  throw StateError('concord_v1.json fixture not found from ${Directory.current.path}');
+  throw StateError(
+    'concord_v1.json fixture not found from ${Directory.current.path}',
+  );
 }
 
 void main() {
