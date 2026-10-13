@@ -264,9 +264,9 @@ class VerifierClient {
     }
     final url = json['url'];
     final target = url is String ? Uri.tryParse(url) : null;
-    // The session has to land on the provider, not on whatever scheme a
+    // The session has to land on a provider's https page, not on whatever a
     // malformed answer happens to name.
-    if (target == null || target.scheme != 'https') {
+    if (target == null || target.scheme != 'https' || target.host.isEmpty) {
       throw const VerifierApiException(
         200,
         'verifier answered a sign-in start without an https url',

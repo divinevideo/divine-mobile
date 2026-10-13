@@ -561,6 +561,66 @@ void main() {
         );
       });
 
+      for (final (name, answer) in [
+        ('an http page', {'url': 'http://x.com/i/oauth2/authorize'}),
+        ('an https address with no host', {'url': 'https:///authorize'}),
+        ('no url', <String, String>{}),
+      ]) {
+        test('refuses an answer with $name', () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => http.Response(jsonEncode(answer), 200),
+            ),
+          );
+          await expectLater(
+            client.startSignIn(
+              platform: 'twitter',
+              pubkey: _hex,
+              returnUrl: 'https://divine.video/app/callback',
+              startCheck: 'x' * 43,
+            ),
+            throwsA(
+              isA<VerifierApiException>().having(
+                (e) => e.statusCode,
+                'statusCode',
+                200,
+              ),
+            ),
+          );
+        });
+      }
+
+      test('sends no handle for a platform other than bluesky', () async {
+        late http.Request sent;
+        final client = VerifierClient(
+          baseUrl: 'https://verifier.example',
+          httpClient: MockClient((req) async {
+            sent = req;
+            return http.Response(
+              jsonEncode({'url': 'https://x.com/i/oauth2/authorize'}),
+              200,
+            );
+          }),
+        );
+
+        await client.startSignIn(
+          platform: 'twitter',
+          pubkey: _hex,
+          returnUrl: 'https://divine.video/app/callback?signin=abc',
+          startCheck: 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+        );
+
+        expect(
+          jsonDecode(sent.body),
+          equals({
+            'pubkey': _hex,
+            'return_url': 'https://divine.video/app/callback?signin=abc',
+            'start_check': 'G2CN_J8Es1JmsWz0QXd2Kc-4p-lCo8GCsR-tVw6vre4',
+          }),
+        );
+      });
+
       test(
         'throws a network error rather than opening anything when the '
         'verifier cannot be reached',
@@ -583,13 +643,13 @@ void main() {
         },
       );
 
-      test('needs a handle for bluesky', () {
+      test('needs a handle for bluesky', () async {
         final client = VerifierClient(
           baseUrl: 'https://verifier.example',
           httpClient: MockClient((_) async => fail('no request')),
         );
-        expect(
-          () => client.startSignIn(
+        await expectLater(
+          client.startSignIn(
             platform: 'bluesky',
             pubkey: _hex,
             returnUrl: 'https://divine.video/app/callback',
@@ -599,13 +659,13 @@ void main() {
         );
       });
 
-      test('refuses a platform without sign-in', () {
+      test('refuses a platform without sign-in', () async {
         final client = VerifierClient(
           baseUrl: 'https://verifier.example',
           httpClient: MockClient((_) async => fail('no request')),
         );
-        expect(
-          () => client.startSignIn(
+        await expectLater(
+          client.startSignIn(
             platform: 'github',
             pubkey: _hex,
             returnUrl: 'https://divine.video/app/callback',
