@@ -92,6 +92,13 @@ enum FeatureFlag {
         'file a group someone else starts as a group. Stays off until group '
         'messaging is ready (#8269).',
     audience: FeatureFlagAudience.internal,
+  ),
+  concordChat(
+    'Concord Chat (POC)',
+    'Open the Concord community chat proof of concept at /chat. Messages '
+        'are signed with your key into a stream anyone can read. Stays off '
+        'outside reviewer builds (#10094).',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(

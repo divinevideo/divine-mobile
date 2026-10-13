@@ -1,0 +1,28 @@
+# ABOUTME: CI workflow for the concord_protocol package.
+# ABOUTME: Runs tests, formatting, and analysis only when concord_protocol files change.
+
+name: Concord Protocol CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/concord_protocol/**"
+      - ".github/workflows/concord_protocol.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/concord_protocol/**"
+      - ".github/workflows/concord_protocol.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/concord_protocol"
+      flutter_version: "3.47.2"
+      min_coverage: 0
