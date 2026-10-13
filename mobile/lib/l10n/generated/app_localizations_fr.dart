@@ -6711,7 +6711,8 @@ class AppLocalizationsFr extends AppLocalizations {
           '$count clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.',
       many:
           '$count clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.',
-      one: '1 clip a été enregistré sans sa preuve, donc il ne peut pas revenir dans tes clips.',
+      one:
+          '$count clip a été enregistré sans sa preuve, donc il ne peut pas revenir dans tes clips.',
     );
     return '$_temp0';
   }

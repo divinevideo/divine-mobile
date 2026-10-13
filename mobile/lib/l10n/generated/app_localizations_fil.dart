@@ -6661,8 +6661,9 @@ class AppLocalizationsFil extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Na-save ang $count clip nang walang proof ng mga ito, kaya hindi na sila makakabalik sa clips mo.',
-      one: 'Na-save ang 1 clip nang walang proof nito, kaya hindi na ito makakabalik sa clips mo.',
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
+      one:
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
     );
     return '$_temp0';
   }
@@ -6707,7 +6708,7 @@ class AppLocalizationsFil extends AppLocalizations {
       total,
       locale: localeName,
       other: 'Sine-save ang clip $current sa $total…',
-      one: 'Sine-save ang clip mo…',
+      one: 'Sine-save ang clip $current sa $total…',
     );
     return '$_temp0';
   }

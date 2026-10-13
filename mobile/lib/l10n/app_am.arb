@@ -2551,7 +2551,7 @@
     "libraryGalleryImportItemCheckUnavailable": "አሁን ማረጋገጥ አልተቻለም። ቆይተው እንደገና ይሞክሩ።",
     "libraryGalleryImportDone": "ተጠናቋል",
     "librarySaveSelectedClipsTooltip": "የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ",
-    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።} other{{count} ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።}}",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{{count} ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።} other{{count} ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።}}",
     "libraryClipsSavedWithoutProofDetails": "ዝርዝሮች",
     "libraryGallerySaveWarningTitle": "ያለ ማረጋገጫ ተቀምጧል",
     "libraryGallerySaveWarningIntro": "ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።",

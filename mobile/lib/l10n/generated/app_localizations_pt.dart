@@ -6668,7 +6668,8 @@ class AppLocalizationsPt extends AppLocalizations {
           '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
       many:
           '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
-      one: '1 clipe foi salvo sem a prova dele, então ele não pode voltar para os seus clipes.',
+      one:
+          '$count clipe foi salvo sem a prova dele, então ele não pode voltar para os seus clipes.',
     );
     return '$_temp0';
   }

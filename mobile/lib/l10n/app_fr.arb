@@ -2152,7 +2152,7 @@
     "libraryGalleryImportItemCheckUnavailable": "Vérification impossible pour l'instant. Réessaie plus tard.",
     "libraryGalleryImportDone": "Terminé",
     "librarySaveSelectedClipsTooltip": "Enregistrer les clips sélectionnés dans ta galerie",
-    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 clip a été enregistré sans sa preuve, donc il ne peut pas revenir dans tes clips.} many{{count} clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.} other{{count} clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.}}",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{{count} clip a été enregistré sans sa preuve, donc il ne peut pas revenir dans tes clips.} many{{count} clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.} other{{count} clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.}}",
     "libraryClipsSavedWithoutProofDetails": "Détails",
     "libraryGallerySaveWarningTitle": "Enregistrés sans preuve",
     "libraryGallerySaveWarningIntro": "Seuls les clips qui prouvent avoir été filmés avec Divine peuvent revenir depuis ta galerie. Les copies de ces clips ont été enregistrées sans cette preuve.",

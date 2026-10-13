@@ -167,7 +167,7 @@ void main() {
           );
           C2paTrustAnchors? anchors;
 
-          service.load().then((value) => anchors = value);
+          unawaited(service.load().then((value) => anchors = value));
           async.elapse(C2paTrustAnchorService.attemptTimeout);
 
           expect(requests, equals(2));
