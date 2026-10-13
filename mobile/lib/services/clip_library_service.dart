@@ -112,7 +112,9 @@ class ClipLibraryService {
   /// Save a clip to the library. Updates existing clip if ID matches.
   ///
   /// A recording hash the entry holds for a file [clip] still plays is kept
-  /// when [clip] carries none (see [rememberRecordingHash]).
+  /// when [clip] carries none (see [rememberRecordingHash]), and so is a
+  /// proof naming a C2PA manifest when [clip]'s names none (see
+  /// [recordLateProof]).
   Future<void> saveClip(DivineVideoClip clip) async {
     Log.debug(
       '💾 Saving clip to library: ${clip.id}',
@@ -129,9 +131,16 @@ class ClipLibraryService {
           ? await _clipsDao.getClipById(_autosaveDraftRowId(clip.id))
           : null;
       final keptHash = await _recordingHashKeptFor(clip, existingLibraryRow);
-      final saved = keptHash == null
+      final keptProof = await _lateProofKeptFor(
+        clip,
+        existingLibraryRow ?? existingAutosaveRow,
+      );
+      final saved = keptHash == null && keptProof == null
           ? clip
-          : clip.copyWith(recordingSha256: keptHash);
+          : clip.copyWith(
+              recordingSha256: keptHash,
+              proofManifestJson: keptProof,
+            );
 
       await _clipsDao.upsertClip(
         id: clip.id,
@@ -448,6 +457,52 @@ class ClipLibraryService {
     if (hash == null) return null;
     final files = _recordingFileNames(stored);
     return _recordingFileNames(clip).any(files.contains) ? hash : null;
+  }
+
+  /// The proof [row] holds for the file [clip] still plays when it names a
+  /// C2PA manifest and [clip]'s proof names none.
+  ///
+  /// [clip] can be a copy read before [recordLateProof] wrote the proof of
+  /// its file signed after the fact, such as one asset recovery saves back.
+  /// Saving it as it is would bring back the unsigned proof, and with it the
+  /// duplicate gallery import that proof exists to prevent.
+  Future<String?> _lateProofKeptFor(DivineVideoClip clip, ClipRow? row) async {
+    if (row == null || _proofManifestId(clip.proofManifestJson) != null) {
+      return null;
+    }
+    final DivineVideoClip stored;
+    try {
+      stored = DivineVideoClip.fromJson(
+        json.decode(row.data) as Map<String, dynamic>,
+        await getDocumentsPath(),
+      );
+    } catch (_) {
+      // A corrupt row has no proof to keep; the save replaces it.
+      return null;
+    }
+    final storedPath = stored.video?.file?.path;
+    final path = clip.video?.file?.path;
+    if (storedPath == null ||
+        path == null ||
+        p.basename(storedPath) != p.basename(path)) {
+      return null;
+    }
+    final storedProof = stored.proofManifestJson;
+    return _proofManifestId(storedProof) == null ? null : storedProof;
+  }
+
+  /// The C2PA manifest [proofJson] names, read the way the gallery import
+  /// matches it, if it parses and names one.
+  static String? _proofManifestId(String? proofJson) {
+    if (proofJson == null) return null;
+    try {
+      final decoded = json.decode(proofJson);
+      if (decoded is! Map<String, dynamic>) return null;
+      final manifestId = decoded['c2paManifestId'];
+      return manifestId is String ? manifestId : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   /// The files [clip]'s recording hash can describe: its video, or the raw

@@ -1032,6 +1032,29 @@ void main() {
         );
         expect(manifestOf(await service.getClipById('other')), isNull);
       });
+
+      test('keeps the proof when a copy read before it is saved', () async {
+        final recording = take('take', 'take.mp4');
+        await service.saveClip(recording);
+        await service.recordLateProof(fileName: 'take.mp4', proof: lateProof);
+
+        await service.saveClip(
+          recording.copyWith(thumbnailPath: '/tmp/take_thumb.jpg'),
+        );
+
+        final entry = await service.getClipById('take');
+        expect(manifestOf(entry), 'urn:c2pa:late');
+        expect(entry?.thumbnailPath, endsWith('take_thumb.jpg'));
+      });
+
+      test('takes the saved proof once the clip plays another file', () async {
+        await service.saveClip(take('take', 'take.mp4'));
+        await service.recordLateProof(fileName: 'take.mp4', proof: lateProof);
+
+        await service.saveClip(take('take', 'baked.mp4'));
+
+        expect(manifestOf(await service.getClipById('take')), isNull);
+      });
     });
 
     group('clearAllClips', () {
