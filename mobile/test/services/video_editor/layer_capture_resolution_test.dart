@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
@@ -46,6 +47,38 @@ void main() {
         5.9,
       );
     });
+
+    test(
+      'keeps the pixel ratio of a layer that fills the frame at any angle',
+      () {
+        // A layer that fits the frame never grows past the frame's diagonal at
+        // any angle, and that has to stay below the capture extent: a larger
+        // export quality needs a larger extent.
+        const pixelRatio = 5.9;
+        final frame = VideoEditorConstants.quality.resolution;
+        final angles = [
+          0.0,
+          math.pi / 6,
+          math.atan2(frame.width, frame.height),
+          math.pi / 4,
+          math.pi / 2,
+        ];
+
+        for (final angle in angles) {
+          for (final side in [frame, frame.flipped]) {
+            expect(
+              capturePixelRatioForLayer(
+                _stickerLayer(rotation: angle),
+                Size(side.width / pixelRatio, side.height / pixelRatio),
+                pixelRatio,
+              ),
+              equals(pixelRatio),
+              reason: '${side.width}×${side.height} layer turned by $angle',
+            );
+          }
+        }
+      },
+    );
 
     test('holds a sticker scaled far past the frame to the capture extent', () {
       // A sticker scaled up eightfold on a square video: at the editor's export
