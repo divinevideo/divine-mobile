@@ -12,11 +12,14 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Auth extends Fake implements AuthService {
-  _Auth(this.currentPublicKeyHex);
+  _Auth(this.currentPublicKeyHex, {this.isAuthenticated = true});
+  @override
+  final bool isAuthenticated;
   @override
   final String? currentPublicKeyHex;
   @override
-  AuthState get authState => AuthState.authenticated;
+  AuthState get authState =>
+      isAuthenticated ? AuthState.authenticated : AuthState.unauthenticated;
   @override
   Stream<AuthState> get authStateStream => const Stream.empty();
 }
@@ -79,6 +82,28 @@ void main() {
         expect(find.byType(ChoiceChip), findsNothing);
       });
     }
+
+    testWidgets('auth teardown hides Rooms even before the key is cleared', (
+      tester,
+    ) async {
+      final container = await pumpPage(tester, account: 'a' * 64);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.messagesRooms));
+      await tester.pump();
+      container.updateOverrides([
+        authServiceProvider.overrideWithValue(
+          _Auth('a' * 64, isAuthenticated: false),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        featureFlagStateProvider.overrideWithValue({
+          FeatureFlag.concordChat: true,
+        }),
+        isDmRestrictedProvider.overrideWithValue(false),
+      ]);
+      await tester.pump();
+      expect(find.text(l10n.messagesPublicTestRooms), findsNothing);
+      expect(find.byType(ChoiceChip), findsNothing);
+    });
 
     testWidgets('switching accounts clears the previous Rooms selection', (
       tester,
