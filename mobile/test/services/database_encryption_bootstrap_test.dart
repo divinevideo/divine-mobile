@@ -1086,6 +1086,36 @@ void main() {
       });
     });
 
+    group('hot journal replayed into a file failing quick_check', () {
+      test('salvages without consulting the probe', () async {
+        const existing =
+            '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+        store[dbCipherKeyStorageKey] = existing;
+        var probed = false;
+        var salvaged = false;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.encryptedButCorrupt,
+          onDelete: () {},
+          // The probe reads too little of the file to see what quick_check
+          // already found.
+          canOpenEncryptedDatabase: (_) {
+            probed = true;
+            return true;
+          },
+          salvageDatabase: (_) {
+            salvaged = true;
+            return true;
+          },
+        );
+
+        final key = await bootstrap.resolveCipherKey();
+
+        expect(probed, isFalse);
+        expect(salvaged, isTrue);
+        expect(key, equals(existing), reason: 'salvage keeps the same key');
+      });
+    });
+
     test('backs up the unrecoverable DB on key loss (generated key + '
         'alreadyEncrypted)', () async {
       // Empty store => key is freshly generated, but an encrypted DB already

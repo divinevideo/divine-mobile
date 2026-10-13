@@ -198,7 +198,8 @@ class DatabaseEncryptionBootstrap {
   ///   the existing file format. Startup fails closed and preserves both the
   ///   database and cipher key for a later retry.
   /// * [DatabaseHotJournalRecoveryError] when SQLite found a rollback journal
-  ///   but could not safely replay and validate it under the existing key.
+  ///   but could not safely replay it under the existing key. A replay that
+  ///   succeeds into a damaged file is salvaged like any corrupt database.
   ///
   /// Must run before the first `AppDatabase` open.
   Future<String?> resolveCipherKey() async {
@@ -235,6 +236,7 @@ class DatabaseEncryptionBootstrap {
       case CipherMigrationOutcome.migrated:
         return (key, true);
       case CipherMigrationOutcome.alreadyEncrypted:
+      case CipherMigrationOutcome.encryptedButCorrupt:
         if (wasGenerated) {
           return (
             await _recoverUnusableEncryptedDatabase(key, reason: 'missing'),
@@ -244,8 +246,10 @@ class DatabaseEncryptionBootstrap {
         // A runtime corruption report from a previous session bypasses the
         // probe: it is reactive by design and already failed to see this
         // corruption once, so asking it again would just clear the database and
-        // strand the user on it for another session.
-        if (!await _hasPendingCorruptionRecovery() &&
+        // strand the user on it for another session. A journal replay that
+        // failed its integrity check bypasses it for the same reason.
+        if (outcome == CipherMigrationOutcome.alreadyEncrypted &&
+            !await _hasPendingCorruptionRecovery() &&
             await _canOpenEncryptedDatabase(key)) {
           return (key, true);
         }

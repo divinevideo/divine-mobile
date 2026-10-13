@@ -468,6 +468,12 @@ enum CipherMigrationOutcome {
   /// The existing database was already encrypted — nothing to do.
   alreadyEncrypted,
 
+  /// The existing database is encrypted and its hot rollback journal replayed
+  /// under the key, but the result fails `PRAGMA quick_check`. The caller must
+  /// recover it rather than trust an open probe that reads too little of the
+  /// file to see the damage.
+  encryptedButCorrupt,
+
   /// An empty plaintext database was removed so a fresh encrypted one is
   /// created on first open.
   removedEmptyPlaintext,
@@ -589,6 +595,8 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   )) {
     case _DbClassification.encrypted:
       return CipherMigrationOutcome.alreadyEncrypted;
+    case _DbClassification.encryptedButCorrupt:
+      return CipherMigrationOutcome.encryptedButCorrupt;
     case _DbClassification.corrupt:
       return CipherMigrationOutcome.unreadable;
     case _DbClassification.emptyPlaintext:
@@ -636,6 +644,10 @@ const _sqliteCorrupt = 11; // SQLITE_CORRUPT
 
 enum _DbClassification {
   encrypted,
+
+  /// Encrypted, and its hot journal replayed into a file that fails
+  /// `PRAGMA quick_check`.
+  encryptedButCorrupt,
   emptyPlaintext,
   populatedPlaintext,
 
@@ -668,8 +680,9 @@ _DbClassification _classifyDatabase(
       rethrow;
     }
 
+    final HotJournalRecoveryResult recovery;
     try {
-      recoverHotRollbackJournal(
+      recovery = recoverHotRollbackJournal(
         databasePath: dbPath,
         configureEncryptedDatabase: (database) =>
             keyCipherDatabase(database, rawKeyHex),
@@ -687,8 +700,9 @@ _DbClassification _classifyDatabase(
     }
     onRecoveryCompleted?.call();
 
+    final _DbClassification classification;
     try {
-      return _classifyDatabaseOnce(dbPath);
+      classification = _classifyDatabaseOnce(dbPath);
     } on DatabaseClassificationException catch (retryError) {
       if (retryError.extendedResultCode == sqliteReadOnlyRollback) {
         throw const DatabaseHotJournalRecoveryError(
@@ -698,6 +712,15 @@ _DbClassification _classifyDatabase(
       }
       rethrow;
     }
+    if (recovery == HotJournalRecoveryResult.sound) return classification;
+    return switch (classification) {
+      _DbClassification.encrypted => _DbClassification.encryptedButCorrupt,
+      // Removed anyway; a fresh database is created in its place.
+      _DbClassification.emptyPlaintext => _DbClassification.emptyPlaintext,
+      _DbClassification.encryptedButCorrupt ||
+      _DbClassification.populatedPlaintext ||
+      _DbClassification.corrupt => _DbClassification.corrupt,
+    };
   }
 }
 
