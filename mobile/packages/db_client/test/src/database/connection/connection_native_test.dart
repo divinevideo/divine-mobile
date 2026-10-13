@@ -1709,7 +1709,7 @@ void main() {
             ),
             // The root zone has no overrides, so this does not call itself.
             createFile: (path) => p.basename(path) == 'restoring'
-                ? _uncreatableFile(path)
+                ? _unwritableFile(path)
                 : Zone.root.run(() => File(path)),
           ),
         ),
@@ -2196,6 +2196,181 @@ void main() {
       expect(File('$dbPath-journal').readAsBytesSync(), journalBefore);
     });
 
+    test('keeps the snapshot when restoring it fails part-way', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      final databaseBefore = File(dbPath).readAsBytesSync();
+      var configurations = 0;
+
+      expect(
+        () => _withPrivateSystemTemp(
+          tempRoot,
+          () => recoverHotRollbackJournal(
+            databasePath: dbPath,
+            configureEncryptedDatabase: (database) {
+              configurations += 1;
+              keyCipherDatabase(database, validKey);
+              if (configurations == 2) {
+                throw StateError('injected replay failure');
+              }
+            },
+            restoreCopyForTesting: (source, destination) {
+              if (destination == dbPath) {
+                File(dbPath).writeAsBytesSync(const [0]);
+                throw const FileSystemException('injected short write');
+              }
+              return source.copySync(destination);
+            },
+          ),
+        ),
+        throwsA(
+          isA<DatabaseHotJournalRecoveryError>().having(
+            (error) => error.stage,
+            'stage',
+            DatabaseHotJournalRecoveryStage.restoreSnapshot,
+          ),
+        ),
+      );
+
+      final snapshots = Directory(
+        p.join(tempRoot.path, 'tmp'),
+      ).listSync().whereType<Directory>().toList();
+      expect(snapshots, hasLength(1));
+      expect(
+        File(p.join(snapshots.single.path, 'database')).readAsBytesSync(),
+        databaseBefore,
+      );
+    });
+
+    test(
+      'the next launch puts back a snapshot whose restore failed part-way',
+      () async {
+        _createHotJournalFixture(dbPath, key: validKey);
+        _failRestorePartWay(tempRoot, dbPath, validKey);
+
+        final outcome = await _withPrivateSystemTemp(
+          tempRoot,
+          () => migratePlaintextToEncrypted(
+            rawKeyHex: validKey,
+            databasePath: dbPath,
+          ),
+        );
+
+        expect(outcome, equals(CipherMigrationOutcome.alreadyEncrypted));
+        expect(File('$dbPath-journal').existsSync(), isFalse);
+        expect(_hotJournalRowCount(dbPath, key: validKey), equals(1));
+        expect(_privateSystemTemp(tempRoot).listSync(), isEmpty);
+      },
+    );
+
+    test(
+      'an unfinished restore that cannot be completed stops the launch',
+      () async {
+        _createHotJournalFixture(dbPath, key: validKey);
+        _failRestorePartWay(tempRoot, dbPath, validKey);
+        final kept = _privateSystemTemp(tempRoot).listSync().single;
+        final wholeCopy = File(p.join(kept.path, 'database')).readAsBytesSync();
+        // A directory where the journal belongs makes the copy back fail.
+        File('$dbPath-journal').deleteSync();
+        Directory('$dbPath-journal').createSync();
+
+        for (var launch = 0; launch < 2; launch += 1) {
+          await expectLater(
+            _withPrivateSystemTemp(
+              tempRoot,
+              () => migratePlaintextToEncrypted(
+                rawKeyHex: validKey,
+                databasePath: dbPath,
+              ),
+            ),
+            throwsA(
+              isA<DatabaseHotJournalRecoveryError>().having(
+                (error) => error.stage,
+                'stage',
+                DatabaseHotJournalRecoveryStage.restoreSnapshot,
+              ),
+            ),
+          );
+        }
+
+        expect(File(dbPath).existsSync(), isTrue);
+        final snapshots = _privateSystemTemp(tempRoot).listSync();
+        expect(snapshots, hasLength(1));
+        expect(
+          File(p.join(snapshots.single.path, 'database')).readAsBytesSync(),
+          equals(wholeCopy),
+        );
+      },
+    );
+
+    test('leaves a snapshot owed to another database alone', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      _failRestorePartWay(tempRoot, dbPath, validKey);
+      final otherPath = p.join(tempRoot.path, 'other', 'divine_db.db');
+      _createHotJournalFixture(otherPath, key: validKey);
+      final otherBefore = File(otherPath).readAsBytesSync();
+
+      _withPrivateSystemTemp(
+        tempRoot,
+        () => completeUnfinishedHotJournalRestore(databasePath: otherPath),
+      );
+
+      expect(File(otherPath).readAsBytesSync(), equals(otherBefore));
+      expect(_privateSystemTemp(tempRoot).listSync(), hasLength(1));
+    });
+
+    test('ignores a marked snapshot that has lost one of its files', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      _failRestorePartWay(tempRoot, dbPath, validKey);
+      final kept = _privateSystemTemp(tempRoot).listSync().single;
+      // The system may clear files out of the temp directory.
+      File(p.join(kept.path, 'journal')).deleteSync();
+      final liveBefore = File(dbPath).readAsBytesSync();
+
+      expect(
+        () => _withPrivateSystemTemp(
+          tempRoot,
+          () => completeUnfinishedHotJournalRestore(databasePath: dbPath),
+        ),
+        returnsNormally,
+      );
+      expect(File(dbPath).readAsBytesSync(), equals(liveBefore));
+    });
+
+    test('a snapshot that was put back is never put back again', () async {
+      _createHotJournalFixture(dbPath, key: validKey);
+      _failRestorePartWay(tempRoot, dbPath, validKey);
+      // Its directory cannot be deleted, so only the cleared mark stops a
+      // later launch from putting the old files back over newer ones.
+      final outcome = await _withSnapshotDirectory(
+        tempRoot,
+        _undeletableDirectory,
+        () => migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+      );
+      expect(outcome, equals(CipherMigrationOutcome.alreadyEncrypted));
+      final database = sqlite3.open(dbPath);
+      try {
+        applyCipherKey(database, validKey);
+        database.execute(
+          'INSERT INTO hot_journal_rows VALUES (zeroblob(1024));',
+        );
+      } finally {
+        database.close();
+      }
+
+      await _withPrivateSystemTemp(
+        tempRoot,
+        () => migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+      );
+
+      expect(_hotJournalRowCount(dbPath, key: validKey), equals(2));
+    });
+
     test('attempts hot-journal recovery at most once', () async {
       _createHotJournalFixture(dbPath, key: validKey);
       final savedJournal = File('$dbPath.saved-journal')
@@ -2645,13 +2820,46 @@ Directory _undeletableDirectory(String path) {
   return directory;
 }
 
-File _uncreatableFile(String path) {
+File _unwritableFile(String path) {
   final file = _MockFile();
   when(() => file.path).thenReturn(path);
   when(
-    file.createSync,
-  ).thenThrow(const FileSystemException('injected create failure'));
+    () => file.writeAsStringSync(any(), flush: any(named: 'flush')),
+  ).thenThrow(const FileSystemException('injected write failure'));
   return file;
+}
+
+/// Runs one recovery whose replay fails and whose restore damages the live
+/// database before failing, the state a full volume or a kill can leave.
+void _failRestorePartWay(Directory root, String dbPath, String key) {
+  var configurations = 0;
+  expect(
+    () => _withPrivateSystemTemp(
+      root,
+      () => recoverHotRollbackJournal(
+        databasePath: dbPath,
+        configureEncryptedDatabase: (database) {
+          configurations += 1;
+          keyCipherDatabase(database, key);
+          if (configurations == 2) throw StateError('injected replay failure');
+        },
+        restoreCopyForTesting: (source, destination) {
+          if (destination == dbPath) {
+            File(dbPath).writeAsBytesSync(const [0]);
+            throw const FileSystemException('injected short write');
+          }
+          return source.copySync(destination);
+        },
+      ),
+    ),
+    throwsA(
+      isA<DatabaseHotJournalRecoveryError>().having(
+        (error) => error.stage,
+        'stage',
+        DatabaseHotJournalRecoveryStage.restoreSnapshot,
+      ),
+    ),
+  );
 }
 
 void _expectReadOnlyRollback(String path) {

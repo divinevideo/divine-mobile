@@ -19,7 +19,8 @@ const _sqliteHeader = 'SQLite format 3\x00';
 // change: [sweepStrandedHotJournalSnapshots] finds them by it.
 const _snapshotDirectoryPrefix = 'divine_hot_journal_recovery_';
 
-// Written into a snapshot when its restore begins.
+// Written into a snapshot when its restore begins, naming the database it
+// belongs to, and removed once both files are back.
 const _restoreMarkerName = 'restoring';
 
 /// Replays a hot rollback journal through SQLite without ever editing the
@@ -70,6 +71,46 @@ void recoverHotRollbackJournal({
   }
 }
 
+/// Finishes a restore that an earlier launch began and did not finish.
+///
+/// A restore overwrites the live database and journal. One that was
+/// interrupted, or failed part-way, can leave them damaged while its snapshot
+/// holds the only whole copy. This puts that copy back and releases the
+/// snapshot.
+///
+/// Call it before anything reads or classifies the database. A marked
+/// snapshot always holds what the live files should contain, because nothing
+/// uses the database while one exists: this either clears the mark or throws.
+///
+/// Throws [DatabaseHotJournalRecoveryError] at
+/// [DatabaseHotJournalRecoveryStage.restoreSnapshot] when the copy cannot be
+/// put back. The snapshot is kept for the next launch.
+void completeUnfinishedHotJournalRestore({
+  required String databasePath,
+  @visibleForTesting
+  File Function(File source, String destination) restoreCopyForTesting =
+      _copyFile,
+}) {
+  final unfinished = _HotJournalSnapshot.unfinishedFor(databasePath);
+  try {
+    // Every mark has to go before the database is used: a snapshot left
+    // marked would be put back again at a later launch, over newer data.
+    for (final snapshot in unfinished) {
+      snapshot
+        .._copyBack(databasePath, copy: restoreCopyForTesting)
+        .._unmark();
+    }
+  } on Object catch (error) {
+    throw _recoveryError(
+      DatabaseHotJournalRecoveryStage.restoreSnapshot,
+      error,
+    );
+  }
+  for (final snapshot in unfinished) {
+    _deleteSnapshotDirectory(snapshot.directory);
+  }
+}
+
 /// Deletes snapshot directories that interrupted recoveries left behind.
 ///
 /// A launch killed between copying the database aside and deleting the copy
@@ -77,25 +118,51 @@ void recoverHotRollbackJournal({
 /// it. The app runs recovery synchronously, before it opens any connection,
 /// so no directory it sweeps can still be in use.
 ///
-/// A snapshot whose restore was interrupted is left alone: the restore
-/// overwrites the live files, so that snapshot may be the only whole copy.
+/// A snapshot whose restore did not finish is left alone: it may be the only
+/// whole copy, and [completeUnfinishedHotJournalRestore] puts it back at the
+/// next launch.
 ///
 /// Best effort: it never throws, because a temp directory that cannot be
 /// listed or an entry that cannot be deleted must not fail startup.
 void sweepStrandedHotJournalSnapshots() {
   try {
-    for (final entity in Directory.systemTemp.listSync(followLinks: false)) {
-      if (entity is! Directory) continue;
-      if (!p.basename(entity.path).startsWith(_snapshotDirectoryPrefix)) {
-        continue;
-      }
-      if (File(p.join(entity.path, _restoreMarkerName)).existsSync()) continue;
-      _deleteSnapshotDirectory(entity);
+    for (final directory in _snapshotDirectories()) {
+      if (_restoreMarker(directory).existsSync()) continue;
+      _deleteSnapshotDirectory(directory);
     }
   } on FileSystemException {
     // The temp directory is unusable, so there is nothing to sweep.
   }
 }
+
+/// Throws [FileSystemException] when the temp directory cannot be listed.
+Iterable<Directory> _snapshotDirectories() => Directory.systemTemp
+    .listSync(followLinks: false)
+    .whereType<Directory>()
+    .where(
+      (entry) => p.basename(entry.path).startsWith(_snapshotDirectoryPrefix),
+    )
+    // `listSync` builds its entries without consulting [IOOverrides].
+    .map((entry) => Directory(entry.path));
+
+File _restoreMarker(Directory snapshot) =>
+    File(p.join(snapshot.path, _restoreMarkerName));
+
+/// Names [databasePath] so that a snapshot can be matched to its database at
+/// a later launch.
+///
+/// The app's container can move between launches (iOS moves it on an update),
+/// so this is the path from the temp directory to the database, with links
+/// resolved so that both ends are spelled the same way.
+///
+/// Throws [FileSystemException] when either directory cannot be resolved.
+String _databaseIdentity(String databasePath) => p.relative(
+  p.join(
+    Directory(p.dirname(databasePath)).resolveSymbolicLinksSync(),
+    p.basename(databasePath),
+  ),
+  from: Directory.systemTemp.resolveSymbolicLinksSync(),
+);
 
 /// Best effort: a snapshot that cannot be removed now is left for
 /// [sweepStrandedHotJournalSnapshots], and must not fail the recovery.
@@ -229,6 +296,38 @@ class _HotJournalSnapshot {
   final File database;
   final File journal;
 
+  // Set while the snapshot is marked, so that it outlives this process.
+  var _keep = false;
+
+  /// The snapshots whose restore to [databasePath] began and did not finish.
+  static List<_HotJournalSnapshot> unfinishedFor(String databasePath) {
+    final unfinished = <_HotJournalSnapshot>[];
+    try {
+      String? identity;
+      for (final directory in _snapshotDirectories()) {
+        final marker = _restoreMarker(directory);
+        if (!marker.existsSync()) continue;
+        identity ??= _databaseIdentity(databasePath);
+        if (marker.readAsStringSync() != identity) continue;
+        final snapshot = _HotJournalSnapshot._(
+          directory: directory,
+          database: File(p.join(directory.path, 'database')),
+          journal: File(p.join(directory.path, 'journal')),
+        );
+        // The system may clear files out of the temp directory. A snapshot
+        // that lost one cannot be put back, and must not stop every launch.
+        if (!snapshot.database.existsSync() || !snapshot.journal.existsSync()) {
+          continue;
+        }
+        unfinished.add(snapshot);
+      }
+    } on FileSystemException {
+      // What cannot be listed or read cannot be put back, so the launch goes
+      // on as it would without this step.
+    }
+    return unfinished;
+  }
+
   /// Returns null when the copy cannot be made.
   static _HotJournalSnapshot? tryCreate(String databasePath) {
     Directory? directory;
@@ -251,6 +350,10 @@ class _HotJournalSnapshot {
 
   /// Puts the snapshot back over the live files.
   ///
+  /// The snapshot is marked first and stays marked until both files are back,
+  /// so a restore that is interrupted or fails part-way is finished at the
+  /// next launch by [completeUnfinishedHotJournalRestore].
+  ///
   /// A restore that cannot first be marked is skipped, touching nothing, so
   /// the caller reports the stage that actually failed. The files are then
   /// left as a recovery without a snapshot leaves them.
@@ -259,13 +362,15 @@ class _HotJournalSnapshot {
     required File Function(File source, String destination) copy,
   }) {
     try {
-      File(p.join(directory.path, _restoreMarkerName)).createSync();
+      _restoreMarker(
+        directory,
+      ).writeAsStringSync(_databaseIdentity(databasePath), flush: true);
     } on FileSystemException {
       return;
     }
+    _keep = true;
     try {
-      copy(journal, '$databasePath$rollbackJournalSuffix');
-      copy(database, databasePath);
+      _copyBack(databasePath, copy: copy);
     } on Object catch (error) {
       throw _recoveryError(
         DatabaseHotJournalRecoveryStage.restoreSnapshot,
@@ -275,13 +380,26 @@ class _HotJournalSnapshot {
     // The live files are whole again, so a snapshot [dispose] cannot remove
     // is an ordinary leftover for the sweep.
     try {
-      File(p.join(directory.path, _restoreMarkerName)).deleteSync();
+      _unmark();
+      _keep = false;
     } on FileSystemException {
-      // The sweep keeps it; nothing else depends on the marker going.
+      // Still marked, so the next launch puts the same files back again.
     }
   }
 
-  void dispose() => _deleteSnapshotDirectory(directory);
+  void _copyBack(
+    String databasePath, {
+    required File Function(File source, String destination) copy,
+  }) {
+    copy(journal, '$databasePath$rollbackJournalSuffix');
+    copy(database, databasePath);
+  }
+
+  void _unmark() => _restoreMarker(directory).deleteSync();
+
+  void dispose() {
+    if (!_keep) _deleteSnapshotDirectory(directory);
+  }
 }
 
 File _copyFile(File source, String destination) => source.copySync(destination);
