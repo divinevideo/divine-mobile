@@ -1,6 +1,7 @@
 // ABOUTME: Metadata identifying a WidgetLayer as a clip detached from the
 // ABOUTME: timeline, so the canvas and the renderer can treat it as video
 
+import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/json_tree_rewrite.dart';
@@ -451,6 +452,101 @@ class DetachedClipLayerData {
     });
     return rewritten! as Map<String, dynamic>;
   }
+
+  /// Brings every detached clip's `exportConfigs.meta` in serialized editor
+  /// state up to date with its `Layer.meta`.
+  ///
+  /// Before pro_image_editor 14.11.1 a history entry stored a widget layer as
+  /// a diff that never carried `exportConfigs`, so on import every entry kept
+  /// the export meta of the layer's first entry — from before a green screen,
+  /// an opacity or a crop was applied. The diff did carry `Layer.meta`, and
+  /// every edit writes the same map into both slots, so the newer `Layer.meta`
+  /// is what the export meta should be. Without this, such a draft reopens
+  /// with each detached clip back in its first state: the widget loader and
+  /// [metaOf] both read the export meta.
+  ///
+  /// Walks the history the way `ImportStateHistory` does, merging each diff
+  /// over the layer's previous state from `references` on, and writes the
+  /// corrected export configs into the diff where the two slots part.
+  ///
+  /// Never mutates [history]; returns it unchanged when both slots agree,
+  /// which is every draft saved with the fixed package.
+  static Map<String, dynamic> withRestoredDetachedClipExportMeta(
+    Map<String, dynamic> history,
+  ) {
+    // Long-form keys only, as in [withRotatableDetachedClips].
+    if (history[_minifiedHistoryKey] == true) return history;
+    final entries = history[_historyEntriesKey];
+    if (entries is! List) return history;
+
+    final previousState = <String, Map<String, dynamic>>{};
+    final references = _asMap(history[_historyReferencesKey]);
+    references?.forEach((id, layer) {
+      if (_asMap(layer) case final map?) previousState[id] = map;
+    });
+
+    List<Object?>? rewrittenEntries;
+    for (var i = 0; i < entries.length; i++) {
+      final entry = _asMap(entries[i]);
+      final layers = entry?[_historyLayersKey];
+      if (entry == null || layers is! List) continue;
+
+      List<Object?>? rewrittenLayers;
+      for (var j = 0; j < layers.length; j++) {
+        final diff = _asMap(layers[j]);
+        final id = diff?[_layerIdKey];
+        if (diff == null || id is! String) continue;
+
+        final state = {...?previousState[id], ...diff};
+        final meta = _asMap(state[_layerMetaKey]);
+        final exportConfigs = _asMap(state[_exportConfigsKey]);
+        final exportMeta = _asMap(exportConfigs?[_layerMetaKey]);
+        if (exportConfigs != null &&
+            isDetachedClipMeta(meta) &&
+            isDetachedClipMeta(exportMeta) &&
+            !const DeepCollectionEquality().equals(meta, exportMeta)) {
+          final restored = {...exportConfigs, _layerMetaKey: meta};
+          state[_exportConfigsKey] = restored;
+          (rewrittenLayers ??= List<Object?>.of(layers))[j] = {
+            ...diff,
+            _exportConfigsKey: restored,
+          };
+        }
+        previousState[id] = state;
+      }
+
+      if (rewrittenLayers != null) {
+        (rewrittenEntries ??= List<Object?>.of(entries))[i] = {
+          ...entry,
+          _historyLayersKey: rewrittenLayers,
+        };
+      }
+    }
+
+    if (rewrittenEntries == null) return history;
+    return {...history, _historyEntriesKey: rewrittenEntries};
+  }
+
+  /// The key a minified export marks itself with.
+  static const String _minifiedHistoryKey = 'm';
+
+  /// Key under which an export lists its history entries.
+  static const String _historyEntriesKey = 'history';
+
+  /// Key under which an export stores each layer's first full map.
+  static const String _historyReferencesKey = 'references';
+
+  /// Key under which a history entry lists its layers.
+  static const String _historyLayersKey = 'layers';
+
+  /// Key under which a serialized layer carries its id.
+  static const String _layerIdKey = 'id';
+
+  /// Key under which a serialized layer, and its export configs, carry meta.
+  static const String _layerMetaKey = 'meta';
+
+  /// Key under which a serialized widget layer carries its export configs.
+  static const String _exportConfigsKey = 'exportConfigs';
 
   /// Whether [map] is a serialized *layer* carrying a detached clip — as
   /// opposed to the clip meta nested inside it, which has no interaction of
