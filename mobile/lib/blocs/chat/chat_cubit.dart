@@ -119,7 +119,10 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     required String body,
     required int now,
   }) async {
-    final stream = pocStreamForChannel?.call(channelId);
+    // Held kind-33302 keys win (private channels especially); the
+    // labeled POC key is only the fallback for unheld communities.
+    final stream =
+        _repo.heldStreamKey(channelId) ?? pocStreamForChannel?.call(channelId);
     final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
     if (_repo.sealedTransport != null &&
         stream != null &&
