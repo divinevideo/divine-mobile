@@ -18,7 +18,9 @@ import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 /// capture on Next past 2.7 GB, and a memory kill took the app with it.
 const double layerCaptureMaxExtent = 3072;
 
-/// The longest side, in pixels, a detached clip's layer image is captured at.
+/// The longest side, in pixels, a detached clip's layer image is captured at,
+/// measured before the capture turns the image by the layer's rotation, which
+/// grows it by up to a factor of √2.
 ///
 /// The export places a detached clip from its own video, so its captured image
 /// only ever stands in for media that cannot be read (see
