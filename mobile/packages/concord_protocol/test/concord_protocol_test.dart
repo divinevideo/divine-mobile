@@ -11,12 +11,30 @@ class _XorCipher implements StreamCipher {
   String open(String c, String s) => utf8.decode(base64.decode(c));
 }
 
+String _readFixture() {
+  const rel = 'test/fixtures/concord_v1.json';
+  final candidates = <String>[
+    rel,
+    'packages/concord_protocol/$rel',
+    '../concord_protocol/$rel',
+  ];
+  var dir = Directory.current;
+  for (var i = 0; i < 6; i++) {
+    candidates.add('${dir.path}/packages/concord_protocol/$rel');
+    candidates.add('${dir.path}/$rel');
+    dir = dir.parent;
+  }
+  for (final path in candidates) {
+    final file = File(path);
+    if (file.existsSync()) return file.readAsStringSync();
+  }
+  throw StateError('concord_v1.json fixture not found from ${Directory.current.path}');
+}
+
 void main() {
   group('concord_protocol', () {
     test('fixture vectors match (same JSON format as web slice)', () {
-      final f =
-          jsonDecode(File('test/fixtures/concord_v1.json').readAsStringSync())
-              as Map<String, dynamic>;
+      final f = jsonDecode(_readFixture()) as Map<String, dynamic>;
       final v = f['streamId'] as Map<String, dynamic>;
       expect(
         deriveStreamId(v['communityId'] as String, v['channelId'] as String),
