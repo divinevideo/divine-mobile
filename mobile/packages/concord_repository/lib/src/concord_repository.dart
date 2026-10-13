@@ -255,7 +255,28 @@ class ConcordRepository {
   /// fragments, unknown fields preserved by the protocol merge).
   Map<String, dynamic>? heldListDoc;
 
-  void replaceHeldListDoc(Map<String, dynamic> doc) => heldListDoc = doc;
+  /// Merges a newly read list fragment into the held document: entries
+  /// union by community_id (newest wins per entry), unknown fields ride
+  /// through. A partial read never erases held memberships.
+  void ingestListFragment(Map<String, dynamic> fragment) {
+    final current = heldListDoc;
+    if (current == null) {
+      heldListDoc = fragment;
+      return;
+    }
+    final byId = <String, dynamic>{
+      for (final e in (current['entries'] as List? ?? []))
+        (e as Map)['community_id'] as String: e,
+    };
+    for (final e in (fragment['entries'] as List? ?? [])) {
+      byId[(e as Map)['community_id'] as String] = e;
+    }
+    heldListDoc = {
+      ...current,
+      ...fragment,
+      'entries': byId.values.toList(),
+    };
+  }
 
   /// Resolves the held stream key for a channel (by held id or name)
   /// from [heldListDoc]; null when the list does not hold it, in which
