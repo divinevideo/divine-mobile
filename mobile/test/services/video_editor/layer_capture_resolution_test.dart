@@ -122,6 +122,32 @@ void main() {
       );
     });
 
+    test('measures a wide layer turned either way by the box around it', () {
+      // Turned by 60° or 120° in either direction, the box around a
+      // 3000 × 600 layer is 3000 × sin 60° + 600 × cos 60° tall.
+      const size = Size(3000, 600);
+      final boxLongestSide = size.width * math.sqrt(3) / 2 + size.height / 2;
+
+      for (final angle in [
+        math.pi / 3,
+        -math.pi / 3,
+        2 * math.pi / 3,
+        -2 * math.pi / 3,
+      ]) {
+        final ratio = capturePixelRatioForLayer(
+          _stickerLayer(rotation: angle),
+          size,
+          4.9,
+        );
+
+        expect(
+          boxLongestSide * ratio,
+          closeTo(layerCaptureMaxExtent, 1e-6),
+          reason: 'turned by $angle',
+        );
+      }
+    });
+
     test('holds a scaled-up detached clip to the detached clip extent', () {
       // A clip scaled up past the frame: at the export ratio its image would be
       // 7350 px on its longest side.
