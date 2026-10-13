@@ -75,6 +75,8 @@ void main() {
       // Group messaging is not ready to turn on for everyone (#8269), so the
       // switch stays out of the user-facing list until it is.
       expect(FeatureFlag.groupMessages.audience, FeatureFlagAudience.internal);
+      // The Concord chat POC is for reviewers only (#10094).
+      expect(FeatureFlag.concordChat.audience, FeatureFlagAudience.internal);
     });
 
     test('should leave user-facing flags visible to users', () {
