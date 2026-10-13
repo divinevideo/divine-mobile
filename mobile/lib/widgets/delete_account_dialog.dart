@@ -598,7 +598,7 @@ Future<void> executeAccountDeletion({
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 runDetached(
                   context.push<void>(RoutePaths.supportReportBug),
-                  'open support report after account deletion preparation failed',
+                  'open support report from account deletion snackbar',
                   logName: screenName,
                   category: LogCategory.auth,
                 );
