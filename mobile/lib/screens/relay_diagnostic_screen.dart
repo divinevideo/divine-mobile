@@ -112,6 +112,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     // Get relay stats from NostrClient
     try {
       final stats = await nostrService.getRelayStats();
+      if (!mounted) return;
       setState(() {
         _relayStats = stats;
       });
