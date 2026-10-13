@@ -149,20 +149,28 @@ void main() {
           jsonDecode(_readFixture('fixtures.json')) as Map<String, dynamic>;
       final list = f['communityList33302'] as Map<String, dynamic>;
       final entry = (list['entries'] as List).first as Map<String, dynamic>;
-      final channelId =
-          ((entry['current'] as Map)['channels'] as List).first['id'] as String;
+      final current = entry['current'] as Map<String, dynamic>;
+      final firstChannel =
+          (current['channels'] as List).first as Map<String, dynamic>;
+      final channelId = firstChannel['id'] as String;
       final pub = streamKeyFromListEntry(entry, channelId);
-      expect(pub?.pubkey, (f['derivations'] as Map)['publicChannel']['pubkey']);
+      final derivations = f['derivations'] as Map<String, dynamic>;
+      expect(
+        pub?.pubkey,
+        (derivations['publicChannel'] as Map<String, dynamic>)['pubkey'],
+      );
       final privEntry = jsonDecode(jsonEncode(entry)) as Map<String, dynamic>;
       final ch =
           ((privEntry['current'] as Map)['channels'] as List).first
               as Map<String, dynamic>;
-      ch['key'] = hexToB64url((f['secrets'] as Map)['channelKey'] as String);
+      ch['key'] = hexToB64url(
+        (f['secrets'] as Map<String, dynamic>)['channelKey'] as String,
+      );
       ch['epoch'] = 1;
       final priv = streamKeyFromListEntry(privEntry, channelId);
       expect(
         priv?.pubkey,
-        (f['derivations'] as Map)['privateChannel']['pubkey'],
+        (derivations['privateChannel'] as Map<String, dynamic>)['pubkey'],
       );
       expect(streamKeyFromListEntry(entry, hexToB64url('ab' * 32)), isNull);
     });
