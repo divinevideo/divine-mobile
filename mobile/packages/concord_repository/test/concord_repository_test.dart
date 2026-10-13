@@ -154,4 +154,19 @@ void main() {
       expect(restarted.timeline(now: 10).messages.single.body, 'kept');
     });
   });
+  group(InMemoryConcordStore, () {
+    test('scoped prefixes the key with the account', () {
+      expect(
+        InMemoryConcordStore('a' * 64).scoped('index'),
+        'concord:v1:${'a' * 64}:index',
+      );
+    });
+    test('clearAccount removes the account rows', () async {
+      final store = InMemoryConcordStore('a' * 64);
+      await store.put('index', 'x');
+      expect(await store.get('index'), 'x');
+      await store.clearAccount();
+      expect(await store.get('index'), isNull);
+    });
+  });
 }
