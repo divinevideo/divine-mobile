@@ -1114,11 +1114,11 @@ class NostrClient {
   /// That covers a read that found the query pool closing, and one no
   /// query-pool slot reached before its network window. Both report like a
   /// read the relays left unfinished — `timedOut` for a full-settlement
-  /// caller, [QueryEnd.deadline] from [readEvents] — so a caller that logs why
-  /// a read was inconclusive cannot otherwise tell a local queue from a relay
-  /// that did not answer, and blames the relay (#10004). This rides the zone
-  /// rather than a new field on every result type and every caller and test
-  /// that builds one.
+  /// caller, [QueryEnd.deadline] from [readEvents] — so a caller that logs
+  /// why a read was inconclusive cannot otherwise tell a local queue from a
+  /// relay that did not answer, and blames the relay (#10004). This rides
+  /// the zone rather than a new field on every result type and every caller
+  /// and test that builds one.
   ///
   /// Only reads started inside [body]'s own call chain report here; the
   /// innermost observer wins when they nest.
@@ -2022,9 +2022,15 @@ class NostrClient {
   /// [_hasRelayOutsidePool]), so naming one keeps the whole read in the pool.
   ///
   /// The only reads that land there today are DmRepository's kind-10050
-  /// legs, one REQ per relay per recipient. A group send resolves every
-  /// member at once against the same indexer, which is why they still share
-  /// a bounded pool rather than going unthrottled.
+  /// legs: one slot per leg, each fanning out to its relays, and at most one
+  /// such leg per recipient at a time. A send resolves every recipient at
+  /// once against the same indexer, which is why they still share a bounded
+  /// pool rather than going unthrottled. Collaborator invites (at most 5)
+  /// fit in its [maxConcurrentQueries] slots. A group send to more members
+  /// than that queues, and with a slow indexer the queued legs can miss their
+  /// slot window and hold the send for a retry, as #10004 did before this
+  /// pool. Groups are behind a feature flag, so sizing for them is left to
+  /// that work.
   bool _asksOnlyRelaysOutsidePool(
     List<String>? tempRelays,
     List<int> relayTypes,
