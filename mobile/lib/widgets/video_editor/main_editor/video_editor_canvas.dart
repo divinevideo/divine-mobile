@@ -41,6 +41,8 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/services/haptic_service.dart';
+import 'package:openvine/services/video_editor/detached_clip_composite.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/preview_composition.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
 import 'package:openvine/utils/await_push_transition.dart';
@@ -513,6 +515,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   Completer<void>? _decoderReleaseGate;
   bool _isMetadataRouteActive = false;
 
+  /// Closes the [InterruptedRenderMonitor] marker of the layer capture that
+  /// pro_image_editor runs between [_handleDone] and [_handleEditorComplete].
+  void Function()? _closeLayerCaptureMarker;
+
   bool _isInitialized = false;
   bool _isImportingHistory = false;
   late bool _useLegacySurface;
@@ -919,6 +925,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+    _settleLayerCaptureTracking();
     _playheadInterpolator.dispose();
     _stopMotionClock.dispose();
     final stopMotionAudio = _stopMotionAudio;
@@ -2208,6 +2215,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ///
   /// Precaches the generated image overlay and triggers video rendering.
   Future<void> _handleEditorComplete(CompleteParameters parameters) async {
+    _settleLayerCaptureTracking();
     Log.info(
       '🎬 Editor complete - starting render (image size: ${parameters.image.length} bytes)',
       name: 'VideoEditorCanvas',
@@ -2277,6 +2285,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // playing under the metadata screen.
     if (_isStopMotionComposition) _stopMotionClock.pause();
     ref.read(videoEditorProvider.notifier).setProcessing(true);
+    _trackLayerCapture();
 
     // Delegate the cover-transition wait to the screen: its context sits above
     // this canvas's nested `Navigator`, so the editor route's secondaryAnimation
@@ -2306,6 +2315,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       await navigation;
     } finally {
       _isMetadataRouteActive = false;
+      // A capture that failed never reaches [_handleEditorComplete].
+      _settleLayerCaptureTracking();
     }
     if (!mounted) return;
     // Stop-motion has no player to rebuild (_clipPaths is empty, which the
@@ -2322,6 +2333,45 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (mounted && wasPlaying) {
       await _videoPlayer?.play();
     }
+  }
+
+  /// Keeps an [InterruptedRenderMonitor] marker open while pro_image_editor
+  /// captures the layers after Done.
+  ///
+  /// The capture rasterizes every layer at export resolution before any render
+  /// starts, so a process killed there is outside every tracked render and
+  /// left no trace at all (#10071). The marker reports it on the next launch.
+  void _trackLayerCapture() {
+    final editor = VideoEditorScope.of(context).editor;
+    final layers = editor?.activeLayers;
+    if (editor == null || layers == null || layers.isEmpty) return;
+    final body = editor.sizesManager.bodySize;
+    final pixelRatio = editor.configs.imageGeneration.customPixelRatio;
+    _settleLayerCaptureTracking();
+    _closeLayerCaptureMarker = InterruptedRenderMonitor.begin(
+      taskId: 'editor_layer_capture',
+      kind: 'editor_layer_capture',
+      details: {
+        'layers': layers.length,
+        'textLayers': layers.whereType<TextLayer>().length,
+        'paintLayers': layers.whereType<PaintLayer>().length,
+        'widgetLayers': layers.whereType<WidgetLayer>().length,
+        'detachedClips': layers
+            .where(DetachedClipLayerData.isDetachedClipLayer)
+            .length,
+        'maxScale': layers
+            .map((layer) => layer.scale)
+            .reduce(max)
+            .toStringAsFixed(2),
+        'body': '${body.width.round()}x${body.height.round()}',
+        'pixelRatio': pixelRatio?.toStringAsFixed(2) ?? 'device',
+      },
+    );
+  }
+
+  void _settleLayerCaptureTracking() {
+    _closeLayerCaptureMarker?.call();
+    _closeLayerCaptureMarker = null;
   }
 
   @override
@@ -2944,6 +2994,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       widget.renderSize.width,
                 ),
               ),
+              layerCapturePixelRatio: capturePixelRatioForLayer,
             ),
             mainEditor: MainEditorConfigs(
               enableZoom: true,

@@ -2,6 +2,7 @@
 // ABOUTME: Restores overlay layers, timed filters, tune and audio from storage
 
 import 'dart:async';
+import 'dart:math' as math;
 
 // The models AspectRatio is the one this file means; the Flutter widget of the
 // same name is unused here.
@@ -17,6 +18,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
+import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -290,8 +292,10 @@ class DraftRenderParametersService {
 
     try {
       // `configs` is deliberately left at the package default apart from
-      // `textEditor.layerBounds`. Only a few values change how a layer
-      // *renders* rather than how it is edited — `textEditor.initFontSize`
+      // `textEditor.layerBounds` and `imageGeneration.layerCapturePixelRatio`,
+      // which holds a detached clip's poster to a small image, as the editor's
+      // own capture on Next does (#10071). Only a few values change how a
+      // layer *renders* rather than how it is edited — `textEditor.initFontSize`
       // (which scales text and emoji layers), `textEditor.layerBounds`
       // (where text lines wrap), `textEditor.style.leadingDistribution`,
       // `emojiEditor.style.textStyle`, `stickerEditor.initWidth` and
@@ -326,6 +330,13 @@ class DraftRenderParametersService {
           'textLayers': drawn.whereType<TextLayer>().length,
           'paintLayers': drawn.whereType<PaintLayer>().length,
           'widgetLayers': drawn.whereType<WidgetLayer>().length,
+          'detachedClips': drawn
+              .where(DetachedClipLayerData.isDetachedClipLayer)
+              .length,
+          'maxScale': drawn
+              .map((layer) => layer.scale)
+              .reduce(math.max)
+              .toStringAsFixed(2),
           'body': '${bodySize.width.round()}x${bodySize.height.round()}',
           'pixelRatio': basePixelRatio.toStringAsFixed(2),
         },
@@ -338,6 +349,9 @@ class DraftRenderParametersService {
                 editorBodySize,
                 targetAspectRatio: aspectRatio.value,
               ),
+            ),
+            imageGeneration: const ImageGenerationConfigs(
+              layerCapturePixelRatio: capturePixelRatioForLayer,
             ),
           ),
           basePixelRatio: basePixelRatio,

@@ -211,6 +211,26 @@ void main() {
       });
     });
 
+    group('begin', () {
+      test('keeps a marker on disk until it is closed', () async {
+        final close = InterruptedRenderMonitor.begin(
+          taskId: 'editor_layer_capture',
+          kind: 'editor_layer_capture',
+          details: const {'detachedClips': 3},
+        );
+        await pumpEventQueue();
+
+        final marker = readOnlyMarker();
+        expect(marker['kind'], equals('editor_layer_capture'));
+        expect(marker['details'], equals({'detachedClips': 3}));
+
+        close();
+        await pumpEventQueue();
+
+        expect(markerFiles(), isEmpty);
+      });
+    });
+
     group('initialize', () {
       test('reports and deletes a marker a previous session left', () async {
         File('${markers.path}/1_draft_autosave.json').writeAsStringSync(
