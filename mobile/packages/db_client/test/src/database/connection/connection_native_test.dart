@@ -1616,6 +1616,7 @@ void main() {
     test('removes stranded snapshots before making a new one', () {
       _createHotJournalFixture(dbPath, key: validKey);
       final systemTemp = _privateSystemTemp(tempRoot);
+      final strandedNames = <String>{};
       for (final name in ['first', 'second']) {
         // The literal is the directory name shipped builds already left on
         // devices, so it is spelled out here rather than read from the code.
@@ -1623,17 +1624,23 @@ void main() {
           p.join(systemTemp.path, 'divine_hot_journal_recovery_$name'),
         )..createSync();
         File(p.join(stranded.path, 'database')).writeAsBytesSync(const [1]);
+        strandedNames.add(p.basename(stranded.path));
       }
       List<String>? presentWhenCopying;
 
       _withSnapshotDirectory(
         tempRoot,
         (path) {
-          // On a full volume the stranded copies hold the space the new one
-          // needs, so they have to be gone before it is made.
-          presentWhenCopying = [
-            for (final entity in systemTemp.listSync()) p.basename(entity.path),
-          ];
+          // The sweep builds a directory for every copy it lists, so only the
+          // first one that is not a stranded copy is the new snapshot.
+          if (!strandedNames.contains(p.basename(path))) {
+            // On a full volume the stranded copies hold the space the new one
+            // needs, so they have to be gone before it is made.
+            presentWhenCopying ??= [
+              for (final entity in systemTemp.listSync())
+                p.basename(entity.path),
+            ];
+          }
           return Zone.root.run(() => Directory(path));
         },
         () => recoverHotRollbackJournal(
