@@ -1725,6 +1725,43 @@ void main() {
       expect(restoredDestinations, isEmpty);
     });
 
+    test('a restore that completes leaves its snapshot to the sweep', () {
+      _createHotJournalFixture(dbPath, key: validKey);
+      late Directory snapshot;
+      var configurations = 0;
+
+      expect(
+        () => _withSnapshotDirectory(
+          tempRoot,
+          // A real snapshot directory whose deletion fails afterwards.
+          (path) => snapshot = _undeletableDirectory(
+            Zone.root.run(() => Directory(path)..createSync()).path,
+          ),
+          () => recoverHotRollbackJournal(
+            databasePath: dbPath,
+            configureEncryptedDatabase: (database) {
+              configurations += 1;
+              keyCipherDatabase(database, validKey);
+              if (configurations == 2) {
+                throw StateError('injected replay failure');
+              }
+            },
+          ),
+        ),
+        throwsA(
+          isA<DatabaseHotJournalRecoveryError>().having(
+            (error) => error.stage,
+            'stage',
+            DatabaseHotJournalRecoveryStage.replayJournal,
+          ),
+        ),
+      );
+
+      final kept = Directory(snapshot.path);
+      expect(File(p.join(kept.path, 'database')).existsSync(), isTrue);
+      expect(File(p.join(kept.path, 'restoring')).existsSync(), isFalse);
+    });
+
     test('completes when its snapshot cannot be deleted afterwards', () {
       _createHotJournalFixture(dbPath, key: validKey);
 

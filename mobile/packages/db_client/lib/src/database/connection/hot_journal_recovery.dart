@@ -272,6 +272,13 @@ class _HotJournalSnapshot {
         error,
       );
     }
+    // The live files are whole again, so a snapshot [dispose] cannot remove
+    // is an ordinary leftover for the sweep.
+    try {
+      File(p.join(directory.path, _restoreMarkerName)).deleteSync();
+    } on FileSystemException {
+      // The sweep keeps it; nothing else depends on the marker going.
+    }
   }
 
   void dispose() => _deleteSnapshotDirectory(directory);
