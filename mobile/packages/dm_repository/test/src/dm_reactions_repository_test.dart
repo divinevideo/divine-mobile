@@ -4792,6 +4792,59 @@ void main() {
         expect(publishedTargets, [ownTargets]);
       });
 
+      test('still publishes the own copy, once, when a recipient send hands '
+          'it over after the fan-out gave up on it', () {
+        fakeAsync((async) {
+          stubQueuedGroupReaction();
+          for (final recipient in [_otherPubkey, secondPubkey]) {
+            stubRecipientSend(
+              recipient,
+              copyDue: false,
+              result: const NIP17SendResult.failure('rejected'),
+            );
+          }
+          // A slow signer: the send outlives the 15 s cap, then lands the
+          // wrap and hands the copy over, as the orphaned send does.
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: thirdPubkey,
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).thenAnswer((invocation) async {
+            await Future<void>.delayed(const Duration(seconds: 20));
+            final handOver =
+                invocation.namedArguments[#onSelfWrapDue]
+                    as void Function(Event?);
+            handOver(null);
+            handOver(null);
+            return NIP17SendResult.success(
+              rumorEventId: _reactionRumorId,
+              messageEventId: _giftWrapId,
+              recipientPubkey: thirdPubkey,
+            );
+          });
+          stubOwnCopyPublish(ownCopyLands);
+
+          DmReactionPublishResult? result;
+          unawaited(
+            withOwnTargets(createRepository())
+                .retry(
+                  rumorId: _reactionRumorId,
+                  targetMessageAuthor: _otherPubkey,
+                )
+                .then((r) => result = r),
+          );
+          async.elapse(const Duration(seconds: 16));
+          expect(result?.success, isFalse);
+          expect(publishedCopies, isEmpty);
+
+          async.elapse(const Duration(seconds: 5));
+          expect(publishedTargets, [ownTargets]);
+        });
+      });
+
       test('keeps the plain pool publish when no resolver is wired', () async {
         stubQueuedGroupReaction();
         groupRecipients.forEach(stubRecipientSend);

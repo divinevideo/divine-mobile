@@ -1930,10 +1930,22 @@ class DmReactionsRepository {
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
     var ownCopyDue = false;
+    var returned = false;
     Event? prebuiltOwnCopy;
+    Future<void> publishOwnCopy() => _publishOwnCopy(
+      messageService: messageService,
+      rumor: rumor,
+      prebuiltSelfWrap: prebuiltOwnCopy,
+      ownerPubkey: ownerPubkey,
+    );
     void onOwnCopyDue(Event? prebuiltSelfWrap) {
-      ownCopyDue = true;
       prebuiltOwnCopy ??= prebuiltSelfWrap;
+      if (ownCopyDue) return;
+      ownCopyDue = true;
+      // A send that outlived its cap can still land the wrap after this
+      // fan-out returned. Before #8446 that send published the copy itself, so
+      // publish it now rather than lose it. It never throws.
+      if (returned) unawaited(publishOwnCopy());
     }
 
     for (final recipient in recipients) {
@@ -1956,17 +1968,12 @@ class DmReactionsRepository {
           failures.add(result);
       }
     }
-    return (
+    final fanOut = (
       result: _aggregateFanOut(lastSuccess, failures),
-      publishOwnCopy: ownCopyDue
-          ? () => _publishOwnCopy(
-              messageService: messageService,
-              rumor: rumor,
-              prebuiltSelfWrap: prebuiltOwnCopy,
-              ownerPubkey: ownerPubkey,
-            )
-          : _noOwnCopy,
+      publishOwnCopy: ownCopyDue ? publishOwnCopy : _noOwnCopy,
     );
+    returned = true;
+    return fanOut;
   }
 
   static NIP17SendResult _aggregateFanOut(
