@@ -35,6 +35,7 @@ void main() {
       // Default: nothing is blocked
       when(() => mockBlocklistRepository.isBlocked(any())).thenReturn(false);
       when(() => mockFollowRepository.followingPubkeys).thenReturn(const []);
+      when(() => mockFollowRepository.isInitialized).thenReturn(false);
       when(
         () => mockFollowRepository.followingStream,
       ).thenAnswer((_) => const Stream<List<String>>.empty());
@@ -117,6 +118,108 @@ void main() {
     });
 
     group('MyFollowingListLoadRequested', () {
+      group('stale cached snapshot', () {
+        test(
+          'keeps the authoritative list when an initialized repository is '
+          'followed by a stale cached snapshot',
+          () async {
+            final followed = validPubkey('followed');
+            when(
+              () => mockFollowRepository.followingPubkeys,
+            ).thenReturn([followed]);
+            when(() => mockFollowRepository.isInitialized).thenReturn(true);
+            // The 30 second cache entry survived a restart and predates the
+            // follow, so it serves an empty list before revalidating.
+            when(() => mockFollowRepository.watchMyFollowingCached())
+                .thenAnswer(
+                  (_) => Stream.value(
+                    const CacheResult.cached(
+                      FollowingSnapshot(pubkeys: <String>[], count: 0),
+                    ),
+                  ),
+                );
+
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            expect(bloc.state.isFollowing(followed), isTrue);
+
+            final isFollowingStates = <bool>[];
+            final sub = bloc.stream.listen(
+              (state) => isFollowingStates.add(state.isFollowing(followed)),
+            );
+            addTearDown(sub.cancel);
+
+            bloc.add(const MyFollowingListLoadRequested());
+            await pumpEventQueue();
+
+            expect(
+              isFollowingStates,
+              isNotEmpty,
+              reason: 'the cached emission should reach the state',
+            );
+            expect(
+              isFollowingStates,
+              everyElement(isTrue),
+              reason:
+                  'a stale cached snapshot must not show Follow for someone '
+                  'already followed: tapping it would publish an unfollow',
+            );
+            expect(bloc.state.isRefreshing, isTrue);
+          },
+        );
+
+        blocTest<MyFollowingBloc, MyFollowingState>(
+          'uses the cached list for first paint while the repository is not '
+          'initialized',
+          setUp: () {
+            when(() => mockFollowRepository.watchMyFollowingCached())
+                .thenAnswer(
+                  (_) => Stream.value(
+                    CacheResult.cached(
+                      FollowingSnapshot(
+                        pubkeys: [validPubkey('cached')],
+                        count: 1,
+                      ),
+                    ),
+                  ),
+                );
+          },
+          build: createBloc,
+          act: (bloc) => bloc.add(const MyFollowingListLoadRequested()),
+          verify: (bloc) {
+            expect(bloc.state.followingPubkeys, [validPubkey('cached')]);
+            expect(bloc.state.isRefreshing, isTrue);
+          },
+        );
+
+        test(
+          'takes the live list even when the repository is initialized',
+          () async {
+            final followed = validPubkey('followed');
+            when(
+              () => mockFollowRepository.followingPubkeys,
+            ).thenReturn(const []);
+            when(() => mockFollowRepository.isInitialized).thenReturn(true);
+            when(() => mockFollowRepository.watchMyFollowingCached())
+                .thenAnswer(
+                  (_) => Stream.value(
+                    CacheResult.live(
+                      FollowingSnapshot(pubkeys: [followed], count: 1),
+                    ),
+                  ),
+                );
+
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            bloc.add(const MyFollowingListLoadRequested());
+            await pumpEventQueue();
+
+            expect(bloc.state.isFollowing(followed), isTrue);
+            expect(bloc.state.isRefreshing, isFalse);
+          },
+        );
+      });
+
       blocTest<MyFollowingBloc, MyFollowingState>(
         'emits success with pubkeys from stream',
         setUp: () {

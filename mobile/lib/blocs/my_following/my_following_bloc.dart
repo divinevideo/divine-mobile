@@ -108,7 +108,17 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
           // otherwise revert the button (#5144). Defer to the repository
           // instead of the stale emission; let the emission only drive the
           // refreshing indicator.
-          final pubkeys = state.hasLocalFollowEdit
+          //
+          // The same holds for any cached (not live) snapshot once the
+          // repository has loaded its authoritative list: the cache outlives
+          // its 30 second TTL across restarts, and the button decides between
+          // follow and unfollow from this state, so a stale snapshot here
+          // would turn a tap into a silent, published unfollow. Cached data
+          // only paints the first frame, while the repository has no list.
+          final repositoryIsAuthority =
+              state.hasLocalFollowEdit ||
+              (!result.isLive && _followRepository.isInitialized);
+          final pubkeys = repositoryIsAuthority
               ? _followRepository.followingPubkeys
               : result.data.pubkeys;
           return state.copyWith(
