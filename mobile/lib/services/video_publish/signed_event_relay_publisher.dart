@@ -304,14 +304,14 @@ class SignedEventRelayPublisher {
       // [outerPublishTimeoutFor]-derived bound (perRelaySendTimeout ×
       // relayCount + buffer) is passed as the OK-wait timeout — the SDK's
       // publish tracker starts that timer before the send fan-out, so it
-      // covers both the sequential sends and the OK wait.
+      // covers both the sequential sends and the OK wait. On a cold pool
+      // the reconnect in front of the send spends from the same bound.
       //
       // Defense-in-depth: the outer `Future.timeout` (one extra
       // [RelayPool.perRelaySendTimeout] of slack so the inner tracker
-      // normally fires first) guards the code that runs before the
-      // tracker exists — e.g. `retryDisconnectedRelays` stuck in
-      // reconnect backoff. The retry loop in [publish] picks up after
-      // each failed attempt.
+      // normally fires first) guards whatever the inner timeout does not
+      // cover. The retry loop in [publish] picks up after each failed
+      // attempt.
       //
       // We use try/catch on [TimeoutException] rather than `.timeout(
       // onTimeout: ...)`: `publishEventAwaitOk` returns a non-nullable
