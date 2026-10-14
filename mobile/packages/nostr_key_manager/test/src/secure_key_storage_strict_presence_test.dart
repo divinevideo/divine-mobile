@@ -58,8 +58,9 @@ void main() {
         expect(args['key'], primary);
         final options = args['options'] as Map<dynamic, dynamic>;
         final accessibility = options['accessibility'] as String?;
-        // Linux and Android have one fallback namespace. The read order still
-        // identifies the two actual storage reads; Apple has distinct slots.
+        // Linux and Android have one fallback namespace, so the read order
+        // identifies the two actual storage reads. Keying Apple reads by
+        // accessibility models macOS; iOS reads ignore accessibility.
         final slot =
             accessibility ?? (fallbackReads.isEmpty ? current : legacy);
         if (Platform.isMacOS || Platform.isIOS) {
