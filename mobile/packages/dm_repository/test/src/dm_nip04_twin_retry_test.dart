@@ -355,6 +355,145 @@ void main() {
       });
     });
 
+    /// Queues a send that never reached the recipient, as the retry sweep
+    /// finds one, with [tags] on its rumor after the recipient's `p` tag.
+    String queueUndeliveredSend(
+      FakeAsync async, {
+      List<List<String>> tags = const [],
+      String? replyToId,
+    }) {
+      final rumor = Event(
+        _owner,
+        EventKind.privateDirectMessage,
+        [
+          ['p', _peer],
+          ...tags,
+        ],
+        'queued while offline',
+        createdAt: _baseCreatedAt,
+      );
+      _resolve(
+        async,
+        OutgoingDmsDao(db).enqueue(
+          OutgoingDm(
+            id: rumor.id,
+            conversationId: conversationId,
+            recipientPubkey: _peer,
+            content: rumor.content,
+            createdAt: _baseCreatedAt,
+            rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientWrapStatus: OutgoingWrapStatus.failed,
+            selfWrapStatus: OutgoingWrapStatus.failed,
+            queuedAt: DateTime.utc(2026, 10),
+            ownerPubkey: _owner,
+            replyToId: replyToId,
+          ),
+        ),
+      );
+      return rumor.id;
+    }
+
+    group('recoverFullSend', () {
+      const batchTag = ['batch', 'queued-send-batch'];
+
+      test('sends the kind 4 a recovered plain-text message never got', () {
+        fakeAsync((async) {
+          final repository = buildRepository();
+          _resolve(async, seedLatchedThread());
+          final rumorId = queueUndeliveredSend(async, tags: [batchTag]);
+
+          final result = _resolve(
+            async,
+            repository.recoverFullSend(rumorId: rumorId),
+          );
+          expect(result.success, isTrue);
+
+          async.elapse(const Duration(seconds: 30));
+          expect(kind4Attempts, hasLength(1));
+          expect(
+            kind4Attempts.single.tags,
+            contains(equals(['p', _peer])),
+          );
+        });
+      });
+
+      test('sends the kind 4 for a recovered reply', () {
+        fakeAsync((async) {
+          final repository = buildRepository();
+          _resolve(async, seedLatchedThread());
+          final parentId = 'd' * 64;
+          final rumorId = queueUndeliveredSend(
+            async,
+            tags: [
+              ['e', parentId],
+              batchTag,
+            ],
+            replyToId: parentId,
+          );
+
+          _resolve(async, repository.recoverFullSend(rumorId: rumorId));
+
+          async.elapse(const Duration(seconds: 30));
+          expect(kind4Attempts, hasLength(1));
+        });
+      });
+
+      test(
+        'sends no kind 4 for a recovered message with structured tags, which '
+        'a share or an invite opted out of',
+        () {
+          fakeAsync((async) {
+            final repository = buildRepository();
+            _resolve(async, seedLatchedThread());
+            final rumorId = queueUndeliveredSend(
+              async,
+              tags: [
+                ['q', '34236:$_peer:clip', _relay],
+                batchTag,
+              ],
+            );
+
+            final result = _resolve(
+              async,
+              repository.recoverFullSend(rumorId: rumorId),
+            );
+            expect(result.success, isTrue);
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+
+      test('sends no kind 4 when the thread is no longer latched', () {
+        fakeAsync((async) {
+          final repository = buildRepository();
+          _resolve(
+            async,
+            conversationsDao.upsertConversation(
+              id: conversationId,
+              participantPubkeys: jsonEncode(participants),
+              isGroup: false,
+              createdAt: _baseCreatedAt,
+              lastMessageTimestamp: _baseCreatedAt,
+              ownerPubkey: _owner,
+              dmProtocol: 'nip17',
+            ),
+          );
+          final rumorId = queueUndeliveredSend(async, tags: [batchTag]);
+
+          final result = _resolve(
+            async,
+            repository.recoverFullSend(rumorId: rumorId),
+          );
+          expect(result.success, isTrue);
+
+          async.elapse(const Duration(seconds: 30));
+          expect(kind4Attempts, isEmpty);
+        });
+      });
+    });
+
     group('a pending retry stops', () {
       test('when the message is deleted for everyone during the backoff', () {
         fakeAsync((async) {

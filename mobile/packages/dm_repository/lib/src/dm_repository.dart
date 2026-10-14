@@ -5874,28 +5874,12 @@ class DmRepository {
         // it stays false when the transaction bailed out, and a plaintext
         // copy of a message the user just deleted must not go out.
         if (persistedLocally && protocol != 'nip17' && !skipNip04Fallback) {
-          unawaited(
-            _sendNip04Message(
-              recipientPubkey: recipientPubkey,
-              content: content,
-              messageId: result.rumorEventId!,
-              conversationId: conversationId,
-              replyToId: replyToId,
-            ).catchError((Object e) {
-              // Thrown failures only — a signer that reports by THROWING
-              // (Keycast's RPC layer raises RpcException on 401/403/504, and a
-              // bunker request raises TimeoutException) lands here. Signers
-              // that report by returning null, and every relay refusal, are
-              // logged inside `_sendNip04Message` instead, because a returned
-              // failure never reaches this handler (#8262).
-              // This leg is best-effort legacy interop and is deliberately
-              // kept off the send's critical path, so it stays `unawaited`.
-              Log.error(
-                'NIP-04 fallback threw — the legacy kind-4 copy was not '
-                'sent: $e',
-                category: LogCategory.system,
-              );
-            }),
+          _fireNip04Copy(
+            recipientPubkey: recipientPubkey,
+            content: content,
+            messageId: result.rumorEventId!,
+            conversationId: conversationId,
+            replyToId: replyToId,
           );
         }
       } on Object catch (e, stackTrace) {
@@ -6551,6 +6535,7 @@ class DmRepository {
         final isGroupRow =
             row.conversationId != computeConversationId(pairParticipants);
         var persistedLocally = false;
+        String? protocol;
         await _conversationsDao.runInTransaction(() async {
           // Cancel interlock: the queue row may be gone by the time this
           // publish lands — the user deleted the send (cancelOutgoingSend),
@@ -6675,6 +6660,7 @@ class DmRepository {
           // message ourselves, mark the conversation NIP-17 so the
           // legacy NIP-04 fallback path doesn't fire on future sends.
           final nextProtocol = existing?.dmProtocol ?? 'nip17';
+          protocol = nextProtocol;
           await _upsertSentConversationAndMarkRead(
             id: row.conversationId,
             participantPubkeys: participantsJson,
@@ -6703,6 +6689,24 @@ class DmRepository {
             'Recovered full send and persisted locally in conversation '
             '${row.conversationId}',
             category: LogCategory.system,
+          );
+        }
+
+        // The original send fires the kind-4 copy only after its own persist,
+        // which never ran for a send the sweep recovers, so without this the
+        // copy was never sent at all (#8506). Plain text only: the queue row
+        // does not record that a share or an invite opted out of the copy,
+        // and both carry tags a plain message never has.
+        if (persistedLocally &&
+            !isGroupRow &&
+            protocol != 'nip17' &&
+            _isPlainTextRumor(rumor)) {
+          _fireNip04Copy(
+            recipientPubkey: row.recipientPubkey,
+            content: row.content,
+            messageId: result.rumorEventId!,
+            conversationId: row.conversationId,
+            replyToId: row.replyToId,
           );
         }
       } on Object catch (e, stackTrace) {
@@ -8836,6 +8840,50 @@ class DmRepository {
       return null;
     }
   }
+
+  /// Starts [_sendNip04Message] off the send's critical path.
+  ///
+  /// This leg is best-effort legacy interop, so it stays `unawaited`. Only
+  /// thrown failures land in the handler below — a signer that reports by
+  /// THROWING (Keycast's RPC layer raises RpcException on 401/403/504, and a
+  /// bunker request raises TimeoutException). Signers that report by
+  /// returning null, and every relay refusal, are logged inside
+  /// [_sendNip04Message] instead, because a returned failure never reaches
+  /// this handler (#8262).
+  void _fireNip04Copy({
+    required String recipientPubkey,
+    required String content,
+    required String messageId,
+    required String conversationId,
+    String? replyToId,
+  }) {
+    unawaited(
+      _sendNip04Message(
+        recipientPubkey: recipientPubkey,
+        content: content,
+        messageId: messageId,
+        conversationId: conversationId,
+        replyToId: replyToId,
+      ).catchError((Object e) {
+        Log.error(
+          'NIP-04 fallback threw — the legacy kind-4 copy was not sent: $e',
+          category: LogCategory.system,
+        );
+      }),
+    );
+  }
+
+  /// Whether [rumor] is a plain kind-14 text message: no tags beyond its
+  /// recipient, a reply reference and the client-internal send batch token.
+  static bool _isPlainTextRumor(Event rumor) =>
+      rumor.kind == EventKind.privateDirectMessage &&
+      rumor.tags.every(
+        (tag) =>
+            tag.isNotEmpty &&
+            (tag.first == 'p' ||
+                tag.first == 'e' ||
+                tag.first == _sendBatchTagKey),
+      );
 
   /// Sends the legacy kind-4 copy of a message to [recipientPubkey], on a
   /// thread still latched to NIP-04.
