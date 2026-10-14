@@ -78,8 +78,9 @@ class VideoEditorAudioVisualizerCubit
   /// Reads what plays when a visualizer needs it: right away when it has
   /// been read before, and otherwise once it has been.
   ///
-  /// A later sync that changes what plays wins: the energies are added up for
-  /// whatever the state says plays once the sound is read.
+  /// A later sync that changes what plays wins: it refreshes again, so a read
+  /// that finishes after it emits nothing. A part that could not be read adds
+  /// nothing and is read again on the next refresh.
   Future<void> _refresh() async {
     final input = state.input;
     if (input == null || !state.needsSound) return;
@@ -114,12 +115,11 @@ class VideoEditorAudioVisualizerCubit
         }
         return;
       }
+      if (state.input != input) return;
     }
-    final current = state.input;
-    if (current == null || !_resolver.hasRead(current.parts)) return;
     final energies = _resolver.energiesOnOutput(
-      current.parts,
-      videoEnd: current.videoEnd,
+      input.parts,
+      videoEnd: input.videoEnd,
     );
     emitIfOpen(
       state.copyWith(

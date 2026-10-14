@@ -148,6 +148,40 @@ void main() {
       await unreadable.close();
     });
 
+    test('follows a sound that failed once when it is read again', () async {
+      var failMusic = true;
+      final cubit = VideoEditorAudioVisualizerCubit(
+        resolver: VideoEditorAudioLevelResolver(
+          extractAudio: (configs) async {
+            final video = configs.video;
+            final source =
+                video.file?.path ?? video.networkUrl ?? video.assetPath ?? '';
+            if (failMusic && source.contains('music')) {
+              throw PlatformException(code: 'busy');
+            }
+            return drumLoopWav(configs);
+          },
+        ),
+      );
+      final clip = mutedClip.copyWith(volume: 1);
+      cubit
+        ..syncSources(sounds: [music], clips: [clip])
+        ..setActive(isActive: true);
+      final clipOnly = await settled(cubit);
+      expect(clipOnly.status, VideoEditorAudioLevelStatus.ready);
+
+      failMusic = false;
+      cubit
+        ..setActive(isActive: false)
+        ..setActive(isActive: true);
+      final both = await settled(cubit);
+
+      final clipEnergy = clipOnly.energies!.fold(0.0, (a, b) => a + b);
+      final bothEnergy = both.energies!.fold(0.0, (a, b) => a + b);
+      expect(bothEnergy, greaterThan(clipEnergy * 1.5));
+      await cubit.close();
+    });
+
     test('says it cannot read the sound when the platform returns no '
         'audio', () async {
       final cubit =

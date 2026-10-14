@@ -187,8 +187,9 @@ class VideoEditorAudioLevelResolver {
   ///
   /// A part without sound, such as a clip recorded without a microphone,
   /// adds nothing, and a part that cannot be read leaves the others to be
-  /// read. Throws an [AudioLevelReadException] when no part could be read at
-  /// all.
+  /// read. A failed part is not remembered, so the next read tries it again;
+  /// until then it adds nothing. Throws an [AudioLevelReadException] when no
+  /// part could be read at all.
   Future<void> read(List<AudioLevelPart> parts) async {
     Exception? failure;
     var anyRead = false;
@@ -214,7 +215,6 @@ class VideoEditorAudioLevelResolver {
         // A platform error, no audio from the platform, or a network sound the
         // plugin could not fetch.
         failure = error;
-        _energies[stretch] = _StretchEnergies.silent;
       } finally {
         if (identical(_readsInFlight[stretch], pending)) {
           // Removal only relinquishes the cache's reference. This future was
@@ -224,10 +224,6 @@ class VideoEditorAudioLevelResolver {
       }
     }
     if (!anyRead && failure != null) {
-      // Not remembered, so a later read can try again.
-      for (final part in parts) {
-        _energies.remove(_Stretch.of(part.source));
-      }
       throw failure is AudioLevelReadException
           ? failure
           : AudioLevelReadException(failure);

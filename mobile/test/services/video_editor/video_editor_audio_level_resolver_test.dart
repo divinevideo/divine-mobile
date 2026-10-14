@@ -379,6 +379,8 @@ void main() {
         await mixed.read([unreachable, _part()]);
 
         expect(mixed.hasRead([_part()]), isTrue);
+        // Not remembered as silent, so the next read tries it again.
+        expect(mixed.hasRead([unreachable]), isFalse);
         expect(
           _energy(
             mixed.energiesOnOutput([unreachable, _part()], videoEnd: _ms(1000)),
