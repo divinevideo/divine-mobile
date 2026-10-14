@@ -162,7 +162,10 @@ class AudioLevelReadException implements Exception {
 ///
 /// Remembers what it has read of every stretch of a file, so the preview
 /// finds it again without reading the file twice, however the stretch is
-/// moved, sped up or turned up.
+/// moved, sped up or turned up. A read serves every later stretch that starts
+/// where it did and ends no later, so moving a sound that runs past the end
+/// of the video, which shortens or lengthens the stretch that plays, reads
+/// its file again only when the stretch grows past what was read.
 class VideoEditorAudioLevelResolver {
   VideoEditorAudioLevelResolver({
     Future<Uint8List> Function(AudioExtractConfigs configs)? extractAudio,
@@ -176,12 +179,26 @@ class VideoEditorAudioLevelResolver {
   static const context = Duration(milliseconds: 50);
 
   final Future<Uint8List> Function(AudioExtractConfigs configs) _extractAudio;
-  final Map<_Stretch, _StretchEnergies> _energies = {};
+  final Map<_ReadStart, _StretchEnergies> _energies = {};
   final Map<_Stretch, Future<_StretchEnergies>> _readsInFlight = {};
 
   /// Whether every part of [parts] has been read.
   bool hasRead(List<AudioLevelPart> parts) =>
-      parts.every((part) => _energies.containsKey(_Stretch.of(part.source)));
+      parts.every((part) => _readFor(part.source) != null);
+
+  /// What has been read of [source]'s file, when it covers the stretch.
+  _StretchEnergies? _readFor(BeatSourcePart source) {
+    final energies = _energies[_ReadStart.of(source)];
+    return energies != null && energies.covers(source.to) ? energies : null;
+  }
+
+  /// Remembers [energies] read for [source], unless what is remembered
+  /// already reaches further, as when a longer read finished first.
+  void _remember(BeatSourcePart source, _StretchEnergies energies) {
+    final key = _ReadStart.of(source);
+    final known = _energies[key];
+    if (known == null || !known.coversAll(energies)) _energies[key] = energies;
+  }
 
   /// Reads every part of [parts] that has not been read yet.
   ///
@@ -194,23 +211,23 @@ class VideoEditorAudioLevelResolver {
     Exception? failure;
     var anyRead = false;
     for (final part in parts) {
-      final stretch = _Stretch.of(part.source);
-      if (_energies.containsKey(stretch)) {
+      if (_readFor(part.source) != null) {
         anyRead = true;
         continue;
       }
+      final stretch = _Stretch.of(part.source);
       final pending = _readsInFlight.putIfAbsent(
         stretch,
         () => _readEnergies(part.source),
       );
       try {
-        _energies[stretch] = await pending;
+        _remember(part.source, await pending);
         anyRead = true;
       } on AudioNoTrackException {
         // An absent audio track is a successful silent result, not a
         // transient read failure.
         anyRead = true;
-        _energies[stretch] = _StretchEnergies.silent;
+        _remember(part.source, _StretchEnergies.silent);
       } on Exception catch (error) {
         // A platform error, no audio from the platform, or a network sound the
         // plugin could not fetch.
@@ -245,7 +262,7 @@ class VideoEditorAudioLevelResolver {
     );
     final mix = Float32List(rows * audioBandCount);
     for (final part in parts) {
-      final energies = _energies[_Stretch.of(part.source)];
+      final energies = _readFor(part.source);
       if (energies == null || energies.rows == 0) continue;
       _addPart(mix, rows, part, energies);
     }
@@ -329,7 +346,11 @@ class VideoEditorAudioLevelResolver {
       if (error is RangeError) rethrow;
       throw AudioLevelReadException(error);
     }
-    return _StretchEnergies(start, await compute(_energiesInWav, wav));
+    return _StretchEnergies(
+      start,
+      await compute(_energiesInWav, wav),
+      readTo: source.to,
+    );
   }
 }
 
@@ -338,6 +359,22 @@ Float32List _energiesInWav(Uint8List wav) {
   final audio = decodeWavMono(wav);
   if (audio == null) return Float32List(0);
   return bandEnergies(audio.samples, sampleRate: audio.sampleRate);
+}
+
+/// Where in a file a part starts reading; see
+/// [VideoEditorAudioLevelResolver._readFor].
+class _ReadStart extends Equatable {
+  const _ReadStart(this.media, this.fileLength, this.from);
+
+  factory _ReadStart.of(BeatSourcePart source) =>
+      _ReadStart(source.media, source.fileLength, source.from);
+
+  final EditorVideo media;
+  final Duration? fileLength;
+  final Duration from;
+
+  @override
+  List<Object?> get props => [media, fileLength, from];
 }
 
 /// The stretch of a file a part reads; where and how fast it plays does not
@@ -358,14 +395,30 @@ class _Stretch extends Equatable {
 }
 
 /// The band energies read from a stretch of a file, from [start] in the file
-/// on, [audioBandFrameRate] rows a second.
+/// on, [audioBandFrameRate] rows a second, for a stretch ending at [readTo].
 class _StretchEnergies {
-  const _StretchEnergies(this.start, this.values);
+  const _StretchEnergies(this.start, this.values, {this.readTo});
 
+  /// A file without sound, which is silent however much of it plays.
   static final silent = _StretchEnergies(Duration.zero, Float32List(0));
 
   final Duration start;
   final Float32List values;
 
+  /// Where in the file the stretch read for ends, or `null` for all of it.
+  final Duration? readTo;
+
   int get rows => values.length ~/ audioBandCount;
+
+  /// Whether this holds a stretch from its start to [to].
+  bool covers(Duration to) {
+    final end = readTo;
+    return end == null || end >= to;
+  }
+
+  /// Whether this holds everything [other] does.
+  bool coversAll(_StretchEnergies other) {
+    final otherEnd = other.readTo;
+    return otherEnd == null ? readTo == null : covers(otherEnd);
+  }
 }

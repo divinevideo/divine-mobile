@@ -1,6 +1,7 @@
 // ABOUTME: Tests which sounds an audio visualizer follows and how their band
 // ABOUTME: energies are read, cached and added up on the exported video.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -341,9 +342,56 @@ void main() {
 
           expect(file.reads, hasLength(1));
           expect(resolver.hasRead([_part(at: _ms(200))]), isTrue);
-          expect(resolver.hasRead([_part(to: _ms(900))]), isFalse);
+          expect(resolver.hasRead([_part(to: _ms(900))]), isTrue);
+          expect(resolver.hasRead([_part(to: _ms(1100))]), isFalse);
+          expect(resolver.hasRead([_part(from: _ms(100))]), isFalse);
         },
       );
+
+      test(
+        'reads a sound running past the video once as it is moved',
+        () async {
+          // A 30-second song in a two-second video: moving it along the
+          // timeline changes how much of it plays, not where it starts.
+          List<AudioLevelPart> movedTo(int ms) => audioLevelSourcesFor(
+            sounds: [_sound('song', startTime: _ms(ms))],
+            clips: const [],
+            videoEnd: _ms(2000),
+          );
+
+          await resolver.read(movedTo(0));
+          for (final ms in [500, 1200, 300, 0]) {
+            expect(resolver.hasRead(movedTo(ms)), isTrue, reason: '$ms ms');
+            await resolver.read(movedTo(ms));
+          }
+
+          expect(file.reads, hasLength(1));
+          final mix = resolver.energiesOnOutput(
+            movedTo(1200),
+            videoEnd: _ms(2000),
+          );
+          expect(_energy(mix, 60), 0);
+          expect(_energy(mix, 90), greaterThan(0));
+        },
+      );
+
+      test('keeps the longer read when a shorter one finishes last', () async {
+        final release = Completer<void>();
+        final ordered = VideoEditorAudioLevelResolver(
+          extractAudio: (configs) async {
+            // The short read is held back until the long one is done.
+            if (configs.endTime == _ms(550)) await release.future;
+            return file(configs);
+          },
+        );
+
+        final short = ordered.read([_part(to: _ms(500))]);
+        await ordered.read([_part(to: _ms(1500))]);
+        release.complete();
+        await short;
+
+        expect(ordered.hasRead([_part(to: _ms(1500))]), isTrue);
+      });
 
       test('reads a little around the stretch, never past the file', () async {
         await resolver.read([
