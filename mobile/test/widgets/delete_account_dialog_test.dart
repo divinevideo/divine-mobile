@@ -60,6 +60,13 @@ const _cancelledStaleAttempt = AccountDeletionAttempt(
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
 
+const _missingCoordinatorRoute = AccountDeletionRecoveryException(
+  'Deletion attempt request failed (404)',
+  stage: AccountDeletionRecoveryStage.coordinatorAttempt,
+  statusCode: 404,
+  indicatesMissingCoordinatorRoute: true,
+);
+
 _MockAccountDeletionRecoveryRepository _successfulRecoveryRepository() {
   final repository = _MockAccountDeletionRecoveryRepository();
   when(
@@ -1516,14 +1523,7 @@ void main() {
       when(
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
-      when(recoveryRepository.prepare).thenThrow(
-        const AccountDeletionRecoveryException(
-          'Deletion attempt request failed (404)',
-          stage: AccountDeletionRecoveryStage.coordinatorAttempt,
-          statusCode: 404,
-          indicatesMissingCoordinatorRoute: true,
-        ),
-      );
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -1570,14 +1570,7 @@ void main() {
       when(
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
-      when(recoveryRepository.prepare).thenThrow(
-        const AccountDeletionRecoveryException(
-          'Deletion attempt request failed (404)',
-          stage: AccountDeletionRecoveryStage.coordinatorAttempt,
-          statusCode: 404,
-          indicatesMissingCoordinatorRoute: true,
-        ),
-      );
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
       final rejected = _rejectAnnouncements(tester);
 
       late BuildContext capturedContext;
@@ -1615,14 +1608,8 @@ void main() {
         when(
           authService.checkAccountDeletionReadiness,
         ).thenAnswer((_) async => AccountDeletionReadiness.ready);
-        when(() => recoveryRepository.prepare(username: 'alice')).thenThrow(
-          const AccountDeletionRecoveryException(
-            'Deletion attempt request failed (404)',
-            stage: AccountDeletionRecoveryStage.coordinatorAttempt,
-            statusCode: 404,
-            indicatesMissingCoordinatorRoute: true,
-          ),
-        );
+        when(() => recoveryRepository.prepare(username: 'alice'))
+            .thenThrow(_missingCoordinatorRoute);
 
         late BuildContext capturedContext;
         await tester.pumpWidget(
