@@ -181,16 +181,27 @@ void main() {
       verify(cubit.load).called(1);
     });
 
-    testWidgets('observes a failed retry request', (tester) async {
+    testWidgets('reports a retry that fails instead of leaking it', (
+      tester,
+    ) async {
       when(cubit.load).thenAnswer((_) async {
         throw StateError('retry failed');
       });
       await pump(tester, VerifyState(status: VerifyStatus.failure));
+      expect(reporter.recordedErrors, isEmpty);
 
       await tester.tap(find.text(l10n.verifyRetry));
       await tester.pump();
 
-      expect(find.text(l10n.verifyLoadFailed), findsOneWidget);
+      verify(cubit.load).called(1);
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
     });
 
     testWidgets('marks each link verified or not', (tester) async {
