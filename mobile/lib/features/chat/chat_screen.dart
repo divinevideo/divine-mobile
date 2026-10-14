@@ -2,6 +2,7 @@
 // ABOUTME: Keeps channel context, sender identity, and delivery state readable.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
@@ -40,6 +41,35 @@ class _ChatScreenState extends State<ChatScreen> {
       nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
     );
     if (mounted && accepted) _controller.clear();
+  }
+
+  void _submit(String text) {
+    final state = context.read<ChatCubit>().state;
+    if (state.sending || state.loading || state.loadFailed) return;
+    final body = text.trim();
+    if (body.isEmpty) return;
+    runDetached(
+      _send(body),
+      'send room message',
+      logName: 'ChatScreen',
+      category: LogCategory.ui,
+    );
+  }
+
+  KeyEventResult _handleComposerKey(FocusNode node, KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    if ((event.logicalKey != LogicalKeyboardKey.enter &&
+            event.logicalKey != LogicalKeyboardKey.numpadEnter) ||
+        keyboard.isShiftPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isAltPressed ||
+        keyboard.isMetaPressed ||
+        !_controller.value.composing.isCollapsed) {
+      return KeyEventResult.ignored;
+    }
+    // Only a fresh press sends; holding Enter must not republish a draft.
+    if (event is KeyDownEvent) _submit(_controller.text);
+    return KeyEventResult.handled;
   }
 
   @override
@@ -129,17 +159,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           },
                         ),
                 ),
-                MessageInputBar(
-                  controller: _controller,
-                  clearOnSend: false,
-                  textCapitalization: TextCapitalization.sentences,
-                  enabled:
-                      !state.sending && !state.loading && !state.loadFailed,
-                  onSend: (text) => runDetached(
-                    _send(text),
-                    'send room message',
-                    logName: 'ChatScreen',
-                    category: LogCategory.ui,
+                Focus(
+                  canRequestFocus: false,
+                  onKeyEvent: _handleComposerKey,
+                  child: MessageInputBar(
+                    controller: _controller,
+                    clearOnSend: false,
+                    textCapitalization: TextCapitalization.sentences,
+                    enabled:
+                        !state.sending && !state.loading && !state.loadFailed,
+                    onSend: _submit,
                   ),
                 ),
               ],

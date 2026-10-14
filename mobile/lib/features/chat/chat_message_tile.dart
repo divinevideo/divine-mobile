@@ -4,6 +4,7 @@
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -11,6 +12,8 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 class ChatMessageTile extends ConsumerWidget {
@@ -28,6 +31,15 @@ class ChatMessageTile extends ConsumerWidget {
   final bool pending;
   final bool sending;
   final VoidCallback onRetry;
+
+  void _openProfile(BuildContext context) {
+    FocusScope.of(context).unfocus();
+    context.push<void>(
+      OtherProfileScreen.pathForNpub(
+        NostrKeyUtils.encodePubKey(message.author),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,6 +60,8 @@ class ChatMessageTile extends ConsumerWidget {
         children: [
           UserAvatar(
             size: 36,
+            onTap: () => _openProfile(context),
+            semanticLabel: context.l10n.profileChipTapHint(name.name),
             imageUrl: avatar.imageUrl,
             contentOverride: avatar.contentOverride,
             name: name.name,
@@ -72,10 +86,19 @@ class ChatMessageTile extends ConsumerWidget {
                         ),
                       )
                     else
-                      Text(
-                        name.name,
-                        style: VineTheme.titleSmallFont(
-                          color: context.vineColors.primaryText,
+                      Semantics(
+                        button: true,
+                        label: context.l10n.profileChipTapHint(name.name),
+                        onTap: () => _openProfile(context),
+                        excludeSemantics: true,
+                        child: InkWell(
+                          onTap: () => _openProfile(context),
+                          child: Text(
+                            name.name,
+                            style: VineTheme.titleSmallFont(
+                              color: context.vineColors.primaryText,
+                            ),
+                          ),
                         ),
                       ),
                     Text(
