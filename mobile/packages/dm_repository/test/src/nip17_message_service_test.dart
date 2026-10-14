@@ -607,7 +607,14 @@ void main() {
               event: invocation.positionalArguments[0] as Event,
             );
           });
+          when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
         });
+
+        /// The message of the `Self-wrap published` line this send logged.
+        String publishedLine() => LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .lastWhere((message) => message.startsWith('Self-wrap published'));
 
         Future<NIP17SendResult> send({List<String>? selfWrapTargetRelays}) {
           final rumor = selfService.buildRumor(
@@ -667,6 +674,41 @@ void main() {
           expect(captured, hasLength(2));
           expect(captured.last, isNull);
         });
+
+        test('logs a bare copy as requested from the default pool', () async {
+          await LogCaptureService().clearAllLogs();
+
+          final result = await send();
+
+          expect(result.selfWrapPublished, isTrue);
+          expect(publishedLine(), endsWith('requested=default pool)'));
+        });
+
+        test(
+          'logs only the requested relays this build may reach (#8446)',
+          () async {
+            // A frame-accept success names no relay, and the environment lock
+            // drops a refused relay before any socket opens, so naming it
+            // would report a copy on a relay that never saw it.
+            when(
+              () => mockNostrClient.isRelayAllowed('wss://nos.lol'),
+            ).thenReturn(false);
+            await LogCaptureService().clearAllLogs();
+
+            final result = await send(
+              selfWrapTargetRelays: const [
+                'wss://relay.divine.video',
+                'wss://nos.lol',
+              ],
+            );
+
+            expect(result.selfWrapPublished, isTrue);
+            expect(
+              publishedLine(),
+              endsWith('requested=wss://relay.divine.video)'),
+            );
+          },
+        );
       });
     });
 

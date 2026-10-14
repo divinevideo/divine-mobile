@@ -1224,20 +1224,28 @@ class NIP17MessageService {
       // Name the destination on both outcomes. Reporting only a bare
       // success/failure is what let a self-copy that never reached the
       // sender's advertised inbox read as delivered (#7328), and support
-      // cannot tell those apart from the event id alone.
-      final destinationForLog = destination?.join(', ') ?? 'default pool';
+      // cannot tell those apart from the event id alone. It is what was
+      // requested, not what was reached: a success names no relay, and the
+      // environment lock drops a relay this build may not use before any
+      // socket opens, so naming that one would misreport it (#8446).
+      final reachable = destination?.where(_nostrService.isRelayAllowed);
+      final destinationForLog = switch (reachable) {
+        null => 'default pool',
+        final relays when relays.isEmpty => 'none this build may use',
+        final relays => relays.join(', '),
+      };
       if (published is! PublishSuccess) {
         Log.warning(
           'Self-wrap publish failed — the sender will not see this '
           'message on other devices or after a reinstall '
-          '(event=${selfWrapEvent.id}, relays=$destinationForLog)',
+          '(event=${selfWrapEvent.id}, requested=$destinationForLog)',
           category: LogCategory.system,
         );
         return false;
       }
       Log.info(
         'Self-wrap published (event=${selfWrapEvent.id}, '
-        'relays=$destinationForLog)',
+        'requested=$destinationForLog)',
         category: LogCategory.system,
       );
       return true;
