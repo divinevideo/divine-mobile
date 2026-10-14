@@ -17,9 +17,12 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
 
 import '../helpers/go_router.dart';
@@ -31,6 +34,25 @@ class _MockDivineVideoClip extends Mock implements DivineVideoClip {}
 class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
     implements BackgroundPublishBloc {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    reports.add((error: error, reason: reason));
+  }
+}
 
 // Matches the unkeyed 64x4 rounded Container the header paints as the drag
 // handle. Asserting the rendered tree, rather than the forwarded
@@ -106,7 +128,7 @@ void main() {
     ).thenAnswer((invocation) {
       final location = invocation.positionalArguments.first as String;
       return location == failingPath
-          ? Future<void>.error(Exception('push failed'))
+          ? Future<void>.error(StateError('push failed'))
           : Future<void>.value();
     });
     return goRouter;
@@ -522,8 +544,36 @@ void main() {
       });
 
       group('when navigation is rejected', () {
-        testWidgets('Account status push does not escape as an unhandled '
-            'error', (tester) async {
+        late CrashReporter originalReporter;
+        late _RecordingCrashReporter reporter;
+
+        setUp(() {
+          originalReporter = detachedFailureReporter;
+          reporter = _RecordingCrashReporter();
+          detachedFailureReporter = reporter;
+        });
+
+        tearDown(() => detachedFailureReporter = originalReporter);
+
+        // The rejection is a StateError, which runDetached forwards to the
+        // crash reporter. Reaching it proves the failure was supervised
+        // rather than dropped.
+        void expectPushFailureReported(WidgetTester tester) {
+          expect(tester.takeException(), isNull);
+          final report = reporter.reports.single;
+          expect(report.reason, equals('runDetached UploadFailureSheet'));
+          expect(
+            report.error,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<StateError>(),
+            ),
+          );
+        }
+
+        testWidgets('Account status push failure is reported, not left '
+            'unhandled', (tester) async {
           final goRouter = buildGoRouter(failingPath: RoutePaths.accountStatus);
           await openFailureSheet(
             tester,
@@ -539,11 +589,11 @@ void main() {
           verify(
             () => goRouter.push<void>(RoutePaths.accountStatus, extra: true),
           ).called(1);
-          expect(tester.takeException(), isNull);
+          expectPushFailureReported(tester);
         });
 
-        testWidgets('View after Save to Drafts does not escape as an '
-            'unhandled error', (tester) async {
+        testWidgets('View after Save to Drafts failure is reported, not '
+            'left unhandled', (tester) async {
           final goRouter = buildGoRouter(failingPath: RoutePaths.libraryDrafts);
           await openFailureSheet(
             tester,
@@ -559,11 +609,11 @@ void main() {
           await tester.pumpAndSettle();
 
           verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
-          expect(tester.takeException(), isNull);
+          expectPushFailureReported(tester);
         });
 
-        testWidgets('View after Account status does not escape as an '
-            'unhandled error', (tester) async {
+        testWidgets('View after Account status failure is reported, not '
+            'left unhandled', (tester) async {
           final goRouter = buildGoRouter(failingPath: RoutePaths.libraryDrafts);
           await openFailureSheet(
             tester,
@@ -579,7 +629,7 @@ void main() {
           await tester.pumpAndSettle();
 
           verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
-          expect(tester.takeException(), isNull);
+          expectPushFailureReported(tester);
         });
       });
     });
