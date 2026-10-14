@@ -90,6 +90,16 @@ void main() {
     return tester.state<_TestWidgetState>(find.byType(_TestWidget));
   }
 
+  void verifyNothingPrefetched() {
+    verifyNever(
+      () => mockCache.preCacheFiles(
+        any(),
+        batchSize: any(named: 'batchSize'),
+        authHeadersProvider: any(named: 'authHeadersProvider'),
+      ),
+    );
+  }
+
   group(GridPrefetchMixin, () {
     group('prefetchGridVideos', () {
       testWidgets('prefetches up to gridPrefetchLimit videos', (tester) async {
@@ -110,14 +120,15 @@ void main() {
         ).called(1);
       });
 
-      testWidgets('handles empty video list', (tester) async {
+      testWidgets('does not prefetch an empty list', (tester) async {
         final state = await pumpTestWidget(tester);
 
-        // Should not throw
         state.prefetchGridVideos([]);
+
+        verifyNothingPrefetched();
       });
 
-      testWidgets('handles videos with null URLs', (tester) async {
+      testWidgets('does not prefetch videos without a URL', (tester) async {
         final state = await pumpTestWidget(tester);
 
         final videos = [
@@ -130,8 +141,9 @@ void main() {
           ),
         ];
 
-        // Should not throw even with null videoUrl
         state.prefetchGridVideos(videos);
+
+        verifyNothingPrefetched();
       });
     });
 
@@ -224,11 +236,10 @@ void main() {
 
         final videos = _createMockVideos(10);
 
-        // These should be no-ops on low bandwidth
         state.prefetchGridVideos(videos);
         state.prefetchAroundIndex(5, videos);
 
-        // No exception means the guard worked
+        verifyNothingPrefetched();
       });
     });
   });
