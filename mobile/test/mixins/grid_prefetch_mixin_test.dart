@@ -334,5 +334,21 @@ void main() {
         verifyNothingPrefetched();
       });
     });
+
+    group('platform gating', () {
+      testWidgets('does not prefetch where $InfiniteVideoFeed is supported', (
+        tester,
+      ) async {
+        InfiniteVideoFeed.debugIsSupportedOverride = true;
+        final state = await pumpTestWidget(tester);
+
+        final videos = _createMockVideos(10);
+
+        state.prefetchGridVideos(videos);
+        state.prefetchAroundIndex(5, videos);
+
+        verifyNothingPrefetched();
+      });
+    });
   });
 }
