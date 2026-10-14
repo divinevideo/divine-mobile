@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Deze chat is nog niet hersteld",
     "inboxRestoreRetryAction": "Opnieuw proberen",
     "inboxRestoringMessages": "Je berichten worden hersteld…",
-    "inboxReportedUser": "{displayName} gerapporteerd",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} gedeblokkeerd",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Dit account rapporteren",
     "inboxActionBlockVanishedAccount": "Dit account blokkeren",
     "inboxActionUnblockVanishedAccount": "Dit account deblokkeren",
-    "inboxReportedVanishedAccount": "Dit account is gerapporteerd",
     "inboxBlockedVanishedAccount": "Dit account is geblokkeerd",
     "inboxUnblockedVanishedAccount": "Dit account is gedeblokkeerd",
     "inboxRemoveConfirmBodyVanishedAccount": "Hiermee verwijder je het gesprek uit je inbox. Als deze persoon je weer een bericht stuurt, begint er een nieuw gesprek.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Reactie kon niet worden bewerkt",
     "commentsErrorNotAuthenticatedInteract": "Log in om mee te doen",
     "commentsErrorVoteFailed": "Stemmen op de reactie is mislukt",
-    "commentsErrorReportFailed": "Reactie kon niet worden gemeld",
     "commentsErrorBlockFailed": "Gebruiker kon niet worden geblokkeerd",
     "commentsErrorDeleteFailed": "Reactie kon niet worden verwijderd",
     "commentsHeaderCount": "{count, plural, =1{{count} reactie} other{{count} reacties}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Reactie bewerken",
     "commentOptionsFlagContentLabel": "Inhoud markeren",
     "commentOptionsFlagContentSemanticLabel": "Deze inhoud markeren",
-    "commentOptionsFlagReasonPrompt": "Selecteer een reden om deze reactie te markeren",
-    "commentOptionsFlagSubmit": "Verzenden",
     "commentOptionsTitle": "Opties",
     "commentsEmptyClassicVineMessage": "We werken nog aan het importeren van oude reacties uit het archief. Ze zijn nog niet klaar.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

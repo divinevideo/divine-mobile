@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Ten czat nie został jeszcze w pełni odzyskany",
     "inboxRestoreRetryAction": "Spróbuj ponownie",
     "inboxRestoringMessages": "Odzyskiwanie wiadomości…",
-    "inboxReportedUser": "Zgłoszono {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "Odblokowano {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Zgłoś to konto",
     "inboxActionBlockVanishedAccount": "Zablokuj to konto",
     "inboxActionUnblockVanishedAccount": "Odblokuj to konto",
-    "inboxReportedVanishedAccount": "Zgłoszono to konto",
     "inboxBlockedVanishedAccount": "Zablokowano to konto",
     "inboxUnblockedVanishedAccount": "Odblokowano to konto",
     "inboxRemoveConfirmBodyVanishedAccount": "To usuwa rozmowę z Twojej skrzynki odbiorczej. Jeśli ta osoba znów do Ciebie napisze, rozpocznie się nowa rozmowa.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Nie udało się edytować komentarza",
     "commentsErrorNotAuthenticatedInteract": "Zaloguj się, aby brać udział",
     "commentsErrorVoteFailed": "Nie udało się zagłosować na komentarz",
-    "commentsErrorReportFailed": "Nie udało się zgłosić komentarza",
     "commentsErrorBlockFailed": "Nie udało się zablokować użytkownika",
     "commentsErrorDeleteFailed": "Nie udało się usunąć komentarza",
     "commentsHeaderCount": "{count, plural, one{{count} komentarz} few{{count} komentarze} many{{count} komentarzy} other{{count} komentarza}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Edytuj komentarz",
     "commentOptionsFlagContentLabel": "Zgłoś treść",
     "commentOptionsFlagContentSemanticLabel": "Zgłoś tę treść",
-    "commentOptionsFlagReasonPrompt": "Wybierz powód zgłoszenia tego komentarza",
-    "commentOptionsFlagSubmit": "Wyślij",
     "commentOptionsTitle": "Opcje",
     "commentsEmptyClassicVineMessage": "Wciąż pracujemy nad importem starych komentarzy z archiwum. Nie są jeszcze gotowe.",
     "commentsEmptyClassicVineTitle": "Klasyczny Vine",

@@ -377,7 +377,6 @@
     "inboxActionReportVanishedAccount": "Докладвай този акаунт",
     "inboxActionBlockVanishedAccount": "Блокирай този акаунт",
     "inboxActionUnblockVanishedAccount": "Отблокирай този акаунт",
-    "inboxReportedVanishedAccount": "Този акаунт е докладван",
     "inboxBlockedVanishedAccount": "Този акаунт е блокиран",
     "inboxUnblockedVanishedAccount": "Този акаунт е отблокиран",
     "inboxRemoveConfirmBodyVanishedAccount": "Това премахва разговора от входящата ти кутия. Ако ти пише отново, започва нов разговор.",
@@ -2111,14 +2110,6 @@
     "categoryVlogging": "Влогове",
     "categoryWrestling": "Борба",
     "profileSetupUploadStaged": "Качено — натисни Запази, за да приложиш",
-    "inboxReportedUser": "Докладвано {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxBlockedUser": "Блокиран {displayName}",
     "@inboxBlockedUser": {
         "placeholders": {
@@ -4002,7 +3993,6 @@
     "commentsErrorEditFailed": "Коментарът не беше редактиран",
     "commentsErrorNotAuthenticatedInteract": "Влез, за да участваш",
     "commentsErrorVoteFailed": "Гласуването за коментара не мина",
-    "commentsErrorReportFailed": "Коментарът не беше докладван",
     "commentsErrorBlockFailed": "Потребителят не беше блокиран",
     "commentsErrorDeleteFailed": "Коментарът не беше изтрит",
     "commentsHeaderCount": "{count, plural, =1{{count} коментар} other{{count} коментара}}",
@@ -4427,8 +4417,6 @@
     "commentOptionsEditSemanticLabel": "Редактирай коментара",
     "commentOptionsFlagContentLabel": "Сигнализирай съдържание",
     "commentOptionsFlagContentSemanticLabel": "Сигнализирай това съдържание",
-    "commentOptionsFlagReasonPrompt": "Избери причина да сигнализираш този коментар",
-    "commentOptionsFlagSubmit": "Изпрати",
     "commentOptionsTitle": "Опции",
     "commentsEmptyClassicVineMessage": "Все още работим по импортирането на стари коментари от архива. Още не са готови.",
     "commentsEmptyClassicVineTitle": "Класически Vine",

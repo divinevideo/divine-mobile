@@ -1027,9 +1027,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Deblochează acest cont';
 
   @override
-  String get inboxReportedVanishedAccount => 'Acest cont a fost raportat';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Acest cont a fost blocat';
 
   @override
@@ -4964,6 +4961,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportWhyReporting => 'De ce raportezi acest conținut?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine va acționa asupra rapoartelor de conținut în 24 de ore eliminând conținutul și excluțând utilizatorul care a furnizat conținutul ofensator.';
 
@@ -4986,6 +4986,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Descrie problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5898,11 +5901,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Încărcată — apasă pe Salvează pentru a aplica';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName a fost raportat(ă)';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7175,13 +7173,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Semnalează acest conținut';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Alege un motiv pentru semnalarea acestui comentariu';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Trimite';
 
   @override
   String get commentOptionsTitle => 'Opțiuni';
@@ -8505,9 +8496,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Nu am putut vota comentariul';
-
-  @override
-  String get commentsErrorReportFailed => 'Nu am putut raporta comentariul';
 
   @override
   String get commentsErrorBlockFailed => 'Nu am putut bloca utilizatorul';

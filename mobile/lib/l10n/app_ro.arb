@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Această conversație nu s-a restaurat complet",
     "inboxRestoreRetryAction": "Reîncearcă",
     "inboxRestoringMessages": "Se restaurează mesajele tale…",
-    "inboxReportedUser": "{displayName} a fost raportat(ă)",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} a fost deblocat(ă)",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Raportează acest cont",
     "inboxActionBlockVanishedAccount": "Blochează acest cont",
     "inboxActionUnblockVanishedAccount": "Deblochează acest cont",
-    "inboxReportedVanishedAccount": "Acest cont a fost raportat",
     "inboxBlockedVanishedAccount": "Acest cont a fost blocat",
     "inboxUnblockedVanishedAccount": "Acest cont a fost deblocat",
     "inboxRemoveConfirmBodyVanishedAccount": "Astfel, conversația este eliminată din inbox. Dacă îți scrie din nou, începe o conversație nouă.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Nu am putut edita comentariul",
     "commentsErrorNotAuthenticatedInteract": "Autentifică-te ca să interacționezi",
     "commentsErrorVoteFailed": "Nu am putut vota comentariul",
-    "commentsErrorReportFailed": "Nu am putut raporta comentariul",
     "commentsErrorBlockFailed": "Nu am putut bloca utilizatorul",
     "commentsErrorDeleteFailed": "Nu am putut șterge comentariul",
     "commentsHeaderCount": "{count, plural, =1{{count} comentariu} few{{count} comentarii} other{{count} de comentarii}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Editează comentariul",
     "commentOptionsFlagContentLabel": "Semnalează conținutul",
     "commentOptionsFlagContentSemanticLabel": "Semnalează acest conținut",
-    "commentOptionsFlagReasonPrompt": "Alege un motiv pentru semnalarea acestui comentariu",
-    "commentOptionsFlagSubmit": "Trimite",
     "commentOptionsTitle": "Opțiuni",
     "commentsEmptyClassicVineMessage": "Încă lucrăm la importarea comentariilor vechi din arhivă. Nu sunt gata încă.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

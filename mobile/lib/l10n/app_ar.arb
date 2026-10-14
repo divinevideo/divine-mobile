@@ -2021,14 +2021,6 @@
     "conversationRestorePausedTitle": "لم تكتمل استعادة هذه المحادثة",
     "inboxRestoreRetryAction": "إعادة المحاولة",
     "inboxRestoringMessages": "جارٍ استعادة رسائلك…",
-    "inboxReportedUser": "تم الإبلاغ عن {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "تم إلغاء حظر {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3135,7 +3127,6 @@
     "inboxActionReportVanishedAccount": "الإبلاغ عن هذا الحساب",
     "inboxActionBlockVanishedAccount": "حظر هذا الحساب",
     "inboxActionUnblockVanishedAccount": "إلغاء حظر هذا الحساب",
-    "inboxReportedVanishedAccount": "تم الإبلاغ عن هذا الحساب",
     "inboxBlockedVanishedAccount": "تم حظر هذا الحساب",
     "inboxUnblockedVanishedAccount": "تم إلغاء حظر هذا الحساب",
     "inboxRemoveConfirmBodyVanishedAccount": "يؤدي هذا إلى إزالة المحادثة من صندوق الوارد. إذا راسلك مرة أخرى، تبدأ محادثة جديدة.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "تعذّر تعديل التعليق",
     "commentsErrorNotAuthenticatedInteract": "سجّل الدخول للتفاعل",
     "commentsErrorVoteFailed": "تعذّر التصويت على التعليق",
-    "commentsErrorReportFailed": "تعذّر الإبلاغ عن التعليق",
     "commentsErrorBlockFailed": "تعذّر حظر المستخدم",
     "commentsErrorDeleteFailed": "تعذّر حذف التعليق",
     "commentsHeaderCount": "{count, plural, zero{لا توجد تعليقات} one{تعليق واحد} two{تعليقان} few{{count} تعليقات} many{{count} تعليقًا} other{{count} تعليق}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "تعديل التعليق",
     "commentOptionsFlagContentLabel": "الإبلاغ عن المحتوى",
     "commentOptionsFlagContentSemanticLabel": "الإبلاغ عن هذا المحتوى",
-    "commentOptionsFlagReasonPrompt": "اختر سبب الإبلاغ عن هذا التعليق",
-    "commentOptionsFlagSubmit": "إرسال",
     "commentOptionsTitle": "خيارات",
     "commentsEmptyClassicVineMessage": "ما زلنا نعمل على استيراد التعليقات القديمة من الأرشيف. إنها ليست جاهزة بعد.",
     "commentsEmptyClassicVineTitle": "Vine الكلاسيكي",

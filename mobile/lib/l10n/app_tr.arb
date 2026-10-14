@@ -2028,14 +2028,6 @@
     "conversationRestorePausedTitle": "Bu sohbet tam geri yüklenmedi",
     "inboxRestoreRetryAction": "Yeniden dene",
     "inboxRestoringMessages": "Mesajların geri yükleniyor…",
-    "inboxReportedUser": "{displayName} bildirildi",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} engeli kaldırıldı",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Bu hesabı bildir",
     "inboxActionBlockVanishedAccount": "Bu hesabı engelle",
     "inboxActionUnblockVanishedAccount": "Bu hesabın engelini kaldır",
-    "inboxReportedVanishedAccount": "Bu hesap bildirildi",
     "inboxBlockedVanishedAccount": "Bu hesap engellendi",
     "inboxUnblockedVanishedAccount": "Bu hesabın engeli kaldırıldı",
     "inboxRemoveConfirmBodyVanishedAccount": "Bu, sohbeti gelen kutundan kaldırır. Sana tekrar yazarsa yeni bir sohbet başlar.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Yorum düzenlenemedi",
     "commentsErrorNotAuthenticatedInteract": "Katılmak için giriş yap",
     "commentsErrorVoteFailed": "Yoruma oy verilemedi",
-    "commentsErrorReportFailed": "Yorum bildirilemedi",
     "commentsErrorBlockFailed": "Kullanıcı engellenemedi",
     "commentsErrorDeleteFailed": "Yorum silinemedi",
     "commentsHeaderCount": "{count, plural, =1{{count} Yorum} other{{count} Yorum}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Yorumu düzenle",
     "commentOptionsFlagContentLabel": "İçeriği İşaretle",
     "commentOptionsFlagContentSemanticLabel": "Bu içeriği işaretle",
-    "commentOptionsFlagReasonPrompt": "Bu yorumu işaretlemek için bir neden seç",
-    "commentOptionsFlagSubmit": "Gönder",
     "commentOptionsTitle": "Seçenekler",
     "commentsEmptyClassicVineMessage": "Arşivden eski yorumları içe aktarmaya hâlâ çalışıyoruz. Henüz hazır değiller.",
     "commentsEmptyClassicVineTitle": "Klasik Vine",

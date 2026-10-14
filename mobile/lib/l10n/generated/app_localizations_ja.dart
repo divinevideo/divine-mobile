@@ -876,9 +876,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'このアカウントのブロックを解除';
 
   @override
-  String get inboxReportedVanishedAccount => 'このアカウントを報告したよ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'このアカウントをブロックしたよ';
 
   @override
@@ -4538,6 +4535,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportWhyReporting => 'このコンテンツを報告する理由は?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine はコンテンツの報告に24時間以内に対応して、問題のあるコンテンツを削除し、違反ユーザーを排除するよ。';
 
@@ -4558,6 +4558,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '問題の内容を記入してください';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly => 'テキストのみです。ここには写真やGIFを添付できません。';
@@ -5423,11 +5426,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'アップロードしたよ — 適用するには「保存」をタップしてね';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayNameを報告したよ';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -6633,12 +6631,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'このコンテンツにフラグを付ける';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => 'このコメントにフラグを付ける理由を選んでね';
-
-  @override
-  String get commentOptionsFlagSubmit => '送信';
 
   @override
   String get commentOptionsTitle => 'オプション';
@@ -7899,9 +7891,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'コメントへの投票に失敗しました';
-
-  @override
-  String get commentsErrorReportFailed => 'コメントを報告できませんでした';
 
   @override
   String get commentsErrorBlockFailed => 'ユーザーをブロックできませんでした';

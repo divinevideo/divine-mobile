@@ -409,7 +409,6 @@
     "inboxActionReportVanishedAccount": "ሪፖርት ይህን መለያ",
     "inboxActionBlockVanishedAccount": "አግድ ይህን መለያ",
     "inboxActionUnblockVanishedAccount": "እገዳን አንሳ ይህን መለያ",
-    "inboxReportedVanishedAccount": "ሪፖርት ተደርጓል ይህን መለያ",
     "inboxBlockedVanishedAccount": "ታግዷል ይህን መለያ",
     "inboxUnblockedVanishedAccount": "እገዳው ተነስቷል ይህን መለያ",
     "inboxRemoveConfirmBodyVanishedAccount": "ይህ ውይይቱን ከመልእክት ሳጥንህ ያስወግዳል። እንደገና መልእክት ከላከልህ አዲስ ውይይት ይጀምራል።",
@@ -2300,14 +2299,6 @@
     "categoryVlogging": "ቭሎግ ማድረግ",
     "categoryWrestling": "ትግል",
     "profileSetupUploadStaged": "ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ",
-    "inboxReportedUser": "ሪፖርት ተደርጓል {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxBlockedUser": "ታግዷል {displayName}",
     "@inboxBlockedUser": {
         "placeholders": {
@@ -3990,7 +3981,6 @@
     "commentsErrorEditFailed": "አስተያየቱን ማረም አልተሳካም",
     "commentsErrorNotAuthenticatedInteract": "ለመሳተፍ እባክህ ግባ",
     "commentsErrorVoteFailed": "በአስተያየቱ ላይ መምረጥ አልተሳካም",
-    "commentsErrorReportFailed": "አስተያየቱን ሪፖርት ማድረግ አልተሳካም",
     "commentsErrorBlockFailed": "ተጠቃሚውን ማገድ አልተሳካም",
     "commentsErrorDeleteFailed": "አስተያየቱን መሰረዝ አልተሳካም",
     "commentsHeaderCount": "{count, plural, =1{{count} አስተያየት} other{{count} አስተያየቶች}}",
@@ -4415,8 +4405,6 @@
     "commentOptionsEditSemanticLabel": "አስተያየት አርትዕ",
     "commentOptionsFlagContentLabel": "ይዘት ምልክት አድርግ",
     "commentOptionsFlagContentSemanticLabel": "ይህን ይዘት ምልክት አድርግ",
-    "commentOptionsFlagReasonPrompt": "ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ",
-    "commentOptionsFlagSubmit": "አስገባ",
     "commentOptionsTitle": "አማራጮች",
     "commentsEmptyClassicVineMessage": "አሮጌ አስተያየቶችን ከማህደሩ ማስመጣት ላይ አሁንም እየሰራን ነው። እስካሁን ዝግጁ አይደሉም።",
     "commentsEmptyClassicVineTitle": "ክላሲክ Vine",

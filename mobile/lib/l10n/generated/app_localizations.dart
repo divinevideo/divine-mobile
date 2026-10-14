@@ -1651,12 +1651,6 @@ abstract class AppLocalizations {
   /// **'Unblock this account'**
   String get inboxActionUnblockVanishedAccount;
 
-  /// Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported this account'**
-  String get inboxReportedVanishedAccount;
-
   /// Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
   ///
   /// In en, this message translates to:
@@ -8191,6 +8185,12 @@ abstract class AppLocalizations {
   /// **'Why are you reporting this content?'**
   String get reportWhyReporting;
 
+  /// Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this comment?'**
+  String get reportWhyReportingComment;
+
   /// No description provided for @reportPolicyNotice.
   ///
   /// In en, this message translates to:
@@ -8232,6 +8232,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please describe the issue'**
   String get reportDetailsRequired;
+
+  /// Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description.
+  ///
+  /// In en, this message translates to:
+  /// **'Add details (optional)'**
+  String get reportDetailsOptional;
 
   /// Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached.
   ///
@@ -9822,12 +9828,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uploaded — tap Save to apply'**
   String get profileSetupUploadStaged;
-
-  /// No description provided for @inboxReportedUser.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported {displayName}'**
-  String inboxReportedUser(String displayName);
 
   /// No description provided for @inboxBlockedUser.
   ///
@@ -11934,18 +11934,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Flag this content'**
   String get commentOptionsFlagContentSemanticLabel;
-
-  /// No description provided for @commentOptionsFlagReasonPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a reason for flagging this comment'**
-  String get commentOptionsFlagReasonPrompt;
-
-  /// No description provided for @commentOptionsFlagSubmit.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit'**
-  String get commentOptionsFlagSubmit;
 
   /// No description provided for @commentOptionsTitle.
   ///
@@ -14068,12 +14056,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to vote on comment'**
   String get commentsErrorVoteFailed;
-
-  /// Snackbar shown when submitting an NIP-56 comment report fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to report comment'**
-  String get commentsErrorReportFailed;
 
   /// Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails.
   ///

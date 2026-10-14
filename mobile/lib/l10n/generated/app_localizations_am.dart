@@ -963,9 +963,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'እገዳን አንሳ ይህን መለያ';
 
   @override
-  String get inboxReportedVanishedAccount => 'ሪፖርት ተደርጓል ይህን መለያ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ታግዷል ይህን መለያ';
 
   @override
@@ -4716,6 +4713,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportWhyReporting => 'ይህን ይዘት ለምን ሪፖርት ያደርጋሉ?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ይዘቱን በማስወገድ እና አጸያፊ ይዘቱን ያቀረበውን ተጠቃሚ በማስወጣት የይዘት ሪፖርቶችን በ24 ሰዓታት ውስጥ ይሰራል።';
 
@@ -4736,6 +4736,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'እባክህ ችግሩን ግለጽ';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5610,11 +5613,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'ሪፖርት ተደርጓል $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -6840,13 +6838,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'ይህን ይዘት ምልክት አድርግ';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ';
-
-  @override
-  String get commentOptionsFlagSubmit => 'አስገባ';
 
   @override
   String get commentOptionsTitle => 'አማራጮች';
@@ -8127,9 +8118,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'በአስተያየቱ ላይ መምረጥ አልተሳካም';
-
-  @override
-  String get commentsErrorReportFailed => 'አስተያየቱን ሪፖርት ማድረግ አልተሳካም';
 
   @override
   String get commentsErrorBlockFailed => 'ተጠቃሚውን ማገድ አልተሳካም';

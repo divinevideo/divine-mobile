@@ -82,28 +82,6 @@ final class CommentVoteCountsFetchRequested extends CommentReactionsEvent {
   final Map<String, String> addressableIdsByCommentId;
 }
 
-/// Report a comment (publishes Kind 1984 / NIP-56).
-final class CommentReportRequested extends CommentReactionsEvent {
-  const CommentReportRequested({
-    required this.commentId,
-    required this.authorPubkey,
-    required this.reason,
-    this.details = '',
-  });
-
-  /// The ID of the comment to report.
-  final String commentId;
-
-  /// The pubkey of the comment author.
-  final String authorPubkey;
-
-  /// The reason for the report.
-  final ContentFilterReason reason;
-
-  /// Optional additional details.
-  final String details;
-}
-
 /// Block a user from comments (updates Kind 10000 mute list / NIP-51).
 ///
 /// After the persist + relay broadcast succeeds, the reactions bloc emits a

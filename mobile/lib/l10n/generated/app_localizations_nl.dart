@@ -988,9 +988,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Dit account deblokkeren';
 
   @override
-  String get inboxReportedVanishedAccount => 'Dit account is gerapporteerd';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Dit account is geblokkeerd';
 
   @override
@@ -4840,6 +4837,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportWhyReporting => 'Waarom meld je deze inhoud?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine handelt binnen 24 uur op meldingen van inhoud door de inhoud te verwijderen en de gebruiker die de schendende inhoud plaatste eruit te zetten.';
 
@@ -4862,6 +4862,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Beschrijf het probleem';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5760,11 +5763,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Geüpload — tik op Opslaan om toe te passen';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName gerapporteerd';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7031,13 +7029,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Deze inhoud markeren';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Selecteer een reden om deze reactie te markeren';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Verzenden';
 
   @override
   String get commentOptionsTitle => 'Opties';
@@ -8349,9 +8340,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Stemmen op de reactie is mislukt';
-
-  @override
-  String get commentsErrorReportFailed => 'Reactie kon niet worden gemeld';
 
   @override
   String get commentsErrorBlockFailed =>

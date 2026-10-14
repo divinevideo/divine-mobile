@@ -992,9 +992,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Unblock this account';
 
   @override
-  String get inboxReportedVanishedAccount => 'Reported this account';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Blocked this account';
 
   @override
@@ -4902,6 +4899,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportWhyReporting => 'Why are you reporting this content?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.';
 
@@ -4924,6 +4924,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Please describe the issue';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5826,11 +5829,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Uploaded — tap Save to apply';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Reported $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7086,13 +7084,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Flag this content';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Select a reason for flagging this comment';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Submit';
 
   @override
   String get commentOptionsTitle => 'Options';
@@ -8413,9 +8404,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Failed to vote on comment';
-
-  @override
-  String get commentsErrorReportFailed => 'Failed to report comment';
 
   @override
   String get commentsErrorBlockFailed => 'Failed to block user';

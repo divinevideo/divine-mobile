@@ -963,9 +963,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-unblock ang account na ito';
 
   @override
-  String get inboxReportedVanishedAccount => 'Na-report ang account na ito';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Na-block ang account na ito';
 
   @override
@@ -4856,6 +4853,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportWhyReporting => 'Bakit mo rine-report ang content na ito?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Aaksyunan ng Divine ang mga content report sa loob ng 24 oras sa pamamagitan ng pag-alis ng content at pag-eject sa user na nagbigay ng masamang content.';
 
@@ -4878,6 +4878,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Pakilarawan ang problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5777,11 +5780,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Na-upload na — i-tap ang I-save para ilapat';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Na-report si $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7046,13 +7044,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'I-flag ang content na ito';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pumili ng dahilan sa pag-flag sa komentong ito';
-
-  @override
-  String get commentOptionsFlagSubmit => 'I-submit';
 
   @override
   String get commentOptionsTitle => 'Mga Option';
@@ -8373,9 +8364,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Hindi naiboto ang komento';
-
-  @override
-  String get commentsErrorReportFailed => 'Hindi na-report ang komento';
 
   @override
   String get commentsErrorBlockFailed => 'Hindi na-block ang user';

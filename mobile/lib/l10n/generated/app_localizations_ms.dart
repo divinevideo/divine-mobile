@@ -954,9 +954,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Nyahsekat akaun ini';
 
   @override
-  String get inboxReportedVanishedAccount => 'Akaun ini dilaporkan';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Akaun ini disekat';
 
   @override
@@ -4820,6 +4817,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportWhyReporting => 'Mengapa anda melaporkan kandungan ini?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.';
 
@@ -4842,6 +4842,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Sila terangkan isu itu';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5741,11 +5744,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Dimuat naik — ketik Simpan untuk menggunakan';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName dilaporkan';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7003,13 +7001,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Tandakan kandungan ini';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pilih sebab untuk menandakan komen ini';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Hantar';
 
   @override
   String get commentOptionsTitle => 'Pilihan';
@@ -8318,9 +8309,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Gagal mengundi komen';
-
-  @override
-  String get commentsErrorReportFailed => 'Gagal melaporkan komen';
 
   @override
   String get commentsErrorBlockFailed => 'Gagal menyekat pengguna';

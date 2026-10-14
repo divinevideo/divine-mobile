@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Esta conversa ainda não terminou de restaurar",
     "inboxRestoreRetryAction": "Tentar de novo",
     "inboxRestoringMessages": "Restaurando suas mensagens…",
-    "inboxReportedUser": "{displayName} denunciado(a)",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} desbloqueado(a)",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Denunciar esta conta",
     "inboxActionBlockVanishedAccount": "Bloquear esta conta",
     "inboxActionUnblockVanishedAccount": "Desbloquear esta conta",
-    "inboxReportedVanishedAccount": "Esta conta foi denunciada",
     "inboxBlockedVanishedAccount": "Esta conta foi bloqueada",
     "inboxUnblockedVanishedAccount": "Esta conta foi desbloqueada",
     "inboxRemoveConfirmBodyVanishedAccount": "Isso remove a conversa da sua caixa de entrada. Se essa pessoa te enviar mensagem de novo, uma nova conversa começa.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Não foi possível editar o comentário",
     "commentsErrorNotAuthenticatedInteract": "Entre para interagir",
     "commentsErrorVoteFailed": "Não foi possível votar no comentário",
-    "commentsErrorReportFailed": "Não foi possível denunciar o comentário",
     "commentsErrorBlockFailed": "Não foi possível bloquear a pessoa",
     "commentsErrorDeleteFailed": "Não foi possível excluir o comentário",
     "commentsHeaderCount": "{count, plural, =1{{count} comentário} other{{count} comentários}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Editar comentário",
     "commentOptionsFlagContentLabel": "Sinalizar conteúdo",
     "commentOptionsFlagContentSemanticLabel": "Sinalizar este conteúdo",
-    "commentOptionsFlagReasonPrompt": "Selecione um motivo para sinalizar este comentário",
-    "commentOptionsFlagSubmit": "Enviar",
     "commentOptionsTitle": "Opções",
     "commentsEmptyClassicVineMessage": "Ainda estamos importando os comentários antigos do arquivo. Eles não estão prontos ainda.",
     "commentsEmptyClassicVineTitle": "Vine clássico",

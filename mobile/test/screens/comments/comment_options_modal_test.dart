@@ -1,15 +1,28 @@
 // ABOUTME: Widget tests for the comment options modal (delete, flag).
-// ABOUTME: Option-row taps and the flag sheet's pinned Submit at large text.
+// ABOUTME: Option-row taps, and Flag opening the shared report form.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
 import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
+
+import '../../helpers/test_provider_overrides.dart';
+
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(CommentOptionsModal, () {
     testWidgets('delete option responds when tapping the icon-label gap', (
       tester,
@@ -86,6 +99,7 @@ void main() {
                   onPressed: () =>
                       CommentOptionsModal.showForOtherUserIntegrated(
                         context,
+                        commentId: 'c' * 64,
                         authorPubkey:
                             'author0123456789abcdef0123456789abcdef012'
                             '3456789ab',
@@ -124,294 +138,204 @@ void main() {
       semanticsHandle.dispose();
     });
 
-    testWidgets(
-      'flag content Submit stays pinned and reachable with every reason at '
-      'large text scale',
-      (tester) async {
-        // Reproduces the reported bug: on a phone-height viewport at the 1.35
-        // accessibility text scale, the 11 reason tiles + Submit exceed the
-        // sheet height. The unfixed sheet did not scroll, clipping Submit
-        // off-screen; the fix pins Submit below the scrolling reasons so it
-        // stays visible.
-        tester.view.physicalSize = const Size(1179, 2556); // iPhone 16 Pro
-        tester.view.devicePixelRatio = 3;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
+    group('Flag Content', () {
+      // Full-length hex, never truncated.
+      final commentId = 'c' * 64;
+      final authorPubkey = 'a' * 64;
+      late _MockContentReportingService reportingService;
 
-        // Capture raw framework errors (e.g. RenderFlex overflow) directly,
-        // bypassing the inspector describe-transform that otherwise masks the
-        // real error and hangs pumpAndSettle.
-        final caughtErrors = <FlutterErrorDetails>[];
-        final previousOnError = FlutterError.onError;
-        addTearDown(() => FlutterError.onError = previousOnError);
+      setUpAll(() => registerFallbackValue(ContentFilterReason.spam));
 
-        // Runs [flow] with framework errors collected instead of failing the
-        // test, and restores the real handler before returning.
-        //
-        // Nothing inside may call expect(): flutter_test reports a
-        // TestFailure through FlutterError.onError, so the collector would
-        // swallow it, `_pendingExceptionDetails` would stay null, and the
-        // binding's own assert would fire before it can complete the test —
-        // hanging the shard instead of reporting the regression. Measure
-        // inside, assert outside.
-        Future<void> collectingErrors(Future<void> Function() flow) async {
-          FlutterError.onError = caughtErrors.add;
-          try {
-            await flow();
-          } finally {
-            FlutterError.onError = previousOnError;
-          }
-        }
+      setUp(() {
+        reportingService = _MockContentReportingService();
+        when(
+          () => reportingService.reportContent(
+            eventId: any(named: 'eventId'),
+            authorPubkey: any(named: 'authorPubkey'),
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            sourceRelay: any(named: 'sourceRelay'),
+            additionalContext: any(named: 'additionalContext'),
+            hashtags: any(named: 'hashtags'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+            addressableCoordinate: any(named: 'addressableCoordinate'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              ReportResult.createSuccess('r', delivery: ReportDelivery.queued),
+        );
+      });
 
-        // Flutter's TextPainter asserts `debugSize == size` when a
-        // RenderParagraph is scrolled under a non-1.0 textScale in tests — a
-        // framework issue, not this widget. Everything else (an overflow in
-        // particular) is a real error the fix must prevent.
-        List<String> unexpectedErrors() => caughtErrors
-            .map((e) => e.exceptionAsString())
-            .where((e) => !e.contains('debugSize == size'))
-            .toList();
-
-        CommentOptionResult? result;
-
+      Widget buildSubject({
+        void Function(CommentOptionResult?)? onResult,
+        TransitionBuilder? builder,
+      }) {
         final router = GoRouter(
           routes: [
             GoRoute(
               path: '/',
               builder: (context, state) => Scaffold(
                 body: Builder(
-                  builder: (context) {
-                    return TextButton(
-                      onPressed: () async {
-                        result =
-                            await CommentOptionsModal.showForOtherUserIntegrated(
-                              context,
-                              authorPubkey:
-                                  'author0123456789abcdef0123456789abcdef012'
-                                  '3456789ab',
-                            );
-                      },
-                      child: const Text('Open options'),
-                    );
-                  },
+                  builder: (context) => TextButton(
+                    onPressed: () async {
+                      final result =
+                          await CommentOptionsModal.showForOtherUserIntegrated(
+                            context,
+                            commentId: commentId,
+                            authorPubkey: authorPubkey,
+                          );
+                      onResult?.call(result);
+                    },
+                    child: const Text('Open options'),
+                  ),
                 ),
               ),
             ),
           ],
         );
-
-        await tester.pumpWidget(
-          MaterialApp.router(
+        return testProviderScope(
+          mockNostrService: createMockNostrService(),
+          additionalOverrides: [
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => reportingService,
+            ),
+          ],
+          child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            builder: (context, child) => MediaQuery.withClampedTextScaling(
-              minScaleFactor: 1.35,
-              maxScaleFactor: 1.35,
-              child: child!,
-            ),
+            builder: builder,
             routerConfig: router,
           ),
         );
+      }
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
+      testWidgets(
+        'opens the shared report form, which names a comment and offers '
+        'every reason with the note box',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(800, 1600));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        // Bounded pumps rather than pumpAndSettle: an overflow in the sheet
-        // would otherwise trigger a Flutter inspector error-describe cascade
-        // that never settles, masking the real failure.
-        Future<void> settle() async {
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 400));
-        }
-
-        final submit = find.widgetWithText(
-          ElevatedButton,
-          l10n.commentOptionsFlagSubmit,
-        );
-        final lastReason = find.text(l10n.reportReasonOther);
-        final viewportHeight =
-            tester.view.physicalSize.height / tester.view.devicePixelRatio;
-
-        late List<String> errorsOnOpen;
-        late int submitMatchesOnOpen;
-        late Rect submitRect;
-        late Rect submitRectAfterScroll;
-        late double lastReasonCenterDy;
-
-        await collectingErrors(() async {
+          await tester.pumpWidget(buildSubject());
           await tester.tap(find.text('Open options'));
-          await settle();
-
-          // Options sheet -> choose Flag Content.
+          await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.commentOptionsFlagContentLabel));
-          await settle();
-          errorsOnOpen = unexpectedErrors();
+          await tester.pumpAndSettle();
 
-          submitMatchesOnOpen = submit.evaluate().length;
-          submitRect = tester.getRect(submit);
+          expect(find.byType(ReportContentDialog), findsOneWidget);
+          expect(find.text(l10n.reportWhyReportingComment), findsOneWidget);
+          expect(find.text(l10n.reportWhyReporting), findsNothing);
+          for (final reason in ContentFilterReason.values) {
+            expect(
+              find.text(l10n.reportReasonTitle(reason)),
+              findsOneWidget,
+              reason: '$reason',
+            );
+          }
+          // The note opens under the reason the reporter picks.
+          expect(find.byType(TextField), findsNothing);
+          await tester.tap(find.text(l10n.reportReasonSpam));
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsOneWidget);
+        },
+      );
 
-          // The last reason must be reachable by scrolling and must sit above
-          // the pinned Submit — never hidden behind it.
+      testWidgets('reports the comment with the note as typed, or empty', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1600));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        var resultReported = false;
+        CommentOptionResult? result;
+
+        await tester.pumpWidget(
+          buildSubject(
+            onResult: (r) {
+              resultReported = true;
+              result = r;
+            },
+          ),
+        );
+        await tester.tap(find.text('Open options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.commentOptionsFlagContentLabel));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.reportReasonSpam));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+
+        final moderationContent =
+            verify(
+                  () => reportingService.reportContent(
+                    eventId: commentId,
+                    authorPubkey: authorPubkey,
+                    reason: ContentFilterReason.spam,
+                    details: '',
+                    sourceRelay: any(named: 'sourceRelay'),
+                    additionalContext: any(named: 'additionalContext'),
+                    hashtags: any(named: 'hashtags'),
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                    addressableCoordinate: any(
+                      named: 'addressableCoordinate',
+                    ),
+                  ),
+                ).captured.single
+                as String;
+        expect(moderationContent, startsWith('Comment Report\n'));
+        expect(moderationContent, contains('Comment ID: $commentId'));
+        expect(find.text(l10n.reportReceivedTitle), findsOneWidget);
+
+        // Closing the confirmation ends the options flow with nothing for
+        // the comment row to do: the form already submitted the report.
+        await tester.tap(find.text(l10n.reportClose));
+        await tester.pumpAndSettle();
+        expect(resultReported, isTrue);
+        expect(result, isNull);
+      });
+
+      testWidgets(
+        'keeps Submit on screen at large text scale with every reason',
+        (tester) async {
+          // On a phone-height viewport at the 1.35 accessibility text scale,
+          // eleven reasons and the note box exceed the sheet. Submit is pinned
+          // in the footer, so it stays reachable without scrolling.
+          tester.view.physicalSize = const Size(1179, 2556); // iPhone 16 Pro
+          tester.view.devicePixelRatio = 3;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            buildSubject(
+              builder: (context, child) => MediaQuery.withClampedTextScaling(
+                minScaleFactor: 1.35,
+                maxScaleFactor: 1.35,
+                child: child!,
+              ),
+            ),
+          );
+          await tester.tap(find.text('Open options'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.commentOptionsFlagContentLabel));
+          await tester.pumpAndSettle();
+
+          final submit = find.widgetWithText(DivineButton, l10n.reportSubmit);
+          final viewportHeight =
+              tester.view.physicalSize.height / tester.view.devicePixelRatio;
+          final submitRect = tester.getRect(submit);
+          expect(submitRect.top, greaterThanOrEqualTo(0));
+          expect(submitRect.bottom, lessThanOrEqualTo(viewportHeight));
+
+          final lastReason = find.text(l10n.reportReasonOther);
           await tester.ensureVisible(lastReason);
-          await settle();
-          submitRectAfterScroll = tester.getRect(submit);
-          lastReasonCenterDy = tester.getCenter(lastReason).dy;
-
-          await tester.tap(lastReason);
-          await settle();
-          await tester.tap(submit);
-          await settle();
-        });
-
-        // Opening the sheet must not overflow — the unfixed sheet clipped
-        // Submit off-screen here.
-        expect(errorsOnOpen, isEmpty, reason: 'overflow on sheet open');
-
-        // Submit is pinned: on-screen and hittable before any scroll (the
-        // unfixed sheet clipped it off-screen).
-        expect(submitMatchesOnOpen, 1);
-        expect(submitRect.top, greaterThanOrEqualTo(0));
-        expect(submitRect.bottom, lessThanOrEqualTo(viewportHeight));
-
-        // Submit did not move when the reasons scrolled: it is pinned, not
-        // part of the scroll view.
-        expect(submitRectAfterScroll, submitRect);
-        expect(lastReasonCenterDy, lessThan(submitRect.top));
-
-        // Submit stayed hittable; submitting reports the last reason.
-        expect(result, isA<CommentReportResult>());
-        expect(
-          (result! as CommentReportResult).reason,
-          ContentFilterReason.other,
-        );
-
-        // No real framework error anywhere in the open -> select -> submit
-        // -> dismiss flow. The debugSize allowlist is coupled to an
-        // SDK-internal string, so also assert the real hazard — an overflow —
-        // directly and message-stably.
-        expect(
-          caughtErrors.where((e) => e.exceptionAsString().contains('overflow')),
-          isEmpty,
-          reason: 'flag sheet overflowed',
-        );
-        expect(
-          unexpectedErrors(),
-          isEmpty,
-          reason: 'unexpected framework error',
-        );
-      },
-    );
-
-    testWidgets('flag reason tiles expose selectable button semantics', (
-      tester,
-    ) async {
-      final semanticsHandle = tester.ensureSemantics();
-
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => Scaffold(
-              body: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () =>
-                      CommentOptionsModal.showForOtherUserIntegrated(
-                        context,
-                        authorPubkey:
-                            'author0123456789abcdef0123456789abcdef012'
-                            '3456789ab',
-                      ),
-                  child: const Text('Open options'),
-                ),
-              ),
-            ),
-          ),
-        ],
+          await tester.pumpAndSettle();
+          expect(tester.getRect(submit), submitRect);
+          expect(tester.getCenter(lastReason).dy, lessThan(submitRect.top));
+        },
       );
-
-      await tester.pumpWidget(
-        MaterialApp.router(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: router,
-        ),
-      );
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-
-      await tester.tap(find.text('Open options'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.commentOptionsFlagContentLabel));
-      await tester.pumpAndSettle();
-
-      // Each reason is a labelled, selectable button for screen readers (it
-      // was a bare GestureDetector exposing no button role). The tap action
-      // is asserted too: excludeSemantics drops the child subtree, so without
-      // an explicit onTap the node reads as a button that cannot be activated.
-      final harassment = find.text(l10n.reportReasonHarassment);
-      expect(
-        tester.getSemantics(harassment),
-        isSemantics(isButton: true, isSelected: false, hasTapAction: true),
-      );
-      expect(
-        tester.getSemantics(harassment).label,
-        contains(l10n.reportReasonHarassment),
-      );
-
-      semanticsHandle.dispose();
-    });
-
-    testWidgets('flag Submit is disabled until a reason is selected', (
-      tester,
-    ) async {
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => Scaffold(
-              body: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () =>
-                      CommentOptionsModal.showForOtherUserIntegrated(
-                        context,
-                        authorPubkey:
-                            'author0123456789abcdef0123456789abcdef012'
-                            '3456789ab',
-                      ),
-                  child: const Text('Open options'),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(
-        MaterialApp.router(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: router,
-        ),
-      );
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-
-      await tester.tap(find.text('Open options'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.commentOptionsFlagContentLabel));
-      await tester.pumpAndSettle();
-
-      final submit = find.widgetWithText(
-        ElevatedButton,
-        l10n.commentOptionsFlagSubmit,
-      );
-
-      // Submit is disabled (onPressed null) until a reason is chosen.
-      expect(tester.widget<ElevatedButton>(submit).onPressed, isNull);
-
-      // Choosing a reason enables it.
-      await tester.tap(find.text(l10n.reportReasonHarassment));
-      await tester.pumpAndSettle();
-      expect(tester.widget<ElevatedButton>(submit).onPressed, isNotNull);
     });
   });
 }

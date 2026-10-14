@@ -926,9 +926,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Buka blokir akun ini';
 
   @override
-  String get inboxReportedVanishedAccount => 'Akun ini dilaporkan';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Akun ini diblokir';
 
   @override
@@ -4750,6 +4747,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get reportWhyReporting => 'Kenapa kamu melaporkan konten ini?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine akan menindak laporan konten dalam 24 jam dengan menghapus konten dan mengeluarkan pengguna yang memberikan konten yang melanggar.';
 
@@ -4772,6 +4772,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Jelaskan masalahnya';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5666,11 +5669,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Diunggah — ketuk Simpan untuk menerapkan';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName dilaporkan';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -6921,13 +6919,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Tandai konten ini';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pilih alasan untuk menandai komentar ini';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Kirim';
 
   @override
   String get commentOptionsTitle => 'Opsi';
@@ -8229,9 +8220,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Gagal memberi suara pada komentar';
-
-  @override
-  String get commentsErrorReportFailed => 'Komentar gagal dilaporkan';
 
   @override
   String get commentsErrorBlockFailed => 'Pengguna gagal diblokir';

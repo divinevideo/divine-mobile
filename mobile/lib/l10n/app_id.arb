@@ -2028,14 +2028,6 @@
     "conversationRestorePausedTitle": "Chat ini belum selesai dipulihkan",
     "inboxRestoreRetryAction": "Coba lagi",
     "inboxRestoringMessages": "Memulihkan pesan Anda…",
-    "inboxReportedUser": "{displayName} dilaporkan",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} tidak diblokir lagi",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Laporkan akun ini",
     "inboxActionBlockVanishedAccount": "Blokir akun ini",
     "inboxActionUnblockVanishedAccount": "Buka blokir akun ini",
-    "inboxReportedVanishedAccount": "Akun ini dilaporkan",
     "inboxBlockedVanishedAccount": "Akun ini diblokir",
     "inboxUnblockedVanishedAccount": "Blokir akun ini dibuka",
     "inboxRemoveConfirmBodyVanishedAccount": "Ini menghapus percakapan dari kotak masukmu. Jika dia mengirim pesan lagi, percakapan baru dimulai.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Komentar gagal diedit",
     "commentsErrorNotAuthenticatedInteract": "Masuk dulu untuk berinteraksi",
     "commentsErrorVoteFailed": "Gagal memberi suara pada komentar",
-    "commentsErrorReportFailed": "Komentar gagal dilaporkan",
     "commentsErrorBlockFailed": "Pengguna gagal diblokir",
     "commentsErrorDeleteFailed": "Komentar gagal dihapus",
     "commentsHeaderCount": "{count, plural, other{{count} Komentar}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Edit komentar",
     "commentOptionsFlagContentLabel": "Tandai Konten",
     "commentOptionsFlagContentSemanticLabel": "Tandai konten ini",
-    "commentOptionsFlagReasonPrompt": "Pilih alasan untuk menandai komentar ini",
-    "commentOptionsFlagSubmit": "Kirim",
     "commentOptionsTitle": "Opsi",
     "commentsEmptyClassicVineMessage": "Kami masih mengerjakan impor komentar lama dari arsip. Belum siap sekarang.",
     "commentsEmptyClassicVineTitle": "Vine Klasik",

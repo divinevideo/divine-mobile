@@ -7,7 +7,6 @@ lib/screens/apps/web_iframe_sandbox_screen_web.dart
 lib/screens/auth/email_verification_screen.dart
 lib/screens/auth/nostr_connect_screen.dart
 lib/screens/auth/welcome_screen.dart
-lib/screens/comments/widgets/comment_options_modal.dart
 lib/screens/content_filters_screen.dart
 lib/screens/developer_options_screen.dart
 lib/screens/feed/pooled_fullscreen_video_feed_screen.dart

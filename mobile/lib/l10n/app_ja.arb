@@ -2021,14 +2021,6 @@
     "conversationRestorePausedTitle": "このチャットの復元が終わっていないよ",
     "inboxRestoreRetryAction": "再試行",
     "inboxRestoringMessages": "メッセージを復元中…",
-    "inboxReportedUser": "{displayName}を報告したよ",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName}のブロックを解除したよ",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3135,7 +3127,6 @@
     "inboxActionReportVanishedAccount": "このアカウントを報告",
     "inboxActionBlockVanishedAccount": "このアカウントをブロック",
     "inboxActionUnblockVanishedAccount": "このアカウントのブロックを解除",
-    "inboxReportedVanishedAccount": "このアカウントを報告したよ",
     "inboxBlockedVanishedAccount": "このアカウントをブロックしたよ",
     "inboxUnblockedVanishedAccount": "このアカウントのブロックを解除したよ",
     "inboxRemoveConfirmBodyVanishedAccount": "この会話が受信トレイから削除されます。相手からまたメッセージが届くと、新しい会話が始まります。",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "コメントを編集できませんでした",
     "commentsErrorNotAuthenticatedInteract": "参加するにはログインしてください",
     "commentsErrorVoteFailed": "コメントへの投票に失敗しました",
-    "commentsErrorReportFailed": "コメントを報告できませんでした",
     "commentsErrorBlockFailed": "ユーザーをブロックできませんでした",
     "commentsErrorDeleteFailed": "コメントを削除できませんでした",
     "commentsHeaderCount": "{count, plural, other{コメント {count} 件}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "コメントを編集",
     "commentOptionsFlagContentLabel": "コンテンツにフラグを付ける",
     "commentOptionsFlagContentSemanticLabel": "このコンテンツにフラグを付ける",
-    "commentOptionsFlagReasonPrompt": "このコメントにフラグを付ける理由を選んでね",
-    "commentOptionsFlagSubmit": "送信",
     "commentOptionsTitle": "オプション",
     "commentsEmptyClassicVineMessage": "アーカイブから昔のコメントをインポートする作業をまだ進めてるよ。まだ準備できてないんだ。",
     "commentsEmptyClassicVineTitle": "クラシック Vine",

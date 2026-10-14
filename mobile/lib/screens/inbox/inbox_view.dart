@@ -43,6 +43,7 @@ import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Main inbox view containing the Messages/Notifications segmented toggle
@@ -1162,24 +1163,14 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
 
       switch (action) {
         case ConversationAction.report:
-          final reported = await actionsCubit.reportUser(otherPubkey);
-          if (context.mounted) {
-            // `reported` is false when the report reached no channel off
-            // this device. Staying silent there would be worse than the
-            // false confirmation it replaced — the user would have no way
-            // to tell the report was lost.
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  reported
-                      ? isVanished
-                            ? context.l10n.inboxReportedVanishedAccount
-                            : context.l10n.inboxReportedUser(displayName)
-                      : context.l10n.reportFailed,
-                ),
-              ),
-            );
-          }
+          // The same report form Report opens from inside the conversation:
+          // the reporter picks a reason and can add a note, and the form
+          // shows its own outcome (#10003). A user report, so what gets
+          // published is unchanged.
+          await ReportContentDialog.showForUser(
+            context,
+            userPubkey: otherPubkey,
+          );
 
         case ConversationAction.block:
           if (isBlocked) {

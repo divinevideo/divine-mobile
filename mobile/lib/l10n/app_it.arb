@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Questa chat non è stata ripristinata del tutto",
     "inboxRestoreRetryAction": "Riprova",
     "inboxRestoringMessages": "Ripristino dei messaggi…",
-    "inboxReportedUser": "{displayName} segnalato/a",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} sbloccato/a",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Segnala questo account",
     "inboxActionBlockVanishedAccount": "Blocca questo account",
     "inboxActionUnblockVanishedAccount": "Sblocca questo account",
-    "inboxReportedVanishedAccount": "Questo account è stato segnalato",
     "inboxBlockedVanishedAccount": "Questo account è stato bloccato",
     "inboxUnblockedVanishedAccount": "Questo account è stato sbloccato",
     "inboxRemoveConfirmBodyVanishedAccount": "Questo rimuove la conversazione dalla tua posta in arrivo. Se ti scrive di nuovo, inizia una nuova conversazione.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Non è stato possibile modificare il commento",
     "commentsErrorNotAuthenticatedInteract": "Accedi per interagire",
     "commentsErrorVoteFailed": "Non è stato possibile votare il commento",
-    "commentsErrorReportFailed": "Non è stato possibile segnalare il commento",
     "commentsErrorBlockFailed": "Non è stato possibile bloccare l'utente",
     "commentsErrorDeleteFailed": "Non è stato possibile eliminare il commento",
     "commentsHeaderCount": "{count, plural, =1{{count} commento} other{{count} commenti}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Modifica commento",
     "commentOptionsFlagContentLabel": "Segnala contenuto",
     "commentOptionsFlagContentSemanticLabel": "Segnala questo contenuto",
-    "commentOptionsFlagReasonPrompt": "Seleziona un motivo per segnalare questo commento",
-    "commentOptionsFlagSubmit": "Invia",
     "commentOptionsTitle": "Opzioni",
     "commentsEmptyClassicVineMessage": "Stiamo ancora importando i vecchi commenti dall'archivio. Non sono ancora pronti.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

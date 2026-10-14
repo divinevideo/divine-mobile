@@ -997,9 +997,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Отблокирай този акаунт';
 
   @override
-  String get inboxReportedVanishedAccount => 'Този акаунт е докладван';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Този акаунт е блокиран';
 
   @override
@@ -4874,6 +4871,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reportWhyReporting => 'Защо подаваш сигнал за това съдържание?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ще преглежда сигналите за съдържание до 24 часа и при нужда ще премахва съдържание или ще блокира акаунта, който го е публикувал.';
 
@@ -4896,6 +4896,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Моля, опиши проблема';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5795,11 +5798,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Качено — натисни Запази, за да приложиш';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Докладвано $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7069,13 +7067,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Сигнализирай това съдържание';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Избери причина да сигнализираш този коментар';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Изпрати';
 
   @override
   String get commentOptionsTitle => 'Опции';
@@ -8388,9 +8379,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Гласуването за коментара не мина';
-
-  @override
-  String get commentsErrorReportFailed => 'Коментарът не беше докладван';
 
   @override
   String get commentsErrorBlockFailed => 'Потребителят не беше блокиран';

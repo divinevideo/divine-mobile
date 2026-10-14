@@ -649,10 +649,6 @@
   "@inboxActionUnblockVanishedAccount": {
     "description": "Unblock action for a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
   },
-  "inboxReportedVanishedAccount": "Reported this account",
-  "@inboxReportedVanishedAccount": {
-    "description": "Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
-  },
   "inboxBlockedVanishedAccount": "Blocked this account",
   "@inboxBlockedVanishedAccount": {
     "description": "Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
@@ -3120,6 +3116,10 @@
     }
   },
   "reportWhyReporting": "Why are you reporting this content?",
+  "reportWhyReportingComment": "Why are you reporting this comment?",
+  "@reportWhyReportingComment": {
+    "description": "Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts."
+  },
   "reportPolicyNotice": "Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.",
   "reportBlockUser": "Block this user",
   "reportCancel": "Cancel",
@@ -3127,6 +3127,10 @@
   "reportSelectReason": "Please select a reason for reporting this content",
   "reportOtherRequiresDetails": "Please describe the issue when selecting Other",
   "reportDetailsRequired": "Please describe the issue",
+  "reportDetailsOptional": "Add details (optional)",
+  "@reportDetailsOptional": {
+    "description": "Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description."
+  },
   "reportDetailsTextOnly": "Text only — photos and GIFs can’t be attached here.",
   "@reportDetailsTextOnly": {
     "description": "Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached."
@@ -3549,14 +3553,6 @@
   "profileSetupUploadStaged": "Uploaded — tap Save to apply",
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
-  },
-  "inboxReportedUser": "Reported {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
   },
   "inboxBlockedUser": "Blocked {displayName}",
   "@inboxBlockedUser": {
@@ -4644,8 +4640,6 @@
   "commentOptionsEditSemanticLabel": "Edit comment",
   "commentOptionsFlagContentLabel": "Flag Content",
   "commentOptionsFlagContentSemanticLabel": "Flag this content",
-  "commentOptionsFlagReasonPrompt": "Select a reason for flagging this comment",
-  "commentOptionsFlagSubmit": "Submit",
   "commentOptionsTitle": "Options",
   "commentsEmptyClassicVineMessage": "We're still working on importing old comments from the archive. They're not ready yet.",
   "commentsEmptyClassicVineTitle": "Classic Vine",
@@ -5571,10 +5565,6 @@
   "commentsErrorVoteFailed": "Failed to vote on comment",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "Failed to report comment",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "Failed to block user",
   "@commentsErrorBlockFailed": {

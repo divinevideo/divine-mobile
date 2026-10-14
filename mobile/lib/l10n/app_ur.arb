@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "اس اکاؤنٹ کی رپورٹ کریں",
   "inboxActionBlockVanishedAccount": "اس اکاؤنٹ کو بلاک کریں",
   "inboxActionUnblockVanishedAccount": "اس اکاؤنٹ کو ان بلاک کریں",
-  "inboxReportedVanishedAccount": "اس اکاؤنٹ کی رپورٹ کی",
   "inboxBlockedVanishedAccount": "اس اکاؤنٹ کو بلاک کیا",
   "inboxUnblockedVanishedAccount": "اس اکاؤنٹ کو ان بلاک کیا",
   "inboxRemoveConfirmBodyVanishedAccount": "اس سے گفتگو آپ کے ان باکس سے ہٹ جائے گی۔ اگر وہ آپ کو دوبارہ پیغام بھیجیں تو نئی گفتگو شروع ہو جائے گی۔",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "{displayName} کی رپورٹ کی",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "{displayName} کو بلاک کیا",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3512,8 +3503,6 @@
   "commentOptionsEditSemanticLabel": "تبصرہ میں ترمیم کریں",
   "commentOptionsFlagContentLabel": "مواد فلیگ کریں",
   "commentOptionsFlagContentSemanticLabel": "یہ مواد فلیگ کریں",
-  "commentOptionsFlagReasonPrompt": "اس تبصرے کو فلیگ کرنے کی وجہ منتخب کریں",
-  "commentOptionsFlagSubmit": "جمع کریں",
   "commentOptionsTitle": "اختیارات",
   "commentsEmptyClassicVineMessage": "ہم آرکائیو سے پرانے تبصرے درآمد کرنے پر ابھی کام کر رہے ہیں۔ وہ ابھی تیار نہیں ہیں۔",
   "commentsEmptyClassicVineTitle": "کلاسک Vine",
@@ -4335,10 +4324,6 @@
   "commentsErrorVoteFailed": "تبصرے پر ووٹ نہیں ہو سکا",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "تبصرے کی رپورٹ نہیں ہو سکی",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "صارف بلاک نہیں ہو سکا",
   "@commentsErrorBlockFailed": {

@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "举报此账号",
   "inboxActionBlockVanishedAccount": "屏蔽此账号",
   "inboxActionUnblockVanishedAccount": "取消屏蔽此账号",
-  "inboxReportedVanishedAccount": "已举报此账号",
   "inboxBlockedVanishedAccount": "已屏蔽此账号",
   "inboxUnblockedVanishedAccount": "已取消屏蔽此账号",
   "inboxRemoveConfirmBodyVanishedAccount": "这会从你的收件箱中移除这段会话。如果对方再次给你发消息，会开始一个新会话。",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "已举报 {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "已屏蔽 {displayName}",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3512,8 +3503,6 @@
   "commentOptionsEditSemanticLabel": "编辑评论",
   "commentOptionsFlagContentLabel": "标记内容",
   "commentOptionsFlagContentSemanticLabel": "标记此内容",
-  "commentOptionsFlagReasonPrompt": "选择标记该评论的原因",
-  "commentOptionsFlagSubmit": "提交",
   "commentOptionsTitle": "选项",
   "commentsEmptyClassicVineMessage": "我们还在从存档中导入旧评论，还没准备好。",
   "commentsEmptyClassicVineTitle": "经典 Vine",
@@ -4335,10 +4324,6 @@
   "commentsErrorVoteFailed": "评论投票失败",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "评论举报失败",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "屏蔽用户失败",
   "@commentsErrorBlockFailed": {

@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "Báo cáo tài khoản này",
   "inboxActionBlockVanishedAccount": "Chặn tài khoản này",
   "inboxActionUnblockVanishedAccount": "Bỏ chặn tài khoản này",
-  "inboxReportedVanishedAccount": "Đã báo cáo tài khoản này",
   "inboxBlockedVanishedAccount": "Đã chặn tài khoản này",
   "inboxUnblockedVanishedAccount": "Đã bỏ chặn tài khoản này",
   "inboxRemoveConfirmBodyVanishedAccount": "Thao tác này xóa cuộc trò chuyện khỏi hộp thư đến. Nếu họ nhắn tin cho bạn lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "Đã báo cáo {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "Đã chặn {displayName}",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3512,8 +3503,6 @@
   "commentOptionsEditSemanticLabel": "Sửa bình luận",
   "commentOptionsFlagContentLabel": "Gắn cờ nội dung",
   "commentOptionsFlagContentSemanticLabel": "Gắn cờ nội dung này",
-  "commentOptionsFlagReasonPrompt": "Chọn lý do gắn cờ bình luận này",
-  "commentOptionsFlagSubmit": "Gửi",
   "commentOptionsTitle": "Tùy chọn",
   "commentsEmptyClassicVineMessage": "Bọn mình vẫn đang nhập các bình luận cũ từ kho lưu trữ. Chưa xong đâu.",
   "commentsEmptyClassicVineTitle": "Vine kinh điển",
@@ -4335,10 +4324,6 @@
   "commentsErrorVoteFailed": "Không bình chọn được bình luận",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "Không báo cáo được bình luận",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "Không chặn được người dùng",
   "@commentsErrorBlockFailed": {

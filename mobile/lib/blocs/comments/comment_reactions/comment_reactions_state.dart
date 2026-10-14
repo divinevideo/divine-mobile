@@ -4,14 +4,11 @@ part of 'comment_reactions_bloc.dart';
 ///
 /// The UI maps these to localized strings via [BlocListener].
 enum ReactionsError {
-  /// User must sign in to vote / report / block / delete.
+  /// User must sign in to vote / block / delete.
   notAuthenticated,
 
   /// Failed to toggle vote on a comment.
   voteFailed,
-
-  /// Failed to report a comment.
-  reportFailed,
 
   /// Failed to block a user.
   blockFailed,

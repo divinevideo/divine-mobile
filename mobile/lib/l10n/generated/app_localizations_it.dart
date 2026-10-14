@@ -1000,9 +1000,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Sblocca questo account';
 
   @override
-  String get inboxReportedVanishedAccount => 'Questo account è stato segnalato';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Questo account è stato bloccato';
 
   @override
@@ -4882,6 +4879,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get reportWhyReporting => 'Perché stai segnalando questo contenuto?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine agirà sulle segnalazioni di contenuti entro 24 ore rimuovendo il contenuto ed espellendo l\'utente che ha fornito il contenuto offensivo.';
 
@@ -4904,6 +4904,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Descrivi il problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5802,11 +5805,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Caricata — tocca Salva per applicare';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName segnalato/a';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7075,13 +7073,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Segnala questo contenuto';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Seleziona un motivo per segnalare questo commento';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Invia';
 
   @override
   String get commentOptionsTitle => 'Opzioni';
@@ -8406,10 +8397,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get commentsErrorVoteFailed =>
       'Non è stato possibile votare il commento';
-
-  @override
-  String get commentsErrorReportFailed =>
-      'Non è stato possibile segnalare il commento';
 
   @override
   String get commentsErrorBlockFailed =>

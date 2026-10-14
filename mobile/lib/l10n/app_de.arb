@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Dieser Chat ist noch nicht vollständig wiederhergestellt",
     "inboxRestoreRetryAction": "Erneut versuchen",
     "inboxRestoringMessages": "Deine Nachrichten werden wiederhergestellt…",
-    "inboxReportedUser": "{displayName} gemeldet",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} entblockt",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Dieses Konto melden",
     "inboxActionBlockVanishedAccount": "Dieses Konto blockieren",
     "inboxActionUnblockVanishedAccount": "Dieses Konto entblocken",
-    "inboxReportedVanishedAccount": "Dieses Konto wurde gemeldet",
     "inboxBlockedVanishedAccount": "Dieses Konto wurde blockiert",
     "inboxUnblockedVanishedAccount": "Dieses Konto wurde entblockt",
     "inboxRemoveConfirmBodyVanishedAccount": "Dadurch wird die Unterhaltung aus deinem Posteingang entfernt. Wenn dir diese Person wieder schreibt, beginnt eine neue Unterhaltung.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Kommentar konnte nicht bearbeitet werden",
     "commentsErrorNotAuthenticatedInteract": "Melde dich an, um mitzumachen",
     "commentsErrorVoteFailed": "Abstimmen über den Kommentar fehlgeschlagen",
-    "commentsErrorReportFailed": "Kommentar konnte nicht gemeldet werden",
     "commentsErrorBlockFailed": "Person konnte nicht blockiert werden",
     "commentsErrorDeleteFailed": "Kommentar konnte nicht gelöscht werden",
     "commentsHeaderCount": "{count, plural, =1{{count} Kommentar} other{{count} Kommentare}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Kommentar bearbeiten",
     "commentOptionsFlagContentLabel": "Inhalt melden",
     "commentOptionsFlagContentSemanticLabel": "Diesen Inhalt melden",
-    "commentOptionsFlagReasonPrompt": "Wähle einen Grund für die Meldung dieses Kommentars",
-    "commentOptionsFlagSubmit": "Absenden",
     "commentOptionsTitle": "Optionen",
     "commentsEmptyClassicVineMessage": "Wir arbeiten noch daran, alte Kommentare aus dem Archiv zu importieren. Sie sind noch nicht bereit.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Den här chatten har inte återställts klart",
     "inboxRestoreRetryAction": "Försök igen",
     "inboxRestoringMessages": "Återställer dina meddelanden…",
-    "inboxReportedUser": "{displayName} rapporterad",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} avblockerad",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -3142,7 +3134,6 @@
     "inboxActionReportVanishedAccount": "Rapportera det här kontot",
     "inboxActionBlockVanishedAccount": "Blockera det här kontot",
     "inboxActionUnblockVanishedAccount": "Avblockera det här kontot",
-    "inboxReportedVanishedAccount": "Det här kontot har rapporterats",
     "inboxBlockedVanishedAccount": "Det här kontot har blockerats",
     "inboxUnblockedVanishedAccount": "Det här kontot har avblockerats",
     "inboxRemoveConfirmBodyVanishedAccount": "Det här tar bort konversationen från din inkorg. Om personen skriver till dig igen startar en ny konversation.",
@@ -3878,7 +3869,6 @@
     "commentsErrorEditFailed": "Kunde inte redigera kommentaren",
     "commentsErrorNotAuthenticatedInteract": "Logga in för att vara med",
     "commentsErrorVoteFailed": "Kunde inte rösta på kommentaren",
-    "commentsErrorReportFailed": "Kunde inte rapportera kommentaren",
     "commentsErrorBlockFailed": "Kunde inte blockera användaren",
     "commentsErrorDeleteFailed": "Kunde inte radera kommentaren",
     "commentsHeaderCount": "{count, plural, =1{{count} kommentar} other{{count} kommentarer}}",
@@ -4303,8 +4293,6 @@
     "commentOptionsEditSemanticLabel": "Redigera kommentar",
     "commentOptionsFlagContentLabel": "Flagga innehåll",
     "commentOptionsFlagContentSemanticLabel": "Flagga det här innehållet",
-    "commentOptionsFlagReasonPrompt": "Välj en anledning till att flagga den här kommentaren",
-    "commentOptionsFlagSubmit": "Skicka",
     "commentOptionsTitle": "Alternativ",
     "commentsEmptyClassicVineMessage": "Vi jobbar fortfarande med att importera gamla kommentarer från arkivet. De är inte klara än.",
     "commentsEmptyClassicVineTitle": "Klassiska Vine",

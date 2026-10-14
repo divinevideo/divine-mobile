@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "Laporkan akaun ini",
   "inboxActionBlockVanishedAccount": "Sekat akaun ini",
   "inboxActionUnblockVanishedAccount": "Nyahsekat akaun ini",
-  "inboxReportedVanishedAccount": "Akaun ini dilaporkan",
   "inboxBlockedVanishedAccount": "Akaun ini disekat",
   "inboxUnblockedVanishedAccount": "Akaun ini dinyahsekat",
   "inboxRemoveConfirmBodyVanishedAccount": "Ini mengalih keluar perbualan daripada peti masuk anda. Jika dia menghantar mesej lagi, perbualan baharu akan bermula.",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "{displayName} dilaporkan",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "{displayName} disekat",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3512,8 +3503,6 @@
   "commentOptionsEditSemanticLabel": "Sunting komen",
   "commentOptionsFlagContentLabel": "Tandakan Kandungan",
   "commentOptionsFlagContentSemanticLabel": "Tandakan kandungan ini",
-  "commentOptionsFlagReasonPrompt": "Pilih sebab untuk menandakan komen ini",
-  "commentOptionsFlagSubmit": "Hantar",
   "commentOptionsTitle": "Pilihan",
   "commentsEmptyClassicVineMessage": "Kami masih berusaha mengimport komen lama daripada arkib. Ia belum sedia lagi.",
   "commentsEmptyClassicVineTitle": "Vine Klasik",
@@ -4335,10 +4324,6 @@
   "commentsErrorVoteFailed": "Gagal mengundi komen",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "Gagal melaporkan komen",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "Gagal menyekat pengguna",
   "@commentsErrorBlockFailed": {

@@ -968,9 +968,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Avblockera det här kontot';
 
   @override
-  String get inboxReportedVanishedAccount => 'Det här kontot har rapporterats';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Det här kontot har blockerats';
 
   @override
@@ -4817,6 +4814,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportWhyReporting => 'Varför rapporterar du det här innehållet?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine agerar på innehållsrapporter inom 24 timmar genom att ta bort innehållet och stänga av användaren som tillhandahöll det felaktiga innehållet.';
 
@@ -4839,6 +4839,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Beskriv problemet';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5731,11 +5734,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get profileSetupUploadStaged =>
       'Uppladdad — tryck på Spara för att tillämpa';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName rapporterad';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -6993,13 +6991,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Flagga det här innehållet';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Välj en anledning till att flagga den här kommentaren';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Skicka';
 
   @override
   String get commentOptionsTitle => 'Alternativ';
@@ -8307,9 +8298,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Kunde inte rösta på kommentaren';
-
-  @override
-  String get commentsErrorReportFailed => 'Kunde inte rapportera kommentaren';
 
   @override
   String get commentsErrorBlockFailed => 'Kunde inte blockera användaren';

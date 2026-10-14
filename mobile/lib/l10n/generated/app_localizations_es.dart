@@ -994,9 +994,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Desbloquear esta cuenta';
 
   @override
-  String get inboxReportedVanishedAccount => 'Reportaste esta cuenta';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Bloqueaste esta cuenta';
 
   @override
@@ -4874,6 +4871,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportWhyReporting => '¿Por qué estás reportando este contenido?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine va a actuar sobre los reportes de contenido dentro de las 24 horas, removiendo el contenido y expulsando al usuario que lo publicó.';
 
@@ -4896,6 +4896,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Describe el problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5791,11 +5794,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileSetupUploadStaged => 'Subida — toca Guardar para aplicar';
-
-  @override
-  String inboxReportedUser(String displayName) {
-    return 'Reportaste a $displayName';
-  }
 
   @override
   String inboxBlockedUser(String displayName) {
@@ -7065,13 +7063,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Marcar este contenido';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Elegí un motivo para marcar este comentario';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Enviar';
 
   @override
   String get commentOptionsTitle => 'Opciones';
@@ -8392,9 +8383,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'No se pudo votar el comentario';
-
-  @override
-  String get commentsErrorReportFailed => 'No se pudo denunciar el comentario';
 
   @override
   String get commentsErrorBlockFailed => 'No se pudo bloquear a la persona';
