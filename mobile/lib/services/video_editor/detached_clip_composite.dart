@@ -1,12 +1,11 @@
 // ABOUTME: Turns detached-clip layers into the composition the export
 // ABOUTME: composites over the finished timeline track
 
-import 'dart:math' as math;
 import 'dart:ui' show Size;
 
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
-    show ExportLayerMapping, exportedLayerTopLeft;
+    show ExportLayerMapping, exportedLayerTopLeft, unrotatedLayerBox;
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -107,53 +106,6 @@ PartitionedLayers partitionDetachedClipLayers(
   }
 
   return (below: below, detached: detached, above: above);
-}
-
-/// The layer's **unrotated** layout box, recovered from the rotated bounding
-/// box `pro_image_editor` reports as `ExportedLayer.logicalSize`.
-///
-/// `Layer.captureAllLayers` grows a rotated layer's reported size to the box
-/// that contains the turned content, because the raster it ships alongside is
-/// rotated too. A detached clip throws that raster away and re-places the
-/// video itself, and `SegmentTransform.rotation` wants the box *before* the
-/// turn — so the growth has to be undone, or a rotated clip would be scaled up
-/// to its own bounding box. Its centre stays put either way, since placement
-/// is anchored on the layer's centre.
-///
-/// With `w`/`h` the unrotated size and `c`/`s` the absolute cosine and sine:
-///
-/// ```text
-/// bounding.width  = w * c + h * s
-/// bounding.height = w * s + h * c
-/// ```
-///
-/// Two equations in two unknowns, but the system is singular at 45°, where
-/// every box with the same `w + h` shares one bounding square. [aspectRatio]
-/// supplies the missing constraint (`w == aspectRatio * h`), which collapses
-/// the sum to a single division that is well conditioned at every angle:
-/// `(1 + aspectRatio) * (c + s)` never drops below `1 + aspectRatio`.
-///
-/// The recovery uses the sum of the measured dimensions, with the clip's
-/// aspect ratio supplying the constraint that separates width from height.
-/// An audio visualizer's export layer undoes the same growth.
-Size unrotatedLayerBox({
-  required Size boundingBox,
-  required double rotation,
-  required double aspectRatio,
-}) {
-  // An unrotated layer is already its own box; an unusable ratio leaves the
-  // box alone rather than scaling the clip by a nonsense factor.
-  if (rotation == 0 ||
-      !rotation.isFinite ||
-      !aspectRatio.isFinite ||
-      aspectRatio <= 0) {
-    return boundingBox;
-  }
-  final denominator =
-      (1 + aspectRatio) * (math.cos(rotation).abs() + math.sin(rotation).abs());
-  if (denominator <= 0) return boundingBox;
-  final height = (boundingBox.width + boundingBox.height) / denominator;
-  return Size(height * aspectRatio, height);
 }
 
 /// Builds the composition layer that places [item] over the base track.

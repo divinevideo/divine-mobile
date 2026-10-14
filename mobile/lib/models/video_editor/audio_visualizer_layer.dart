@@ -10,8 +10,6 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/services/video_editor/detached_clip_composite.dart'
-    show unrotatedLayerBox;
 import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
