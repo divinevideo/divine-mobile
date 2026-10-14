@@ -8910,6 +8910,8 @@ class DmRepository {
       recipientPubkey: recipientPubkey,
       content: content,
       replyToId: replyToId,
+      ownerPubkey: ownerPubkey,
+      generation: generation,
     );
     if (signed == null) return;
     await _attemptNip04Copy((
@@ -8928,9 +8930,17 @@ class DmRepository {
   /// A signer that reports failure by throwing — Keycast's RPC layer raises
   /// `RpcException`, a bunker request `TimeoutException` — is left to the
   /// caller.
+  ///
+  /// Encryption and the reply lookup await the signer and the database, and
+  /// an account switch or a stop can land in between. A copy whose session,
+  /// identified by [ownerPubkey] and [generation], ended meanwhile is
+  /// abandoned rather than built under the incoming account and signed with
+  /// the outgoing signer.
   Future<Event?> _prepareNip04Copy({
     required String recipientPubkey,
     required String content,
+    required String ownerPubkey,
+    required int generation,
     String? replyToId,
   }) async {
     final signer = _signer;
@@ -8960,7 +8970,16 @@ class DmRepository {
     // NIP-04 reply tags are public. Resolve through the stored row so only a
     // kind-4 id already visible to the peer can leave this private store.
     final replyTag = await _resolveNip04ReplyTag(replyToId);
-    final event = Event(_userPubkey, EventKind.directMessage, [
+    if (_ingestSessionEnded(ownerPubkey, generation)) {
+      Log.info(
+        'NIP-04 fallback: the account session ended while the legacy kind-4 '
+        'copy for ${pubkeyForLogs(recipientPubkey)} was being prepared — it '
+        'was not sent',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+    final event = Event(ownerPubkey, EventKind.directMessage, [
       ['p', recipientPubkey],
       if (replyTag != null) ['e', replyTag],
     ], ciphertext);

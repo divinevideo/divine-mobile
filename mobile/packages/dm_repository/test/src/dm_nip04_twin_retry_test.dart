@@ -494,6 +494,36 @@ void main() {
       });
     });
 
+    group('preparation', () {
+      test(
+        'publishes nothing when another account signs in while the copy is '
+        'being encrypted',
+        () {
+          fakeAsync((async) {
+            final encrypting = Completer<String?>();
+            final repository = buildRepository(
+              signer: _ScriptedEncryptSigner(
+                _privateKey,
+                () => encrypting.future,
+              ),
+            );
+            sendOverLatchedThread(async, repository);
+            expect(kind4Attempts, isEmpty, reason: 'still encrypting');
+
+            repository.setCredentials(
+              userPubkey: _otherOwner,
+              signer: LocalNostrSigner(_otherPrivateKey),
+              messageService: messageService,
+            );
+            encrypting.complete('ciphertext?iv=aXY=');
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+    });
+
     group('a pending retry stops', () {
       test('when the message is deleted for everyone during the backoff', () {
         fakeAsync((async) {
