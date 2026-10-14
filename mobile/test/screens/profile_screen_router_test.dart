@@ -363,8 +363,8 @@ void main() {
             .toList();
         expect(logs, hasLength(1));
         final log = logs.single;
-        expect(log.name, 'ProfileScreenRouter');
-        expect(log.level, LogLevel.error);
+        expect(log.name, equals('ProfileScreenRouter'));
+        expect(log.level, equals(LogLevel.error));
         expect(log.message, contains('push-failed'));
 
         await tester.pumpWidget(const SizedBox.shrink());
