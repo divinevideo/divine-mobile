@@ -1558,6 +1558,27 @@ class DmRepository {
     return <String>{..._nostrClient.configuredRelays, ...ownInbox}.toList();
   }
 
+  /// [_selfWrapTargetRelays] for a caller that publishes its own copies: a
+  /// reaction's fan-out (#8446).
+  ///
+  /// `null` keeps the plain pool publish, as it does here, and is also the
+  /// answer when [ownerPubkey] is not the signed-in account before or after
+  /// the lookup: a copy queued under one account must not be routed by the
+  /// next account's inbox. Never throws.
+  Future<List<String>?> resolveSelfWrapTargetRelays(String ownerPubkey) async {
+    if (ownerPubkey.isEmpty || ownerPubkey != _userPubkey) return null;
+    try {
+      final targets = await _selfWrapTargetRelays();
+      return ownerPubkey == _userPubkey ? targets : null;
+    } on Object catch (e) {
+      Log.warning(
+        'Own copy targets unresolved, using the pool: $e',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
+
   /// Fetches a single older page of DM events (gift wraps, NIP-04,
   /// deletions) addressed to [pubkey] from the relay older than [until]
   /// (inclusive), capped to [limit]. Each event flows through

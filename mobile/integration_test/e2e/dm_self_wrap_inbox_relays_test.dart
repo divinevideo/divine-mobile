@@ -35,16 +35,21 @@ import '../helpers/fake_relay.dart';
 /// "this host was dialed" is then observed rather than inferred from a
 /// publish result.
 class _RecordingRedirectFactory implements WebSocketChannelFactory {
-  _RecordingRedirectFactory(this.port);
+  _RecordingRedirectFactory(this.port, {this.routes = const {}});
 
   final int port;
+
+  /// Hosts that land on a relay of their own rather than on [port], so a test
+  /// can read what that one relay was sent.
+  final Map<String, int> routes;
   final List<String> requested = [];
 
   @override
   WebSocketChannel create(Uri uri) {
     requested.add(uri.toString());
+    final target = routes[uri.host] ?? port;
     return WebSocketChannel.connect(
-      Uri.parse('ws://127.0.0.1:$port${uri.path}'),
+      Uri.parse('ws://127.0.0.1:$target${uri.path}'),
     );
   }
 }
@@ -107,12 +112,14 @@ void main() {
   /// The recipient therefore has no advertised inbox, their wrap goes to the
   /// plain pool, and any connection to [_senderOnlyInbox] can only have come
   /// from the self-addressed wrap.
-  Map<String, dynamic> senderInbox() {
+  Map<String, dynamic> senderInbox([
+    List<String> relays = const [_senderOnlyInbox],
+  ]) {
     final event = Event(
       senderPubkey,
       10050,
       [
-        ['relay', _senderOnlyInbox],
+        for (final relay in relays) ['relay', relay],
       ],
       '',
       createdAt: 1700000000,
@@ -131,8 +138,12 @@ void main() {
       _RecordingRedirectFactory factory,
     })
   >
-  buildStack(FakeRelay relay) async {
-    final factory = _RecordingRedirectFactory(relay.port);
+  buildStack(
+    FakeRelay relay, {
+    String? poolUrl,
+    Map<String, int> routes = const {},
+  }) async {
+    final factory = _RecordingRedirectFactory(relay.port, routes: routes);
     final signer = LocalNostrSigner(senderKey);
 
     RelayBase gen(String url) =>
@@ -141,10 +152,13 @@ void main() {
 
     final relayManager = RelayManager(
       config: RelayManagerConfig(
-        defaultRelayUrl: relay.url,
+        defaultRelayUrl: poolUrl ?? relay.url,
         storage: InMemoryRelayStorage(),
       ),
       relayPool: nostr.relayPool,
+      // Without it a pooled relay is built with the default channel factory
+      // and dialed through real DNS, which only a loopback pool URL survives.
+      relayFactory: gen,
     );
     final client = NostrClient.forTesting(
       nostr: nostr,
@@ -180,7 +194,9 @@ void main() {
           userPubkey: senderPubkey,
           messageService: messageService,
         );
-    reactions.setDmInboxRelayResolver(repository.resolveDmInboxRelaysDetailed);
+    reactions
+      ..setDmInboxRelayResolver(repository.resolveDmInboxRelaysDetailed)
+      ..setSelfWrapRelayResolver(repository.resolveSelfWrapTargetRelays);
     // `addTearDown` is LIFO and `relay.stop` was registered first, so this
     // closes every socket ahead of it — otherwise in-flight connects fail
     // after the test completes and get attributed to it.
@@ -334,5 +350,86 @@ void main() {
             'devices; one per member multiplies it by the size of the group',
       );
     });
+
+    /// Reacts to [recipientPubkey]'s message in their 1:1 conversation.
+    Future<DmReactionPublishResult> reactOneToOne(
+      ({DmReactionsRepository reactions, AppDatabase db}) stack,
+    ) async {
+      final conversationId = DmRepository.computeConversationId([
+        senderPubkey,
+        recipientPubkey,
+      ]);
+      await stack.db.conversationsDao.upsertConversation(
+        id: conversationId,
+        participantPubkeys: jsonEncode([senderPubkey, recipientPubkey]),
+        isGroup: false,
+        createdAt: 1700000000,
+        ownerPubkey: senderPubkey,
+      );
+      return stack.reactions.publish(
+        conversationId: conversationId,
+        targetMessageId: targetMessageId,
+        targetMessageAuthor: recipientPubkey,
+        emoji: '🔥',
+      );
+    }
+
+    // The two shapes a sender's kind-10050 takes. Divine's default names its
+    // own relay, which is in the pool, beside two that are not; the loss is
+    // total only for an inbox that names no pool relay at all.
+    for (final shape in [
+      (name: 'an inbox outside the pool', namesPool: false),
+      (name: 'an inbox that also names the pool relay', namesPool: true),
+    ]) {
+      testWidgets(
+        "a reaction's own copy reaches ${shape.name} as well as the pool",
+        (tester) async {
+          const poolUrl = 'wss://pool.example';
+          final inboxRelay = await FakeRelay.start();
+          addTearDown(inboxRelay.stop);
+          final pool = await FakeRelay.start(
+            reply: senderInbox([
+              if (shape.namesPool) poolUrl,
+              _senderOnlyInbox,
+            ]),
+          );
+          addTearDown(pool.stop);
+          final stack = await buildStack(
+            pool,
+            poolUrl: poolUrl,
+            routes: {
+              Uri.parse(poolUrl).host: pool.port,
+              Uri.parse(_senderOnlyInbox).host: inboxRelay.port,
+            },
+          );
+
+          final result = await reactOneToOne((
+            reactions: stack.reactions,
+            db: stack.db,
+          ));
+
+          // Positive control: the recipient's wrap went through the pool, so
+          // the reaction really was sent before its copy is looked for.
+          expect(result.success, isTrue, reason: result.errorMessage);
+          expect(giftWrapsTo(pool, recipientPubkey), hasLength(1));
+          await waitUntil(
+            () => giftWrapsTo(pool, senderPubkey).isNotEmpty,
+            reason: 'the sender own copy never reached the pool',
+          );
+          await waitUntil(
+            () => giftWrapsTo(inboxRelay, senderPubkey).isNotEmpty,
+            reason:
+                'the sender advertises $_senderOnlyInbox as a DM inbox, so '
+                'their own copy of a reaction has to reach it, as their '
+                'message copies do since #7328',
+          );
+          expect(
+            giftWrapsTo(inboxRelay, senderPubkey),
+            giftWrapsTo(pool, senderPubkey),
+            reason: 'one copy, published to both',
+          );
+        },
+      );
+    }
   });
 }

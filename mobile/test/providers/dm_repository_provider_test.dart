@@ -170,6 +170,12 @@ void main() {
         container.read(dmReactionsRepositoryProvider).hasDmInboxRelayResolver,
         isTrue,
       );
+      // #8446: a reaction's own copy reaches the sender's own inbox relays,
+      // which only this repository can resolve.
+      expect(
+        container.read(dmReactionsRepositoryProvider).hasSelfWrapRelayResolver,
+        isTrue,
+      );
     });
 
     // #8391: the removal policy is what stops ANY caller destroying a Divine

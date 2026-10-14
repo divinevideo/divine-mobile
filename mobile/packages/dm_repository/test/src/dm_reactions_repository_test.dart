@@ -4359,11 +4359,29 @@ void main() {
 
       late List<String> calls;
       late List<Event?> publishedCopies;
+      late List<List<String>?> publishedTargets;
+      late List<String> resolvedFor;
 
       setUp(() {
         calls = <String>[];
         publishedCopies = <Event?>[];
+        publishedTargets = <List<String>?>[];
+        resolvedFor = <String>[];
       });
+
+      /// The sender's own copy targets: the pool UNION their kind-10050.
+      const ownTargets = [
+        'wss://relay.divine.video',
+        'wss://nos.lol',
+        'wss://relay.primal.net',
+      ];
+
+      /// Wires the sender's own copy targets the way the app wires them.
+      DmReactionsRepository withOwnTargets(DmReactionsRepository repository) =>
+          repository..setSelfWrapRelayResolver((owner) async {
+            resolvedFor.add(owner);
+            return ownTargets;
+          });
 
       Event ownCopy(String content) => Event(
         _ownerPubkey,
@@ -4418,6 +4436,9 @@ void main() {
           calls.add('own copy');
           publishedCopies.add(
             invocation.namedArguments[#prebuiltSelfWrap] as Event?,
+          );
+          publishedTargets.add(
+            invocation.namedArguments[#targetRelays] as List<String>?,
           );
           return answer();
         });
@@ -4641,6 +4662,164 @@ void main() {
             prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
           ),
         ).called(1);
+      });
+
+      test('routes a group reaction own copy to the sender own targets, '
+          'resolved once for the whole fan-out', () async {
+        stubQueuedGroupReaction();
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(ownCopyLands);
+
+        final result = await withOwnTargets(createRepository()).retry(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(result.success, isTrue);
+        expect(publishedTargets, [ownTargets]);
+        expect(resolvedFor, [_ownerPubkey]);
+      });
+
+      test('routes the own copy of a first tap to the sender own '
+          'targets', () async {
+        final rumor = stubPublishPath();
+        when(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: rumor.id,
+            realRumorId: rumor.id,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async => calls.add('mark sent'));
+        stubRecipientSend(_otherPubkey);
+        stubOwnCopyPublish(ownCopyLands);
+
+        final result = await publishReaction(
+          withOwnTargets(createRepository()),
+        );
+
+        expect(result.success, isTrue);
+        expect(calls.sublist(calls.length - 2), ['mark sent', 'own copy']);
+        expect(publishedTargets, [ownTargets]);
+      });
+
+      test('routes the own copy of a removal to the sender own '
+          'targets', () async {
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        stubQueuedRow(publishStatus: 'sent');
+        when(
+          () => mockDao.markOwnDeletionPending(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '',
+            eventKind: EventKind.eventDeletion,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(deletionRumor);
+        when(
+          () => mockDao.markDeletionSent(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async => calls.add('mark removal sent'));
+        stubRecipientSend(_otherPubkey);
+        stubOwnCopyPublish(ownCopyLands);
+
+        await withOwnTargets(createRepository()).removeOwn(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+        // The removal is driven unawaited; let it finish.
+        await pumpEventQueue();
+
+        expect(calls.sublist(calls.length - 2), [
+          'mark removal sent',
+          'own copy',
+        ]);
+        expect(publishedTargets, [ownTargets]);
+      });
+
+      test('routes the own copy of a removal retry to the sender own '
+          'targets', () async {
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        when(
+          () =>
+              mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+        ).thenAnswer(
+          (_) async => makeRow(
+            isDeleted: true,
+            publishStatus: 'deletion_pending',
+            rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
+          ),
+        );
+        when(
+          () => mockDao.markDeletionSent(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async {});
+        stubRecipientSend(_otherPubkey);
+        stubOwnCopyPublish(ownCopyLands);
+
+        final outcome = await withOwnTargets(createRepository()).retryDeletion(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(outcome, DmReactionDeletionOutcome.sent);
+        expect(publishedTargets, [ownTargets]);
+      });
+
+      test('keeps the plain pool publish when no resolver is wired', () async {
+        stubQueuedGroupReaction();
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(ownCopyLands);
+
+        final result = await retryGroupReaction();
+
+        expect(result.success, isTrue);
+        expect(publishedTargets, [null]);
+      });
+
+      test('a resolver that throws still publishes the own copy, to the '
+          'plain pool', () async {
+        stubQueuedGroupReaction();
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(ownCopyLands);
+        final repository = createRepository()
+          ..setSelfWrapRelayResolver(
+            (_) async => throw StateError('relay list read failed'),
+          );
+
+        final result = await repository.retry(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(result.success, isTrue);
+        expect(publishedTargets, [null]);
       });
     });
   });

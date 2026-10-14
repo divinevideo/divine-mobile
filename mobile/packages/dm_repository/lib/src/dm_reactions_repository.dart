@@ -145,6 +145,19 @@ class DmReactionRetryTarget {
 /// delivery.
 typedef DmInboxRelayResolver = Future<DmInboxLookup> Function(String pubkey);
 
+/// Resolves where [ownerPubkey]'s own gift-wrap copy of a reaction is
+/// published: the pool UNION the kind-10050 inbox that account advertises,
+/// the same set its message copies reach (#7328, #8446).
+///
+/// A function port for the same Riverpod-cycle reason as
+/// [DmInboxRelayResolver]. The answer does not depend on who the reaction is
+/// for, so it is resolved once per fan-out, not once per recipient. `null`
+/// keeps the plain pool publish: no inbox advertised or readable, or
+/// [ownerPubkey] is no longer the signed-in account. A resolver that throws is
+/// treated as `null`, so the copy still goes to the pool.
+typedef DmSelfWrapRelayResolver =
+    Future<List<String>?> Function(String ownerPubkey);
+
 /// What `DmReactionsRepository._fanOutRumor` reports: the recipients'
 /// `result`, and the sender's own copy, which the caller publishes once it
 /// has recorded that result (#8446).
@@ -248,6 +261,10 @@ class DmReactionsRepository {
   @visibleForTesting
   bool get hasDmInboxRelayResolver => _resolveDmInboxRelays != null;
 
+  /// Whether the sender's own copy routing has been wired by the app layer.
+  @visibleForTesting
+  bool get hasSelfWrapRelayResolver => _resolveSelfWrapRelays != null;
+
   /// Set the credentials needed for outgoing publishes.
   void setCredentials({
     required String userPubkey,
@@ -284,6 +301,19 @@ class DmReactionsRepository {
   // ignore: use_setters_to_change_properties
   void setDmInboxRelayResolver(DmInboxRelayResolver? resolver) {
     _resolveDmInboxRelays = resolver;
+  }
+
+  /// Resolves where the sender's own copy of a reaction is published. Null
+  /// until wired: the copy then goes to the plain pool, the pre-#8446
+  /// behaviour.
+  DmSelfWrapRelayResolver? _resolveSelfWrapRelays;
+
+  /// Wire the sender's own copy targets, injected beside
+  /// [setDmInboxRelayResolver] and for the same reasons.
+  // A method rather than a setter, as [setDmInboxRelayResolver] explains.
+  // ignore: use_setters_to_change_properties
+  void setSelfWrapRelayResolver(DmSelfWrapRelayResolver? resolver) {
+    _resolveSelfWrapRelays = resolver;
   }
 
   /// Drop every reaction row this account holds for [conversationIds].
@@ -621,6 +651,7 @@ class DmReactionsRepository {
     try {
       final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: rumor,
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
@@ -793,6 +824,7 @@ class DmReactionsRepository {
     try {
       final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: rumor,
         recipients: recipients,
         awaitRecipientOk: true,
@@ -1109,6 +1141,7 @@ class DmReactionsRepository {
     try {
       final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: deletion,
         recipients: recipients,
         awaitRecipientOk: true,
@@ -1163,6 +1196,7 @@ class DmReactionsRepository {
       final inboxByRecipient = await inboxes;
       final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: deletion,
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
@@ -1880,6 +1914,7 @@ class DmReactionsRepository {
   ///   the in-flight min-age hold.
   Future<_FanOut> _fanOutRumor({
     required NIP17MessageService messageService,
+    required String ownerPubkey,
     required Event rumor,
     required List<String> recipients,
     Map<String, DmInboxLookup>? inboxByRecipient,
@@ -1928,6 +1963,7 @@ class DmReactionsRepository {
               messageService: messageService,
               rumor: rumor,
               prebuiltSelfWrap: prebuiltOwnCopy,
+              ownerPubkey: ownerPubkey,
             )
           : _noOwnCopy,
     );
@@ -1957,21 +1993,22 @@ class DmReactionsRepository {
     // sender's own copy is due.
   }
 
-  /// Publish the sender's own copy of [rumor] for [_fanOutRumor]. Never
-  /// throws: a copy that fails, throws or outlives [_publishTimeout] is
-  /// logged and dropped.
+  /// Publish the sender's own copy of [rumor] for [_fanOutRumor], to
+  /// [ownerPubkey]'s own copy targets. Never throws: a copy that fails,
+  /// throws or outlives [_publishTimeout] is logged and dropped.
   Future<void> _publishOwnCopy({
     required NIP17MessageService messageService,
     required Event rumor,
     required Event? prebuiltSelfWrap,
+    required String ownerPubkey,
   }) async {
+    Future<NIP17SendResult> publish() async => messageService.publishSelfWrap(
+      rumorEvent: rumor,
+      targetRelays: await _selfWrapTargets(ownerPubkey),
+      prebuiltSelfWrap: prebuiltSelfWrap,
+    );
     try {
-      final published = await messageService
-          .publishSelfWrap(
-            rumorEvent: rumor,
-            prebuiltSelfWrap: prebuiltSelfWrap,
-          )
-          .timeout(_publishTimeout);
+      final published = await publish().timeout(_publishTimeout);
       if (!published.success) {
         Log.warning(
           'DM reaction own copy not published for rumor ${rumor.id}: '
@@ -1984,6 +2021,22 @@ class DmReactionsRepository {
         'DM reaction own copy failed for rumor ${rumor.id}: $e',
         category: LogCategory.system,
       );
+    }
+  }
+
+  /// [ownerPubkey]'s own copy targets, or `null` for the plain pool when no
+  /// resolver is wired or it throws.
+  Future<List<String>?> _selfWrapTargets(String ownerPubkey) async {
+    final resolve = _resolveSelfWrapRelays;
+    if (resolve == null) return null;
+    try {
+      return await resolve(ownerPubkey);
+    } on Object catch (e) {
+      Log.warning(
+        'DM reaction own copy targets unresolved, using the pool: $e',
+        category: LogCategory.system,
+      );
+      return null;
     }
   }
 

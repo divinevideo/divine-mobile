@@ -220,5 +220,62 @@ void main() {
         expect(capturedTargets, equals([null]));
       },
     );
+
+    test(
+      'hands a caller that publishes its own copies the same union (#8446)',
+      () async {
+        stubOwnDmInbox(_advertisedInbox);
+
+        final targets = await buildRepository().resolveSelfWrapTargetRelays(
+          _ownerPubkey,
+        );
+
+        expect(targets, isNotNull);
+        expect(targets, containsAll(_poolRelays));
+        expect(
+          targets,
+          containsAll(['wss://nos.lol', 'wss://relay.primal.net']),
+          reason:
+              'a reaction copy has to reach the same inbox relays a message '
+              'copy does',
+        );
+        expect(targets!.toSet(), hasLength(targets.length));
+      },
+    );
+
+    test(
+      'gives no targets for an account that is no longer signed in (#8446)',
+      () async {
+        stubOwnDmInbox(_advertisedInbox);
+        final repository = buildRepository();
+
+        // Positive control: the signed-in account does get targets, so the
+        // null below is the owner check rather than an unread inbox.
+        expect(
+          await repository.resolveSelfWrapTargetRelays(_ownerPubkey),
+          isNotNull,
+        );
+        expect(
+          await repository.resolveSelfWrapTargetRelays(_recipientPubkey),
+          isNull,
+          reason:
+              'a copy queued under one account must never be routed by the '
+              'inbox of whoever is signed in now',
+        );
+      },
+    );
+
+    test(
+      'gives no targets when no inbox is advertised, keeping the plain pool '
+      'publish (#8446)',
+      () async {
+        stubOwnDmInbox(null);
+
+        expect(
+          await buildRepository().resolveSelfWrapTargetRelays(_ownerPubkey),
+          isNull,
+        );
+      },
+    );
   });
 }
