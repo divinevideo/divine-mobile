@@ -387,10 +387,14 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                   );
                 case ProfileEditorError.usernameReserved:
                   final username = state.username;
+                  final editorBloc = context.read<ProfileEditorBloc>();
                   runDetached(
                     showDialog<void>(
                       context: context,
-                      builder: (context) => UsernameReservedDialog(username),
+                      builder: (_) => BlocProvider.value(
+                        value: editorBloc,
+                        child: UsernameReservedDialog(username),
+                      ),
                     ),
                     'show reserved username dialog',
                     logName: 'ProfileSetupListeners',
