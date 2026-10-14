@@ -1,5 +1,5 @@
-// ABOUTME: The sheet where a creator picks how an audio visualizer looks:
-// ABOUTME: one of four styles and a color, for a new one or to change one.
+// ABOUTME: The sheet where a creator picks how an audio visualizer looks and
+// ABOUTME: moves, for a new one or to change one.
 
 import 'dart:math' as math;
 import 'dart:typed_data';

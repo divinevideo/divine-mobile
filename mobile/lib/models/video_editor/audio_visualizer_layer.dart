@@ -1,5 +1,5 @@
-// ABOUTME: An audio visualizer overlay: the style and color a creator picked,
-// ABOUTME: kept in the meta of its widget layer on the canvas.
+// ABOUTME: An audio visualizer overlay: the look a creator picked, kept in the
+// ABOUTME: meta of its widget layer on the canvas.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
