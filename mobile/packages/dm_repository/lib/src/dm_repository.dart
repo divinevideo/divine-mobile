@@ -6712,7 +6712,11 @@ class DmRepository {
         if (persistedLocally &&
             !isGroupRow &&
             protocol != 'nip17' &&
-            _isPlainTextRumor(rumor)) {
+            _isPlainTextRumor(
+              rumor,
+              recipientPubkey: row.recipientPubkey,
+              replyToId: row.replyToId,
+            )) {
           _fireNip04Copy(
             recipientPubkey: row.recipientPubkey,
             content: row.content,
@@ -8887,14 +8891,24 @@ class DmRepository {
 
   /// Whether [rumor] is a plain kind-14 text message: no tags beyond its
   /// recipient, a reply reference and the client-internal send batch token.
-  static bool _isPlainTextRumor(Event rumor) =>
+  ///
+  /// The `p` and `e` tags must name [recipientPubkey] and [replyToId]. Any
+  /// other one is a structured tag a caller added, so it fails closed.
+  static bool _isPlainTextRumor(
+    Event rumor, {
+    required String recipientPubkey,
+    required String? replyToId,
+  }) =>
       rumor.kind == EventKind.privateDirectMessage &&
       rumor.tags.every(
         (tag) =>
-            tag.isNotEmpty &&
-            (tag.first == 'p' ||
-                tag.first == 'e' ||
-                tag.first == _sendBatchTagKey),
+            tag.length >= 2 &&
+            switch (tag.first) {
+              'p' => tag[1] == recipientPubkey,
+              'e' => tag[1] == replyToId,
+              _sendBatchTagKey => true,
+              _ => false,
+            },
       );
 
   /// Sends the legacy kind-4 copy of a message to [recipientPubkey], on a

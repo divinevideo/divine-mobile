@@ -469,6 +469,60 @@ void main() {
         },
       );
 
+      test(
+        'sends no kind 4 for a recovered message that names anyone beyond '
+        'its recipient',
+        () {
+          fakeAsync((async) {
+            final repository = buildRepository();
+            _resolve(async, seedLatchedThread());
+            final rumorId = queueUndeliveredSend(
+              async,
+              tags: [
+                ['p', _otherOwner],
+                batchTag,
+              ],
+            );
+
+            final result = _resolve(
+              async,
+              repository.recoverFullSend(rumorId: rumorId),
+            );
+            expect(result.success, isTrue);
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+
+      test(
+        'sends no kind 4 for a recovered message citing an event it does not '
+        'reply to',
+        () {
+          fakeAsync((async) {
+            final repository = buildRepository();
+            _resolve(async, seedLatchedThread());
+            final rumorId = queueUndeliveredSend(
+              async,
+              tags: [
+                ['e', 'd' * 64],
+                batchTag,
+              ],
+            );
+
+            final result = _resolve(
+              async,
+              repository.recoverFullSend(rumorId: rumorId),
+            );
+            expect(result.success, isTrue);
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+
       test('sends no kind 4 when the thread is no longer latched', () {
         fakeAsync((async) {
           final repository = buildRepository();
