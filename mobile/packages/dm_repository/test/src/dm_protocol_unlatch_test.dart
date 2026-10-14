@@ -233,6 +233,56 @@ void main() {
     );
 
     test(
+      'our own NIP-17 that arrives before the send path stored it leaves the '
+      'thread latched (#8506)',
+      () async {
+        // A send held pending — an unreadable inbox lookup keeps its queue row
+        // and stores nothing — still published a self-wrap, which comes back
+        // through this path as a unique message rather than a twin. Writing
+        // 'nip17' for it unlatched the thread for good: our own NIP-17 is no
+        // evidence the PEER reads it, and nothing ever re-latches a thread.
+        await seedLatchedThreadWithKind4(
+          id: '6' * 64,
+          sender: _peer,
+          content: 'hello',
+        );
+        expect(await storedProtocol(), 'nip04');
+
+        await deliverGiftWrap(
+          wrapId: '7' * 64,
+          rumorId: '8' * 64,
+          author: _owner,
+          content: 'my reply, sent while their inbox could not be read',
+        );
+        expect(
+          await messagesDao.getMessageById('8' * 64, ownerPubkey: _owner),
+          isNotNull,
+          reason: 'the echo was stored, so it reached the persist upsert',
+        );
+
+        expect(await storedProtocol(), 'nip04');
+      },
+    );
+
+    test('a unique NIP-17 from the peer clears the latch', () async {
+      await seedLatchedThreadWithKind4(
+        id: '9' * 64,
+        sender: _peer,
+        content: 'hello',
+      );
+      expect(await storedProtocol(), 'nip04');
+
+      await deliverGiftWrap(
+        wrapId: 'a1' * 32,
+        rumorId: 'b2' * 32,
+        author: _peer,
+        content: 'something new, over NIP-17 this time',
+      );
+
+      expect(await storedProtocol(), 'nip17');
+    });
+
+    test(
       'a later peer NIP-17 after the unlatch leaves the thread nip17',
       () async {
         // The first wrap claims the kind-4 twin and clears. The second wrap

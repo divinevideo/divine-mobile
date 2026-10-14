@@ -1096,8 +1096,9 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
           authService.currentPublicKeyHex != report.userPubkey) {
         return false;
       }
-      // Recovery publishes only NIP-17. The persisted report identity makes a
-      // crash between DM enqueue and report bookkeeping safe to replay.
+      // Recovery sends this DM over NIP-17 only: its report tags keep it out
+      // of the legacy kind-4 copy (#8506). The persisted report identity makes
+      // a crash between DM enqueue and report bookkeeping safe to replay.
       final result = await repository.recoverFullSend(
         rumorId: queued.queuedRumorId!,
         resetRetryBudget: true,
