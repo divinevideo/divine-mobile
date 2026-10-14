@@ -709,6 +709,22 @@ void main() {
             );
           },
         );
+
+        test(
+          'logs the default pool when every requested relay is refused, '
+          'because that is where the copy goes (#8446)',
+          () async {
+            when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(false);
+            await LogCaptureService().clearAllLogs();
+
+            final result = await send(
+              selfWrapTargetRelays: const ['wss://nos.lol'],
+            );
+
+            expect(result.selfWrapPublished, isTrue);
+            expect(publishedLine(), endsWith('requested=default pool)'));
+          },
+        );
       });
     });
 

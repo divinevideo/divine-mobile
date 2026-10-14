@@ -1225,15 +1225,14 @@ class NIP17MessageService {
       // success/failure is what let a self-copy that never reached the
       // sender's advertised inbox read as delivered (#7328), and support
       // cannot tell those apart from the event id alone. It is what was
-      // requested, not what was reached: a success names no relay, and the
+      // requested, not what was reached: a success names no relay. The
       // environment lock drops a relay this build may not use before any
-      // socket opens, so naming that one would misreport it (#8446).
-      final reachable = destination?.where(_nostrService.isRelayAllowed);
-      final destinationForLog = switch (reachable) {
-        null => 'default pool',
-        final relays when relays.isEmpty => 'none this build may use',
-        final relays => relays.join(', '),
-      };
+      // socket opens, and the publish falls back to the pool when it drops
+      // them all, so name what is left (#8446).
+      final allowed = destination?.where(_nostrService.isRelayAllowed).toList();
+      final destinationForLog = allowed == null || allowed.isEmpty
+          ? 'default pool'
+          : allowed.join(', ');
       if (published is! PublishSuccess) {
         Log.warning(
           'Self-wrap publish failed — the sender will not see this '
