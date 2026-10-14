@@ -110,17 +110,7 @@ class _AudioVisualizerPreviewState extends State<AudioVisualizerPreview>
   }
 
   LayerAudioVisualizer _visualizerFor(AudioVisualizerLayerData data) =>
-      LayerAudioVisualizer(
-        style: data.style,
-        color: data.color,
-        bandCount: data.bandCount,
-        levels: audioVisualizerLevels(
-          _energies,
-          bandCount: data.bandCount,
-          reaction: data.reaction,
-        ),
-        framesPerSecond: audioBandFrameRate.toDouble(),
-      );
+      data.visualizerFor(_energies);
 
   /// Runs the loop, or holds the loudest moment with reduced motion.
   void _syncMotion() {

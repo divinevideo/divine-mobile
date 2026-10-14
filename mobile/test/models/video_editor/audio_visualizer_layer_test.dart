@@ -166,6 +166,41 @@ void main() {
     });
   });
 
+  group('visualizerFor', () {
+    final energies = bandEnergies(
+      Float32List.fromList([
+        for (var i = 0; i < 44100; i++)
+          0.5 * math.sin(2 * math.pi * 1000 * i / 44100),
+      ]),
+      sampleRate: 44100,
+    );
+
+    test('draws its own look from the energies of the sound', () {
+      const data = AudioVisualizerLayerData(
+        style: AudioVisualizerStyle.mirroredBars,
+        color: VineTheme.whiteText,
+        bands: 12,
+        barFill: 0.4,
+      );
+      final visualizer = data.visualizerFor(energies);
+
+      expect(visualizer.style, AudioVisualizerStyle.mirroredBars);
+      expect(visualizer.color, VineTheme.whiteText);
+      expect(visualizer.bandCount, 12);
+      expect(visualizer.barFill, 0.4);
+      // A second of sound, 60 rows of 12 bands.
+      expect(visualizer.levels, hasLength(60 * 12));
+      expect(visualizer.levels.any((level) => level > 0), isTrue);
+    });
+
+    test('takes another color when given one', () {
+      const data = AudioVisualizerLayerData(style: AudioVisualizerStyle.wave);
+      final faded = VineTheme.whiteText.withValues(alpha: 0.5);
+
+      expect(data.visualizerFor(energies, color: faded).color, faded);
+    });
+  });
+
   group('audioVisualizerImageLayer', () {
     // A 100 x 200 body mapped onto a 300 x 600 frame: three frame pixels per
     // body pixel, with the body's top-left on the frame's.

@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show AudioVisualizerPainter, LayerAudioVisualizer;
@@ -95,19 +94,7 @@ class _AudioVisualizerLayerViewState extends State<AudioVisualizerLayerView> {
   LayerAudioVisualizer? _visualizerFor(Float32List? energies) {
     _builtFrom = energies;
     if (energies == null) return null;
-    final data = widget.data;
-    return LayerAudioVisualizer(
-      style: data.style,
-      color: data.color,
-      bandCount: data.bandCount,
-      levels: audioVisualizerLevels(
-        energies,
-        bandCount: data.bandCount,
-        reaction: data.reaction,
-      ),
-      framesPerSecond: audioBandFrameRate.toDouble(),
-      barFill: data.effectiveBarFill,
-    );
+    return widget.data.visualizerFor(energies);
   }
 
   @override

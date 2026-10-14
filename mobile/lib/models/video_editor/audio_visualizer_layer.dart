@@ -87,6 +87,27 @@ class AudioVisualizerLayerData extends Equatable {
   double get effectiveBarFill =>
       barFill ?? VideoEditorConstants.audioVisualizerDefaultBarFill(style);
 
+  /// This visualizer drawn from [energies], band energies laid out by
+  /// `bandEnergies` (none rests it). The editor, the sheet preview and the
+  /// export all draw through it, so they show the same shapes. [color]
+  /// replaces [AudioVisualizerLayerData.color], as the export's does to carry
+  /// the layer's opacity.
+  pve.LayerAudioVisualizer visualizerFor(
+    Float32List energies, {
+    Color? color,
+  }) => pve.LayerAudioVisualizer(
+    style: style,
+    color: color ?? this.color,
+    bandCount: bandCount,
+    levels: audioVisualizerLevels(
+      energies,
+      bandCount: bandCount,
+      reaction: reaction,
+    ),
+    framesPerSecond: audioBandFrameRate.toDouble(),
+    barFill: effectiveBarFill,
+  );
+
   /// The width of the visualizer's box against its height.
   double get aspectRatio =>
       VideoEditorConstants.audioVisualizerAspectRatio(style);
@@ -207,20 +228,7 @@ pve.ImageLayer audioVisualizerImageLayer(
       ? data.color
       : data.color.withValues(alpha: data.color.a * layer.opacity);
   return pve.ImageLayer.audioVisualizer(
-    visualizer: pve.LayerAudioVisualizer(
-      style: data.style,
-      color: color,
-      bandCount: data.bandCount,
-      levels: energies == null
-          ? Float32List(0)
-          : audioVisualizerLevels(
-              energies,
-              bandCount: data.bandCount,
-              reaction: data.reaction,
-            ),
-      framesPerSecond: audioBandFrameRate.toDouble(),
-      barFill: data.effectiveBarFill,
-    ),
+    visualizer: data.visualizerFor(energies ?? Float32List(0), color: color),
     startTime: timelineMap.editorToOutputOrNull(layer.startTime),
     endTime: timelineMap.editorToOutputOrNull(layer.endTime),
     offset: exportedLayerTopLeft(
