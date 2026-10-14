@@ -28,6 +28,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/share_position_origin.dart';
@@ -205,11 +206,16 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
     // the same id `sendMessage` persists under. Passing the raw peer pubkey
     // here opened a thread whose id matched no stored row, so history never
     // rendered and messages sent from this screen never appeared in it.
-    context.push(
-      ConversationPage.pathForId(
-        DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
+    runDetached(
+      context.push<void>(
+        ConversationPage.pathForId(
+          DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
+        ),
+        extra: [widget.pubkey],
       ),
-      extra: [widget.pubkey],
+      'open direct message from profile',
+      logName: 'OtherProfileView',
+      category: LogCategory.ui,
     );
   }
 
