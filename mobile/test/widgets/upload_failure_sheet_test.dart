@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the upload failure bottom sheet.
 // ABOUTME: Verifies retry, save-to-drafts actions and UI rendering.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -44,11 +46,13 @@ void main() {
   late _MockDivineVideoDraft mockDraft;
   late _MockDivineVideoClip mockClip;
   late _MockBackgroundPublishBloc mockBloc;
+  Future<void>? sheetFuture;
 
   setUp(() {
     mockDraft = _MockDivineVideoDraft();
     mockClip = _MockDivineVideoClip();
     mockBloc = _MockBackgroundPublishBloc();
+    sheetFuture = null;
 
     when(() => mockDraft.id).thenReturn('draft-1');
     when(() => mockDraft.title).thenReturn('Test Video');
@@ -67,7 +71,7 @@ void main() {
   }) {
     final opener = Builder(
       builder: (context) => ElevatedButton(
-        onPressed: () => showUploadFailureSheet(context, upload),
+        onPressed: () => sheetFuture = showUploadFailureSheet(context, upload),
         child: const Text('Open Sheet'),
       ),
     );
@@ -463,6 +467,32 @@ void main() {
             findsNothing,
           );
         });
+      });
+
+      // GoRouter.push completes only when the pushed route pops. Awaiting it
+      // would hold the listener's sheet queue until the user leaves Account
+      // status, so later upload failures would get no sheet.
+      testWidgets('Account status returns without waiting for the status '
+          'screen to close', (tester) async {
+        final goRouter = MockGoRouter();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) => Completer<void>().future);
+        await openFailureSheet(
+          tester,
+          kind: PublishErrorKind.accountRestricted,
+          goRouter: goRouter,
+        );
+        var sheetReturned = false;
+        unawaited(sheetFuture!.then((_) => sheetReturned = true));
+
+        await tester.tap(find.text(l10n.uploadFailureSheetAccountStatusButton));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => goRouter.push<void>(RoutePaths.accountStatus, extra: true),
+        ).called(1);
+        expect(sheetReturned, isTrue);
       });
 
       // The snackbar outlives the widget that opened the sheet; its action
