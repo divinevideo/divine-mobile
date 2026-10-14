@@ -28,7 +28,7 @@ void main() {
     late _MockOthersFollowersBloc mockOthersFollowersBloc;
 
     setUpAll(() {
-      registerFallbackValue(const MyFollowingToggleRequested(''));
+      registerFallbackValue(const MyFollowingFollowRequested(''));
       registerFallbackValue(const OthersFollowersIncrementRequested(''));
       registerFallbackValue(const OthersFollowersDecrementRequested(''));
     });
@@ -173,30 +173,37 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('dispatches MyFollowingToggleRequested when tapping Follow', (
-        tester,
-      ) async {
-        final otherPubkey = validPubkey('other');
-        when(
-          () => mockMyFollowingBloc.state,
-        ).thenReturn(const MyFollowingState(status: MyFollowingStatus.success));
+      testWidgets(
+        'dispatches $MyFollowingFollowRequested when tapping Follow',
+        (
+          tester,
+        ) async {
+          final otherPubkey = validPubkey('other');
+          when(
+            () => mockMyFollowingBloc.state,
+          ).thenReturn(
+            const MyFollowingState(status: MyFollowingStatus.success),
+          );
 
-        await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
-        await tester.pump();
+          await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+          await tester.pump();
 
-        await tester.tap(find.text('Follow'));
-        await tester.pump();
+          await tester.tap(find.text('Follow'));
+          await tester.pump();
 
-        final captured = verify(
-          () => mockMyFollowingBloc.add(captureAny()),
-        ).captured;
-        expect(captured.length, 1);
-        expect(captured.first, isA<MyFollowingToggleRequested>());
-        expect(
-          (captured.first as MyFollowingToggleRequested).pubkey,
-          otherPubkey,
-        );
-      });
+          final captured = verify(
+            () => mockMyFollowingBloc.add(captureAny()),
+          ).captured;
+          expect(
+            captured.single,
+            isA<MyFollowingFollowRequested>().having(
+              (e) => e.pubkey,
+              'pubkey',
+              otherPubkey,
+            ),
+          );
+        },
+      );
 
       testWidgets(
         'shows unfollow confirmation sheet when tapping follow button',
@@ -223,7 +230,7 @@ void main() {
       );
 
       testWidgets(
-        'dispatches MyFollowingToggleRequested when confirming unfollow',
+        'dispatches $MyFollowingUnfollowRequested when confirming unfollow',
         (tester) async {
           final otherPubkey = validPubkey('other');
           when(() => mockMyFollowingBloc.state).thenReturn(
@@ -241,14 +248,71 @@ void main() {
           await tester.pumpAndSettle();
 
           // Tap Unfollow to confirm
-          await tester.tap(find.text('Unfollow'));
+          await tester.tap(
+            find.text(
+              lookupAppLocalizations(const Locale('en')).unfollowConfirmButton,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // `single` also proves no Follow was sent alongside it.
+          final captured = verify(
+            () => mockMyFollowingBloc.add(captureAny()),
+          ).captured;
+          expect(
+            captured.single,
+            isA<MyFollowingUnfollowRequested>().having(
+              (e) => e.pubkey,
+              'pubkey',
+              otherPubkey,
+            ),
+          );
+        },
+      );
+
+      testWidgets(
+        'still dispatches Unfollow when the list changes while the sheet is '
+        'open',
+        (tester) async {
+          final otherPubkey = validPubkey('other');
+          final following = MyFollowingState(
+            status: MyFollowingStatus.success,
+            followingPubkeys: [otherPubkey],
+          );
+          final states = StreamController<MyFollowingState>();
+          addTearDown(states.close);
+          whenListen(
+            mockMyFollowingBloc,
+            states.stream,
+            initialState: following,
+          );
+
+          await tester.pumpWidget(createTestWidget(pubkey: otherPubkey));
+          await tester.pump();
+
+          await tester.tap(find.byType(DivineButton));
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.unfollowConfirmButton), findsOneWidget);
+
+          // The follow list loses the account while the sheet is open.
+          states.add(const MyFollowingState(status: MyFollowingStatus.success));
+          await tester.pump();
+
+          await tester.tap(find.text(l10n.unfollowConfirmButton));
           await tester.pumpAndSettle();
 
           final captured = verify(
             () => mockMyFollowingBloc.add(captureAny()),
           ).captured;
-          expect(captured.length, 1);
-          expect(captured.first, isA<MyFollowingToggleRequested>());
+          expect(
+            captured.single,
+            isA<MyFollowingUnfollowRequested>().having(
+              (e) => e.pubkey,
+              'pubkey',
+              otherPubkey,
+            ),
+          );
         },
       );
 

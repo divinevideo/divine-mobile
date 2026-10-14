@@ -43,10 +43,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       _onLoadRequested,
       transformer: restartable(),
     );
-    on<MyFollowingToggleRequested>(
-      _onToggleRequested,
-      transformer: droppable(),
-    );
     on<MyFollowingEditRequested>(
       _onEditRequested,
       transformer: droppable(),
@@ -151,58 +147,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       emit(
         state.copyWith(status: MyFollowingStatus.failure, isRefreshing: false),
       );
-    }
-  }
-
-  /// Handle follow toggle request.
-  ///
-  /// Delegates to the repository, which updates the in-memory follow set and
-  /// emits on [FollowRepository.followingStream]. That stream drives
-  /// [_onRepositoryUpdated] — the single source of post-toggle reactivity — so
-  /// the button reflects the new state immediately and optimistically.
-  ///
-  /// We deliberately do NOT re-dispatch [MyFollowingListLoadRequested] here.
-  /// That re-load re-read [FollowRepository.watchMyFollowingCached], whose
-  /// stale-while-revalidate cache served a pre-toggle disk snapshot first and
-  /// reverted the button (#5144). The repository invalidates that cache on
-  /// mutation, so the next load (on the next mount) is fresh.
-  ///
-  /// Before the toggle we set [MyFollowingState.hasLocalFollowEdit] so that an
-  /// already-in-flight mount-time load (its revalidation read can still
-  /// resolve with the relay-lagged pre-toggle list) defers to the repository
-  /// instead of reverting the button — see [_onLoadRequested] — and so the
-  /// feed badge can tell a follow made from it apart from one that predates
-  /// the item.
-  ///
-  /// Uses [droppable] transformer to prevent concurrent toggles from
-  /// racing each other (e.g. rapid taps toggling follow/unfollow/follow).
-  Future<void> _onToggleRequested(
-    MyFollowingToggleRequested event,
-    Emitter<MyFollowingState> emit,
-  ) async {
-    // Clear previous toggle error state before retrying.
-    if (state.status == MyFollowingStatus.toggleFailure) {
-      emit(state.copyWith(status: MyFollowingStatus.success));
-    }
-
-    // Marked before the toggle resolves rather than after: the repository
-    // updates its in-memory list and emits synchronously, so the badge shows
-    // the new state before the network round trip completes, and it must
-    // already know by then that this follow was made here.
-    if (!state.hasLocalFollowEdit) {
-      emit(state.copyWith(hasLocalFollowEdit: true));
-    }
-
-    try {
-      await _followRepository.toggleFollow(event.pubkey);
-    } catch (e) {
-      Log.error(
-        'Failed to toggle follow for user: $e',
-        name: 'MyFollowingBloc',
-        category: LogCategory.system,
-      );
-      if (isClosed || emit.isDone) return;
-      emit(state.copyWith(status: MyFollowingStatus.toggleFailure));
     }
   }
 

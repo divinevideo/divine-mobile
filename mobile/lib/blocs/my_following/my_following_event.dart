@@ -13,15 +13,6 @@ final class MyFollowingListLoadRequested extends MyFollowingEvent {
   const MyFollowingListLoadRequested();
 }
 
-/// Request to toggle follow status for a user.
-/// The bloc will determine whether to follow or unfollow based on current state.
-final class MyFollowingToggleRequested extends MyFollowingEvent {
-  const MyFollowingToggleRequested(this.pubkey);
-
-  /// The public key of the user to follow/unfollow
-  final String pubkey;
-}
-
 /// A follow or unfollow the user chose.
 ///
 /// Sealed so [MyFollowingBloc] handles both in one droppable bucket: a Follow

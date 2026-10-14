@@ -30,7 +30,7 @@ void main() {
     late _MockMyFollowingBloc mockMyFollowingBloc;
 
     setUpAll(() {
-      registerFallbackValue(const MyFollowingToggleRequested(''));
+      registerFallbackValue(const MyFollowingFollowRequested(''));
     });
 
     // Helper to create valid hex pubkeys (64 hex characters)
@@ -200,10 +200,13 @@ void main() {
         final captured = verify(
           () => mockMyFollowingBloc.add(captureAny()),
         ).captured;
-        expect(captured.single, isA<MyFollowingToggleRequested>());
         expect(
-          (captured.single as MyFollowingToggleRequested).pubkey,
-          pubkey,
+          captured.single,
+          isA<MyFollowingFollowRequested>().having(
+            (e) => e.pubkey,
+            'pubkey',
+            pubkey,
+          ),
         );
       });
     });
@@ -303,7 +306,7 @@ void main() {
 
     group('interactions', () {
       testWidgets(
-        'dispatches MyFollowingToggleRequested on tap when not following',
+        'dispatches $MyFollowingFollowRequested on tap when not following',
         (tester) async {
           final otherPubkey = validPubkey('other');
           when(() => mockMyFollowingBloc.state).thenReturn(
@@ -319,11 +322,13 @@ void main() {
           final captured = verify(
             () => mockMyFollowingBloc.add(captureAny()),
           ).captured;
-          expect(captured.length, 1);
-          expect(captured.first, isA<MyFollowingToggleRequested>());
           expect(
-            (captured.first as MyFollowingToggleRequested).pubkey,
-            otherPubkey,
+            captured.single,
+            isA<MyFollowingFollowRequested>().having(
+              (e) => e.pubkey,
+              'pubkey',
+              otherPubkey,
+            ),
           );
         },
       );

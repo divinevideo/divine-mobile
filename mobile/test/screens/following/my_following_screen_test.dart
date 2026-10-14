@@ -3,6 +3,7 @@
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,6 +46,13 @@ class _FakeCacheDao implements CacheDao {
   @override
   Future<void> evictOldest(int bytesToFree) async {}
 }
+
+Finder _rowIcon(String pubkey, DivineIconName icon) => find.descendant(
+  of: find.byWidgetPredicate(
+    (w) => w is UserProfileTile && w.pubkey == pubkey,
+  ),
+  matching: find.byWidgetPredicate((w) => w is DivineIcon && w.icon == icon),
+);
 
 void main() {
   const currentUserPubkey =
@@ -176,6 +184,27 @@ void main() {
         visibleOrder(tester),
         equals([thirdFollowed, secondFollowed, firstFollowed]),
       );
+    });
+
+    testWidgets('confirming Unfollow on a row unfollows it, never follows it', (
+      tester,
+    ) async {
+      when(() => mockFollowRepository.follow(any())).thenAnswer((_) async {});
+      when(
+        () => mockFollowRepository.unfollow(any()),
+      ).thenAnswer((_) async {});
+      await pumpScreen(tester);
+
+      await tester.tap(_rowIcon(thirdFollowed, DivineIconName.userMinus));
+      await tester.pumpAndSettle();
+      // The follow list loses the account while the sheet is open; confirming
+      // must still unfollow rather than decide again from the list.
+      when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
+      await tester.tap(find.text(l10n.unfollowConfirmButton));
+      await tester.pumpAndSettle();
+
+      verify(() => mockFollowRepository.unfollow(thirdFollowed)).called(1);
+      verifyNever(() => mockFollowRepository.follow(any()));
     });
   });
 }

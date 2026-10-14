@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -23,6 +24,13 @@ class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+Finder _rowIcon(String pubkey, DivineIconName icon) => find.descendant(
+  of: find.byWidgetPredicate(
+    (w) => w is UserProfileTile && w.pubkey == pubkey,
+  ),
+  matching: find.byWidgetPredicate((w) => w is DivineIcon && w.icon == icon),
+);
 
 void main() {
   const targetPubkey =
@@ -127,6 +135,54 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
 
       await reloadController.close();
+    });
+
+    testWidgets('tapping Follow on a row follows it, never unfollows it', (
+      tester,
+    ) async {
+      when(() => mockFollowRepository.follow(any())).thenAnswer((_) async {});
+      when(
+        () => mockFollowRepository.unfollow(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFollowRepository.watchOthersFollowingCached(
+          any(),
+          forceRefresh: any(named: 'forceRefresh'),
+        ),
+      ).thenAnswer(
+        (_) => Stream.value(
+          const CacheResult.live(
+            FollowingSnapshot(pubkeys: [followingOne, followingTwo], count: 2),
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: const OthersFollowingScreen(
+            pubkey: targetPubkey,
+            displayName: 'Alice',
+          ),
+          mockProfileRepository: createMockProfileRepository(),
+          mockNostrService: mockNostrClient,
+          mockFollowRepository: mockFollowRepository,
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // The follow list gains the account after the row drew Follow; the tap
+      // must still follow rather than decide again from the list.
+      when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
+      await tester.tap(_rowIcon(followingOne, DivineIconName.userPlus));
+      await tester.pump();
+
+      verify(() => mockFollowRepository.follow(followingOne)).called(1);
+      verifyNever(() => mockFollowRepository.unfollow(any()));
     });
   });
 }

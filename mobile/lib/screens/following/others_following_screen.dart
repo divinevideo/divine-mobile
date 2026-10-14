@@ -191,11 +191,12 @@ class _FollowingListBody extends StatelessWidget {
               isFollowing: isFollowing,
               index: index,
               addToListEntryPoint: PeopleListEntryPoint.followingList,
-              onToggleFollow: () {
-                context.read<MyFollowingBloc>().add(
-                  MyFollowingToggleRequested(userPubkey),
-                );
-              },
+              onFollow: () => context.read<MyFollowingBloc>().add(
+                MyFollowingFollowRequested(userPubkey),
+              ),
+              onUnfollow: () => context.read<MyFollowingBloc>().add(
+                MyFollowingUnfollowRequested(userPubkey),
+              ),
             );
           },
         );

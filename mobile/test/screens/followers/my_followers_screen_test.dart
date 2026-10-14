@@ -3,6 +3,7 @@
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,6 +46,13 @@ class _FakeCacheDao implements CacheDao {
   @override
   Future<void> evictOldest(int bytesToFree) async {}
 }
+
+Finder _rowIcon(String pubkey, DivineIconName icon) => find.descendant(
+  of: find.byWidgetPredicate(
+    (w) => w is UserProfileTile && w.pubkey == pubkey,
+  ),
+  matching: find.byWidgetPredicate((w) => w is DivineIcon && w.icon == icon),
+);
 
 void main() {
   const currentUserPubkey =
@@ -176,6 +184,25 @@ void main() {
         visibleOrder(tester),
         equals([newestFollower, oldestFollower, undatedFollower]),
       );
+    });
+
+    testWidgets('tapping Follow on a row follows it, never unfollows it', (
+      tester,
+    ) async {
+      when(() => mockFollowRepository.follow(any())).thenAnswer((_) async {});
+      when(
+        () => mockFollowRepository.unfollow(any()),
+      ).thenAnswer((_) async {});
+      await pumpScreen(tester);
+
+      // The follow list gains the account after the row drew Follow; the tap
+      // must still follow rather than decide again from the list.
+      when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
+      await tester.tap(_rowIcon(newestFollower, DivineIconName.userPlus));
+      await tester.pump();
+
+      verify(() => mockFollowRepository.follow(newestFollower)).called(1);
+      verifyNever(() => mockFollowRepository.unfollow(any()));
     });
   });
 }
