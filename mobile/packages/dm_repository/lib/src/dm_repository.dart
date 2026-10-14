@@ -5860,16 +5860,13 @@ class DmRepository {
               // that report by returning null, and every relay refusal, are
               // logged inside `_sendNip04Message` instead, because a returned
               // failure never reaches this handler (#8262).
+              // This leg is best-effort legacy interop and is deliberately
+              // kept off the send's critical path, so it stays `unawaited`.
               Log.error(
                 'NIP-04 fallback threw — the legacy kind-4 copy was not '
                 'sent: $e',
                 category: LogCategory.system,
               );
-              // The value is discarded by design: this leg is best-effort
-              // legacy interop and is deliberately kept off the send's
-              // critical path, so it stays `unawaited`. Every outcome is
-              // observable in the log rather than in this return.
-              return NIP17SendResult.failure('NIP-04 fallback failed: $e');
             }),
           );
         }
@@ -8812,22 +8809,38 @@ class DmRepository {
     }
   }
 
-  /// Sends a NIP-04 encrypted direct message (kind 4) for legacy client
-  /// interoperability.
+  /// Sends the legacy kind-4 copy of a message to [recipientPubkey], on a
+  /// thread still latched to NIP-04.
   ///
-  /// Reuses [NIP17SendResult] as the return type for simplicity — the
-  /// semantics (success/failure with optional event ID) are identical.
-  Future<NIP17SendResult> _sendNip04Message({
+  /// Every outcome is logged rather than returned: the caller fires this
+  /// unawaited, so a returned failure that logged nothing was invisible on both
+  /// devices — the sender saw a delivered message and the legacy recipient
+  /// never got one (#8262).
+  Future<void> _sendNip04Message({
     required String recipientPubkey,
     required String content,
     String? replyToId,
   }) async {
-    // Reuses NIP17SendResult for simplicity — this is an internal helper.
-    //
-    // Every failure below is LOGGED as well as returned. The caller fires this
-    // leg unawaited, so a returned failure that logged nothing was invisible on
-    // both devices: the sender saw a delivered message and the legacy recipient
-    // never got one (#8262).
+    final signed = await _prepareNip04Copy(
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+    );
+    if (signed == null) return;
+    await _publishNip04Copy(signed, recipientPubkey: recipientPubkey);
+  }
+
+  /// Encrypts, builds and signs the kind-4 copy, or logs why it could not and
+  /// returns `null`.
+  ///
+  /// A signer that reports failure by throwing — Keycast's RPC layer raises
+  /// `RpcException`, a bunker request `TimeoutException` — is left to the
+  /// caller.
+  Future<Event?> _prepareNip04Copy({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+  }) async {
     final signer = _signer;
     if (signer == null) {
       Log.warning(
@@ -8835,7 +8848,7 @@ class DmRepository {
         'the legacy kind-4 copy was not sent',
         category: LogCategory.system,
       );
-      return const NIP17SendResult.failure('Signer not available');
+      return null;
     }
 
     final ciphertext = await signer.encrypt(recipientPubkey, content);
@@ -8849,7 +8862,7 @@ class DmRepository {
         'sent',
         category: LogCategory.system,
       );
-      return const NIP17SendResult.failure('NIP-04 encrypt returned null');
+      return null;
     }
 
     // NIP-04 reply tags are public. Resolve through the stored row so only a
@@ -8868,9 +8881,17 @@ class DmRepository {
         'sent',
         category: LogCategory.system,
       );
-      return const NIP17SendResult.failure('NIP-04 sign returned null');
+      return null;
     }
+    return signed;
+  }
 
+  /// Publishes the signed kind-4 copy and logs the outcome. Returns whether
+  /// any relay accepted it.
+  Future<bool> _publishNip04Copy(
+    Event signed, {
+    required String recipientPubkey,
+  }) async {
     // OK-confirm the kind 4. `publishEvent` reports success on a WebSocket
     // frame write, so a relay answering `OK false` — rate limited, blocked by
     // policy, caught by a spam filter — came back as a delivered message.
@@ -8884,7 +8905,7 @@ class DmRepository {
         '${outcome.summary}',
         category: LogCategory.system,
       );
-      return const NIP17SendResult.failure('NIP-04 publish failed');
+      return false;
     }
 
     // Partial acceptance still counts as sent, but a relay that refused is
@@ -8909,12 +8930,7 @@ class DmRepository {
       'still latched to nip04, so its metadata is public',
       category: LogCategory.system,
     );
-
-    return NIP17SendResult.success(
-      rumorEventId: signed.id,
-      messageEventId: signed.id,
-      recipientPubkey: recipientPubkey,
-    );
+    return true;
   }
 
   // -------------------------------------------------------------------------
