@@ -182,16 +182,12 @@ Future<bool> encryptedDatabaseKeyDecrypts({
 /// [salvageCorruptEncryptedDatabase].
 const _salvageSuffix = '.corruption_salvage';
 
-/// Tables whose rows are local-only and cannot be re-fetched from relays, so
-/// they are copied during salvage.
+/// Tables a salvage copies: their rows have no other copy, so a row dropped
+/// here is lost.
 ///
-/// The large relay-backed caches (`event`, `video_metrics`, profile/hashtag
-/// stats, `user_profiles`, `notifications`, `nip05_verifications`) are
-/// intentionally omitted: they resync from relays and copying them would be
-/// unbounded. `direct_messages` / `conversations` are also omitted — they
-/// re-drain from gift wraps on relays, which the app-layer recovery triggers by
-/// clearing the DM sync state after a salvage. `pending_view_events` is omitted
-/// as best-effort view telemetry.
+/// Every table of the schema is listed here or in [tablesDroppedBySalvage].
+/// `connection_native_test.dart` fails on a table that is in neither, so a new
+/// one cannot be left out by accident (#10105).
 ///
 /// `outgoing_dms` and `dm_message_reactions` are kept: an unsent outbound
 /// message or a `failed`/`pending` reaction (`gift_wrap_id IS NULL`) was never
@@ -201,20 +197,79 @@ const _salvageSuffix = '.corruption_salvage';
 /// not the user's unsent reaction, so it is the same only-copy case as
 /// `outgoing_dms`.
 ///
+/// `scheduled_posts` is also what keeps a scheduled draft reachable: the
+/// Drafts list hides a draft marked `scheduled`, and the Scheduled section is
+/// built from these rows.
+///
+/// `removed_conversations` and `removed_message_ids` go together. Removing a
+/// conversation publishes nothing, so once the DM history is rebuilt from the
+/// relays these rows are all that keeps a removed conversation from returning.
+///
+/// `vanished_profiles` could be read from the server again, but until then a
+/// cached profile of an account that asked to be erased can be shown.
+///
+/// `personal_events` holds the user's own signed events, which nothing refills
+/// from the relays. "Try Again" re-sends the signed video kept here, and an
+/// edit of an own video reads its raw tags here before asking a relay. It is
+/// bounded by `maxDurablePersonalEventsPerOwner`.
+///
 /// This overlaps the [_localOnlyDataQueries] legacy-migration probe but is not
 /// identical: salvage drops `direct_messages` / `conversations` (re-drainable)
-/// and adds `dm_message_reactions` (only-copy). A new local-only table added to
-/// one list should be considered for the other.
+/// and copies tables the probe does not check, such as `dm_message_reactions`
+/// (#10114). A new local-only table added to one list should be considered for
+/// the other.
 @visibleForTesting
 const salvageableLocalOnlyTables = <String>[
   'drafts',
   'clips',
+  'clip_categories',
+  'saved_caption_styles',
+  'saved_title_styles',
+  'scheduled_posts',
   'pending_uploads',
   'pending_actions',
+  'pending_reports',
+  'pending_profile_saves',
   'outgoing_dms',
+  'dm_message_reactions',
+  'removed_conversations',
+  'removed_message_ids',
+  'personal_events',
   'personal_reactions',
   'personal_reposts',
-  'dm_message_reactions',
+  'vanished_profiles',
+];
+
+/// Tables a salvage leaves empty on purpose. Each one refills, or only means
+/// something beside rows that are themselves dropped.
+@visibleForTesting
+const tablesDroppedBySalvage = <String>[
+  // Caches that resync from relays or the REST API. Copying them would make
+  // the salvage unbounded.
+  'event',
+  'video_metrics',
+  'profile_statistics',
+  'user_profiles',
+  'notifications',
+  'nip05_verifications',
+  'identity_events',
+  'identity_verifications',
+  // DM history. It is rebuilt from the gift wraps on relays: the app-layer
+  // recovery clears the DM sync state after a salvage. Wraps still waiting for
+  // a decrypt retry are fetched again with it.
+  'direct_messages',
+  'conversations',
+  'pending_gift_wraps',
+  // Must go with the DM history above. It records wraps that needed no message
+  // row given the rows that existed then; kept without those rows, the rebuild
+  // would skip them, and a message its sender deleted would be shown again.
+  'processed_gift_wraps',
+  // Watch history. SharedPreferences holds the recent part, which is all the
+  // feed looks at.
+  'seen_videos',
+  // Best-effort telemetry.
+  'pending_view_events',
+  'pending_product_events',
 ];
 
 /// Salvages a corrupt encrypted database in place, preserving the local-only

@@ -1237,23 +1237,110 @@ void main() {
     );
   });
 
-  group('salvageableLocalOnlyTables', () {
-    test('every name exists in the real AppDatabase schema', () {
-      // Pins the salvage list to the live Drift schema. Renaming a table
-      // without updating this list would make `SELECT * FROM "<old>"` throw and
-      // be silently swallowed — that table would salvage zero rows with every
-      // test still green, because the salvage tests use a fabricated schema.
+  // The salvage tests above use a fabricated schema, so they cannot see a table
+  // the real schema has and the copy list lacks. These salvage the database a
+  // fresh install creates.
+  group('salvage of the real schema', () {
+    const validKey =
+        '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+    late Directory tempRoot;
+    late String dbPath;
+
+    setUp(() {
+      tempRoot = Directory.systemTemp.createTempSync(
+        'db_client_real_schema_salvage_test_',
+      );
+      dbPath = p.join(tempRoot.path, 'divine_db.db');
+    });
+
+    tearDown(() {
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    /// Salvages a database that holds one row in every table and fails its
+    /// integrity check with every table still readable.
+    Future<void> salvageOneRowPerTable() async {
+      await _createRealSchemaDatabaseWithOneRowPerTable(dbPath, validKey);
+      final damaged = sqlite3.open(dbPath);
+      try {
+        applyCipherKey(damaged, validKey);
+        _orphanIndexPages(damaged);
+      } finally {
+        damaged.close();
+      }
+      expect(
+        await encryptedDatabaseOpensWithKey(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isFalse,
+        reason: 'precondition: the database must fail the integrity check',
+      );
+      expect(
+        await salvageCorruptEncryptedDatabase(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isTrue,
+      );
+    }
+
+    test('keeps the tables whose rows it must not lose', () async {
+      await salvageOneRowPerTable();
+
+      // Named here, not read from the copy list, so that taking one of them
+      // out of the list fails this test (#10105).
+      const tables = [
+        'scheduled_posts',
+        'saved_caption_styles',
+        'saved_title_styles',
+        'clip_categories',
+        'pending_reports',
+        'pending_profile_saves',
+        'removed_conversations',
+        'removed_message_ids',
+        'vanished_profiles',
+        'personal_events',
+      ];
+      expect(
+        [
+          for (final table in tables)
+            if (_encryptedRowCount(dbPath, validKey, table) == 0) table,
+        ],
+        isEmpty,
+        reason: 'these tables came back empty',
+      );
+    });
+
+    test('copies the row of every table in its list', () async {
+      await salvageOneRowPerTable();
+
+      // A listed table that was renamed, or that gained a column the copy
+      // cannot insert, would salvage nothing while every fabricated-schema
+      // test stayed green.
+      expect(
+        [
+          for (final table in salvageableLocalOnlyTables)
+            if (_encryptedRowCount(dbPath, validKey, table) != 1) table,
+        ],
+        isEmpty,
+        reason: 'these listed tables lost their row',
+      );
+    });
+
+    test('has every table of the schema in exactly one of its lists', () {
       final db = AppDatabase();
       addTearDown(db.close);
+      final schema = db.allTables.map((t) => t.actualTableName).toList()
+        ..sort();
 
-      final realTables = db.allTables.map((t) => t.actualTableName).toSet();
-      for (final table in salvageableLocalOnlyTables) {
-        expect(
-          realTables,
-          contains(table),
-          reason: 'salvage list references unknown table "$table" — renamed?',
-        );
-      }
+      // A table in neither list comes back empty without anyone having
+      // decided that. Put a new table in `salvageableLocalOnlyTables` when its
+      // rows have no other copy, in `tablesDroppedBySalvage` when they resync.
+      expect(
+        [...salvageableLocalOnlyTables, ...tablesDroppedBySalvage]..sort(),
+        equals(schema),
+      );
     });
   });
 
@@ -3748,3 +3835,48 @@ String _destinationBackupPath(String path) =>
 
 String _legacyConflictBackupPath(String path) =>
     _preservedCopy(path, legacyConflictBackupSuffix)!;
+
+/// Creates the database a fresh install has — Drift's `onCreate` at the current
+/// schema version, under [key] — and inserts one row into every table.
+Future<void> _createRealSchemaDatabaseWithOneRowPerTable(
+  String path,
+  String key,
+) async {
+  final drift = AppDatabase(
+    NativeDatabase(File(path), setup: (rawDb) => applyCipherKey(rawDb, key)),
+  );
+  await drift.customSelect('SELECT 1;').get();
+  await drift.close();
+
+  final db = sqlite3.open(path);
+  try {
+    applyCipherKey(db, key);
+    final tables = db.select(
+      "SELECT name FROM sqlite_master WHERE type = 'table' "
+      "AND name NOT LIKE 'sqlite_%';",
+    );
+    for (final table in tables) {
+      final name = table['name'] as String;
+      final columns = db.select('PRAGMA table_info("$name");');
+      db.execute(
+        'INSERT INTO "$name" '
+        '(${columns.map((column) => '"${column['name']}"').join(', ')}) '
+        'VALUES (${columns.map((_) => '?').join(', ')});',
+        [
+          for (final column in columns)
+            _sampleValueFor(column['type'] as String),
+        ],
+      );
+    }
+  } finally {
+    db.close();
+  }
+}
+
+/// A value SQLite accepts for a column declared as [type]. `1` satisfies both
+/// an integer column and the `IN (0, 1)` check Drift puts on a boolean one.
+Object _sampleValueFor(String type) => switch (type.toUpperCase()) {
+  'INTEGER' => 1,
+  'REAL' => 1.0,
+  _ => 'x',
+};

@@ -246,6 +246,24 @@ still-signed-in account's queued work.
 
 Enforced by `check_prefs_key_classification.sh`; see AGENTS.md.
 
+## Corruption Salvage
+
+When the local database is damaged, startup rebuilds it from the tables whose
+rows have no other copy and leaves every other table empty. Each table of the
+schema is classified in
+`mobile/packages/db_client/lib/src/database/connection/connection_native.dart`:
+
+- `salvageableLocalOnlyTables`: copied. Losing a row here loses something the
+  user did (a draft, a queued report, a removed conversation).
+- `tablesDroppedBySalvage`: left empty. Caches that resync, and ledgers that
+  only mean something beside rows that are themselves dropped.
+
+A new table must go into one of the two; `connection_native_test.dart` fails on
+a table that is in neither (#10105). A table that describes dropped rows goes
+with them: `processed_gift_wraps` records which gift wraps needed no message
+row, so copying it while `direct_messages` is rebuilt from the relays would
+make the rebuild skip them.
+
 ## Review Checklist
 
 Before approving a data/storage change, confirm:
@@ -256,3 +274,5 @@ Before approving a data/storage change, confirm:
 - durable local data has migration and recovery behavior
 - new Hive usage has a written justification
 - Drift schema changes are represented as real migrations
+- a new Drift table is in `salvageableLocalOnlyTables` or
+  `tablesDroppedBySalvage`
