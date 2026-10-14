@@ -411,13 +411,64 @@ void main() {
     });
 
     group('options sheet unfollow', () {
+      testWidgets('never follows the account when Unfollow is chosen', (
+        tester,
+      ) async {
+        final followRepository = createMockFollowRepository(
+          followingPubkeys: const [otherPubkey],
+        );
+        when(() => followRepository.isFollowing(otherPubkey)).thenReturn(true);
+        // Mirrors FollowRepository.toggleFollow, which follows the account
+        // when the list no longer has it.
+        when(
+          () => followRepository.toggleFollow(otherPubkey),
+        ).thenAnswer(
+          (_) => followRepository.isFollowing(otherPubkey)
+              ? followRepository.unfollow(otherPubkey)
+              : followRepository.follow(otherPubkey),
+        );
+        when(
+          () => followRepository.follow(otherPubkey),
+        ).thenAnswer((_) async {});
+        when(
+          () => followRepository.unfollow(otherPubkey),
+        ).thenAnswer((_) async {});
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildSubject(
+            followRepository: followRepository,
+            state: const ConversationState(
+              status: ConversationStatus.loaded,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+        );
+        await tester.pumpAndSettle();
+        // The follow list changes while the sheet is open.
+        when(
+          () => followRepository.isFollowing(otherPubkey),
+        ).thenReturn(false);
+        await tester.tap(
+          find.textContaining(l10n.profileUnfollowDisplayName('')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verifyNever(() => followRepository.follow(otherPubkey));
+        verify(() => followRepository.unfollow(otherPubkey)).called(1);
+      });
+
       testWidgets('tells the user when the unfollow fails', (tester) async {
         final followRepository = createMockFollowRepository(
           followingPubkeys: const [otherPubkey],
         );
         when(() => followRepository.isFollowing(otherPubkey)).thenReturn(true);
         when(
-          () => followRepository.toggleFollow(otherPubkey),
+          () => followRepository.unfollow(otherPubkey),
         ).thenAnswer((_) async => throw Exception('publish failed'));
         final l10n = lookupAppLocalizations(const Locale('en'));
 

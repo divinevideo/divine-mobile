@@ -390,7 +390,9 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
     final followRepository = ref.read(followRepositoryProvider);
     try {
-      await followRepository.toggleFollow(widget.pubkey);
+      // `unfollow`, never `toggleFollow`: the follow list can change while
+      // the sheet is open, and toggle would then follow the account.
+      await followRepository.unfollow(widget.pubkey);
     } on Exception {
       // FollowRepository has already logged the failure and left the follow
       // in place; the user only needs to know the unfollow didn't happen.

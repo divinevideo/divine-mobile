@@ -504,11 +504,51 @@ void main() {
       },
     );
 
+    testWidgets('never follows the account when More → Unfollow is chosen', (
+      tester,
+    ) async {
+      // The sheet offered Unfollow (the bloc said following), but the follow
+      // list no longer has the account by the time the user taps it. The stub
+      // mirrors FollowRepository.toggleFollow, which would follow it here.
+      when(
+        () => followRepository.toggleFollow(targetPubkey),
+      ).thenAnswer(
+        (_) => followRepository.isFollowing(targetPubkey)
+            ? followRepository.unfollow(targetPubkey)
+            : followRepository.follow(targetPubkey),
+      );
+      when(
+        () => followRepository.follow(targetPubkey),
+      ).thenAnswer((_) async {});
+      when(
+        () => followRepository.unfollow(targetPubkey),
+      ).thenAnswer((_) async {});
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildSubject(container: container));
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.bySemanticsLabel(l10n.profileMoreTooltip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(
+        find.textContaining(l10n.profileUnfollowDisplayName('')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tester.takeException(), isNull);
+      verifyNever(() => followRepository.follow(targetPubkey));
+      verify(() => followRepository.unfollow(targetPubkey)).called(1);
+    });
+
     testWidgets('tells the user when unfollowing from More fails', (
       tester,
     ) async {
       when(
-        () => followRepository.toggleFollow(targetPubkey),
+        () => followRepository.unfollow(targetPubkey),
       ).thenAnswer((_) async => throw Exception('publish failed'));
       final container = createContainer(StateProvider<bool>((ref) => false));
       addTearDown(container.dispose);
