@@ -267,7 +267,6 @@ class _DivineVideoMetricsTrackerState
     if (_hasStartedPlayback) return;
     _hasStartedPlayback = true;
     _sessionToken = const Uuid().v4();
-
     unawaited(
       _analyticsService
           .trackDetailedVideoViewWithUser(
@@ -298,6 +297,16 @@ class _DivineVideoMetricsTrackerState
     _isPlaying = false;
   }
 
+  Duration? _resolveTotalDuration() {
+    final knownDuration = _lastKnownDuration;
+    if (knownDuration != null) return knownDuration;
+    try {
+      return widget.controller?.state.duration;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Flush the watch/loop delta since the last flush as an end-phase event.
   /// Non-terminal by construction: a segment with no new playback emits
   /// nothing, so flush triggers (cover, video change, dispose) can all run
@@ -308,14 +317,7 @@ class _DivineVideoMetricsTrackerState
   }) {
     _closePlayInterval(widget._clock());
 
-    Duration? totalDuration = _lastKnownDuration;
-    if (totalDuration == null) {
-      try {
-        totalDuration = widget.controller?.state.duration;
-      } catch (_) {
-        totalDuration = null;
-      }
-    }
+    final totalDuration = _resolveTotalDuration();
 
     _recordSeen(video, totalDuration);
     _recordProductPlayback(video, totalDuration, productEndReason);

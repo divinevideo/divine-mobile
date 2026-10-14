@@ -52,7 +52,7 @@ void main() {
         home: Scaffold(
           body: BlocProvider<MyFollowingBloc>.value(
             value: mockMyFollowingBloc,
-            child: VideoFollowButtonView(pubkey: pubkey),
+            child: VideoFollowButtonView(pubkey: pubkey, videoId: 'video-id'),
           ),
         ),
       );
@@ -143,7 +143,10 @@ void main() {
               body: Center(
                 child: BlocProvider<MyFollowingBloc>.value(
                   value: mockMyFollowingBloc,
-                  child: VideoFollowButtonView(pubkey: pubkey),
+                  child: VideoFollowButtonView(
+                    pubkey: pubkey,
+                    videoId: 'video-id',
+                  ),
                 ),
               ),
             ),
@@ -325,6 +328,10 @@ void main() {
             (captured.first as MyFollowingToggleRequested).pubkey,
             otherPubkey,
           );
+          expect(
+            (captured.first as MyFollowingToggleRequested).targetVideoId,
+            'video-id',
+          );
         },
       );
     });
@@ -351,7 +358,12 @@ void main() {
 
         await tester.pumpWidget(
           testMaterialApp(
-            home: Scaffold(body: VideoFollowButton(pubkey: authorPubkey)),
+            home: Scaffold(
+              body: VideoFollowButton(
+                pubkey: authorPubkey,
+                videoId: 'video-id',
+              ),
+            ),
             additionalOverrides: [
               contentBlocklistRepositoryProvider.overrideWithValue(
                 mockBlocklist,
@@ -382,7 +394,12 @@ void main() {
 
       await tester.pumpWidget(
         testMaterialApp(
-          home: Scaffold(body: VideoFollowButton(pubkey: authorPubkey)),
+          home: Scaffold(
+            body: VideoFollowButton(
+              pubkey: authorPubkey,
+              videoId: 'video-id',
+            ),
+          ),
           additionalOverrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(
               mockBlocklist,
@@ -438,7 +455,7 @@ void main() {
                       onTap: () => reachedTheVideo = true,
                     ),
                   ),
-                  VideoFollowButton(pubkey: authorPubkey),
+                  VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
                 ],
               ),
             ),
@@ -478,7 +495,7 @@ void main() {
                     onTap: () => reachedTheVideo = true,
                   ),
                 ),
-                VideoFollowButton(pubkey: authorPubkey),
+                VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
               ],
             ),
           ),
@@ -538,7 +555,7 @@ void main() {
                       onTap: () => reachedTheVideo = true,
                     ),
                   ),
-                  VideoFollowButton(pubkey: authorPubkey),
+                  VideoFollowButton(pubkey: authorPubkey, videoId: 'video-id'),
                 ],
               ),
             ),

@@ -48,6 +48,7 @@ class MyFollowersScreen extends ConsumerWidget {
           create: (_) => MyFollowingBloc(
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
+            consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
           )..add(const MyFollowingListLoadRequested()),
         ),
         // Deliberately unkeyed: profileRepositoryProvider resolves from null

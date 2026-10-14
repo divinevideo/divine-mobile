@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_feed_item/actions/like_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/actions/repost_action_button.dart';
@@ -17,6 +18,9 @@ class _MockLikesRepository extends Mock implements LikesRepository {}
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
+
+class _MockConsumptionAnalytics extends Mock
+    implements ConsumptionAnalyticsTracker {}
 
 void main() {
   group(videoInteractionsBlocKey, () {
@@ -143,6 +147,7 @@ class _InteractionHost extends StatelessWidget {
             likesRepository: likesRepository,
             commentsRepository: commentsRepository,
             repostsRepository: repostsRepository,
+            consumptionAnalytics: _MockConsumptionAnalytics(),
           )..add(const VideoInteractionsFetchRequested()),
           child: Column(
             children: [

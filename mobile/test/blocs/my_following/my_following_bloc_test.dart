@@ -9,6 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
+
+import '../../helpers/recording_consumption_analytics.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -19,6 +22,7 @@ void main() {
   group(MyFollowingBloc, () {
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
+    late RecordingConsumptionAnalytics analytics;
 
     // Helper to create valid hex pubkeys (64 hex characters)
     String validPubkey(String suffix) {
@@ -31,6 +35,7 @@ void main() {
     setUp(() async {
       mockFollowRepository = _MockFollowRepository();
       mockBlocklistRepository = _MockContentBlocklistRepository();
+      analytics = RecordingConsumptionAnalytics();
 
       // Default: nothing is blocked
       when(() => mockBlocklistRepository.isBlocked(any())).thenReturn(false);
@@ -43,6 +48,9 @@ void main() {
     MyFollowingBloc createBloc() => MyFollowingBloc(
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,
+      consumptionAnalytics: ConsumptionAnalyticsTracker(
+        analytics: () => analytics,
+      ),
     );
 
     test('initial state is initial when repository cache is empty', () async {
@@ -278,12 +286,21 @@ void main() {
           ).thenAnswer((_) => const Stream.empty());
         },
         build: createBloc,
-        act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        act: (bloc) => bloc.add(
+          MyFollowingToggleRequested(
+            validPubkey('user'),
+            targetVideoId: 'video-id',
+          ),
+        ),
         verify: (_) {
           verify(
             () => mockFollowRepository.toggleFollow(validPubkey('user')),
           ).called(1);
+          expect(analytics.eventNames, ['engagement_recorded']);
+          expect(analytics.parameters.single, {
+            'action': 'follow_added',
+            'content_id': 'video-id',
+          });
         },
       );
 
@@ -307,6 +324,49 @@ void main() {
           // followingStream/_onRepositoryUpdated, not a watchMyFollowingCached
           // re-read.
           verifyNever(() => mockFollowRepository.watchMyFollowingCached());
+          expect(analytics.parameters.single, {
+            'action': 'follow_added',
+          });
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the toggle is an unfollow',
+        setUp: () {
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([validPubkey('user')]);
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockFollowRepository.watchMyFollowingCached(),
+          ).thenAnswer((_) => const Stream.empty());
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (_) {
+          verify(
+            () => mockFollowRepository.toggleFollow(validPubkey('user')),
+          ).called(1);
+          expect(analytics.eventNames, isEmpty);
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the follow fails',
+        setUp: () {
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenThrow(Exception('Network error'));
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (bloc) {
+          expect(bloc.state.status, MyFollowingStatus.toggleFailure);
+          expect(analytics.eventNames, isEmpty);
         },
       );
 

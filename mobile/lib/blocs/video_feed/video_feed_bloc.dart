@@ -397,6 +397,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       cachedVideos,
       emit,
       baseState: selectedState,
+      feedSessionRevision: state.feedSessionRevision + 1,
       requireCurrentSource: false,
       feedLoad: feedLoad,
     );
@@ -408,6 +409,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       feedLoad: feedLoad,
       revalidate: true,
       prefetchedCachedVideos: cachedVideos,
+      startsNewFeedSession: !servedCache,
     );
   }
 
@@ -595,7 +597,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       ),
     );
 
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(
+      state.source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      startsNewFeedSession: true,
+    );
   }
 
   /// Handle auto-refresh request (dispatched by UI on app resume).
@@ -650,6 +658,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       feedLoad: feedLoad,
       skipCache: state.source.type != VideoFeedSourceType.newVideos,
       revalidate: state.source.type == VideoFeedSourceType.newVideos,
+      startsNewFeedSession: true,
     );
   }
 
@@ -748,7 +757,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       reason: FeedLoadReason.refresh,
     );
 
-    await _loadVideos(nextSource, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(
+      nextSource,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      startsNewFeedSession: true,
+    );
   }
 
   /// Handle blocklist changes.
@@ -802,11 +817,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     bool skipCache = false,
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
+    bool startsNewFeedSession = false,
   }) async {
+    final nextFeedSessionRevision = startsNewFeedSession
+        ? state.feedSessionRevision + 1
+        : state.feedSessionRevision;
     try {
       final servedCache =
           prefetchedCachedVideos?.isNotEmpty ??
-          await _maybeServeCachedFeed(source, emit, skipCache, feedLoad);
+          await _maybeServeCachedFeed(
+            source,
+            emit,
+            skipCache,
+            feedLoad,
+            nextFeedSessionRevision,
+          );
       if (!_canEmitForSource(source, emit)) return;
 
       // `revalidate` serves the cached window *and* forces a fresh fetch.
@@ -867,6 +892,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           listOnlyVideoIds: result.listOnlyVideoIds,
           paginationCursor: result.paginationCursor,
           clearPaginationCursor: result.paginationCursor == null,
+          feedSessionRevision: nextFeedSessionRevision,
         ),
       );
 
@@ -945,9 +971,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     Emitter<VideoFeedBlocState> emit,
     bool skipCache,
     FeedLoadHandle? feedLoad,
+    int feedSessionRevision,
   ) async {
     final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
-    return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad);
+    return _emitCachedFeed(
+      source,
+      cachedValid,
+      emit,
+      feedLoad: feedLoad,
+      feedSessionRevision: feedSessionRevision,
+    );
   }
 
   Future<List<VideoEvent>> _readCachedFeed(
@@ -970,6 +1003,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     List<VideoEvent> cachedValid,
     Emitter<VideoFeedBlocState> emit, {
     VideoFeedBlocState? baseState,
+    int? feedSessionRevision,
     bool requireCurrentSource = true,
     FeedLoadHandle? feedLoad,
   }) {
@@ -991,6 +1025,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         hasMore: true,
         clearPaginationCursor: true,
         clearError: true,
+        feedSessionRevision: feedSessionRevision,
       ),
     );
     if (feedLoad != null) {

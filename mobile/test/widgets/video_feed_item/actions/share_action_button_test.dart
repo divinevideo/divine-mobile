@@ -18,6 +18,7 @@ import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -39,6 +40,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/recording_consumption_analytics.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -196,6 +198,47 @@ void main() {
     });
 
     group('share menu', () {
+      testWidgets('records governed share intent without blocking the sheet', (
+        tester,
+      ) async {
+        final pending = Completer<void>();
+        final analytics = RecordingConsumptionAnalytics(
+          pending: pending.future,
+        );
+        addTearDown(analytics.dispose);
+        final sink = _RecordingAnalyticsSink();
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(body: ShareActionButton(video: testVideo)),
+            additionalOverrides: [
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+              analyticsEventSinkProvider.overrideWithValue(sink),
+            ],
+            mockAuthService: createMockAuthService(),
+            mockProfileRepository: mockProfileRepository,
+          ),
+        );
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Share with'), findsOneWidget);
+        expect(analytics.eventNames, ['engagement_recorded']);
+        expect(analytics.parameters.single, {
+          'action': 'share_tapped',
+          'content_id': testVideo.id,
+        });
+        expect(
+          sink.events.where((event) => event.name == 'share_tapped'),
+          isEmpty,
+        );
+        pending.complete();
+        await tester.pump();
+      });
+
       testWidgets('shows Share with section', (tester) async {
         final mockAuth = createMockAuthService();
 
@@ -559,8 +602,8 @@ void main() {
             await tester.drag(actions, const Offset(-500, 0));
             await tester.pumpAndSettle();
             expect(sink.events, hasLength(1));
-            expect(sink.events.single.name, 'crosspost_cta_shown');
-            expect(sink.events.single.parameters, {
+            expect(sink.events.last.name, 'crosspost_cta_shown');
+            expect(sink.events.last.parameters, {
               'surface': 'share_sheet',
               'cta': 'crosspost_row',
             });
@@ -718,9 +761,9 @@ void main() {
           );
 
           expect(sink.events, hasLength(1));
-          expect(sink.events.single.name, 'crosspost_cta_shown');
+          expect(sink.events.last.name, 'crosspost_cta_shown');
           expect(
-            sink.events.single.parameters,
+            sink.events.last.parameters,
             {'surface': 'share_sheet', 'cta': 'crosspost_row'},
           );
           verifyNever(client.getConnections);

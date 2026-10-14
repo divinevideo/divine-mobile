@@ -407,6 +407,13 @@ class AnalyticsService implements BackgroundAwareService {
     await _productEventQueue?.clear();
   }
 
+  /// Identifies the current governed session without exposing account identity.
+  ///
+  /// Consumers reset their measurement state when this changes so navigation
+  /// depth cannot bridge login, account switches, or consent withdrawal.
+  String get productAnalyticsSessionId =>
+      _sessionIdOverride?.call() ?? _sessionId;
+
   void _rotateProductAnalyticsIdentity() {
     if (_anonymousIdOverride == null) _anonymousId = _uuid.v4();
     if (_sessionIdOverride == null) _sessionId = _uuid.v4();
@@ -452,6 +459,36 @@ class AnalyticsService implements BackgroundAwareService {
         loopCount: loopCount,
         completed: completed,
         endReason: endReason,
+      ),
+    ),
+  );
+
+  /// Records a confirmed engagement or share intent without target identity.
+  Future<String?> recordEngagement({
+    required ProductAnalyticsV2EngagementAction action,
+    String? contentId,
+  }) => _trackProductEvent(
+    (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
+      envelope: envelope,
+      properties: ProductAnalyticsV2EngagementRecordedProperties(
+        action: action,
+        contentId: contentId,
+      ),
+    ),
+  );
+
+  /// Records deliberate navigation depth within one visible feed session.
+  Future<String?> recordFeedDepth({
+    required String feedSessionId,
+    required ProductAnalyticsV2FeedType feedType,
+    required int depth,
+  }) => _trackProductEvent(
+    (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
+      envelope: envelope,
+      properties: ProductAnalyticsV2FeedDepthRecordedProperties(
+        feedSessionId: feedSessionId,
+        feedType: feedType,
+        depth: depth,
       ),
     ),
   );
