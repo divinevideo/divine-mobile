@@ -21,82 +21,85 @@ import 'package:openvine/widgets/user_avatar.dart';
 class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
 void main() {
-  for (final tapAvatar in [false, true]) {
-    testWidgets(
-      'opens sender profile and returns to draft: avatar=$tapAvatar',
-      (
-        tester,
-      ) async {
-        const author =
-            '3333333333333333333333333333333333333333333333333333333333333333';
-        final cubit = _ChatCubit();
-        when(() => cubit.state).thenReturn(const ChatState());
-        whenListen(cubit, const Stream<ChatState>.empty());
-        when(cubit.visibleMessages).thenReturn([
-          ChatMessage(
-            id: '5555555555555555555555555555555555555555555555555555555555555555',
-            channelId: 'general',
-            author: author,
-            body: 'Hello room',
-            createdAt: 1,
-          ),
-        ]);
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => BlocProvider<ChatCubit>.value(
-                value: cubit,
-                child: const ChatScreen(),
-              ),
+  group('sender profile navigation', () {
+    for (final tapAvatar in [false, true]) {
+      testWidgets(
+        'opens sender profile and returns to draft: avatar=$tapAvatar',
+        (
+          tester,
+        ) async {
+          const author =
+              '3333333333333333333333333333333333333333333333333333333333333333';
+          final cubit = _ChatCubit();
+          when(() => cubit.state).thenReturn(const ChatState());
+          whenListen(cubit, const Stream<ChatState>.empty());
+          when(cubit.visibleMessages).thenReturn([
+            ChatMessage(
+              id: '5555555555555555555555555555555555555555555555555555555555555555',
+              channelId: 'general',
+              author: author,
+              body: 'Hello room',
+              createdAt: 1,
             ),
-            GoRoute(
-              path: OtherProfileScreen.pathWithNpub,
-              builder: (_, state) => Scaffold(
-                appBar: AppBar(),
-                body: Text(state.pathParameters['npub']!),
-              ),
-            ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              fetchUserProfileProvider(author).overrideWith(
-                (ref) async => UserProfile(
-                  pubkey: author,
-                  displayName: 'Room member',
-                  rawData: const {},
-                  createdAt: DateTime(2026),
-                  eventId: '6' * 64,
+          ]);
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => BlocProvider<ChatCubit>.value(
+                  value: cubit,
+                  child: const ChatScreen(),
                 ),
               ),
-              profileIdentityResolvingProvider(author).overrideWithValue(false),
-              profileVanishedProvider(author).overrideWith((ref) => false),
+              GoRoute(
+                path: OtherProfileScreen.pathWithNpub,
+                builder: (_, state) => Scaffold(
+                  appBar: AppBar(),
+                  body: Text(state.pathParameters['npub']!),
+                ),
+              ),
             ],
-            child: MaterialApp.router(
-              routerConfig: router,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                fetchUserProfileProvider(author).overrideWith(
+                  (ref) async => UserProfile(
+                    pubkey: author,
+                    displayName: 'Room member',
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: '6' * 64,
+                  ),
+                ),
+                profileIdentityResolvingProvider(author)
+                    .overrideWithValue(false),
+                profileVanishedProvider(author).overrideWith((ref) => false),
+              ],
+              child: MaterialApp.router(
+                routerConfig: router,
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              ),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField), 'unfinished reply');
-        await tester.tap(
-          tapAvatar ? find.byType(UserAvatar) : find.text('Room member'),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text(NostrKeyUtils.encodePubKey(author)), findsOneWidget);
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
-        expect(find.text('Hello room'), findsOneWidget);
-        expect(
-          tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          'unfinished reply',
-        );
-      },
-    );
-  }
+          );
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), 'unfinished reply');
+          await tester.tap(
+            tapAvatar ? find.byType(UserAvatar) : find.text('Room member'),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text(NostrKeyUtils.encodePubKey(author)), findsOneWidget);
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          expect(find.text('Hello room'), findsOneWidget);
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            'unfinished reply',
+          );
+        },
+      );
+    }
+  });
 }
