@@ -273,6 +273,28 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
   return announced;
 }
 
+/// Rejects every screen-reader announcement and collects what was attempted.
+List<Object?> _rejectAnnouncements(WidgetTester tester) {
+  final attempted = <Object?>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      if (message is Map && message['type'] == 'announce') {
+        attempted.add((message['data'] as Map?)?['message']);
+      }
+      throw PlatformException(code: 'announce-failed');
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return attempted;
+}
+
 /// Asserts the flow did not sign the user out, under any argument shape.
 ///
 /// Matching exact flags would miss the bare `signOut()` the processing branch
@@ -1556,18 +1578,7 @@ void main() {
           indicatesMissingCoordinatorRoute: true,
         ),
       );
-      tester.binding.defaultBinaryMessenger
-          .setMockDecodedMessageHandler<Object?>(
-            SystemChannels.accessibility,
-            (_) async => throw PlatformException(code: 'announce-failed'),
-          );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger
-            .setMockDecodedMessageHandler<Object?>(
-              SystemChannels.accessibility,
-              null,
-            ),
-      );
+      final rejected = _rejectAnnouncements(tester);
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -1589,11 +1600,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final unavailableText = _englishL10n().deleteAccountDeletionUnavailable;
+      expect(rejected, contains(unavailableText));
       expect(tester.takeException(), isNull);
-      expect(
-        find.text(_englishL10n().deleteAccountDeletionUnavailable),
-        findsOneWidget,
-      );
+      expect(find.text(unavailableText), findsOneWidget);
     });
 
     testWidgets(
