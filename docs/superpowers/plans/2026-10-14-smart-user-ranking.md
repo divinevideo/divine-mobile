@@ -119,7 +119,7 @@ git fetch origin
 git worktree add .worktrees/cache-serve-stale -b fix/cache-serve-stale origin/main
 ```
 
-### Task A1: `cache_sync` stops deleting expired entries
+### Task 1 (A1): `cache_sync` stops deleting expired entries
 
 **Files:**
 - Modify: `mobile/packages/cache_sync/lib/src/cache_dao.dart`
@@ -179,7 +179,7 @@ git worktree add .worktrees/cache-serve-stale -b fix/cache-serve-stale origin/ma
   Then run each one's mirrored test file. In particular, run the follow_repository suite: `follow_repository_cached_test.dart`.
 - [ ] **Step 6: Commit:** `fix(cache_sync): serve stale entries and refresh instead of deleting them`.
 
-### Task A2: `CacheSync.read` callers that already revalidate show stale data
+### Task 2 (A2): `CacheSync.read` callers that already revalidate show stale data
 
 **Files:** each `CacheSync.read` caller, listed with:
 
@@ -213,7 +213,7 @@ Change each one's mirrored test.
 - [ ] **Step 4: Run** each mirrored test file and expect it to pass.
 - [ ] **Step 5: Commit:** `fix(cache): show stale snapshots while revalidating`.
 
-### Task A3: `profile_stats` keeps rows for 30 days
+### Task 3 (A3): `profile_stats` keeps rows for 30 days
 
 **Files:**
 - Modify: `mobile/packages/db_client/lib/src/database/daos/profile_stats_dao.dart`
@@ -241,7 +241,7 @@ Change each one's mirrored test.
 - [ ] **Step 4: Run** the db_client tests and expect them to pass. Also run `app_database` startup-cleanup tests if they exist (`grep -rn runStartupCleanup mobile/packages/db_client/test`).
 - [ ] **Step 5: Commit:** `fix(db_client): keep profile stats for 30 days instead of 5 minutes`.
 
-### Task A4: Ship PR 1
+### Task 4 (A4): Ship PR 1
 
 - [ ] **Step 1:** From `mobile/`, run:
   - `mise exec -- dart format` on the changed files
@@ -257,7 +257,7 @@ Change each one's mirrored test.
 
 Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase origin/main` before starting.
 
-### Task B1: The `my_followers` Drift table and DAO (schema v22)
+### Task 5 (B1): The `my_followers` Drift table and DAO (schema v22)
 
 **Files:**
 - Modify: `mobile/packages/db_client/lib/src/database/tables.dart`. Add `MyFollowers` after `RemovedMessageIds`, and give it a doc comment stating the retention policy from spec §5.
@@ -307,7 +307,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 5: Run** the db_client tests and expect them to pass.
 - [ ] **Step 6: Commit:** `feat(db_client): add owner-scoped my_followers table (schema v22)`.
 
-### Task B2: `FollowRepository` persists and syncs the follower set
+### Task 6 (B2): `FollowRepository` persists and syncs the follower set
 
 **Files:**
 - Modify: `mobile/packages/follow_repository/lib/src/follow_repository.dart`:
@@ -351,7 +351,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 5: Run** the app tests for the provider: `cd mobile && mise exec -- flutter test test/providers/repository_providers_test.dart`, if it exists. Otherwise run whichever tests construct `followRepositoryProvider` (find them with `grep -rln followRepositoryProvider test/providers`).
 - [ ] **Step 6: Commit:** `feat(follow_repository): keep the follower set on device and sync it incrementally`.
 
-### Task B3: Account cleanup clears `my_followers`
+### Task 7 (B3): Account cleanup clears `my_followers`
 
 **Files:**
 - Modify: `mobile/lib/providers/social_providers.dart`. In the `!preserveActiveSession` block (:849-883), add `await requiredCleanup(() => db.myFollowersDao.clearAllForUser(userPubkey))` when `userPubkey != null`.
@@ -367,7 +367,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 
 ## Part C — Ranking (PR 2, commits 4 onward)
 
-### Task C1: The pure-Dart `user_ranking` package
+### Task 8 (C1): The pure-Dart `user_ranking` package
 
 **Files:**
 - Create: `mobile/packages/user_ranking/`, copying the layout of `count_formatter`:
@@ -424,7 +424,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
   - `bash mobile/scripts/check_package_flutter_boundary.sh`
 - [ ] **Step 6: Commit:** `feat(user_ranking): add pure-Dart closeness scoring`.
 
-### Task C2: Batched local reads for ranking signals
+### Task 9 (C2): Batched local reads for ranking signals
 
 **Files:**
 - Modify:
@@ -443,7 +443,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** them and expect them to pass. `profile_repository` is strict-coverage, so it must reach 100%.
 - [ ] **Step 5: Commit:** `feat(db_client,profile_repository): batched stats and newest-post reads`.
 
-### Task C3: `UserRankingSignalsLoader`
+### Task 10 (C3): `UserRankingSignalsLoader`
 
 **Files:**
 - Create: `mobile/lib/services/user_ranking/user_ranking_signals_loader.dart`. Keep it to one file; the untested-services guard requires a test for every `.dart` file under `lib/services`.
@@ -498,7 +498,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** it and expect it to pass. Then run `bash scripts/check_untested_services_floor.sh` and `bash scripts/check_layer_direction.sh`.
 - [ ] **Step 5: Commit:** `feat(ranking): load ranking signals from local stores`.
 
-### Task C4: The share sheet ranks its contacts
+### Task 11 (C4): The share sheet ranks its contacts
 
 **Files:**
 - Modify: `mobile/lib/blocs/share_sheet/share_sheet_bloc.dart:38-57` (constructor) and `:98-247` (`_onContactsLoadRequested`)
@@ -526,7 +526,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** the bloc tests and `test/widgets/video_feed_item/actions/share_action_button_test.dart`. Expect them to pass.
 - [ ] **Step 5: Commit:** `feat(share): rank share-sheet contacts by closeness`.
 
-### Task C5: The new-DM picker ranks its contacts
+### Task 12 (C5): The new-DM picker ranks its contacts
 
 **Files:**
 - Modify: `mobile/lib/screens/inbox/bloc/new_message_search_bloc.dart`:
@@ -553,7 +553,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** the bloc tests and `test/screens/inbox/new_message_sheet_test.dart`. Expect them to pass.
 - [ ] **Step 5: Commit:** `feat(dm): rank new-message contacts by closeness`.
 
-### Task C6: Search puts people you know first within each page
+### Task 13 (C6): Search puts people you know first within each page
 
 **Files:**
 - Modify: `mobile/lib/blocs/user_search/user_search_bloc.dart`:
@@ -581,7 +581,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** the bloc tests and `test/screens/search_results/`. Expect them to pass.
 - [ ] **Step 5: Commit:** `feat(search): promote people you know within each result page`.
 
-### Task C7: A "Smart" sort for your own follow lists, made the default
+### Task 14 (C7): A "Smart" sort for your own follow lists, made the default
 
 **Files:**
 - Create: `mobile/lib/blocs/follow_list_sort.dart`:
@@ -623,7 +623,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** the tests above plus `test/l10n/arb_consistency_test.dart`. Expect them to pass.
 - [ ] **Step 5: Commit:** `feat(follows): add smart sort and make it the default`.
 
-### Task C8: The user picker and add-to-list rank by closeness
+### Task 15 (C8): The user picker and add-to-list rank by closeness
 
 **Files:**
 - Modify: `mobile/lib/widgets/user_picker_sheet.dart`. Replace the `_sortedByRenderedName` callers at :258, :300, :314 and :428 with the ranked order from the loader (`ref.read(userRankingSignalsLoaderProvider)`). Keep the mutual-only filter.
@@ -643,7 +643,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** them and expect them to pass.
 - [ ] **Step 5: Commit:** `feat(people): rank pickers by closeness`.
 
-### Task C9: The shared row indicator line, plus the "Posted" label
+### Task 16 (C9): The shared row indicator line, plus the "Posted" label
 
 **Files:**
 - Create: `mobile/lib/widgets/user_indicator_line.dart`. It is a `StatelessWidget` with the fields:
@@ -678,7 +678,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 - [ ] **Step 4: Run** the tests, `test/l10n/arb_consistency_test.dart` and `bash scripts/check_orphaned_arb_key_floor.sh`. Expect them to pass.
 - [ ] **Step 5: Commit:** `feat(people): show NIP-05, video count and recent posts on user rows`.
 
-### Task C10: Ship PR 2
+### Task 17 (C10): Ship PR 2
 
 - [ ] **Step 1:** From `mobile/`, run:
   - `mise exec -- dart format` on the changed files
