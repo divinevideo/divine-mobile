@@ -9,14 +9,14 @@ class MessagesPreferenceService {
 
   final SharedPreferences _preferences;
 
+  /// Preference key for [account]; account deletion removes it.
+  static String storageKey(String account) => 'messages_rooms_$account';
+
   bool roomsSelected(String account) =>
-      _preferences.getBool('messages_rooms_$account') ?? false;
+      _preferences.getBool(storageKey(account)) ?? false;
 
   Future<void> selectRooms(String account, {required bool selected}) async {
-    final saved = await _preferences.setBool(
-      'messages_rooms_$account',
-      selected,
-    );
+    final saved = await _preferences.setBool(storageKey(account), selected);
     if (!saved) throw StateError('Messages preference could not be saved');
   }
 }

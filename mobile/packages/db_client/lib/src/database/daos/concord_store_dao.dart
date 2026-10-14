@@ -61,9 +61,7 @@ class ConcordStoreDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Removes an account's values across every relay and channel.
-  Future<void> clearAccount(String account) async {
-    await (delete(
-      concordStoreEntries,
-    )..where((t) => t.account.equals(account))).go();
-  }
+  Future<int> clearAccount(String account) => (delete(
+    concordStoreEntries,
+  )..where((t) => t.account.equals(account))).go();
 }

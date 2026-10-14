@@ -11,6 +11,7 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -896,6 +897,23 @@ void main() {
 
         expect(store.lastKnownRestrictedFor(deletedPubkey), isNull);
         expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
+      });
+
+      test("forgets only that account's Messages section choice", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final preference = MessagesPreferenceService(prefs);
+        await preference.selectRooms(deletedPubkey, selected: true);
+        await preference.selectRooms(otherPubkey, selected: true);
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(preference.roomsSelected(deletedPubkey), isFalse);
+        expect(preference.roomsSelected(otherPubkey), isTrue);
       });
 
       test('deletes device-wide user data when no session is active', () async {
