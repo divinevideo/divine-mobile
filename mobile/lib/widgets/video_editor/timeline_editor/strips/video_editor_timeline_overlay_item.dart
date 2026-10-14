@@ -9,6 +9,7 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
@@ -56,6 +57,9 @@ String timelineOverlayItemLabel(
   }
   if (_stickerGroupOf(layer) case final group?) {
     return context.l10n.videoEditorStickerGroupLabel(group.stickerCount);
+  }
+  if (_isAudioVisualizer(layer)) {
+    return context.l10n.videoEditorAudioVisualizerLabel;
   }
   return item.label;
 }
@@ -187,6 +191,11 @@ class TimelineOverlayItemTile extends StatelessWidget {
                             )
                           : item.layer is PaintLayer
                           ? _PaintPreview(layer: item.layer! as PaintLayer)
+                          : _isAudioVisualizer(item.layer)
+                          ? _AudioVisualizerContent(
+                              label: timelineOverlayItemLabel(context, item),
+                              color: foregroundColor,
+                            )
                           : item.layer is WidgetLayer
                           ? _StickerPreview(item: item)
                           : Text(
@@ -336,6 +345,40 @@ class _CensorAreaContent extends StatelessWidget {
           size: 16,
           color: color,
         ),
+        Flexible(
+          child: Text(
+            label,
+            style: VineTheme.labelMediumFont(color: color),
+            maxLines: 1,
+            overflow: .ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Whether [layer] is an audio visualizer.
+bool _isAudioVisualizer(Layer? layer) =>
+    layer != null && AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
+
+/// An audio visualizer's row: its icon and name.
+///
+/// The layer's widget repaints with every frame of the playhead, so it is not
+/// mounted in a bar a few pixels tall.
+class _AudioVisualizerContent extends StatelessWidget {
+  const _AudioVisualizerContent({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: .min,
+      spacing: 4,
+      children: [
+        DivineIcon(icon: .equalizer, size: 16, color: color),
         Flexible(
           child: Text(
             label,

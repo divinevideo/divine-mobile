@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show Size;
 
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 
@@ -27,6 +28,13 @@ const double layerCaptureMaxExtent = 3072;
 /// `partitionDetachedClipLayers`). Enough for a recognisable frame there.
 const double detachedClipCaptureExtent = 720;
 
+/// The longest side, in pixels, an audio visualizer's layer image is captured
+/// at, before the capture turns it.
+///
+/// The export draws the visualizer itself and reads nothing but the captured
+/// layer's size, so its image is kept small.
+const double audioVisualizerCaptureExtent = 256;
+
 /// The pixel ratio a layer is captured at, for
 /// `ImageGenerationConfigs.layerCapturePixelRatio`.
 ///
@@ -34,6 +42,8 @@ const double detachedClipCaptureExtent = 720;
 /// [layerCaptureMaxExtent], and a detached clip is held to
 /// [detachedClipCaptureExtent]: three clips scaled up over the frame took the
 /// capture on Next past 1.7 GB (#10071), for images the export throws away.
+/// An audio visualizer is held to [audioVisualizerCaptureExtent] for the same
+/// reason.
 ///
 /// [size] is the layer's laid-out size before rotation, as pro_image_editor
 /// passes it; the capture turns the image by the layer's rotation afterwards,
@@ -42,6 +52,9 @@ double capturePixelRatioForLayer(Layer layer, Size size, double pixelRatio) {
   final rotatedExtent = _rotatedLongestSide(size, layer.rotation);
   if (rotatedExtent <= 0) return pixelRatio;
   final ratio = math.min(pixelRatio, layerCaptureMaxExtent / rotatedExtent);
+  if (AudioVisualizerLayerData.isAudioVisualizerLayer(layer)) {
+    return math.min(ratio, audioVisualizerCaptureExtent / size.longestSide);
+  }
   if (!DetachedClipLayerData.isDetachedClipLayer(layer)) return ratio;
   return math.min(ratio, detachedClipCaptureExtent / size.longestSide);
 }

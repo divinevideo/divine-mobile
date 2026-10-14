@@ -1,8 +1,11 @@
 // ABOUTME: Rebuilds every kind of WidgetLayer the video editor creates from
-// ABOUTME: the meta it was exported with (stickers, detached clips)
+// ABOUTME: the meta it was exported with (stickers, detached clips, audio
+// ABOUTME: visualizers)
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
@@ -17,6 +20,9 @@ import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticke
 Widget videoEditorWidgetLayerLoader(String id, {Map<String, dynamic>? meta}) {
   if (DetachedClipLayerData.isDetachedClipMeta(meta)) {
     return DetachedClipLayerView(meta: meta!);
+  }
+  if (AudioVisualizerLayerData.fromMeta(meta) case final visualizer?) {
+    return AudioVisualizerLayerView(data: visualizer);
   }
   return videoEditorStickerWidgetLoader(id, meta: meta);
 }

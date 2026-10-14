@@ -9398,6 +9398,61 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'Otwórz edytor naklejek';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Wizualizator';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Dodaj wizualizator, który porusza się z dźwiękiem';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Kolor wizualizatora';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Słupki';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Lustro';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Fala';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Koło';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Dodaj wizualizator';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Gęstość';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Mniej';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Więcej';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reakcja';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Spokojna';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Żywa';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Szerokość słupków';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Wąskie';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Szerokie';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Przykładowy rytm';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Zapisać wersję roboczą?';
 
   @override

@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioSourceKind;
+import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
@@ -30,6 +31,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
@@ -2084,6 +2086,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       )
       ..syncApplied(editor.stateManager.videoEffectEntries);
 
+    context.read<VideoEditorAudioVisualizerCubit>()
+      ..syncSources(
+        sounds: editor.stateManager.audioTracks,
+        clips: context.read<ClipEditorBloc>().state.clips,
+      )
+      ..setActive(
+        isActive: editor.activeLayers.any(
+          AudioVisualizerLayerData.isAudioVisualizerLayer,
+        ),
+      );
+
     // Reconcile the editor's current history entry with the app clip state.
     // Undo/redo can resurrect a clip removed earlier in the session — its
     // media was already deleted by FileCleanupService, and handing that dead
@@ -2157,6 +2170,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // Undo/redo restores the clip snapshot after the initial capabilities
       // sync. Publish its beat source too, before the preview sees those clips.
       context.read<VideoEditorEffectsCubit>().syncBeatSource(
+        sounds: editor.stateManager.audioTracks,
+        clips: clips,
+      );
+      context.read<VideoEditorAudioVisualizerCubit>().syncSources(
         sounds: editor.stateManager.audioTracks,
         clips: clips,
       );

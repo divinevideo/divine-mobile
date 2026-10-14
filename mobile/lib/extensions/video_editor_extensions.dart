@@ -3,6 +3,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
@@ -68,7 +69,14 @@ extension VideoEditorExtensions on ProImageEditorState {
       basePixelRatio: configs.imageGeneration.customPixelRatio,
     );
     return EditorOverlaySnapshot(
-      capturedLayers: withCensorLayers(activeLayers, capturedLayers),
+      // An audio visualizer follows everything that plays in this video,
+      // music and voice-over included, which a saved clip does not take
+      // along, so it is left out like an effect on the beat.
+      capturedLayers: [
+        for (final item in withCensorLayers(activeLayers, capturedLayers))
+          if (!AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer))
+            item,
+      ],
       filterStates: List.of(stateManager.activeFilters),
       tuneAdjustments: List.of(stateManager.activeTuneAdjustments),
       // An effect on the beat follows this video's music, which a saved clip

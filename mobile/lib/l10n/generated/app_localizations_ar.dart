@@ -9185,6 +9185,61 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'فتح محرر الملصقات';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'مرئيات الصوت';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'إضافة مرئيات تتحرك مع الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'لون مرئيات الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'أشرطة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'مرآة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'موجة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'دائرة';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'إضافة مرئيات الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'الكثافة';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'أقل';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'أكثر';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'الاستجابة';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'هادئة';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'حيوية';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'عرض الأشرطة';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'رفيعة';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'عريضة';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'إيقاع تجريبي';
+
+  @override
   String get videoEditorSaveDraftTitle => 'حفظ المسودة؟';
 
   @override

@@ -8677,6 +8677,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => '打开贴纸编辑器';
 
   @override
+  String get videoEditorAudioVisualizerLabel => '音频可视化';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel => '添加随声音律动的可视化效果';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => '可视化颜色';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => '柱状';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => '镜像';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => '波形';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => '圆环';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => '添加可视化';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '密度';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '更少';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '更多';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '反应';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '平缓';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '活跃';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => '柱宽';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '细';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '宽';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => '示例节拍';
+
+  @override
   String get videoEditorSaveDraftTitle => '保存草稿？';
 
   @override

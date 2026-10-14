@@ -9410,6 +9410,62 @@ class AppLocalizationsRo extends AppLocalizations {
       'Deschide editorul de stickere';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Vizualizator';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Adaugă un vizualizator care se mișcă după sunet';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel =>
+      'Culoarea vizualizatorului';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Bare';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Oglindă';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Undă';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Cerc';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Adaugă vizualizator';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Densitate';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Mai puține';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Mai multe';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reacție';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Calmă';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Vie';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Lățimea barelor';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Subțiri';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Late';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Ritm de exemplu';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Salvezi schița?';
 
   @override

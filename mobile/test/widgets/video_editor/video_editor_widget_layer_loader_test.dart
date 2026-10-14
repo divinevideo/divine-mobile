@@ -4,13 +4,17 @@
 
 import 'dart:convert';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
@@ -21,7 +25,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
         ImportStateHistory,
         WidgetLayer,
         WidgetLayerExportConfigs;
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show AudioVisualizerStyle, EditorVideo;
 
 DivineVideoClip _clip() => DivineVideoClip(
   id: 'clip-1',
@@ -81,6 +86,23 @@ void main() {
       // the only thing that can tell the loader which widget to rebuild.
       expect(restored.widget, isA<DetachedClipLayerView>());
       expect((restored.widget as DetachedClipLayerView).meta, equals(meta));
+    });
+
+    test('rebuilds an audio visualizer with its look', () {
+      const data = AudioVisualizerLayerData(
+        style: AudioVisualizerStyle.wave,
+        color: VineTheme.whiteText,
+      );
+      final layer = audioVisualizerWidgetLayer(data, width: 120);
+      // A draft stores the history as JSON.
+      final stored = jsonDecode(
+        jsonEncode(_exportedHistory(layer)),
+      ) as Map<String, dynamic>;
+
+      final restored = _reopen(stored).single! as WidgetLayer;
+
+      expect(restored.widget, isA<AudioVisualizerLayerView>());
+      expect((restored.widget as AudioVisualizerLayerView).data, data);
     });
 
     test('still rebuilds a sticker as a sticker', () {

@@ -9200,6 +9200,61 @@ class AppLocalizationsSv extends AppLocalizations {
       'Öppna klistermärkesredigerare';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Visualiserare';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Lägg till en visualiserare som rör sig med ljudet';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Visualiserarens färg';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Staplar';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Spegel';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Våg';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Cirkel';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Lägg till visualiserare';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Täthet';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Färre';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Fler';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reaktion';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Lugn';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Livlig';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Stapelbredd';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Smal';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Bred';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Exempelbeat';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Spara ditt utkast?';
 
   @override

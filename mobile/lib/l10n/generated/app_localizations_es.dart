@@ -9294,6 +9294,61 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'Abrir editor de stickers';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Visualizador';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Agregá un visualizador que se mueve con el sonido';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Color del visualizador';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Barras';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Espejo';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Onda';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Círculo';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Agregar visualizador';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Densidad';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Menos';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Más';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reacción';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Tranquila';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Viva';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Ancho de barra';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Fina';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Ancha';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Ritmo de ejemplo';
+
+  @override
   String get videoEditorSaveDraftTitle => '¿Guardar tu borrador?';
 
   @override

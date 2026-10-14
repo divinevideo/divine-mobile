@@ -9123,6 +9123,61 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'Stiker düzenleyiciyi aç';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Görselleştirici';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Sesle birlikte hareket eden bir görselleştirici ekle';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Görselleştirici rengi';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Çubuklar';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Ayna';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Dalga';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Daire';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Görselleştirici ekle';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Yoğunluk';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Daha az';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Daha fazla';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Tepki';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Sakin';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Canlı';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Çubuk genişliği';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'İnce';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Geniş';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Örnek ritim';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Taslağınızı kaydedin?';
 
   @override

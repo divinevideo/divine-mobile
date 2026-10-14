@@ -66,46 +66,60 @@ List<BeatSourcePart> beatSourceFor({
 }) {
   final music =
       sounds
-          .where(
-            (sound) =>
-                sound.volume > 0 &&
-                !sound.isVoiceOver &&
-                sound.resolvedSource != null &&
-                sound.startTime < videoEnd,
-          )
+          .where((sound) => !sound.isVoiceOver)
+          .map((sound) => soundSourcePartFor(sound, videoEnd: videoEnd))
+          .nonNulls
           .toList()
-        ..sort((a, b) => a.startTime.compareTo(b.startTime));
-  if (music.isNotEmpty) {
-    final sound = music.first;
-    final source = sound.resolvedSource!;
-    // A sound without a usable end plays to the end of the video, as it does
-    // in the export.
-    final soundEnd = sound.endTime;
-    final end = soundEnd != null && soundEnd > sound.startTime
-        ? (soundEnd < videoEnd ? soundEnd : videoEnd)
-        : videoEnd;
-    var to = sound.startOffset + (end - sound.startTime);
-    final seconds = sound.duration;
-    final fileLength = seconds == null
-        ? null
-        : Duration(microseconds: (seconds * 1e6).round());
-    if (fileLength != null && fileLength < to) to = fileLength;
-    return [
-      BeatSourcePart(
-        media: switch (source.kind) {
-          AudioSourceKind.asset => EditorVideo.asset(source.path),
-          AudioSourceKind.file => EditorVideo.file(File(source.path)),
-          AudioSourceKind.network => EditorVideo.network(source.path),
-        },
-        fileLength: fileLength,
-        from: sound.startOffset,
-        to: to,
-        at: sound.startTime,
-      ),
-    ];
-  }
+        ..sort((a, b) => a.at.compareTo(b.at));
+  if (music.isNotEmpty) return [music.first];
+  return clipSoundSourceParts(clips);
+}
 
-  final parts = <BeatSourcePart>[];
+/// The stretch of [sound] that plays on a video ending at [videoEnd], or
+/// `null` when it is silent, has no source or starts after the video ends.
+BeatSourcePart? soundSourcePartFor(
+  AudioEvent sound, {
+  required Duration videoEnd,
+}) {
+  final source = sound.resolvedSource;
+  if (sound.volume <= 0 || source == null || sound.startTime >= videoEnd) {
+    return null;
+  }
+  // A sound without a usable end plays to the end of the video, as it does
+  // in the export.
+  final soundEnd = sound.endTime;
+  final end = soundEnd != null && soundEnd > sound.startTime
+      ? (soundEnd < videoEnd ? soundEnd : videoEnd)
+      : videoEnd;
+  var to = sound.startOffset + (end - sound.startTime);
+  final seconds = sound.duration;
+  final fileLength = seconds == null
+      ? null
+      : Duration(microseconds: (seconds * 1e6).round());
+  if (fileLength != null && fileLength < to) to = fileLength;
+  return BeatSourcePart(
+    media: switch (source.kind) {
+      AudioSourceKind.asset => EditorVideo.asset(source.path),
+      AudioSourceKind.file => EditorVideo.file(File(source.path)),
+      AudioSourceKind.network => EditorVideo.network(source.path),
+    },
+    fileLength: fileLength,
+    from: sound.startOffset,
+    to: to,
+    at: sound.startTime,
+  );
+}
+
+/// The stretches of the clips' own sound that play on the exported video,
+/// leaving out muted clips and freeze frames.
+List<BeatSourcePart> clipSoundSourceParts(List<DivineVideoClip> clips) => [
+  for (final (:part, clip: _) in clipSoundSourcePartsWithClips(clips)) part,
+];
+
+/// [clipSoundSourceParts], each with the clip it comes from.
+List<({DivineVideoClip clip, BeatSourcePart part})>
+clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
+  final parts = <({DivineVideoClip clip, BeatSourcePart part})>[];
   final transitions = clampTransitions(clips);
   Duration overlapAfter(DivineVideoClip clip) {
     final transition = transitions[clip.id];
@@ -147,8 +161,9 @@ List<BeatSourcePart> beatSourceFor({
       );
       if (i == 0 && head > Duration.zero && headSounds) {
         // The first head is the incoming side of the final wrap blend.
-        parts.add(
-          BeatSourcePart(
+        parts.add((
+          clip: clip,
+          part: BeatSourcePart(
             media: video,
             fileLength: clip.duration,
             from: clip.trimStart,
@@ -156,10 +171,11 @@ List<BeatSourcePart> beatSourceFor({
             at: outputDuration - wrap,
             speed: speed,
           ),
-        );
+        ));
       }
-      parts.add(
-        BeatSourcePart(
+      parts.add((
+        clip: clip,
+        part: BeatSourcePart(
           media: video,
           fileLength: clip.duration,
           from: clip.trimStart + head,
@@ -171,7 +187,7 @@ List<BeatSourcePart> beatSourceFor({
           // Reverse is baked into clip.video; its samples are already in
           // playback order, including the rewritten trims.
         ),
-      );
+      ));
     }
     clipStart += clip.playbackDuration;
     if (i < clips.length - 1) clipStart -= overlapAfter(clip);

@@ -9167,6 +9167,61 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mở trình chỉnh sửa nhãn dán';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Sóng nhạc';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Thêm sóng nhạc chuyển động theo âm thanh';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Màu sóng nhạc';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Thanh';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Gương';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Sóng';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Vòng tròn';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Thêm sóng nhạc';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Mật độ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Ít hơn';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Nhiều hơn';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Phản ứng';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Êm';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Sôi động';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Độ rộng thanh';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Mảnh';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Rộng';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Nhịp mẫu';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Lưu bản nháp của bạn?';
 
   @override

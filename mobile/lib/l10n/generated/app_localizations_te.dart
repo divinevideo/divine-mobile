@@ -9458,6 +9458,61 @@ class AppLocalizationsTe extends AppLocalizations {
       'స్టిక్కర్ ఎడిటర్‌ను తెరవండి';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'ఆడియో విజువలైజర్';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'శబ్దంతో పాటు కదిలే విజువలైజర్‌ను జోడించండి';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'విజువలైజర్ రంగు';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'బార్‌లు';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'అద్దం';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'తరంగం';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'వృత్తం';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'విజువలైజర్ జోడించండి';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'సాంద్రత';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'తక్కువ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'ఎక్కువ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'స్పందన';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'ప్రశాంతం';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'ఉత్సాహం';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'బార్ వెడల్పు';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'సన్నని';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'వెడల్పాటి';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'నమూనా బీట్';
+
+  @override
   String get videoEditorSaveDraftTitle => 'మీ చిత్తుప్రతిని సేవ్ చేయాలా?';
 
   @override

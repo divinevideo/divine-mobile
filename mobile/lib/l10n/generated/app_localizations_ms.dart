@@ -9210,6 +9210,61 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'Buka penyunting pelekat';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Visualizer';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Tambah visualizer yang bergerak mengikut bunyi';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Warna visualizer';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Bar';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Cermin';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Gelombang';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Bulatan';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Tambah visualizer';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Kepadatan';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Kurang';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Lebih';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reaksi';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Tenang';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Rancak';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Lebar bar';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Nipis';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Lebar';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Rentak contoh';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Simpan draf anda?';
 
   @override

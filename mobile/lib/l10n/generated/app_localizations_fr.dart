@@ -9341,6 +9341,61 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ouvrir l\'éditeur de stickers';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Visualiseur';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Ajoute un visualiseur qui bouge avec le son';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Couleur du visualiseur';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Barres';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Miroir';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Onde';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Cercle';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Ajouter un visualiseur';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Densité';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Moins';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Plus';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Réaction';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Calme';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Vive';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Largeur des barres';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Fines';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Larges';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Rythme d’exemple';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Enregistrer votre brouillon ?';
 
   @override
