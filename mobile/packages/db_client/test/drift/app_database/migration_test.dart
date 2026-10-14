@@ -57,7 +57,7 @@ void main() {
     );
 
     test('v22 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(21);
+      final schema = await verifier.schemaAt(22);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 22);
       await db.close();
