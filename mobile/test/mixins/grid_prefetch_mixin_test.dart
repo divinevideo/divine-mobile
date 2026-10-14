@@ -75,21 +75,25 @@ void main() {
     InfiniteVideoFeed.debugIsSupportedOverride = null;
   });
 
+  Future<_TestWidgetState> pumpTestWidget(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mediaCacheProvider.overrideWithValue(mockCache),
+          featureFlagServiceProvider.overrideWithValue(
+            mockFeatureFlagService,
+          ),
+        ],
+        child: const _TestWidget(),
+      ),
+    );
+    return tester.state<_TestWidgetState>(find.byType(_TestWidget));
+  }
+
   group(GridPrefetchMixin, () {
     group('prefetchGridVideos', () {
       testWidgets('prefetches up to gridPrefetchLimit videos', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              mediaCacheProvider.overrideWithValue(mockCache),
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(20);
 
@@ -107,35 +111,14 @@ void main() {
       });
 
       testWidgets('handles empty video list', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              mediaCacheProvider.overrideWithValue(mockCache),
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         // Should not throw
         state.prefetchGridVideos([]);
       });
 
       testWidgets('handles videos with null URLs', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = [
           VideoEvent(
@@ -154,18 +137,7 @@ void main() {
 
     group('prefetchAroundIndex', () {
       testWidgets('does not throw for valid index', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              mediaCacheProvider.overrideWithValue(mockCache),
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(10);
 
@@ -181,17 +153,7 @@ void main() {
       });
 
       testWidgets('handles index at start of list', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(10);
 
@@ -200,17 +162,7 @@ void main() {
       });
 
       testWidgets('handles index at end of list', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(10);
 
@@ -219,17 +171,7 @@ void main() {
       });
 
       testWidgets('handles small list', (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(2);
 
@@ -250,18 +192,7 @@ void main() {
         ),
       ).thenAnswer((_) async => throw StateError('prefetch failed'));
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mediaCacheProvider.overrideWithValue(mockCache),
-            featureFlagServiceProvider.overrideWithValue(
-              mockFeatureFlagService,
-            ),
-          ],
-          child: const _TestWidget(),
-        ),
-      );
-      final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+      final state = await pumpTestWidget(tester);
       final videos = _createMockVideos(10);
 
       state
@@ -289,17 +220,7 @@ void main() {
         );
         expect(BandwidthTrackerService.instance.shouldUseHighQuality, isFalse);
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              featureFlagServiceProvider.overrideWithValue(
-                mockFeatureFlagService,
-              ),
-            ],
-            child: const _TestWidget(),
-          ),
-        );
-        final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+        final state = await pumpTestWidget(tester);
 
         final videos = _createMockVideos(10);
 
