@@ -2136,6 +2136,79 @@ void main() {
         );
       });
 
+      group('replacingIdentity', () {
+        const canonical = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'mastodon',
+          identity: 'mastodon.example/@alice',
+          proof: '110123',
+        );
+
+        test('also replaces the claim under the identity as sent', () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'Mastodon:@Alice@mastodon.example', '110100'],
+                ['i', 'mastodon:other.example/@bob', '220'],
+                ['i', 'github:octocat', 'abc'],
+              ],
+            ),
+          ]);
+
+          final tags = await repo.publishClaim(
+            canonical,
+            replacingIdentity: '@alice@mastodon.example',
+          );
+
+          expect(
+            tags,
+            equals([
+              ['i', 'mastodon:other.example/@bob', '220'],
+              ['i', 'github:octocat', 'abc'],
+              ['i', 'mastodon:mastodon.example/@alice', '110123'],
+            ]),
+          );
+        });
+
+        test('keeps the replaced claim gone while relays lag', () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'mastodon:@alice@mastodon.example', '110100'],
+              ],
+            ),
+          ]);
+
+          await repo.publishClaim(
+            canonical,
+            replacingIdentity: '@alice@mastodon.example',
+          );
+
+          // Relay still serves the event from before the replacement.
+          final tags = await repo.publishClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'github',
+              identity: 'octocat',
+              proof: 'abc',
+            ),
+          );
+
+          expect(
+            tags.map((t) => t[1]),
+            isNot(contains('mastodon:@alice@mastodon.example')),
+          );
+          expect(
+            tags.map((t) => t[1]),
+            contains('mastodon:mastodon.example/@alice'),
+          );
+        });
+      });
+
       test('carries unknown-platform tags through untouched', () async {
         stubIdentityEvents([
           _event(

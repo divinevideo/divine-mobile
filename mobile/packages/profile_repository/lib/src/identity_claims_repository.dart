@@ -455,6 +455,11 @@ class IdentityClaimsRepository {
   /// still live in kind-0 tags has them carried into this first kind-10011
   /// write, matching what the verifier's web UI does.
   ///
+  /// [replacingIdentity] is the identity the claim was sent to the verifier
+  /// under, when the verifier confirmed it under a different one. The claim
+  /// for that identity on the same platform is replaced too, so linking an
+  /// account again leaves one tag for it whichever form it was saved in.
+  ///
   /// This publishes what it is told to. Confirming the claim with the
   /// verifier first is the caller's job — an unverified `i` tag is valid
   /// NIP-39 and simply renders unverified.
@@ -464,21 +469,39 @@ class IdentityClaimsRepository {
   /// * [StateError] if the repository was built without write dependencies.
   /// * [IdentityClaimPublishException] if the event cannot be signed, or no
   ///   relay confirms it.
-  Future<List<List<String>>> publishClaim(IdentityClaim claim) async {
+  Future<List<List<String>>> publishClaim(
+    IdentityClaim claim, {
+    String? replacingIdentity,
+  }) async {
     final base = await _currentIdentityEventBase(claim.pubkey, forWrite: true);
     final key = _identityKeyOf(claim);
+    final replacedKey = replacingIdentity == null
+        ? null
+        : _identityKeyOf(
+            IdentityClaim(
+              pubkey: claim.pubkey,
+              platform: claim.platform,
+              identity: replacingIdentity,
+              proof: claim.proof,
+            ),
+          );
+    final droppedKeys = {key, ?replacedKey};
     // Linking again undoes an earlier unlink from this session.
     _lastRemovedKeys[claim.pubkey]?.remove(key);
-    return _publishIdentityEvent(
+    final published = await _publishIdentityEvent(
       claim.pubkey,
       content: base.content,
       after: base.source,
       tags: [
         for (final tag in base.tags)
-          if (_tagIdentityKeyOrNull(tag) != key) tag,
+          if (!droppedKeys.contains(_tagIdentityKeyOrNull(tag))) tag,
         ['i', '${claim.platform}:${claim.identity}', claim.proof],
       ],
     );
+    if (replacedKey != null) {
+      (_lastRemovedKeys[claim.pubkey] ??= <String>{}).add(replacedKey);
+    }
+    return published;
   }
 
   /// Unlinks the claim matching [claim]'s `platform:identity` and returns the

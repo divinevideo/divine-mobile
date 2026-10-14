@@ -132,7 +132,15 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
       identity: result.canonicalIdentity ?? claim.identity,
       proof: result.canonicalProof ?? claim.proof,
     );
-    await _publish(canonical.isServerValid ? canonical : claim);
+    final linked = canonical.isServerValid ? canonical : claim;
+    // A tag saved earlier under the form sent is the same account, so it is
+    // replaced too rather than left beside the new one.
+    await _publish(
+      linked,
+      replacingIdentity: linked.identity == claim.identity
+          ? null
+          : claim.identity,
+    );
   }
 
   /// Runs the platform's OAuth login, then publishes the claim it confirms.
@@ -209,10 +217,16 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
     );
   }
 
-  Future<void> _publish(IdentityClaim claim) async {
+  Future<void> _publish(
+    IdentityClaim claim, {
+    String? replacingIdentity,
+  }) async {
     emit(state.copyWith(status: VerifyConnectStatus.publishing));
     try {
-      await _repository.publishClaim(claim);
+      await _repository.publishClaim(
+        claim,
+        replacingIdentity: replacingIdentity,
+      );
       if (isClosed) return;
       emit(
         state.copyWith(

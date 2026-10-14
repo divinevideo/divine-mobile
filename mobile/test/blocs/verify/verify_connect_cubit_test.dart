@@ -113,7 +113,12 @@ void main() {
       when(
         () => repository.verifyClaim(any()),
       ).thenAnswer((_) async => _result(verified: true));
-      when(() => repository.publishClaim(any())).thenAnswer((_) async => []);
+      when(
+        () => repository.publishClaim(
+          any(),
+          replacingIdentity: any(named: 'replacingIdentity'),
+        ),
+      ).thenAnswer((_) async => []);
       when(
         () => repository.resolveOAuthLaunchUri(
           platform: any(named: 'platform'),
@@ -137,6 +142,17 @@ void main() {
         return callback;
       },
     );
+
+    // The claim published, and the identity it was told to replace.
+    (IdentityClaim, String?) published() {
+      final captured = verify(
+        () => repository.publishClaim(
+          captureAny(),
+          replacingIdentity: captureAny(named: 'replacingIdentity'),
+        ),
+      ).captured;
+      return (captured[0] as IdentityClaim, captured[1] as String?);
+    }
 
     group('submitProof', () {
       blocTest<VerifyConnectCubit, VerifyConnectState>(
@@ -267,11 +283,9 @@ void main() {
                   as IdentityClaim;
           expect(checked.proof, equals('https://vm.tiktok.com/ZMabc123/'));
 
-          final claim =
-              verify(
-                    () => repository.publishClaim(captureAny()),
-                  ).captured.single
-                  as IdentityClaim;
+          final (claim, replacing) = published();
+          // The account is the one sent, so there is no other form to drop.
+          expect(replacing, isNull);
           expect(claim.pubkey, equals(_pubkey));
           expect(claim.platform, equals('tiktok'));
           expect(claim.identity, equals('alice'));
@@ -300,11 +314,9 @@ void main() {
           await cubit.submitProof();
         },
         verify: (cubit) {
-          final claim =
-              verify(
-                    () => repository.publishClaim(captureAny()),
-                  ).captured.single
-                  as IdentityClaim;
+          final (claim, replacing) = published();
+          // A tag saved earlier under the form typed is replaced too.
+          expect(replacing, equals('@alice@mastodon.example'));
           expect(claim.pubkey, equals(_pubkey));
           expect(claim.platform, equals('mastodon'));
           expect(claim.identity, equals('mastodon.example/@alice'));
@@ -399,11 +411,9 @@ void main() {
           await cubit.submitProof();
         },
         verify: (cubit) {
-          final claim =
-              verify(
-                    () => repository.publishClaim(captureAny()),
-                  ).captured.single
-                  as IdentityClaim;
+          final (claim, replacing) = published();
+          // The claim as sent replaces only itself.
+          expect(replacing, isNull);
           expect(claim.identity, equals('@alice@mastodon.example'));
           expect(claim.proof, equals('110123'));
         },
