@@ -316,8 +316,9 @@ class _VerifyContent extends StatelessWidget {
       description: 'announce linked identity',
       logName: 'VerifyView',
     );
-    ScaffoldMessenger.of(context)
-        .showSnackBar(DivineSnackbarContainer.snackBar(message));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(DivineSnackbarContainer.snackBar(message));
   }
 }
 
