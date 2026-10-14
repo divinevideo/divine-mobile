@@ -136,10 +136,6 @@ void main() {
     video('profile-video-2'),
   ];
 
-  // The URL is the source of truth for which profile video plays, through
-  // URL -> ProfileScreenRouter -> ProfileViewSwitcher -> ProfileVideoFeedView
-  // -> PooledFullscreenVideoFeedScreen. Assert the video the fullscreen feed
-  // actually shows, so a dropped index anywhere in that chain fails (#7160).
   group('profile routes', () {
     late _MockVideosRepository videosRepository;
     late _MockVideoEventService videoEventService;
@@ -376,6 +372,10 @@ void main() {
       });
     });
 
+    // The URL is the source of truth for which profile video plays, through
+    // URL -> ProfileScreenRouter -> ProfileViewSwitcher -> ProfileVideoFeedView
+    // -> PooledFullscreenVideoFeedScreen. Assert the video the fullscreen feed
+    // actually shows, so a dropped index anywhere in that chain fails (#7160).
     group('profile feed URL opens the matching page', () {
       setUp(stubProfileDependencies);
 
