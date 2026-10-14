@@ -11746,6 +11746,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyErrorOauthFailed => '没成功。再试一次吧。';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => '先填你的 handle。';
 
   @override

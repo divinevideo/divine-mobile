@@ -21015,6 +21015,12 @@ abstract class AppLocalizations {
   /// **'That didn\'t go through. Give it another go.'**
   String get verifyErrorOauthFailed;
 
+  /// The verifier didn't confirm a sign-in link; the person needs to sign in again.
+  ///
+  /// In en, this message translates to:
+  /// **'That sign-in couldn\'t be confirmed. Sign in again.'**
+  String get verifyErrorSignInNotConfirmed;
+
   /// Error shown when Bluesky sign-in is started without a handle, which it needs to find the user's server.
   ///
   /// In en, this message translates to:

@@ -98,16 +98,23 @@ Uri parseAppOAuthCallback(String callback) {
   // Facebook `#_=_`), and a browser carries that fragment across the server's
   // fragment-less 302 to this URL (RFC 9110 §10.2.2). The verifier sends a
   // sign-in's one-time code after the # (divinevideo/divine-mobile#10119):
-  // keep that, as a query value, and drop the rest.
-  if (!uri.hasFragment) return uri;
+  // keep that, as a query value, and drop the rest. An empty code is no code.
+  if (!uri.hasFragment) return _withoutEmptyCode(uri);
   final code = _fragmentValue(uri.fragment, 'oauth_confirm');
   final withoutFragment = uri.removeFragment();
-  if (code == null) return withoutFragment;
+  if (code == null || code.isEmpty) return _withoutEmptyCode(withoutFragment);
   return withoutFragment.replace(
     queryParameters: {
       ...withoutFragment.queryParametersAll,
       'oauth_confirm': [code],
     },
+  );
+}
+
+Uri _withoutEmptyCode(Uri uri) {
+  if (uri.queryParameters['oauth_confirm']?.isEmpty != true) return uri;
+  return uri.replace(
+    queryParameters: {...uri.queryParametersAll}..remove('oauth_confirm'),
   );
 }
 

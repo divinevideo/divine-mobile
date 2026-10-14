@@ -12769,6 +12769,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get verifyErrorOauthFailed => 'N-a mers. Mai încearcă o dată.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Scrie mai întâi handle-ul tău.';
 
   @override

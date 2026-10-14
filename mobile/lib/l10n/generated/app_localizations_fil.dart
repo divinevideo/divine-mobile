@@ -12621,6 +12621,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get verifyErrorOauthFailed => 'Hindi natuloy. Subukan ulit.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Ilagay muna ang handle mo.';
 
   @override

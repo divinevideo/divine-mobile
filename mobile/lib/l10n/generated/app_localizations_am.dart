@@ -12193,6 +12193,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get verifyErrorOauthFailed => 'አልተሳካም። እንደገና ሞክር።';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'መጀመሪያ ሃንድልህን አስገባ።';
 
   @override

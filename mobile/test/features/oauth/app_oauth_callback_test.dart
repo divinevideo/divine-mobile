@@ -234,6 +234,20 @@ void main() {
       expect(uri.queryParameters['oauth_confirm'], equals(code));
     });
 
+    test('lets an empty code after the # leave the query code alone', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?oauth_confirm=$code#oauth_confirm=',
+      );
+      expect(uri.queryParameters['oauth_confirm'], equals(code));
+    });
+
+    test('treats an empty code in the query as no code', () {
+      final uri = parseAppOAuthCallback(
+        'https://divine.video/app/callback?signin=abc&oauth_confirm=',
+      );
+      expect(uri.queryParameters, equals({'signin': 'abc'}));
+    });
+
     test('drops a junk fragment with no code, as before', () {
       final uri = parseAppOAuthCallback(
         'https://divine.video/app/callback?code=k#_=_',

@@ -12632,6 +12632,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get verifyErrorOauthFailed => 'Не се получи. Пробвай отново.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Първо въведи своя handle.';
 
   @override

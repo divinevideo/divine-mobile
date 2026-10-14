@@ -286,6 +286,72 @@ void main() {
     });
   });
 
+  group('$VerifyConnectView sign-in return', () {
+    late _MockIdentityClaimsRepository repository;
+    late VerifyConnectCubit cubit;
+    late String startedReturnUrl;
+
+    const twitter = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+    );
+
+    setUp(() {
+      repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenAnswer((invocation) async {
+        startedReturnUrl = invocation.namedArguments[#returnUrl] as String;
+        return Uri.parse('https://provider.example/authorize?state=s');
+      });
+      cubit = VerifyConnectCubit(
+        repository: repository,
+        pubkey: _pubkey,
+        platform: twitter,
+        oauthReturnUrl: _returnUrl,
+        // This group never rejects a proof, so the sink is never reached.
+        analytics: const NoOpAnalyticsEventSink(),
+        // A return for this sign-in that carries no confirmation code.
+        launchOAuth: (_) async =>
+            Uri.parse('$startedReturnUrl&platform=twitter&identity=jack'),
+      );
+    });
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    testWidgets('says to sign in again when the return has no code', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: BlocProvider<VerifyConnectCubit>.value(
+            value: cubit,
+            child: const VerifyConnectView(npub: _npub),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await cubit.connectWithOAuth();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorSignInNotConfirmed), findsOneWidget);
+    });
+  });
+
   group('$VerifyConnectView OAuth support arriving late', () {
     late VerifyConnectCubit cubit;
 

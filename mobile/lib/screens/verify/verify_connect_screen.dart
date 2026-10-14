@@ -148,6 +148,8 @@ class VerifyConnectView extends StatelessWidget {
         VerifyConnectError.verifierUnreachable =>
           l10n.verifyErrorVerifierUnreachable,
         VerifyConnectError.oauthFailed => l10n.verifyErrorOauthFailed,
+        VerifyConnectError.signInNotConfirmed =>
+          l10n.verifyErrorSignInNotConfirmed,
         VerifyConnectError.oauthUnavailable => l10n.verifyErrorOauthUnavailable,
         VerifyConnectError.telegramNotPublic =>
           l10n.verifyErrorTelegramNotPublic,

@@ -2028,50 +2028,6 @@ void main() {
       });
     });
 
-    group('resolveOAuthLaunchUri', () {
-      test('delegates to the verifier client', () async {
-        when(
-          () => client.resolveOAuthLaunchUri(
-            platform: any(named: 'platform'),
-            pubkey: any(named: 'pubkey'),
-            returnUrl: any(named: 'returnUrl'),
-            handle: any(named: 'handle'),
-          ),
-        ).thenAnswer(
-          (_) async => Uri.parse('https://x.com/i/oauth2/authorize'),
-        );
-
-        expect(
-          await repo.resolveOAuthLaunchUri(
-            platform: 'twitter',
-            pubkey: _pubkey,
-            returnUrl: 'https://divine.video/app/callback',
-          ),
-          equals(Uri.parse('https://x.com/i/oauth2/authorize')),
-        );
-      });
-
-      test('passes an unavailable platform through as null', () async {
-        when(
-          () => client.resolveOAuthLaunchUri(
-            platform: any(named: 'platform'),
-            pubkey: any(named: 'pubkey'),
-            returnUrl: any(named: 'returnUrl'),
-            handle: any(named: 'handle'),
-          ),
-        ).thenAnswer((_) async => null);
-
-        expect(
-          await repo.resolveOAuthLaunchUri(
-            platform: 'twitter',
-            pubkey: _pubkey,
-            returnUrl: 'https://divine.video/app/callback',
-          ),
-          isNull,
-        );
-      });
-    });
-
     group('confirmable sign-ins', () {
       test(
         'startSignIn passes everything through to the verifier client',

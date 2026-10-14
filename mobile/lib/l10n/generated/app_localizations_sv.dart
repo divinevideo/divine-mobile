@@ -12510,6 +12510,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get verifyErrorOauthFailed => 'Det gick inte igenom. Testa igen.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Fyll i ditt handle först.';
 
   @override

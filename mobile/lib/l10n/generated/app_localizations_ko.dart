@@ -11904,6 +11904,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyErrorOauthFailed => '잘 안 됐어. 한 번 더 해봐.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => '핸들부터 입력해.';
 
   @override

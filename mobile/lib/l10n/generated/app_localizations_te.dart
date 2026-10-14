@@ -12847,6 +12847,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get verifyErrorOauthFailed => 'అది జరగలేదు. మరొకసారి ఇవ్వండి.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired =>
       'ముందుగా మీ హ్యాండిల్‌ని నమోదు చేయండి.';
 

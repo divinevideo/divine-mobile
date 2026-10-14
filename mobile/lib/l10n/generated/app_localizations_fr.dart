@@ -12700,6 +12700,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get verifyErrorOauthFailed => 'Ça n\'a pas marché. Retente le coup.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Saisis d\'abord ton identifiant.';
 
   @override

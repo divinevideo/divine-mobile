@@ -424,26 +424,6 @@ class IdentityClaimsRepository {
     return platforms.where((platform) => platform.supported).toList();
   }
 
-  /// Starts [platform]'s OAuth flow and returns the URL to open in a browser.
-  ///
-  /// See `VerifierClient.resolveOAuthLaunchUri` for the contract, including
-  /// which return URLs the service accepts. A null result means this
-  /// deployment has no credentials for the platform and the caller has to
-  /// fall back to the proof post.
-  Future<Uri?> resolveOAuthLaunchUri({
-    required String platform,
-    required String pubkey,
-    required String returnUrl,
-    String? handle,
-  }) {
-    return _verifierClient.resolveOAuthLaunchUri(
-      platform: platform,
-      pubkey: pubkey,
-      returnUrl: returnUrl,
-      handle: handle,
-    );
-  }
-
   /// Starts [platform]'s sign-in so its owner can confirm it, and returns the
   /// provider page to open, or null when this deployment has no sign-in for it.
   ///

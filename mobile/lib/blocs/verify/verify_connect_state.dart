@@ -11,6 +11,10 @@ enum VerifyConnectStatus {
   /// The OAuth browser session is open.
   authorizing,
 
+  /// Signed in at the provider; waiting for the person to link the account it
+  /// named.
+  awaitingApproval,
+
   /// The verifier is checking the proof.
   verifying,
 
@@ -60,6 +64,9 @@ enum VerifyConnectError {
   /// The OAuth round trip ended without a usable confirmation.
   oauthFailed,
 
+  /// The verifier didn't confirm the sign-in; the person signs in again.
+  signInNotConfirmed,
+
   /// The Telegram link points at a private channel or an invite, neither of
   /// which the verifier can read.
   telegramNotPublic,
@@ -90,6 +97,7 @@ class VerifyConnectState extends Equatable {
     this.error,
     this.errorAttempt = 0,
     this.linkedClaim,
+    this.signedInAccount,
   });
 
   /// The platform being linked.
@@ -116,6 +124,9 @@ class VerifyConnectState extends Equatable {
   /// actually published, rather than from a relay reread that may not serve
   /// the event back yet.
   final IdentityClaim? linkedClaim;
+
+  /// The account a sign-in returned, shown for the person to approve.
+  final String? signedInAccount;
 
   /// Whether an attempt currently owns the flow.
   bool get isBusy =>
@@ -188,7 +199,9 @@ class VerifyConnectState extends Equatable {
     VerifyConnectError? error,
     int? errorAttempt,
     IdentityClaim? linkedClaim,
+    String? signedInAccount,
     bool clearError = false,
+    bool clearSignedInAccount = false,
   }) {
     return VerifyConnectState(
       platform: platform,
@@ -198,6 +211,9 @@ class VerifyConnectState extends Equatable {
       error: clearError ? null : (error ?? this.error),
       errorAttempt: errorAttempt ?? this.errorAttempt,
       linkedClaim: linkedClaim ?? this.linkedClaim,
+      signedInAccount: clearSignedInAccount
+          ? null
+          : (signedInAccount ?? this.signedInAccount),
     );
   }
 
@@ -210,5 +226,6 @@ class VerifyConnectState extends Equatable {
     error,
     errorAttempt,
     linkedClaim,
+    signedInAccount,
   ];
 }

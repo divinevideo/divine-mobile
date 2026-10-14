@@ -12436,6 +12436,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get verifyErrorOauthFailed => 'Olmadı. Bir daha dene.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Önce kullanıcı adını gir.';
 
   @override

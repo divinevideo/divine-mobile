@@ -8928,6 +8928,10 @@
   "@verifyErrorOauthFailed": {
     "description": "Error shown when the platform sign-in ended without a usable confirmation."
   },
+  "verifyErrorSignInNotConfirmed": "That sign-in couldn't be confirmed. Sign in again.",
+  "@verifyErrorSignInNotConfirmed": {
+    "description": "The verifier didn't confirm a sign-in link; the person needs to sign in again."
+  },
   "verifyErrorHandleRequired": "Enter your handle first.",
   "@verifyErrorHandleRequired": {
     "description": "Error shown when Bluesky sign-in is started without a handle, which it needs to find the user's server."

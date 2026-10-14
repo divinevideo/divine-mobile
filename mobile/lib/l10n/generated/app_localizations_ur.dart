@@ -12500,6 +12500,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get verifyErrorOauthFailed => 'بات نہیں بنی۔ ایک بار پھر کوشش کریں۔';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'پہلے اپنا ہینڈل درج کریں۔';
 
   @override

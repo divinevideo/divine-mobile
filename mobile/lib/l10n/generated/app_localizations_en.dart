@@ -12597,6 +12597,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'That didn\'t go through. Give it another go.';
 
   @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
   String get verifyErrorHandleRequired => 'Enter your handle first.';
 
   @override
