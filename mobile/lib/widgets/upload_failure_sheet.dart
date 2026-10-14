@@ -67,7 +67,7 @@ Future<void> showUploadFailureSheet(
             context.push<void>(LibraryScreen.draftsPath),
             viewDescription,
             logName: _logName,
-            category: LogCategory.video,
+            category: LogCategory.ui,
           );
         },
       ),
@@ -103,7 +103,7 @@ Future<void> showUploadFailureSheet(
         context.push<void>(RoutePaths.accountStatus, extra: true),
         'open account status for restricted upload',
         logName: _logName,
-        category: LogCategory.video,
+        category: LogCategory.ui,
       );
     case _:
       // Sheet was popped externally (e.g. during route transition).
