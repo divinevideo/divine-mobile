@@ -425,19 +425,39 @@ void main() {
       );
 
       group('snackbar View action', () {
-        testWidgets('after Save to Drafts opens drafts and dismisses it', (
-          tester,
-        ) async {
+        Future<MockGoRouter> showSavedToDraftsSnackBar(
+          WidgetTester tester, {
+          required PublishErrorKind kind,
+          required String sheetAction,
+        }) async {
           final goRouter = buildGoRouter();
-          await openFailureSheet(
+          await openFailureSheet(tester, kind: kind, goRouter: goRouter);
+          await tester.tap(find.text(sheetAction));
+          await tester.pumpAndSettle();
+          return goRouter;
+        }
+
+        testWidgets('after Save to Drafts opens drafts', (tester) async {
+          final goRouter = await showSavedToDraftsSnackBar(
             tester,
             kind: PublishErrorKind.generic,
-            goRouter: goRouter,
+            sheetAction: l10n.uploadFailureSheetSaveToDraftsButton,
           );
-          await tester.tap(
-            find.text(l10n.uploadFailureSheetSaveToDraftsButton),
-          );
+
+          await tester.tap(find.text(l10n.contentWarningView));
           await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+        });
+
+        testWidgets('after Save to Drafts dismisses the snackbar', (
+          tester,
+        ) async {
+          await showSavedToDraftsSnackBar(
+            tester,
+            kind: PublishErrorKind.generic,
+            sheetAction: l10n.uploadFailureSheetSaveToDraftsButton,
+          );
           expect(
             find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
             findsOneWidget,
@@ -446,26 +466,33 @@ void main() {
           await tester.tap(find.text(l10n.contentWarningView));
           await tester.pumpAndSettle();
 
-          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
           expect(
             find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
             findsNothing,
           );
         });
 
-        testWidgets('after Account status opens drafts and dismisses it', (
-          tester,
-        ) async {
-          final goRouter = buildGoRouter();
-          await openFailureSheet(
+        testWidgets('after Account status opens drafts', (tester) async {
+          final goRouter = await showSavedToDraftsSnackBar(
             tester,
             kind: PublishErrorKind.accountRestricted,
-            goRouter: goRouter,
+            sheetAction: l10n.uploadFailureSheetAccountStatusButton,
           );
-          await tester.tap(
-            find.text(l10n.uploadFailureSheetAccountStatusButton),
-          );
+
+          await tester.tap(find.text(l10n.contentWarningView));
           await tester.pumpAndSettle();
+
+          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
+        });
+
+        testWidgets('after Account status dismisses the snackbar', (
+          tester,
+        ) async {
+          await showSavedToDraftsSnackBar(
+            tester,
+            kind: PublishErrorKind.accountRestricted,
+            sheetAction: l10n.uploadFailureSheetAccountStatusButton,
+          );
           expect(
             find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
             findsOneWidget,
@@ -474,7 +501,6 @@ void main() {
           await tester.tap(find.text(l10n.contentWarningView));
           await tester.pumpAndSettle();
 
-          verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
           expect(
             find.text(l10n.uploadFailureSheetSavedToDraftsSnackbar),
             findsNothing,
