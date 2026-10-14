@@ -73,6 +73,7 @@ List<VideoEvent> _createMockVideos(int count) {
 void main() {
   late _MockMediaCacheManager mockCache;
   late _MockFeatureFlagService mockFeatureFlagService;
+
   setUp(() {
     InfiniteVideoFeed.debugIsSupportedOverride = false;
     mockCache = _MockMediaCacheManager();
@@ -96,6 +97,7 @@ void main() {
 
   tearDown(() {
     InfiniteVideoFeed.debugIsSupportedOverride = null;
+    BandwidthTrackerService.instance.clearSamples();
   });
 
   Future<_TestWidgetState> pumpTestWidget(WidgetTester tester) async {
