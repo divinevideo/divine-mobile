@@ -328,7 +328,8 @@ void main() {
           path: ProfileScreenRouter.pathWithNpub,
           navigation: navigation,
         );
-        await tester.tap(find.byKey(const Key('library-button')));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.profileMyLibraryLabel));
         await tester.pump();
 
         verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
@@ -353,7 +354,8 @@ void main() {
           path: ProfileScreenRouter.pathWithNpub,
           navigation: navigation,
         );
-        await tester.tap(find.byKey(const Key('library-button')));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.profileMyLibraryLabel));
         await tester.pump();
 
         expect(tester.takeException(), isNull);
