@@ -248,6 +248,23 @@ void main() {
         },
       );
 
+      for (final modifier in [
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.altLeft,
+        LogicalKeyboardKey.metaLeft,
+      ]) {
+        testWidgets('${modifier.keyLabel} with Enter does not send', (
+          tester,
+        ) async {
+          await pumpComposer(tester);
+          await tester.sendKeyDownEvent(modifier);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.sendKeyUpEvent(modifier);
+          await tester.pump();
+          expectNoSend();
+        });
+      }
+
       testWidgets('Enter does not send while an IME is composing', (
         tester,
       ) async {
