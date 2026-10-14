@@ -302,6 +302,29 @@ void main() {
         expect(_energy(faded, 55), lessThan(_energy(steady, 55) / 10));
       });
 
+      test('is silent past the end of what was read', () async {
+        // A two-second slot for a file of unknown length that holds half a
+        // second of sound, as a short effect sound can.
+        final short = VideoEditorAudioLevelResolver(
+          extractAudio: (configs) => file(
+            AudioExtractConfigs(video: configs.video, endTime: _ms(500)),
+          ),
+        );
+        final part = AudioLevelPart(
+          source: BeatSourcePart(
+            media: EditorVideo.file('${Directory.systemTemp.path}/short.m4a'),
+            from: Duration.zero,
+            to: _ms(2000),
+            at: Duration.zero,
+          ),
+        );
+        await short.read([part]);
+        final mix = short.energiesOnOutput([part], videoEnd: _ms(2000));
+
+        expect(_energy(mix, 15), greaterThan(0));
+        expect(_energy(mix, 90), 0);
+      });
+
       test('adds nothing for a part that was not read', () {
         final mix = resolver.energiesOnOutput([_part()], videoEnd: _ms(1000));
 

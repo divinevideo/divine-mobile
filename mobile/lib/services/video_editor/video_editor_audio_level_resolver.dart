@@ -285,6 +285,9 @@ class VideoEditorAudioLevelResolver {
       final position =
           (fileSeconds - energies.start.inMicroseconds / 1e6) *
           audioBandFrameRate;
+      // Past the end of what was read, as when a file is shorter than its
+      // slot, the part plays nothing.
+      if (position >= energies.rows) continue;
       final low = position.floor().clamp(0, energies.rows - 1);
       final high = math.min(low + 1, energies.rows - 1);
       final mixOfHigh = (position - low).clamp(0.0, 1.0);
