@@ -22,6 +22,29 @@ final class MyFollowingToggleRequested extends MyFollowingEvent {
   final String pubkey;
 }
 
+/// A follow or unfollow the user chose.
+///
+/// Sealed so [MyFollowingBloc] handles both in one droppable bucket: a Follow
+/// and an Unfollow never publish the contact list at the same time.
+sealed class MyFollowingEditRequested extends MyFollowingEvent {
+  const MyFollowingEditRequested(this.pubkey);
+
+  /// The account to follow or unfollow.
+  final String pubkey;
+}
+
+/// The user tapped Follow on [pubkey]. Always follows; a no-op if the account
+/// is already followed.
+final class MyFollowingFollowRequested extends MyFollowingEditRequested {
+  const MyFollowingFollowRequested(super.pubkey);
+}
+
+/// The user confirmed Unfollow on [pubkey]. Always unfollows; a no-op if the
+/// account is no longer followed.
+final class MyFollowingUnfollowRequested extends MyFollowingEditRequested {
+  const MyFollowingUnfollowRequested(super.pubkey);
+}
+
 /// Notification that the blocklist has changed, requiring re-filtering.
 final class MyFollowingBlocklistChanged extends MyFollowingEvent {
   const MyFollowingBlocklistChanged();
