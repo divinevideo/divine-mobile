@@ -307,7 +307,13 @@ void _stubSuccessfulDeletion(
 }
 
 /// Collects what the deletion flow hands to screen readers.
-List<Object?> _captureAnnouncements(WidgetTester tester) {
+///
+/// With [rejectWith] set, the platform rejects every message with it, so the
+/// list holds what was attempted rather than what was delivered.
+List<Object?> _captureAnnouncements(
+  WidgetTester tester, {
+  Object? rejectWith,
+}) {
   final announced = <Object?>[];
   tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
     SystemChannels.accessibility,
@@ -315,6 +321,7 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
       if (message is Map && message['type'] == 'announce') {
         announced.add((message['data'] as Map?)?['message']);
       }
+      if (rejectWith != null) throw rejectWith;
       return null;
     },
   );
@@ -326,28 +333,6 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
         ),
   );
   return announced;
-}
-
-/// Rejects every screen-reader announcement and collects what was attempted.
-List<Object?> _rejectAnnouncements(WidgetTester tester) {
-  final attempted = <Object?>[];
-  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
-    SystemChannels.accessibility,
-    (message) async {
-      if (message is Map && message['type'] == 'announce') {
-        attempted.add((message['data'] as Map?)?['message']);
-      }
-      throw PlatformException(code: 'announce-failed');
-    },
-  );
-  addTearDown(
-    () => tester.binding.defaultBinaryMessenger
-        .setMockDecodedMessageHandler<Object?>(
-          SystemChannels.accessibility,
-          null,
-        ),
-  );
-  return attempted;
 }
 
 /// Asserts the flow did not sign the user out, under any argument shape.
@@ -1734,7 +1719,10 @@ void main() {
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
       when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
-      final rejected = _rejectAnnouncements(tester);
+      final rejected = _captureAnnouncements(
+        tester,
+        rejectWith: PlatformException(code: 'announce-failed'),
+      );
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
