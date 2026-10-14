@@ -159,48 +159,58 @@ void main() {
     });
 
     group('prefetchAroundIndex', () {
-      testWidgets('does not throw for valid index', (tester) async {
+      testWidgets('prefetches the neighbours but not the tapped video', (
+        tester,
+      ) async {
+        expect(AppConstants.preloadBefore, equals(2));
+        expect(AppConstants.preloadAfter, equals(3));
         final state = await pumpTestWidget(tester);
 
-        final videos = _createMockVideos(10);
+        state.prefetchAroundIndex(5, _createMockVideos(10));
 
-        // Should not throw
-        state.prefetchAroundIndex(5, videos);
-        verify(
-          () => mockCache.preCacheFiles(
-            any(),
-            batchSize: any(named: 'batchSize'),
-            authHeadersProvider: any(named: 'authHeadersProvider'),
-          ),
-        ).called(1);
+        expect(prefetchedKeysPerCall(), [
+          ['video-3', 'video-4', 'video-6', 'video-7', 'video-8'],
+        ]);
       });
 
-      testWidgets('handles index at start of list', (tester) async {
+      testWidgets('prefetches only the following videos at the start', (
+        tester,
+      ) async {
         final state = await pumpTestWidget(tester);
 
-        final videos = _createMockVideos(10);
+        state.prefetchAroundIndex(0, _createMockVideos(10));
 
-        // Should not throw for index 0
-        state.prefetchAroundIndex(0, videos);
+        expect(prefetchedKeysPerCall(), [
+          ['video-1', 'video-2', 'video-3'],
+        ]);
       });
 
-      testWidgets('handles index at end of list', (tester) async {
+      testWidgets('prefetches only the preceding videos at the end', (
+        tester,
+      ) async {
         final state = await pumpTestWidget(tester);
 
-        final videos = _createMockVideos(10);
+        state.prefetchAroundIndex(9, _createMockVideos(10));
 
-        // Should not throw for last index
-        state.prefetchAroundIndex(9, videos);
+        expect(prefetchedKeysPerCall(), [
+          ['video-7', 'video-8'],
+        ]);
       });
 
-      testWidgets('handles small list', (tester) async {
+      testWidgets('prefetches the other video in a two-video list', (
+        tester,
+      ) async {
         final state = await pumpTestWidget(tester);
-
         final videos = _createMockVideos(2);
 
-        // Should not throw
-        state.prefetchAroundIndex(0, videos);
-        state.prefetchAroundIndex(1, videos);
+        state
+          ..prefetchAroundIndex(0, videos)
+          ..prefetchAroundIndex(1, videos);
+
+        expect(prefetchedKeysPerCall(), [
+          ['video-1'],
+          ['video-0'],
+        ]);
       });
     });
 
