@@ -1,10 +1,13 @@
-// ABOUTME: E2E for #7328 — the sender's own gift-wrap copy reaches the relays
-// ABOUTME: their own kind-10050 advertises, not just the connected pool.
+// ABOUTME: E2E for #7328 and #8446 — the sender's own gift-wrap copy of a
+// ABOUTME: message or a reaction reaches the relays their own kind-10050
+// ABOUTME: advertises, not just the connected pool, and only once.
 // ABOUTME: Drives a real DmRepository + NostrClient over real sockets.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
 @Tags(['service'])
 library;
+
+import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -63,6 +66,37 @@ void main() {
   final senderPubkey = getPublicKey(senderKey);
   final recipientPubkey = getPublicKey(recipientKey);
 
+  /// Gift wraps [relay] was asked to store that are addressed to [pubkey].
+  List<String> giftWrapsTo(FakeRelay relay, String pubkey) => [
+    for (final frame in relay.receivedFrames)
+      if (frame.length >= 2 &&
+          frame[0] == 'EVENT' &&
+          frame[1] is Map &&
+          (frame[1] as Map)['kind'] == 1059 &&
+          ((frame[1] as Map)['tags'] as List).any(
+            (tag) =>
+                tag is List &&
+                tag.length >= 2 &&
+                tag[0] == 'p' &&
+                tag[1] == pubkey,
+          ))
+        (frame[1] as Map)['id'] as String,
+  ];
+
+  /// Polls [condition] on real time. A `publishEvent` returns once the frame
+  /// is handed to the socket, before the relay has read it.
+  Future<void> waitUntil(
+    bool Function() condition, {
+    required String reason,
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (!condition()) {
+      if (DateTime.now().isAfter(deadline)) fail('timed out: $reason');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
+
   /// A kind-10050 signed by the SENDER.
   ///
   /// [FakeRelay] serves one reply for every `REQ` regardless of filter, and
@@ -89,7 +123,13 @@ void main() {
   /// Builds the real stack: Nostr → RelayPool → RelayManager → NostrClient →
   /// NIP17MessageService → DmRepository, with every socket landing on [relay].
   Future<
-    ({DmRepository repository, Nostr nostr, _RecordingRedirectFactory factory})
+    ({
+      DmRepository repository,
+      DmReactionsRepository reactions,
+      AppDatabase db,
+      Nostr nostr,
+      _RecordingRedirectFactory factory,
+    })
   >
   buildStack(FakeRelay relay) async {
     final factory = _RecordingRedirectFactory(relay.port);
@@ -114,6 +154,11 @@ void main() {
     final db = AppDatabase.test(NativeDatabase.memory());
     addTearDown(db.close);
 
+    final messageService = NIP17MessageService(
+      signer: signer,
+      senderPublicKey: senderPubkey,
+      nostrService: client,
+    );
     final repository = DmRepository(
       nostrClient: client,
       directMessagesDao: db.directMessagesDao,
@@ -121,13 +166,21 @@ void main() {
       outgoingDmsDao: db.outgoingDmsDao,
       userPubkey: senderPubkey,
       signer: signer,
-      messageService: NIP17MessageService(
-        signer: signer,
-        senderPublicKey: senderPubkey,
-        nostrService: client,
-      ),
+      messageService: messageService,
     );
     addTearDown(repository.stopListening);
+
+    // Wired the way `dmRepositoryProvider` wires it.
+    final reactions =
+        DmReactionsRepository(
+          reactionsDao: db.dmReactionsDao,
+          conversationsDao: db.conversationsDao,
+          directMessagesDao: db.directMessagesDao,
+        )..setCredentials(
+          userPubkey: senderPubkey,
+          messageService: messageService,
+        );
+    reactions.setDmInboxRelayResolver(repository.resolveDmInboxRelaysDetailed);
     // `addTearDown` is LIFO and `relay.stop` was registered first, so this
     // closes every socket ahead of it — otherwise in-flight connects fail
     // after the test completes and get attributed to it.
@@ -137,7 +190,13 @@ void main() {
     // targets checks `connectedRelays`, which only the manager populates.
     await client.initialize();
 
-    return (repository: repository, nostr: nostr, factory: factory);
+    return (
+      repository: repository,
+      reactions: reactions,
+      db: db,
+      nostr: nostr,
+      factory: factory,
+    );
   }
 
   group('#7328 self-wrap inbox relays', () {
@@ -206,6 +265,73 @@ void main() {
         stack.factory.requested.where((u) => u.contains(host)),
         isEmpty,
         reason: 'nothing advertised this host, so nothing may dial it',
+      );
+    });
+  });
+
+  group('#8446 reaction own copy', () {
+    const memberKeys = [
+      '5555555555555555555555555555555555555555555555555555555555555555',
+      '6666666666666666666666666666666666666666666666666666666666666666',
+      '7777777777777777777777777777777777777777777777777777777777777777',
+    ];
+    final memberPubkeys = memberKeys.map(getPublicKey).toList();
+    final groupId = DmRepository.computeConversationId([
+      senderPubkey,
+      ...memberPubkeys,
+    ]);
+    const targetMessageId =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+    Future<DmReactionPublishResult> reactInGroup(
+      ({DmReactionsRepository reactions, AppDatabase db}) stack,
+    ) async {
+      await stack.db.conversationsDao.upsertConversation(
+        id: groupId,
+        participantPubkeys: jsonEncode([senderPubkey, ...memberPubkeys]),
+        isGroup: true,
+        createdAt: 1700000000,
+        ownerPubkey: senderPubkey,
+      );
+      return stack.reactions.publish(
+        conversationId: groupId,
+        targetMessageId: targetMessageId,
+        targetMessageAuthor: memberPubkeys.first,
+        emoji: '🔥',
+      );
+    }
+
+    testWidgets('a group reaction leaves one copy addressed to the sender', (
+      tester,
+    ) async {
+      final relay = await FakeRelay.start();
+      addTearDown(relay.stop);
+      final stack = await buildStack(relay);
+
+      final result = await reactInGroup((
+        reactions: stack.reactions,
+        db: stack.db,
+      ));
+
+      // Positive control: every member got their own wrap, so the count below
+      // is measured on a fan-out that actually ran.
+      expect(result.success, isTrue, reason: result.errorMessage);
+      for (final member in memberPubkeys) {
+        expect(giftWrapsTo(relay, member), hasLength(1));
+      }
+      // The copy goes out last, after the row is marked sent, and every wrap
+      // shares the pool socket: once it has arrived, any copy published
+      // before it has arrived too.
+      await waitUntil(
+        () => giftWrapsTo(relay, senderPubkey).isNotEmpty,
+        reason: 'the sender own copy never reached the relay',
+      );
+      expect(
+        giftWrapsTo(relay, senderPubkey),
+        hasLength(1),
+        reason:
+            'the sender needs one copy of their reaction for their other '
+            'devices; one per member multiplies it by the size of the group',
       );
     });
   });

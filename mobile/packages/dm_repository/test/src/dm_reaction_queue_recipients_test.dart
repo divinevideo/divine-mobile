@@ -100,6 +100,7 @@ void main() {
           recipientPubkey: any(named: 'recipientPubkey'),
           targetRelays: any(named: 'targetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
           selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),

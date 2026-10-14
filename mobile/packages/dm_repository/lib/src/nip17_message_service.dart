@@ -535,7 +535,8 @@ class NIP17MessageService {
   static const Duration _selfWrapPublishTimeout = DmSendBudget.selfWrapPublish;
 
   /// Wrap and publish a pre-built [rumorEvent] to the recipient and to
-  /// ourselves (self-addressed gift wrap for cross-device recovery).
+  /// ourselves (self-addressed gift wrap for cross-device recovery), unless
+  /// [onSelfWrapDue] takes the self-addressed wrap over.
   ///
   /// When [awaitRecipientOk] is `true`, the recipient wrap publish requires
   /// the relay's NIP-20 `OK true` before it counts as landed, instead of the
@@ -585,6 +586,15 @@ class NIP17MessageService {
   /// cap and no retry row should do that, because a slow human-gated signer
   /// approval is otherwise indistinguishable from a hung signer.
   ///
+  /// [onSelfWrapDue] moves the self-addressed wrap to the caller. When set,
+  /// nothing is published to the sender: at the point the self-wrap would
+  /// have been published, the callback receives the copy built alongside the
+  /// recipient wrap (`null` when the signer did not build one there) and the
+  /// result reports `selfWrapPublished: false`. A caller that sends one rumor
+  /// to several recipients uses it to publish the sender's copy once rather
+  /// than once per recipient, through [publishSelfWrap] (#8446). It must not
+  /// throw.
+  ///
   /// [selfWrapBuildTimeout] bounds the self-wrap build, defaulting to the
   /// tight [DmSendBudget.selfWrapBuild] for callers that protect the full
   /// publish with an outer cap. Durable message sends use
@@ -610,6 +620,7 @@ class NIP17MessageService {
     bool selfWrapOnSoftUnconfirmed = true,
     Duration? recipientWrapBuildTimeout = DmBatchSendBudget.recipientWrapBuild,
     Duration? selfWrapBuildTimeout = DmSendBudget.selfWrapBuild,
+    void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
   }) async {
     final recipientWrapBound = recipientWrapBuildTimeout;
     final selfWrapBound = selfWrapBuildTimeout;
@@ -840,12 +851,13 @@ class NIP17MessageService {
         final selfWrapPublished =
             (outcome.confirmed ||
                 (softUnconfirmed && selfWrapOnSoftUnconfirmed)) &&
-            await _publishSelfWrap(
+            await _publishSelfWrapUnlessDeferred(
               nostr: nostr,
               rumorEvent: rumorEvent,
               wrapBuildTimeout: selfWrapBound,
               prebuiltSelfWrap: prebuiltSelfWrap,
               targetRelays: selfWrapTargetRelays,
+              onSelfWrapDue: onSelfWrapDue,
             );
 
         if (outcome.confirmed) {
@@ -920,12 +932,13 @@ class NIP17MessageService {
       // separately. Re-publishing the recipient wrap would
       // double-deliver, so the recovery path uses [publishSelfWrap]
       // to retry only the missing self-wrap.
-      final selfWrapPublished = await _publishSelfWrap(
+      final selfWrapPublished = await _publishSelfWrapUnlessDeferred(
         nostr: nostr,
         rumorEvent: rumorEvent,
         wrapBuildTimeout: selfWrapBound,
         prebuiltSelfWrap: prebuiltSelfWrap,
         targetRelays: selfWrapTargetRelays,
+        onSelfWrapDue: onSelfWrapDue,
       );
 
       Log.info(
@@ -1024,11 +1037,17 @@ class NIP17MessageService {
   /// to the recipient (the recipient kind 1059 wrap landed) but the
   /// self-addressed wrap did not. Re-running [sendRumor] would publish
   /// the recipient wrap a second time and double-deliver, so the
-  /// recovery path goes through this method instead. Receiver-side
+  /// recovery path goes through this method instead. A reaction's fan-out
+  /// uses it too, to publish one copy after every recipient's send has taken
+  /// it over through `onSelfWrapDue` (#8446). Receiver-side
   /// dedup keys on the rumor event id, so callers must pass the same
   /// rumor that was published originally — rebuilding it from the
   /// queue's `rumor_event_json` preserves the id, minting a fresh
   /// rumor would not.
+  ///
+  /// [prebuiltSelfWrap] is published as given instead of building a new
+  /// wrap: the copy [sendRumor] hands to its `onSelfWrapDue` callback, so a
+  /// remote signer is not asked to sign the same copy twice.
   ///
   /// Returns [NIP17SendResult.success] on a successful self-wrap
   /// publish (the `messageEventId` slot carries the rumor id since no
@@ -1039,6 +1058,7 @@ class NIP17MessageService {
   Future<NIP17SendResult> publishSelfWrap({
     required Event rumorEvent,
     List<String>? targetRelays,
+    Event? prebuiltSelfWrap,
   }) async {
     try {
       // Same fail-fast as sendRumor: a frame buffered to a stale-`connected`
@@ -1046,7 +1066,7 @@ class NIP17MessageService {
       // self-wrap `sent` even though it never left the device.
       if (await _isOfflineSafely()) {
         Log.info(
-          'Self-wrap recovery skipped: device reports no connectivity',
+          'Self-wrap skipped: device reports no connectivity',
           category: LogCategory.system,
         );
         return const NIP17SendResult.failure(
@@ -1055,7 +1075,7 @@ class NIP17MessageService {
       }
 
       Log.info(
-        'Publishing self-addressed NIP-17 gift wrap for rumor recovery',
+        'Publishing self-addressed NIP-17 gift wrap on its own',
         category: LogCategory.system,
       );
 
@@ -1066,6 +1086,7 @@ class NIP17MessageService {
         nostr: nostr,
         rumorEvent: rumorEvent,
         wrapBuildTimeout: DmSendBudget.selfWrapUncappedBuild,
+        prebuiltSelfWrap: prebuiltSelfWrap,
         targetRelays: targetRelays,
       );
       if (!published) {
@@ -1078,7 +1099,7 @@ class NIP17MessageService {
       );
     } on Object catch (e, stackTrace) {
       Log.error(
-        'Failed to publish self-wrap recovery: $e',
+        'Failed to publish self-wrap on its own: $e',
         category: LogCategory.system,
         error: e,
         stackTrace: stackTrace,
@@ -1087,12 +1108,40 @@ class NIP17MessageService {
     }
   }
 
+  /// [_publishSelfWrap], or, when [onSelfWrapDue] is set, hand the copy to
+  /// the caller and return `false`; see [sendRumor].
+  Future<bool> _publishSelfWrapUnlessDeferred({
+    required Nostr nostr,
+    required Event rumorEvent,
+    required Duration? wrapBuildTimeout,
+    required Event? prebuiltSelfWrap,
+    required List<String>? targetRelays,
+    required void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
+  }) async {
+    if (onSelfWrapDue != null) {
+      onSelfWrapDue(prebuiltSelfWrap);
+      Log.info(
+        'Self-wrap for rumor ${rumorEvent.id} handed to the caller',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+    return _publishSelfWrap(
+      nostr: nostr,
+      rumorEvent: rumorEvent,
+      wrapBuildTimeout: wrapBuildTimeout,
+      prebuiltSelfWrap: prebuiltSelfWrap,
+      targetRelays: targetRelays,
+    );
+  }
+
   /// Build and publish the sender self-addressed gift wrap for
   /// [rumorEvent]. Returns `true` when the wrap reached at least one
   /// relay.
   ///
-  /// When [prebuiltSelfWrap] is non-null (supplied by [_buildBothWraps] on
-  /// the local-key-signer path), the build step is skipped and the prebuilt
+  /// When [prebuiltSelfWrap] is non-null (supplied by [_buildBothWraps] on a
+  /// batch path, directly or through [publishSelfWrap]), the build step is
+  /// skipped and the prebuilt
   /// event is published directly. Otherwise the wrap is built via
   /// [_buildWrap] on the main isolate.
   ///

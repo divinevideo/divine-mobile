@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -370,6 +371,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -423,6 +425,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       },
@@ -493,6 +496,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -537,6 +541,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         // Confirmed delivery clears the pending marker to terminal.
@@ -614,6 +619,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -654,6 +660,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       }
@@ -811,6 +818,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: thirdPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -884,6 +892,7 @@ void main() {
               rumorEvent: deletionRumor,
               recipientPubkey: captureAny(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured;
           expect(
@@ -943,6 +952,7 @@ void main() {
               rumorEvent: rumor,
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
           verifyNever(
@@ -950,6 +960,7 @@ void main() {
               rumorEvent: deletionRumor,
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -995,6 +1006,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -1033,6 +1045,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       },
@@ -1086,6 +1099,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
         when(
@@ -1241,6 +1255,7 @@ void main() {
               rumorEvent: rumor,
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => sendResult(rumor));
           stubSettleWrites();
@@ -1287,6 +1302,7 @@ void main() {
           rumorEvent: rumor,
           recipientPubkey: _otherPubkey,
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((_) async => const NIP17SendResult.failure('relay down'));
       when(
@@ -1346,6 +1362,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => const NIP17SendResult.blocked('policy refused'),
@@ -1416,6 +1433,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenThrow(StateError('socket boom'));
         when(
@@ -1476,6 +1494,7 @@ void main() {
             rumorEvent: rumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => const NIP17SendResult.failure(
@@ -1566,6 +1585,7 @@ void main() {
           rumorEvent: any(named: 'rumorEvent'),
           recipientPubkey: _otherPubkey,
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer(
         (_) async => NIP17SendResult.success(
@@ -1623,6 +1643,7 @@ void main() {
           rumorEvent: any(named: 'rumorEvent'),
           recipientPubkey: any(named: 'recipientPubkey'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       );
     });
@@ -1656,6 +1677,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async {
           repository.setCredentials(
@@ -1723,6 +1745,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => sendResult(rumor));
           stubSettleWrites();
@@ -1789,6 +1812,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
 
@@ -1846,6 +1870,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async {
           repository.setCredentials(
@@ -1895,6 +1920,7 @@ void main() {
           rumorEvent: any(named: 'rumorEvent'),
           recipientPubkey: any(named: 'recipientPubkey'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       );
     });
@@ -1927,6 +1953,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -1970,6 +1997,7 @@ void main() {
           rumorEvent: any(named: 'rumorEvent'),
           recipientPubkey: _otherPubkey,
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((_) async => const NIP17SendResult.failure('relay down'));
       when(
@@ -2012,6 +2040,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => const NIP17SendResult.failure(
@@ -2034,6 +2063,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         verifyNever(
@@ -2111,6 +2141,7 @@ void main() {
           rumorEvent: any(named: 'rumorEvent'),
           recipientPubkey: any(named: 'recipientPubkey'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       );
       expect(reporterSites, isEmpty);
@@ -2151,6 +2182,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
 
@@ -2174,6 +2206,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         verifyNever(
@@ -2234,6 +2267,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       },
@@ -2270,6 +2304,7 @@ void main() {
           rumorEvent: deletionRumor,
           recipientPubkey: _otherPubkey,
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer(
         (_) async => const NIP17SendResult.blocked('policy refused'),
@@ -2347,6 +2382,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) => send.future);
         when(
@@ -2380,6 +2416,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       },
@@ -2440,6 +2477,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) => send.future);
         when(
@@ -2475,6 +2513,7 @@ void main() {
             rumorEvent: deletionRumor,
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       },
@@ -2508,6 +2547,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -2542,6 +2582,7 @@ void main() {
                     rumorEvent: captureAny(named: 'rumorEvent'),
                     recipientPubkey: _otherPubkey,
                     awaitRecipientOk: true,
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -2577,6 +2618,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => const NIP17SendResult.blocked('policy refused'),
@@ -3024,6 +3066,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -3059,6 +3102,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _otherPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         verifyNever(
@@ -3066,6 +3110,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: _ownerPubkey,
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       },
@@ -3107,6 +3152,7 @@ void main() {
               rumorEvent: deletionRumor,
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -3120,6 +3166,7 @@ void main() {
               rumorEvent: deletionRumor,
               recipientPubkey: thirdPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => const NIP17SendResult.blocked('policy refused'),
@@ -3198,6 +3245,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -3231,6 +3279,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
           verify(
@@ -3238,6 +3287,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: thirdPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -3308,6 +3358,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -3378,6 +3429,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -3438,6 +3490,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _otherPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -3451,6 +3504,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: thirdPubkey,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => const NIP17SendResult.failure('relay down'),
@@ -3656,6 +3710,7 @@ void main() {
           recipientPubkey: any(named: 'recipientPubkey'),
           targetRelays: any(named: 'targetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer(
         (_) async => NIP17SendResult.success(
@@ -3695,6 +3750,7 @@ void main() {
               recipientPubkey: _otherPubkey,
               targetRelays: inbox,
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -3719,6 +3775,7 @@ void main() {
               // the point of these three tests.
               targetRelays: any(named: 'targetRelays', that: isNull),
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -3739,6 +3796,7 @@ void main() {
             recipientPubkey: _otherPubkey,
             targetRelays: any(named: 'targetRelays', that: isNull),
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       });
@@ -3779,6 +3837,7 @@ void main() {
               // the point of these three tests.
               targetRelays: any(named: 'targetRelays', that: isNull),
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -3816,6 +3875,7 @@ void main() {
             recipientPubkey: _otherPubkey,
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
 
@@ -3834,6 +3894,7 @@ void main() {
             recipientPubkey: _otherPubkey,
             targetRelays: inbox,
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       });
@@ -3969,6 +4030,7 @@ void main() {
             recipientPubkey: any(named: 'recipientPubkey'),
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -4009,6 +4071,7 @@ void main() {
               recipientPubkey: _otherPubkey,
               targetRelays: any(named: 'targetRelays', that: isNull),
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
           // But the pool's OK is not delivery to an inbox we never read. The
@@ -4092,6 +4155,7 @@ void main() {
               recipientPubkey: _otherPubkey,
               targetRelays: any(named: 'targetRelays', that: isNull),
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
           verifyNever(
@@ -4148,6 +4212,7 @@ void main() {
               recipientPubkey: _otherPubkey,
               targetRelays: any(named: 'targetRelays', that: isNull),
               awaitRecipientOk: true,
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
           // A falsely `deletion_sent` row is worse than a falsely `sent` one:
@@ -4283,6 +4348,300 @@ void main() {
           );
         },
       );
+    });
+
+    group('one own copy per fan-out (#8446)', () {
+      const secondPubkey =
+          '2222222222222222222222222222222222222222222222222222222222222222';
+      const thirdPubkey =
+          '5555555555555555555555555555555555555555555555555555555555555555';
+      const groupRecipients = [_otherPubkey, secondPubkey, thirdPubkey];
+
+      late List<String> calls;
+      late List<Event?> publishedCopies;
+
+      setUp(() {
+        calls = <String>[];
+        publishedCopies = <Event?>[];
+      });
+
+      Event ownCopy(String content) => Event(
+        _ownerPubkey,
+        EventKind.giftWrap,
+        [
+          ['p', _ownerPubkey],
+        ],
+        content,
+        createdAt: 1_700_000_000,
+      );
+
+      /// A recipient send that records itself and, unless [copyDue] is false
+      /// (a rejected send), reports the own copy due with [copy].
+      void stubRecipientSend(
+        String recipient, {
+        NIP17SendResult? result,
+        bool copyDue = true,
+        Event? copy,
+      }) {
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: recipient,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          ),
+        ).thenAnswer((invocation) async {
+          calls.add('send $recipient');
+          if (copyDue) {
+            final handOver =
+                invocation.namedArguments[#onSelfWrapDue]
+                    as void Function(Event?)?;
+            handOver?.call(copy);
+          }
+          return result ??
+              NIP17SendResult.success(
+                rumorEventId: _reactionRumorId,
+                messageEventId: _giftWrapId,
+                recipientPubkey: recipient,
+              );
+        });
+      }
+
+      void stubOwnCopyPublish(Future<NIP17SendResult> Function() answer) {
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer((invocation) {
+          calls.add('own copy');
+          publishedCopies.add(
+            invocation.namedArguments[#prebuiltSelfWrap] as Event?,
+          );
+          return answer();
+        });
+      }
+
+      Future<NIP17SendResult> ownCopyLands() async => NIP17SendResult.success(
+        rumorEventId: _reactionRumorId,
+        messageEventId: _reactionRumorId,
+        recipientPubkey: _ownerPubkey,
+      );
+
+      /// A queued group reaction for the three [groupRecipients].
+      void stubQueuedGroupReaction() {
+        when(
+          () =>
+              mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+        ).thenAnswer(
+          (_) async => makeRow(
+            rumorEventJson: jsonEncode(reactionRumor().toJson()),
+            publishStatus: 'failed',
+            recipientPubkeys: jsonEncode(groupRecipients),
+          ),
+        );
+        when(
+          () => mockDao.markPending(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: _reactionRumorId,
+            realRumorId: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async => calls.add('mark sent'));
+        when(
+          () => mockDao.markFailed(
+            placeholderId: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async {});
+      }
+
+      Future<DmReactionPublishResult> retryGroupReaction() =>
+          createRepository().retry(
+            rumorId: _reactionRumorId,
+            targetMessageAuthor: _otherPubkey,
+          );
+
+      test('a group reaction publishes one own copy, once the reaction is '
+          'marked sent, using the first copy that was built', () async {
+        stubQueuedGroupReaction();
+        final secondCopy = ownCopy('second');
+        stubRecipientSend(_otherPubkey);
+        stubRecipientSend(secondPubkey, copy: secondCopy);
+        stubRecipientSend(thirdPubkey, copy: ownCopy('third'));
+        stubOwnCopyPublish(ownCopyLands);
+
+        final result = await retryGroupReaction();
+
+        expect(result.success, isTrue);
+        expect(calls, [
+          'send $_otherPubkey',
+          'send $secondPubkey',
+          'send $thirdPubkey',
+          'mark sent',
+          'own copy',
+        ]);
+        expect(publishedCopies, [same(secondCopy)]);
+      });
+
+      test(
+        'publishes no own copy when no recipient took the reaction',
+        () async {
+          stubQueuedGroupReaction();
+          for (final recipient in groupRecipients) {
+            stubRecipientSend(
+              recipient,
+              copyDue: false,
+              result: const NIP17SendResult.failure('rejected'),
+            );
+          }
+
+          final result = await retryGroupReaction();
+
+          expect(result.success, isFalse);
+          expect(calls, hasLength(3));
+          verifyNever(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          );
+        },
+      );
+
+      test('publishes the own copy when only one recipient took the '
+          'reaction', () async {
+        stubQueuedGroupReaction();
+        stubRecipientSend(_otherPubkey);
+        for (final recipient in [secondPubkey, thirdPubkey]) {
+          stubRecipientSend(
+            recipient,
+            copyDue: false,
+            result: const NIP17SendResult.failure('rejected'),
+          );
+        }
+        stubOwnCopyPublish(ownCopyLands);
+
+        final result = await retryGroupReaction();
+
+        expect(result.success, isFalse);
+        expect(calls.where((call) => call == 'own copy'), hasLength(1));
+      });
+
+      test('a failed own copy leaves the reaction sent', () async {
+        stubQueuedGroupReaction();
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(
+          () async => const NIP17SendResult.failure('self-wrap failed'),
+        );
+
+        final result = await retryGroupReaction();
+
+        expect(publishedCopies, hasLength(1));
+        expect(result.success, isTrue);
+        verify(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: _reactionRumorId,
+            realRumorId: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).called(1);
+      });
+
+      test('an own copy that throws leaves the reaction sent', () async {
+        stubQueuedGroupReaction();
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(() => throw StateError('relay pool torn down'));
+
+        final result = await retryGroupReaction();
+
+        expect(publishedCopies, hasLength(1));
+        expect(result.success, isTrue);
+        verifyNever(
+          () => mockDao.markFailed(
+            placeholderId: any(named: 'placeholderId'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        );
+      });
+
+      test('marks the reaction sent while a stalled own copy is still out, '
+          'and gives up on the copy after the publish timeout', () {
+        fakeAsync((async) {
+          stubQueuedGroupReaction();
+          groupRecipients.forEach(stubRecipientSend);
+          stubOwnCopyPublish(() => Completer<NIP17SendResult>().future);
+
+          DmReactionPublishResult? result;
+          unawaited(retryGroupReaction().then((r) => result = r));
+          async.flushMicrotasks();
+          expect(publishedCopies, hasLength(1));
+          expect(calls, contains('mark sent'));
+
+          async.elapse(const Duration(seconds: 14));
+          expect(result, isNull);
+
+          async.elapse(const Duration(seconds: 1));
+          expect(result?.success, isTrue);
+        });
+      });
+
+      test('a reaction removal publishes one own copy', () async {
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        when(
+          () =>
+              mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+        ).thenAnswer(
+          (_) async => makeRow(
+            isDeleted: true,
+            publishStatus: 'deletion_pending',
+            rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode(groupRecipients),
+          ),
+        );
+        when(
+          () => mockDao.markDeletionSent(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async => calls.add('mark removal sent'));
+        groupRecipients.forEach(stubRecipientSend);
+        stubOwnCopyPublish(ownCopyLands);
+
+        final outcome = await createRepository().retryDeletion(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(outcome, DmReactionDeletionOutcome.sent);
+        expect(calls.sublist(calls.length - 2), [
+          'mark removal sent',
+          'own copy',
+        ]);
+        expect(calls.where((call) => call == 'own copy'), hasLength(1));
+        verify(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: deletionRumor,
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).called(1);
+      });
     });
   });
 }
