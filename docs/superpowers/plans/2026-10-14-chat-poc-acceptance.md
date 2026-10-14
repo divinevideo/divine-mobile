@@ -67,6 +67,25 @@ internal settings override remains available under **App preferences →
 Experimental Features** after enabling developer mode, but is not part of
 the PR review flow. Each preview URL has separate local preferences.
 
+### Mobile room interaction
+
+The room UI follows a mobile channel-list → full-screen conversation flow.
+Messages → Direct / Rooms uses Divine controls; each community groups clear
+channel rows. A room keeps its channel and community in the header, uses the
+same peer identity and avatar rules as DMs, displays localized timestamps, and
+anchors recent messages above the shared multiline composer. The public-test
+notice remains visible. Wide screens cap the reading column at 720 logical
+pixels. Sending still preserves the draft until durable acceptance.
+
+Design references: [Divine messaging explorations](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=9437-13416)
+and [Discord mobile navigation](https://support.discord.com/hc/en-us/articles/12654190110999-New-Mobile-App-Updates-Layout).
+These inform the interaction and styling; this POC does not add Discord's
+member, voice, or moderation controls.
+
+Verify small and wide screens, light/dark themes, large text, route back to the
+channel list, account restrictions, sender identity, and failed-send draft
+preservation. The shared composer must retain its existing DM behavior.
+
 ## Relay evidence and required contract
 
 The live https://relay.divine.video/ NIP-11 response advertised NIP-59 and

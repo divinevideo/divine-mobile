@@ -1,6 +1,7 @@
 // ABOUTME: Direct / Rooms navigation within the existing Messages tab.
 // ABOUTME: Keeps list state mounted while hiding inactive input and semantics.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/messages/messages_navigation_cubit.dart';
@@ -36,17 +37,29 @@ class MessagesHomeView extends StatelessWidget {
                   child: Wrap(
                     spacing: 8,
                     children: [
-                      ChoiceChip(
-                        label: Text(context.l10n.messagesDirect),
+                      Semantics(
                         selected: !showRooms,
-                        onSelected: (_) =>
-                            _select(context, MessagesSection.direct),
+                        child: DivineButton(
+                          label: context.l10n.messagesDirect,
+                          type: !showRooms
+                              ? DivineButtonType.secondary
+                              : DivineButtonType.ghostSecondary,
+                          size: DivineButtonSize.small,
+                          onPressed: () =>
+                              _select(context, MessagesSection.direct),
+                        ),
                       ),
-                      ChoiceChip(
-                        label: Text(context.l10n.messagesRooms),
+                      Semantics(
                         selected: showRooms,
-                        onSelected: (_) =>
-                            _select(context, MessagesSection.rooms),
+                        child: DivineButton(
+                          label: context.l10n.messagesRooms,
+                          type: showRooms
+                              ? DivineButtonType.secondary
+                              : DivineButtonType.ghostSecondary,
+                          size: DivineButtonSize.small,
+                          onPressed: () =>
+                              _select(context, MessagesSection.rooms),
+                        ),
                       ),
                     ],
                   ),

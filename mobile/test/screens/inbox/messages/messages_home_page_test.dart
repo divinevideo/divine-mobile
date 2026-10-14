@@ -9,6 +9,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/inbox/messages/messages_home_page.dart';
+import 'package:openvine/screens/inbox/messages/messages_home_view.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -80,7 +81,7 @@ void main() {
           account: scenario.account,
         );
         expect(find.text('direct-content'), findsOneWidget);
-        expect(find.byType(ChoiceChip), findsNothing);
+        expect(find.byType(MessagesHomeView), findsNothing);
       });
     }
 
@@ -129,7 +130,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       await tester.tap(find.text(l10n.messagesRooms));
       await tester.pump();
-      await tester.tap(find.text('#introductions'));
+      await tester.tap(find.text('introductions'));
       await tester.pumpAndSettle();
       expect(opened, {
         'community': 'community-test',
@@ -156,7 +157,7 @@ void main() {
       ]);
       await tester.pump();
       expect(find.text(l10n.messagesPublicTestRooms), findsNothing);
-      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.byType(MessagesHomeView), findsNothing);
     });
 
     testWidgets('switching accounts clears the previous Rooms selection', (

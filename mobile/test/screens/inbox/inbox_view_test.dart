@@ -279,7 +279,7 @@ void main() {
         await tester.tap(find.text(l10n.messagesRooms));
         await tester.pump();
         expect(find.text(l10n.messagesPublicTestRooms), findsOneWidget);
-        expect(find.text('#general'), findsOneWidget);
+        expect(find.text('general'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
 

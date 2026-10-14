@@ -64,12 +64,24 @@ class MessageInputBar extends StatefulWidget {
   const MessageInputBar({
     required this.onSend,
     this.controller,
+    this.enabled = true,
+    this.clearOnSend = true,
+    this.textCapitalization = TextCapitalization.none,
     this.onAttachVideo,
     this.isAttachVideoBusy = false,
     super.key,
   });
 
   final ValueChanged<String> onSend;
+
+  /// Disables composition while a conversation is unavailable or sending.
+  final bool enabled;
+
+  /// False when the caller clears its controller after durable acceptance.
+  final bool clearOnSend;
+
+  /// Keyboard capitalization policy for the hosting conversation.
+  final TextCapitalization textCapitalization;
 
   /// Invoked when the user taps the attach-video affordance.
   ///
@@ -83,10 +95,11 @@ class MessageInputBar extends StatefulWidget {
 
   /// Optional externally-owned controller.
   ///
-  /// The bar clears the field the moment [onSend] fires, before any outcome is
+  /// By default the bar clears when [onSend] fires, before any outcome is
   /// known. A caller that can learn the send was refused — an oversized rumor
   /// leaves no queue row and so no failed bubble (#7331) — passes its own
-  /// controller so it can put the text back rather than lose it.
+  /// controller so it can put the text back rather than lose it, or sets
+  /// [clearOnSend] to false and clears after acceptance.
   final TextEditingController? controller;
 
   @override
@@ -123,10 +136,11 @@ class _MessageInputBarState extends State<MessageInputBar> {
   }
 
   void _handleSend() {
+    if (!widget.enabled) return;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     widget.onSend(text);
-    _controller.clear();
+    if (widget.clearOnSend) _controller.clear();
   }
 
   @override
@@ -180,11 +194,13 @@ class _MessageInputBarState extends State<MessageInputBar> {
                 // Field honours font scaling (#4620): no withNoTextScaling.
                 child: TextField(
                   controller: _controller,
+                  enabled: widget.enabled,
                   style: VineTheme.bodyLargeFont(
                     color: context.vineColors.primaryText,
                   ),
                   cursorColor: context.vineColors.accentPositive,
                   keyboardType: TextInputType.multiline,
+                  textCapitalization: widget.textCapitalization,
                   // Return = newline; send via button only (#4620).
                   textInputAction: TextInputAction.newline,
                   minLines: 1,
@@ -221,7 +237,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
-                          onPressed: _handleSend,
+                          onPressed: widget.enabled ? _handleSend : null,
                           padding: EdgeInsets.zero,
                           icon: DivineIcon(
                             icon: DivineIconName.arrowUp,

@@ -86,12 +86,23 @@ void main() {
       expect(directAnimates, isFalse);
     });
 
-    testWidgets('marks the open section on its chip', (tester) async {
+    testWidgets('marks the open section on its navigation control', (
+      tester,
+    ) async {
       await tester.pumpWidget(subject());
       final l10n = lookupAppLocalizations(const Locale('en'));
       bool isMarked(String label) => tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label))
-          .selected;
+          .widget<Semantics>(
+            find.ancestor(
+              of: find.widgetWithText(DivineButton, label),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Semantics && widget.properties.selected != null,
+              ),
+            ),
+          )
+          .properties
+          .selected!;
       expect(isMarked(l10n.messagesDirect), isTrue);
       expect(isMarked(l10n.messagesRooms), isFalse);
       await tester.tap(find.text(l10n.messagesRooms));

@@ -1,23 +1,99 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 
 class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
 void main() {
   group(ChatScreen, () {
+    for (final width in [390.0, 1400.0]) {
+      for (final theme in [VineTheme.theme, VineTheme.lightTheme]) {
+        testWidgets(
+          'sender identity and readable layout at $width in ${theme.brightness}',
+          (
+            tester,
+          ) async {
+            const author =
+                '3333333333333333333333333333333333333333333333333333333333333333';
+            final cubit = _ChatCubit();
+            when(() => cubit.state).thenReturn(const ChatState());
+            when(cubit.visibleMessages).thenReturn([
+              ChatMessage(
+                id: '5555555555555555555555555555555555555555555555555555555555555555',
+                channelId: 'general',
+                author: author,
+                body: 'Hello room',
+                createdAt: 1,
+              ),
+            ]);
+            whenListen(cubit, const Stream<ChatState>.empty());
+            tester.view.physicalSize = Size(width, 900);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  fetchUserProfileProvider(author).overrideWith(
+                    (ref) async => UserProfile(
+                      pubkey: author,
+                      displayName: 'Room member',
+                      rawData: const {},
+                      createdAt: DateTime(2026),
+                      eventId: '6' * 64,
+                    ),
+                  ),
+                  profileIdentityResolvingProvider(author)
+                      .overrideWithValue(false),
+                  profileVanishedProvider(author).overrideWith((ref) => false),
+                ],
+                child: MaterialApp(
+                  theme: theme,
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(context)
+                        .copyWith(textScaler: const TextScaler.linear(2)),
+                    child: child!,
+                  ),
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: BlocProvider<ChatCubit>.value(
+                    value: cubit,
+                    child: const ChatScreen(),
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+            expect(find.text('Room member'), findsOneWidget);
+            expect(find.text('Hello room'), findsOneWidget);
+            expect(find.text(author), findsNothing);
+            expect(find.byType(UserAvatar), findsOneWidget);
+            expect(
+              tester.getSize(find.byType(TextField)).width,
+              lessThanOrEqualTo(720),
+            );
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
     testWidgets('shows the selected room and no local-only join wizard', (
       tester,
     ) async {
       final cubit = _ChatCubit();
-      when(() => cubit.state)
-          .thenReturn(const ChatState(selectedChannelId: 'introductions'));
+      when(
+        () => cubit.state,
+      ).thenReturn(const ChatState(selectedChannelId: 'introductions'));
       when(cubit.visibleMessages).thenReturn([]);
       whenListen(cubit, const Stream<ChatState>.empty());
       await tester.pumpWidget(
@@ -30,12 +106,13 @@ void main() {
           ),
         ),
       );
-      expect(find.text('#introductions'), findsOneWidget);
+      expect(find.text('#introductions'), findsNWidgets(2));
       expect(find.byType(Drawer), findsNothing);
       expect(
         find.text(
-          lookupAppLocalizations(const Locale('en'))
-              .messagesPublicTestDisclosure,
+          lookupAppLocalizations(
+            const Locale('en'),
+          ).messagesPublicTestDisclosure,
         ),
         findsOneWidget,
       );
@@ -68,7 +145,12 @@ void main() {
           ),
         );
         await tester.enterText(find.byType(TextField), 'keep this draft');
-        await tester.tap(find.byType(DivineIconButton).last);
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(
+            lookupAppLocalizations(const Locale('en')).dmMessageSendLabel,
+          ),
+        );
         await tester.pump();
         expect(
           tester.widget<TextField>(find.byType(TextField)).controller!.text,

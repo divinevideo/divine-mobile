@@ -31,7 +31,7 @@ void main() {
       expect(find.text(l10n.messagesPublicTestDisclosure), findsOneWidget);
       expect(find.text('First'), findsOneWidget);
       expect(find.text('Second'), findsOneWidget);
-      await tester.tap(find.text('#general').last);
+      await tester.tap(find.text('general').last);
       expect(selected, ('two', 'general'));
     });
 
@@ -56,7 +56,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('#general'), findsOneWidget);
+      expect(find.text('general'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

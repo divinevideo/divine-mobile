@@ -1,9 +1,10 @@
-// ABOUTME: Displays Concord POC channels grouped by community inside Messages.
-// ABOUTME: Makes public test-room access explicit before opening a conversation.
+// ABOUTME: Mobile-first channel list inside Messages, grouped by community.
+// ABOUTME: Shows public-room context and clear full-row conversation targets.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 class RoomsView extends StatelessWidget {
@@ -18,56 +19,71 @@ class RoomsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    // The Messages tab paints a coloured box behind this list. Without a
-    // Material of its own, each ListTile's ink is hidden by that box and the
-    // framework reports it on every build.
+    // The inbox paints a colored box above its ancestor Material. Keep the
+    // channel rows on their own Material so their ink remains visible.
     type: MaterialType.transparency,
-    child: ListView(
-      key: const PageStorageKey('messages-rooms'),
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.messagesPublicTestRooms,
-                style: VineTheme.titleMediumFont(
-                  color: context.vineColors.primaryText,
+    child: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView(
+          key: const PageStorageKey('messages-rooms'),
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            for (final community in communities) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    community.name,
+                    style: VineTheme.titleLargeFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(context.l10n.messagesPublicTestDisclosure),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.l10n.messagesPublicTestRooms,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.onSurfaceMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              for (final channel in community.channels)
+                DivineListTile(
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: context.vineColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '#',
+                      style: VineTheme.titleLargeFont(
+                        color: context.vineColors.accentPositive,
+                      ),
+                    ),
+                  ),
+                  title: channel,
+                  subtitle: context.l10n.listVisibilityPublic,
+                  onTap: () => onRoomSelected(community.id, channel),
+                ),
             ],
-          ),
-        ),
-        if (communities.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(context.l10n.messagesNoRooms),
-          ),
-        for (final community in communities) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Semantics(
-              header: true,
-              child: Text(
-                community.name,
-                style: VineTheme.titleMediumFont(
-                  color: context.vineColors.primaryText,
-                ),
+            if (communities.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(context.l10n.messagesNoRooms),
               ),
-            ),
-          ),
-          for (final channel in community.channels)
-            ListTile(
-              title: Text('#$channel'),
-              subtitle: Text(context.l10n.listVisibilityPublic),
-              onTap: () => onRoomSelected(community.id, channel),
-            ),
-        ],
-      ],
+            const PublicRoomNotice(),
+          ],
+        ),
+      ),
     ),
   );
 }
