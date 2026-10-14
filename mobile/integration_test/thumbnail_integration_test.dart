@@ -39,7 +39,10 @@ void main() {
       ($) async {
         final tester = $.tester;
         await runWithAppErrorHandlers(() async {
-          await app.main();
+          await app.main().timeout(
+            const Duration(seconds: 60),
+            onTimeout: () => fail('The app did not finish startup in 60s'),
+          );
           await tester.pumpAndSettle();
           await grantCameraAndMicrophone($);
 
