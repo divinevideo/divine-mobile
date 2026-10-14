@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
@@ -522,6 +523,31 @@ void main() {
           expect(cubit.state.status, equals(VerifyConnectStatus.editing));
         },
         errors: () => [isA<IdentityClaimPublishException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'says a verified link the signer declined was not signed',
+        build: () => build(_github),
+        setUp: () {
+          when(() => repository.publishClaim(any())).thenThrow(
+            const IdentityClaimNotSignedException(
+              'Could not sign the identity event',
+            ),
+          );
+        },
+        act: (cubit) async {
+          cubit
+            ..identityChanged('octocat')
+            ..proofChanged('abc');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.notSigned));
+          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
+        },
+        // The signer reports its own faults; a decline is the person's
+        // choice, so neither is filed again here (#9340).
+        errors: () => const [],
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
@@ -1158,6 +1184,47 @@ void main() {
         },
       );
 
+      test('stops waiting to try again once closed', () {
+        fakeAsync((async) {
+          whenConfirm().thenThrow(
+            SignInConfirmException(404, SignInRefusal.notFound),
+          );
+          // No wait passed in, so the cubit's own is the one closed.
+          final cubit = VerifyConnectCubit(
+            repository: repository,
+            pubkey: _pubkey,
+            platform: _twitter,
+            oauthReturnUrl: _returnUrl,
+            analytics: analytics,
+            random: _ZeroRandom(),
+            launchOAuth: (_) async => answer(Uri.parse(startedReturnUrl!)),
+          );
+          unawaited(cubit.connectWithOAuth());
+          async.flushMicrotasks();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+          var finished = false;
+          unawaited(cubit.approveSignIn().then((_) => finished = true));
+          async.flushMicrotasks();
+          expectConfirmCalls(1);
+
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+
+          // Done at once, without the two seconds passing.
+          expect(finished, isTrue);
+          async.elapse(const Duration(seconds: 10));
+          verifyNever(() => repository.publishSignedClaim(any()));
+          verifyNever(
+            () => repository.confirmSignIn(
+              code: any(named: 'code'),
+              startSecret: any(named: 'startSecret'),
+              signed: any(named: 'signed'),
+            ),
+          );
+        });
+      });
+
       test('waits two seconds between tries', () async {
         final waits = <Duration>[];
         whenConfirm().thenThrow(
@@ -1456,23 +1523,28 @@ void main() {
         },
       );
 
-      test(
-        'when the signer declines, the approval stays and nothing is confirmed',
-        () async {
-          when(
-            () => repository.signClaim(
-              any(),
-              confirmBinding: any(named: 'confirmBinding'),
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'when the signer declines, says it was not signed and keeps the approval',
+        setUp: () =>
+            when(
+              () => repository.signClaim(
+                any(),
+                confirmBinding: any(named: 'confirmBinding'),
+              ),
+            ).thenThrow(
+              const IdentityClaimNotSignedException(
+                'Could not sign the identity event',
+              ),
             ),
-          ).thenThrow(
-            const IdentityClaimPublishException(
-              'Could not sign the identity event',
-            ),
-          );
-          final cubit = await waiting();
+        build: () => build(_twitter, random: _ZeroRandom()),
+        act: (cubit) async {
+          await cubit.connectWithOAuth();
           await cubit.approveSignIn();
+        },
+        verify: (cubit) {
           expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
-          expect(cubit.state.error, VerifyConnectError.publishFailed);
+          expect(cubit.state.error, VerifyConnectError.notSigned);
+          expect(cubit.state.signedInAccount, 'jack');
           verifyNever(
             () => repository.confirmSignIn(
               code: any(named: 'code'),
@@ -1480,8 +1552,10 @@ void main() {
               signed: any(named: 'signed'),
             ),
           );
-          await cubit.close();
         },
+        // The signer reports its own faults; a decline is the person's
+        // choice, so neither is filed again here (#9340).
+        errors: () => const [],
       );
 
       test(

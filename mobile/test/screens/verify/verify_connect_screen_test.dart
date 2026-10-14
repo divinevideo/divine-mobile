@@ -1,10 +1,15 @@
 // ABOUTME: Widget tests for the single-platform verify connect form.
-// ABOUTME: Covers the manual account fallback used when a proof link is opaque.
+// ABOUTME: Covers the manual account fallback used when a proof link is opaque,
+// ABOUTME: and approving the account a sign-in returned.
+
+import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
@@ -17,6 +22,30 @@ class _MockIdentityClaimsRepository extends Mock
     implements IdentityClaimsRepository {}
 
 class _MockAnalyticsEventSink extends Mock implements AnalyticsEventSink {}
+
+class _MockSignedIdentityClaim extends Mock implements SignedIdentityClaim {}
+
+/// Collects what the screen hands to screen readers.
+List<Object?> _captureAnnouncements(WidgetTester tester) {
+  final announced = <Object?>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      if (message is Map && message['type'] == 'announce') {
+        announced.add((message['data'] as Map?)?['message']);
+      }
+      return null;
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return announced;
+}
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -410,6 +439,457 @@ void main() {
       await pump(tester, oauthAvailable: true);
 
       expect(find.text('divine.bsky.social'), findsOneWidget);
+    });
+  });
+
+  group('$VerifyConnectView after a sign-in returns', () {
+    late _MockIdentityClaimsRepository repository;
+    late VerifyConnectCubit cubit;
+    late String startedReturnUrl;
+
+    const twitter = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+    );
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    final platformLabel = verifyPlatformLabel(twitter.key);
+    final signedInTitle = l10n.verifyConnectSignedInTitle(
+      platformLabel,
+      'jack',
+    );
+
+    Finder button(String label) => find.byWidgetPredicate(
+      (widget) => widget is DivineButton && widget.label == label,
+    );
+
+    setUpAll(() {
+      registerFallbackValue(
+        const IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: IdentityClaim.oauthProof,
+        ),
+      );
+      registerFallbackValue(_MockSignedIdentityClaim());
+    });
+
+    setUp(() {
+      repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenAnswer((invocation) async {
+        startedReturnUrl = invocation.namedArguments[#returnUrl] as String;
+        return Uri.parse('https://provider.example/authorize?state=s');
+      });
+      when(
+        () => repository.signClaim(
+          any(),
+          confirmBinding: any(named: 'confirmBinding'),
+        ),
+      ).thenAnswer((_) async => _MockSignedIdentityClaim());
+      when(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: any(named: 'signed'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const SignInConfirmation(platform: 'twitter', identity: 'jack'),
+      );
+      when(
+        () => repository.publishSignedClaim(any()),
+      ).thenAnswer((_) async => []);
+      cubit = VerifyConnectCubit(
+        repository: repository,
+        pubkey: _pubkey,
+        platform: twitter,
+        oauthReturnUrl: _returnUrl,
+        // This group never rejects a proof, so the sink is never reached.
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => Uri.parse(
+          '$startedReturnUrl&platform=twitter&identity=jack'
+          '&oauth_confirm=${'C' * 43}',
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    // Pushed over a stand-in dashboard, so going back has somewhere to go.
+    // Tall enough that the whole form is built, down to the proof button.
+    Future<void> pumpWaitingForApproval(
+      WidgetTester tester, {
+      String? handle,
+    }) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final router = GoRouter(
+        initialLocation: '/connect',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Text('dashboard'),
+            routes: [
+              GoRoute(
+                path: 'connect',
+                builder: (_, _) => BlocProvider<VerifyConnectCubit>.value(
+                  value: cubit,
+                  child: const VerifyConnectView(npub: _npub),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          routerConfig: router,
+        ),
+      );
+      await tester.pump();
+      if (handle != null) {
+        await tester.enterText(find.byType(TextField).first, handle);
+        await tester.pump();
+      }
+      await cubit.connectWithOAuth();
+      await tester.pump();
+    }
+
+    // Holds the approve in its confirm step until the returned completer is
+    // completed.
+    Completer<SignInConfirmation> holdConfirm() {
+      final confirm = Completer<SignInConfirmation>();
+      when(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: any(named: 'signed'),
+        ),
+      ).thenAnswer((_) => confirm.future);
+      return confirm;
+    }
+
+    testWidgets('names the account and offers to link it', (tester) async {
+      await pumpWaitingForApproval(tester);
+
+      expect(find.text(signedInTitle), findsOneWidget);
+      // The start button gives way to the approval.
+      expect(
+        find.text(l10n.verifyConnectOauthCta(platformLabel)),
+        findsNothing,
+      );
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+
+      verify(
+        () => repository.signClaim(
+          any(),
+          confirmBinding: any(named: 'confirmBinding'),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('cancel goes back to the sign-in button', (tester) async {
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCancel));
+      await tester.pump();
+
+      expect(find.text(signedInTitle), findsNothing);
+      expect(
+        find.text(l10n.verifyConnectOauthCta(platformLabel)),
+        findsOneWidget,
+      );
+    });
+
+    // Not verifyIdentityHint('bluesky'), which find.text would match in an
+    // empty field.
+    const blueskyHandle = 'divine.bsky.social';
+
+    // As pumpWaitingForApproval, for a Bluesky sign-in started with
+    // [blueskyHandle] typed.
+    Future<void> pumpBlueskyWaitingForApproval(WidgetTester tester) async {
+      await cubit.close();
+      cubit = VerifyConnectCubit(
+        repository: repository,
+        pubkey: _pubkey,
+        platform: _bluesky,
+        oauthReturnUrl: _returnUrl,
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => Uri.parse(
+          '$startedReturnUrl&platform=bluesky&identity=$blueskyHandle'
+          '&oauth_confirm=${'C' * 43}',
+        ),
+      );
+      await pumpWaitingForApproval(tester, handle: blueskyHandle);
+    }
+
+    testWidgets('keeps the typed Bluesky handle through a cancel', (
+      tester,
+    ) async {
+      await pumpBlueskyWaitingForApproval(tester);
+      expect(
+        find.text(
+          l10n.verifyConnectSignedInTitle(
+            verifyPlatformLabel(_bluesky.key),
+            blueskyHandle,
+          ),
+        ),
+        findsOneWidget,
+      );
+      TextField handleField() => tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('verify-identity-field')),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(handleField().enabled, isFalse);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCancel));
+      await tester.pump();
+
+      expect(find.text(blueskyHandle), findsOneWidget);
+      expect(handleField().enabled, isTrue);
+      expect(cubit.state.identity, blueskyHandle);
+    });
+
+    testWidgets('hides the Bluesky proof note while the card is up', (
+      tester,
+    ) async {
+      // "Signed in above? Nothing else needed." reads wrong while the card
+      // still asks to link the account.
+      final explainer = verifyProofExplainer(l10n, _bluesky.key);
+      await pumpBlueskyWaitingForApproval(tester);
+
+      expect(find.text(explainer), findsNothing);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCancel));
+      await tester.pump();
+
+      expect(find.text(explainer), findsOneWidget);
+    });
+
+    testWidgets("keeps other platforms' proof notes with the card up", (
+      tester,
+    ) async {
+      await pumpWaitingForApproval(tester);
+
+      expect(find.text(signedInTitle), findsOneWidget);
+      expect(
+        find.text(verifyProofExplainer(l10n, twitter.key)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('says to sign in again when the verifier does not confirm', (
+      tester,
+    ) async {
+      when(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: any(named: 'signed'),
+        ),
+      ).thenThrow(SignInConfirmException(401, SignInRefusal.notYours));
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorSignInNotConfirmed), findsOneWidget);
+      expect(find.text(signedInTitle), findsNothing);
+    });
+
+    testWidgets('says nothing was linked when the signer declines', (
+      tester,
+    ) async {
+      when(
+        () => repository.signClaim(
+          any(),
+          confirmBinding: any(named: 'confirmBinding'),
+        ),
+      ).thenThrow(
+        const IdentityClaimNotSignedException(
+          'Could not sign the identity event',
+        ),
+      );
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorNotSigned), findsOneWidget);
+      expect(find.text(l10n.verifyErrorPublishFailed), findsNothing);
+      // The sign-in is kept, so linking can be tried again.
+      expect(find.text(signedInTitle), findsOneWidget);
+    });
+
+    testWidgets('says no relay took it when the publish fails', (
+      tester,
+    ) async {
+      when(
+        () => repository.publishSignedClaim(any()),
+      ).thenThrow(const IdentityClaimPublishException('no relay confirmed'));
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorPublishFailed), findsOneWidget);
+      expect(find.text(l10n.verifyErrorNotSigned), findsNothing);
+    });
+
+    testWidgets('tells a screen reader who the sign-in returned', (
+      tester,
+    ) async {
+      final announced = _captureAnnouncements(tester);
+
+      await pumpWaitingForApproval(tester);
+
+      // The start button that had focus is gone, so this is how a screen
+      // reader hears that the card arrived.
+      expect(announced, [signedInTitle]);
+    });
+
+    testWidgets('does not announce the card again after a kept failure', (
+      tester,
+    ) async {
+      when(
+        () => repository.signClaim(
+          any(),
+          confirmBinding: any(named: 'confirmBinding'),
+        ),
+      ).thenThrow(
+        const IdentityClaimNotSignedException(
+          'Could not sign the identity event',
+        ),
+      );
+      final announced = _captureAnnouncements(tester);
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+      await tester.pump();
+
+      // The snackbar speaks for the failure; the card was already there.
+      expect(
+        announced.where((message) => message == signedInTitle),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('closes the proof form while a sign-in waits', (
+      tester,
+    ) async {
+      await pumpWaitingForApproval(tester);
+      // Text that isn't a link brings up the account field too.
+      cubit.proofChanged('some nonsense');
+      await tester.pump();
+
+      final fields = tester.widgetList<TextField>(find.byType(TextField));
+      expect(fields, hasLength(2));
+      expect(fields.map((field) => field.enabled), everyElement(isFalse));
+      expect(
+        tester
+            .widget<DivineButton>(button(l10n.verifyConnectProofCta))
+            .onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('holds cancel while linking', (tester) async {
+      final confirm = holdConfirm();
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+
+      final link = tester.widget<DivineButton>(
+        button(l10n.verifyConnectSignedInCta),
+      );
+      expect(link.isLoading, isTrue);
+      expect(link.onPressed, isNull);
+      expect(
+        tester
+            .widget<DivineButton>(button(l10n.verifyConnectSignedInCancel))
+            .onPressed,
+        isNull,
+      );
+      // The proof form below isn't what's working.
+      final proof = tester.widget<DivineButton>(
+        button(l10n.verifyConnectProofCta),
+      );
+      expect(proof.isLoading, isFalse);
+      expect(proof.onPressed, isNull);
+
+      confirm.complete(
+        const SignInConfirmation(platform: 'twitter', identity: 'jack'),
+      );
+      await tester.pump();
+    });
+
+    testWidgets('stays on the page while linking', (tester) async {
+      final confirm = holdConfirm();
+      await pumpWaitingForApproval(tester);
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      await tester.pump();
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.byType(VerifyConnectView), findsOneWidget);
+
+      await tester.tap(find.bySemanticsIdentifier('back_button'));
+      await tester.pump();
+      expect(find.byType(VerifyConnectView), findsOneWidget);
+
+      // Once linked, the page closes itself.
+      confirm.complete(
+        const SignInConfirmation(platform: 'twitter', identity: 'jack'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(VerifyConnectView), findsNothing);
+    });
+
+    testWidgets('goes back while a sign-in waits', (tester) async {
+      await pumpWaitingForApproval(tester);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VerifyConnectView), findsNothing);
+      expect(find.text('dashboard'), findsOneWidget);
+    });
+
+    testWidgets('the back button leaves while a sign-in waits', (
+      tester,
+    ) async {
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.bySemanticsIdentifier('back_button'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VerifyConnectView), findsNothing);
     });
   });
 }

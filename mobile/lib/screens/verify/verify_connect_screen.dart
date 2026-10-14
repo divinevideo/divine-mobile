@@ -16,6 +16,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 /// Route host for linking a single platform.
@@ -108,14 +109,24 @@ class VerifyConnectView extends StatelessWidget {
     final platform = context.select(
       (VerifyConnectCubit cubit) => cubit.state.platform,
     );
+    // Held while an attempt runs: leaving during its write would let an
+    // unlink on the dashboard read the links before the write lands, and
+    // publish over it.
+    final busy = context.select(
+      (VerifyConnectCubit cubit) => cubit.state.isBusy,
+    );
     return BlocListener<VerifyConnectCubit, VerifyConnectState>(
       listenWhen: (previous, current) =>
           previous.status != current.status ||
           previous.errorAttempt != current.errorAttempt,
       listener: _onStateChanged,
-      child: _ConnectScaffold(
-        title: verifyPlatformLabel(platform.key),
-        body: _ConnectForm(npub: npub, oauthAvailable: oauthAvailable),
+      child: PopScope(
+        canPop: !busy,
+        child: _ConnectScaffold(
+          title: verifyPlatformLabel(platform.key),
+          canLeave: !busy,
+          body: _ConnectForm(npub: npub, oauthAvailable: oauthAvailable),
+        ),
       ),
     );
   }
@@ -129,6 +140,25 @@ class VerifyConnectView extends StatelessWidget {
       return;
     }
     final error = state.error;
+    final account = state.signedInAccount;
+    // The card replaces the start button that had focus when the browser
+    // returned, so nothing else tells a screen reader it arrived. A failure
+    // that keeps the sign-in comes back here with an error, which the
+    // snackbar speaks for.
+    if (state.status == VerifyConnectStatus.awaitingApproval &&
+        error == null &&
+        account != null) {
+      announceDetached(
+        context,
+        l10n.verifyConnectSignedInTitle(
+          verifyPlatformLabel(state.platform.key),
+          account,
+        ),
+        description: 'announce the signed-in account',
+        logName: 'VerifyConnectView',
+      );
+      return;
+    }
     if (error == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(switch (error) {
@@ -150,6 +180,7 @@ class VerifyConnectView extends StatelessWidget {
         VerifyConnectError.oauthFailed => l10n.verifyErrorOauthFailed,
         VerifyConnectError.signInNotConfirmed =>
           l10n.verifyErrorSignInNotConfirmed,
+        VerifyConnectError.notSigned => l10n.verifyErrorNotSigned,
         VerifyConnectError.oauthUnavailable => l10n.verifyErrorOauthUnavailable,
         VerifyConnectError.telegramNotPublic =>
           l10n.verifyErrorTelegramNotPublic,
@@ -162,10 +193,18 @@ class VerifyConnectView extends StatelessWidget {
 }
 
 class _ConnectScaffold extends StatelessWidget {
-  const _ConnectScaffold({required this.title, required this.body});
+  const _ConnectScaffold({
+    required this.title,
+    required this.body,
+    this.canLeave = true,
+  });
 
   final String title;
   final Widget body;
+
+  /// False while an attempt runs. The back button pops directly, which a
+  /// [PopScope] does not stop, so it checks this itself.
+  final bool canLeave;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +213,9 @@ class _ConnectScaffold extends StatelessWidget {
       appBar: DiVineAppBar(
         title: title,
         showBackButton: true,
-        onBackPressed: () => context.safePop(fallback: '/verify'),
+        onBackPressed: () {
+          if (canLeave) context.safePop(fallback: '/verify');
+        },
       ),
       body: body,
     );
@@ -192,6 +233,12 @@ class _ConnectForm extends StatelessWidget {
     final l10n = context.l10n;
     final state = context.watch<VerifyConnectCubit>().state;
     final showOAuth = state.supportsOAuth && oauthAvailable;
+    final signedInAccount = state.signedInAccount;
+    // One link at a time: while a sign-in waits, the person links that
+    // account or cancels it first. One already signed carries the links as
+    // they were, so a proof linked meanwhile would be dropped once that
+    // sign-in is published.
+    final inputsEnabled = !state.isBusy && signedInAccount == null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -212,31 +259,71 @@ class _ConnectForm extends StatelessWidget {
             // key is what carries the typed handle across the move. It has to
             // sit on the child the list matches, not on the DivineTextField
             // inside — keying the inner field leaves this element to be
-            // rebuilt by position, which loses the text anyway.
+            // rebuilt by position, which loses the text anyway. It stays while
+            // a sign-in waits for the same reason: a cancel brings back the
+            // start button, and the handle has to still be in the field.
             _IdentityField(
               key: const ValueKey('verify-identity-field'),
               state: state,
+              enabled: inputsEnabled,
             ),
             const SizedBox(height: 12),
           ],
-          DivineButton(
-            label: l10n.verifyConnectOauthCta(
-              verifyPlatformLabel(state.platform.key),
+          if (signedInAccount != null) ...[
+            Text(
+              l10n.verifyConnectSignedInTitle(
+                verifyPlatformLabel(state.platform.key),
+                signedInAccount,
+              ),
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.primaryText,
+              ),
             ),
-            expanded: true,
-            isLoading: state.status == VerifyConnectStatus.authorizing,
-            onPressed: state.isBusy
-                ? null
-                : context.read<VerifyConnectCubit>().connectWithOAuth,
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            DivineButton(
+              label: l10n.verifyConnectSignedInCta,
+              expanded: true,
+              isLoading: state.status == VerifyConnectStatus.publishing,
+              onPressed: state.isBusy
+                  ? null
+                  : context.read<VerifyConnectCubit>().approveSignIn,
+            ),
+            const SizedBox(height: 8),
+            DivineButton(
+              label: l10n.verifyConnectSignedInCancel,
+              type: DivineButtonType.secondary,
+              expanded: true,
+              onPressed: state.isBusy
+                  ? null
+                  : context.read<VerifyConnectCubit>().cancelSignIn,
+            ),
+            const SizedBox(height: 24),
+          ] else ...[
+            DivineButton(
+              label: l10n.verifyConnectOauthCta(
+                verifyPlatformLabel(state.platform.key),
+              ),
+              expanded: true,
+              isLoading: state.status == VerifyConnectStatus.authorizing,
+              onPressed: state.isBusy
+                  ? null
+                  : context.read<VerifyConnectCubit>().connectWithOAuth,
+            ),
+            const SizedBox(height: 24),
+          ],
         ],
         _SectionLabel(l10n.verifyConnectProofTitle),
-        Text(
-          verifyProofExplainer(l10n, state.platform.key),
-          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
-        ),
-        const SizedBox(height: 12),
+        // Bluesky's note says a sign-in above is all it takes, which reads
+        // wrong while the card above still asks to link the account.
+        if (!(signedInAccount != null && state.platform.key == 'bluesky')) ...[
+          Text(
+            verifyProofExplainer(l10n, state.platform.key),
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         _NpubCard(npub: npub),
         const SizedBox(height: 16),
         // Skipped when the pasted link already carries the account, and when
@@ -246,6 +333,7 @@ class _ConnectForm extends StatelessWidget {
           _IdentityField(
             key: const ValueKey('verify-identity-field'),
             state: state,
+            enabled: inputsEnabled,
           ),
           const SizedBox(height: 12),
         ],
@@ -259,13 +347,13 @@ class _ConnectForm extends StatelessWidget {
           labelText: l10n.verifyProofLabel,
           hintText: verifyProofHint(state.platform.key),
           filled: true,
-          enabled: !state.isBusy,
+          enabled: inputsEnabled,
           textInputAction: .send,
           keyboardType: TextInputType.url,
           textCapitalization: TextCapitalization.none,
           autocorrect: false,
           onChanged: context.read<VerifyConnectCubit>().proofChanged,
-          onSubmitted: (_) => state.isBusy || !state.canSubmitProof
+          onSubmitted: (_) => !inputsEnabled || !state.canSubmitProof
               ? null
               : context.read<VerifyConnectCubit>().submitProof(),
         ),
@@ -273,10 +361,12 @@ class _ConnectForm extends StatelessWidget {
         DivineButton(
           label: l10n.verifyConnectProofCta,
           expanded: true,
+          // A sign-in being linked shows its own progress above.
           isLoading:
-              state.status == VerifyConnectStatus.verifying ||
-              state.status == VerifyConnectStatus.publishing,
-          onPressed: state.isBusy || !state.canSubmitProof
+              signedInAccount == null &&
+              (state.status == VerifyConnectStatus.verifying ||
+                  state.status == VerifyConnectStatus.publishing),
+          onPressed: !inputsEnabled || !state.canSubmitProof
               ? null
               : context.read<VerifyConnectCubit>().submitProof,
         ),
@@ -286,9 +376,14 @@ class _ConnectForm extends StatelessWidget {
 }
 
 class _IdentityField extends StatelessWidget {
-  const _IdentityField({required this.state, super.key});
+  const _IdentityField({
+    required this.state,
+    required this.enabled,
+    super.key,
+  });
 
   final VerifyConnectState state;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +391,7 @@ class _IdentityField extends StatelessWidget {
       labelText: verifyIdentityFieldLabel(context.l10n, state.platform.key),
       hintText: verifyIdentityHint(state.platform.key),
       filled: true,
-      enabled: !state.isBusy,
+      enabled: enabled,
       textInputAction: .next,
       textCapitalization: TextCapitalization.none,
       onChanged: context.read<VerifyConnectCubit>().identityChanged,

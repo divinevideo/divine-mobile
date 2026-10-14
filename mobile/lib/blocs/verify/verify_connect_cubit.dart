@@ -8,8 +8,10 @@ import 'package:analytics/analytics.dart';
 import 'package:bloc/bloc.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/verify/verify_proof_input.dart';
 import 'package:openvine/blocs/verify/verify_rejection.dart';
+import 'package:openvine/utils/async_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -25,7 +27,8 @@ typedef VerifyOAuthLauncher = Future<Uri?> Function(Uri authorizationUrl);
 /// Both routes end the same way: the verifier confirms the account, and only
 /// then is the `i` tag published. The web flow leaves publishing as a second
 /// button, which is how people end up verified with no checkmark (#6154).
-class VerifyConnectCubit extends Cubit<VerifyConnectState> {
+class VerifyConnectCubit extends Cubit<VerifyConnectState>
+    with CloseGuardedEmit<VerifyConnectState> {
   /// Creates a [VerifyConnectCubit] for [platform].
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
@@ -42,7 +45,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
        _launchOAuth = launchOAuth,
        _oauthReturnUrl = oauthReturnUrl,
        _random = random ?? Random.secure(),
-       _wait = wait ?? Future<void>.delayed,
+       _wait = wait,
        super(VerifyConnectState(platform: platform));
 
   final IdentityClaimsRepository _repository;
@@ -51,7 +54,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
   final AnalyticsEventSink _analytics;
   final String _oauthReturnUrl;
   final Random _random;
-  final Future<void> Function(Duration) _wait;
+  // Tests pass their own; otherwise the wait is [_async]'s, so closing the
+  // cubit ends it.
+  final Future<void> Function(Duration)? _wait;
+  final _async = AsyncScope(debugName: 'VerifyConnectCubit');
 
   // The sign-in waiting for approval. Kept out of state: its code and secret
   // never go into state, logs or analytics.
@@ -321,6 +327,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
         pending.confirmed = true;
       }
       await _repository.publishSignedClaim(signed);
+    } on IdentityClaimNotSignedException {
+      // _failKeepingSignIn already stops once the page has closed.
+      _logNotSigned(pending.claim.platform);
+      return _failKeepingSignIn(VerifyConnectError.notSigned);
     } on SignInConfirmException catch (error) {
       if (_superseded(pending)) return;
       Log.warning(
@@ -347,9 +357,11 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
       addError(error, stackTrace);
       return _failKeepingSignIn(VerifyConnectError.publishFailed);
     }
-    if (_superseded(pending)) return;
+    // A sign-in started over this one owns the state now. Closing the page
+    // while publishing is left to emitIfOpen.
+    if (!identical(_pending, pending)) return;
     _pending = null;
-    emit(
+    emitIfOpen(
       state.copyWith(
         status: VerifyConnectStatus.linked,
         identity: pending.claim.identity,
@@ -370,6 +382,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
         clearSignedInAccount: true,
       ),
     );
+  }
+
+  @override
+  Future<void> close() {
+    _async.dispose();
+    return super.close();
   }
 
   // Sends the same signed event every time: the verifier answers a repeat of
@@ -394,7 +412,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
             outOfTime) {
           rethrow;
         }
-        await _wait(_confirmRetryDelay);
+        // Closing cancels this wait by throwing AsyncCancelledException,
+        // which approveSignIn's catch drops once it sees the cubit closed.
+        await (_wait ?? _async.delay)(_confirmRetryDelay);
         if (_superseded(pending)) return null;
       }
     }
@@ -442,6 +462,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
           clearSignedInAccount: true,
         ),
       );
+    } on IdentityClaimNotSignedException {
+      _logNotSigned(claim.platform);
+      _fail(VerifyConnectError.notSigned);
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -452,6 +475,13 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
       );
     }
   }
+
+  // The signer declined or failed. It reports its own faults, so this is
+  // logged rather than filed again (#9340).
+  static void _logNotSigned(String platform) => Log.warning(
+    'The $platform link was not signed',
+    name: 'VerifyConnectCubit',
+  );
 
   // Back to editing, so any sign-in waiting for approval goes too.
   void _fail(VerifyConnectError error) {

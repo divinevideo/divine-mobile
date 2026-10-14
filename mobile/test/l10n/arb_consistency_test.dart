@@ -812,6 +812,10 @@ const _knownUntranslatedDebt = <String>{
   'postPublishCrosspostAutomatic',
   // Verifier sign-in confirmation (#10119); translations in the next pass.
   'verifyErrorSignInNotConfirmed',
+  'verifyConnectSignedInTitle',
+  'verifyConnectSignedInCta',
+  'verifyConnectSignedInCancel',
+  'verifyErrorNotSigned',
 };
 
 const _profileBadgeSheetKeys = <String>{

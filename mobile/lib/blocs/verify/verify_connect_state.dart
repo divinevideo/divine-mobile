@@ -67,6 +67,11 @@ enum VerifyConnectError {
   /// The verifier didn't confirm the sign-in; the person signs in again.
   signInNotConfirmed,
 
+  /// The identity event carrying the link was never signed: the signer
+  /// declined or failed, so nothing was published. A sign-in stays to approve
+  /// again; a proof post can be checked and linked again.
+  notSigned,
+
   /// The Telegram link points at a private channel or an invite, neither of
   /// which the verifier can read.
   telegramNotPublic,
