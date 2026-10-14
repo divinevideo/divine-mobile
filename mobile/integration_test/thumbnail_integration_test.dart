@@ -43,7 +43,9 @@ void main() {
             const Duration(seconds: 60),
             onTimeout: () => fail('The app did not finish startup in 60s'),
           );
-          await tester.pumpAndSettle();
+          // The mounted app never reaches a quiescent frame, so
+          // pumpAndSettle would wait out the suite timeout.
+          await pumpUntilSettled(tester, maxSeconds: 3);
           await grantCameraAndMicrophone($);
 
           final prefs = await SharedPreferences.getInstance();
