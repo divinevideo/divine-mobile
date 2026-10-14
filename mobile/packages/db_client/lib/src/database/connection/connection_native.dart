@@ -210,8 +210,9 @@ const _salvageSuffix = '.corruption_salvage';
 ///
 /// This overlaps the [_localOnlyDataQueries] legacy-migration probe but is not
 /// identical: salvage drops `direct_messages` / `conversations` (re-drainable)
-/// and adds `dm_message_reactions` (only-copy). A new local-only table added to
-/// one list should be considered for the other.
+/// and copies tables the probe does not check, such as `dm_message_reactions`
+/// (#10114). A new local-only table added to one list should be considered for
+/// the other.
 @visibleForTesting
 const salvageableLocalOnlyTables = <String>[
   'drafts',
