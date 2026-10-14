@@ -2,12 +2,21 @@
 // ABOUTME: repository-level guard that stops any caller destroying a protected
 // ABOUTME: thread, which #8302 had guarded in one cubit only.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/client_utils/keys.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -20,7 +29,25 @@ const _ordinaryPeer =
 const _otherPeer =
     '4444444444444444444444444444444444444444444444444444444444444444';
 
+/// Sorts after [_owner] and before [_protectedPeer], so a group holding both
+/// lists the protected peer second among its members.
+const _earlyPeer =
+    '1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a';
+
 bool _protectsTheProtectedPeer(String pubkeyHex) => pubkeyHex == _protectedPeer;
+
+// Real key pairs for the receive-path tests: those gift wraps are sealed,
+// signed and decrypted for real, so each pubkey has to belong to its secret.
+final String _receiverSecret = '5' * 64;
+final String _strangerSecret = '6' * 64;
+final String _protectedAuthorSecret = '7' * 64;
+final String _receiver = getPublicKey(_receiverSecret);
+final String _stranger = getPublicKey(_strangerSecret);
+final String _protectedAuthor = getPublicKey(_protectedAuthorSecret);
+
+/// Watchdog for a wrap the receive path never settles; nothing waits this
+/// long on a passing run.
+const _settleTimeout = Duration(seconds: 20);
 
 void main() {
   group('DmRepository removal policy', () {
@@ -88,9 +115,10 @@ void main() {
         expect(await repository.getConversation(conversationId), isNull);
       });
 
-      test('refuses a group that merely includes a protected peer', () async {
-        // `.any`, never `.first` — a group has more than one peer, and the
-        // protected one need not be the first (#8302 review, 739349d45).
+      test('removes a group that includes a protected peer', () async {
+        // A group's members are whoever its author listed, so naming a
+        // protected account does not make the room that account's thread
+        // (#10151).
         final repository = buildRepository(
           removalPolicy: _protectsTheProtectedPeer,
         );
@@ -102,8 +130,8 @@ void main() {
 
         final outcome = await repository.removeConversation(conversationId);
 
-        expect(outcome, equals(ConversationRemovalOutcome.refused));
-        expect(await repository.getConversation(conversationId), isNotNull);
+        expect(outcome, equals(ConversationRemovalOutcome.removed));
+        expect(await repository.getConversation(conversationId), isNull);
       });
 
       test('excludes self, so a protected account can clear its own '
@@ -169,6 +197,29 @@ void main() {
         expect(await repository.getConversation(protectedId), isNotNull);
         expect(await repository.getConversation(ordinaryId), isNull);
         expect(await repository.getConversation(otherId), isNull);
+      });
+
+      test('removes a group that includes a protected peer and keeps the '
+          'protected one-to-one', () async {
+        final repository = buildRepository(
+          removalPolicy: _protectsTheProtectedPeer,
+        );
+        final protectedId = await seedConversation([_owner, _protectedPeer]);
+        final groupId = await seedConversation([
+          _owner,
+          _protectedPeer,
+          _ordinaryPeer,
+        ]);
+
+        final outcome = await repository.removeConversations([
+          protectedId,
+          groupId,
+        ]);
+
+        expect(outcome.removed, equals(1));
+        expect(outcome.refused, equals(1));
+        expect(await repository.getConversation(protectedId), isNotNull);
+        expect(await repository.getConversation(groupId), isNull);
       });
 
       test('reports the refusal when every row is protected', () async {
@@ -294,6 +345,209 @@ void main() {
         final conversation = await repository.getConversation(conversationId);
 
         expect(repository.isRemovalProtected(conversation!), isFalse);
+      });
+
+      test('answers for a one-to-one while no account is signed in', () {
+        // No self to exclude, so "exactly one other member" would see two
+        // and drop the protection; two distinct members is still a one-to-one.
+        final repository = buildRepository(
+          removalPolicy: _protectsTheProtectedPeer,
+          owner: '',
+        );
+        final conversation = DmConversation(
+          id: DmRepository.computeConversationId([_owner, _protectedPeer]),
+          participantPubkeys: const [_owner, _protectedPeer],
+          isGroup: false,
+          createdAt: 1700000000,
+        );
+
+        expect(repository.isRemovalProtected(conversation), isTrue);
+      });
+
+      test('answers false for a group that includes a protected peer, '
+          'wherever it sorts', () async {
+        final repository = buildRepository(
+          removalPolicy: _protectsTheProtectedPeer,
+        );
+        final protectedFirstId = await seedConversation([
+          _owner,
+          _protectedPeer,
+          _ordinaryPeer,
+        ]);
+        final protectedSecondId = await seedConversation([
+          _owner,
+          _earlyPeer,
+          _protectedPeer,
+        ]);
+        final protectedFirst = await repository.getConversation(
+          protectedFirstId,
+        );
+        final protectedSecond = await repository.getConversation(
+          protectedSecondId,
+        );
+
+        expect(
+          protectedFirst!.participantPubkeys,
+          containsAllInOrder([_owner, _protectedPeer, _ordinaryPeer]),
+        );
+        expect(
+          protectedSecond!.participantPubkeys,
+          containsAllInOrder([_owner, _earlyPeer, _protectedPeer]),
+        );
+        expect(repository.isRemovalProtected(protectedFirst), isFalse);
+        expect(repository.isRemovalProtected(protectedSecond), isFalse);
+      });
+    });
+
+    // Real gift wraps through the real receive path: the room's membership is
+    // whatever its author put in the p tags, which is the point under test.
+    group('on the receive path', () {
+      late _MockNostrClient nostrClient;
+      late StreamController<Event> relay;
+      late DmRepository repository;
+
+      setUpAll(() {
+        // queryEventsDetailed takes a `Duration timeout`, so a stub matching
+        // on it needs a fallback (#8212).
+        registerFallbackValue(Duration.zero);
+      });
+
+      setUp(() async {
+        nostrClient = _MockNostrClient();
+        relay = StreamController<Event>();
+        when(() => nostrClient.connectedRelayCount).thenReturn(1);
+        when(() => nostrClient.configuredRelayCount).thenReturn(1);
+        // The own kind-10050 resolve, answered and empty.
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: const <Event>[],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
+        when(
+          () => nostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) => relay.stream);
+
+        repository = DmRepository(
+          nostrClient: nostrClient,
+          directMessagesDao: messagesDao,
+          conversationsDao: conversationsDao,
+          processedGiftWrapsDao: ProcessedGiftWrapsDao(db),
+          removedConversationsDao: db.removedConversationsDao,
+          userPubkey: _receiver,
+          signer: LocalNostrSigner(_receiverSecret),
+          receivesPeerRooms: () => true,
+          removalPolicy: (pubkeyHex) => pubkeyHex == _protectedAuthor,
+        );
+        await repository.startListening();
+      });
+
+      tearDown(() async {
+        // stopListening() before closing the stream: onDone would otherwise
+        // arm a reconnect timer that outlives this test.
+        await repository.stopListening();
+        await relay.close();
+      });
+
+      /// Completes once the receive path has stored the gift wrap [id] as a
+      /// message or recorded it in the processed ledger.
+      Future<void> settled(String id) => db
+          .customSelect(
+            '''
+            SELECT EXISTS (
+              SELECT 1 FROM direct_messages WHERE gift_wrap_id = ?1
+            ) OR EXISTS (
+              SELECT 1 FROM processed_gift_wraps WHERE gift_wrap_id = ?1
+            ) AS settled
+            ''',
+            variables: [Variable.withString(id)],
+            readsFrom: {db.directMessages, db.processedGiftWraps},
+          )
+          .watchSingle()
+          .firstWhere((row) => row.read<bool>('settled'))
+          .timeout(
+            _settleTimeout,
+            onTimeout: () => fail('gift wrap $id was never settled'),
+          );
+
+      /// Seals a kind-14 rumor by the holder of [authorSecret], naming
+      /// [pTags], gift-wraps it to the receiver and waits for it to settle.
+      Future<void> deliver({
+        required String authorSecret,
+        required List<String> pTags,
+      }) async {
+        final rumor = Event(
+          getPublicKey(authorSecret),
+          EventKind.privateDirectMessage,
+          [
+            for (final pubkey in pTags) ['p', pubkey],
+          ],
+          'a message',
+          createdAt: 1700000000,
+        );
+        final wrap = await buildGiftWrapFromHex(
+          senderPrivateKeyHex: authorSecret,
+          rumorJson: rumor.toJson(),
+          receiverPublicKey: _receiver,
+        );
+        relay.add(wrap!);
+        await settled(wrap.id);
+      }
+
+      test('removes a room a stranger opened with a protected account in '
+          'it', () async {
+        await deliver(
+          authorSecret: _strangerSecret,
+          pTags: [_receiver, _protectedAuthor],
+        );
+        final roomId = DmRepository.computeConversationId([
+          _receiver,
+          _stranger,
+          _protectedAuthor,
+        ]);
+        final room = await repository.getConversation(roomId);
+        expect(room?.isGroup, isTrue);
+
+        final outcome = await repository.removeConversation(roomId);
+
+        expect(outcome, equals(ConversationRemovalOutcome.removed));
+        expect(await repository.getConversation(roomId), isNull);
+      });
+
+      test("still refuses the protected account's own one-to-one", () async {
+        await deliver(
+          authorSecret: _protectedAuthorSecret,
+          pTags: [_receiver],
+        );
+        final oneToOneId = DmRepository.computeConversationId([
+          _receiver,
+          _protectedAuthor,
+        ]);
+        expect(await repository.getConversation(oneToOneId), isNotNull);
+
+        final outcome = await repository.removeConversation(oneToOneId);
+
+        expect(outcome, equals(ConversationRemovalOutcome.refused));
+        expect(await repository.getConversation(oneToOneId), isNotNull);
       });
     });
   });
