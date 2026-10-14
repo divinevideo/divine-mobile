@@ -1086,7 +1086,7 @@ class NIP17MessageService {
         nostr: nostr,
         rumorEvent: rumorEvent,
         wrapBuildTimeout: DmSendBudget.selfWrapUncappedBuild,
-        prebuiltSelfWrap: prebuiltSelfWrap,
+        prebuiltSelfWrap: _ownCopyOrNull(prebuiltSelfWrap),
         targetRelays: targetRelays,
       );
       if (!published) {
@@ -1106,6 +1106,26 @@ class NIP17MessageService {
       );
       return NIP17SendResult.failure('Failed to publish self-wrap: $e');
     }
+  }
+
+  /// [wrap] when it is a gift wrap addressed to the sender, else `null` so
+  /// the copy is built again: a prebuilt event is published as given, and a
+  /// wrap meant for someone else must never go out as the sender's copy.
+  Event? _ownCopyOrNull(Event? wrap) {
+    if (wrap == null) return null;
+    final addressedToSender =
+        wrap.kind == EventKind.giftWrap &&
+        wrap.tags.any(
+          (tag) =>
+              tag.length >= 2 && tag[0] == 'p' && tag[1] == _senderPublicKey,
+        );
+    if (addressedToSender) return wrap;
+    Log.warning(
+      'Prebuilt self-wrap ${wrap.id} is not addressed to the sender; '
+      'building the copy again',
+      category: LogCategory.system,
+    );
+    return null;
   }
 
   /// [_publishSelfWrap], or, when [onSelfWrapDue] is set, hand the copy to

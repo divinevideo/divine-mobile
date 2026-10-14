@@ -2230,6 +2230,44 @@ void main() {
         expect(captured, equals([prebuilt]));
       });
 
+      test('builds its own copy rather than publish a prebuilt wrap that is '
+          'not addressed to the sender', () async {
+        final captured = <Event>[];
+        when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments[0] as Event;
+          captured.add(event);
+          return PublishSuccess(event: event);
+        });
+        final rumor = realKeyService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'not my copy',
+        );
+        final recipientWrap = Event(
+          getPublicKey(_testPrivateKey),
+          EventKind.giftWrap,
+          [
+            ['p', _recipientPubkey],
+          ],
+          'addressed to the recipient',
+        );
+
+        final result = await realKeyService.publishSelfWrap(
+          rumorEvent: rumor,
+          prebuiltSelfWrap: recipientWrap,
+        );
+
+        expect(result.success, isTrue);
+        final published = captured.single;
+        expect(published, isNot(same(recipientWrap)));
+        expect(published.kind, equals(EventKind.giftWrap));
+        expect(
+          published.tags,
+          contains(equals(['p', getPublicKey(_testPrivateKey)])),
+        );
+      });
+
       test('returns failure when the self-wrap publish returns '
           'PublishFailed without throwing', () async {
         when(
