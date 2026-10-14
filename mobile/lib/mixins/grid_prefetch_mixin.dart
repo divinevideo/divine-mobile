@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Mixin for grid views to prefetch video files for faster playback.
@@ -46,7 +47,12 @@ mixin GridPrefetchMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       category: LogCategory.video,
     );
 
-    openVineMediaCache.preCacheFiles(items);
+    runDetached(
+      ref.read(mediaCacheProvider).preCacheFiles(items),
+      'prefetch grid videos',
+      logName: _logName,
+      category: LogCategory.video,
+    );
   }
 
   /// Prefetch videos adjacent to the given [index].
@@ -78,7 +84,12 @@ mixin GridPrefetchMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       category: LogCategory.video,
     );
 
-    openVineMediaCache.preCacheFiles(items);
+    runDetached(
+      ref.read(mediaCacheProvider).preCacheFiles(items),
+      'prefetch videos around a grid item',
+      logName: _logName,
+      category: LogCategory.video,
+    );
   }
 
   bool get _shouldPrefetch =>
