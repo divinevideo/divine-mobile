@@ -243,32 +243,44 @@ void main() {
     }
 
     group('a conversation the user removed', () {
-      test('stays removed when its messages are replayed', () async {
-        final removed = _message(id: _id('1'));
-        final kept = _message(id: _id('4'), author: _peer2);
-        final before = await _Launch.start(dbPath, rumorByWrapId);
-        await before.deliver(wrapId: _id('a'), rumor: removed);
-        await before.deliver(wrapId: _id('d'), rumor: kept);
-        expect(
-          await before.repository.removeConversation(peerConversation),
-          ConversationRemovalOutcome.removed,
-        );
-        await before.stop();
+      test(
+        'stays removed when the replay brings a message it never stored',
+        () async {
+          // The replay is the whole relay history, which can hold a message
+          // from before the removal that this device never loaded. No id was
+          // recorded for it, so only the removal time can keep it out.
+          final removed = _message(id: _id('1'));
+          final neverStored = _message(
+            id: _id('3'),
+            createdAt: _baseCreatedAt + 1,
+          );
+          final kept = _message(id: _id('4'), author: _peer2);
+          final before = await _Launch.start(dbPath, rumorByWrapId);
+          await before.deliver(wrapId: _id('a'), rumor: removed);
+          await before.deliver(wrapId: _id('d'), rumor: kept);
+          expect(
+            await before.repository.removeConversation(peerConversation),
+            ConversationRemovalOutcome.removed,
+          );
+          await before.stop();
 
-        await salvage();
+          await salvage();
 
-        final after = await _Launch.start(dbPath, rumorByWrapId);
-        await after.deliver(wrapId: _id('a'), rumor: removed);
-        await after.deliver(wrapId: _id('d'), rumor: kept);
+          final after = await _Launch.start(dbPath, rumorByWrapId);
+          await after.deliver(wrapId: _id('a'), rumor: removed);
+          await after.deliver(wrapId: _id('c'), rumor: neverStored);
+          await after.deliver(wrapId: _id('d'), rumor: kept);
 
-        expect(
-          await after.message(_id('4')),
-          isNotNull,
-          reason: 'the conversation the user kept must come back',
-        );
-        expect(await after.message(_id('1')), isNull);
-        expect(await after.conversation(peerConversation), isNull);
-      });
+          expect(
+            await after.message(_id('4')),
+            isNotNull,
+            reason: 'the conversation the user kept must come back',
+          );
+          expect(await after.message(_id('1')), isNull);
+          expect(await after.message(_id('3')), isNull);
+          expect(await after.conversation(peerConversation), isNull);
+        },
+      );
 
       test(
         'stays removed when a replayed message is stamped after the removal',
