@@ -56,17 +56,21 @@ class _TestWidgetState extends ConsumerState<_TestWidget>
   Widget build(BuildContext context) => const SizedBox();
 }
 
+VideoEvent _createMockVideo(int i, {String? videoUrl}) {
+  return VideoEvent(
+    id: 'video-$i',
+    pubkey: 'pubkey-$i',
+    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    content: 'Video $i',
+    timestamp: DateTime.now(),
+    videoUrl: videoUrl,
+  );
+}
+
 List<VideoEvent> _createMockVideos(int count) {
   return List.generate(
     count,
-    (i) => VideoEvent(
-      id: 'video-$i',
-      pubkey: 'pubkey-$i',
-      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      content: 'Video $i',
-      timestamp: DateTime.now(),
-      videoUrl: 'https://example.com/video-$i.mp4',
-    ),
+    (i) => _createMockVideo(i, videoUrl: 'https://example.com/video-$i.mp4'),
   );
 }
 
@@ -167,17 +171,10 @@ void main() {
       testWidgets('does not prefetch videos without a URL', (tester) async {
         final state = await pumpTestWidget(tester);
 
-        final videos = [
-          VideoEvent(
-            id: 'video-1',
-            pubkey: 'pubkey-1',
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            content: 'Video 1',
-            timestamp: DateTime.now(),
-          ),
-        ];
-
-        state.prefetchGridVideos(videos);
+        state.prefetchGridVideos([
+          _createMockVideo(0),
+          _createMockVideo(1, videoUrl: ''),
+        ]);
 
         verifyNothingPrefetched();
       });
@@ -236,6 +233,20 @@ void main() {
           ['video-1'],
           ['video-0'],
         ]);
+      });
+
+      testWidgets('does not prefetch neighbours without a URL', (
+        tester,
+      ) async {
+        final state = await pumpTestWidget(tester);
+
+        state.prefetchAroundIndex(2, [
+          _createMockVideo(0),
+          _createMockVideo(1, videoUrl: ''),
+          _createMockVideo(2, videoUrl: 'https://example.com/video-2.mp4'),
+        ]);
+
+        verifyNothingPrefetched();
       });
     });
 
