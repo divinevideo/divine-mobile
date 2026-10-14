@@ -6358,6 +6358,12 @@ class DmRepository {
   /// - Recipient failure: re-mark both wraps `failed` so the row
   ///   stays retryable.
   ///
+  /// After a full success on a one-to-one thread still latched to NIP-04, the
+  /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
+  /// (#8506) — but only for a plain-text rumor. The row does not record
+  /// whether its sender opted out of the copy, so any tag beyond the
+  /// recipient, a reply reference and the send token suppresses it.
+  ///
   /// A one-to-one row addressed to its own sender is never republished: it is
   /// dropped and reported as blocked (#8363). [sendMessage] refuses such a
   /// send before queuing it, so only a row queued by an older build gets here.
