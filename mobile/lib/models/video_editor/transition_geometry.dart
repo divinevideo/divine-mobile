@@ -3,6 +3,7 @@
 // ABOUTME: timeline. Shared by the render pipeline, seam preview, picker and the
 // ABOUTME: timeline header so all of them agree on the same budget.
 
+import 'package:meta/meta.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ClipTransition, ClipTransitionType;
@@ -315,11 +316,21 @@ class LoopWrapDisplay {
 /// One overlap blend on the editor axis: the region
 /// `[editorStart, editorStart + 2×blend]` (clips at full length) compresses to
 /// `blend` of output. Dips are excluded — they don't shorten the timeline.
+@immutable
 class _Blend {
   const _Blend({required this.editorStart, required this.blend});
 
   final Duration editorStart;
   final Duration blend;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Blend &&
+      other.editorStart == editorStart &&
+      other.blend == blend;
+
+  @override
+  int get hashCode => Object.hash(editorStart, blend);
 }
 
 /// Precomputed piecewise-linear map between the editor timeline (clips at full
@@ -334,13 +345,17 @@ class _Blend {
 /// clamp guarantees adjacent blend regions never touch, so the mapping is
 /// strictly monotonic and invertible.
 ///
+/// Two maps built from clips that place time alike are equal, so a consumer
+/// can tell a clip edit that moved nothing on the output from one that did.
+///
 /// The loop-restart wrap (the last clip's transition) adds **no blend region**
 /// to the position mapping: its blend sits at the loop point, past the last
 /// clip, so the editor timeline stays the editing space (clips at full length)
 /// and the ruler/playhead map exactly as without a wrap. Like any overlap it
 /// does shorten the export, so [outputDuration] subtracts its blend.
+@immutable
 class TransitionTimelineMap {
-  TransitionTimelineMap._(
+  const TransitionTimelineMap._(
     this._blends, {
     required this.editorDuration,
     required this.outputDuration,
@@ -391,6 +406,24 @@ class TransitionTimelineMap {
   final Duration outputDuration;
 
   final List<_Blend> _blends;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! TransitionTimelineMap ||
+        other.editorDuration != editorDuration ||
+        other.outputDuration != outputDuration ||
+        other._blends.length != _blends.length) {
+      return false;
+    }
+    for (var i = 0; i < _blends.length; i++) {
+      if (other._blends[i] != _blends[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(editorDuration, outputDuration, Object.hashAll(_blends));
 
   /// Editor times at which the editor-to-output clock changes speed.
   ///

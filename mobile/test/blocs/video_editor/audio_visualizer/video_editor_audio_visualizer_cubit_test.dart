@@ -112,6 +112,24 @@ void main() {
       await cubit.close();
     });
 
+    test('emits nothing for a sync that changes nothing', () async {
+      final cubit = buildCubit()
+        ..syncSources(sounds: [music], clips: [mutedClip]);
+      final map = cubit.state.timelineMap;
+      expect(map, isNotNull);
+      final emitted = <VideoEditorAudioVisualizerState>[];
+      final subscription = cubit.stream.listen(emitted.add);
+
+      // What a layer move or a text edit syncs: the same sounds and clips.
+      cubit.syncSources(sounds: [music], clips: [mutedClip]);
+      await pumpEventQueue();
+
+      expect(emitted, isEmpty);
+      expect(identical(cubit.state.timelineMap, map), isTrue);
+      await subscription.cancel();
+      await cubit.close();
+    });
+
     test('passes on the map from the editor timeline to the video', () async {
       final cubit = buildCubit()
         ..syncSources(sounds: const [], clips: [mutedClip]);

@@ -120,8 +120,13 @@ class AudioVisualizerLayerData extends Equatable {
       meta != null &&
       meta[audioVisualizerLayerKindKey] == audioVisualizerLayerKind;
 
-  /// Whether [layer] is an audio visualizer.
-  static bool isAudioVisualizerLayer(Layer layer) => of(layer) != null;
+  /// Whether [layer] is an audio visualizer. Checks the kind alone, without
+  /// reading the rest of the meta as [of] does: the canvas asks it of every
+  /// layer on every edit.
+  static bool isAudioVisualizerLayer(Layer layer) =>
+      layer is WidgetLayer &&
+      (isAudioVisualizerMeta(layer.exportConfigs.meta) ||
+          isAudioVisualizerMeta(layer.meta));
 
   /// The visualizer [meta] describes, or `null` when it describes none. An
   /// unknown style draws bars, and anything else missing or out of range

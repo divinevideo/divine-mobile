@@ -53,7 +53,9 @@ class VideoEditorAudioVisualizerCubit
     );
     final changed = input != state.input;
     // The clips can move on the video without changing what plays, so the
-    // map from the editor's timeline to the video is passed on every sync.
+    // map from the editor's timeline to the video is compared on its own.
+    // Most syncs, a layer moved or a text edited, change neither.
+    if (!changed && timelineMap == state.timelineMap) return;
     emit(state.copyWith(input: input, timelineMap: timelineMap));
     if (changed) unawaited(_refresh());
   }
