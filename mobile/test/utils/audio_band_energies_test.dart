@@ -71,6 +71,27 @@ void main() {
       expect(low[30 * audioBandCount + audioBandCount - 1], 0);
     });
 
+    test('measures a tone as loud at any sample rate', () {
+      double energyAt(int rate) {
+        final energies = bandEnergies(
+          Float32List.fromList([
+            for (var i = 0; i < rate; i++)
+              0.5 * math.sin(2 * math.pi * 1000 * i / rate),
+          ]),
+          sampleRate: rate,
+        );
+        var sum = 0.0;
+        for (var band = 0; band < audioBandCount; band++) {
+          sum += energies[30 * audioBandCount + band];
+        }
+        return sum;
+      }
+
+      final low = energyAt(16000);
+      expect(energyAt(48000), closeTo(low, low * 0.02));
+      expect(energyAt(44100), closeTo(low, low * 0.02));
+    });
+
     test('keeps a tone out of the bands far from its pitch', () {
       final energies = bandEnergies(_tone(1000), sampleRate: _sampleRate);
       const row = 30;

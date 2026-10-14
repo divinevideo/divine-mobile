@@ -57,14 +57,20 @@ const double _halfCalmRisePerSecond = 64;
 ///
 /// The bands are spaced evenly in pitch, each a fraction of an octave wide,
 /// from [_lowestFrequency] up. An energy is the summed power of the band, not
-/// a level, so the energies of several sounds playing at once add up.
+/// a level, so the energies of several sounds playing at once add up. It is
+/// scaled by the window, so a sound measures the same at any sample rate.
 Float32List bandEnergies(Float32List samples, {required int sampleRate}) {
   if (sampleRate <= 0 || samples.isEmpty) return Float32List(0);
   final size = _windowSize(sampleRate);
   final window = Float64List(size);
+  var windowPower = 0.0;
   for (var i = 0; i < size; i++) {
     window[i] = 0.5 - 0.5 * math.cos(2 * math.pi * i / (size - 1));
+    windowPower += window[i] * window[i];
   }
+  // By Parseval the power of a window's FFT grows with the window's length
+  // times its summed squares, and the window is longer at higher rates.
+  final scale = 1 / (size * windowPower);
   final bins = _bandBins(size, sampleRate);
   final rows = (samples.length * audioBandFrameRate / sampleRate).ceil().clamp(
     1,
@@ -85,7 +91,8 @@ Float32List bandEnergies(Float32List samples, {required int sampleRate}) {
     }
     _fft(real, imaginary);
     for (var bin = 0; bin < power.length; bin++) {
-      power[bin] = real[bin] * real[bin] + imaginary[bin] * imaginary[bin];
+      power[bin] =
+          (real[bin] * real[bin] + imaginary[bin] * imaginary[bin]) * scale;
     }
     for (var band = 0; band < audioBandCount; band++) {
       var sum = 0.0;
