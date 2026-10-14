@@ -10,6 +10,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -65,6 +66,44 @@ void main() {
       // advancing the clock that the retry assertions deliberately pin.
       await tester.pump();
     }
+
+    group('initial refresh', () {
+      late LogCaptureService logCapture;
+
+      setUp(() async {
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+      });
+
+      tearDown(() async {
+        await logCapture.clearAllLogs();
+      });
+
+      testWidgets(
+        'logs no failure when the screen closes before relay stats arrive',
+        (tester) async {
+          stubScreenDependencies();
+          final statsGate = Completer<Map<String, dynamic>?>();
+          when(nostrClient.getRelayStats).thenAnswer((_) => statsGate.future);
+
+          await pumpScreen(tester);
+          verify(nostrClient.getRelayStats).called(1);
+
+          await tester.pumpWidget(const SizedBox());
+          statsGate.complete(<String, dynamic>{});
+          for (var i = 0; i < 4; i++) {
+            await tester.pump();
+          }
+
+          final failures = logCapture.getRecentLogs().where(
+            (entry) =>
+                entry.name == 'RelayDiagnostic' &&
+                entry.level == LogLevel.error,
+          );
+          expect(failures, isEmpty);
+        },
+      );
+    });
 
     group('retry connection', () {
       testWidgets('reports the connected count without a wall-clock wait', (
