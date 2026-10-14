@@ -215,11 +215,7 @@ class VideoEditorAudioLevelResolver {
         anyRead = true;
         continue;
       }
-      final stretch = _Stretch.of(part.source);
-      final pending = _readsInFlight.putIfAbsent(
-        stretch,
-        () => _readEnergies(part.source),
-      );
+      final (stretch, pending) = _pendingReadFor(part.source);
       try {
         _remember(part.source, await pending);
         anyRead = true;
@@ -252,6 +248,17 @@ class VideoEditorAudioLevelResolver {
           ? failure
           : AudioLevelReadException(failure);
     }
+  }
+
+  /// A read under way that covers [source], or a new one for it, with the
+  /// stretch it is filed under.
+  (_Stretch, Future<_StretchEnergies>) _pendingReadFor(BeatSourcePart source) {
+    for (final MapEntry(key: stretch, value: pending)
+        in _readsInFlight.entries) {
+      if (stretch.covers(source)) return (stretch, pending);
+    }
+    final stretch = _Stretch.of(source);
+    return (stretch, _readsInFlight[stretch] = _readEnergies(source));
   }
 
   /// The band energies of everything in [parts] added up on the exported
@@ -331,6 +338,7 @@ class VideoEditorAudioLevelResolver {
     final start = source.from > context ? source.from - context : Duration.zero;
     final fileLength = source.fileLength;
     final end = source.to + context;
+    final toEndOfFile = _Stretch.of(source).readsToEndOfFile;
     final Uint8List wav;
     try {
       wav = await _extractAudio(
@@ -340,9 +348,7 @@ class VideoEditorAudioLevelResolver {
           video: source.media.copyWith(),
           format: AudioFormat.wav,
           startTime: start,
-          endTime: fileLength == null
-              ? null
-              : (end < fileLength ? end : fileLength),
+          endTime: toEndOfFile ? fileLength : end,
         ),
       );
       // The plugin reports a platform that returned no audio as a plain
@@ -356,7 +362,8 @@ class VideoEditorAudioLevelResolver {
     return _StretchEnergies(
       start,
       await compute(_energiesInWav, wav),
-      readTo: source.to,
+      // A read to the end of the file holds every stretch from its start.
+      readTo: toEndOfFile ? null : source.to,
     );
   }
 }
@@ -396,6 +403,21 @@ class _Stretch extends Equatable {
   final Duration? fileLength;
   final Duration from;
   final Duration to;
+
+  /// Whether reading this stretch, with the context around it, reaches the
+  /// end of the file.
+  bool get readsToEndOfFile {
+    final length = fileLength;
+    return length == null ||
+        to + VideoEditorAudioLevelResolver.context >= length;
+  }
+
+  /// Whether reading this stretch also reads [source]'s.
+  bool covers(BeatSourcePart source) =>
+      media == source.media &&
+      fileLength == source.fileLength &&
+      from == source.from &&
+      (readsToEndOfFile || to >= source.to);
 
   @override
   List<Object?> get props => [media, fileLength, from, to];

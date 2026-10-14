@@ -375,6 +375,41 @@ void main() {
         },
       );
 
+      test('shares a read under way with a shorter stretch', () async {
+        final release = Completer<void>();
+        final held = VideoEditorAudioLevelResolver(
+          extractAudio: (configs) async {
+            await release.future;
+            return file(configs);
+          },
+        );
+
+        final long = held.read([_part(to: _ms(1500))]);
+        final short = held.read([_part(to: _ms(500))]);
+        release.complete();
+        await Future.wait([long, short]);
+
+        expect(file.reads, hasLength(1));
+        expect(held.hasRead([_part(to: _ms(500))]), isTrue);
+      });
+
+      test('reads a file of unknown length once for every stretch', () async {
+        AudioLevelPart unknownLength(Duration to) => AudioLevelPart(
+          source: BeatSourcePart(
+            media: EditorVideo.file('${Directory.systemTemp.path}/open.m4a'),
+            from: Duration.zero,
+            to: to,
+            at: Duration.zero,
+          ),
+        );
+
+        await resolver.read([unknownLength(_ms(1000))]);
+
+        // The read ran to the end of the file, so it holds longer stretches.
+        expect(file.reads.single.endTime, isNull);
+        expect(resolver.hasRead([unknownLength(_ms(5000))]), isTrue);
+      });
+
       test('keeps the longer read when a shorter one finishes last', () async {
         final release = Completer<void>();
         final ordered = VideoEditorAudioLevelResolver(
