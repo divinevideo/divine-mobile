@@ -596,6 +596,58 @@ void main() {
     });
   });
 
+  group('iOS accessibility-compatible owned removal', () {
+    void useIosKeychain(Map<String, (String, String)> records) {
+      messenger.setMockMethodCallHandler(fallbackChannel, (call) async {
+        final args = call.arguments as Map<dynamic, dynamic>;
+        final key = args['key'] as String;
+        final options = args['options'] as Map<dynamic, dynamic>;
+        final accessibility = options['accessibility'] as String;
+        switch (call.method) {
+          case 'read':
+            return records[key]?.$2;
+          case 'delete':
+            deletes.add(fallbackId(accessibility, key));
+            if (records[key]?.$1 == accessibility) records.remove(key);
+            return null;
+          default:
+            fail('Owned removal must not write key records');
+        }
+      });
+    }
+
+    for (final accessibility in [current, legacy]) {
+      test('removes owned records stored as $accessibility', () async {
+        final records = {
+          primary: (accessibility, rawRecord(alice)),
+          aliceSaved: (accessibility, rawRecord(alice)),
+        };
+        useIosKeychain(records);
+
+        await removeAlice();
+
+        expect(records, isEmpty);
+        expect(deletes, contains(fallbackId(accessibility, primary)));
+        expect(deletes, contains(fallbackId(accessibility, aliceSaved)));
+      });
+
+      test('preserves foreign PRIMARY stored as $accessibility', () async {
+        final foreign = rawRecord(bob);
+        final records = {
+          primary: (accessibility, foreign),
+          aliceSaved: (legacy, rawRecord(alice)),
+        };
+        useIosKeychain(records);
+
+        await removeAlice();
+
+        expect(records, {primary: (accessibility, foreign)});
+        expect(deletes, isNot(contains(fallbackId(current, primary))));
+        expect(deletes, isNot(contains(fallbackId(legacy, primary))));
+      });
+    }
+  });
+
   group('Aliased current and legacy fallback namespaces', () {
     for (final platform in [TargetPlatform.android, TargetPlatform.linux]) {
       test(

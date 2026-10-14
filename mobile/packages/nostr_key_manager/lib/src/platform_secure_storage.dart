@@ -702,11 +702,36 @@ class PlatformSecureStorage {
           );
         }
       }
-      final after = await _readStrictSnapshot(
+      var after = await _readStrictSnapshot(
         snapshot.keyId,
         snapshot.storage,
         ensureCurrent,
       );
+      if (storage != null && snapshot.matches(after)) {
+        // Some fallback readers share a record across accessibility options.
+        // Retry only through an unchanged sibling already proven to own it.
+        for (final sibling in snapshots) {
+          final siblingStorage = sibling.storage;
+          if (sibling.keyId != snapshot.keyId ||
+              siblingStorage == null ||
+              identical(siblingStorage, storage) ||
+              sibling.ownerPubkey != ownerPubkey ||
+              sibling.raw != snapshot.raw) {
+            continue;
+          }
+          await _requireUnchangedSnapshot(sibling, ensureCurrent);
+          await _strictIO(
+            () => siblingStorage.delete(key: sibling.keyId),
+            ensureCurrent,
+          );
+          after = await _readStrictSnapshot(
+            snapshot.keyId,
+            storage,
+            ensureCurrent,
+          );
+          break;
+        }
+      }
       if (after.ownerPubkey != null) {
         throw const PlatformSecureStorageException(
           'A deleted key record remains in storage',
