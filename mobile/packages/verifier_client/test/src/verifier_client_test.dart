@@ -565,26 +565,35 @@ void main() {
         );
       });
 
-      test('treats a server error as an API error, not a refusal', () async {
-        final client = VerifierClient(
-          baseUrl: 'https://verifier.example',
-          httpClient: MockClient((_) async => http.Response('oops', 502)),
+      // 500 is what an unhandled Worker error returns, so the boundary itself
+      // has to read as a server error: the app resends the same event then.
+      for (final status in [500, 502]) {
+        test(
+          'treats a $status as an API error, not a refusal',
+          () async {
+            final client = VerifierClient(
+              baseUrl: 'https://verifier.example',
+              httpClient: MockClient(
+                (_) async => http.Response('oops', status),
+              ),
+            );
+            await expectLater(
+              client.confirmSignIn(
+                code: 'C' * 43,
+                startSecret: 'S' * 43,
+                event: event,
+              ),
+              throwsA(
+                isA<VerifierApiException>().having(
+                  (e) => e.statusCode,
+                  'statusCode',
+                  status,
+                ),
+              ),
+            );
+          },
         );
-        await expectLater(
-          client.confirmSignIn(
-            code: 'C' * 43,
-            startSecret: 'S' * 43,
-            event: event,
-          ),
-          throwsA(
-            isA<VerifierApiException>().having(
-              (e) => e.statusCode,
-              'statusCode',
-              502,
-            ),
-          ),
-        );
-      });
+      }
 
       test('does not count a 200 that does not say linked', () async {
         final client = VerifierClient(
