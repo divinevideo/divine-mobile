@@ -255,11 +255,12 @@ class ProfileCollabVideosBloc
 
   Future<ProfileVideoCursorSnapshot?> _readCachedSnapshot() async {
     try {
-      final snapshot = await CacheSync.read<ProfileVideoCursorSnapshot>(
+      // Expired snapshots are served too; the sync revalidates right after.
+      final entry = await CacheSync.readEntry<ProfileVideoCursorSnapshot>(
         key: _cacheKey,
         fromJson: ProfileVideoCursorSnapshot.fromJson,
       );
-      return snapshot == null ? null : _filterDeletedSnapshot(snapshot);
+      return entry == null ? null : _filterDeletedSnapshot(entry.data);
     } on Object catch (e) {
       Log.warning(
         'ProfileCollabVideosBloc: Failed to read cached snapshot - $e',

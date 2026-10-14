@@ -24,6 +24,9 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   /// When set, [write] parks until it completes, holding a sync handler in the
   /// post-emit snapshot write the way a real disk write does.
   Completer<void>? writeGate;
@@ -33,7 +36,7 @@ class _InMemoryCacheDao implements CacheDao {
     final payload = _store[key];
     return payload == null
         ? null
-        : CacheEntry(payload: payload, isStale: false);
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
   }
 
   @override
@@ -425,6 +428,47 @@ void main() {
           ),
         );
       });
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows a stale snapshot while revalidating',
+        setUp: () async {
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: [createTestVideo('video-1'), createTestVideo('video-2')],
+              itemIds: const ['video-1', 'video-2'],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          cacheDao.staleKeys.add(snapshotCacheKey);
+          when(
+            () => mockBookmarksRepository.globalBookmarks,
+          ).thenReturn(repositoryListShownAs(['video-1', 'video-2']));
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileSavedVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having(
+                (s) => s.videos.map((v) => v.id).toList(),
+                'stale videos',
+                ['video-1', 'video-2'],
+              ),
+          isA<ProfileSavedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockBookmarksRepository.globalBookmarks).called(
+            greaterThan(0),
+          );
+        },
+      );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'reopen restores the cached list, then flips the bar off when '

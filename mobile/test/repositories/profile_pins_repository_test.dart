@@ -18,12 +18,15 @@ class _FakeEvent extends Fake implements Event {}
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   @override
   Future<CacheEntry?> readEntry(String key) async {
     final payload = store[key];
     return payload == null
         ? null
-        : CacheEntry(payload: payload, isStale: false);
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
   }
 
   @override
@@ -300,6 +303,16 @@ void main() {
 
       test('readCached is null before any fetch', () async {
         expect(await repository.readCached(_owner), isNull);
+      });
+
+      test('readCached shows a stale snapshot while revalidating', () async {
+        final key = ProfilePinsRepository.cacheKeyFor(_owner);
+        cacheDao
+          ..store[key] = '["${_coordinate('one')}"]'
+          ..staleKeys.add(key);
+
+        expect(await repository.readCached(_owner), [_coordinate('one')]);
+        expect(cacheDao.store, contains(key));
       });
 
       test('readCached drops a corrupt cache entry instead of serving it '

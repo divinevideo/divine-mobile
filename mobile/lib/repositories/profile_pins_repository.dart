@@ -152,14 +152,16 @@ class ProfilePinsRepository {
 
   /// The cached pin list for [ownerPubkey], or `null` when nothing is cached.
   ///
+  /// An expired list is still returned; callers revalidate with [fetch].
   /// Never touches the network; a cache failure reads as a miss so a cold
   /// profile open cannot be broken by it.
   Future<List<String>?> readCached(String ownerPubkey) async {
     try {
-      return await CacheSync.read<List<String>>(
+      final entry = await CacheSync.readEntry<List<String>>(
         key: cacheKeyFor(ownerPubkey),
         fromJson: _coordinatesFromJson,
       );
+      return entry?.data;
     } on Object catch (error) {
       Log.warning(
         'Failed to read cached profile pins - $error',

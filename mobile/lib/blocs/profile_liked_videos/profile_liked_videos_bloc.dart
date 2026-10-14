@@ -411,11 +411,12 @@ class ProfileLikedVideosBloc
   /// failure (cache problems must never break the load).
   Future<ProfileVideoListSnapshot?> _readCachedSnapshot() async {
     try {
-      final snapshot = await CacheSync.read<ProfileVideoListSnapshot>(
+      // Expired snapshots are served too; the sync revalidates right after.
+      final entry = await CacheSync.readEntry<ProfileVideoListSnapshot>(
         key: _cacheKey,
         fromJson: ProfileVideoListSnapshot.fromJson,
       );
-      return snapshot == null ? null : _filterDeletedSnapshot(snapshot);
+      return entry == null ? null : _filterDeletedSnapshot(entry.data);
     } on Object catch (e) {
       Log.warning(
         'ProfileLikedVideosBloc: Failed to read cached snapshot - $e',

@@ -9,9 +9,8 @@ import 'package:models/models.dart';
 
 /// Maximum age of a cached home feed before it is considered stale.
 ///
-/// Tuned to cover same-day reopens (the common "closed it this morning,
-/// reopen at lunch" case) while still forcing a clean fresh load after a
-/// long absence.
+/// A stale window is still served on cold start; the age only marks when the
+/// entry is due a refresh, which the feed always runs after serving it.
 const homeFeedCacheMaxAge = Duration(hours: 6);
 
 /// Upper bound on how many videos are persisted per mode.
@@ -46,17 +45,21 @@ class HomeFeedCache {
   String _videosKey(String? pubkey, String mode) =>
       '${_accountPrefix(pubkey)}:home_feed:$mode';
 
-  /// Returns the cached forward window for [mode], or `null` when absent or
-  /// expired.
+  /// Returns the cached forward window for [mode], or `null` when absent.
+  ///
+  /// An entry older than [homeFeedCacheMaxAge] is still returned: the feed
+  /// always loads fresh videos right after serving this window and splices
+  /// them in, so an old window beats a blank screen.
   Future<List<VideoEvent>?> readVideos({
     required String? pubkey,
     required String mode,
   }) async {
     try {
-      return await CacheSync.read<List<VideoEvent>>(
+      final entry = await CacheSync.readEntry<List<VideoEvent>>(
         key: _videosKey(pubkey, mode),
         fromJson: _decodeVideos,
       );
+      return entry?.data;
     } on Object {
       return null;
     }

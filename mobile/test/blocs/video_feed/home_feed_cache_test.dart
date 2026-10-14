@@ -88,6 +88,24 @@ void main() {
         expect(result!.map((v) => v.id), equals(['a', 'b']));
       });
 
+      test('shows a stale snapshot while revalidating', () async {
+        await cache.writeVideos(
+          pubkey: pubkey,
+          mode: 'forYou',
+          videos: [_video('a'), _video('b')],
+        );
+        final key = dao.store.keys.single;
+        dao.store[key] = (
+          payload: dao.store[key]!.payload,
+          expiresAt: DateTime.now().toUtc().subtract(homeFeedCacheMaxAge),
+        );
+
+        final result = await cache.readVideos(pubkey: pubkey, mode: 'forYou');
+
+        expect(result!.map((v) => v.id), equals(['a', 'b']));
+        expect(dao.store, contains(key));
+      });
+
       test('does not persist an empty list', () async {
         await cache.writeVideos(pubkey: pubkey, mode: 'forYou', videos: []);
         expect(dao.store, isEmpty);
