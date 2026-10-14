@@ -3,7 +3,6 @@
 # scripts/check_async_safety_ceiling.sh. Each count may only SHRINK.
 # Owner: issue #9118 (NotThatKindOfDrLiz); affected-file owners must classify
 # their futures and reduce the baseline when they touch these paths.
-discarded_futures|lib/main.dart	1
 discarded_futures|lib/repositories/feed_repository_impl.dart	2
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
 discarded_futures|lib/screens/web_auth_screen.dart	1
