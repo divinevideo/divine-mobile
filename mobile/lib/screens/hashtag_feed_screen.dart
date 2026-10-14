@@ -287,6 +287,9 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
                 const SizedBox(height: 24),
                 Text(
                   context.l10n.hashtagFeedLoadingTitle(widget.hashtag),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.vineColors.primaryText,
                     fontSize: 18,
@@ -308,32 +311,40 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
         if (videos.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.tag,
-                  size: 64,
-                  color: context.vineColors.secondaryText,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  context.l10n.hashtagFeedEmptyTitle(widget.hashtag),
-                  style: TextStyle(
-                    color: context.vineColors.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.l10n.hashtagFeedEmptySubtitle,
-                  style: TextStyle(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.tag,
+                    size: 64,
                     color: context.vineColors.secondaryText,
-                    fontSize: 14,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text(
+                    context.l10n.hashtagFeedEmptyTitle(widget.hashtag),
+                    // Older events can carry thousands of characters in one
+                    // tag; the app bar already ellipsizes, so this does too.
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: context.vineColors.primaryText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    context.l10n.hashtagFeedEmptySubtitle,
+                    style: TextStyle(
+                      color: context.vineColors.secondaryText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }

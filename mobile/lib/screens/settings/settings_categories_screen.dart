@@ -33,6 +33,7 @@ import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
+import 'package:openvine/screens/settings/recording_gallery_backup_setting.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
@@ -122,6 +123,12 @@ class CreatingSettingsScreen extends ConsumerWidget {
         if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
           const AudioDeviceSetting(),
         const AudioSharingSetting(),
+        // Android and iOS only, like the gallery import that brings the
+        // copies back.
+        if (!kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.android))
+          const RecordingGalleryBackupSetting(),
         if (crosspostingEnabled || blueskyEnabled)
           DivineSectionHeader(context.l10n.generalSettingsSectionIntegrations),
         if (crosspostingEnabled)

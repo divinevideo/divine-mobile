@@ -258,6 +258,7 @@ void main() {
       DmVideoSendService? videoSendService,
       ImagePicker? videoPicker,
       ProfileReader? profileReadRepository,
+      FollowRepository? followRepository,
       List<Override> extraOverrides = const [],
     }) {
       final effectiveState = state ?? const ConversationState();
@@ -281,6 +282,7 @@ void main() {
       final app = testMaterialApp(
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrClient,
+        mockFollowRepository: followRepository,
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           watermarkDownloadServiceProvider.overrideWithValue(
@@ -405,6 +407,82 @@ void main() {
           find.textContaining(l10n.profileReportDisplayName('')),
           findsOneWidget,
         );
+      });
+    });
+
+    group('options sheet unfollow', () {
+      testWidgets('never follows the account when Unfollow is chosen', (
+        tester,
+      ) async {
+        final followRepository = createMockFollowRepository(
+          followingPubkeys: const [otherPubkey],
+        );
+        when(() => followRepository.isFollowing(otherPubkey)).thenReturn(true);
+        when(
+          () => followRepository.follow(otherPubkey),
+        ).thenAnswer((_) async {});
+        when(
+          () => followRepository.unfollow(otherPubkey),
+        ).thenAnswer((_) async {});
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildSubject(
+            followRepository: followRepository,
+            state: const ConversationState(
+              status: ConversationStatus.loaded,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+        );
+        await tester.pumpAndSettle();
+        // The follow list changes while the sheet is open.
+        when(
+          () => followRepository.isFollowing(otherPubkey),
+        ).thenReturn(false);
+        await tester.tap(
+          find.textContaining(l10n.profileUnfollowDisplayName('')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verifyNever(() => followRepository.follow(otherPubkey));
+        verify(() => followRepository.unfollow(otherPubkey)).called(1);
+      });
+
+      testWidgets('tells the user when the unfollow fails', (tester) async {
+        final followRepository = createMockFollowRepository(
+          followingPubkeys: const [otherPubkey],
+        );
+        when(() => followRepository.isFollowing(otherPubkey)).thenReturn(true);
+        when(
+          () => followRepository.unfollow(otherPubkey),
+        ).thenAnswer((_) async => throw Exception('publish failed'));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildSubject(
+            followRepository: followRepository,
+            state: const ConversationState(
+              status: ConversationStatus.loaded,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.textContaining(l10n.profileUnfollowDisplayName('')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.followersUpdateFollowFailed), findsOneWidget);
       });
     });
 

@@ -1,8 +1,7 @@
 // ABOUTME: Tests for ClipsLibraryBloc - managing saved video clips
-// ABOUTME: Tests loading, selection, deletion, and gallery export
+// ABOUTME: Tests loading, selection, deletion, trash and categories
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -14,16 +13,10 @@ import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/services/clip_library_service.dart';
-import 'package:openvine/services/gallery_save_service.dart';
-import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
-
-class _MockGallerySaveService extends Mock implements GallerySaveService {}
-
-class _FakeEditorVideo extends Fake implements EditorVideo {}
 
 class _CapturingObserver extends BlocObserver {
   final List<Object> errors = [];
@@ -36,13 +29,8 @@ class _CapturingObserver extends BlocObserver {
 }
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(_FakeEditorVideo());
-  });
-
   group(ClipsLibraryBloc, () {
     late _MockClipLibraryService mockClipLibraryService;
-    late _MockGallerySaveService mockGallerySaveService;
     late SharedPreferences sharedPreferences;
 
     DivineVideoClip createClip({
@@ -65,7 +53,6 @@ void main() {
 
     setUp(() async {
       mockClipLibraryService = _MockClipLibraryService();
-      mockGallerySaveService = _MockGallerySaveService();
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
 
@@ -81,11 +68,6 @@ void main() {
       when(
         () => mockClipLibraryService.getCategories(),
       ).thenAnswer((_) async => <ClipCategory>[]);
-    });
-
-    tearDown(() {
-      StopMotionRenderService.assembleOverride = null;
-      StopMotionRenderService.probeDurationOverride = null;
     });
 
     DivineVideoClip createStopMotionClip({
@@ -115,7 +97,6 @@ void main() {
       bool allowsMixedClipTypes = false,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
-      gallerySaveService: mockGallerySaveService,
       sharedPreferences: sharedPreferences,
       clipTypeFilter: clipTypeFilter,
       allowsMixedClipTypes: allowsMixedClipTypes,
@@ -182,7 +163,6 @@ void main() {
         });
         final bloc = ClipsLibraryBloc(
           clipLibraryService: mockClipLibraryService,
-          gallerySaveService: mockGallerySaveService,
           sharedPreferences: await SharedPreferences.getInstance(),
         );
 
@@ -198,7 +178,6 @@ void main() {
           });
           final bloc = ClipsLibraryBloc(
             clipLibraryService: mockClipLibraryService,
-            gallerySaveService: mockGallerySaveService,
             sharedPreferences: await SharedPreferences.getInstance(),
           );
 
@@ -1721,178 +1700,6 @@ void main() {
             'status',
             ClipsLibraryStatus.error,
           ),
-        ],
-      );
-    });
-
-    group('ClipsLibrarySaveToGallery', () {
-      final clip1 = DivineVideoClip(
-        id: 'clip1',
-        video: EditorVideo.file('/path/to/clip1.mp4'),
-        thumbnailPath: '/path/to/thumb1.jpg',
-        duration: const Duration(seconds: 5),
-        recordedAt: DateTime(2026),
-        targetAspectRatio: .vertical,
-        originalAspectRatio: 9 / 16,
-      );
-
-      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
-        'does nothing when no clips selected',
-        seed: () => ClipsLibraryState(
-          status: ClipsLibraryStatus.loaded,
-          clips: [clip1],
-        ),
-        build: createBloc,
-        act: (bloc) => bloc.add(const ClipsLibrarySaveToGallery()),
-        expect: () => [],
-      );
-
-      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
-        'saves selected clips to gallery',
-        setUp: () {
-          when(
-            () => mockGallerySaveService.saveVideoToGallery(any()),
-          ).thenAnswer((_) async => const GallerySaveSuccess());
-        },
-        seed: () => ClipsLibraryState(
-          status: ClipsLibraryStatus.loaded,
-          clips: [clip1],
-          selectedClipIds: const {'clip1'},
-          selectedDuration: const Duration(seconds: 5),
-        ),
-        build: createBloc,
-        act: (bloc) => bloc.add(const ClipsLibrarySaveToGallery()),
-        expect: () => [
-          isA<ClipsLibraryState>().having(
-            (s) => s.status,
-            'status',
-            ClipsLibraryStatus.savingToGallery,
-          ),
-          isA<ClipsLibraryState>()
-              .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
-              .having((s) => s.selectedClipIds, 'selectedClipIds', isEmpty)
-              .having(
-                (s) => s.lastGallerySaveResult,
-                'lastGallerySaveResult',
-                isA<GallerySaveResultSuccess>()
-                    .having((r) => r.successCount, 'successCount', 1)
-                    .having((r) => r.failureCount, 'failureCount', 0),
-              ),
-        ],
-      );
-
-      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
-        'cleans up the transient mp4 after saving a stop-motion clip',
-        setUp: () {
-          final tempDir = Directory.systemTemp.createTempSync(
-            'clips_library_stop_motion_gallery_test',
-          );
-          addTearDown(() async {
-            if (tempDir.existsSync()) await tempDir.delete(recursive: true);
-          });
-          final output = File('${tempDir.path}/rendered.mp4')
-            ..writeAsStringSync('rendered');
-          StopMotionRenderService.assembleOverride = ({
-            required frames,
-            required aspectRatio,
-            frameRate = StopMotionRenderService.defaultFrameRate,
-            String? taskId,
-          }) async => output.path;
-          StopMotionRenderService.probeDurationOverride = (_) async => null;
-          when(
-            () => mockGallerySaveService.saveVideoToGallery(any()),
-          ).thenAnswer((_) async => const GallerySaveSuccess());
-        },
-        seed: () => ClipsLibraryState(
-          status: ClipsLibraryStatus.loaded,
-          clips: [createStopMotionClip(id: 'sm1')],
-          selectedClipIds: const {'sm1'},
-          selectedDuration: const Duration(seconds: 1),
-        ),
-        build: createBloc,
-        // Wait for the save-result state before asserting on disk. The cleanup
-        // runs in the save loop's `finally`, which the handler awaits before
-        // emitting that state — but `blocTest` closes the bloc without waiting
-        // for an in-flight handler, so a bare `add` would race the real (async)
-        // file delete and see the mp4 still there.
-        act: (bloc) async {
-          final saved = bloc.stream.firstWhere(
-            (s) => s.lastGallerySaveResult is GallerySaveResultSuccess,
-          );
-          bloc.add(const ClipsLibrarySaveToGallery());
-          await saved;
-        },
-        verify: (_) {
-          final captured =
-              verify(
-                    () =>
-                        mockGallerySaveService.saveVideoToGallery(captureAny()),
-                  ).captured.single
-                  as EditorVideo;
-          expect(File(captured.file!.path).existsSync(), isFalse);
-        },
-      );
-
-      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
-        'stops on permission denied',
-        setUp: () {
-          when(
-            () => mockGallerySaveService.saveVideoToGallery(any()),
-          ).thenAnswer((_) async => const GallerySavePermissionDenied());
-        },
-        seed: () => ClipsLibraryState(
-          status: ClipsLibraryStatus.loaded,
-          clips: [clip1],
-          selectedClipIds: const {'clip1'},
-          selectedDuration: const Duration(seconds: 5),
-        ),
-        build: createBloc,
-        act: (bloc) => bloc.add(const ClipsLibrarySaveToGallery()),
-        expect: () => [
-          isA<ClipsLibraryState>().having(
-            (s) => s.status,
-            'status',
-            ClipsLibraryStatus.savingToGallery,
-          ),
-          isA<ClipsLibraryState>()
-              .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
-              .having(
-                (s) => s.lastGallerySaveResult,
-                'lastGallerySaveResult',
-                isA<GallerySaveResultPermissionDenied>(),
-              ),
-        ],
-      );
-
-      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
-        'emits error result when exception is thrown',
-        setUp: () {
-          when(
-            () => mockGallerySaveService.saveVideoToGallery(any()),
-          ).thenThrow(Exception('Unexpected error'));
-        },
-        seed: () => ClipsLibraryState(
-          status: ClipsLibraryStatus.loaded,
-          clips: [clip1],
-          selectedClipIds: const {'clip1'},
-          selectedDuration: const Duration(seconds: 5),
-        ),
-        build: createBloc,
-        act: (bloc) => bloc.add(const ClipsLibrarySaveToGallery()),
-        errors: () => [isA<Exception>()],
-        expect: () => [
-          isA<ClipsLibraryState>().having(
-            (s) => s.status,
-            'status',
-            ClipsLibraryStatus.savingToGallery,
-          ),
-          isA<ClipsLibraryState>()
-              .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
-              .having(
-                (s) => s.lastGallerySaveResult,
-                'lastGallerySaveResult',
-                isA<GallerySaveResultError>(),
-              ),
         ],
       );
     });

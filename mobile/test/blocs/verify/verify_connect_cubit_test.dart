@@ -67,15 +67,34 @@ const _youtube = VerifierPlatform(
   supported: true,
 );
 
-VerificationResult _result({required bool verified, String? code}) =>
-    VerificationResult(
-      platform: 'github',
-      identity: 'octocat',
-      verified: verified,
-      checkedAt: 1,
-      cached: false,
-      code: code,
-    );
+const _tiktok = VerifierPlatform(
+  key: 'tiktok',
+  label: 'TikTok',
+  supported: true,
+);
+const _mastodon = VerifierPlatform(
+  key: 'mastodon',
+  label: 'Mastodon',
+  supported: true,
+);
+
+VerificationResult _result({
+  required bool verified,
+  String platform = 'github',
+  String identity = 'octocat',
+  String? code,
+  String? canonicalProof,
+  String? canonicalIdentity,
+}) => VerificationResult(
+  platform: platform,
+  identity: identity,
+  verified: verified,
+  checkedAt: 1,
+  cached: false,
+  code: code,
+  canonicalProof: canonicalProof,
+  canonicalIdentity: canonicalIdentity,
+);
 
 void main() {
   group(VerifyConnectCubit, () {
@@ -122,7 +141,12 @@ void main() {
       when(
         () => repository.verifyClaim(any()),
       ).thenAnswer((_) async => _result(verified: true));
-      when(() => repository.publishClaim(any())).thenAnswer((_) async => []);
+      when(
+        () => repository.publishClaim(
+          any(),
+          replacingIdentity: any(named: 'replacingIdentity'),
+        ),
+      ).thenAnswer((_) async => []);
       when(
         () => repository.startSignIn(
           platform: any(named: 'platform'),
@@ -158,6 +182,17 @@ void main() {
             return answer(Uri.parse(startedReturnUrl!));
           },
     );
+
+    // The claim published, and the identity it was told to replace.
+    (IdentityClaim, String?) published() {
+      final captured = verify(
+        () => repository.publishClaim(
+          captureAny(),
+          replacingIdentity: captureAny(named: 'replacingIdentity'),
+        ),
+      ).captured;
+      return (captured[0] as IdentityClaim, captured[1] as String?);
+    }
 
     group('submitProof', () {
       blocTest<VerifyConnectCubit, VerifyConnectState>(
@@ -257,6 +292,170 @@ void main() {
           expect(claim.proof, equals('abc'));
           // Handed back so the dashboard can render it straight away.
           expect(cubit.state.linkedClaim, equals(claim));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the post number the verifier returns, not the pasted link',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'tiktok',
+              identity: 'alice',
+              canonicalProof: '7123456789012345678',
+            ),
+          );
+        },
+        build: () => build(_tiktok),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://vm.tiktok.com/ZMabc123/');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          // The verifier is asked about the link as pasted.
+          final checked =
+              verify(
+                    () => repository.verifyClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(checked.proof, equals('https://vm.tiktok.com/ZMabc123/'));
+
+          final (claim, replacing) = published();
+          // The account is the one sent, so there is no other form to drop.
+          expect(replacing, isNull);
+          expect(claim.pubkey, equals(_pubkey));
+          expect(claim.platform, equals('tiktok'));
+          expect(claim.identity, equals('alice'));
+          expect(claim.proof, equals('7123456789012345678'));
+          expect(cubit.state.linkedClaim, equals(claim));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the account the verifier tidied, not the one typed',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
+              canonicalIdentity: 'mastodon.example/@alice',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final (claim, replacing) = published();
+          // A tag saved earlier under the form typed is replaced too.
+          expect(replacing, equals('@alice@mastodon.example'));
+          expect(claim.pubkey, equals(_pubkey));
+          expect(claim.platform, equals('mastodon'));
+          expect(claim.identity, equals('mastodon.example/@alice'));
+          expect(claim.proof, equals('110123'));
+          expect(cubit.state.identity, equals('mastodon.example/@alice'));
+        },
+      );
+
+      // Claims that fail the server's text rules are dropped whenever the
+      // identity event is read, so publishing one would leave a tag nobody
+      // sees.
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the pasted proof when the returned one is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'tiktok',
+              identity: 'alice',
+              canonicalProof: '7123|456',
+            ),
+          );
+        },
+        build: () => build(_tiktok),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://vm.tiktok.com/ZMabc123/');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('alice'));
+          expect(claim.proof, equals('https://vm.tiktok.com/ZMabc123/'));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the typed account when the returned one is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
+              canonicalIdentity: 'mastodon.example/@al|ice',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final claim =
+              verify(
+                    () => repository.publishClaim(captureAny()),
+                  ).captured.single
+                  as IdentityClaim;
+          expect(claim.identity, equals('@alice@mastodon.example'));
+          expect(claim.proof, equals('110123'));
+        },
+      );
+
+      // The returned values describe one confirmed claim, so a valid account
+      // is not mixed with the proof as sent.
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'publishes the whole claim as sent when one returned value is not valid',
+        setUp: () {
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async => _result(
+              verified: true,
+              platform: 'mastodon',
+              identity: '@alice@mastodon.example',
+              canonicalIdentity: 'mastodon.example/@alice',
+              canonicalProof: '110|123',
+            ),
+          );
+        },
+        build: () => build(_mastodon),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('@alice@mastodon.example')
+            ..proofChanged('110123');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          final (claim, replacing) = published();
+          // The claim as sent replaces only itself.
+          expect(replacing, isNull);
+          expect(claim.identity, equals('@alice@mastodon.example'));
+          expect(claim.proof, equals('110123'));
         },
       );
 

@@ -143,7 +143,7 @@ class VideoFollowButtonView extends StatelessWidget {
         isReady:
             state.status == MyFollowingStatus.success ||
             state.status == MyFollowingStatus.toggleFailure,
-        // Set by the bloc before a toggle resolves, so it is true for exactly
+        // Set by the bloc before a follow resolves, so it is true for exactly
         // the follows made from this badge and false for an author the viewer
         // already followed when the item mounted.
         followedHere: state.hasLocalFollowEdit,
@@ -182,7 +182,7 @@ class VideoFollowButtonView extends StatelessWidget {
               category: LogCategory.ui,
             );
             context.read<MyFollowingBloc>().add(
-              MyFollowingToggleRequested(pubkey),
+              MyFollowingFollowRequested(pubkey),
             );
           },
         );

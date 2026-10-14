@@ -38,7 +38,6 @@ class InboxPage extends ConsumerWidget {
     final dmRepository = ref.watch(dmRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-    final reportingService = ref.watch(contentReportingServiceProvider).value;
     // Read once for constructor seeding; subsequent changes are handled by
     // ref.listen below via _InboxRepositorySync, avoiding page rebuild on
     // profileRepository null → instance transition at cold start.
@@ -68,13 +67,6 @@ class InboxPage extends ConsumerWidget {
       // cubits capturing them silently keep the stale instance. See
       // .claude/rules/state_management.md ("Bridging Riverpod-provided
       // dependencies into BlocProvider").
-      //
-      // reportingService is deliberately NOT in this tuple: it resolves
-      // from null asynchronously shortly after every inbox mount, and
-      // keying the whole MultiBlocProvider on it tore down and recreated
-      // every bloc (double ConversationListStarted + list reload)
-      // right after every open. Only its consumer — the
-      // ConversationActionsCubit provider below — is re-keyed on it.
       key: ValueKey((
         dmRepository,
         followRepository,
@@ -124,15 +116,8 @@ class InboxPage extends ConsumerWidget {
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),
         ),
-        // Re-keyed on the async-resolving reportingService alone (last in
-        // the list so the swap recreates the smallest possible subtree):
-        // the actions cubit is action-only state and cheap to rebuild,
-        // and without the key it would capture the pre-resolution null
-        // forever, silently failing every report.
         BlocProvider(
-          key: ValueKey(reportingService),
           create: (_) => ConversationActionsCubit(
-            contentReportingService: reportingService,
             contentBlocklistRepository: blocklistRepository,
             dmRepository: dmRepository,
             currentUserPubkey: currentUserPubkey,

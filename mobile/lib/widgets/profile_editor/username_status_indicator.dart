@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Displays username availability status (checking, available, taken, reserved, error)
@@ -186,12 +188,17 @@ class _UsernameReservedIndicator extends StatelessWidget {
                       .read<ProfileEditorBloc>()
                       .state
                       .username;
-                  showDialog<void>(
-                    context: context,
-                    builder: (dialogContext) => BlocProvider.value(
-                      value: context.read<ProfileEditorBloc>(),
-                      child: UsernameReservedDialog(username),
+                  runDetached(
+                    showDialog<void>(
+                      context: context,
+                      builder: (dialogContext) => BlocProvider.value(
+                        value: context.read<ProfileEditorBloc>(),
+                        child: UsernameReservedDialog(username),
+                      ),
                     ),
+                    'open reserved username dialog',
+                    logName: 'UsernameStatusIndicator',
+                    category: LogCategory.ui,
                   );
                 },
                 child: Text(

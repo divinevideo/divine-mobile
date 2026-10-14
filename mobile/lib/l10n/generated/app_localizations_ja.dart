@@ -876,9 +876,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'このアカウントのブロックを解除';
 
   @override
-  String get inboxReportedVanishedAccount => 'このアカウントを報告したよ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'このアカウントをブロックしたよ';
 
   @override
@@ -4538,6 +4535,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportWhyReporting => 'このコンテンツを報告する理由は?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine はコンテンツの報告に24時間以内に対応して、問題のあるコンテンツを削除し、違反ユーザーを排除するよ。';
 
@@ -4558,6 +4558,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '問題の内容を記入してください';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly => 'テキストのみです。ここには写真やGIFを添付できません。';
@@ -5425,11 +5428,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileSetupUploadStaged => 'アップロードしたよ — 適用するには「保存」をタップしてね';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayNameを報告したよ';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayNameをブロックしたよ';
   }
@@ -6190,7 +6188,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get librarySortVerticalFirst => '縦長を先に';
 
   @override
-  String get libraryDeleteClipsWarning => 'この操作は取り消せません。動画ファイルは端末から完全に削除されます。';
+  String get libraryDeleteClipsWarning => 'この操作は取り消せません。';
 
   @override
   String get libraryPreparingVideo => '動画を準備しています…';
@@ -6263,6 +6261,61 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => '完了';
+
+  @override
+  String get librarySaveSelectedClipsTooltip => '選択したクリップをギャラリーに保存';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを証明なしで保存しました。このため、クリップに戻すことはできません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '詳細';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '証明なしで保存済み';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ギャラリーから戻せるのは、Divineで撮影したことを証明できるクリップだけです。これらのクリップのコピーは証明なしで保存されました。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'オフラインだったなどの理由で、今は証明を追加できませんでした。もう一度試すと、証明付きのコピーを保存できます。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'ストップモーションのクリップは写真から作られていて、写真には証明を付けられません。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'このバージョンのDivineでは、クリップに証明を追加できません。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'このクリップには証明がなく、Divineで後から追加することもできません。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '証明付きで保存しました';
+
+  @override
+  String get libraryGallerySaveSigning => 'クリップに証明を追加しています…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件中$current件目のクリップを保存しています…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6357,6 +6410,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDeleteClipMessage => 'このクリップを削除しますか？';
 
   @override
+  String get libraryDeleteClipTrashNote => 'クリップはまずゴミ箱に移動するため、まだ復元できます。';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds秒';
   }
@@ -6372,6 +6428,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'アーカイブ済み。$label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'まだギャラリーにありません。$label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'コンテンツ認証情報なしでギャラリーに保存済み。$label';
   }
 
   @override
@@ -6633,12 +6699,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'このコンテンツにフラグを付ける';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => 'このコメントにフラグを付ける理由を選んでね';
-
-  @override
-  String get commentOptionsFlagSubmit => '送信';
 
   @override
   String get commentOptionsTitle => 'オプション';
@@ -7901,9 +7961,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commentsErrorVoteFailed => 'コメントへの投票に失敗しました';
 
   @override
-  String get commentsErrorReportFailed => 'コメントを報告できませんでした';
-
-  @override
   String get commentsErrorBlockFailed => 'ユーザーをブロックできませんでした';
 
   @override
@@ -8697,6 +8754,61 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'スタンプエディタを開く';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'ビジュアライザー';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      '音に合わせて動くビジュアライザーを追加します';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'ビジュアライザーの色';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'バー';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'ミラー';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'ウェーブ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'サークル';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ビジュアライザーを追加';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '密度';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '少なめ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '多め';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '反応';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '穏やか';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '活発';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'バーの幅';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '細い';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '太い';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'サンプルビート';
 
   @override
   String get videoEditorSaveDraftTitle => '下書きを保存しますか？';
@@ -10978,6 +11090,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => '一致するタグがありません';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ハッシュタグは$max文字までです。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ハッシュタグは$max個まで追加できます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max文字中$count文字',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '「#$tag」を追加';
   }
@@ -10999,6 +11141,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => '長押しすると録画が始まり、離すと止まります';
+
+  @override
+  String get settingsBackUpRecordings => '録画をギャラリーにバックアップ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      '新しい録画のコピーをギャラリーに保存します。他のアプリやクラウドの写真バックアップからも見えます。';
 
   @override
   String uploadPublishedCountMessage(int count) {

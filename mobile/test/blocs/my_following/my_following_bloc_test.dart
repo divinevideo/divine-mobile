@@ -1,5 +1,5 @@
 // ABOUTME: Tests for MyFollowingBloc - current user's following list
-// ABOUTME: Tests CacheSync stream, toggle operations, and blocklist filtering
+// ABOUTME: Tests CacheSync stream, follow/unfollow, and blocklist filtering
 
 import 'dart:async';
 
@@ -266,32 +266,34 @@ void main() {
       );
     });
 
-    group('MyFollowingToggleRequested', () {
+    group(MyFollowingFollowRequested, () {
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'calls toggleFollow on repository',
+        'follows even when the repository already lists the account',
         setUp: () {
+          when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
           when(
-            () => mockFollowRepository.toggleFollow(any()),
+            () => mockFollowRepository.follow(any()),
           ).thenAnswer((_) async {});
           when(
-            () => mockFollowRepository.watchMyFollowingCached(),
-          ).thenAnswer((_) => const Stream.empty());
+            () => mockFollowRepository.unfollow(any()),
+          ).thenAnswer((_) async {});
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
         verify: (_) {
           verify(
-            () => mockFollowRepository.toggleFollow(validPubkey('user')),
+            () => mockFollowRepository.follow(validPubkey('user')),
           ).called(1);
+          verifyNever(() => mockFollowRepository.unfollow(any()));
         },
       );
 
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'does not re-dispatch a load after a successful toggle (#5144)',
+        'does not re-dispatch a load after a successful follow (#5144)',
         setUp: () {
           when(
-            () => mockFollowRepository.toggleFollow(any()),
+            () => mockFollowRepository.follow(any()),
           ).thenAnswer((_) async {});
           when(
             () => mockFollowRepository.watchMyFollowingCached(),
@@ -299,10 +301,10 @@ void main() {
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
         verify: (_) {
-          verify(() => mockFollowRepository.toggleFollow(any())).called(1);
-          // The post-toggle re-load that surfaced a stale cached snapshot and
+          verify(() => mockFollowRepository.follow(any())).called(1);
+          // The post-follow re-load that surfaced a stale cached snapshot and
           // reverted the button (#5144) is gone — reactivity comes from
           // followingStream/_onRepositoryUpdated, not a watchMyFollowingCached
           // re-read.
@@ -311,7 +313,7 @@ void main() {
       );
 
       test(
-        'does not revert follow state after a successful toggle (#5144)',
+        'does not revert follow state after a successful follow (#5144)',
         () async {
           final pubkey = validPubkey('target');
           final following = <String>[];
@@ -335,7 +337,7 @@ void main() {
               ),
             ),
           );
-          when(() => mockFollowRepository.toggleFollow(pubkey)).thenAnswer((
+          when(() => mockFollowRepository.follow(pubkey)).thenAnswer((
             _,
           ) async {
             following.add(pubkey);
@@ -352,7 +354,7 @@ void main() {
 
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
-          bloc.add(MyFollowingToggleRequested(pubkey));
+          bloc.add(MyFollowingFollowRequested(pubkey));
           await pumpEventQueue();
 
           final firstFollowed = isFollowingStates.indexOf(true);
@@ -366,14 +368,14 @@ void main() {
             everyElement(isTrue),
             reason:
                 'follow state must never revert to not-following after a '
-                'successful toggle (#5144)',
+                'successful follow (#5144)',
           );
         },
       );
 
       test(
         'does not revert when an in-flight load emits stale data after a '
-        'toggle (#5144)',
+        'follow (#5144)',
         () async {
           final pubkey = validPubkey('target');
           final following = <String>[];
@@ -398,9 +400,7 @@ void main() {
           // The repository updates its in-memory list and emits at once, then
           // waits for the contact-list publish to reach the relays.
           final publish = Completer<void>();
-          when(() => mockFollowRepository.toggleFollow(pubkey)).thenAnswer((
-            _,
-          ) {
+          when(() => mockFollowRepository.follow(pubkey)).thenAnswer((_) {
             following.add(pubkey);
             followingController.add(List.of(following));
             return publish.future;
@@ -419,7 +419,7 @@ void main() {
 
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
-          bloc.add(MyFollowingToggleRequested(pubkey));
+          bloc.add(MyFollowingFollowRequested(pubkey));
           await pumpEventQueue();
 
           // While the publish is still pending, the in-flight load's network
@@ -443,104 +443,158 @@ void main() {
             everyElement(isTrue),
             reason:
                 'a stale in-flight load emission must not revert the button '
-                'after a successful toggle (#5144)',
+                'after a successful follow (#5144)',
           );
         },
       );
 
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'emits toggleFailure when toggleFollow throws',
+        'emits toggleFailure and reports the error when follow throws',
         setUp: () {
           when(
-            () => mockFollowRepository.toggleFollow(any()),
+            () => mockFollowRepository.follow(any()),
           ).thenThrow(Exception('Network error'));
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
-        verify: (bloc) {
-          expect(bloc.state.status, MyFollowingStatus.toggleFailure);
-        },
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
+        expect: () => const [
+          MyFollowingState(hasLocalFollowEdit: true),
+          MyFollowingState(
+            status: MyFollowingStatus.toggleFailure,
+            hasLocalFollowEdit: true,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
       );
 
-      test(
-        'does not emit after close when a successful toggle completes',
-        () async {
-          final pubkey = validPubkey('user');
-          final toggleCompleter = Completer<void>();
-          when(
-            () => mockFollowRepository.toggleFollow(pubkey),
-          ).thenAnswer((_) => toggleCompleter.future);
-
-          final bloc = createBloc();
-          addTearDown(() async {
-            if (!toggleCompleter.isCompleted) toggleCompleter.complete();
-            await bloc.close();
-          });
-          bloc.add(MyFollowingToggleRequested(pubkey));
-          await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
-
-          final closeFuture = bloc.close();
-          toggleCompleter.complete();
-
-          await expectLater(closeFuture, completes);
-          // The local-edit flag is set before the toggle is awaited, so the
-          // state can only differ from this if something emitted afterwards.
-          expect(bloc.state, const MyFollowingState(hasLocalFollowEdit: true));
-        },
-      );
-
-      test('does not emit after close when a toggle fails', () async {
+      test('does not emit after close when a follow completes', () async {
         final pubkey = validPubkey('user');
-        final toggleCompleter = Completer<void>();
+        final followCompleter = Completer<void>();
         when(
-          () => mockFollowRepository.toggleFollow(pubkey),
-        ).thenAnswer((_) => toggleCompleter.future);
+          () => mockFollowRepository.follow(pubkey),
+        ).thenAnswer((_) => followCompleter.future);
 
         final bloc = createBloc();
         addTearDown(() async {
-          if (!toggleCompleter.isCompleted) toggleCompleter.complete();
+          if (!followCompleter.isCompleted) followCompleter.complete();
           await bloc.close();
         });
-        bloc.add(MyFollowingToggleRequested(pubkey));
-        await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
+        bloc.add(MyFollowingFollowRequested(pubkey));
+        await untilCalled(() => mockFollowRepository.follow(pubkey));
 
         final closeFuture = bloc.close();
-        toggleCompleter.completeError(Exception('Network error'));
+        followCompleter.complete();
+
+        await expectLater(closeFuture, completes);
+        // The local-edit flag is set before the follow is awaited, so the
+        // state can only differ from this if something emitted afterwards.
+        expect(bloc.state, const MyFollowingState(hasLocalFollowEdit: true));
+      });
+    });
+
+    group(MyFollowingUnfollowRequested, () {
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'unfollows even when the repository no longer lists the account',
+        setUp: () {
+          // The button offered Unfollow, but the follow list lost the account
+          // before the event ran; deciding again from it would follow.
+          when(
+            () => mockFollowRepository.isFollowing(any()),
+          ).thenReturn(false);
+          when(
+            () => mockFollowRepository.follow(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockFollowRepository.unfollow(any()),
+          ).thenAnswer((_) async {});
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingUnfollowRequested(validPubkey('user'))),
+        verify: (_) {
+          verify(
+            () => mockFollowRepository.unfollow(validPubkey('user')),
+          ).called(1);
+          verifyNever(() => mockFollowRepository.follow(any()));
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'emits toggleFailure and reports the error when unfollow throws',
+        setUp: () {
+          when(
+            () => mockFollowRepository.unfollow(any()),
+          ).thenThrow(Exception('Network error'));
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingUnfollowRequested(validPubkey('user'))),
+        expect: () => const [
+          MyFollowingState(hasLocalFollowEdit: true),
+          MyFollowingState(
+            status: MyFollowingStatus.toggleFailure,
+            hasLocalFollowEdit: true,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+
+      test('does not emit after close when an unfollow fails', () async {
+        final pubkey = validPubkey('user');
+        final unfollowCompleter = Completer<void>();
+        when(
+          () => mockFollowRepository.unfollow(pubkey),
+        ).thenAnswer((_) => unfollowCompleter.future);
+
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!unfollowCompleter.isCompleted) unfollowCompleter.complete();
+          await bloc.close();
+        });
+        bloc.add(MyFollowingUnfollowRequested(pubkey));
+        await untilCalled(() => mockFollowRepository.unfollow(pubkey));
+
+        final closeFuture = bloc.close();
+        unfollowCompleter.completeError(Exception('Network error'));
 
         await expectLater(closeFuture, completes);
         expect(bloc.state.status, MyFollowingStatus.initial);
       });
+    });
 
-      test(
-        'uses droppable transformer — second rapid toggle is dropped',
-        () async {
-          final pubkey = validPubkey('user');
-          final finishToggle = Completer<void>();
-          when(
-            () => mockFollowRepository.toggleFollow(pubkey),
-          ).thenAnswer((_) => finishToggle.future);
+    group(MyFollowingEditRequested, () {
+      test('drops an Unfollow sent while a Follow is still publishing', () async {
+        final pubkey = validPubkey('user');
+        final finishFollow = Completer<void>();
+        when(
+          () => mockFollowRepository.follow(pubkey),
+        ).thenAnswer((_) => finishFollow.future);
+        when(
+          () => mockFollowRepository.unfollow(pubkey),
+        ).thenAnswer((_) async {});
 
-          final bloc = createBloc();
-          addTearDown(() async {
-            if (!finishToggle.isCompleted) finishToggle.complete();
-            await bloc.close();
-          });
-          bloc.add(MyFollowingToggleRequested(pubkey));
-          await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
-          // Keep the first repository write pending while the second event
-          // drains, so the assertion checks overlap rather than elapsed time.
-          bloc.add(MyFollowingToggleRequested(pubkey));
-          await pumpEventQueue();
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!finishFollow.isCompleted) finishFollow.complete();
+          await bloc.close();
+        });
+        bloc.add(MyFollowingFollowRequested(pubkey));
+        await untilCalled(() => mockFollowRepository.follow(pubkey));
+        // Keep the follow pending while the Unfollow drains, so the assertion
+        // checks overlap rather than elapsed time. Separate buckets per event
+        // type would run it concurrently and publish two contact lists at once.
+        bloc.add(MyFollowingUnfollowRequested(pubkey));
+        await pumpEventQueue();
 
-          verify(() => mockFollowRepository.toggleFollow(pubkey)).called(1);
+        verifyNever(() => mockFollowRepository.unfollow(pubkey));
 
-          finishToggle.complete();
-          await pumpEventQueue();
-          // A sequential transformer would defer the second write until now.
-          verifyNever(() => mockFollowRepository.toggleFollow(pubkey));
-        },
-      );
+        finishFollow.complete();
+        await pumpEventQueue();
+        // A sequential transformer would run the queued Unfollow now.
+        verifyNever(() => mockFollowRepository.unfollow(pubkey));
+        verify(() => mockFollowRepository.follow(pubkey)).called(1);
+      });
     });
 
     test('applies live repository updates after initial load', () async {

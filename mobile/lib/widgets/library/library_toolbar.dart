@@ -57,6 +57,7 @@ class LibraryToolbar extends StatelessWidget {
     this.isTrashFilterActive = false,
     this.onEmptyTrash,
     this.onManageActiveCategory,
+    this.onSaveSelectedClips,
     this.onMoveSelectedClips,
     this.onDeleteSelectedClips,
     super.key,
@@ -84,6 +85,10 @@ class LibraryToolbar extends StatelessWidget {
   /// Renames or deletes the category the grid is filtered to. Null unless a
   /// user category is the active filter.
   final VoidCallback? onManageActiveCategory;
+
+  /// Saves the selected clips to the device gallery. Null when nothing is
+  /// selected.
+  final VoidCallback? onSaveSelectedClips;
 
   /// Files the selected clips into a category. Null when nothing is selected.
   final VoidCallback? onMoveSelectedClips;
@@ -185,6 +190,12 @@ class LibraryToolbar extends StatelessWidget {
           onPressed: onEnterSelectionMode,
         ),
       if (isLibrarySelectionMode) ...[
+        _ClipAction(
+          icon: .downloadSimple,
+          menuLabel: l10n.librarySaveSelectedClipsTooltip,
+          semanticLabel: l10n.librarySaveSelectedClipsTooltip,
+          onPressed: onSaveSelectedClips,
+        ),
         _ClipAction(
           icon: .folderOpen,
           menuLabel: l10n.libraryMoveSelectedClipsTooltip,

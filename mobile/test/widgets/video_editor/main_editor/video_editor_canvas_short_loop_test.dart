@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
@@ -184,6 +185,8 @@ void main() {
               BlocProvider(create: (_) => VideoEditorDrawBloc()),
               BlocProvider(create: (_) => VideoEditorFilterBloc()),
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
+              // Read by the same capability sync, before the clip reconcile.
+              BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
             ],
             child: VideoEditorScope(
               editorKey: GlobalKey(),

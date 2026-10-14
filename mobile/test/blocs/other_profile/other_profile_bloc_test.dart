@@ -71,9 +71,6 @@ void main() {
       mockFollowRepository = _MockFollowRepository();
 
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
-      when(
-        () => mockFollowRepository.toggleFollow(any()),
-      ).thenAnswer((_) async {});
       // Default: not a deleted account. The vanish group below overrides this.
       when(() => mockProfileRepository.isVanished(any())).thenReturn(false);
     });
@@ -781,7 +778,7 @@ void main() {
           // Not mutating the follow list is the whole point: the omission
           // happens when FollowRepository publishes, so unblocking restores
           // the follow instead of costing it permanently.
-          verifyNever(() => mockFollowRepository.toggleFollow(any()));
+          verifyNever(() => mockFollowRepository.follow(any()));
           verifyNever(() => mockFollowRepository.unfollow(any()));
         },
       );

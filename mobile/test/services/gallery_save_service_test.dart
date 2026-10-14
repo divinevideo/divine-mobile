@@ -155,6 +155,25 @@ void main() {
       },
     );
 
+    test('reports a permission not granted yet without prompting when asked '
+        'not to request it', () async {
+      when(
+        () => mockPermissionsService.checkGalleryStatus(),
+      ).thenAnswer((_) async => PermissionStatus.canRequest);
+      final tempDir = Directory.systemTemp.createTempSync('gallery_test_');
+      addTearDown(() => tempDir.deleteSync(recursive: true));
+      final tempFile = File('${tempDir.path}/test_video.mp4')
+        ..writeAsBytesSync([0, 1, 2, 3]);
+
+      final result = await service.saveVideoToGallery(
+        EditorVideo.file(tempFile.path),
+        requestPermission: false,
+      );
+
+      expect(result, isA<GallerySavePermissionDenied>());
+      verifyNever(() => mockPermissionsService.requestGalleryPermission());
+    });
+
     test(
       'skips permission check on MissingPluginException (desktop)',
       () async {

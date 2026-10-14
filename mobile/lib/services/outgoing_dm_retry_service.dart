@@ -132,30 +132,6 @@ class OutgoingDmRetryService {
   final DateTime Function() _now;
   final CrashReporter _crashReporting;
 
-  /// What a send can cost OUTSIDE [DmBatchSendBudget.messagePublishTimeout].
-  ///
-  /// Chiefly recipient kind-10050 inbox resolution, which runs before the
-  /// publish is wrapped. This used to be a flat 30s estimate documented as
-  /// "a margin, not a guarantee", because nothing bounded that resolution:
-  /// on device it took 51s on a real send while the capped publish took 10ms
-  /// (#7091). It is now derived from the bound actually enforced there, so it
-  /// cannot drift from it — the #6586 failure mode.
-  static final Duration _inboxResolutionMargin =
-      DmSendBudget.inboxResolution + _nonCancellationCushion;
-
-  /// Room beyond the two bounds for a send that has already been abandoned.
-  ///
-  /// `Future.timeout` does not cancel, so a send the backstop gave up on keeps
-  /// running past the cap. This guard has to outlive the IN-FLIGHT send, not
-  /// merely the cap, which is why deriving it from the bounds alone would be
-  /// too tight.
-  ///
-  /// Sized to hold the total at the 160s it has shipped at: bounding the
-  /// segments made the derivation honest, and re-deriving it downward at the
-  /// same time would ship an unmeasured change to how soon the sweep re-drives
-  /// a live send. That is a separate decision, on its own evidence.
-  static const Duration _nonCancellationCushion = Duration(seconds: 23);
-
   /// Minimum age of a still-`pending` row before the interrupted-send arm
   /// may re-drive it. Must exceed the worst-case legitimately-in-flight
   /// send. A foreground/connectivity trigger fired while a live send holds
@@ -166,19 +142,20 @@ class OutgoingDmRetryService {
   /// duplicate publish of the same rumor. Receiver dedup makes that safe but
   /// wasteful; the old value (the 2s `initialDelay`) made it the common case.
   ///
-  /// Derived from the backstop rather than restated as a literal. It was
-  /// previously hardcoded to 120s against a 90s backstop, and #6586 showed why
-  /// that is fragile twice over: the backstop had itself drifted below the
-  /// chain it bounds, and `Future.timeout` does not cancel — so the abandoned
-  /// send keeps running past the cap and this guard has to outlive the
-  /// IN-FLIGHT send, not merely the cap.
+  /// Derived from the two bounds on the original send rather than restated
+  /// (#6586): its inbox resolution ([DmSendBudget.inboxResolution]), which
+  /// runs before the publish is wrapped, then the publish backstop
+  /// ([DmBatchSendBudget.messagePublishTimeout]).
   ///
-  /// Both halves are now derived: the backstop covers the whole capped chain
-  /// including the three pre-wrap steps that used to sit in its headroom, and
-  /// [_inboxResolutionMargin] covers resolution at the bound now enforced on
-  /// it. The guard is a guarantee rather than an estimate (#7091).
+  /// There is no margin on top. A send that keeps its stage bounds ends
+  /// inside resolution plus [DmBatchSendBudget.chainWorstCase], short of this
+  /// guard by the backstop's own headroom. That holds because
+  /// `NostrClient.publishEventAwaitOk` spends its `timeout` on the reconnect
+  /// in front of the send (#8451). What no constant covers is a send
+  /// abandoned because a stage broke its own bound: `Future.timeout` does not
+  /// cancel it, and a guard can only outlive an await that has a bound.
   static final Duration _interruptedMinAge =
-      DmBatchSendBudget.messagePublishTimeout + _inboxResolutionMargin;
+      DmBatchSendBudget.messagePublishTimeout + DmSendBudget.inboxResolution;
 
   /// The interrupted-send guard, for tests that need to age a row across it.
   ///

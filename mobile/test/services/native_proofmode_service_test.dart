@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:c2pa_flutter/c2pa.dart';
@@ -565,6 +566,104 @@ void main() {
 
           expect(c2paService.signVideoInPlaceCallCount, 1);
         });
+      });
+    });
+
+    group('signOwnClips', () {
+      late File recording;
+      late String recordingHash;
+      late File edit;
+      late String editHash;
+
+      DivineVideoClip editOf(
+        List<C2paEditSource> sources, {
+        String? renderedHash,
+      }) => clipAt(edit.path).copyWith(
+        derivedFrom: sources,
+        proofManifestJson: jsonEncode({'videoHash': renderedHash ?? editHash}),
+      );
+
+      setUp(() async {
+        recording = File('${directory.path}/recording.mp4');
+        await recording.writeAsBytes(const [1, 2, 3]);
+        recordingHash = await NativeProofModeService.generateSha256FileHash(
+          recording.path,
+        );
+        edit = File('${directory.path}/edit.mp4');
+        await edit.writeAsBytes(const [4, 5, 6]);
+        editHash = await NativeProofModeService.generateSha256FileHash(
+          edit.path,
+        );
+      });
+
+      test('reports a recording whose signing still cannot run', () async {
+        final clip = clipAt(recording.path, recordingSha256: recordingHash);
+
+        final pending = await NativeProofModeService.signOwnClips([clip]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+        expect(pending, {clip.id});
+      });
+
+      test('signs an edit left unsigned as an edit of its sources', () async {
+        const sources = [C2paEditSource(path: '/clips/signed.mp4')];
+        final recorded = <(String, model.NativeProofData)>[];
+        NativeProofModeService.lateProofRecorder = (path, proof) async =>
+            recorded.add((path, proof));
+
+        final pending = await NativeProofModeService.signOwnClips([
+          editOf(sources),
+        ]);
+
+        expect(c2paService.editSources, equals([sources]));
+        expect(pending, isEmpty);
+        // The library learns the new proof, so the gallery import knows it.
+        final (path, proof) = recorded.single;
+        expect(path, edit.path);
+        expect(proof.c2paManifestId, 'urn:c2pa:edit');
+      });
+
+      test('keeps an edit pending while its signing cannot run', () async {
+        c2paService.editFailure = C2paSigningFailureReason.network;
+        final clip = editOf(const [C2paEditSource(path: '/clips/signed.mp4')]);
+
+        final pending = await NativeProofModeService.signOwnClips([clip]);
+
+        expect(pending, {clip.id});
+      });
+
+      test('does not keep an edit of unproven footage pending', () async {
+        c2paService.editFailure = C2paSigningFailureReason.sourceUnattested;
+
+        final pending = await NativeProofModeService.signOwnClips([
+          editOf(const [C2paEditSource(path: '/clips/gallery.mp4')]),
+        ]);
+
+        expect(c2paService.editSources, hasLength(1));
+        expect(pending, isEmpty);
+      });
+
+      test('leaves an edit that changed since it was rendered alone', () async {
+        final pending = await NativeProofModeService.signOwnClips([
+          editOf(const [
+            C2paEditSource(path: '/clips/signed.mp4'),
+          ], renderedHash: 'f' * 64),
+        ]);
+
+        expect(c2paService.editSources, isEmpty);
+        expect(pending, isEmpty);
+      });
+
+      test('waits for the unsigned recording an edit was made from', () async {
+        final clip = editOf([
+          C2paEditSource(path: recording.path, recordingSha256: recordingHash),
+        ]);
+
+        final pending = await NativeProofModeService.signOwnClips([clip]);
+
+        expect(c2paService.signVideoInPlaceCallCount, 1);
+        expect(c2paService.editSources, isEmpty);
+        expect(pending, {clip.id});
       });
     });
   });

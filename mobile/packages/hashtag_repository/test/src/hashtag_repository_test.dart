@@ -20,6 +20,17 @@ void main() {
     });
 
     group('searchHashtags', () {
+      test('drops remote results over the hashtag length limit', () async {
+        final pastedList = 'vine' * 20;
+        when(
+          () => mockClient.searchHashtags(query: 'vine'),
+        ).thenAnswer((_) async => [pastedList, 'vine', 'vinefyp']);
+
+        final results = await repository.searchHashtags(query: 'vine');
+
+        expect(results, equals(['vine', 'vinefyp']));
+      });
+
       test('returns filtered remote results when they contain query', () async {
         when(
           () => mockClient.searchHashtags(query: 'bitcoin'),
@@ -213,6 +224,17 @@ void main() {
     });
 
     group('searchHashtagsLocally', () {
+      test('drops local results over the hashtag length limit', () {
+        final repoWithLocal = HashtagRepository(
+          funnelcakeApiClient: mockClient,
+          localSearch: (query, limit) => ['local', 'local' * 20],
+        );
+
+        final results = repoWithLocal.searchHashtagsLocally(query: 'local');
+
+        expect(results, equals(['local']));
+      });
+
       test('returns results from local callback', () {
         final repoWithLocal = HashtagRepository(
           funnelcakeApiClient: mockClient,

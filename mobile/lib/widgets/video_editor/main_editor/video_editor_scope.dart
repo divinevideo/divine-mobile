@@ -42,6 +42,7 @@ class VideoEditorScope extends InheritedWidget {
     this.liveVolumeNotifier,
     this.cancelLiveVolumePreview,
     this.liveEqualizerNotifier,
+    this.onAddAudioVisualizer,
     super.child = const SizedBox.shrink(),
     super.key,
   }) : assert(
@@ -71,6 +72,10 @@ class VideoEditorScope extends InheritedWidget {
 
   /// Callback to open the sticker picker.
   final VoidCallback onAddStickers;
+
+  /// Callback to open the audio visualizer sheet and add a visualizer, or
+  /// `null` where the editor offers none.
+  final VoidCallback? onAddAudioVisualizer;
 
   /// Callback to open the in-editor camera recorder.
   final VoidCallback onOpenCamera;

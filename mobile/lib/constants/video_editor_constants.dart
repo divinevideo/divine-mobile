@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show AudioVisualizerStyle;
 
 /// A text font with its style getter.
 typedef TextFont = TextStyle Function({double? fontSize, Color? color});
@@ -101,9 +103,6 @@ class VideoEditorConstants {
   /// (`brightness`, `contrast`, …) so its label / toMatrix can be resolved
   /// after the matrix is given a unique per-instance id.
   static const String tuneKindMetaKey = 'tuneKind';
-
-  /// Maximum number of tags allowed per video.
-  static const int tagLimit = 1 << 30; // ~1 billion
 
   /// Maximum number of characters allowed in a description.
   static const int descriptionLimit = 1_000;
@@ -286,6 +285,50 @@ class VideoEditorConstants {
     Color(0xFF8568FF),
     Color(0xFF34BBF1),
   ];
+
+  /// The color a new audio visualizer draws in; it can pick any of [colors].
+  static const Color audioVisualizerDefaultColor = VineTheme.vineGreen;
+
+  /// How many frequency bands an audio visualizer of [style] shows: enough
+  /// for the shape to read as the sound, few enough that the bars stay wide
+  /// on a phone.
+  static int audioVisualizerBandCount(AudioVisualizerStyle style) =>
+      switch (style) {
+        AudioVisualizerStyle.bars => 24,
+        AudioVisualizerStyle.mirroredBars => 32,
+        AudioVisualizerStyle.wave => 16,
+        AudioVisualizerStyle.circle => 24,
+      };
+
+  /// The fewest bands the band slider of an audio visualizer picks; the most
+  /// is every band the sound is measured in.
+  static const int audioVisualizerMinBandCount = 6;
+
+  /// How much of its share a bar of an audio visualizer of [style] fills
+  /// unless the creator picks another width: the `LayerAudioVisualizer`
+  /// defaults of pro_video_editor.
+  static double audioVisualizerDefaultBarFill(AudioVisualizerStyle style) =>
+      style == AudioVisualizerStyle.circle ? 0.6 : 0.7;
+
+  /// The thinnest and the widest bar the bar width slider picks.
+  static const double audioVisualizerMinBarFill = 0.3;
+  static const double audioVisualizerMaxBarFill = 0.95;
+
+  /// How lively a new audio visualizer reacts: halfway between calm and
+  /// lively.
+  static const double audioVisualizerDefaultReaction = 0.5;
+
+  /// The width of an audio visualizer of [style] against its height.
+  static double audioVisualizerAspectRatio(AudioVisualizerStyle style) =>
+      style == AudioVisualizerStyle.circle ? 1 : 3;
+
+  /// How much of the canvas's width a new audio visualizer of [style] covers.
+  static double audioVisualizerWidthFactor(AudioVisualizerStyle style) =>
+      style == AudioVisualizerStyle.circle ? 0.5 : 0.8;
+
+  /// How far below the middle of the canvas a new row of bars or wave sits,
+  /// against the canvas's height: in its lower part, clear of a face.
+  static const double audioVisualizerLowerOffset = 0.28;
 
   /// Available text fonts for text overlays, with the family name each one is
   /// published under.

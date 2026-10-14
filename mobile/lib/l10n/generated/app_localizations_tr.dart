@@ -924,9 +924,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Bu hesabın engelini kaldır';
 
   @override
-  String get inboxReportedVanishedAccount => 'Bu hesap bildirildi';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Bu hesap engellendi';
 
   @override
@@ -4766,6 +4763,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportWhyReporting => 'Bu içeriği neden bildiriyorsun?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine, içerik bildirimlerine 24 saat içinde içeriği kaldırarak ve söz konusu içeriği sağlayan kullanıcıyı çıkararak işlem yapar.';
 
@@ -4788,6 +4788,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Lütfen sorunu açıkla';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5680,11 +5683,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yüklendi — uygulamak için Kaydet\'e dokunun';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName bildirildi';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName engellendi';
   }
@@ -6463,8 +6461,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get librarySortVerticalFirst => 'Önce dikey';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Geri alınamaz. Video dosyaları cihazından kalıcı olarak silinir.';
+  String get libraryDeleteClipsWarning => 'Geri alınamaz.';
 
   @override
   String get libraryPreparingVideo => 'Video hazırlanıyor...';
@@ -6538,6 +6535,65 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'Tamam';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Seçili klipleri galerine kaydet';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count klip kanıtı olmadan kaydedildi, bu yüzden kliplerine geri dönemez.',
+      one: '1 klip kanıtı olmadan kaydedildi, bu yüzden kliplerine geri dönemez.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Ayrıntılar';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Kanıtsız kaydedildi';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Galerinden yalnızca Divine ile çekildiğini kanıtlayan klipler geri dönebilir. Bu kliplerin kopyaları bu kanıt olmadan kaydedildi.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Kanıtı şu an eklenemedi, belki çevrimdışı olduğun için. Kanıtlı bir kopya kaydetmek için tekrar dene.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stop motion klipler fotoğraflardan oluşur ve fotoğraflar kanıt taşıyamaz.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine\'ın bu sürümü kliplere kanıt ekleyemiyor.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Bu klibin kanıtı yok ve Divine sonradan ekleyemez.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Kanıtıyla kaydedildi';
+
+  @override
+  String get libraryGallerySaveSigning => 'Kliplerine kanıt ekleniyor…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Klip $current/$total kaydediliyor…',
+      one: 'Klibin kaydediliyor…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6635,6 +6691,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Bu klibi silmek istiyor musun?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip önce çöp kutusuna gider, yani hâlâ geri yükleyebilirsin.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds sn';
   }
@@ -6650,6 +6710,16 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arşivlendi. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Henüz galerinde değil. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Galerinde içerik kimlik bilgileri olmadan. $label';
   }
 
   @override
@@ -6925,13 +6995,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Bu içeriği işaretle';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Bu yorumu işaretlemek için bir neden seç';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Gönder';
 
   @override
   String get commentOptionsTitle => 'Seçenekler';
@@ -8236,9 +8299,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commentsErrorVoteFailed => 'Yoruma oy verilemedi';
 
   @override
-  String get commentsErrorReportFailed => 'Yorum bildirilemedi';
-
-  @override
   String get commentsErrorBlockFailed => 'Kullanıcı engellenemedi';
 
   @override
@@ -9061,6 +9121,61 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'Stiker düzenleyiciyi aç';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'Görselleştirici';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Sesle birlikte hareket eden bir görselleştirici ekle';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Görselleştirici rengi';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Çubuklar';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Ayna';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Dalga';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Daire';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Görselleştirici ekle';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Yoğunluk';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Daha az';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Daha fazla';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Tepki';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Sakin';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Canlı';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Çubuk genişliği';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'İnce';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Geniş';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Örnek ritim';
 
   @override
   String get videoEditorSaveDraftTitle => 'Taslağınızı kaydedin?';
@@ -11471,6 +11586,39 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Eşleşen etiket yok';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtag\'ler en fazla $max karakter olabilir.',
+      one: 'Hashtag\'ler en fazla $max karakter olabilir.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'En fazla $max hashtag ekleyebilirsin.',
+      one: 'En fazla $max hashtag ekleyebilirsin.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max karakterden $count',
+      one: '$max karakterden $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ekle';
   }
@@ -11493,6 +11641,13 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Basılı tuttuğunuzda kayıt başlar, bıraktığınızda durur';
+
+  @override
+  String get settingsBackUpRecordings => 'Kayıtları galeriye yedekle';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Her yeni kaydın bir kopyasını galerine kaydeder. Diğer uygulamalar ve buluttaki fotoğraf yedekleri onu orada görebilir.';
 
   @override
   String uploadPublishedCountMessage(int count) {

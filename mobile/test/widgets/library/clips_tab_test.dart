@@ -923,6 +923,10 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 300));
           expect(find.text(en.libraryDeleteClipTitle), findsOneWidget);
+          // The clip only moves to the trash, so the prompt must not claim
+          // its files are gone for good.
+          expect(find.text(en.libraryDeleteClipTrashNote), findsOneWidget);
+          expect(find.text(en.libraryDeleteClipsWarning), findsNothing);
 
           final confirmButton = find.text(en.libraryDeleteConfirm).last;
           await tester.ensureVisible(confirmButton);

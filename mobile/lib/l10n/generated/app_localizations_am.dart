@@ -963,9 +963,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'እገዳን አንሳ ይህን መለያ';
 
   @override
-  String get inboxReportedVanishedAccount => 'ሪፖርት ተደርጓል ይህን መለያ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ታግዷል ይህን መለያ';
 
   @override
@@ -4716,6 +4713,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportWhyReporting => 'ይህን ይዘት ለምን ሪፖርት ያደርጋሉ?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ይዘቱን በማስወገድ እና አጸያፊ ይዘቱን ያቀረበውን ተጠቃሚ በማስወጣት የይዘት ሪፖርቶችን በ24 ሰዓታት ውስጥ ይሰራል።';
 
@@ -4736,6 +4736,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'እባክህ ችግሩን ግለጽ';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5612,11 +5615,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileSetupUploadStaged => 'ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'ሪፖርት ተደርጓል $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'ታግዷል $displayName';
   }
@@ -6385,8 +6383,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get librarySortVerticalFirst => 'ቁመት በመጀመሪያ';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'ይህ እርምጃ ሊቀለበስ አይችልም። የቪዲዮ ፋይሎቹ እስከመጨረሻው ከመሣሪያዎ ይወገዳሉ።';
+  String get libraryDeleteClipsWarning => 'ይህ እርምጃ ሊቀለበስ አይችልም።';
 
   @override
   String get libraryPreparingVideo => 'ቪዲዮ በማዘጋጀት ላይ...';
@@ -6460,6 +6457,63 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'ተጠናቋል';
+
+  @override
+  String get librarySaveSelectedClipsTooltip => 'የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።',
+      one: '$count ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'ዝርዝሮች';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'ያለ ማረጋገጫ ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'ማረጋገጫው አሁን ሊታከል አልቻለም፣ ምናልባት ከመስመር ውጭ ስለነበሩ ይሆናል። ማረጋገጫ ያለው ቅጂ ለማስቀመጥ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'የስቶፕ ሞሽን ክሊፖች ከፎቶዎች የተሠሩ ናቸው፣ ፎቶዎች ደግሞ ማረጋገጫ መያዝ አይችሉም።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'ይህ የDivine ስሪት ለክሊፖች ማረጋገጫ ማከል አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'ይህ ክሊፕ ማረጋገጫ የለውም፣ Divine ደግሞ በኋላ ሊያክልለት አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'ከማረጋገጫው ጋር ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveSigning => 'ለክሊፖችዎ ማረጋገጫ እየታከለ ነው…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'ክሊፕ $current ከ$total እየተቀመጠ ነው…',
+      one: 'ክሊፕዎ እየተቀመጠ ነው…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6556,6 +6610,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryDeleteClipMessage => 'እርግጠኛ ነዎት ይህን ክሊፕ መሰረዝ ይፈልጋሉ?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'ክሊፑ መጀመሪያ ወደ ቆሻሻ መጣያው ይሄዳል፣ ስለዚህ አሁንም መመለስ ይችላሉ።';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds ሰከ';
   }
@@ -6571,6 +6629,16 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'መዝገብ ውስጥ ተቀምጧል። $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ገና በጋለሪዎ ውስጥ የለም። $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'ያለ የይዘት መታወቂያዎች በጋለሪዎ ውስጥ አለ። $label';
   }
 
   @override
@@ -6840,13 +6908,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'ይህን ይዘት ምልክት አድርግ';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ';
-
-  @override
-  String get commentOptionsFlagSubmit => 'አስገባ';
 
   @override
   String get commentOptionsTitle => 'አማራጮች';
@@ -8129,9 +8190,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commentsErrorVoteFailed => 'በአስተያየቱ ላይ መምረጥ አልተሳካም';
 
   @override
-  String get commentsErrorReportFailed => 'አስተያየቱን ሪፖርት ማድረግ አልተሳካም';
-
-  @override
   String get commentsErrorBlockFailed => 'ተጠቃሚውን ማገድ አልተሳካም';
 
   @override
@@ -8937,6 +8995,61 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'ተለጣፊ አርታዒን ክፈት';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'የድምፅ ምስላዊ';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'ከድምፁ ጋር የሚንቀሳቀስ ምስላዊ ማከል';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'የምስላዊው ቀለም';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'አሞሌዎች';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'መስታወት';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'ሞገድ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'ክብ';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ምስላዊ ያክሉ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'ጥግግት';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'ያነሰ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'ብዙ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'ምላሽ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'ረጋ ያለ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'ሕያው';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'የአሞሌ ስፋት';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'ቀጭን';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'ሰፊ';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'የናሙና ምት';
 
   @override
   String get videoEditorSaveDraftTitle => 'ረቂቅዎን ይቆጥቡ?';
@@ -11265,6 +11378,39 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'ተዛማጅ መለያዎች የሉም';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ሃሽታጎች እስከ $max ቁምፊዎች ሊኖራቸው ይችላሉ።',
+      one: 'ሃሽታጎች እስከ $max ቁምፊ ሊኖራቸው ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'እስከ $max ሃሽታጎች ማከል ይችላሉ።',
+      one: 'እስከ $max ሃሽታግ ማከል ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ከ$max ቁምፊዎች $count',
+      one: 'ከ$max ቁምፊ $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ያክሉ';
   }
@@ -11286,6 +11432,13 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => 'ሲይዙ ቀረጻ ይጀምራል፣ ሲለቁ ይቆማል';
+
+  @override
+  String get settingsBackUpRecordings => 'ቀረጻዎችን ወደ ጋለሪ ምትኬ ማስቀመጥ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'የእያንዳንዱን አዲስ ቀረጻ ቅጂ በጋለሪዎ ያስቀምጣል። ሌሎች መተግበሪያዎች እና የደመና የፎቶ ምትኬዎች እዚያ ሊያዩት ይችላሉ።';
 
   @override
   String uploadPublishedCountMessage(int count) {

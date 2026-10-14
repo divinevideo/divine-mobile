@@ -15,6 +15,7 @@ import 'package:nostr_client/src/social_publish_result.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/utils/hash_util.dart';
 import 'package:pool/pool.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The relay ended a live subscription before the client unsubscribed.
 class RelaySubscriptionRefusedException implements Exception {
@@ -170,6 +171,9 @@ class NostrClient {
   /// fetches) a high-volume screen triggers, so the app can't trip a relay's
   /// "too many concurrent REQs" limit. Override in tests before the first
   /// query. Backed by a [Pool] from `package:pool`.
+  ///
+  /// Sizes both query pools: the one for reads that ask the pool's own
+  /// relays, and the one for reads that ask only relays outside it.
   @visibleForTesting
   static int maxConcurrentQueries = 6;
 
@@ -186,6 +190,15 @@ class NostrClient {
   );
 
   late final Pool _queryPool = Pool(maxConcurrentQueries);
+
+  /// The query pool for reads that ask only relays outside [_queryPool]'s
+  /// relays (see [_asksOnlyRelaysOutsidePool]).
+  ///
+  /// Kept apart so those reads never queue behind feed reads (#10004), and
+  /// sized like [_queryPool] for the same reason that one exists: a group send
+  /// resolves every member's DM inbox at once against the same indexer, and
+  /// an unbounded burst could trip that relay's concurrent-REQ limit too.
+  late final Pool _outsidePoolQueryPool = Pool(maxConcurrentQueries);
 
   /// The signer used by this client for event signing and NIP-44 encryption.
   ///
@@ -801,6 +814,13 @@ class NostrClient {
   ///  * a short settle window elapses after the first answer, or
   ///  * [timeout] elapses.
   ///
+  /// [timeout] covers the reconnect as well as the `OK` wait. When no relay is
+  /// connected and none was named, the reconnect in front of the send is spent
+  /// from it, and one [PublishTracker.defaultSettleWindow] stays back for the
+  /// send. A reconnect still running by then is abandoned and the publish goes
+  /// ahead with whatever connected, or reports that no relay was reached when
+  /// nothing did. Signing an event that arrives unsigned is not part of it.
+  ///
   /// It does **not** complete on the first acceptance. A publish that one
   /// relay accepts and another rejects reports both, and relays that were
   /// targeted but never reached are reported in
@@ -853,8 +873,33 @@ class NostrClient {
     final hasExplicitTargets =
         effectiveTargets != null && effectiveTargets.isNotEmpty;
 
+    var sendTimeout = timeout;
     if (_relayManager.connectedRelays.isEmpty && !hasExplicitTargets) {
-      await retryDisconnectedRelays();
+      // One deadline for the reconnect and the send, as the read paths keep
+      // (#7091). A settle window stays back for the send: a relay that
+      // connects at the deadline must still get time to answer (#8451).
+      final reserve = timeout < PublishTracker.defaultSettleWindow
+          ? timeout
+          : PublishTracker.defaultSettleWindow;
+      final reconnecting = clock.stopwatch()..start();
+      var abandoned = false;
+      await retryDisconnectedRelays().timeout(
+        timeout - reserve,
+        onTimeout: () {
+          abandoned = true;
+        },
+      );
+      final left = timeout - reconnecting.elapsed;
+      sendTimeout = left.isNegative ? Duration.zero : left;
+      if (abandoned) {
+        Log.info(
+          'Reconnect still dialling after '
+          '${reconnecting.elapsed.inMilliseconds}ms; carrying on with '
+          'whatever connected',
+          name: 'NostrClient',
+          category: LogCategory.relay,
+        );
+      }
       if (_relayManager.connectedRelays.isEmpty) {
         return rollbackOnFailure(
           PublishOutcome(
@@ -874,7 +919,7 @@ class NostrClient {
             event,
             targetRelays: effectiveTargets,
             tempRelays: effectiveTargets,
-            timeout: timeout,
+            timeout: sendTimeout,
           ) ??
           PublishOutcome(
             eventId: event.id,
@@ -982,6 +1027,11 @@ class NostrClient {
   /// ended rather than only whether it ran out of time, or [readAllEvents] to
   /// walk every event a filter matches across many pages instead of one
   /// capped read.
+  ///
+  /// A read that asks only temp relays ([relayTypes] of just
+  /// [RelayType.temp]), none of them a pool member, takes its slot from a
+  /// separate query pool of the same size, so it never queues behind reads of
+  /// the pool's own relays but a burst of such reads is still bounded.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsDetailed(
     List<Filter> filters, {
@@ -1087,6 +1137,29 @@ class NostrClient {
     );
     return read.result;
   }
+
+  /// Zone key [observeSkippedReads] puts its listener under.
+  static final Object _skippedReadListenerKey = Object();
+
+  /// Runs [body], telling [onSkipped] why each read started inside it was
+  /// skipped on this device without reaching any relay.
+  ///
+  /// That covers a read that found the query pool closing, and one no
+  /// query-pool slot reached before its network window. Both report like a
+  /// read the relays left unfinished — `timedOut` for a full-settlement
+  /// caller, [QueryEnd.deadline] from [readEvents] — so a caller that logs
+  /// why a read was inconclusive cannot otherwise tell a local queue from a
+  /// relay that did not answer, and blames the relay (#10004). This rides
+  /// the zone rather than a new field on every result type and every caller
+  /// and test that builds one.
+  ///
+  /// Only reads started inside [body]'s own call chain report here; the
+  /// innermost observer wins when they nest. A paged walk ([readAllEvents])
+  /// ends through its own exits and is not reported.
+  static Future<T> observeSkippedReads<T>(
+    Future<T> Function() body, {
+    required void Function(String reason) onSkipped,
+  }) => runZoned(body, zoneValues: {_skippedReadListenerKey: onSkipped});
 
   /// Runs the one read behind [readEvents], [queryEventsDetailed] and
   /// [queryEvents].
@@ -1240,8 +1313,8 @@ class NostrClient {
     Duration overrunBackstop() =>
         remainingTimeout() + _websocketLegOverrunGrace;
 
-    Future<QueryResult> runPooledWebSocketQuery() async {
-      final acquisition = _queryPool.request();
+    Future<QueryResult> runPooledWebSocketQuery(Pool pool) async {
+      final acquisition = pool.request();
       PoolResource resource;
       try {
         resource = await acquisition.timeout(remainingPreparationTime());
@@ -1250,6 +1323,14 @@ class NostrClient {
         // slot eventually reaches it, but never run the abandoned callback.
         unawaited(acquisition.then((resource) => resource.release()));
         throw const _QueryPoolWaitExpired();
+      }
+      // dispose() can run while this read is queued, and a closed `Pool`
+      // still hands a queued request its slot. Asking the relays now would
+      // put a REQ on a client that is tearing down and hold dispose() for
+      // the whole read, so it ends as a read that found the pool closed.
+      if (_queryPool.isClosed) {
+        resource.release();
+        throw const _QueryPoolClosedWhileQueued();
       }
       try {
         return await runWebSocketQuery().timeout(overrunBackstop());
@@ -1267,10 +1348,13 @@ class NostrClient {
     // independent of `useQueryPool`: dispose() can run during the awaits
     // above, and `_queryPool.close()` flips `isClosed` before `_isDisposed`
     // is set (dispose() closes the pool first), so it's a reliable
-    // dispose-in-progress sentinel for both paths. The non-pooled path
-    // (`queryUsers`, `useQueryPool: false`) matters here too: a query that
-    // fell through after `_nostr.close()` would re-open fresh WebSockets to
-    // the NIP-50 search relays and leak temp relays nothing would clean up.
+    // dispose-in-progress sentinel for every path. That includes reads bound
+    // for [_outsidePoolQueryPool], which dispose() closes only after this one,
+    // so a read that passes this check never finds its own pool closed. The
+    // non-pooled path (`queryUsers`, `useQueryPool: false`) matters here too:
+    // a query that fell through after `_nostr.close()` would re-open fresh
+    // WebSockets to the NIP-50 search relays and leak temp relays nothing
+    // would clean up.
     // This check-then-call has no await before the query, so it closes the
     // race rather than narrowing it. See #5952.
     // What a read the relay pool never finished hands back, overwritten by
@@ -1280,6 +1364,8 @@ class NostrClient {
     // decides who owes the read its one `queryCompletion` line.
     String? skippedReason;
     bool? timedOutOverride;
+    const poolClosedReason =
+        'the query pool closed mid-call, so the read was skipped';
     if (_queryPool.isClosed) {
       // Nothing was asked of the relays here, which is a different thing from
       // their having nothing. A display read is content to fall back on cache;
@@ -1288,15 +1374,21 @@ class NostrClient {
       // That split is what `timedOut` has always carried here, and it is the
       // one place it and `endedBy` disagree on purpose: the read itself never
       // ran, whoever was asking.
-      skippedReason =
-          'the query pool closed mid-call, so the read was '
-          'skipped';
+      skippedReason = poolClosedReason;
       timedOutOverride = requireAllRelaysSettled;
     } else {
       try {
         network = useQueryPool
-            ? await runPooledWebSocketQuery()
+            ? await runPooledWebSocketQuery(
+                _asksOnlyRelaysOutsidePool(effectiveTempRelays, relayTypes)
+                    ? _outsidePoolQueryPool
+                    : _queryPool,
+              )
             : await runWebSocketQuery().timeout(overrunBackstop());
+      } on _QueryPoolClosedWhileQueued {
+        // Nothing was asked here either, so it answers as the check above.
+        skippedReason = poolClosedReason;
+        timedOutOverride = requireAllRelaysSettled;
       } on _QueryPoolWaitExpired {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
         // an inactivity timer reset on every acquire and release, so a busy
@@ -1355,6 +1447,22 @@ class NostrClient {
         events: events.length,
         startedAt: startedAt,
       );
+      final onSkipped = Zone.current[_skippedReadListenerKey];
+      if (onSkipped is void Function(String)) {
+        try {
+          onSkipped(skippedReason);
+        } on Object catch (e, st) {
+          // Diagnostics only: the read already ended, and a listener that
+          // throws must not turn its answer into an error.
+          Log.warning(
+            'A skipped-read listener threw',
+            name: 'NostrClient',
+            category: LogCategory.relay,
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }
     }
 
     return (
@@ -1933,19 +2041,62 @@ class NostrClient {
     return allowed.isEmpty ? null : allowed;
   }
 
+  /// A test for whether a relay address is one of the pool's own relays.
+  ///
+  /// Compared on normalized URLs, since the pool stores them that way and a
+  /// trailing slash must not make a pool member look like an outsider.
+  bool Function(String url) _poolMembership() {
+    final pooled = _relayManager.configuredRelays.toSet();
+    return (url) => pooled.contains(normalizeRelayUrl(url) ?? url);
+  }
+
   /// Whether [tempRelays] names at least one relay the pool does not own.
   ///
   /// Only such a relay can answer a fan-out while every pooled relay is
   /// disconnected: `RelayPool` hands a temp address that matches a pool
   /// member to the pooled relay object rather than opening a socket of its
-  /// own. Compared on normalized URLs, since the pool stores them that way
-  /// and a trailing slash must not make a pool member look like an outsider.
+  /// own.
   bool _hasRelayOutsidePool(List<String>? tempRelays) {
     if (tempRelays == null || tempRelays.isEmpty) return false;
-    final pooled = _relayManager.configuredRelays.toSet();
-    return tempRelays.any(
-      (url) => !pooled.contains(normalizeRelayUrl(url) ?? url),
-    );
+    final isPoolMember = _poolMembership();
+    return tempRelays.any((url) => !isPoolMember(url));
+  }
+
+  /// Whether a read over [tempRelays] and [relayTypes] asks no relay the pool
+  /// owns: it asks temp relays alone, and none of them is a pool member.
+  ///
+  /// Such a read takes its slot from [_outsidePoolQueryPool] instead of
+  /// [_queryPool]. The main pool exists to keep a burst of one-shot REQs from
+  /// tripping a pooled relay's concurrent-REQ limit, and this read sends those
+  /// relays nothing, so queueing it behind feed reads only starves it. A
+  /// recipient-inbox lookup's 2s indexer leg got 1s to win a slot right after
+  /// a publish, was skipped, and held the collaborator invite pending (#10004).
+  /// A temp relay that IS a pool member resolves to the pooled socket (see
+  /// [_hasRelayOutsidePool]), so naming one keeps the whole read in the pool.
+  ///
+  /// The only reads that land there today are DmRepository's kind-10050
+  /// legs: one slot per leg, each fanning out to its relays, and at most one
+  /// such leg per lookup at a time. Lookups are not deduplicated, so a send
+  /// and a retry resolving the same recipient together hold a slot each. A
+  /// send resolves every recipient at once against the same indexer, which is
+  /// why they still share a bounded pool rather than going unthrottled.
+  /// Collaborator invites (at most 5) fit in its [maxConcurrentQueries] slots
+  /// while nothing else is resolving an inbox beside them. Past that the legs
+  /// queue, and with a slow indexer the queued ones can miss their slot
+  /// window and hold the send for a retry, as #10004 did before this pool. A
+  /// group send to more members is the plain case; groups are behind a
+  /// feature flag, so sizing for them is left to that work.
+  bool _asksOnlyRelaysOutsidePool(
+    List<String>? tempRelays,
+    List<int> relayTypes,
+  ) {
+    if (tempRelays == null || tempRelays.isEmpty) return false;
+    if (relayTypes.isEmpty ||
+        relayTypes.any((type) => type != RelayType.temp)) {
+      return false;
+    }
+    final isPoolMember = _poolMembership();
+    return tempRelays.every((url) => !isPoolMember(url));
   }
 
   /// Removes a relay connection.
@@ -2484,7 +2635,10 @@ class NostrClient {
     _nostr.beginClose();
     await closeAllSubscriptions();
     await _relayManager.dispose();
-    await _queryPool.close();
+    // [_queryPool] first: its `isClosed` is the sentinel `_read` checks
+    // before requesting a slot from either pool.
+    final mainPoolClosed = _queryPool.close();
+    await Future.wait([mainPoolClosed, _outsidePoolQueryPool.close()]);
     _nostr.close();
     _verifyWorker?.close();
     _verifyWorker = null;
@@ -2556,6 +2710,12 @@ class NostrClient {
 /// relay pool never saw the read and owes no line for it.
 class _QueryPoolWaitExpired implements Exception {
   const _QueryPoolWaitExpired();
+}
+
+/// The query pool closed while the read was queued for a slot, so the read
+/// ends without asking a relay.
+class _QueryPoolClosedWhileQueued implements Exception {
+  const _QueryPoolClosedWhileQueued();
 }
 
 const _invalidRelayCountSentinels = {

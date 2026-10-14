@@ -2009,6 +2009,48 @@ void main() {
       );
 
       test(
+        'leaves a pending row alone until the original send can no longer be '
+        'running, then re-drives it',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          // What the original send can spend: its inbox resolution, then the
+          // publish backstop. Taken from the budgets that bound the send, not
+          // from the guard under test, so a margin added on top turns the
+          // second row red.
+          final spendable =
+              DmSendBudget.inboxResolution +
+              DmBatchSendBudget.messagePublishTimeout;
+          final stillInFlight = _row(
+            id: 'in-flight-1',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: now.subtract(spendable - const Duration(seconds: 1)),
+          );
+          final outlived = _row(
+            id: 'outlived-1',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: now.subtract(spendable),
+          );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [stillInFlight, outlived]);
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _successResult('outlived-1'));
+
+          await buildService(now: () => now).sweep();
+
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: 'in-flight-1'),
+          );
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'outlived-1'),
+          ).called(1);
+        },
+      );
+
+      test(
         'does not double-dispatch a row already handled by the failed arm',
         () async {
           final now = DateTime.utc(2026, 5, 10, 12);

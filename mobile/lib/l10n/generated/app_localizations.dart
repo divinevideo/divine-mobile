@@ -1651,12 +1651,6 @@ abstract class AppLocalizations {
   /// **'Unblock this account'**
   String get inboxActionUnblockVanishedAccount;
 
-  /// Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported this account'**
-  String get inboxReportedVanishedAccount;
-
   /// Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
   ///
   /// In en, this message translates to:
@@ -8191,6 +8185,12 @@ abstract class AppLocalizations {
   /// **'Why are you reporting this content?'**
   String get reportWhyReporting;
 
+  /// Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this comment?'**
+  String get reportWhyReportingComment;
+
   /// No description provided for @reportPolicyNotice.
   ///
   /// In en, this message translates to:
@@ -8232,6 +8232,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please describe the issue'**
   String get reportDetailsRequired;
+
+  /// Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description.
+  ///
+  /// In en, this message translates to:
+  /// **'Add details (optional)'**
+  String get reportDetailsOptional;
 
   /// Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached.
   ///
@@ -9823,12 +9829,6 @@ abstract class AppLocalizations {
   /// **'Uploaded — tap Save to apply'**
   String get profileSetupUploadStaged;
 
-  /// No description provided for @inboxReportedUser.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported {displayName}'**
-  String inboxReportedUser(String displayName);
-
   /// No description provided for @inboxBlockedUser.
   ///
   /// In en, this message translates to:
@@ -11170,7 +11170,7 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDeleteClipsWarning.
   ///
   /// In en, this message translates to:
-  /// **'This action cannot be undone. The video files will be permanently removed from your device.'**
+  /// **'This can\'t be undone.'**
   String get libraryDeleteClipsWarning;
 
   /// No description provided for @libraryPreparingVideo.
@@ -11280,6 +11280,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get libraryGalleryImportDone;
+
+  /// Accessibility label for the clip library selection toolbar button that saves the selected clips to the device gallery, and its row in the toolbar's overflow menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Save selected clips to your gallery'**
+  String get librarySaveSelectedClipsTooltip;
+
+  /// Snackbar after saving library clips to the device gallery when some copies carry no C2PA proof that they were shot with Divine, so the gallery import would turn them away. {count} is how many such clips were saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 clip was saved without its proof, so it can\'t come back into your clips.} other{{count} clips were saved without their proof, so they can\'t come back into your clips.}}'**
+  String libraryClipsSavedWithoutProof(int count);
+
+  /// Snackbar action that opens the page listing the clips saved to the gallery without their proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get libraryClipsSavedWithoutProofDetails;
+
+  /// App bar title of the page listing clips whose gallery copy carries no proof that they were shot with Divine.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved without proof'**
+  String get libraryGallerySaveWarningTitle;
+
+  /// Text at the top of the page listing clips saved to the gallery without their C2PA proof, explaining that the gallery import will not take those copies back into the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Only clips with proof that they were shot with Divine can come back from your gallery. The copies of these clips were saved without it.'**
+  String get libraryGallerySaveWarningIntro;
+
+  /// Row on the saved-without-proof page: signing the clip could not run, e.g. offline. Retrying saves another copy that carries the proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Its proof couldn\'t be added just now, maybe because you were offline. Try again to save a copy with it.'**
+  String get libraryGallerySaveWarningSigningUnavailable;
+
+  /// Row on the saved-without-proof page for a stop-motion clip, which is rendered from still photos that carry no proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop-motion clips are made from photos, which can\'t carry proof.'**
+  String get libraryGallerySaveWarningStopMotion;
+
+  /// Row on the saved-without-proof page when this build of the app cannot sign clips at all.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Divine can\'t add proof to clips.'**
+  String get libraryGallerySaveWarningSigningUnsupported;
+
+  /// Row on the saved-without-proof page for a clip that has no proof and cannot be signed later, e.g. footage the app did not record.
+  ///
+  /// In en, this message translates to:
+  /// **'This clip has no proof, and Divine can\'t add it afterwards.'**
+  String get libraryGallerySaveWarningNoProof;
+
+  /// Row on the saved-without-proof page once trying again saved a copy of the clip that carries its proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved with its proof'**
+  String get libraryGallerySaveWarningSavedWithProof;
+
+  /// Shown over the clip library while the app signs its own clips that were left without C2PA proof, before saving them to the gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding proof to your clips…'**
+  String get libraryGallerySaveSigning;
+
+  /// Shown over the clip library while selected clips are saved to the device gallery one after another. {current} is the clip being saved, {total} how many are being saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, =1{Saving your clip…} other{Saving clip {current} of {total}…}}'**
+  String libraryGallerySaveProgress(int current, int total);
 
   /// No description provided for @libraryClipsDeletedCount.
   ///
@@ -11425,6 +11497,12 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this clip?'**
   String get libraryDeleteClipMessage;
 
+  /// Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored, so the prompt must not say its files are gone for good.
+  ///
+  /// In en, this message translates to:
+  /// **'It goes to the trash first, so you can still restore it.'**
+  String get libraryDeleteClipTrashNote;
+
   /// Compact clip duration shown in the library trash row. {seconds} is already formatted with two decimal places, e.g. '5.73'.
   ///
   /// In en, this message translates to:
@@ -11448,6 +11526,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Archived. {label}'**
   String videoClipArchivedSemanticLabel(String label);
+
+  /// Accessibility label for a library clip whose recording is not in the gallery yet, because it is waiting for its content credentials. Wraps the clip's own label.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in your gallery yet. {label}'**
+  String videoClipBackupPendingSemanticLabel(String label);
+
+  /// Accessibility label for a library clip whose recording was saved to the gallery without content credentials, so the copy cannot be brought back to the clips. Wraps the clip's own label.
+  ///
+  /// In en, this message translates to:
+  /// **'In your gallery without content credentials. {label}'**
+  String videoClipBackupUnsignedSemanticLabel(String label);
 
   /// Accessibility label for a stop-motion clip thumbnail. {frames} is the already-localized frame count from videoEditorStopMotionFramesCount. Replaces the duration label, which is a misleading value for stop-motion and is hidden visually for the same reason.
   ///
@@ -11934,18 +12024,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Flag this content'**
   String get commentOptionsFlagContentSemanticLabel;
-
-  /// No description provided for @commentOptionsFlagReasonPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a reason for flagging this comment'**
-  String get commentOptionsFlagReasonPrompt;
-
-  /// No description provided for @commentOptionsFlagSubmit.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit'**
-  String get commentOptionsFlagSubmit;
 
   /// No description provided for @commentOptionsTitle.
   ///
@@ -14069,12 +14147,6 @@ abstract class AppLocalizations {
   /// **'Failed to vote on comment'**
   String get commentsErrorVoteFailed;
 
-  /// Snackbar shown when submitting an NIP-56 comment report fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to report comment'**
-  String get commentsErrorReportFailed;
-
   /// Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails.
   ///
   /// In en, this message translates to:
@@ -15520,6 +15592,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open sticker editor'**
   String get videoEditorOpenStickerSemanticLabel;
+
+  /// Name of the editor tool and overlay that draws bars or a wave moving with the video's sound. Shown on its tile, as the sheet title and on its timeline bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer'**
+  String get videoEditorAudioVisualizerLabel;
+
+  /// No description provided for @videoEditorOpenAudioVisualizerSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a visualizer that moves with the sound'**
+  String get videoEditorOpenAudioVisualizerSemanticLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerColorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer color'**
+  String get videoEditorAudioVisualizerColorLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars'**
+  String get videoEditorAudioVisualizerStyleBars;
+
+  /// Visualizer style: bars that grow up and down from the middle line.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror'**
+  String get videoEditorAudioVisualizerStyleMirrored;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleWave.
+  ///
+  /// In en, this message translates to:
+  /// **'Wave'**
+  String get videoEditorAudioVisualizerStyleWave;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleCircle.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get videoEditorAudioVisualizerStyleCircle;
+
+  /// No description provided for @videoEditorAudioVisualizerAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add visualizer'**
+  String get videoEditorAudioVisualizerAdd;
+
+  /// Slider in the audio visualizer sheet: how many frequency bands (bars) the visualizer shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Density'**
+  String get videoEditorAudioVisualizerDensityLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerDensityFewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer'**
+  String get videoEditorAudioVisualizerDensityFewer;
+
+  /// No description provided for @videoEditorAudioVisualizerDensityMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get videoEditorAudioVisualizerDensityMore;
+
+  /// Slider in the audio visualizer sheet: how strongly and quickly the bars react to the sound, from calm to lively.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaction'**
+  String get videoEditorAudioVisualizerReactionLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerReactionCalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get videoEditorAudioVisualizerReactionCalm;
+
+  /// No description provided for @videoEditorAudioVisualizerReactionLively.
+  ///
+  /// In en, this message translates to:
+  /// **'Lively'**
+  String get videoEditorAudioVisualizerReactionLively;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar width'**
+  String get videoEditorAudioVisualizerBarWidthLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthThin.
+  ///
+  /// In en, this message translates to:
+  /// **'Thin'**
+  String get videoEditorAudioVisualizerBarWidthThin;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthWide.
+  ///
+  /// In en, this message translates to:
+  /// **'Wide'**
+  String get videoEditorAudioVisualizerBarWidthWide;
+
+  /// Small label on the live preview of the audio visualizer sheet while it moves with a built-in drum loop instead of the video's own sound (still being read, or the video has none).
+  ///
+  /// In en, this message translates to:
+  /// **'Sample beat'**
+  String get videoEditorAudioVisualizerPreviewSampleBeat;
 
   /// No description provided for @videoEditorSaveDraftTitle.
   ///
@@ -19437,6 +19617,24 @@ abstract class AppLocalizations {
   /// **'No matching tags'**
   String get videoMetadataTagsPickerNoResults;
 
+  /// Helper under the tags picker field when a hashtag is at or over the length limit.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{Hashtags can be up to {max} character.} other{Hashtags can be up to {max} characters.}}'**
+  String videoMetadataTagsPickerTagTooLong(int max);
+
+  /// Helper under the tags picker field once a video has the maximum number of hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}'**
+  String videoMetadataTagsPickerTagLimitReached(int max);
+
+  /// Screen-reader label for the tags picker character counter, which is shown visually as count/max.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}'**
+  String videoMetadataTagsPickerCharacterCount(int count, int max);
+
   /// No description provided for @videoMetadataTagsPickerAddTag.
   ///
   /// In en, this message translates to:
@@ -19478,6 +19676,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start recording when you press and hold, then stop when you release'**
   String get generalSettingsHoldToRecordSubtitle;
+
+  /// Title of the Create & Share setting that saves a copy of every new camera recording to the device gallery (#10067).
+  ///
+  /// In en, this message translates to:
+  /// **'Back up recordings to your gallery'**
+  String get settingsBackUpRecordings;
+
+  /// Subtitle of the gallery backup setting. Must say that other apps and cloud photo backups can see the copies in the gallery. Kept to about three lines; the delete dialogs say that gallery copies stay.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.'**
+  String get settingsBackUpRecordingsSubtitle;
 
   /// Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.
   ///

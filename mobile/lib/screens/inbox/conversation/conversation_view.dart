@@ -214,7 +214,20 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           final npub = NostrKeyUtils.encodePubKey(otherPubkey);
           await ClipboardUtils.copyPubkey(context, npub);
         case MoreSheetResult.unfollow:
-          await followRepository.toggleFollow(otherPubkey);
+          try {
+            // The user chose Unfollow; don't decide again from a follow list
+            // that can change while the sheet is open (#6903).
+            await followRepository.unfollow(otherPubkey);
+          } on Exception {
+            // FollowRepository has already logged the failure and left the
+            // follow in place; the user only needs to know it didn't happen.
+            if (mounted) {
+              _showSnackbar(
+                context.l10n.followersUpdateFollowFailed,
+                error: true,
+              );
+            }
+          }
         case MoreSheetResult.report:
           if (!mounted) return;
           await ReportContentDialog.showForUser(

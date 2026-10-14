@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "اس اکاؤنٹ کی رپورٹ کریں",
   "inboxActionBlockVanishedAccount": "اس اکاؤنٹ کو بلاک کریں",
   "inboxActionUnblockVanishedAccount": "اس اکاؤنٹ کو ان بلاک کریں",
-  "inboxReportedVanishedAccount": "اس اکاؤنٹ کی رپورٹ کی",
   "inboxBlockedVanishedAccount": "اس اکاؤنٹ کو بلاک کیا",
   "inboxUnblockedVanishedAccount": "اس اکاؤنٹ کو ان بلاک کیا",
   "inboxRemoveConfirmBodyVanishedAccount": "اس سے گفتگو آپ کے ان باکس سے ہٹ جائے گی۔ اگر وہ آپ کو دوبارہ پیغام بھیجیں تو نئی گفتگو شروع ہو جائے گی۔",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "{displayName} کی رپورٹ کی",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "{displayName} کو بلاک کیا",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3290,7 +3281,7 @@
   "librarySortShortestClip": "سب سے چھوٹی کلپ",
   "librarySortSquareFirst": "پہلے چوکور",
   "librarySortVerticalFirst": "پہلے عمودی",
-  "libraryDeleteClipsWarning": "یہ کارروائی واپس نہیں ہو سکتی۔ ویڈیو فائلیں آپ کی ڈیوائس سے مستقل طور پر ہٹا دی جائیں گی۔",
+  "libraryDeleteClipsWarning": "یہ کارروائی واپس نہیں ہو سکتی۔",
   "libraryPreparingVideo": "ویڈیو تیار ہو رہی ہے...",
   "libraryCreateVideo": "ویڈیو بنائیں ({count})",
   "libraryClipsSavedToDestination": "{count, plural, =1{1 کلپ} other{{count} کلپس}} {destination} میں محفوظ ہو گئیں",
@@ -3336,6 +3327,18 @@
   "libraryGalleryImportItemNotVerified": "تصدیق نہیں ہو سکی کہ یہ Divine سے بنی ہے",
   "libraryGalleryImportItemCheckUnavailable": "ابھی جانچ نہیں ہو سکی۔ بعد میں دوبارہ کوشش کریں۔",
   "libraryGalleryImportDone": "ہو گیا",
+  "librarySaveSelectedClipsTooltip": "منتخب کلپس اپنی گیلری میں محفوظ کریں",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔} other{{count} کلپس اپنے ثبوت کے بغیر محفوظ ہوئیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتیں۔}}",
+  "libraryClipsSavedWithoutProofDetails": "تفصیلات",
+  "libraryGallerySaveWarningTitle": "ثبوت کے بغیر محفوظ",
+  "libraryGallerySaveWarningIntro": "آپ کی گیلری سے صرف وہی کلپس واپس آ سکتی ہیں جن کے پاس ثبوت ہو کہ وہ Divine سے بنائی گئی ہیں۔ ان کلپس کی کاپیاں اس ثبوت کے بغیر محفوظ ہوئیں۔",
+  "libraryGallerySaveWarningSigningUnavailable": "ابھی اس کا ثبوت شامل نہیں ہو سکا، شاید اس لیے کہ آپ آف لائن تھے۔ ثبوت والی کاپی محفوظ کرنے کے لیے دوبارہ کوشش کریں۔",
+  "libraryGallerySaveWarningStopMotion": "اسٹاپ موشن کلپس تصاویر سے بنتی ہیں، اور تصاویر ثبوت نہیں رکھ سکتیں۔",
+  "libraryGallerySaveWarningSigningUnsupported": "Divine کا یہ ورژن کلپس میں ثبوت شامل نہیں کر سکتا۔",
+  "libraryGallerySaveWarningNoProof": "اس کلپ کا کوئی ثبوت نہیں، اور Divine بعد میں اسے شامل نہیں کر سکتا۔",
+  "libraryGallerySaveWarningSavedWithProof": "ثبوت کے ساتھ محفوظ ہو گئی",
+  "libraryGallerySaveSigning": "آپ کی کلپس میں ثبوت شامل ہو رہا ہے…",
+  "libraryGallerySaveProgress": "{total, plural, =1{آپ کی کلپ محفوظ ہو رہی ہے…} other{کلپ {current} از {total} محفوظ ہو رہی ہے…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 کلپ حذف ہو گئی} other{{count} کلپس حذف ہو گئیں}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -3396,10 +3399,13 @@
   },
   "libraryDeleteClipTitle": "کلپ حذف کریں",
   "libraryDeleteClipMessage": "کیا آپ واقعی یہ کلپ حذف کرنا چاہتے ہیں؟",
+  "libraryDeleteClipTrashNote": "کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔",
   "libraryClipDuration": "{seconds}s",
   "libraryRecordVideo": "ویڈیو ریکارڈ کریں",
   "videoClipSemanticLabel": "ویڈیو کلپ، {duration} سیکنڈ",
   "videoClipArchivedSemanticLabel": "آرکائیو شدہ۔ {label}",
+  "videoClipBackupPendingSemanticLabel": "ابھی آپ کی گیلری میں نہیں۔ {label}",
+  "videoClipBackupUnsignedSemanticLabel": "آپ کی گیلری میں مواد اسناد کے بغیر۔ {label}",
   "videoClipStopMotionSemanticLabel": "اسٹاپ موشن کلپ، {frames}",
   "@videoClipSemanticLabel": {
     "description": "Accessibility label for a video clip thumbnail. Duration is formatted as seconds with 2 decimal places, e.g. '5.73'.",
@@ -3512,8 +3518,6 @@
   "commentOptionsEditSemanticLabel": "تبصرہ میں ترمیم کریں",
   "commentOptionsFlagContentLabel": "مواد فلیگ کریں",
   "commentOptionsFlagContentSemanticLabel": "یہ مواد فلیگ کریں",
-  "commentOptionsFlagReasonPrompt": "اس تبصرے کو فلیگ کرنے کی وجہ منتخب کریں",
-  "commentOptionsFlagSubmit": "جمع کریں",
   "commentOptionsTitle": "اختیارات",
   "commentsEmptyClassicVineMessage": "ہم آرکائیو سے پرانے تبصرے درآمد کرنے پر ابھی کام کر رہے ہیں۔ وہ ابھی تیار نہیں ہیں۔",
   "commentsEmptyClassicVineTitle": "کلاسک Vine",
@@ -4336,10 +4340,6 @@
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
   },
-  "commentsErrorReportFailed": "تبصرے کی رپورٹ نہیں ہو سکی",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
-  },
   "commentsErrorBlockFailed": "صارف بلاک نہیں ہو سکا",
   "@commentsErrorBlockFailed": {
     "description": "Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails."
@@ -4726,6 +4726,24 @@
   "videoEditorOpenBlurSemanticLabel": "ویڈیو کے کسی حصے کو دھندلا یا پکسلیٹ کریں",
   "videoEditorOpenFilterSemanticLabel": "فلٹر ایڈیٹر کھولیں",
   "videoEditorOpenStickerSemanticLabel": "اسٹیکر ایڈیٹر کھولیں",
+  "videoEditorAudioVisualizerLabel": "آڈیو ویژولائزر",
+  "videoEditorOpenAudioVisualizerSemanticLabel": "آواز کے ساتھ حرکت کرنے والا ویژولائزر شامل کریں",
+  "videoEditorAudioVisualizerColorLabel": "ویژولائزر کا رنگ",
+  "videoEditorAudioVisualizerStyleBars": "پٹیاں",
+  "videoEditorAudioVisualizerStyleMirrored": "آئینہ",
+  "videoEditorAudioVisualizerStyleWave": "لہر",
+  "videoEditorAudioVisualizerStyleCircle": "دائرہ",
+  "videoEditorAudioVisualizerAdd": "ویژولائزر شامل کریں",
+  "videoEditorAudioVisualizerDensityLabel": "کثافت",
+  "videoEditorAudioVisualizerDensityFewer": "کم",
+  "videoEditorAudioVisualizerDensityMore": "زیادہ",
+  "videoEditorAudioVisualizerReactionLabel": "ردِعمل",
+  "videoEditorAudioVisualizerReactionCalm": "پُرسکون",
+  "videoEditorAudioVisualizerReactionLively": "پُرجوش",
+  "videoEditorAudioVisualizerBarWidthLabel": "پٹی کی چوڑائی",
+  "videoEditorAudioVisualizerBarWidthThin": "پتلی",
+  "videoEditorAudioVisualizerBarWidthWide": "چوڑی",
+  "videoEditorAudioVisualizerPreviewSampleBeat": "نمونہ بیٹ",
   "videoEditorSaveDraftTitle": "اپنا مسودہ محفوظ کریں؟",
   "videoEditorSaveDraftSubtitle": "اپنی ترامیم بعد کے لیے رکھیں، یا انہیں چھوڑ کر ایڈیٹر سے نکل جائیں۔",
   "videoEditorSaveDraftButton": "مسودہ محفوظ کریں",
@@ -5867,6 +5885,9 @@
   "videoMetadataTagsPickerSearchHint": "ٹیگز تلاش یا شامل کریں",
   "videoMetadataTagsPickerEmptyHint": "لوگوں کی آپ کی ویڈیو دریافت کرنے میں مدد کے لیے ٹیگز شامل کریں",
   "videoMetadataTagsPickerNoResults": "کوئی میلتا ٹیگ نہیں",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{ہیش ٹیگ زیادہ سے زیادہ {max} حرف کے ہو سکتے ہیں۔} other{ہیش ٹیگ زیادہ سے زیادہ {max} حروف کے ہو سکتے ہیں۔}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔} other{آپ زیادہ سے زیادہ {max} ہیش ٹیگ شامل کر سکتے ہیں۔}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} میں سے {count} حرف} other{{max} میں سے {count} حروف}}",
   "videoMetadataTagsPickerAddTag": "\"#{tag}\" شامل کریں",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {
@@ -5890,6 +5911,8 @@
   "minorAccountReviewUnder13WhyTitle": "یہ ہے وجہ",
   "generalSettingsHoldToRecord": "دبا کر ریکارڈ کریں",
   "generalSettingsHoldToRecordSubtitle": "دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے",
+  "settingsBackUpRecordings": "ریکارڈنگز کا گیلری میں بیک اپ",
+  "settingsBackUpRecordingsSubtitle": "ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔",
   "uploadPublishedCountMessage": "{count, plural, =1{ویڈیو آپ کے پروفائل پر شائع ہو گئی} other{{count} ویڈیوز آپ کے پروفائل پر شائع ہو گئیں}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

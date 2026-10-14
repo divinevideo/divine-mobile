@@ -3,6 +3,7 @@
 // ABOUTME: the configured pool UNION the user's advertised kind-10050 DM
 // ABOUTME: inbox, because targetRelays FILTERS the pool rather than adding.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -218,6 +219,107 @@ void main() {
 
         expect(result.success, isTrue);
         expect(capturedTargets, equals([null]));
+      },
+    );
+
+    test(
+      'hands a caller that publishes its own copies the same union (#8446)',
+      () async {
+        stubOwnDmInbox(_advertisedInbox);
+
+        final targets = await buildRepository().resolveSelfWrapTargetRelays(
+          _ownerPubkey,
+        );
+
+        expect(targets, isNotNull);
+        expect(targets, containsAll(_poolRelays));
+        expect(
+          targets,
+          containsAll(['wss://nos.lol', 'wss://relay.primal.net']),
+          reason:
+              'a reaction copy has to reach the same inbox relays a message '
+              'copy does',
+        );
+        expect(targets!.toSet(), hasLength(targets.length));
+      },
+    );
+
+    test(
+      'gives no targets for an account that is no longer signed in (#8446)',
+      () async {
+        stubOwnDmInbox(_advertisedInbox);
+        final repository = buildRepository();
+
+        // Positive control: the signed-in account does get targets, so the
+        // null below is the owner check rather than an unread inbox.
+        expect(
+          await repository.resolveSelfWrapTargetRelays(_ownerPubkey),
+          isNotNull,
+        );
+        expect(
+          await repository.resolveSelfWrapTargetRelays(_recipientPubkey),
+          isNull,
+          reason:
+              'a copy queued under one account must never be routed by the '
+              'inbox of whoever is signed in now',
+        );
+      },
+    );
+
+    test(
+      'gives no targets when the account switches during the lookup (#8446)',
+      () async {
+        final lookup =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) => lookup.future);
+        final repository = buildRepository();
+
+        final pending = repository.resolveSelfWrapTargetRelays(_ownerPubkey);
+        repository.setCredentials(
+          userPubkey: _recipientPubkey,
+          signer: LocalNostrSigner(_privateKey),
+          messageService: messageService,
+        );
+        lookup.complete((
+          events: [
+            Event(_ownerPubkey, EventKind.dmRelaysList, [
+              for (final relay in _advertisedInbox) ['relay', relay],
+            ], ''),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ));
+
+        expect(
+          await pending,
+          isNull,
+          reason:
+              'the lookup began for the previous account; its answer must '
+              'not route a copy once someone else is signed in',
+        );
+      },
+    );
+
+    test(
+      'gives no targets when no inbox is advertised, keeping the plain pool '
+      'publish (#8446)',
+      () async {
+        stubOwnDmInbox(null);
+
+        expect(
+          await buildRepository().resolveSelfWrapTargetRelays(_ownerPubkey),
+          isNull,
+        );
       },
     );
   });

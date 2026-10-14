@@ -1,10 +1,12 @@
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -211,6 +213,84 @@ void main() {
         containsAll(<int>[moreId, lessId]),
       );
       handle.dispose();
+    });
+  });
+
+  group('threshold haptic', () {
+    late List<MethodCall> platformCalls;
+
+    void mockPlatformChannel(WidgetTester tester, {bool failHaptics = false}) {
+      platformCalls = <MethodCall>[];
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        platformCalls.add(call);
+        if (failHaptics && call.method == 'HapticFeedback.vibrate') {
+          throw PlatformException(code: 'haptics-unavailable');
+        }
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+    }
+
+    Iterable<MethodCall> selectionClicks() => platformCalls.where(
+      (call) =>
+          call.method == 'HapticFeedback.vibrate' &&
+          call.arguments == 'HapticFeedbackType.selectionClick',
+    );
+
+    testWidgets('ticks once when a drag crosses the threshold', (tester) async {
+      mockPlatformChannel(tester);
+      await pumpOverlay(tester);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(FeedTuningSwipeOverlay)),
+      );
+      await gesture.moveBy(const Offset(60, 0));
+      await tester.pump();
+      expect(selectionClicks(), isEmpty);
+
+      await gesture.moveBy(const Offset(60, 0));
+      await gesture.moveBy(const Offset(60, 0));
+      await tester.pump();
+      expect(selectionClicks(), hasLength(1));
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a failing haptic channel still tunes and logs the failure', (
+      tester,
+    ) async {
+      mockPlatformChannel(tester, failHaptics: true);
+      final tuned = await pumpOverlay(tester);
+      await LogCaptureService().clearAllLogs();
+
+      await tester.drag(
+        find.byType(FeedTuningSwipeOverlay),
+        const Offset(200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(selectionClicks(), hasLength(1));
+      expect(tuned, [FeedTuningDirection.more]);
+      expect(tester.takeException(), isNull);
+
+      // Matched anywhere: the capture is a process-global ring buffer shared
+      // by every suite in a merged isolate, so `.last` is not stable.
+      final errors = LogCaptureService().getRecentLogs(
+        minLevel: LogLevel.error,
+      );
+      expect(
+        errors.map((entry) => entry.message),
+        contains(
+          allOf(
+            contains('Failed to play feed tuning threshold haptic'),
+            contains('haptics-unavailable'),
+          ),
+        ),
+      );
     });
   });
 

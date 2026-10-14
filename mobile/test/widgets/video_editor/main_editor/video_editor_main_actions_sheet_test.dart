@@ -262,6 +262,45 @@ void main() {
       expect(addedStickers, isTrue);
     });
 
+    testWidgets('tap on Visualizer triggers onAddAudioVisualizer', (
+      tester,
+    ) async {
+      var addedVisualizer = false;
+
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          onAddAudioVisualizer: () => addedVisualizer = true,
+        ),
+      );
+
+      expect(find.text(l10n.videoEditorAudioVisualizerLabel), findsOneWidget);
+      await tester.tap(
+        find.bySemanticsLabel(
+          l10n.videoEditorOpenAudioVisualizerSemanticLabel,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(addedVisualizer, isTrue);
+    });
+
+    testWidgets('hides the visualizer action where the editor offers none', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+        ),
+      );
+
+      expect(find.text(l10n.videoEditorAudioVisualizerLabel), findsNothing);
+    });
+
     testWidgets('tap on Marker enters marker mode', (tester) async {
       when(
         () => clipBloc.state,
@@ -387,6 +426,7 @@ VideoEditorScope _scope({
   VoidCallback? onOpenCaptions,
   VoidCallback? onOpenEffects,
   VoidCallback? onAddStickers,
+  VoidCallback? onAddAudioVisualizer,
 }) => VideoEditorScope(
   editorKey: GlobalKey<ProImageEditorState>(),
   removeAreaKey: GlobalKey(),
@@ -398,6 +438,7 @@ VideoEditorScope _scope({
   onOpenVoiceOver: onOpenVoiceOver ?? () {},
   onOpenCaptions: onOpenCaptions ?? () {},
   onOpenEffects: onOpenEffects ?? () {},
+  onAddAudioVisualizer: onAddAudioVisualizer,
   originalClipAspectRatio: 9 / 16,
   bodySizeNotifier: ValueNotifier(const Size(400, 800)),
   zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
@@ -451,6 +492,7 @@ Widget _buildWidget({
   VoidCallback? onOpenCaptions,
   VoidCallback? onOpenEffects,
   VoidCallback? onAddStickers,
+  VoidCallback? onAddAudioVisualizer,
 }) => _app(
   child: MultiBlocProvider(
     providers: [
@@ -466,6 +508,7 @@ Widget _buildWidget({
         onOpenCaptions: onOpenCaptions,
         onOpenEffects: onOpenEffects,
         onAddStickers: onAddStickers,
+        onAddAudioVisualizer: onAddAudioVisualizer,
       ),
     ),
   ),

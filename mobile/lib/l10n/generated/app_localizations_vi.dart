@@ -952,9 +952,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Bỏ chặn tài khoản này';
 
   @override
-  String get inboxReportedVanishedAccount => 'Đã báo cáo tài khoản này';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Đã chặn tài khoản này';
 
   @override
@@ -4790,6 +4787,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportWhyReporting => 'Tại sao bạn báo cáo nội dung này?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.';
 
@@ -4811,6 +4811,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Vui lòng mô tả vấn đề';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5708,11 +5711,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profileSetupUploadStaged => 'Đã tải lên — chạm Lưu để áp dụng';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'Đã báo cáo $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'Đã chặn $displayName';
   }
@@ -6497,8 +6495,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get librarySortVerticalFirst => 'Dọc trước';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Không thể hoàn tác thao tác này. Các tệp video sẽ bị xóa vĩnh viễn khỏi thiết bị của bạn.';
+  String get libraryDeleteClipsWarning => 'Không thể hoàn tác thao tác này.';
 
   @override
   String get libraryPreparingVideo => 'Đang chuẩn bị video...';
@@ -6573,6 +6570,66 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'Xong';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Lưu các clip đã chọn vào thư viện ảnh';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Đã lưu $count clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.',
+      one: 'Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Chi tiết';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Đã lưu không có bằng chứng';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Chỉ những clip có bằng chứng được quay bằng Divine mới có thể quay lại từ thư viện ảnh. Bản sao của các clip này đã được lưu mà không có bằng chứng đó.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Hiện chưa thêm được bằng chứng, có thể vì bạn đang ngoại tuyến. Thử lại để lưu một bản sao có bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clip stop-motion được tạo từ ảnh, mà ảnh thì không thể mang bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Phiên bản Divine này không thể thêm bằng chứng vào clip.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Clip này không có bằng chứng, và Divine không thể thêm vào sau.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Đã lưu kèm bằng chứng';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Đang thêm bằng chứng vào clip của bạn…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đang lưu clip $current/$total…',
+      one: 'Đang lưu clip của bạn…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6672,6 +6729,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Bạn có chắc muốn xóa clip này không?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Clip sẽ vào thùng rác trước, nên bạn vẫn có thể khôi phục.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds giây';
   }
@@ -6687,6 +6748,16 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Đã lưu trữ. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Chưa có trong thư viện ảnh của bạn. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Có trong thư viện ảnh của bạn nhưng không có chứng nhận nội dung. $label';
   }
 
   @override
@@ -6966,13 +7037,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Gắn cờ nội dung này';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Chọn lý do gắn cờ bình luận này';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Gửi';
 
   @override
   String get commentOptionsTitle => 'Tùy chọn';
@@ -8280,9 +8344,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commentsErrorVoteFailed => 'Không bình chọn được bình luận';
 
   @override
-  String get commentsErrorReportFailed => 'Không báo cáo được bình luận';
-
-  @override
   String get commentsErrorBlockFailed => 'Không chặn được người dùng';
 
   @override
@@ -9104,6 +9165,61 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorOpenStickerSemanticLabel =>
       'Mở trình chỉnh sửa nhãn dán';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'Sóng nhạc';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Thêm sóng nhạc chuyển động theo âm thanh';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Màu sóng nhạc';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Thanh';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Gương';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Sóng';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Vòng tròn';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Thêm sóng nhạc';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Mật độ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Ít hơn';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Nhiều hơn';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Phản ứng';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Êm';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Sôi động';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Độ rộng thanh';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Mảnh';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Rộng';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Nhịp mẫu';
 
   @override
   String get videoEditorSaveDraftTitle => 'Lưu bản nháp của bạn?';
@@ -11508,6 +11624,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Không có thẻ phù hợp';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtag có thể dài tối đa $max ký tự.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Bạn có thể thêm tối đa $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count/$max ký tự',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Thêm \"#$tag\"';
   }
@@ -11530,6 +11676,13 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Bắt đầu quay khi bạn nhấn giữ, dừng khi bạn thả ra';
+
+  @override
+  String get settingsBackUpRecordings => 'Sao lưu bản quay vào thư viện ảnh';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.';
 
   @override
   String uploadPublishedCountMessage(int count) {

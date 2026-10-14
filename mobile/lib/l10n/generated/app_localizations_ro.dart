@@ -1027,9 +1027,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Deblochează acest cont';
 
   @override
-  String get inboxReportedVanishedAccount => 'Acest cont a fost raportat';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Acest cont a fost blocat';
 
   @override
@@ -4964,6 +4961,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportWhyReporting => 'De ce raportezi acest conținut?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine va acționa asupra rapoartelor de conținut în 24 de ore eliminând conținutul și excluțând utilizatorul care a furnizat conținutul ofensator.';
 
@@ -4986,6 +4986,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Descrie problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5900,11 +5903,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Încărcată — apasă pe Salvează pentru a aplica';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName a fost raportat(ă)';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName a fost blocat(ă)';
   }
@@ -6700,8 +6698,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticalele mai întâi';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Nu se poate anula. Fișierele video vor fi eliminate definitiv de pe dispozitiv.';
+  String get libraryDeleteClipsWarning => 'Nu se poate anula.';
 
   @override
   String get libraryPreparingVideo => 'Se pregătește videoclipul...';
@@ -6776,6 +6773,68 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'Gata';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Salvează clipurile selectate în galeria ta';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count de clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
+      few:
+          '$count clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
+      one: '1 clip a fost salvat fără dovada lui, așa că nu se poate întoarce printre clipurile tale.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Detalii';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Salvate fără dovadă';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Din galeria ta se pot întoarce doar clipurile cu dovada că au fost filmate cu Divine. Copiile acestor clipuri au fost salvate fără ea.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Dovada nu a putut fi adăugată acum, poate pentru că erai offline. Încearcă din nou ca să salvezi o copie cu dovadă.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clipurile stop-motion sunt făcute din fotografii, care nu pot purta o dovadă.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Această versiune de Divine nu poate adăuga dovezi clipurilor.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Acest clip nu are dovadă, iar Divine nu o mai poate adăuga ulterior.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Salvat cu dovada lui';
+
+  @override
+  String get libraryGallerySaveSigning => 'Se adaugă dovada la clipurile tale…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Se salvează clipul $current din $total…',
+      few: 'Se salvează clipul $current din $total…',
+      one: 'Se salvează clipul tău…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6874,6 +6933,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Ștergi acest clip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Clipul ajunge mai întâi în coș, așa că îl poți restaura în continuare.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6889,6 +6952,16 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arhivat. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Încă nu e în galeria ta. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'În galeria ta fără acreditări de conținut. $label';
   }
 
   @override
@@ -7175,13 +7248,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Semnalează acest conținut';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Alege un motiv pentru semnalarea acestui comentariu';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Trimite';
 
   @override
   String get commentOptionsTitle => 'Opțiuni';
@@ -8507,9 +8573,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commentsErrorVoteFailed => 'Nu am putut vota comentariul';
 
   @override
-  String get commentsErrorReportFailed => 'Nu am putut raporta comentariul';
-
-  @override
   String get commentsErrorBlockFailed => 'Nu am putut bloca utilizatorul';
 
   @override
@@ -9345,6 +9408,62 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorOpenStickerSemanticLabel =>
       'Deschide editorul de stickere';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'Vizualizator';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Adaugă un vizualizator care se mișcă după sunet';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel =>
+      'Culoarea vizualizatorului';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Bare';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Oglindă';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Undă';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Cerc';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Adaugă vizualizator';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Densitate';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Mai puține';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Mai multe';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reacție';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Calmă';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Vie';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Lățimea barelor';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Subțiri';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Late';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Ritm de exemplu';
 
   @override
   String get videoEditorSaveDraftTitle => 'Salvezi schița?';
@@ -11795,6 +11914,42 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Nicio etichetă potrivită';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtagurile pot avea până la $max de caractere.',
+      few: 'Hashtagurile pot avea până la $max caractere.',
+      one: 'Hashtagurile pot avea până la $max caracter.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Poți adăuga până la $max de hashtaguri.',
+      few: 'Poți adăuga până la $max hashtaguri.',
+      one: 'Poți adăuga până la $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count din $max de caractere',
+      few: '$count din $max caractere',
+      one: '$count din $max caracter',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adaugă „#$tag\"';
   }
@@ -11817,6 +11972,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Înregistrarea începe când ții apăsat și se oprește când eliberezi';
+
+  @override
+  String get settingsBackUpRecordings => 'Salvează înregistrările în galerie';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.';
 
   @override
   String uploadPublishedCountMessage(int count) {

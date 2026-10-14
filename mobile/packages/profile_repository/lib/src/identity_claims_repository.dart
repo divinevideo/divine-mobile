@@ -471,6 +471,11 @@ class IdentityClaimsRepository {
   /// still live in kind-0 tags has them carried into this first kind-10011
   /// write, matching what the verifier's web UI does.
   ///
+  /// [replacingIdentity] is the identity the claim was sent to the verifier
+  /// under, when the verifier confirmed it under a different one. The claim
+  /// for that identity on the same platform is replaced too, so linking an
+  /// account again leaves one tag for it whichever form it was saved in.
+  ///
   /// This publishes what it is told to. Confirming the claim with the
   /// verifier first is the caller's job — an unverified `i` tag is valid
   /// NIP-39 and simply renders unverified.
@@ -480,25 +485,42 @@ class IdentityClaimsRepository {
   /// * [StateError] if the repository was built without write dependencies.
   /// * [IdentityClaimPublishException] if the event cannot be signed, or no
   ///   relay confirms it.
-  Future<List<List<String>>> publishClaim(IdentityClaim claim) async {
-    return publishSignedClaim(await signClaim(claim));
+  Future<List<List<String>>> publishClaim(
+    IdentityClaim claim, {
+    String? replacingIdentity,
+  }) async {
+    return publishSignedClaim(
+      await signClaim(claim, replacingIdentity: replacingIdentity),
+    );
   }
 
   /// Builds and signs the identity event that links [claim], without
   /// publishing it. [confirmBinding] goes on the new claim's tag as a fourth
   /// value, for a sign-in the verifier confirms before it is published
-  /// (#10119).
+  /// (#10119). [replacingIdentity] is as for [publishClaim].
   ///
   /// Throws the same exceptions as [publishClaim].
   Future<SignedIdentityClaim> signClaim(
     IdentityClaim claim, {
     String? confirmBinding,
+    String? replacingIdentity,
   }) async {
     final base = await _currentIdentityEventBase(claim.pubkey, forWrite: true);
     final key = _identityKeyOf(claim);
+    final replacedKey = replacingIdentity == null
+        ? null
+        : _identityKeyOf(
+            IdentityClaim(
+              pubkey: claim.pubkey,
+              platform: claim.platform,
+              identity: replacingIdentity,
+              proof: claim.proof,
+            ),
+          );
+    final droppedKeys = {key, ?replacedKey};
     final tags = [
       for (final tag in base.tags)
-        if (_tagIdentityKeyOrNull(tag) != key) tag,
+        if (!droppedKeys.contains(_tagIdentityKeyOrNull(tag))) tag,
       [
         'i',
         '${claim.platform}:${claim.identity}',
@@ -517,6 +539,7 @@ class IdentityClaimsRepository {
       event: event,
       tags: tags,
       claimKey: key,
+      replacedKey: replacedKey,
     );
   }
 
@@ -528,11 +551,16 @@ class IdentityClaimsRepository {
   ) async {
     // Linking again undoes an earlier unlink from this session.
     _lastRemovedKeys[signed.pubkey]?.remove(signed.claimKey);
-    return _publishSignedIdentityEvent(
+    final published = await _publishSignedIdentityEvent(
       signed.pubkey,
       signed.event,
       signed.tags,
     );
+    // Counted as removed only once a relay has the event without it.
+    if (signed.replacedKey case final replacedKey?) {
+      (_lastRemovedKeys[signed.pubkey] ??= <String>{}).add(replacedKey);
+    }
+    return published;
   }
 
   /// Unlinks the claim matching [claim]'s `platform:identity` and returns the
@@ -1389,6 +1417,7 @@ class SignedIdentityClaim {
     required this.event,
     required this.tags,
     required this.claimKey,
+    this.replacedKey,
   });
 
   /// Whose identity event this is.
@@ -1402,6 +1431,10 @@ class SignedIdentityClaim {
 
   /// The `platform:identity` key of the claim it adds.
   final String claimKey;
+
+  /// The key of a claim saved under the form sent to the verifier, which the
+  /// event drops; counted as removed once the event is published.
+  final String? replacedKey;
 
   /// The event as the verifier receives it.
   Map<String, dynamic> get eventJson => event.toJson();

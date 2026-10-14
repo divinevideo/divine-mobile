@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "Báo cáo tài khoản này",
   "inboxActionBlockVanishedAccount": "Chặn tài khoản này",
   "inboxActionUnblockVanishedAccount": "Bỏ chặn tài khoản này",
-  "inboxReportedVanishedAccount": "Đã báo cáo tài khoản này",
   "inboxBlockedVanishedAccount": "Đã chặn tài khoản này",
   "inboxUnblockedVanishedAccount": "Đã bỏ chặn tài khoản này",
   "inboxRemoveConfirmBodyVanishedAccount": "Thao tác này xóa cuộc trò chuyện khỏi hộp thư đến. Nếu họ nhắn tin cho bạn lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "Đã báo cáo {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "Đã chặn {displayName}",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3290,7 +3281,7 @@
   "librarySortShortestClip": "Clip ngắn nhất",
   "librarySortSquareFirst": "Vuông trước",
   "librarySortVerticalFirst": "Dọc trước",
-  "libraryDeleteClipsWarning": "Không thể hoàn tác thao tác này. Các tệp video sẽ bị xóa vĩnh viễn khỏi thiết bị của bạn.",
+  "libraryDeleteClipsWarning": "Không thể hoàn tác thao tác này.",
   "libraryPreparingVideo": "Đang chuẩn bị video...",
   "libraryCreateVideo": "Tạo video ({count})",
   "libraryClipsSavedToDestination": "Đã lưu {count, plural, =1{1 clip} other{{count} clip}} vào {destination}",
@@ -3336,6 +3327,18 @@
   "libraryGalleryImportItemNotVerified": "Không thể xác nhận clip được quay bằng Divine",
   "libraryGalleryImportItemCheckUnavailable": "Hiện không kiểm tra được. Thử lại sau nhé.",
   "libraryGalleryImportDone": "Xong",
+  "librarySaveSelectedClipsTooltip": "Lưu các clip đã chọn vào thư viện ảnh",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.} other{Đã lưu {count} clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.}}",
+  "libraryClipsSavedWithoutProofDetails": "Chi tiết",
+  "libraryGallerySaveWarningTitle": "Đã lưu không có bằng chứng",
+  "libraryGallerySaveWarningIntro": "Chỉ những clip có bằng chứng được quay bằng Divine mới có thể quay lại từ thư viện ảnh. Bản sao của các clip này đã được lưu mà không có bằng chứng đó.",
+  "libraryGallerySaveWarningSigningUnavailable": "Hiện chưa thêm được bằng chứng, có thể vì bạn đang ngoại tuyến. Thử lại để lưu một bản sao có bằng chứng.",
+  "libraryGallerySaveWarningStopMotion": "Clip stop-motion được tạo từ ảnh, mà ảnh thì không thể mang bằng chứng.",
+  "libraryGallerySaveWarningSigningUnsupported": "Phiên bản Divine này không thể thêm bằng chứng vào clip.",
+  "libraryGallerySaveWarningNoProof": "Clip này không có bằng chứng, và Divine không thể thêm vào sau.",
+  "libraryGallerySaveWarningSavedWithProof": "Đã lưu kèm bằng chứng",
+  "libraryGallerySaveSigning": "Đang thêm bằng chứng vào clip của bạn…",
+  "libraryGallerySaveProgress": "{total, plural, =1{Đang lưu clip của bạn…} other{Đang lưu clip {current}/{total}…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{Đã xóa 1 clip} other{Đã xóa {count} clip}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -3396,10 +3399,13 @@
   },
   "libraryDeleteClipTitle": "Xóa clip",
   "libraryDeleteClipMessage": "Bạn có chắc muốn xóa clip này không?",
+  "libraryDeleteClipTrashNote": "Clip sẽ vào thùng rác trước, nên bạn vẫn có thể khôi phục.",
   "libraryClipDuration": "{seconds} giây",
   "libraryRecordVideo": "Quay video",
   "videoClipSemanticLabel": "Clip video, {duration} giây",
   "videoClipArchivedSemanticLabel": "Đã lưu trữ. {label}",
+  "videoClipBackupPendingSemanticLabel": "Chưa có trong thư viện ảnh của bạn. {label}",
+  "videoClipBackupUnsignedSemanticLabel": "Có trong thư viện ảnh của bạn nhưng không có chứng nhận nội dung. {label}",
   "videoClipStopMotionSemanticLabel": "Đoạn stop-motion, {frames}",
   "@videoClipSemanticLabel": {
     "description": "Accessibility label for a video clip thumbnail. Duration is formatted as seconds with 2 decimal places, e.g. '5.73'.",
@@ -3512,8 +3518,6 @@
   "commentOptionsEditSemanticLabel": "Sửa bình luận",
   "commentOptionsFlagContentLabel": "Gắn cờ nội dung",
   "commentOptionsFlagContentSemanticLabel": "Gắn cờ nội dung này",
-  "commentOptionsFlagReasonPrompt": "Chọn lý do gắn cờ bình luận này",
-  "commentOptionsFlagSubmit": "Gửi",
   "commentOptionsTitle": "Tùy chọn",
   "commentsEmptyClassicVineMessage": "Bọn mình vẫn đang nhập các bình luận cũ từ kho lưu trữ. Chưa xong đâu.",
   "commentsEmptyClassicVineTitle": "Vine kinh điển",
@@ -4336,10 +4340,6 @@
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
   },
-  "commentsErrorReportFailed": "Không báo cáo được bình luận",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
-  },
   "commentsErrorBlockFailed": "Không chặn được người dùng",
   "@commentsErrorBlockFailed": {
     "description": "Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails."
@@ -4726,6 +4726,24 @@
   "videoEditorOpenBlurSemanticLabel": "Làm mờ hoặc pixel hóa một phần video",
   "videoEditorOpenFilterSemanticLabel": "Mở trình chỉnh sửa bộ lọc",
   "videoEditorOpenStickerSemanticLabel": "Mở trình chỉnh sửa nhãn dán",
+  "videoEditorAudioVisualizerLabel": "Sóng nhạc",
+  "videoEditorOpenAudioVisualizerSemanticLabel": "Thêm sóng nhạc chuyển động theo âm thanh",
+  "videoEditorAudioVisualizerColorLabel": "Màu sóng nhạc",
+  "videoEditorAudioVisualizerStyleBars": "Thanh",
+  "videoEditorAudioVisualizerStyleMirrored": "Gương",
+  "videoEditorAudioVisualizerStyleWave": "Sóng",
+  "videoEditorAudioVisualizerStyleCircle": "Vòng tròn",
+  "videoEditorAudioVisualizerAdd": "Thêm sóng nhạc",
+  "videoEditorAudioVisualizerDensityLabel": "Mật độ",
+  "videoEditorAudioVisualizerDensityFewer": "Ít hơn",
+  "videoEditorAudioVisualizerDensityMore": "Nhiều hơn",
+  "videoEditorAudioVisualizerReactionLabel": "Phản ứng",
+  "videoEditorAudioVisualizerReactionCalm": "Êm",
+  "videoEditorAudioVisualizerReactionLively": "Sôi động",
+  "videoEditorAudioVisualizerBarWidthLabel": "Độ rộng thanh",
+  "videoEditorAudioVisualizerBarWidthThin": "Mảnh",
+  "videoEditorAudioVisualizerBarWidthWide": "Rộng",
+  "videoEditorAudioVisualizerPreviewSampleBeat": "Nhịp mẫu",
   "videoEditorSaveDraftTitle": "Lưu bản nháp của bạn?",
   "videoEditorSaveDraftSubtitle": "Giữ các chỉnh sửa để làm sau, hoặc bỏ chúng và rời trình chỉnh sửa.",
   "videoEditorSaveDraftButton": "Lưu bản nháp",
@@ -5867,6 +5885,9 @@
   "videoMetadataTagsPickerSearchHint": "Tìm hoặc thêm thẻ",
   "videoMetadataTagsPickerEmptyHint": "Thêm thẻ để giúp mọi người khám phá video của bạn",
   "videoMetadataTagsPickerNoResults": "Không có thẻ phù hợp",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag có thể dài tối đa {max} ký tự.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Bạn có thể thêm tối đa {max} hashtag.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} ký tự}}",
   "videoMetadataTagsPickerAddTag": "Thêm \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {
@@ -5890,6 +5911,8 @@
   "minorAccountReviewUnder13WhyTitle": "Đây là lý do",
   "generalSettingsHoldToRecord": "Giữ để quay",
   "generalSettingsHoldToRecordSubtitle": "Bắt đầu quay khi bạn nhấn giữ, dừng khi bạn thả ra",
+  "settingsBackUpRecordings": "Sao lưu bản quay vào thư viện ảnh",
+  "settingsBackUpRecordingsSubtitle": "Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.",
   "uploadPublishedCountMessage": "{count, plural, =1{Đã đăng video lên hồ sơ của bạn} other{Đã đăng {count} video lên hồ sơ của bạn}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

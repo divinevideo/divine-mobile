@@ -89,6 +89,68 @@ void main() {
       },
     );
 
+    test(
+      'an empty note is sent empty and leaves Details out of the moderation DM',
+      () async {
+        final cubit = build();
+        addTearDown(cubit.close);
+
+        await cubit.submit(
+          reason: ContentFilterReason.spam,
+          reasonTitle: 'Spam',
+          details: '',
+        );
+
+        final moderationContent =
+            verify(
+                  () => service.reportContent(
+                    eventId: target.eventId,
+                    authorPubkey: target.authorPubkey,
+                    reason: ContentFilterReason.spam,
+                    details: '',
+                    sourceRelay: target.sourceRelay,
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                  ),
+                ).captured.single
+                as String;
+        expect(moderationContent, contains('Reason: Spam'));
+        expect(moderationContent, isNot(contains('Details')));
+      },
+    );
+
+    // Every report surface, comments included, reads its outcome from here.
+    for (final (delivery, expected) in [
+      // A refusal (a self-report, #8352) is silent: it will always refuse
+      // identically, so it must not read as a failure to retry.
+      (ReportDelivery.refused, ReportSubmissionStatus.submitted),
+      // A report that reached no channel off this device is not a success
+      // (#6387, #6595).
+      (ReportDelivery.localOnly, ReportSubmissionStatus.failure),
+    ]) {
+      test('a $delivery result ends in $expected', () async {
+        when(
+          () => service.reportContent(
+            eventId: any(named: 'eventId'),
+            authorPubkey: any(named: 'authorPubkey'),
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            sourceRelay: any(named: 'sourceRelay'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+          ),
+        ).thenAnswer(
+          (_) async => ReportResult.createSuccess('report', delivery: delivery),
+        );
+        final cubit = build();
+        addTearDown(cubit.close);
+
+        await submit(cubit);
+
+        expect(cubit.state.status, expected);
+      });
+    }
+
     test('reports a list with its coordinate and title context', () async {
       // Full-length hex, never truncated.
       final listAuthor = 'd' * 64;

@@ -491,6 +491,28 @@ void main() {
         expect(map.outputDuration, equals(const Duration(milliseconds: 1500)));
       });
 
+      test('is equal for clips that place time alike', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(seconds: 1), transition: overlap500),
+          clip('b', const Duration(seconds: 2)),
+        ]);
+        final same = TransitionTimelineMap.fromClips([
+          clip('c', const Duration(seconds: 1), transition: overlap500),
+          clip('d', const Duration(seconds: 2)),
+        ]);
+        // Same lengths, but the blend starts half a second later.
+        final shifted = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(milliseconds: 1500), transition: overlap500),
+          clip('b', const Duration(milliseconds: 1500)),
+        ]);
+
+        expect(same, equals(map));
+        expect(same.hashCode, map.hashCode);
+        expect(shifted.editorDuration, map.editorDuration);
+        expect(shifted.outputDuration, map.outputDuration);
+        expect(shifted, isNot(equals(map)));
+      });
+
       test('editor and output durations match for a dip', () {
         final dip500 = fadeToBlack.copyWith(
           duration: const Duration(milliseconds: 500),

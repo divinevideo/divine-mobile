@@ -90,6 +90,10 @@ enum DivineIconName {
   envelope('envelope'),
   envelopeSimple('envelope_simple'),
   envelopeSimplePlus('envelope_simple_plus'),
+
+  /// Bars of different heights standing side by side, for an audio
+  /// visualizer.
+  equalizer('equalizer'),
   eye('eye'),
   eyeSlash('eye_slash'),
   faders('faders'),

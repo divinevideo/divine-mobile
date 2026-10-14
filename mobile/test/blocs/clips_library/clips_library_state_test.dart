@@ -40,7 +40,6 @@ void main() {
       expect(state.clips, isEmpty);
       expect(state.selectedClipIds, isEmpty);
       expect(state.selectedDuration, Duration.zero);
-      expect(state.lastGallerySaveResult, isNull);
       expect(state.lastDeletedCount, isNull);
     });
 
@@ -49,23 +48,12 @@ void main() {
         const state = ClipsLibraryState(status: ClipsLibraryStatus.loading);
         expect(state.isLoading, isTrue);
         expect(state.isDeleting, isFalse);
-        expect(state.isSavingToGallery, isFalse);
       });
 
       test('isDeleting returns true when deleting', () {
         const state = ClipsLibraryState(status: ClipsLibraryStatus.deleting);
         expect(state.isDeleting, isTrue);
         expect(state.isLoading, isFalse);
-        expect(state.isSavingToGallery, isFalse);
-      });
-
-      test('isSavingToGallery returns true when saving', () {
-        const state = ClipsLibraryState(
-          status: ClipsLibraryStatus.savingToGallery,
-        );
-        expect(state.isSavingToGallery, isTrue);
-        expect(state.isLoading, isFalse);
-        expect(state.isDeleting, isFalse);
       });
     });
 
@@ -106,20 +94,6 @@ void main() {
         );
         expect(updated.selectedDuration, const Duration(seconds: 10));
       });
-
-      test(
-        'clears gallery save result when clearGallerySaveResult is true',
-        () {
-          const state = ClipsLibraryState(
-            lastGallerySaveResult: GallerySaveResultSuccess(
-              successCount: 1,
-              failureCount: 0,
-            ),
-          );
-          final updated = state.copyWith(clearGallerySaveResult: true);
-          expect(updated.lastGallerySaveResult, isNull);
-        },
-      );
 
       test('clears deleted count when clearDeletedCount is true', () {
         const state = ClipsLibraryState(lastDeletedCount: 5);
@@ -208,6 +182,16 @@ void main() {
 
         expect(state.visibleSelectedClipIds, isEmpty);
       });
+
+      test('lists the visible clips in selection order', () {
+        final state = ClipsLibraryState(
+          status: ClipsLibraryStatus.loaded,
+          clips: [clip1, filedClip, archivedClip],
+          selectedClipIds: const {'filed', 'archived', 'clip1'},
+        );
+
+        expect(state.visibleSelectedClips, [filedClip, clip1]);
+      });
     });
 
     group('selectedIsStopMotion', () {
@@ -272,10 +256,6 @@ void main() {
         clips: [clip1],
         selectedClipIds: const {'clip1'},
         selectedDuration: const Duration(seconds: 5),
-        lastGallerySaveResult: const GallerySaveResultSuccess(
-          successCount: 1,
-          failureCount: 0,
-        ),
         lastDeletedCount: 1,
       );
 
@@ -292,7 +272,6 @@ void main() {
         ClipGridColumns.initial,
         false,
         false,
-        const GallerySaveResultSuccess(successCount: 1, failureCount: 0),
         1,
         const <String>{},
         const <ClipCategory>[],
@@ -301,53 +280,6 @@ void main() {
         null,
         false,
       ]);
-    });
-  });
-
-  group('GallerySaveResult', () {
-    group(GallerySaveResultSuccess, () {
-      test('supports value equality', () {
-        expect(
-          const GallerySaveResultSuccess(successCount: 1, failureCount: 0),
-          equals(
-            const GallerySaveResultSuccess(successCount: 1, failureCount: 0),
-          ),
-        );
-      });
-
-      test('props are correct', () {
-        const result = GallerySaveResultSuccess(
-          successCount: 2,
-          failureCount: 1,
-        );
-        expect(result.props, [2, 1]);
-      });
-    });
-
-    group(GallerySaveResultPermissionDenied, () {
-      test('supports value equality', () {
-        expect(
-          const GallerySaveResultPermissionDenied(),
-          equals(const GallerySaveResultPermissionDenied()),
-        );
-      });
-
-      test('props are empty', () {
-        expect(const GallerySaveResultPermissionDenied().props, isEmpty);
-      });
-    });
-
-    group(GallerySaveResultError, () {
-      test('supports value equality regardless of cause', () {
-        expect(
-          const GallerySaveResultError(),
-          equals(const GallerySaveResultError()),
-        );
-      });
-
-      test('props are empty', () {
-        expect(const GallerySaveResultError().props, isEmpty);
-      });
     });
   });
 
@@ -360,7 +292,6 @@ void main() {
           ClipsLibraryStatus.loading,
           ClipsLibraryStatus.loaded,
           ClipsLibraryStatus.deleting,
-          ClipsLibraryStatus.savingToGallery,
           ClipsLibraryStatus.error,
         ]),
       );

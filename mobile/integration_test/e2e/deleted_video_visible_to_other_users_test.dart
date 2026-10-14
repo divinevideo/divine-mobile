@@ -148,7 +148,7 @@ void main() {
           final router = GoRouter.of(
             tester.element(find.byType(Scaffold).first),
           );
-          router.push(profilePath);
+          final initialProfilePopped = router.push<void>(profilePath);
           await pumpUntilSettled(tester);
           logPhase('Pushed to User A profile: $profilePath');
 
@@ -208,6 +208,7 @@ void main() {
           // Go back from User A's profile
           router.pop();
           await pumpUntilSettled(tester);
+          await _expectRoutePopped(initialProfilePopped, 'User A profile');
 
           await tapBottomNavTab(tester, 'explore_tab');
           await pumpUntilSettled(tester);
@@ -217,7 +218,7 @@ void main() {
           // ProfileFeedCubit. If the repository serves an instant cached reseed,
           // the cubit follows it with a skip-cache refresh, so the deleted video is
           // removed once Funnelcake filters it.
-          router.push(profilePath);
+          final refreshedProfilePopped = router.push<void>(profilePath);
           await pumpUntilSettled(tester, maxSeconds: 15);
           logPhase('Back on User A profile');
 
@@ -248,6 +249,10 @@ void main() {
           );
           logPhase('Deleted video disappeared after re-navigation');
 
+          router.pop();
+          await pumpUntilSettled(tester);
+          await _expectRoutePopped(refreshedProfilePopped, 'refreshed profile');
+
           // ── Cleanup ──
           drainAsyncErrors(tester);
         });
@@ -255,4 +260,13 @@ void main() {
       timeout: const Timeout(Duration(minutes: 5)),
     );
   });
+}
+
+/// Awaits a pushed route's result, failing fast if `router.pop()` closed
+/// something else and the route is still open.
+Future<void> _expectRoutePopped(Future<void> routePopped, String route) {
+  return routePopped.timeout(
+    const Duration(seconds: 5),
+    onTimeout: () => fail('router.pop() did not close the $route route'),
+  );
 }

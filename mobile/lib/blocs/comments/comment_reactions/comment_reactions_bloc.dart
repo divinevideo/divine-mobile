@@ -11,8 +11,6 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/blocs/comments/comment_reactions/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/content_moderation_types.dart';
-import 'package:openvine/services/content_reporting_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'comment_reactions_event.dart';
@@ -25,7 +23,6 @@ part 'comment_reactions_state.dart';
 ///   the four state-sync sentinels ([AlreadyLikedException], etc.) handled
 ///   silently to reconcile pre-tap state without surfacing as failures.
 /// - Vote count batch fetch on demand (UI bridges from [CommentsListBloc]).
-/// - Reporting (Kind 1984) via [ContentReportingService].
 /// - Blocking (Kind 10000 mute) via [ContentBlocklistRepository]; emits
 ///   [ReactionsOutboxRemoveByAuthor] for list cleanup.
 /// - Deleting via [CommentsRepository.deleteComment]; emits
@@ -36,14 +33,12 @@ class CommentReactionsBloc
     required AuthService authService,
     required LikesRepository likesRepository,
     required CommentsRepository commentsRepository,
-    required Future<ContentReportingService> contentReportingServiceFuture,
     required ContentBlocklistRepository contentBlocklistRepository,
     required String rootEventId,
     String? rootAddressableId,
   }) : _authService = authService,
        _likesRepository = likesRepository,
        _commentsRepository = commentsRepository,
-       _contentReportingServiceFuture = contentReportingServiceFuture,
        _contentBlocklistRepository = contentBlocklistRepository,
        _rootEventId = rootEventId,
        _rootAddressableId = rootAddressableId,
@@ -56,7 +51,6 @@ class CommentReactionsBloc
       _onVoteCountsFetchRequested,
       transformer: restartable(),
     );
-    on<CommentReportRequested>(_onReportRequested, transformer: droppable());
     on<CommentBlockUserRequested>(
       _onBlockUserRequested,
       transformer: droppable(),
@@ -69,7 +63,6 @@ class CommentReactionsBloc
   final AuthService _authService;
   final LikesRepository _likesRepository;
   final CommentsRepository _commentsRepository;
-  final Future<ContentReportingService> _contentReportingServiceFuture;
   final ContentBlocklistRepository _contentBlocklistRepository;
   final String _rootEventId;
   final String? _rootAddressableId;
@@ -339,49 +332,6 @@ class CommentReactionsBloc
           error: ReactionsError.voteFailed,
         ),
       );
-    }
-  }
-
-  Future<void> _onReportRequested(
-    CommentReportRequested event,
-    Emitter<CommentReactionsState> emit,
-  ) async {
-    try {
-      final reportingService = await _contentReportingServiceFuture;
-      final result = await reportingService.reportContent(
-        eventId: event.commentId,
-        authorPubkey: event.authorPubkey,
-        reason: event.reason,
-        details: event.details,
-      );
-      // The result carries two separate claims and the UI needs both:
-      // `success` is false for an uninitialized service, a missing signer,
-      // or an unbuildable event, and a `success` report can still have
-      // reached no channel off this device (#6387). Neither throws, so
-      // discarding the result showed the user a silent success (#6595).
-      // A deliberately refused report (a self-report, #8352) is a silent
-      // success like `reached` — it must not surface as a failure the user
-      // could "retry", since it will always refuse identically.
-      if (!result.isSilentSuccess) {
-        Log.warning(
-          'Comment report not delivered '
-          '(success=${result.success}, delivery=${result.delivery}): '
-          '${result.error ?? 'reached no channel'}',
-          name: 'CommentReactionsBloc',
-          category: LogCategory.ui,
-        );
-        emit(state.copyWith(error: ReactionsError.reportFailed));
-      }
-    } catch (e, stackTrace) {
-      // ContentReportingService returns a typed failure result for normal
-      // domain issues; a throw escaping here is unexpected.
-      _logFailure(
-        e,
-        stackTrace,
-        CommentReactionsBlocReportableSites.onReportRequested,
-        'Error reporting comment',
-      );
-      emit(state.copyWith(error: ReactionsError.reportFailed));
     }
   }
 

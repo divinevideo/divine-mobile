@@ -977,9 +977,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'إلغاء حظر هذا الحساب';
 
   @override
-  String get inboxReportedVanishedAccount => 'تم الإبلاغ عن هذا الحساب';
-
-  @override
   String get inboxBlockedVanishedAccount => 'تم حظر هذا الحساب';
 
   @override
@@ -4804,6 +4801,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportWhyReporting => 'لماذا تُبلِّغ عن هذا المحتوى؟';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'ستتصرف Divine بشأن بلاغات المحتوى خلال 24 ساعة بإزالة المحتوى وإخراج المستخدم الذي قدَّم المحتوى المخالف.';
 
@@ -4824,6 +4824,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'يرجى وصف المشكلة';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5716,11 +5719,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSetupUploadStaged => 'تم الرفع — اضغط على حفظ للتطبيق';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'تم الإبلاغ عن $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'تم حظر $displayName';
   }
@@ -6511,8 +6509,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get librarySortVerticalFirst => 'العمودي أولاً';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'لا يمكن التراجع. ستُزال ملفات الفيديو نهائيًا من جهازك.';
+  String get libraryDeleteClipsWarning => 'لا يمكن التراجع.';
 
   @override
   String get libraryPreparingVideo => 'جاري تجهيز الفيديو...';
@@ -6587,6 +6584,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'تم';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'حفظ المقاطع المحددة في معرض الصور';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'تم حفظ $count مقطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      many:
+          'تم حفظ $count مقطعًا بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      few:
+          'تم حفظ $count مقاطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      two: 'تم حفظ مقطعين بدون إثباتهما، لذلك لا يمكنهما العودة إلى مقاطعك.',
+      one: 'تم حفظ مقطع واحد بدون إثباته، لذلك لا يمكنه العودة إلى مقاطعك.',
+      zero: 'لم يُحفظ أي مقطع بدون إثباته.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'التفاصيل';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'تم الحفظ بدون إثبات';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'لا يمكن أن تعود من معرض الصور إلا المقاطع التي تحمل إثباتًا بأنها صُوّرت باستخدام Divine. تم حفظ نسخ هذه المقاطع بدون هذا الإثبات.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'تعذّرت إضافة الإثبات الآن، ربما لأنك كنت غير متصل. حاول مرة أخرى لحفظ نسخة تحمل الإثبات.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'مقاطع الإيقاف الحركي مصنوعة من صور، والصور لا يمكنها أن تحمل إثباتًا.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'لا يمكن لهذا الإصدار من Divine إضافة إثبات إلى المقاطع.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'هذا المقطع ليس له إثبات، ولا يمكن لـ Divine إضافته لاحقًا.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'تم الحفظ مع الإثبات';
+
+  @override
+  String get libraryGallerySaveSigning => 'جارٍ إضافة الإثبات إلى مقاطعك…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'جارٍ حفظ المقطع $current من $total…',
+      many: 'جارٍ حفظ المقطع $current من $total…',
+      few: 'جارٍ حفظ المقطع $current من $total…',
+      two: 'جارٍ حفظ المقطع $current من $total…',
+      one: 'جارٍ حفظ مقطعك…',
+      zero: 'جارٍ حفظ المقطع $current من $total…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6684,6 +6750,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'هل تريد حذف هذا المقطع؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'يُنقل المقطع إلى سلة المهملات أولًا، لذا يمكن استعادته.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds ث';
   }
@@ -6699,6 +6769,16 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'مؤرشف. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ليس في معرض الصور بعد. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'في معرض الصور دون بيانات اعتماد المحتوى. $label';
   }
 
   @override
@@ -6972,13 +7052,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'الإبلاغ عن هذا المحتوى';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'اختر سبب الإبلاغ عن هذا التعليق';
-
-  @override
-  String get commentOptionsFlagSubmit => 'إرسال';
 
   @override
   String get commentOptionsTitle => 'خيارات';
@@ -8288,9 +8361,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsErrorVoteFailed => 'تعذّر التصويت على التعليق';
 
   @override
-  String get commentsErrorReportFailed => 'تعذّر الإبلاغ عن التعليق';
-
-  @override
   String get commentsErrorBlockFailed => 'تعذّر حظر المستخدم';
 
   @override
@@ -9113,6 +9183,61 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'فتح محرر الملصقات';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'مرئيات الصوت';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'إضافة مرئيات تتحرك مع الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'لون مرئيات الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'أشرطة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'مرآة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'موجة';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'دائرة';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'إضافة مرئيات الصوت';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'الكثافة';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'أقل';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'أكثر';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'الاستجابة';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'هادئة';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'حيوية';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'عرض الأشرطة';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'رفيعة';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'عريضة';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'إيقاع تجريبي';
 
   @override
   String get videoEditorSaveDraftTitle => 'حفظ المسودة؟';
@@ -11504,6 +11629,51 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'لا توجد وسوم مطابقة';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+      many: 'يمكن أن يصل طول الوسم إلى $max حرفًا.',
+      few: 'يمكن أن يصل طول الوسم إلى $max أحرف.',
+      two: 'يمكن أن يصل طول الوسم إلى $max حرفين.',
+      one: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+      zero: 'يمكن أن يصل طول الوسم إلى $max حرف.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      many: 'يمكنك إضافة ما يصل إلى $max وسمًا.',
+      few: 'يمكنك إضافة ما يصل إلى $max وسوم.',
+      two: 'يمكنك إضافة ما يصل إلى $max وسمين.',
+      one: 'يمكنك إضافة ما يصل إلى $max وسم.',
+      zero: 'يمكنك إضافة ما يصل إلى $max وسم.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count من $max حرف',
+      many: '$count من $max حرفًا',
+      few: '$count من $max أحرف',
+      two: '$count من $max حرفين',
+      one: '$count من $max حرف',
+      zero: '$count من $max حرف',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'إضافة \"#$tag\"';
   }
@@ -11526,6 +11696,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'يبدأ التسجيل عند الضغط المطوّل ويتوقف عند الإفراج';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'النسخ الاحتياطي للتسجيلات في معرض الصور';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.';
 
   @override
   String uploadPublishedCountMessage(int count) {

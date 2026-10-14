@@ -15,7 +15,11 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_preview_screen.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+const _logName = 'UploadFailureSheet';
 
 /// Shows a bottom sheet when a background upload fails.
 ///
@@ -50,7 +54,33 @@ Future<void> showUploadFailureSheet(
 
   if (!context.mounted) return;
 
+  // Resolved once, up front: a snackbar action fires seconds later, when this
+  // context may no longer reach its ancestors. Both fail closed when absent.
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final router = GoRouter.maybeOf(context);
+
+  void pushDetached(String location, String description, {Object? extra}) {
+    if (router == null) return;
+    runDetached(
+      router.push<void>(location, extra: extra),
+      description,
+      logName: _logName,
+      category: LogCategory.ui,
+    );
+  }
+
+  void showSavedToDraftsSnackBar({required String viewDescription}) {
+    messenger?.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
+        actionLabel: context.l10n.contentWarningView,
+        onActionPressed: () {
+          messenger.hideCurrentSnackBar();
+          pushDetached(LibraryScreen.draftsPath, viewDescription);
+        },
+      ),
+    );
+  }
 
   switch (result) {
     case 'retry':
@@ -67,31 +97,21 @@ Future<void> showUploadFailureSheet(
       context.read<BackgroundPublishBloc>().add(
         BackgroundPublishVanished(draftId: upload.draft.id),
       );
-      messenger?.showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
-          actionLabel: context.l10n.contentWarningView,
-          onActionPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            context.push(LibraryScreen.draftsPath);
-          },
-        ),
+      showSavedToDraftsSnackBar(
+        viewDescription: 'open drafts from upload failure',
       );
     case 'account_status':
       context.read<BackgroundPublishBloc>().add(
         BackgroundPublishVanished(draftId: upload.draft.id),
       );
-      messenger?.showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
-          actionLabel: context.l10n.contentWarningView,
-          onActionPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            context.push(LibraryScreen.draftsPath);
-          },
-        ),
+      showSavedToDraftsSnackBar(
+        viewDescription: 'open drafts from restricted upload',
       );
-      context.push(RoutePaths.accountStatus, extra: true);
+      pushDetached(
+        RoutePaths.accountStatus,
+        'open account status for restricted upload',
+        extra: true,
+      );
     case _:
       // Sheet was popped externally (e.g. during route transition).
       // Save to drafts silently so the user's content is preserved.

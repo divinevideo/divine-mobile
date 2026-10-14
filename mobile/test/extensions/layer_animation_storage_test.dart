@@ -1,6 +1,7 @@
 // ABOUTME: Tests the layer-animation bridge between pro_image_editor's typed
 // ABOUTME: Layer.animations and the pro_video_editor models used at export.
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart' show BuildContext, Builder, SizedBox;
@@ -20,6 +21,18 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 import 'package:pro_image_editor/shared/widgets/screen_resize_detector.dart'
     show ResizeEvent;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
+
+/// The bounding box `pro_image_editor` reports for a [size] layer turned by
+/// [rotation] — `Layer.captureAllLayers`' own formula, so the tests feed the
+/// production code the same numbers the editor would.
+Size _boundingBoxOf(Size size, double rotation) {
+  final c = math.cos(rotation).abs();
+  final s = math.sin(rotation).abs();
+  return Size(
+    size.width * c + size.height * s,
+    size.width * s + size.height * c,
+  );
+}
 
 void main() {
   const enter = editor.LayerAnimation(
@@ -390,6 +403,85 @@ void main() {
           mapping: scaleBy(3),
         ),
         equals(const Offset(750, 900)),
+      );
+    });
+  });
+
+  group('unrotatedLayerBox', () {
+    test('returns the bounds untouched when the layer is upright', () {
+      expect(
+        unrotatedLayerBox(
+          boundingBox: const Size(90, 160),
+          rotation: 0,
+          aspectRatio: 90 / 160,
+        ),
+        const Size(90, 160),
+      );
+    });
+
+    test('recovers a square box at 45 degrees', () {
+      // The angle where the two bounding equations collapse into one: every
+      // box with the same width plus height shares this bounding square, so
+      // only the aspect ratio can tell them apart.
+      final recovered = unrotatedLayerBox(
+        boundingBox: _boundingBoxOf(const Size(90, 90), math.pi / 4),
+        rotation: math.pi / 4,
+        aspectRatio: 1,
+      );
+
+      expect(recovered.width, closeTo(90, 0.001));
+      expect(recovered.height, closeTo(90, 0.001));
+    });
+
+    test('round-trips every quarter of the circle', () {
+      const original = Size(160, 90);
+      const aspectRatio = 160 / 90;
+
+      for (var degrees = -180; degrees <= 180; degrees += 15) {
+        final rotation = degrees * math.pi / 180;
+        final recovered = unrotatedLayerBox(
+          boundingBox: _boundingBoxOf(original, rotation),
+          rotation: rotation,
+          aspectRatio: aspectRatio,
+        );
+
+        expect(
+          recovered.width,
+          closeTo(original.width, 0.001),
+          reason: 'width at $degrees degrees',
+        );
+        expect(
+          recovered.height,
+          closeTo(original.height, 0.001),
+          reason: 'height at $degrees degrees',
+        );
+      }
+    });
+
+    test('falls back to the bounds when the aspect ratio is unusable', () {
+      // A clip with no readable display size must still place somewhere; its
+      // own bounding box is the closest thing to the truth available.
+      for (final aspectRatio in [0.0, -1.0, double.nan, double.infinity]) {
+        expect(
+          unrotatedLayerBox(
+            boundingBox: const Size(120, 120),
+            rotation: math.pi / 4,
+            aspectRatio: aspectRatio,
+          ),
+          const Size(120, 120),
+          reason: 'aspect ratio $aspectRatio',
+        );
+      }
+    });
+
+    test('falls back to the bounds when the rotation is not a number', () {
+      expect(
+        unrotatedLayerBox(
+          boundingBox: const Size(120, 120),
+          rotation: double.nan,
+          aspectRatio: 1,
+        ),
+        const Size(120, 120),
       );
     });
   });

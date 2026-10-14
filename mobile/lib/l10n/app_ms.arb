@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "Laporkan akaun ini",
   "inboxActionBlockVanishedAccount": "Sekat akaun ini",
   "inboxActionUnblockVanishedAccount": "Nyahsekat akaun ini",
-  "inboxReportedVanishedAccount": "Akaun ini dilaporkan",
   "inboxBlockedVanishedAccount": "Akaun ini disekat",
   "inboxUnblockedVanishedAccount": "Akaun ini dinyahsekat",
   "inboxRemoveConfirmBodyVanishedAccount": "Ini mengalih keluar perbualan daripada peti masuk anda. Jika dia menghantar mesej lagi, perbualan baharu akan bermula.",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "{displayName} dilaporkan",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "{displayName} disekat",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3290,7 +3281,7 @@
   "librarySortShortestClip": "Klip Terpendek",
   "librarySortSquareFirst": "Segi Empat Dahulu",
   "librarySortVerticalFirst": "Menegak Dahulu",
-  "libraryDeleteClipsWarning": "Tindakan ini tidak boleh dibuat asal. Fail video akan dialih keluar secara kekal daripada peranti anda.",
+  "libraryDeleteClipsWarning": "Tindakan ini tidak boleh dibatalkan.",
   "libraryPreparingVideo": "Menyediakan video...",
   "libraryCreateVideo": "Cipta Video ({count})",
   "libraryClipsSavedToDestination": "{count, plural, =1{1 klip} other{{count} klip}} disimpan ke {destination}",
@@ -3336,6 +3327,18 @@
   "libraryGalleryImportItemNotVerified": "Tidak dapat mengesahkan klip ini dirakam dengan Divine",
   "libraryGalleryImportItemCheckUnavailable": "Tidak dapat disemak sekarang. Cuba lagi nanti.",
   "libraryGalleryImportDone": "Selesai",
+  "librarySaveSelectedClipsTooltip": "Simpan klip yang dipilih ke galeri anda",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.} other{{count} klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.}}",
+  "libraryClipsSavedWithoutProofDetails": "Butiran",
+  "libraryGallerySaveWarningTitle": "Disimpan tanpa bukti",
+  "libraryGallerySaveWarningIntro": "Hanya klip yang ada bukti dirakam dengan Divine boleh kembali dari galeri anda. Salinan klip-klip ini disimpan tanpa bukti itu.",
+  "libraryGallerySaveWarningSigningUnavailable": "Buktinya tidak dapat ditambah sekarang, mungkin kerana anda di luar talian. Cuba lagi untuk menyimpan salinan yang ada buktinya.",
+  "libraryGallerySaveWarningStopMotion": "Klip stop-motion dibuat daripada foto, dan foto tidak boleh membawa bukti.",
+  "libraryGallerySaveWarningSigningUnsupported": "Versi Divine ini tidak dapat menambah bukti pada klip.",
+  "libraryGallerySaveWarningNoProof": "Klip ini tiada bukti, dan Divine tidak dapat menambahnya kemudian.",
+  "libraryGallerySaveWarningSavedWithProof": "Disimpan dengan buktinya",
+  "libraryGallerySaveSigning": "Menambah bukti pada klip anda…",
+  "libraryGallerySaveProgress": "{total, plural, =1{Menyimpan klip anda…} other{Menyimpan klip {current} daripada {total}…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 klip dipadam} other{{count} klip dipadam}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -3396,10 +3399,13 @@
   },
   "libraryDeleteClipTitle": "Padam Klip",
   "libraryDeleteClipMessage": "Adakah anda pasti mahu memadam klip ini?",
+  "libraryDeleteClipTrashNote": "Klip masuk ke tong sampah dahulu, jadi anda masih boleh memulihkannya.",
   "libraryClipDuration": "{seconds}s",
   "libraryRecordVideo": "Rakam Video",
   "videoClipSemanticLabel": "Klip video, {duration} saat",
   "videoClipArchivedSemanticLabel": "Diarkibkan. {label}",
+  "videoClipBackupPendingSemanticLabel": "Belum ada dalam galeri anda. {label}",
+  "videoClipBackupUnsignedSemanticLabel": "Dalam galeri anda tanpa kelayakan kandungan. {label}",
   "videoClipStopMotionSemanticLabel": "Klip stop-motion, {frames}",
   "@videoClipSemanticLabel": {
     "description": "Accessibility label for a video clip thumbnail. Duration is formatted as seconds with 2 decimal places, e.g. '5.73'.",
@@ -3512,8 +3518,6 @@
   "commentOptionsEditSemanticLabel": "Sunting komen",
   "commentOptionsFlagContentLabel": "Tandakan Kandungan",
   "commentOptionsFlagContentSemanticLabel": "Tandakan kandungan ini",
-  "commentOptionsFlagReasonPrompt": "Pilih sebab untuk menandakan komen ini",
-  "commentOptionsFlagSubmit": "Hantar",
   "commentOptionsTitle": "Pilihan",
   "commentsEmptyClassicVineMessage": "Kami masih berusaha mengimport komen lama daripada arkib. Ia belum sedia lagi.",
   "commentsEmptyClassicVineTitle": "Vine Klasik",
@@ -4336,10 +4340,6 @@
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
   },
-  "commentsErrorReportFailed": "Gagal melaporkan komen",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
-  },
   "commentsErrorBlockFailed": "Gagal menyekat pengguna",
   "@commentsErrorBlockFailed": {
     "description": "Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails."
@@ -4726,6 +4726,24 @@
   "videoEditorOpenBlurSemanticLabel": "Kaburkan atau pikselkan sebahagian video",
   "videoEditorOpenFilterSemanticLabel": "Buka penyunting penapis",
   "videoEditorOpenStickerSemanticLabel": "Buka penyunting pelekat",
+  "videoEditorAudioVisualizerLabel": "Visualizer",
+  "videoEditorOpenAudioVisualizerSemanticLabel": "Tambah visualizer yang bergerak mengikut bunyi",
+  "videoEditorAudioVisualizerColorLabel": "Warna visualizer",
+  "videoEditorAudioVisualizerStyleBars": "Bar",
+  "videoEditorAudioVisualizerStyleMirrored": "Cermin",
+  "videoEditorAudioVisualizerStyleWave": "Gelombang",
+  "videoEditorAudioVisualizerStyleCircle": "Bulatan",
+  "videoEditorAudioVisualizerAdd": "Tambah visualizer",
+  "videoEditorAudioVisualizerDensityLabel": "Kepadatan",
+  "videoEditorAudioVisualizerDensityFewer": "Kurang",
+  "videoEditorAudioVisualizerDensityMore": "Lebih",
+  "videoEditorAudioVisualizerReactionLabel": "Reaksi",
+  "videoEditorAudioVisualizerReactionCalm": "Tenang",
+  "videoEditorAudioVisualizerReactionLively": "Rancak",
+  "videoEditorAudioVisualizerBarWidthLabel": "Lebar bar",
+  "videoEditorAudioVisualizerBarWidthThin": "Nipis",
+  "videoEditorAudioVisualizerBarWidthWide": "Lebar",
+  "videoEditorAudioVisualizerPreviewSampleBeat": "Rentak contoh",
   "videoEditorSaveDraftTitle": "Simpan draf anda?",
   "videoEditorSaveDraftSubtitle": "Simpan suntingan anda untuk kemudian, atau buangnya dan tinggalkan penyunting.",
   "videoEditorSaveDraftButton": "Simpan draf",
@@ -5867,6 +5885,9 @@
   "videoMetadataTagsPickerSearchHint": "Cari atau tambah tag",
   "videoMetadataTagsPickerEmptyHint": "Tambah tag untuk membantu orang menemui video anda",
   "videoMetadataTagsPickerNoResults": "Tiada tag sepadan",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag boleh mencapai {max} aksara.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Anda boleh menambah sehingga {max} hashtag.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count} daripada {max} aksara}}",
   "videoMetadataTagsPickerAddTag": "Tambah \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {
@@ -5890,6 +5911,8 @@
   "minorAccountReviewUnder13WhyTitle": "Ini sebabnya",
   "generalSettingsHoldToRecord": "Tahan untuk merakam",
   "generalSettingsHoldToRecordSubtitle": "Mula merakam apabila anda tekan dan tahan, kemudian berhenti apabila anda lepaskan",
+  "settingsBackUpRecordings": "Sandarkan rakaman ke galeri",
+  "settingsBackUpRecordingsSubtitle": "Menyimpan salinan setiap rakaman baharu dalam galeri anda. Apl lain dan sandaran foto awan boleh melihatnya di sana.",
   "uploadPublishedCountMessage": "{count, plural, =1{Video diterbitkan ke profil anda} other{{count} video diterbitkan ke profil anda}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

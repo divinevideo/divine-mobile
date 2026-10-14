@@ -193,6 +193,17 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   scope.onAddStickers();
                 },
               ),
+              if (scope.onAddAudioVisualizer case final onAddAudioVisualizer?)
+                _ItemButton(
+                  icon: .equalizer,
+                  label: context.l10n.videoEditorAudioVisualizerLabel,
+                  semanticLabel:
+                      context.l10n.videoEditorOpenAudioVisualizerSemanticLabel,
+                  onTap: () {
+                    Navigator.pop(context);
+                    onAddAudioVisualizer();
+                  },
+                ),
               _ItemButton(
                 icon: .closedCaptioning,
                 label: context.l10n.videoEditorCaptionsLabel,

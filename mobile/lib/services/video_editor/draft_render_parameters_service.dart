@@ -15,6 +15,7 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -220,6 +222,13 @@ class DraftRenderParametersService {
             // opens a decoder, unlike the canvas' live view.
             if (DetachedClipLayerData.isDetachedClipMeta(meta)) {
               return DetachedClipPoster(meta: meta);
+            }
+            // An audio visualizer is drawn by the export from its meta; its
+            // raster is thrown away like a detached clip's, but it still
+            // mounts at its size so the bake counts it.
+            if (AudioVisualizerLayerData.fromMeta(meta)
+                case final visualizer?) {
+              return AudioVisualizerLayerView(data: visualizer);
             }
             if (StickerGroupData.isStickerGroupMeta(meta)) {
               stickers.addAll(StickerGroupData.fromMeta(meta)?.stickers ?? []);

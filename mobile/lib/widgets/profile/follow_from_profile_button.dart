@@ -193,8 +193,7 @@ class FollowFromProfileButtonView extends StatelessWidget {
       category: LogCategory.ui,
     );
 
-    // Follow in MyFollowingBloc
-    context.read<MyFollowingBloc>().add(MyFollowingToggleRequested(pubkey));
+    context.read<MyFollowingBloc>().add(MyFollowingFollowRequested(pubkey));
 
     // Optimistically update the followers count in OthersFollowersBloc
     final othersFollowersBloc = context.read<OthersFollowersBloc?>();
@@ -212,8 +211,7 @@ class FollowFromProfileButtonView extends StatelessWidget {
       category: LogCategory.ui,
     );
 
-    // Unfollow in MyFollowingBloc
-    context.read<MyFollowingBloc>().add(MyFollowingToggleRequested(pubkey));
+    context.read<MyFollowingBloc>().add(MyFollowingUnfollowRequested(pubkey));
 
     // Optimistically update the followers count in OthersFollowersBloc
     final othersFollowersBloc = context.read<OthersFollowersBloc?>();

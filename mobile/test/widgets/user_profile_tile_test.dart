@@ -3,6 +3,7 @@
 // ABOUTME: engagement lists all render, so the picker and the screens it feeds
 // ABOUTME: have to agree about who an account is (#8421 adjacent).
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -149,6 +150,95 @@ void main() {
         );
 
         expect(find.text('@aeontropy'), findsOneWidget);
+      });
+    });
+
+    group('follow button', () {
+      late int follows;
+      late int unfollows;
+      late ValueNotifier<bool> following;
+
+      setUp(() {
+        follows = 0;
+        unfollows = 0;
+        following = ValueNotifier(false);
+      });
+
+      tearDown(() => following.dispose());
+
+      Finder icon(DivineIconName name) =>
+          find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
+
+      Future<void> pumpFollowTile(WidgetTester tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              profileVanishedProvider(pubkey).overrideWith((ref) => false),
+              followRelationshipProvider(
+                pubkey,
+              ).overrideWith((ref) => Stream.value(FollowRelationship.none)),
+            ],
+            home: Scaffold(
+              body: ValueListenableBuilder<bool>(
+                valueListenable: following,
+                builder: (context, isFollowing, _) => UserProfileTile(
+                  pubkey: pubkey,
+                  isFollowing: isFollowing,
+                  onFollow: () => follows++,
+                  onUnfollow: () => unfollows++,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('tapping Follow calls onFollow, never onUnfollow', (
+        tester,
+      ) async {
+        await pumpFollowTile(tester);
+
+        await tester.tap(icon(DivineIconName.userPlus));
+        await tester.pump();
+
+        expect(follows, equals(1));
+        expect(unfollows, equals(0));
+      });
+
+      testWidgets(
+        'confirming Unfollow calls onUnfollow even if the row stops showing '
+        'Following while the sheet is open',
+        (tester) async {
+          following.value = true;
+          await pumpFollowTile(tester);
+
+          await tester.tap(icon(DivineIconName.userMinus));
+          await tester.pumpAndSettle();
+          following.value = false;
+          await tester.pump();
+          await tester.tap(find.text(l10n.unfollowConfirmButton));
+          await tester.pumpAndSettle();
+
+          expect(unfollows, equals(1));
+          expect(follows, equals(0));
+        },
+      );
+
+      testWidgets('cancelling the Unfollow sheet calls neither', (
+        tester,
+      ) async {
+        following.value = true;
+        await pumpFollowTile(tester);
+
+        await tester.tap(icon(DivineIconName.userMinus));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.unfollowConfirmButton), findsOneWidget);
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+
+        expect(unfollows, equals(0));
+        expect(follows, equals(0));
       });
     });
   });

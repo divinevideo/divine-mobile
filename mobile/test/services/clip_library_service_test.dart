@@ -12,6 +12,7 @@ import 'package:models/models.dart' as models show AspectRatio;
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -1075,6 +1076,67 @@ void main() {
         await service.saveClip(take('take', 'baked.mp4'));
 
         expect(manifestOf(await service.getClipById('take')), isNull);
+      });
+    });
+
+    group('gallery backups', () {
+      DivineVideoClip take() => DivineVideoClip(
+        id: 'take',
+        video: EditorVideo.file('/tmp/take.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      ClipGalleryBackup backup(ClipGalleryBackupStatus status) =>
+          ClipGalleryBackup(status: status, recordingPath: '/tmp/take.mp4');
+
+      test('notes the state on the library entry and keeps the rest', () async {
+        await service.saveClip(take().copyWith(libraryTitle: 'Beach'));
+
+        final updated = await service.setGalleryBackup(
+          clipId: 'take',
+          backup: backup(ClipGalleryBackupStatus.pending),
+        );
+
+        expect(updated, isTrue);
+        final entry = await service.getClipById('take');
+        expect(entry?.galleryBackup?.status, ClipGalleryBackupStatus.pending);
+        expect(entry?.galleryBackup?.recordingPath, endsWith('take.mp4'));
+        expect(entry?.libraryTitle, 'Beach');
+      });
+
+      test("keeps the entry's state over a copy read before it changed, so "
+          'a recording is not copied twice', () async {
+        await service.saveClip(take());
+        await service.setGalleryBackup(
+          clipId: 'take',
+          backup: backup(ClipGalleryBackupStatus.pending),
+        );
+        final stale = (await service.getClipById('take'))!;
+        await service.setGalleryBackup(
+          clipId: 'take',
+          backup: backup(ClipGalleryBackupStatus.saved),
+        );
+
+        await service.saveClip(stale.copyWith(thumbnailPath: '/tmp/take.jpg'));
+
+        final entry = await service.getClipById('take');
+        expect(entry?.thumbnailPath, endsWith('take.jpg'));
+        expect(entry?.galleryBackup?.status, ClipGalleryBackupStatus.saved);
+      });
+
+      test('clears the state', () async {
+        await service.saveClip(take());
+        await service.setGalleryBackup(
+          clipId: 'take',
+          backup: backup(ClipGalleryBackupStatus.pending),
+        );
+
+        await service.setGalleryBackup(clipId: 'take', backup: null);
+
+        expect((await service.getClipById('take'))?.galleryBackup, isNull);
       });
     });
 

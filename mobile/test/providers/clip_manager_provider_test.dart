@@ -17,10 +17,12 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
+import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/recording_gallery_backup_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -29,6 +31,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
+
+class _MockRecordingGalleryBackupService extends Mock
+    implements RecordingGalleryBackupService {}
 
 /// Mirrors the stub shape used by the widget suites (for example
 /// `library_screen_test.dart`): seed a clip list from `build` without calling
@@ -887,6 +892,74 @@ void main() {
           ),
         );
       });
+
+      test(
+        'hands the take to the gallery backup once its proof settled',
+        () async {
+          const proofData = NativeProofData(
+            videoHash: 'abc123',
+            c2paManifestId: 'urn:c2pa:signed',
+          );
+          NativeProofModeService.proofFileOverride = (
+            _, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+            derivedFrom,
+          }) async => proofData;
+          addTearDown(() => NativeProofModeService.proofFileOverride = null);
+          final galleryBackup = _MockRecordingGalleryBackupService();
+          when(
+            () => galleryBackup.backUpRecording(
+              clipId: any(named: 'clipId'),
+              recordingPath: any(named: 'recordingPath'),
+              proof: proofData,
+            ),
+          ).thenAnswer((_) async {});
+          final backupContainer = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(
+                container.read(sharedPreferencesProvider),
+              ),
+              draftStorageServiceProvider.overrideWithValue(
+                mockDraftStorageService,
+              ),
+              clipLibraryServiceProvider.overrideWithValue(
+                mockClipLibraryService,
+              ),
+              recordingGalleryBackupServiceProvider.overrideWithValue(
+                galleryBackup,
+              ),
+            ],
+          );
+          addTearDown(backupContainer.dispose);
+          final backgroundWork = backupContainer.read(
+            editorBackgroundWorkProvider,
+          );
+
+          final clip = backupContainer
+              .read(clipManagerProvider.notifier)
+              .addClip(
+                limitClipDuration: false,
+                video: EditorVideo.file('/documents/take.mp4'),
+                duration: const Duration(seconds: 2),
+                targetAspectRatio: .vertical,
+                originalAspectRatio: 9 / 16,
+              );
+          await backgroundWork.settle();
+
+          verify(
+            () => galleryBackup.backUpRecording(
+              clipId: clip.id,
+              recordingPath: '/documents/take.mp4',
+              proof: proofData,
+            ),
+          ).called(1);
+        },
+      );
 
       test('newly added clip has no proofManifestJson initially', () {
         final notifier = container.read(clipManagerProvider.notifier);

@@ -2,6 +2,7 @@
 // ABOUTME: Tests Apple compliance requirements, reason selection, and submission
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -15,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -212,21 +214,56 @@ void main() {
       expect(find.text(l10n.reportReasonOtherSubtitle), findsOneWidget);
     });
 
-    testWidgets('details field is hidden until Other is selected', (
-      tester,
-    ) async {
+    testWidgets('the note box opens under whichever reason is picked, '
+        'optional except under Other', (tester) async {
       await setLargeSurface(tester);
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsNothing);
-      expect(find.text(l10n.reportDetailsTextOnly), findsNothing);
+      expect(
+        find.byType(TextField),
+        findsNothing,
+        reason: 'the note belongs to a reason, so none shows before one',
+      );
 
-      await tester.tap(find.text(l10n.reportReasonOther));
-      await tester.pumpAndSettle();
+      const reasons = ContentFilterReason.values;
+      for (final (index, reason) in reasons.indexed) {
+        await tester.tap(find.text(l10n.reportReasonTitle(reason)));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
+        final isOther = reason == ContentFilterReason.other;
+        expect(find.byType(TextField), findsOneWidget, reason: '$reason');
+
+        // Directly under the chosen card, so a reporter who picks a reason
+        // near the top of the list sees the note without scrolling for it.
+        final field = tester.getRect(find.byType(TextField));
+        final subtitle = l10n.reportReasonSubtitle(reason);
+        expect(
+          field.top,
+          greaterThan(tester.getRect(find.text(subtitle)).bottom),
+          reason: 'the note sits below the $reason card',
+        );
+        if (index + 1 < reasons.length) {
+          final next = l10n.reportReasonTitle(reasons[index + 1]);
+          expect(
+            field.bottom,
+            lessThan(tester.getRect(find.text(next)).top),
+            reason: 'the note sits above the card after $reason',
+          );
+        }
+        expect(
+          find.text(l10n.reportDetailsRequired),
+          isOther ? findsOneWidget : findsNothing,
+          reason: '$reason',
+        );
+        expect(
+          find.text(l10n.reportDetailsOptional),
+          isOther ? findsNothing : findsOneWidget,
+          reason: '$reason',
+        );
+      }
+
       expect(find.text(l10n.reportDetailsTextOnly), findsOneWidget);
       expect(
         tester.getTopLeft(find.text(l10n.reportDetailsTextOnly)).dy,
@@ -239,6 +276,41 @@ void main() {
       expect(detailsField.textInputAction, TextInputAction.newline);
       expect(detailsField.textCapitalization, TextCapitalization.sentences);
     });
+
+    for (final (reason, label) in [
+      (ContentFilterReason.other, l10n.reportDetailsRequired),
+      (ContentFilterReason.spam, l10n.reportDetailsOptional),
+    ]) {
+      testWidgets('under $reason the note field is announced as "$label"', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await setLargeSurface(tester);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonTitle(reason)));
+        await tester.pumpAndSettle();
+
+        final field = tester.getSemantics(find.byType(TextField));
+        expect(field.getSemanticsData().flagsCollection.isTextField, isTrue);
+        expect(
+          field.label,
+          label,
+          reason:
+              'the visible label above the field must reach a screen reader '
+              'as the field name, not as a stray line before an unnamed field',
+        );
+        // The visible copy is excluded so it is not read a second time.
+        expect(
+          find.bySemanticsLabel(label),
+          findsOneWidget,
+          reason: 'the label is announced once, on the field',
+        );
+
+        handle.dispose();
+      });
+    }
 
     testWidgets(
       'Submit button is visible before selecting a reason (Apple requirement) '
@@ -684,6 +756,222 @@ void main() {
       },
     );
 
+    for (final keyboardAlreadyUp in [true, false]) {
+      testWidgets(
+        'Other with no note shows its error inside the note box, scrolled '
+        'into view above the Report button '
+        '(keyboard ${keyboardAlreadyUp ? 'already up' : 'opens after'})',
+        (tester) async {
+          // A real phone with the keyboard up: the note box under Other, the
+          // last card, sits behind the footer unless something scrolls it.
+          tester.view.physicalSize = const Size(412, 915);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+
+          await openBottomSheetReport(tester);
+          await tester.ensureVisible(find.text(l10n.reportReasonOther));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.reportReasonOther));
+          await tester.pumpAndSettle();
+          const keyboard = FakeViewPadding(bottom: 336);
+          if (keyboardAlreadyUp) {
+            tester.view.viewInsets = keyboard;
+            await tester.pumpAndSettle();
+          }
+
+          await tester.tap(
+            find.widgetWithText(DivineButton, l10n.reportSubmit),
+          );
+          await tester.pumpAndSettle();
+          if (!keyboardAlreadyUp) {
+            // The reporter had dismissed it; the tap focuses the note again.
+            tester.view.viewInsets = keyboard;
+            await tester.pumpAndSettle();
+          }
+
+          final error = find.text(l10n.reportOtherRequiresDetails);
+          expect(
+            find.descendant(
+              of: find.byType(SingleChildScrollView),
+              matching: error,
+            ),
+            findsOneWidget,
+            reason: 'the error is about the note, so it sits with the note',
+          );
+          final errorRect = tester.getRect(error);
+          expect(
+            errorRect.top,
+            greaterThanOrEqualTo(tester.getRect(find.byType(TextField)).bottom),
+            reason: 'under the field it asks the reporter to fill in',
+          );
+          expect(
+            errorRect.bottom,
+            lessThanOrEqualTo(
+              tester
+                  .getRect(find.widgetWithText(DivineButton, l10n.reportSubmit))
+                  .top,
+            ),
+            reason:
+                'visible above the pinned footer, or the Report tap looks like '
+                'it did nothing',
+          );
+        },
+      );
+    }
+
+    testWidgets(
+      'once the reporter scrolls away from the missing-note error, closing '
+      'the keyboard does not drag them back to it',
+      (tester) async {
+        tester.view.physicalSize = const Size(412, 915);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+        // Back up to re-read the reasons, then put the keyboard away.
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SingleChildScrollView),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(0);
+        await tester.pumpAndSettle();
+        tester.view.viewInsets = FakeViewPadding.zero;
+        await tester.pumpAndSettle();
+
+        expect(
+          position.pixels,
+          0,
+          reason:
+              'a bigger view gives the reporter room; it is no reason to '
+              'move them',
+        );
+      },
+    );
+
+    testWidgets(
+      "the note field's own scrolling does not move a reporter who scrolled "
+      'away from the missing-note error',
+      (tester) async {
+        tester.view.physicalSize = const Size(412, 915);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SingleChildScrollView),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(0);
+        await tester.pumpAndSettle();
+
+        // What the multiline field's inner scrollable sends as it resizes:
+        // a much smaller view, from below this form's own.
+        final fieldContext = tester.element(
+          find.descendant(
+            of: find.byType(TextField),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        ScrollMetricsNotification(
+          metrics: FixedScrollMetrics(
+            minScrollExtent: 0,
+            maxScrollExtent: 0,
+            pixels: 0,
+            viewportDimension: 24,
+            axisDirection: AxisDirection.down,
+            devicePixelRatio: 1,
+          ),
+          context: fieldContext,
+        ).dispatch(fieldContext);
+        await tester.pumpAndSettle();
+
+        expect(position.pixels, 0);
+      },
+    );
+
+    testWidgets(
+      'tapping Report again under Other with no note announces the error '
+      'again',
+      (tester) async {
+        final announcements = <String>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (Object? message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  final data = message['data'];
+                  if (data is Map) announcements.add('${data['message']}');
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+
+        await setLargeSurface(tester);
+        await openBottomSheetReport(tester);
+        await tester.ensureVisible(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+
+        final report = find.widgetWithText(DivineButton, l10n.reportSubmit);
+        await tester.tap(report);
+        await tester.pumpAndSettle();
+        expect(
+          announcements,
+          isNot(contains(l10n.reportOtherRequiresDetails)),
+          reason:
+              'the first time, the live region speaks; saying it twice '
+              'would read the error double',
+        );
+
+        await tester.tap(report);
+        await tester.pumpAndSettle();
+        expect(
+          announcements.where((m) => m == l10n.reportOtherRequiresDetails),
+          hasLength(1),
+          reason:
+              'the error is already on screen, so the live region stays '
+              'quiet; without this a repeat tap says nothing',
+        );
+      },
+    );
+
     testWidgets('the inline error announces its message once', (tester) async {
       final handle = tester.ensureSemantics();
 
@@ -783,6 +1071,317 @@ void main() {
         ),
       ).called(1);
     });
+  });
+
+  group('$ReportContentDialog note', () {
+    Widget buildSubject() => testProviderScope(
+      mockNostrService: createMockNostrService(),
+      additionalOverrides: [
+        contentReportingServiceProvider.overrideWith(
+          (ref) async => mockReportingService,
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: ReportContentDialog(video: testVideo)),
+      ),
+    );
+
+    Future<void> pick(WidgetTester tester, ContentFilterReason reason) async {
+      await tester.tap(find.text(l10n.reportReasonTitle(reason)));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> submit(WidgetTester tester) async {
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+    }
+
+    /// The note handed to the reporting service by the one submit.
+    String sentNote() =>
+        verify(
+              () => mockReportingService.reportContent(
+                eventId: any(named: 'eventId'),
+                authorPubkey: any(named: 'authorPubkey'),
+                reason: any(named: 'reason'),
+                details: captureAny(named: 'details'),
+                sourceRelay: any(named: 'sourceRelay'),
+                additionalContext: any(named: 'additionalContext'),
+                hashtags: any(named: 'hashtags'),
+                moderationContent: any(named: 'moderationContent'),
+                moderationTags: any(named: 'moderationTags'),
+              ),
+            ).captured.single
+            as String;
+
+    void verifyNothingSent() => verifyNever(
+      () => mockReportingService.reportContent(
+        eventId: any(named: 'eventId'),
+        authorPubkey: any(named: 'authorPubkey'),
+        reason: any(named: 'reason'),
+        details: any(named: 'details'),
+        sourceRelay: any(named: 'sourceRelay'),
+        additionalContext: any(named: 'additionalContext'),
+        hashtags: any(named: 'hashtags'),
+        moderationContent: any(named: 'moderationContent'),
+        moderationTags: any(named: 'moderationTags'),
+      ),
+    );
+
+    for (final reason in ContentFilterReason.values.where(
+      (reason) => reason != ContentFilterReason.other,
+    )) {
+      testWidgets('$reason with no note submits an empty note, not the '
+          "reason's label", (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await pick(tester, reason);
+        await submit(tester);
+
+        expect(sentNote(), isEmpty);
+        expect(find.text(l10n.reportOtherRequiresDetails), findsNothing);
+      });
+    }
+
+    testWidgets('a note under a reason other than Other is sent', (
+      tester,
+    ) async {
+      await setLargeSurface(tester);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await pick(tester, ContentFilterReason.spam);
+      await tester.enterText(find.byType(TextField), '  weird DM  ');
+      await submit(tester);
+
+      expect(sentNote(), 'weird DM');
+    });
+
+    for (final note in ['', '   \n  ']) {
+      testWidgets('Other with the note ${jsonEncode(note)} is blocked', (
+        tester,
+      ) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await pick(tester, ContentFilterReason.other);
+        await tester.enterText(find.byType(TextField), note);
+        await submit(tester);
+
+        expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+        verifyNothingSent();
+      });
+    }
+
+    testWidgets(
+      'a note typed under Other is still on screen after switching reasons, '
+      'and the sent note is exactly that visible text',
+      (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await pick(tester, ContentFilterReason.other);
+        await tester.enterText(find.byType(TextField), 'typed under Other');
+        await pick(tester, ContentFilterReason.spam);
+
+        final visible = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!
+            .text;
+        expect(find.text('typed under Other'), findsOneWidget);
+
+        await submit(tester);
+
+        expect(sentNote(), visible.trim());
+      },
+    );
+
+    testWidgets(
+      'picking a reason keeps the same cards, so the selection animates and '
+      'a screen reader stays on the card it tapped',
+      (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        State<StatefulWidget> cardState(ContentFilterReason reason) =>
+            tester.state(
+              find
+                  .ancestor(
+                    of: find.text(l10n.reportReasonTitle(reason)),
+                    matching: find.byType(AnimatedContainer),
+                  )
+                  .first,
+            );
+
+        final spam = cardState(ContentFilterReason.spam);
+        final harassment = cardState(ContentFilterReason.harassment);
+
+        await pick(tester, ContentFilterReason.spam);
+        expect(identical(cardState(ContentFilterReason.spam), spam), isTrue);
+
+        await pick(tester, ContentFilterReason.harassment);
+        expect(
+          identical(cardState(ContentFilterReason.harassment), harassment),
+          isTrue,
+        );
+        expect(
+          identical(cardState(ContentFilterReason.spam), spam),
+          isTrue,
+          reason: 'the card that lost the selection is the same card too',
+        );
+      },
+    );
+
+    testWidgets('the missing-note error clears once the reporter types, '
+        'and when they pick another reason', (tester) async {
+      await setLargeSurface(tester);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await pick(tester, ContentFilterReason.other);
+      await submit(tester);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'w');
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reportOtherRequiresDetails), findsNothing);
+
+      await tester.enterText(find.byType(TextField), '');
+      await submit(tester);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+
+      await pick(tester, ContentFilterReason.spam);
+      expect(find.text(l10n.reportOtherRequiresDetails), findsNothing);
+    });
+
+    testWidgets(
+      'switching reasons moves the note box itself, so its state comes '
+      'along: the keyboard and the limit-reached notice stay',
+      (tester) async {
+        await setLargeSurface(tester);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        await pick(tester, ContentFilterReason.other);
+        await tester.enterText(
+          find.byType(TextField),
+          'a' * (BugReportConfig.maxFreeTextFieldLength + 1),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.supportFieldLimitReached), findsOneWidget);
+
+        await pick(tester, ContentFilterReason.spam);
+
+        expect(
+          find.text(l10n.supportFieldLimitReached),
+          findsOneWidget,
+          reason:
+              'the text is still at the limit, so rebuilding the box fresh '
+              'under the new reason must not drop the notice',
+        );
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText)).focusNode,
+          isA<FocusNode>().having((n) => n.hasFocus, 'hasFocus', isTrue),
+          reason: 'a reporter mid-sentence must not lose the keyboard',
+        );
+      },
+    );
+  });
+
+  group('$ReportContentDialog note focus', () {
+    Widget buildSheetSubject() {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () =>
+                      ReportContentDialog.show(context, video: testVideo),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      return testProviderScope(
+        mockNostrService: createMockNostrService(),
+        additionalOverrides: [
+          contentReportingServiceProvider.overrideWith(
+            (ref) async => mockReportingService,
+          ),
+        ],
+        child: MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+    }
+
+    for (final reason in [
+      ContentFilterReason.spam,
+      ContentFilterReason.other,
+    ]) {
+      testWidgets('focusing the note under $reason grows the sheet so the '
+          'field has room above the keyboard', (tester) async {
+        // A phone-sized surface, so the reason list overflows as on device.
+        tester.view.physicalSize = const Size(412, 915);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(buildSheetSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final sheetTop = tester.getRect(find.byType(ReportContentDialog)).top;
+
+        await tester.ensureVisible(find.text(l10n.reportReasonTitle(reason)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonTitle(reason)));
+        await tester.pumpAndSettle();
+
+        final focusNode = tester
+            .widget<EditableText>(find.byType(EditableText))
+            .focusNode;
+        if (reason == ContentFilterReason.other) {
+          expect(
+            focusNode.hasFocus,
+            isTrue,
+            reason: 'Other requires a note, so it focuses the field itself',
+          );
+        } else {
+          expect(
+            focusNode.hasFocus,
+            isFalse,
+            reason: 'an optional note must not pop the keyboard on its own',
+          );
+          expect(
+            tester.getRect(find.byType(ReportContentDialog)).top,
+            sheetTop,
+            reason: 'picking a reason alone leaves the sheet where it was',
+          );
+          // The reporter taps into the note.
+          focusNode.requestFocus();
+          await tester.pumpAndSettle();
+        }
+
+        expect(
+          tester.getRect(find.byType(ReportContentDialog)).top,
+          lessThan(sheetTop),
+          reason: 'the sheet grows toward full height once the note has focus',
+        );
+      });
+    }
   });
 
   group('list report (showForList path)', () {
@@ -1677,29 +2276,22 @@ void main() {
     );
 
     testWidgets(
-      'keeps the not-attached notice when the details field gets a fresh '
-      'State (reason reselection), because the flag lives in the durable '
-      'parent',
+      'keeps the not-attached notice across a change of reason, because the '
+      'note box stays for every reason',
       (tester) async {
         await openDetailsField(tester);
         await commitKeyboardImage(tester);
         await tester.pumpAndSettle();
         expect(find.text(l10n.reportDetailsImageNotAttached), findsOneWidget);
 
-        // Leaving "Other" unmounts the details block and returning rebuilds it
-        // from scratch. A notice flag stored in the field's State would be
-        // lost across that; the parent-owned flag survives it.
         await tester.tap(find.text(l10n.reportReasonSpam));
         await tester.pumpAndSettle();
-        expect(find.byType(TextField), findsNothing);
-
-        await tester.tap(find.text(l10n.reportReasonOther));
-        await tester.pumpAndSettle();
+        expect(find.byType(TextField), findsOneWidget);
 
         expect(
           find.text(l10n.reportDetailsImageNotAttached),
           findsOneWidget,
-          reason: 'the notice must survive a fresh details-field State',
+          reason: 'the notice must survive a change of reason',
         );
       },
     );

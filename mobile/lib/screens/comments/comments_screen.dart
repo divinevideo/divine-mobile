@@ -56,7 +56,6 @@ String _reactionsErrorToString(AppLocalizations l10n, ReactionsError error) {
     ReactionsError.notAuthenticated =>
       l10n.commentsErrorNotAuthenticatedInteract,
     ReactionsError.voteFailed => l10n.commentsErrorVoteFailed,
-    ReactionsError.reportFailed => l10n.commentsErrorReportFailed,
     ReactionsError.blockFailed => l10n.commentsErrorBlockFailed,
     ReactionsError.deleteCommentFailed => l10n.commentsErrorDeleteFailed,
   };
@@ -183,9 +182,6 @@ abstract final class CommentsScreen {
     final contentBlocklistRepository = container.read(
       contentBlocklistRepositoryProvider,
     );
-    final contentReportingServiceFuture = container.read(
-      contentReportingServiceProvider.future,
-    );
     final profileRepository = container.read(profileRepositoryProvider);
     final followRepository = container.read(followRepositoryProvider);
     final showVideoReplies = container.read(
@@ -278,7 +274,6 @@ abstract final class CommentsScreen {
                   authService: authService,
                   likesRepository: likesRepository,
                   commentsRepository: commentsRepository,
-                  contentReportingServiceFuture: contentReportingServiceFuture,
                   contentBlocklistRepository: contentBlocklistRepository,
                   rootEventId: video.id,
                   rootAddressableId: video.addressableId,

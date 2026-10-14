@@ -65,11 +65,15 @@ class GallerySaveService {
   /// The [video] is the video to save.
   /// The optional [aspectRatio] crops the video before saving if needed.
   /// The optional [albumName] specifies the album to save to.
+  /// Without [requestPermission] a permission the user has not granted yet is
+  /// reported as [GallerySavePermissionDenied] instead of prompting, for
+  /// saves that run in the background.
   Future<GallerySaveResult> saveVideoToGallery(
     EditorVideo video, {
     model.AspectRatio? aspectRatio,
     String albumName = 'Divine',
     VideoMetadata? metadata,
+    bool requestPermission = true,
   }) async {
     Log.info(
       'saveVideoToGallery started: aspectRatio=$aspectRatio album=$albumName',
@@ -105,7 +109,9 @@ class GallerySaveService {
       // Check gallery permission.
       // On desktop, permission_handler may not be available —
       // fall back to Gal's own permission request or Downloads.
-      final permResult = await _checkPermission();
+      final permResult = await _checkPermission(
+        requestPermission: requestPermission,
+      );
       if (permResult != null) {
         // Permission denied — on desktop, save to Downloads instead.
         if (_isDesktop) {
@@ -182,13 +188,15 @@ class GallerySaveService {
 
   /// Checks permission and returns null if granted,
   /// or a failure result if denied.
-  Future<GallerySaveResult?> _checkPermission() async {
+  Future<GallerySaveResult?> _checkPermission({
+    required bool requestPermission,
+  }) async {
     try {
       final status = await _permissionsService.checkGalleryStatus();
       if (status == PermissionStatus.granted) return null;
 
       // Not granted yet — try requesting
-      if (status == PermissionStatus.canRequest) {
+      if (requestPermission && status == PermissionStatus.canRequest) {
         final requested = await _permissionsService.requestGalleryPermission();
         if (requested == PermissionStatus.granted) return null;
 
@@ -211,7 +219,8 @@ class GallerySaveService {
       final hasAccess = await Gal.hasAccess(toAlbum: true);
       if (hasAccess) return null;
 
-      final granted = await Gal.requestAccess(toAlbum: true);
+      final granted =
+          requestPermission && await Gal.requestAccess(toAlbum: true);
       if (granted) return null;
 
       Log.warning(

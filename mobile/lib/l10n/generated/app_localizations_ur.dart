@@ -989,9 +989,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'اس اکاؤنٹ کو ان بلاک کریں';
 
   @override
-  String get inboxReportedVanishedAccount => 'اس اکاؤنٹ کی رپورٹ کی';
-
-  @override
   String get inboxBlockedVanishedAccount => 'اس اکاؤنٹ کو بلاک کیا';
 
   @override
@@ -4836,6 +4833,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportWhyReporting => 'آپ یہ مواد کیوں رپورٹ کر رہے ہیں؟';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine مواد کی رپورٹس پر 24 گھنٹوں کے اندر کارروائی کرے گا: مواد ہٹا کر اور قاعدہ توڑنے والا مواد دینے والے صارف کو نکال کر۔';
 
@@ -4858,6 +4858,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'براہ کرم مسئلہ بیان کریں';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5750,11 +5753,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'اپلوڈ ہو گئی — لاگو کرنے کے لیے محفوظ کریں پر ٹیپ کریں';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName کی رپورٹ کی';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName کو بلاک کیا';
   }
@@ -6538,8 +6536,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get librarySortVerticalFirst => 'پہلے عمودی';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'یہ کارروائی واپس نہیں ہو سکتی۔ ویڈیو فائلیں آپ کی ڈیوائس سے مستقل طور پر ہٹا دی جائیں گی۔';
+  String get libraryDeleteClipsWarning => 'یہ کارروائی واپس نہیں ہو سکتی۔';
 
   @override
   String get libraryPreparingVideo => 'ویڈیو تیار ہو رہی ہے...';
@@ -6614,6 +6611,66 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'ہو گیا';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'منتخب کلپس اپنی گیلری میں محفوظ کریں';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count کلپس اپنے ثبوت کے بغیر محفوظ ہوئیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتیں۔',
+      one: '1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'تفصیلات';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'ثبوت کے بغیر محفوظ';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'آپ کی گیلری سے صرف وہی کلپس واپس آ سکتی ہیں جن کے پاس ثبوت ہو کہ وہ Divine سے بنائی گئی ہیں۔ ان کلپس کی کاپیاں اس ثبوت کے بغیر محفوظ ہوئیں۔';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'ابھی اس کا ثبوت شامل نہیں ہو سکا، شاید اس لیے کہ آپ آف لائن تھے۔ ثبوت والی کاپی محفوظ کرنے کے لیے دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'اسٹاپ موشن کلپس تصاویر سے بنتی ہیں، اور تصاویر ثبوت نہیں رکھ سکتیں۔';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine کا یہ ورژن کلپس میں ثبوت شامل نہیں کر سکتا۔';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'اس کلپ کا کوئی ثبوت نہیں، اور Divine بعد میں اسے شامل نہیں کر سکتا۔';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'ثبوت کے ساتھ محفوظ ہو گئی';
+
+  @override
+  String get libraryGallerySaveSigning => 'آپ کی کلپس میں ثبوت شامل ہو رہا ہے…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'کلپ $current از $total محفوظ ہو رہی ہے…',
+      one: 'آپ کی کلپ محفوظ ہو رہی ہے…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6713,6 +6770,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کیا آپ واقعی یہ کلپ حذف کرنا چاہتے ہیں؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6728,6 +6789,16 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'آرکائیو شدہ۔ $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ابھی آپ کی گیلری میں نہیں۔ $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'آپ کی گیلری میں مواد اسناد کے بغیر۔ $label';
   }
 
   @override
@@ -7003,13 +7074,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'یہ مواد فلیگ کریں';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'اس تبصرے کو فلیگ کرنے کی وجہ منتخب کریں';
-
-  @override
-  String get commentOptionsFlagSubmit => 'جمع کریں';
 
   @override
   String get commentOptionsTitle => 'اختیارات';
@@ -8319,9 +8383,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commentsErrorVoteFailed => 'تبصرے پر ووٹ نہیں ہو سکا';
 
   @override
-  String get commentsErrorReportFailed => 'تبصرے کی رپورٹ نہیں ہو سکی';
-
-  @override
   String get commentsErrorBlockFailed => 'صارف بلاک نہیں ہو سکا';
 
   @override
@@ -9140,6 +9201,61 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'اسٹیکر ایڈیٹر کھولیں';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'آڈیو ویژولائزر';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'آواز کے ساتھ حرکت کرنے والا ویژولائزر شامل کریں';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'ویژولائزر کا رنگ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'پٹیاں';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'آئینہ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'لہر';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'دائرہ';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ویژولائزر شامل کریں';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'کثافت';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'کم';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'زیادہ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'ردِعمل';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'پُرسکون';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'پُرجوش';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'پٹی کی چوڑائی';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'پتلی';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'چوڑی';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'نمونہ بیٹ';
 
   @override
   String get videoEditorSaveDraftTitle => 'اپنا مسودہ محفوظ کریں؟';
@@ -11553,6 +11669,39 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'کوئی میلتا ٹیگ نہیں';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ہیش ٹیگ زیادہ سے زیادہ $max حروف کے ہو سکتے ہیں۔',
+      one: 'ہیش ٹیگ زیادہ سے زیادہ $max حرف کے ہو سکتے ہیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+      one: 'آپ زیادہ سے زیادہ $max ہیش ٹیگ شامل کر سکتے ہیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max میں سے $count حروف',
+      one: '$max میں سے $count حرف',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" شامل کریں';
   }
@@ -11575,6 +11724,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے';
+
+  @override
+  String get settingsBackUpRecordings => 'ریکارڈنگز کا گیلری میں بیک اپ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔';
 
   @override
   String uploadPublishedCountMessage(int count) {

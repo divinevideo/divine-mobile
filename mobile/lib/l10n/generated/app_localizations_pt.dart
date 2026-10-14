@@ -997,9 +997,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Desbloquear esta conta';
 
   @override
-  String get inboxReportedVanishedAccount => 'Esta conta foi denunciada';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Esta conta foi bloqueada';
 
   @override
@@ -4858,6 +4855,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Por que você está denunciando este conteúdo?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'O Divine vai agir sobre denúncias de conteúdo em até 24 horas, removendo o conteúdo e expulsando o usuário que o publicou.';
 
@@ -4880,6 +4880,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Descreva o problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5783,11 +5786,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Enviada — toque em Salvar para aplicar';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName denunciado(a)';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName bloqueado(a)';
   }
@@ -6578,8 +6576,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticais primeiro';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Não dá para desfazer. Os arquivos de vídeo serão removidos permanentemente do dispositivo.';
+  String get libraryDeleteClipsWarning => 'Não dá para desfazer.';
 
   @override
   String get libraryPreparingVideo => 'Preparando vídeo...';
@@ -6654,6 +6651,70 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => 'Concluído';
+
+  @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Salvar os clipes selecionados na sua galeria';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
+      many:
+          '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
+      one:
+          '$count clipe foi salvo sem a prova dele, então ele não pode voltar para os seus clipes.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Detalhes';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Salvos sem prova';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Só podem voltar da sua galeria os clipes com prova de que foram gravados com o Divine. As cópias destes clipes foram salvas sem ela.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Não deu para adicionar a prova agora, talvez porque você estava offline. Tente de novo para salvar uma cópia com a prova.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clipes em stop motion são feitos de fotos, que não podem ter prova.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Esta versão do Divine não consegue adicionar prova aos clipes.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Este clipe não tem prova, e o Divine não consegue adicioná-la depois.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Salvo com a prova';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Adicionando a prova aos seus clipes…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Salvando o clipe $current de $total…',
+      many: 'Salvando o clipe $current de $total…',
+      one: 'Salvando seu clipe…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6754,6 +6815,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Excluir este clipe?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Primeiro ele vai para a lixeira, então você ainda pode restaurá-lo.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6769,6 +6834,16 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arquivado. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Ainda não está na sua galeria. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Na sua galeria sem credenciais de conteúdo. $label';
   }
 
   @override
@@ -7054,13 +7129,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Sinalizar este conteúdo';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Selecione um motivo para sinalizar este comentário';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Enviar';
 
   @override
   String get commentOptionsTitle => 'Opções';
@@ -8381,10 +8449,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commentsErrorVoteFailed => 'Não foi possível votar no comentário';
 
   @override
-  String get commentsErrorReportFailed =>
-      'Não foi possível denunciar o comentário';
-
-  @override
   String get commentsErrorBlockFailed => 'Não foi possível bloquear a pessoa';
 
   @override
@@ -9212,6 +9276,61 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => 'Abrir editor de stickers';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => 'Visualizador';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Adicione um visualizador que se move com o som';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Cor do visualizador';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Barras';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Espelho';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Onda';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Círculo';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Adicionar visualizador';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Densidade';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'Menos';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Mais';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Reação';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Calma';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Viva';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Largura das barras';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Finas';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Largas';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Ritmo de exemplo';
 
   @override
   String get videoEditorSaveDraftTitle => 'Salvar seu rascunho?';
@@ -11642,6 +11761,42 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => 'Sem tags correspondentes';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'As hashtags podem ter até $max caracteres.',
+      many: 'As hashtags podem ter até $max de caracteres.',
+      one: 'As hashtags podem ter até $max caractere.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Você pode adicionar até $max hashtags.',
+      many: 'Você pode adicionar até $max de hashtags.',
+      one: 'Você pode adicionar até $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count de $max caracteres',
+      many: '$count de $max de caracteres',
+      one: '$count de $max caractere',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adicionar «#$tag»';
   }
@@ -11664,6 +11819,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'A gravação começa ao manter pressionado e para ao soltar';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'Fazer backup das gravações na galeria';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Salva uma cópia de cada nova gravação na sua galeria. Outros apps e backups de fotos na nuvem podem vê-la lá.';
 
   @override
   String uploadPublishedCountMessage(int count) {

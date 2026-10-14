@@ -649,10 +649,6 @@
   "@inboxActionUnblockVanishedAccount": {
     "description": "Unblock action for a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
   },
-  "inboxReportedVanishedAccount": "Reported this account",
-  "@inboxReportedVanishedAccount": {
-    "description": "Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
-  },
   "inboxBlockedVanishedAccount": "Blocked this account",
   "@inboxBlockedVanishedAccount": {
     "description": "Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
@@ -3120,6 +3116,10 @@
     }
   },
   "reportWhyReporting": "Why are you reporting this content?",
+  "reportWhyReportingComment": "Why are you reporting this comment?",
+  "@reportWhyReportingComment": {
+    "description": "Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts."
+  },
   "reportPolicyNotice": "Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.",
   "reportBlockUser": "Block this user",
   "reportCancel": "Cancel",
@@ -3127,6 +3127,10 @@
   "reportSelectReason": "Please select a reason for reporting this content",
   "reportOtherRequiresDetails": "Please describe the issue when selecting Other",
   "reportDetailsRequired": "Please describe the issue",
+  "reportDetailsOptional": "Add details (optional)",
+  "@reportDetailsOptional": {
+    "description": "Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description."
+  },
   "reportDetailsTextOnly": "Text only — photos and GIFs can’t be attached here.",
   "@reportDetailsTextOnly": {
     "description": "Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached."
@@ -3549,14 +3553,6 @@
   "profileSetupUploadStaged": "Uploaded — tap Save to apply",
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
-  },
-  "inboxReportedUser": "Reported {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
   },
   "inboxBlockedUser": "Blocked {displayName}",
   "@inboxBlockedUser": {
@@ -4339,7 +4335,7 @@
   "librarySortShortestClip": "Shortest Clip",
   "librarySortSquareFirst": "Square First",
   "librarySortVerticalFirst": "Vertical First",
-  "libraryDeleteClipsWarning": "This action cannot be undone. The video files will be permanently removed from your device.",
+  "libraryDeleteClipsWarning": "This can't be undone.",
   "libraryPreparingVideo": "Preparing video...",
   "libraryCreateVideo": "Create Video ({count})",
   "@libraryCreateVideo": {
@@ -4436,6 +4432,67 @@
   "@libraryGalleryImportDone": {
     "description": "Button closing the gallery import page once every video is checked."
   },
+  "librarySaveSelectedClipsTooltip": "Save selected clips to your gallery",
+  "@librarySaveSelectedClipsTooltip": {
+    "description": "Accessibility label for the clip library selection toolbar button that saves the selected clips to the device gallery, and its row in the toolbar's overflow menu."
+  },
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 clip was saved without its proof, so it can't come back into your clips.} other{{count} clips were saved without their proof, so they can't come back into your clips.}}",
+  "@libraryClipsSavedWithoutProof": {
+    "description": "Snackbar after saving library clips to the device gallery when some copies carry no C2PA proof that they were shot with Divine, so the gallery import would turn them away. {count} is how many such clips were saved.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryClipsSavedWithoutProofDetails": "Details",
+  "@libraryClipsSavedWithoutProofDetails": {
+    "description": "Snackbar action that opens the page listing the clips saved to the gallery without their proof."
+  },
+  "libraryGallerySaveWarningTitle": "Saved without proof",
+  "@libraryGallerySaveWarningTitle": {
+    "description": "App bar title of the page listing clips whose gallery copy carries no proof that they were shot with Divine."
+  },
+  "libraryGallerySaveWarningIntro": "Only clips with proof that they were shot with Divine can come back from your gallery. The copies of these clips were saved without it.",
+  "@libraryGallerySaveWarningIntro": {
+    "description": "Text at the top of the page listing clips saved to the gallery without their C2PA proof, explaining that the gallery import will not take those copies back into the clip library."
+  },
+  "libraryGallerySaveWarningSigningUnavailable": "Its proof couldn't be added just now, maybe because you were offline. Try again to save a copy with it.",
+  "@libraryGallerySaveWarningSigningUnavailable": {
+    "description": "Row on the saved-without-proof page: signing the clip could not run, e.g. offline. Retrying saves another copy that carries the proof."
+  },
+  "libraryGallerySaveWarningStopMotion": "Stop-motion clips are made from photos, which can't carry proof.",
+  "@libraryGallerySaveWarningStopMotion": {
+    "description": "Row on the saved-without-proof page for a stop-motion clip, which is rendered from still photos that carry no proof."
+  },
+  "libraryGallerySaveWarningSigningUnsupported": "This version of Divine can't add proof to clips.",
+  "@libraryGallerySaveWarningSigningUnsupported": {
+    "description": "Row on the saved-without-proof page when this build of the app cannot sign clips at all."
+  },
+  "libraryGallerySaveWarningNoProof": "This clip has no proof, and Divine can't add it afterwards.",
+  "@libraryGallerySaveWarningNoProof": {
+    "description": "Row on the saved-without-proof page for a clip that has no proof and cannot be signed later, e.g. footage the app did not record."
+  },
+  "libraryGallerySaveWarningSavedWithProof": "Saved with its proof",
+  "@libraryGallerySaveWarningSavedWithProof": {
+    "description": "Row on the saved-without-proof page once trying again saved a copy of the clip that carries its proof."
+  },
+  "libraryGallerySaveSigning": "Adding proof to your clips…",
+  "@libraryGallerySaveSigning": {
+    "description": "Shown over the clip library while the app signs its own clips that were left without C2PA proof, before saving them to the gallery."
+  },
+  "libraryGallerySaveProgress": "{total, plural, =1{Saving your clip…} other{Saving clip {current} of {total}…}}",
+  "@libraryGallerySaveProgress": {
+    "description": "Shown over the clip library while selected clips are saved to the device gallery one after another. {current} is the clip being saved, {total} how many are being saved.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "libraryClipsDeletedCount": "{count, plural, =1{1 clip deleted} other{{count} clips deleted}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -4496,6 +4553,10 @@
   },
   "libraryDeleteClipTitle": "Delete Clip",
   "libraryDeleteClipMessage": "Are you sure you want to delete this clip?",
+  "libraryDeleteClipTrashNote": "It goes to the trash first, so you can still restore it.",
+  "@libraryDeleteClipTrashNote": {
+    "description": "Shown when deleting a single clip from its preview. The clip only moves to the trash, where it can be restored, so the prompt must not say its files are gone for good."
+  },
   "libraryClipDuration": "{seconds}s",
   "@libraryClipDuration": {
     "description": "Compact clip duration shown in the library trash row. {seconds} is already formatted with two decimal places, e.g. '5.73'.",
@@ -4518,6 +4579,24 @@
   "videoClipArchivedSemanticLabel": "Archived. {label}",
   "@videoClipArchivedSemanticLabel": {
     "description": "Accessibility label for an archived clip thumbnail shown inside a category. Wraps the clip's own label.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "videoClipBackupPendingSemanticLabel": "Not in your gallery yet. {label}",
+  "@videoClipBackupPendingSemanticLabel": {
+    "description": "Accessibility label for a library clip whose recording is not in the gallery yet, because it is waiting for its content credentials. Wraps the clip's own label.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "videoClipBackupUnsignedSemanticLabel": "In your gallery without content credentials. {label}",
+  "@videoClipBackupUnsignedSemanticLabel": {
+    "description": "Accessibility label for a library clip whose recording was saved to the gallery without content credentials, so the copy cannot be brought back to the clips. Wraps the clip's own label.",
     "placeholders": {
       "label": {
         "type": "String"
@@ -4644,8 +4723,6 @@
   "commentOptionsEditSemanticLabel": "Edit comment",
   "commentOptionsFlagContentLabel": "Flag Content",
   "commentOptionsFlagContentSemanticLabel": "Flag this content",
-  "commentOptionsFlagReasonPrompt": "Select a reason for flagging this comment",
-  "commentOptionsFlagSubmit": "Submit",
   "commentOptionsTitle": "Options",
   "commentsEmptyClassicVineMessage": "We're still working on importing old comments from the archive. They're not ready yet.",
   "commentsEmptyClassicVineTitle": "Classic Vine",
@@ -5572,10 +5649,6 @@
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
   },
-  "commentsErrorReportFailed": "Failed to report comment",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
-  },
   "commentsErrorBlockFailed": "Failed to block user",
   "@commentsErrorBlockFailed": {
     "description": "Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails."
@@ -6227,6 +6300,39 @@
   },
   "videoEditorOpenFilterSemanticLabel": "Open filter editor",
   "videoEditorOpenStickerSemanticLabel": "Open sticker editor",
+  "videoEditorAudioVisualizerLabel": "Visualizer",
+  "@videoEditorAudioVisualizerLabel": {
+    "description": "Name of the editor tool and overlay that draws bars or a wave moving with the video's sound. Shown on its tile, as the sheet title and on its timeline bar."
+  },
+  "videoEditorOpenAudioVisualizerSemanticLabel": "Add a visualizer that moves with the sound",
+  "videoEditorAudioVisualizerColorLabel": "Visualizer color",
+  "videoEditorAudioVisualizerStyleBars": "Bars",
+  "videoEditorAudioVisualizerStyleMirrored": "Mirror",
+  "@videoEditorAudioVisualizerStyleMirrored": {
+    "description": "Visualizer style: bars that grow up and down from the middle line."
+  },
+  "videoEditorAudioVisualizerStyleWave": "Wave",
+  "videoEditorAudioVisualizerStyleCircle": "Circle",
+  "videoEditorAudioVisualizerAdd": "Add visualizer",
+  "videoEditorAudioVisualizerDensityLabel": "Density",
+  "@videoEditorAudioVisualizerDensityLabel": {
+    "description": "Slider in the audio visualizer sheet: how many frequency bands (bars) the visualizer shows."
+  },
+  "videoEditorAudioVisualizerDensityFewer": "Fewer",
+  "videoEditorAudioVisualizerDensityMore": "More",
+  "videoEditorAudioVisualizerReactionLabel": "Reaction",
+  "@videoEditorAudioVisualizerReactionLabel": {
+    "description": "Slider in the audio visualizer sheet: how strongly and quickly the bars react to the sound, from calm to lively."
+  },
+  "videoEditorAudioVisualizerReactionCalm": "Calm",
+  "videoEditorAudioVisualizerReactionLively": "Lively",
+  "videoEditorAudioVisualizerBarWidthLabel": "Bar width",
+  "videoEditorAudioVisualizerBarWidthThin": "Thin",
+  "videoEditorAudioVisualizerBarWidthWide": "Wide",
+  "videoEditorAudioVisualizerPreviewSampleBeat": "Sample beat",
+  "@videoEditorAudioVisualizerPreviewSampleBeat": {
+    "description": "Small label on the live preview of the audio visualizer sheet while it moves with a built-in drum loop instead of the video's own sound (still being read, or the video has none)."
+  },
   "videoEditorSaveDraftTitle": "Save your draft?",
   "videoEditorSaveDraftSubtitle": "Keep your edits for later, or discard them and leave the editor.",
   "videoEditorSaveDraftButton": "Save draft",
@@ -7894,6 +8000,36 @@
   "videoMetadataTagsPickerSearchHint": "Search or add tags",
   "videoMetadataTagsPickerEmptyHint": "Add tags to help people discover your video",
   "videoMetadataTagsPickerNoResults": "No matching tags",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags can be up to {max} character.} other{Hashtags can be up to {max} characters.}}",
+  "@videoMetadataTagsPickerTagTooLong": {
+    "description": "Helper under the tags picker field when a hashtag is at or over the length limit.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}",
+  "@videoMetadataTagsPickerTagLimitReached": {
+    "description": "Helper under the tags picker field once a video has the maximum number of hashtags.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}",
+  "@videoMetadataTagsPickerCharacterCount": {
+    "description": "Screen-reader label for the tags picker character counter, which is shown visually as count/max.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "videoMetadataTagsPickerAddTag": "Add \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {
@@ -7917,6 +8053,14 @@
   "minorAccountReviewUnder13WhyTitle": "Here's why",
   "generalSettingsHoldToRecord": "Hold to record",
   "generalSettingsHoldToRecordSubtitle": "Start recording when you press and hold, then stop when you release",
+  "settingsBackUpRecordings": "Back up recordings to your gallery",
+  "@settingsBackUpRecordings": {
+    "description": "Title of the Create & Share setting that saves a copy of every new camera recording to the device gallery (#10067)."
+  },
+  "settingsBackUpRecordingsSubtitle": "Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.",
+  "@settingsBackUpRecordingsSubtitle": {
+    "description": "Subtitle of the gallery backup setting. Must say that other apps and cloud photo backups can see the copies in the gallery. Kept to about three lines; the delete dialogs say that gallery copies stay."
+  },
   "uploadPublishedCountMessage": "{count, plural, =1{Video published to your profile} other{{count} videos published to your profile}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

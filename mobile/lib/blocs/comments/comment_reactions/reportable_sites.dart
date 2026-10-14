@@ -4,7 +4,6 @@ abstract class CommentReactionsBlocReportableSites {
   static const String onVoteToggled = '_onVoteToggled';
   static const String onVoteCountsFetchRequested =
       '_onVoteCountsFetchRequested';
-  static const String onReportRequested = '_onReportRequested';
   static const String onBlockUserRequested = '_onBlockUserRequested';
   static const String onDeleteRequested = '_onDeleteRequested';
 }

@@ -2251,6 +2251,133 @@ void main() {
         );
       });
 
+      group('replacingIdentity', () {
+        const canonical = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'mastodon',
+          identity: 'mastodon.example/@alice',
+          proof: '110123',
+        );
+
+        test('also replaces the claim under the identity as sent', () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'Mastodon:@Alice@mastodon.example', '110100'],
+                ['i', 'mastodon:other.example/@bob', '220'],
+                ['i', 'github:octocat', 'abc'],
+              ],
+            ),
+          ]);
+
+          final tags = await repo.publishClaim(
+            canonical,
+            replacingIdentity: '@alice@mastodon.example',
+          );
+
+          expect(
+            tags,
+            equals([
+              ['i', 'mastodon:other.example/@bob', '220'],
+              ['i', 'github:octocat', 'abc'],
+              ['i', 'mastodon:mastodon.example/@alice', '110123'],
+            ]),
+          );
+        });
+
+        test('keeps the replaced claim gone while relays lag', () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'mastodon:@alice@mastodon.example', '110100'],
+              ],
+            ),
+          ]);
+
+          await repo.publishClaim(
+            canonical,
+            replacingIdentity: '@alice@mastodon.example',
+          );
+
+          // Relay still serves the event from before the replacement.
+          final tags = await repo.publishClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'github',
+              identity: 'octocat',
+              proof: 'abc',
+            ),
+          );
+
+          expect(
+            tags.map((t) => t[1]),
+            isNot(contains('mastodon:@alice@mastodon.example')),
+          );
+          expect(
+            tags.map((t) => t[1]),
+            contains('mastodon:mastodon.example/@alice'),
+          );
+        });
+
+        test('counts nothing as removed when the publish fails', () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'mastodon:@alice@mastodon.example', '110100'],
+              ],
+            ),
+          ]);
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            final event = invocation.positionalArguments.single as Event;
+            return PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {'wss://relay.divine.video': 'blocked'},
+              noResponseFrom: const [],
+            );
+          });
+
+          await expectLater(
+            () => repo.publishClaim(
+              canonical,
+              replacingIdentity: '@alice@mastodon.example',
+            ),
+            throwsA(isA<IdentityClaimPublishException>()),
+          );
+
+          // The sent-form tag is still on the event. A read that falls back
+          // to kind-0 and misses it is contradicted by the snapshot, so the
+          // next write is refused rather than published without it.
+          stubIdentityEvents(const [], kind0: [_event(id: _eventId(11))]);
+          when(() => identityEventsDao.getEvent(_pubkey)).thenAnswer(
+            (_) async => const IdentityEventRow(
+              pubkey: _pubkey,
+              tagsJson: '[["i","mastodon:@alice@mastodon.example","110100"]]',
+              sourceKind: 10011,
+            ),
+          );
+          await expectLater(
+            () => repo.publishClaim(
+              const IdentityClaim(
+                pubkey: _pubkey,
+                platform: 'github',
+                identity: 'octocat',
+                proof: 'abc',
+              ),
+            ),
+            throwsA(isA<IdentityClaimReadException>()),
+          );
+        });
+      });
+
       test('carries unknown-platform tags through untouched', () async {
         stubIdentityEvents([
           _event(

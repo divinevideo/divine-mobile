@@ -879,9 +879,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '이 계정 차단 해제';
 
   @override
-  String get inboxReportedVanishedAccount => '이 계정을 신고했어요';
-
-  @override
   String get inboxBlockedVanishedAccount => '이 계정을 차단했어요';
 
   @override
@@ -4555,6 +4552,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportWhyReporting => '이 콘텐츠를 왜 신고하시나요?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine은 24시간 이내에 신고된 콘텐츠를 조치하여 콘텐츠를 삭제하고 문제가 된 콘텐츠를 제공한 사용자를 퇴출해요.';
 
@@ -4575,6 +4575,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '문제를 설명해 주세요';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5445,11 +5448,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileSetupUploadStaged => '업로드됐어요 — 적용하려면 저장을 탭하세요';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName을(를) 신고했어요';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName을(를) 차단했어요';
   }
@@ -6211,7 +6209,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get librarySortVerticalFirst => '세로형 먼저';
 
   @override
-  String get libraryDeleteClipsWarning => '되돌릴 수 없어요. 동영상 파일이 기기에서 삭제됩니다.';
+  String get libraryDeleteClipsWarning => '되돌릴 수 없어요.';
 
   @override
   String get libraryPreparingVideo => '동영상 준비 중...';
@@ -6284,6 +6282,63 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => '완료';
+
+  @override
+  String get librarySaveSelectedClipsTooltip => '선택한 클립을 갤러리에 저장';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개가 증명 없이 저장돼서 클립으로 다시 가져올 수 없어요.',
+      one: '클립 1개가 증명 없이 저장돼서 클립으로 다시 가져올 수 없어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '자세히';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '증명 없이 저장됨';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Divine으로 촬영했다는 증명이 있는 클립만 갤러리에서 다시 가져올 수 있어요. 이 클립들의 사본은 증명 없이 저장됐어요.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      '오프라인이었던 탓인지 지금은 증명을 추가하지 못했어요. 다시 시도하면 증명이 있는 사본을 저장해요.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      '스톱모션 클립은 사진으로 만들어져서 증명을 담을 수 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      '이 버전의 Divine은 클립에 증명을 추가할 수 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      '이 클립에는 증명이 없고, Divine이 나중에 추가할 수도 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '증명과 함께 저장됨';
+
+  @override
+  String get libraryGallerySaveSigning => '클립에 증명을 추가하는 중…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '클립 $total개 중 $current번째 저장 중…',
+      one: '클립을 저장하는 중…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6379,6 +6434,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryDeleteClipMessage => '이 클립을 삭제할까요?';
 
   @override
+  String get libraryDeleteClipTrashNote => '클립은 먼저 휴지통으로 이동하므로 아직 복원할 수 있어요.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds초';
   }
@@ -6394,6 +6452,16 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return '보관됨. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return '아직 갤러리에 없어요. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return '콘텐츠 자격 증명 없이 갤러리에 있어요. $label';
   }
 
   @override
@@ -6655,12 +6723,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => '이 콘텐츠 신고';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => '이 댓글을 신고하는 이유를 선택해주세요';
-
-  @override
-  String get commentOptionsFlagSubmit => '제출';
 
   @override
   String get commentOptionsTitle => '옵션';
@@ -7917,9 +7979,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentsErrorVoteFailed => '댓글 투표에 실패했어요';
 
   @override
-  String get commentsErrorReportFailed => '댓글을 신고하지 못했어요';
-
-  @override
   String get commentsErrorBlockFailed => '사용자를 차단하지 못했어요';
 
   @override
@@ -8713,6 +8772,61 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => '스티커 편집기 열기';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => '비주얼라이저';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      '소리에 맞춰 움직이는 비주얼라이저를 추가해요';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => '비주얼라이저 색상';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => '막대';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => '미러';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => '웨이브';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => '원형';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => '비주얼라이저 추가';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '밀도';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '적게';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '많이';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '반응';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '잔잔하게';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '역동적으로';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => '막대 너비';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '가늘게';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '굵게';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => '샘플 비트';
 
   @override
   String get videoEditorSaveDraftTitle => '임시저장 하시겠어요?';
@@ -10994,6 +11108,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => '일치하는 태그 없음';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max자까지 쓸 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max자 중 $count자',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" 추가';
   }
@@ -11015,6 +11159,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => '길게 누르면 녹화가 시작되고, 놓으면 멈춰요';
+
+  @override
+  String get settingsBackUpRecordings => '녹화본을 갤러리에 백업';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      '새 녹화본마다 갤러리에 사본을 저장해요. 다른 앱과 클라우드 사진 백업에서도 볼 수 있어요.';
 
   @override
   String uploadPublishedCountMessage(int count) {

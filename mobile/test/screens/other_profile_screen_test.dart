@@ -33,8 +33,10 @@ import 'package:openvine/services/official_accounts_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockOtherProfileBloc
@@ -218,24 +220,28 @@ void main() {
     required ProviderContainer container,
     String? displayNameHint,
     String? avatarUrlHint,
+    MockGoRouter? navigation,
   }) {
+    final view = MultiBlocProvider(
+      providers: [
+        BlocProvider<OtherProfileBloc>.value(value: otherProfileBloc),
+        BlocProvider<PeopleListsBloc>.value(value: peopleListsBloc),
+      ],
+      child: OtherProfileView(
+        pubkey: targetPubkey,
+        displayNameHint: displayNameHint,
+        avatarUrlHint: avatarUrlHint,
+      ),
+    );
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<OtherProfileBloc>.value(value: otherProfileBloc),
-            BlocProvider<PeopleListsBloc>.value(value: peopleListsBloc),
-          ],
-          child: OtherProfileView(
-            pubkey: targetPubkey,
-            displayNameHint: displayNameHint,
-            avatarUrlHint: avatarUrlHint,
-          ),
-        ),
+        home: navigation == null
+            ? view
+            : MockGoRouterProvider(goRouter: navigation, child: view),
       ),
     );
   }
@@ -497,6 +503,76 @@ void main() {
         ).called(1);
       },
     );
+
+    testWidgets('never follows the account when More → Unfollow is chosen', (
+      tester,
+    ) async {
+      // The sheet offered Unfollow (the bloc said following), but the follow
+      // list no longer has the account by the time the user taps it.
+      when(() => followRepository.isFollowing(targetPubkey)).thenReturn(false);
+      when(
+        () => followRepository.follow(targetPubkey),
+      ).thenAnswer((_) async {});
+      when(
+        () => followRepository.unfollow(targetPubkey),
+      ).thenAnswer((_) async {});
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildSubject(container: container));
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.bySemanticsLabel(l10n.profileMoreTooltip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(
+        find.textContaining(l10n.profileUnfollowDisplayName('')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tester.takeException(), isNull);
+      verifyNever(() => followRepository.follow(targetPubkey));
+      verify(() => followRepository.unfollow(targetPubkey)).called(1);
+    });
+
+    testWidgets('tells the user when unfollowing from More fails', (
+      tester,
+    ) async {
+      when(
+        () => followRepository.unfollow(targetPubkey),
+      ).thenAnswer((_) async => throw Exception('publish failed'));
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildSubject(container: container));
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.bySemanticsLabel(l10n.profileMoreTooltip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(
+        find.textContaining(l10n.profileUnfollowDisplayName('')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.followersUpdateFollowFailed), findsOneWidget);
+
+      // A second snackbar waits in the queue until the visible one goes, so
+      // dismiss the error before checking that no confirmation follows it.
+      ScaffoldMessenger.of(
+        tester.element(find.byType(OtherProfileView)),
+      ).removeCurrentSnackBar();
+      await tester.pump();
+      expect(
+        find.textContaining(l10n.profileUnfollowedUser('')),
+        findsNothing,
+      );
+    });
   });
 
   group('navigation', () {
@@ -559,6 +635,41 @@ void main() {
         DmRepository.computeConversationId([viewerPubkey, targetPubkey]),
       );
       expect(pushedId, isNot(targetPubkey));
+    });
+
+    testWidgets('logs a rejected Message navigation instead of leaking it', (
+      tester,
+    ) async {
+      await LogCaptureService().clearAllLogs();
+      addTearDown(LogCaptureService().clearAllLogs);
+      final navigation = MockGoRouter();
+      when(
+        () => navigation.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) => Future<void>.error(Exception('push-failed')));
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        buildSubject(container: container, navigation: navigation),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.profileMessageLabel));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final logs = LogCaptureService()
+          .getRecentLogs()
+          .where(
+            (entry) => entry.message.contains('open direct message'),
+          )
+          .toList();
+      expect(logs, hasLength(1));
+      final log = logs.single;
+      expect(log.name, equals('OtherProfileView'));
+      expect(log.level, equals(LogLevel.error));
+      expect(log.message, contains('push-failed'));
     });
   });
 }

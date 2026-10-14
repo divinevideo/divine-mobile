@@ -899,9 +899,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '取消屏蔽此账号';
 
   @override
-  String get inboxReportedVanishedAccount => '已举报此账号';
-
-  @override
   String get inboxBlockedVanishedAccount => '已屏蔽此账号';
 
   @override
@@ -4516,6 +4513,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportWhyReporting => '你为什么要举报该内容？';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。';
 
@@ -4536,6 +4536,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '请描述问题';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly => '仅限文字——无法在此附加照片或 GIF。';
@@ -5395,11 +5398,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileSetupUploadStaged => '已上传——点保存生效';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '已举报 $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '已屏蔽 $displayName';
   }
@@ -6152,7 +6150,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get librarySortVerticalFirst => '竖屏优先';
 
   @override
-  String get libraryDeleteClipsWarning => '此操作无法撤销。视频文件将从你的设备上永久删除。';
+  String get libraryDeleteClipsWarning => '此操作无法撤销。';
 
   @override
   String get libraryPreparingVideo => '正在准备视频...';
@@ -6224,6 +6222,61 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryGalleryImportDone => '完成';
+
+  @override
+  String get librarySaveSelectedClipsTooltip => '将所选片段保存到相册';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+      one: '1 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '详情';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '已保存但没有证明';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      '只有能证明是用 Divine 拍摄的片段才能从相册找回。这些片段的副本保存时没有附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      '暂时无法添加证明，可能是因为你当时处于离线状态。重试即可保存一份带证明的副本。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion => '定格动画片段由照片组成，照片无法附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      '此版本的 Divine 无法为片段添加证明。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof => '这个片段没有证明，Divine 也无法事后添加。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '已连同证明一起保存';
+
+  @override
+  String get libraryGallerySaveSigning => '正在为你的片段添加证明…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '正在保存第 $current 个片段，共 $total 个…',
+      one: '正在保存你的片段…',
+    );
+    return '$_temp0';
+  }
 
   @override
   String libraryClipsDeletedCount(int count) {
@@ -6319,6 +6372,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDeleteClipMessage => '确定要删除这个片段吗？';
 
   @override
+  String get libraryDeleteClipTrashNote => '片段会先进入回收站，你仍然可以恢复它。';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds 秒';
   }
@@ -6334,6 +6390,16 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return '已归档。$label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return '尚未保存到你的相册。$label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return '已保存到你的相册，但没有内容凭证。$label';
   }
 
   @override
@@ -6591,12 +6657,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => '标记此内容';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => '选择标记该评论的原因';
-
-  @override
-  String get commentOptionsFlagSubmit => '提交';
 
   @override
   String get commentOptionsTitle => '选项';
@@ -7826,9 +7886,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsErrorVoteFailed => '评论投票失败';
 
   @override
-  String get commentsErrorReportFailed => '评论举报失败';
-
-  @override
   String get commentsErrorBlockFailed => '屏蔽用户失败';
 
   @override
@@ -8618,6 +8675,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorOpenStickerSemanticLabel => '打开贴纸编辑器';
+
+  @override
+  String get videoEditorAudioVisualizerLabel => '音频可视化';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel => '添加随声音律动的可视化效果';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => '可视化颜色';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => '柱状';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => '镜像';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => '波形';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => '圆环';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => '添加可视化';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '密度';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '更少';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '更多';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '反应';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '平缓';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '活跃';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => '柱宽';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '细';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '宽';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => '示例节拍';
 
   @override
   String get videoEditorSaveDraftTitle => '保存草稿？';
@@ -10853,6 +10964,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoMetadataTagsPickerNoResults => '没有匹配的标签';
 
   @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '话题标签最多 $max 个字符。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '最多可以添加 $max 个话题标签。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count/$max 个字符',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '添加“#$tag”';
   }
@@ -10874,6 +11015,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => '按住开始录制，松开停止';
+
+  @override
+  String get settingsBackUpRecordings => '将录制内容备份到相册';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      '为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。';
 
   @override
   String uploadPublishedCountMessage(int count) {

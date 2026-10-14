@@ -13,6 +13,7 @@ import 'package:openvine/services/hold_to_record_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/nostr_signature_verification_preference_service.dart';
+import 'package:openvine/services/recording_gallery_backup_preference_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -56,6 +57,14 @@ final musicModePreferenceServiceProvider = Provider<MusicModePreferenceService>(
     return MusicModePreferenceService(prefs);
   },
 );
+
+/// Whether new camera recordings are backed up to the gallery (#10067).
+/// Non-autoDispose so the setting outlives the settings screen that wrote it.
+final recordingGalleryBackupPreferenceServiceProvider =
+    Provider<RecordingGalleryBackupPreferenceService>((ref) {
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return RecordingGalleryBackupPreferenceService(prefs);
+    });
 
 final nostrSignatureVerificationPreferenceServiceProvider =
     Provider<NostrSignatureVerificationPreferenceService>((ref) {

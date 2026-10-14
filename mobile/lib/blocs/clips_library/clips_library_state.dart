@@ -255,9 +255,6 @@ enum ClipsLibraryStatus {
   /// Deleting selected clips.
   deleting,
 
-  /// Saving to gallery.
-  savingToGallery,
-
   /// Loading the list of trashed clips.
   trashLoading,
 
@@ -266,45 +263,6 @@ enum ClipsLibraryStatus {
 
   /// An error occurred.
   error,
-}
-
-/// Result of a gallery save operation.
-sealed class GallerySaveResult extends Equatable {
-  const GallerySaveResult();
-
-  @override
-  List<Object?> get props => [];
-}
-
-/// Gallery save completed successfully.
-final class GallerySaveResultSuccess extends GallerySaveResult {
-  const GallerySaveResultSuccess({
-    required this.successCount,
-    required this.failureCount,
-  });
-
-  /// Number of clips saved successfully.
-  final int successCount;
-
-  /// Number of clips that failed to save.
-  final int failureCount;
-
-  @override
-  List<Object?> get props => [successCount, failureCount];
-}
-
-/// Gallery save failed due to permission denial.
-final class GallerySaveResultPermissionDenied extends GallerySaveResult {
-  const GallerySaveResultPermissionDenied();
-}
-
-/// Gallery save failed for an unexpected reason.
-///
-/// Carries no message: `state_management.md` forbids error strings in state,
-/// and the UI renders localized copy for this case. The underlying exception
-/// reaches diagnostics through `addError` in the bloc.
-final class GallerySaveResultError extends GallerySaveResult {
-  const GallerySaveResultError();
 }
 
 /// State for the clips library.
@@ -322,7 +280,6 @@ final class ClipsLibraryState extends Equatable {
     this.gridColumnCount = ClipGridColumns.initial,
     this.isLibrarySelectionMode = false,
     this.didAutoOpenSelectionMode = false,
-    this.lastGallerySaveResult,
     this.lastDeletedCount,
     this.lastDeletedClipIds = const {},
     this.categories = const [],
@@ -378,9 +335,6 @@ final class ClipsLibraryState extends Equatable {
   /// is opened in clips-only mode and the first selection arrives.
   final bool didAutoOpenSelectionMode;
 
-  /// Result of the last gallery save operation (for UI feedback).
-  final GallerySaveResult? lastGallerySaveResult;
-
   /// Number of clips deleted in the last delete operation (for UI feedback).
   final int? lastDeletedCount;
 
@@ -435,9 +389,6 @@ final class ClipsLibraryState extends Equatable {
   /// Whether a delete operation is in progress.
   bool get isDeleting => status == ClipsLibraryStatus.deleting;
 
-  /// Whether a gallery save is in progress.
-  bool get isSavingToGallery => status == ClipsLibraryStatus.savingToGallery;
-
   /// The selected clips the active [filter] actually shows.
   ///
   /// A selection survives switching between the active filters so a timeline
@@ -455,6 +406,15 @@ final class ClipsLibraryState extends Equatable {
   List<DivineVideoClip> get selectedClips {
     final clipsById = {for (final c in clips) c.id: c};
     return [for (final id in selectedClipIds) ?clipsById[id]];
+  }
+
+  /// The clips of [visibleSelectedClipIds], in selection order.
+  List<DivineVideoClip> get visibleSelectedClips {
+    final visible = visibleSelectedClipIds;
+    return [
+      for (final clip in selectedClips)
+        if (visible.contains(clip.id)) clip,
+    ];
   }
 
   /// Type the rest of the selection has to match: `true` when stop-motion
@@ -499,7 +459,6 @@ final class ClipsLibraryState extends Equatable {
     int? gridColumnCount,
     bool? isLibrarySelectionMode,
     bool? didAutoOpenSelectionMode,
-    GallerySaveResult? lastGallerySaveResult,
     int? lastDeletedCount,
     Set<String>? lastDeletedClipIds,
     List<ClipCategory>? categories,
@@ -508,7 +467,6 @@ final class ClipsLibraryState extends Equatable {
     ClipsLibraryDragSelection? dragSelection,
     bool clearDragSelection = false,
     bool clearOrganizeResult = false,
-    bool clearGallerySaveResult = false,
     bool clearDeletedCount = false,
     bool clearDeletedClipIds = false,
   }) {
@@ -527,9 +485,6 @@ final class ClipsLibraryState extends Equatable {
           isLibrarySelectionMode ?? this.isLibrarySelectionMode,
       didAutoOpenSelectionMode:
           didAutoOpenSelectionMode ?? this.didAutoOpenSelectionMode,
-      lastGallerySaveResult: clearGallerySaveResult
-          ? null
-          : (lastGallerySaveResult ?? this.lastGallerySaveResult),
       lastDeletedCount: clearDeletedCount
           ? null
           : (lastDeletedCount ?? this.lastDeletedCount),
@@ -562,7 +517,6 @@ final class ClipsLibraryState extends Equatable {
     gridColumnCount,
     isLibrarySelectionMode,
     didAutoOpenSelectionMode,
-    lastGallerySaveResult,
     lastDeletedCount,
     lastDeletedClipIds,
     categories,

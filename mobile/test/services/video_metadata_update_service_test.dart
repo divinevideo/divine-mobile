@@ -767,6 +767,31 @@ void main() {
         },
       );
 
+      test('drops an over-long hashtag when the video is edited', () async {
+        final pastedList = 'VineHashtagsMasterList' * 10;
+        final video = _testVideo(
+          extraTags: [
+            ['t', pastedList],
+          ],
+        );
+
+        final result = await service.updateVideo(
+          originalVideo: video,
+          editorState: VideoEditorProviderState(
+            tags: {pastedList, 'FunnyDivines'},
+          ),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(
+          capturedTags.where((tag) => tag.first == 't'),
+          equals([
+            ['t', 'funnydivines'],
+          ]),
+        );
+      });
+
       test('allows the user to clear hashtags from a complete event', () async {
         final video = _testVideo(
           extraTags: const [

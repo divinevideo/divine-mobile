@@ -2,6 +2,7 @@
 // ABOUTME: finished timeline track, and decides whether it is needed at all
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show Size;
 
 import 'package:models/models.dart' as model show AspectRatio;
@@ -99,6 +100,9 @@ class DetachedClipRenderPass {
   /// the canvas are baked on top as image layers, so a caption written over a
   /// detached clip stays over it.
   ///
+  /// Audio visualizers above the clips are drawn from [audioEnergies]; see
+  /// [VideoEditorRenderService.buildImageLayers].
+  ///
   /// Returns [basePath] unchanged when there is nothing to composite.
   Future<String> composite({
     required List<DivineVideoClip> clips,
@@ -107,6 +111,7 @@ class DetachedClipRenderPass {
     required String taskId,
     required List<String> tempFilePaths,
     required Duration? maxOutputDuration,
+    Float32List? audioEnergies,
   }) async {
     if (!isActive) return basePath;
 
@@ -168,6 +173,7 @@ class DetachedClipRenderPass {
         // with only the kind marker left here is the deliberately rescued
         // raster fallback for unreadable media and must stay visible.
         excludeDetachedClips: false,
+        audioEnergies: audioEnergies,
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

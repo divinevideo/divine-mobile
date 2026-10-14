@@ -28,6 +28,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/share_position_origin.dart';
@@ -205,11 +206,16 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
     // the same id `sendMessage` persists under. Passing the raw peer pubkey
     // here opened a thread whose id matched no stored row, so history never
     // rendered and messages sent from this screen never appeared in it.
-    context.push(
-      ConversationPage.pathForId(
-        DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
+    runDetached(
+      context.push<void>(
+        ConversationPage.pathForId(
+          DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
+        ),
+        extra: [widget.pubkey],
       ),
-      extra: [widget.pubkey],
+      'open direct message from profile',
+      logName: 'OtherProfileView',
+      category: LogCategory.ui,
     );
   }
 
@@ -383,7 +389,23 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
         profile?.bestDisplayName ?? widget.displayNameHint ?? fallbackName;
 
     final followRepository = ref.read(followRepositoryProvider);
-    await followRepository.toggleFollow(widget.pubkey);
+    try {
+      // The user chose Unfollow; don't decide again from a follow list that
+      // can change while the sheet is open (#6903).
+      await followRepository.unfollow(widget.pubkey);
+    } on Exception {
+      // FollowRepository has already logged the failure and left the follow
+      // in place; the user only needs to know the unfollow didn't happen.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.followersUpdateFollowFailed,
+            error: true,
+          ),
+        );
+      }
+      return;
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

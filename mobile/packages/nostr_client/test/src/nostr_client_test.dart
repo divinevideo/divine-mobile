@@ -1130,6 +1130,154 @@ void main() {
         );
       });
 
+      test('gives a reconnect that never finishes its share of the timeout, '
+          'no more and no less', () {
+        fakeAsync((async) {
+          final event = _createTestEvent();
+          when(() => mockRelayManager.connectedRelays).thenReturn([]);
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => Completer<void>().future);
+
+          PublishOutcome? outcome;
+          unawaited(
+            client
+                .publishEventAwaitOk(
+                  event,
+                  timeout: const Duration(seconds: 10),
+                )
+                .then((value) => outcome = value),
+          );
+          // One settle window stays back for a send that never comes.
+          final reconnectShare =
+              const Duration(seconds: 10) - PublishTracker.defaultSettleWindow;
+
+          async.elapse(reconnectShare - const Duration(milliseconds: 1));
+          expect(outcome, isNull, reason: 'gave up on the reconnect early');
+
+          async.elapse(const Duration(milliseconds: 1));
+          expect(
+            outcome,
+            isNotNull,
+            reason: 'the reconnect ran past its share of the 10s timeout',
+          );
+          expect(outcome!.failed, isTrue);
+          expect(outcome!.eventId, equals(event.id));
+          verifyNever(
+            () => mockNostr.sendEventAwaitOk(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
+        });
+      });
+
+      test('hands the send only what the reconnect left of the timeout', () {
+        fakeAsync((async) {
+          final event = _createTestEvent();
+          var connected = false;
+          when(() => mockRelayManager.connectedRelays).thenAnswer(
+            (_) => connected ? ['wss://relay.test'] : <String>[],
+          );
+          when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(seconds: 4));
+            connected = true;
+          });
+          when(
+            () => mockNostr.sendEventAwaitOk(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => accepted(event.id));
+
+          unawaited(
+            client.publishEventAwaitOk(
+              event,
+              timeout: const Duration(seconds: 10),
+            ),
+          );
+          async.elapse(const Duration(seconds: 4));
+
+          verify(
+            () => mockNostr.sendEventAwaitOk(
+              event,
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: const Duration(seconds: 6),
+            ),
+          ).called(1);
+        });
+      });
+
+      test('keeps a settle window for the send when the reconnect runs out '
+          'the clock with a relay up', () {
+        fakeAsync((async) {
+          final event = _createTestEvent();
+          var connected = false;
+          when(() => mockRelayManager.connectedRelays).thenAnswer(
+            (_) => connected ? ['wss://relay.test'] : <String>[],
+          );
+          // One relay comes up; the others are still dialling when time is up.
+          when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(seconds: 2));
+            connected = true;
+            await Completer<void>().future;
+          });
+          when(
+            () => mockNostr.sendEventAwaitOk(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => accepted(event.id));
+
+          unawaited(
+            client.publishEventAwaitOk(
+              event,
+              timeout: const Duration(seconds: 10),
+            ),
+          );
+          async.elapse(const Duration(seconds: 10));
+
+          verify(
+            () => mockNostr.sendEventAwaitOk(
+              event,
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: PublishTracker.defaultSettleWindow,
+            ),
+          ).called(1);
+        });
+      });
+
+      test('does not wait on a reconnect when given no time', () {
+        fakeAsync((async) {
+          final event = _createTestEvent();
+          when(() => mockRelayManager.connectedRelays).thenReturn([]);
+          when(
+            mockRelayManager.retryDisconnectedRelays,
+          ).thenAnswer((_) => Completer<void>().future);
+
+          PublishOutcome? outcome;
+          unawaited(
+            client
+                .publishEventAwaitOk(event, timeout: Duration.zero)
+                .then((value) => outcome = value),
+          );
+          async
+            ..flushMicrotasks()
+            ..elapse(Duration.zero);
+
+          expect(outcome, isNotNull);
+          expect(outcome!.failed, isTrue);
+        });
+      });
+
       test('attempts explicit target relays without retrying disconnected pool '
           'relays', () async {
         final event = _createTestEvent();
