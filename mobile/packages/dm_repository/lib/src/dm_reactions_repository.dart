@@ -718,7 +718,7 @@ class DmReactionsRepository {
             );
         }
       } finally {
-        // After the status write: the chip reports the recipients.
+        // After the outcome is recorded, so the copy cannot delay or change it.
         await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
@@ -876,7 +876,7 @@ class DmReactionsRepository {
             );
         }
       } finally {
-        // After the status write: the chip reports the recipients.
+        // After the outcome is recorded, so the copy cannot delay or change it.
         await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
@@ -1170,7 +1170,7 @@ class DmReactionsRepository {
             return DmReactionDeletionOutcome.unconfirmed;
         }
       } finally {
-        // After the status write: the chip reports the recipients.
+        // After the outcome is recorded, so the copy cannot delay or change it.
         await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
@@ -1222,7 +1222,7 @@ class DmReactionsRepository {
             return DmReactionDeletionOutcome.unconfirmed;
         }
       } finally {
-        // After the status write: the chip reports the recipients.
+        // After the outcome is recorded, so the copy cannot delay or change it.
         await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
@@ -1874,7 +1874,9 @@ class DmReactionsRepository {
   /// recipients are what the result reports. So it is not published here:
   /// the caller records the result first and then awaits
   /// `publishOwnCopy`, and the chip does not wait on a relay the recipient
-  /// never needed.
+  /// never needed. The caller's own call still waits for the copy, up to
+  /// [_publishTimeout]. A copy handed over only after this returns, by a send
+  /// that outlived its cap, is published detached.
   ///
   /// A group reaction persists as one row that can't track per-recipient
   /// delivery, so a partial fan-out (one member confirmed, another timed

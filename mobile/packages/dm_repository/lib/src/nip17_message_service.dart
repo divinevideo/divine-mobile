@@ -1161,9 +1161,8 @@ class NIP17MessageService {
   ///
   /// When [prebuiltSelfWrap] is non-null (supplied by [_buildBothWraps] on a
   /// batch path, directly or through [publishSelfWrap]), the build step is
-  /// skipped and the prebuilt
-  /// event is published directly. Otherwise the wrap is built via
-  /// [_buildWrap] on the main isolate.
+  /// skipped and the prebuilt event is published directly. Otherwise the
+  /// wrap is built via [_buildWrap] on the main isolate.
   ///
   /// Catches every error — used by both the happy-path send (where the
   /// recipient has already received the message and an exception must
