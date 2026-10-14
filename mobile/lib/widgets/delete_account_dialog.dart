@@ -15,6 +15,7 @@ import 'package:openvine/repositories/account_deletion_recovery_repository.dart'
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -484,7 +485,12 @@ Future<void> executeAccountDeletion({
   // Speak each delete outcome so screen-reader users hear the result the
   // snackbar shows visually. Mirrors the snackbar text at every outcome site.
   void announceOutcome(String message) {
-    SemanticsService.sendAnnouncement(view, message, textDirection);
+    runDetached(
+      SemanticsService.sendAnnouncement(view, message, textDirection),
+      'announce account deletion outcome',
+      logName: screenName,
+      category: LogCategory.auth,
+    );
   }
 
   // Captured before the first await so the post-sign-out catch can localize
@@ -581,7 +587,11 @@ Future<void> executeAccountDeletion({
     );
     dismissProgressSheet();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Resolved while the context is live: the action can fire up to 12
+    // seconds later, after the caller route has left the tree.
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.maybeOf(context);
+    messenger.showSnackBar(
       DivineSnackbarContainer.snackBar(
         message,
         error: true,
@@ -589,8 +599,14 @@ Future<void> executeAccountDeletion({
         actionLabel: offerSupport ? reportBugText : null,
         onActionPressed: offerSupport
             ? () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                context.push(RoutePaths.supportReportBug);
+                messenger.hideCurrentSnackBar();
+                if (router == null) return;
+                runDetached(
+                  router.push<void>(RoutePaths.supportReportBug),
+                  'open support report from account deletion snackbar',
+                  logName: screenName,
+                  category: LogCategory.auth,
+                );
               }
             : null,
       ),

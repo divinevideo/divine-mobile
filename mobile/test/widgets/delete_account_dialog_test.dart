@@ -11,10 +11,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart'
     as dialog_api
@@ -23,6 +26,8 @@ import 'package:openvine/widgets/delete_account_dialog.dart'
     hide executeAccountDeletion;
 import 'package:profile_repository/profile_repository.dart';
 
+import '../helpers/go_router.dart';
+
 class _MockAccountDeletionService extends Mock
     implements AccountDeletionService {}
 
@@ -30,6 +35,49 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockAccountDeletionRecoveryRepository extends Mock
     implements AccountDeletionRecoveryRepository {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    reports.add((error: error, reason: reason));
+  }
+}
+
+/// Routes reportable detached failures to a recorder for this test only.
+_RecordingCrashReporter _recordDetachedFailures() {
+  final original = detachedFailureReporter;
+  final reporter = _RecordingCrashReporter();
+  detachedFailureReporter = reporter;
+  addTearDown(() => detachedFailureReporter = original);
+  return reporter;
+}
+
+/// Asserts a StateError reached the reporter through `runDetached`, which is
+/// what proves the failure was supervised rather than dropped.
+void _expectDetachedStateErrorReported(_RecordingCrashReporter reporter) {
+  final report = reporter.reports.single;
+  expect(report.reason, equals('runDetached AccountDeletion'));
+  expect(
+    report.error,
+    isA<Reportable<Object>>().having(
+      (r) => r.unwrap(),
+      'unwrap',
+      isA<StateError>(),
+    ),
+  );
+}
 
 const _recoverableAttempt = AccountDeletionAttempt(
   id: 'attempt-id',
@@ -59,6 +107,13 @@ const _cancelledStaleAttempt = AccountDeletionAttempt(
 
 const _pubkeyHex =
     '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+
+const _missingCoordinatorRoute = AccountDeletionRecoveryException(
+  'Deletion attempt request failed (404)',
+  stage: AccountDeletionRecoveryStage.coordinatorAttempt,
+  statusCode: 404,
+  indicatesMissingCoordinatorRoute: true,
+);
 
 _MockAccountDeletionRecoveryRepository _successfulRecoveryRepository() {
   final repository = _MockAccountDeletionRecoveryRepository();
@@ -252,7 +307,13 @@ void _stubSuccessfulDeletion(
 }
 
 /// Collects what the deletion flow hands to screen readers.
-List<Object?> _captureAnnouncements(WidgetTester tester) {
+///
+/// With [rejectWith] set, the platform rejects every message with it, so the
+/// list holds what was attempted rather than what was delivered.
+List<Object?> _captureAnnouncements(
+  WidgetTester tester, {
+  Object? rejectWith,
+}) {
   final announced = <Object?>[];
   tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
     SystemChannels.accessibility,
@@ -260,6 +321,7 @@ List<Object?> _captureAnnouncements(WidgetTester tester) {
       if (message is Map && message['type'] == 'announce') {
         announced.add((message['data'] as Map?)?['message']);
       }
+      if (rejectWith != null) throw rejectWith;
       return null;
     },
   );
@@ -1494,14 +1556,7 @@ void main() {
       when(
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
-      when(recoveryRepository.prepare).thenThrow(
-        const AccountDeletionRecoveryException(
-          'Deletion attempt request failed (404)',
-          stage: AccountDeletionRecoveryStage.coordinatorAttempt,
-          statusCode: 404,
-          indicatesMissingCoordinatorRoute: true,
-        ),
-      );
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
 
       late BuildContext capturedContext;
       await tester.pumpWidget(
@@ -1539,6 +1594,163 @@ void main() {
       expect(find.text('Bug report form'), findsOneWidget);
     });
 
+    testWidgets('Report a bug opens the form after the caller route closed', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+
+      late BuildContext callerContext;
+      final router = GoRouter(
+        initialLocation: '/caller',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(body: SizedBox.shrink()),
+            routes: [
+              GoRoute(
+                path: 'caller',
+                builder: (_, _) => Builder(
+                  builder: (context) {
+                    callerContext = context;
+                    return const Scaffold(body: Text(_callerScreenMarker));
+                  },
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.supportReportBug,
+            builder: (_, _) => const Scaffold(body: Text('Bug report form')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+
+      await runDeletion(
+        context: callerContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+
+      // The snackbar outlives the route that showed it: back out of the
+      // caller while it is still on screen.
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text(_callerScreenMarker), findsNothing);
+      expect(callerContext.mounted, isFalse);
+
+      final l10n = _englishL10n();
+      await tester.tap(find.text(l10n.supportReportBug));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Bug report form'), findsOneWidget);
+    });
+
+    testWidgets('a rejected support-report push is reported, not left '
+        'unhandled', (tester) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+      final reporter = _recordDetachedFailures();
+      final goRouter = MockGoRouter();
+      when(
+        () => goRouter.push<void>(RoutePaths.supportReportBug),
+      ).thenAnswer((_) => Future<void>.error(StateError('push failed')));
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        MockGoRouterProvider(
+          goRouter: goRouter,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return const Scaffold(body: SizedBox.shrink());
+              },
+            ),
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_englishL10n().supportReportBug));
+      await tester.pumpAndSettle();
+
+      verify(() => goRouter.push<void>(RoutePaths.supportReportBug)).called(1);
+      expect(tester.takeException(), isNull);
+      _expectDetachedStateErrorReported(reporter);
+    });
+
+    testWidgets('a rejected screen-reader announcement is reported, not '
+        'left unhandled', (tester) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+      final reporter = _recordDetachedFailures();
+      final rejected = _captureAnnouncements(
+        tester,
+        rejectWith: StateError('announce failed'),
+      );
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+
+      final unavailableText = _englishL10n().deleteAccountDeletionUnavailable;
+      expect(rejected, contains(unavailableText));
+      expect(tester.takeException(), isNull);
+      expect(find.text(unavailableText), findsOneWidget);
+      _expectDetachedStateErrorReported(reporter);
+    });
+
     testWidgets(
       'a missing coordinator route shows unavailable even when a name is owned',
       (tester) async {
@@ -1548,14 +1760,8 @@ void main() {
         when(
           authService.checkAccountDeletionReadiness,
         ).thenAnswer((_) async => AccountDeletionReadiness.ready);
-        when(() => recoveryRepository.prepare(username: 'alice')).thenThrow(
-          const AccountDeletionRecoveryException(
-            'Deletion attempt request failed (404)',
-            stage: AccountDeletionRecoveryStage.coordinatorAttempt,
-            statusCode: 404,
-            indicatesMissingCoordinatorRoute: true,
-          ),
-        );
+        when(() => recoveryRepository.prepare(username: 'alice'))
+            .thenThrow(_missingCoordinatorRoute);
 
         late BuildContext capturedContext;
         await tester.pumpWidget(
