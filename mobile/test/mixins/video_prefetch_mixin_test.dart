@@ -240,7 +240,7 @@ void main() {
       });
     });
 
-    test('SPEC: should handle prefetch errors gracefully', () {
+    test('SPEC: should contain asynchronous prefetch errors', () {
       final videos = _createMockVideos(5);
 
       when(
@@ -249,11 +249,30 @@ void main() {
           batchSize: any(named: 'batchSize'),
           authHeadersProvider: any(named: 'authHeadersProvider'),
         ),
-      ).thenThrow(Exception('Network error'));
+      ).thenAnswer((_) async => throw Exception('Network error'));
 
       final mixin = TestVideoPrefetchMixin(mockCache);
 
       // Should not throw
+      expect(
+        () => mixin.checkForPrefetch(currentIndex: 2, videos: videos),
+        returnsNormally,
+      );
+    });
+
+    test('SPEC: should contain synchronous prefetch errors', () {
+      final videos = _createMockVideos(10);
+
+      when(
+        () => mockCache.preCacheFiles(
+          any(),
+          batchSize: any(named: 'batchSize'),
+          authHeadersProvider: any(named: 'authHeadersProvider'),
+        ),
+      ).thenThrow(Exception('Synchronous cache error'));
+
+      final mixin = TestVideoPrefetchMixin(mockCache);
+
       expect(
         () => mixin.checkForPrefetch(currentIndex: 2, videos: videos),
         returnsNormally,
