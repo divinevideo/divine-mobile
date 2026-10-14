@@ -4,6 +4,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/mixins/grid_prefetch_mixin.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
+import 'package:openvine/services/openvine_media_cache.dart';
 
 class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
@@ -48,8 +50,12 @@ List<VideoEvent> _createMockVideos(int count) {
 void main() {
   late _MockMediaCacheManager mockCache;
   late _MockFeatureFlagService mockFeatureFlagService;
+  bool? previousInfiniteVideoFeedSupportOverride;
 
   setUp(() {
+    previousInfiniteVideoFeedSupportOverride =
+        InfiniteVideoFeed.debugIsSupportedOverride;
+    InfiniteVideoFeed.debugIsSupportedOverride = false;
     mockCache = _MockMediaCacheManager();
     when(
       () => mockCache.preCacheFiles(
@@ -69,12 +75,18 @@ void main() {
     );
   });
 
+  tearDown(() {
+    InfiniteVideoFeed.debugIsSupportedOverride =
+        previousInfiniteVideoFeedSupportOverride;
+  });
+
   group(GridPrefetchMixin, () {
     group('prefetchGridVideos', () {
       testWidgets('prefetches up to gridPrefetchLimit videos', (tester) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              mediaCacheProvider.overrideWithValue(mockCache),
               featureFlagServiceProvider.overrideWithValue(
                 mockFeatureFlagService,
               ),
@@ -86,22 +98,24 @@ void main() {
 
         final videos = _createMockVideos(20);
 
-        // We can't easily swap the singleton, so just verify the method
-        // doesn't throw and the logic is correct by testing the pure
-        // behavior.
-        // The method accesses openVineMediaCache directly (singleton),
-        // so we validate the data preparation logic separately.
         expect(AppConstants.gridPrefetchLimit, equals(9));
         expect(videos.length, greaterThan(AppConstants.gridPrefetchLimit));
 
-        // Verify the method doesn't throw
         state.prefetchGridVideos(videos);
+        verify(
+          () => mockCache.preCacheFiles(
+            any(),
+            batchSize: any(named: 'batchSize'),
+            authHeadersProvider: any(named: 'authHeadersProvider'),
+          ),
+        ).called(1);
       });
 
       testWidgets('handles empty video list', (tester) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              mediaCacheProvider.overrideWithValue(mockCache),
               featureFlagServiceProvider.overrideWithValue(
                 mockFeatureFlagService,
               ),
@@ -148,6 +162,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              mediaCacheProvider.overrideWithValue(mockCache),
               featureFlagServiceProvider.overrideWithValue(
                 mockFeatureFlagService,
               ),
@@ -161,6 +176,13 @@ void main() {
 
         // Should not throw
         state.prefetchAroundIndex(5, videos);
+        verify(
+          () => mockCache.preCacheFiles(
+            any(),
+            batchSize: any(named: 'batchSize'),
+            authHeadersProvider: any(named: 'authHeadersProvider'),
+          ),
+        ).called(1);
       });
 
       testWidgets('handles index at start of list', (tester) async {
@@ -220,6 +242,46 @@ void main() {
         state.prefetchAroundIndex(0, videos);
         state.prefetchAroundIndex(1, videos);
       });
+    });
+
+    testWidgets('contains failures from both prefetch entry points', (
+      tester,
+    ) async {
+      when(
+        () => mockCache.preCacheFiles(
+          any(),
+          batchSize: any(named: 'batchSize'),
+          authHeadersProvider: any(named: 'authHeadersProvider'),
+        ),
+      ).thenAnswer((_) async => throw StateError('prefetch failed'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mediaCacheProvider.overrideWithValue(mockCache),
+            featureFlagServiceProvider.overrideWithValue(
+              mockFeatureFlagService,
+            ),
+          ],
+          child: const _TestWidget(),
+        ),
+      );
+      final state = tester.state<_TestWidgetState>(find.byType(_TestWidget));
+      final videos = _createMockVideos(10);
+
+      state
+        ..prefetchGridVideos(videos)
+        ..prefetchAroundIndex(5, videos);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      verify(
+        () => mockCache.preCacheFiles(
+          any(),
+          batchSize: any(named: 'batchSize'),
+          authHeadersProvider: any(named: 'authHeadersProvider'),
+        ),
+      ).called(2);
     });
 
     group('bandwidth gating', () {
