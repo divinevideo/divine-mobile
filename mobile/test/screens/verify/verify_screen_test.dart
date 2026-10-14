@@ -277,6 +277,7 @@ void main() {
     }
 
     testWidgets('unlinks the tapped account once confirmed', (tester) async {
+      when(() => cubit.isClosed).thenReturn(false);
       await pump(tester, ready());
 
       await tapUnlink(tester, 'jack');
@@ -302,6 +303,21 @@ void main() {
 
       verifyNever(() => cubit.removeClaim(any()));
       expect(find.text('jack'), findsOne);
+    });
+
+    testWidgets('drops the unlink when the cubit closed behind the prompt', (
+      tester,
+    ) async {
+      await pump(tester, ready());
+
+      await tapUnlink(tester, 'jack');
+      // The prompt lives on the navigator, so an identity change can close the
+      // cubit and leave the prompt open. Unlinking on it throws.
+      when(() => cubit.isClosed).thenReturn(true);
+      await tester.tap(find.text(l10n.verifyUnlinkConfirmCta));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => cubit.removeClaim(any()));
     });
 
     /// Drives the state change the error listener reacts to.

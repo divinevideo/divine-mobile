@@ -290,7 +290,8 @@ class _VerifyContent extends StatelessWidget {
       secondaryButtonText: l10n.commonCancel,
       onSecondaryPressed: () => navigator.pop(false),
     );
-    if (confirmed != true) return;
+    // The prompt outlives a cubit that an identity change closed under it.
+    if (confirmed != true || cubit.isClosed) return;
     await cubit.removeClaim(claim);
   }
 
