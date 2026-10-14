@@ -72,6 +72,30 @@ void main() {
       expect(disposed, isTrue);
     });
 
+    test(
+      'dispose closes outgoing while a paused listener holds incoming open',
+      () async {
+        final transport = InMemoryNostrTransport();
+
+        final subscription = transport.incoming.listen(null)..pause();
+        addTearDown(subscription.cancel);
+
+        var outgoingClosed = false;
+        transport.outgoingFromClient.listen(
+          null,
+          onDone: () => outgoingClosed = true,
+        );
+
+        final disposal = transport.dispose();
+        await pumpEventQueue();
+
+        expect(outgoingClosed, isTrue);
+
+        subscription.resume();
+        await disposal;
+      },
+    );
+
     test('dispose can be called more than once', () async {
       final transport = InMemoryNostrTransport();
 
