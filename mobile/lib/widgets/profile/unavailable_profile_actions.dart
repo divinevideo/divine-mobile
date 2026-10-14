@@ -73,8 +73,8 @@ class UnavailableProfileActions extends ConsumerWidget {
           NostrKeyUtils.encodePubKey(userIdHex),
         );
       case MoreSheetResult.unfollow:
-        // `unfollow`, never `toggleFollow`: on a follow list that has not
-        // loaded, toggle would *follow* the account instead (#6903).
+        // The user chose Unfollow; deciding again from a follow list that has
+        // not loaded would *follow* the account instead (#6903).
         await _runWithReceipt(
           context,
           successMessage: context.l10n.profileUnfollowedUser(

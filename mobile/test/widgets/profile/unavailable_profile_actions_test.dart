@@ -65,7 +65,7 @@ void main() {
     }
 
     testWidgets(
-      'unfollow calls unfollow, not toggleFollow, and reports success',
+      'unfollow calls unfollow, never follow, and reports success',
       (tester) async {
         when(
           () => followRepository.unfollow(_userIdHex),
@@ -82,7 +82,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(() => followRepository.unfollow(_userIdHex)).called(1);
-        verifyNever(() => followRepository.toggleFollow(_userIdHex));
+        verifyNever(() => followRepository.follow(any()));
         expect(
           find.text(l10n.profileUnfollowedUser(l10n.profileUserFallback)),
           findsOneWidget,
