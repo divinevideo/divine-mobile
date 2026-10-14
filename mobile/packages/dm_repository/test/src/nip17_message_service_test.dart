@@ -607,7 +607,14 @@ void main() {
               event: invocation.positionalArguments[0] as Event,
             );
           });
+          when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
         });
+
+        /// The message of the `Self-wrap published` line this send logged.
+        String publishedLine() => LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .lastWhere((message) => message.startsWith('Self-wrap published'));
 
         Future<NIP17SendResult> send({List<String>? selfWrapTargetRelays}) {
           final rumor = selfService.buildRumor(
@@ -667,6 +674,57 @@ void main() {
           expect(captured, hasLength(2));
           expect(captured.last, isNull);
         });
+
+        test('logs a bare copy as requested from the default pool', () async {
+          await LogCaptureService().clearAllLogs();
+
+          final result = await send();
+
+          expect(result.selfWrapPublished, isTrue);
+          expect(publishedLine(), endsWith('requested=default pool)'));
+        });
+
+        test(
+          'logs only the requested relays this build may reach (#8446)',
+          () async {
+            // A frame-accept success names no relay, and the environment lock
+            // drops a refused relay before any socket opens, so naming it
+            // would report a copy on a relay that never saw it.
+            when(
+              () => mockNostrClient.isRelayAllowed('wss://nos.lol'),
+            ).thenReturn(false);
+            await LogCaptureService().clearAllLogs();
+
+            final result = await send(
+              selfWrapTargetRelays: const [
+                'wss://relay.divine.video',
+                'wss://nos.lol',
+              ],
+            );
+
+            expect(result.selfWrapPublished, isTrue);
+            expect(
+              publishedLine(),
+              endsWith('requested=wss://relay.divine.video)'),
+            );
+          },
+        );
+
+        test(
+          'logs the default pool when every requested relay is refused, '
+          'because that is where the copy goes (#8446)',
+          () async {
+            when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(false);
+            await LogCaptureService().clearAllLogs();
+
+            final result = await send(
+              selfWrapTargetRelays: const ['wss://nos.lol'],
+            );
+
+            expect(result.selfWrapPublished, isTrue);
+            expect(publishedLine(), endsWith('requested=default pool)'));
+          },
+        );
       });
     });
 
@@ -1004,6 +1062,126 @@ void main() {
           expect(result.retryablePending, isTrue);
         },
       );
+
+      group('onSelfWrapDue (one own copy per fan-out)', () {
+        Future<({NIP17SendResult result, int selfWraps, List<Event?> due})>
+        sendDeferring(
+          PublishOutcome recipient, {
+          NIP17MessageService? service,
+        }) async {
+          final sender = service ?? okService;
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => recipient);
+          var selfWrapPublishes = 0;
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            selfWrapPublishes++;
+            return PublishSuccess(event: inv.positionalArguments[0] as Event);
+          });
+          final rumor = sender.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+          );
+          final due = <Event?>[];
+          final result = await sender.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _recipientPubkey,
+            awaitRecipientOk: true,
+            onSelfWrapDue: due.add,
+          );
+          return (result: result, selfWraps: selfWrapPublishes, due: due);
+        }
+
+        test('a confirmed send hands the copy to the caller instead of '
+            'publishing it', () async {
+          final sent = await sendDeferring(
+            outcome(accepted: const ['wss://relay.example.com']),
+          );
+
+          expect(sent.result.success, isTrue);
+          expect(sent.due, hasLength(1));
+          expect(sent.selfWraps, 0);
+          expect(sent.result.selfWrapPublished, isFalse);
+        });
+
+        test('an unconfirmed send (frame written, no OK) still reports the '
+            'copy due', () async {
+          final sent = await sendDeferring(
+            outcome(noResponse: const ['wss://relay.example.com']),
+          );
+
+          expect(sent.result.retryablePending, isTrue);
+          expect(sent.due, hasLength(1));
+          expect(sent.selfWraps, 0);
+        });
+
+        test('a rejected send reports no copy due', () async {
+          final sent = await sendDeferring(
+            outcome(rejected: const {'wss://relay.example.com': 'blocked'}),
+          );
+
+          expect(sent.result.success, isFalse);
+          expect(sent.due, isEmpty);
+          expect(sent.selfWraps, 0);
+        });
+
+        test('hands over the copy built alongside the recipient wrap, '
+            'addressed to the sender', () async {
+          // Only a batch-capable signer builds the copy with the recipient
+          // wrap; for any other signer the handed-over copy is null and the
+          // caller builds it when it publishes.
+          final sent = await sendDeferring(
+            outcome(accepted: const ['wss://relay.example.com']),
+            service: NIP17MessageService(
+              signer: _LocalIsolateSigner(_testPrivateKey),
+              senderPublicKey: getPublicKey(_testPrivateKey),
+              nostrService: mockNostrClient,
+              isolateGiftWrapBatchBuilder: buildGiftWrapBatch,
+            ),
+          );
+
+          final copy = sent.due.single;
+          expect(copy, isNotNull);
+          expect(copy!.kind, equals(EventKind.giftWrap));
+          expect(
+            copy.tags,
+            contains(equals(['p', getPublicKey(_testPrivateKey)])),
+          );
+        });
+
+        test('a frame-accepted send hands the copy over too', () async {
+          final published = <Event>[];
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            final event = inv.positionalArguments[0] as Event;
+            published.add(event);
+            return PublishSuccess(event: event);
+          });
+          final rumor = okService.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: 'hi',
+          );
+          final due = <Event?>[];
+
+          final result = await okService.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _recipientPubkey,
+            onSelfWrapDue: due.add,
+          );
+
+          expect(result.success, isTrue);
+          expect(due, hasLength(1));
+          expect(published, hasLength(1));
+          expect(result.selfWrapPublished, isFalse);
+        });
+      });
     });
 
     group('publishSelfApplicationMarker (#4977)', () {
@@ -2018,6 +2196,76 @@ void main() {
               'doing so would double-deliver the message',
         );
         expect(captured.single.kind, equals(EventKind.giftWrap));
+      });
+
+      test('publishes a prebuilt copy as given instead of building '
+          'another', () async {
+        final captured = <Event>[];
+        when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments[0] as Event;
+          captured.add(event);
+          return PublishSuccess(event: event);
+        });
+        final rumor = realKeyService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'prebuilt copy',
+        );
+        final prebuilt = Event(
+          getPublicKey(_testPrivateKey),
+          EventKind.giftWrap,
+          [
+            ['p', getPublicKey(_testPrivateKey)],
+          ],
+          'already wrapped',
+        );
+
+        final result = await realKeyService.publishSelfWrap(
+          rumorEvent: rumor,
+          prebuiltSelfWrap: prebuilt,
+        );
+
+        expect(result.success, isTrue);
+        expect(captured, equals([prebuilt]));
+      });
+
+      test('builds its own copy rather than publish a prebuilt wrap that is '
+          'not addressed to the sender', () async {
+        final captured = <Event>[];
+        when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments[0] as Event;
+          captured.add(event);
+          return PublishSuccess(event: event);
+        });
+        final rumor = realKeyService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'not my copy',
+        );
+        final recipientWrap = Event(
+          getPublicKey(_testPrivateKey),
+          EventKind.giftWrap,
+          [
+            ['p', _recipientPubkey],
+          ],
+          'addressed to the recipient',
+        );
+
+        final result = await realKeyService.publishSelfWrap(
+          rumorEvent: rumor,
+          prebuiltSelfWrap: recipientWrap,
+        );
+
+        expect(result.success, isTrue);
+        final published = captured.single;
+        expect(published, isNot(same(recipientWrap)));
+        expect(published.kind, equals(EventKind.giftWrap));
+        expect(
+          published.tags,
+          contains(equals(['p', getPublicKey(_testPrivateKey)])),
+        );
       });
 
       test('returns failure when the self-wrap publish returns '

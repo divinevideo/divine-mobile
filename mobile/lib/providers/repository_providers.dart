@@ -915,9 +915,11 @@ DmRepository dmRepository(Ref ref) {
   //
   // The reaction retry provider also watches this provider explicitly, making
   // this wiring complete before its fire-immediately sweep can run.
-  reactionsRepository.setDmInboxRelayResolver(
-    repository.resolveDmInboxRelaysDetailed,
-  );
+  reactionsRepository
+    ..setDmInboxRelayResolver(repository.resolveDmInboxRelaysDetailed)
+    // The sender's own copy of a reaction goes where their message copies
+    // go: the pool UNION their own kind-10050 inbox (#8446).
+    ..setSelfWrapRelayResolver(repository.resolveSelfWrapTargetRelays);
 
   // Set credentials and open the gift-wrap subscription as soon as the
   // signer is ready. The subscription is auth-session-scoped (not inbox-

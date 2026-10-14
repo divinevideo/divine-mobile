@@ -145,6 +145,27 @@ class DmReactionRetryTarget {
 /// delivery.
 typedef DmInboxRelayResolver = Future<DmInboxLookup> Function(String pubkey);
 
+/// Resolves where [ownerPubkey]'s own gift-wrap copy of a reaction is
+/// published: the pool UNION the kind-10050 inbox that account advertises,
+/// the same set its message copies reach (#7328, #8446).
+///
+/// A function port for the same Riverpod-cycle reason as
+/// [DmInboxRelayResolver]. The answer does not depend on who the reaction is
+/// for, so it is resolved once per fan-out, not once per recipient. `null`
+/// keeps the plain pool publish: no inbox advertised or readable, or
+/// [ownerPubkey] is no longer the signed-in account. A resolver that throws is
+/// treated as `null`, so the copy still goes to the pool.
+typedef DmSelfWrapRelayResolver =
+    Future<List<String>?> Function(String ownerPubkey);
+
+/// What `DmReactionsRepository._fanOutRumor` reports: the recipients'
+/// `result`, and the sender's own copy, which the caller publishes once it
+/// has recorded that result (#8446).
+typedef _FanOut = ({
+  NIP17SendResult result,
+  Future<void> Function() publishOwnCopy,
+});
+
 /// Repository for DM emoji reactions.
 ///
 /// Public surface:
@@ -240,6 +261,10 @@ class DmReactionsRepository {
   @visibleForTesting
   bool get hasDmInboxRelayResolver => _resolveDmInboxRelays != null;
 
+  /// Whether the sender's own copy routing has been wired by the app layer.
+  @visibleForTesting
+  bool get hasSelfWrapRelayResolver => _resolveSelfWrapRelays != null;
+
   /// Set the credentials needed for outgoing publishes.
   void setCredentials({
     required String userPubkey,
@@ -276,6 +301,19 @@ class DmReactionsRepository {
   // ignore: use_setters_to_change_properties
   void setDmInboxRelayResolver(DmInboxRelayResolver? resolver) {
     _resolveDmInboxRelays = resolver;
+  }
+
+  /// Resolves where the sender's own copy of a reaction is published. Null
+  /// until wired: the copy then goes to the plain pool, the pre-#8446
+  /// behaviour.
+  DmSelfWrapRelayResolver? _resolveSelfWrapRelays;
+
+  /// Wire the sender's own copy targets, injected beside
+  /// [setDmInboxRelayResolver] and for the same reasons.
+  // A method rather than a setter, as [setDmInboxRelayResolver] explains.
+  // ignore: use_setters_to_change_properties
+  void setSelfWrapRelayResolver(DmSelfWrapRelayResolver? resolver) {
+    _resolveSelfWrapRelays = resolver;
   }
 
   /// Drop every reaction row this account holds for [conversationIds].
@@ -611,68 +649,77 @@ class DmReactionsRepository {
 
     final inboxByRecipient = await inboxes;
     try {
-      final result = await _fanOutRumor(
+      final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: rumor,
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
       );
-      switch (result) {
-        case NIP17SendSuccess():
-          try {
-            await _reactionsDao.swapPlaceholderId(
-              placeholderId: rumorId,
-              realRumorId: rumorId,
-              ownerPubkey: ownerPubkey,
+      try {
+        switch (fanOut.result) {
+          case NIP17SendSuccess():
+            try {
+              await _reactionsDao.swapPlaceholderId(
+                placeholderId: rumorId,
+                realRumorId: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+            } on Object catch (e, st) {
+              _errorReporter?.call(
+                e,
+                st,
+                site:
+                    DmReactionsRepositoryReportableSites.publishSwapPlaceholder,
+              );
+            }
+            return DmReactionPublishResult(
+              success: true,
+              rumorId: rumorId,
+              optimisticInsertSucceeded: true,
             );
-          } on Object catch (e, st) {
-            _errorReporter?.call(
-              e,
-              st,
-              site: DmReactionsRepositoryReportableSites.publishSwapPlaceholder,
+          case NIP17SendFailure(
+            :final error,
+            :final retryablePending,
+            :final blocked,
+          ):
+            // Policy-blocked (#176): terminal and non-retryable — retrying
+            // only re-hits the same policy. Mark 'blocked' so the sweep and a
+            // chip re-tap both leave it alone (unlike 'failed', which they
+            // re-drive).
+            if (blocked) {
+              await _reactionsDao.markBlocked(
+                id: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+            } else if (retryablePending) {
+              // Unconfirmed (frame written, no relay OK): keep the row
+              // 'pending' so it stays a dim, sweep-retryable chip — a lost OK
+              // is not proof of loss. Only a confirmed rejection/error flips
+              // it to 'failed'.
+              await _reactionsDao.markPending(
+                id: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+              _notifyRetryableWork();
+            } else {
+              await _reactionsDao.markFailed(
+                placeholderId: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+              _notifyRetryableWork();
+            }
+            return DmReactionPublishResult(
+              success: false,
+              rumorId: rumorId,
+              errorMessage: error,
+              optimisticInsertSucceeded: true,
             );
-          }
-          return DmReactionPublishResult(
-            success: true,
-            rumorId: rumorId,
-            optimisticInsertSucceeded: true,
-          );
-        case NIP17SendFailure(
-          :final error,
-          :final retryablePending,
-          :final blocked,
-        ):
-          // Policy-blocked (#176): terminal and non-retryable — retrying only
-          // re-hits the same policy. Mark 'blocked' so the sweep and a chip
-          // re-tap both leave it alone (unlike 'failed', which they re-drive).
-          if (blocked) {
-            await _reactionsDao.markBlocked(
-              id: rumorId,
-              ownerPubkey: ownerPubkey,
-            );
-          } else if (retryablePending) {
-            // Unconfirmed (frame written, no relay OK): keep the row 'pending'
-            // so it stays a dim, sweep-retryable chip — a lost OK is not proof
-            // of loss. Only a confirmed rejection/error flips it to 'failed'.
-            await _reactionsDao.markPending(
-              id: rumorId,
-              ownerPubkey: ownerPubkey,
-            );
-            _notifyRetryableWork();
-          } else {
-            await _reactionsDao.markFailed(
-              placeholderId: rumorId,
-              ownerPubkey: ownerPubkey,
-            );
-            _notifyRetryableWork();
-          }
-          return DmReactionPublishResult(
-            success: false,
-            rumorId: rumorId,
-            errorMessage: error,
-            optimisticInsertSucceeded: true,
-          );
+        }
+      } finally {
+        // After the outcome is recorded, so the copy cannot delay or change it.
+        await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
       Log.warning(
@@ -775,56 +822,62 @@ class DmReactionsRepository {
     }
 
     try {
-      final result = await _fanOutRumor(
+      final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: rumor,
         recipients: recipients,
         awaitRecipientOk: true,
       );
-      switch (result) {
-        case NIP17SendSuccess():
-          await _reactionsDao.swapPlaceholderId(
-            placeholderId: rumorId,
-            realRumorId: rumorId,
-            ownerPubkey: ownerPubkey,
-          );
-          return DmReactionPublishResult(
-            success: true,
-            rumorId: rumorId,
-            optimisticInsertSucceeded: true,
-          );
-        case NIP17SendFailure(
-          :final error,
-          :final retryablePending,
-          :final blocked,
-        ):
-          // Policy-blocked (#176): terminal — flip the row out of the
-          // retryable pending/failed set so the sweep and a chip re-tap stop
-          // re-driving a send the policy will always refuse.
-          if (blocked) {
-            await _reactionsDao.markBlocked(
-              id: rumorId,
+      try {
+        switch (fanOut.result) {
+          case NIP17SendSuccess():
+            await _reactionsDao.swapPlaceholderId(
+              placeholderId: rumorId,
+              realRumorId: rumorId,
               ownerPubkey: ownerPubkey,
             );
-          } else {
-            // Confirmed rejection/error: flip to 'failed' so the chip is
-            // tappable again. A soft (retryablePending) failure instead
-            // leaves the pre-send 'pending' untouched, so the sweep keeps
-            // re-driving it. Both stay on the sweep's worklist.
-            if (!retryablePending) {
-              await _reactionsDao.markFailed(
-                placeholderId: rumorId,
+            return DmReactionPublishResult(
+              success: true,
+              rumorId: rumorId,
+              optimisticInsertSucceeded: true,
+            );
+          case NIP17SendFailure(
+            :final error,
+            :final retryablePending,
+            :final blocked,
+          ):
+            // Policy-blocked (#176): terminal — flip the row out of the
+            // retryable pending/failed set so the sweep and a chip re-tap stop
+            // re-driving a send the policy will always refuse.
+            if (blocked) {
+              await _reactionsDao.markBlocked(
+                id: rumorId,
                 ownerPubkey: ownerPubkey,
               );
+            } else {
+              // Confirmed rejection/error: flip to 'failed' so the chip is
+              // tappable again. A soft (retryablePending) failure instead
+              // leaves the pre-send 'pending' untouched, so the sweep keeps
+              // re-driving it. Both stay on the sweep's worklist.
+              if (!retryablePending) {
+                await _reactionsDao.markFailed(
+                  placeholderId: rumorId,
+                  ownerPubkey: ownerPubkey,
+                );
+              }
+              _notifyRetryableWork();
             }
-            _notifyRetryableWork();
-          }
-          return DmReactionPublishResult(
-            success: false,
-            rumorId: rumorId,
-            errorMessage: error,
-            optimisticInsertSucceeded: true,
-          );
+            return DmReactionPublishResult(
+              success: false,
+              rumorId: rumorId,
+              errorMessage: error,
+              optimisticInsertSucceeded: true,
+            );
+        }
+      } finally {
+        // After the outcome is recorded, so the copy cannot delay or change it.
+        await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
       Log.warning('DM reaction retry threw: $e', category: LogCategory.system);
@@ -1086,33 +1139,39 @@ class DmReactionsRepository {
       removal: true,
     );
     try {
-      final result = await _fanOutRumor(
+      final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: deletion,
         recipients: recipients,
         awaitRecipientOk: true,
       );
-      switch (result) {
-        case NIP17SendSuccess():
-          await _reactionsDao.markDeletionSent(
-            id: rumorId,
-            ownerPubkey: ownerPubkey,
-          );
-          return DmReactionDeletionOutcome.sent;
-        case NIP17SendFailure(:final error, :final blocked):
-          if (blocked) {
-            await _reactionsDao.markDeletionRefused(
+      try {
+        switch (fanOut.result) {
+          case NIP17SendSuccess():
+            await _reactionsDao.markDeletionSent(
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
-            return DmReactionDeletionOutcome.refused;
-          }
-          Log.warning(
-            'DM reaction deletion retry was unconfirmed: $error',
-            category: LogCategory.system,
-          );
-          _notifyRetryableWork();
-          return DmReactionDeletionOutcome.unconfirmed;
+            return DmReactionDeletionOutcome.sent;
+          case NIP17SendFailure(:final error, :final blocked):
+            if (blocked) {
+              await _reactionsDao.markDeletionRefused(
+                id: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+              return DmReactionDeletionOutcome.refused;
+            }
+            Log.warning(
+              'DM reaction deletion retry was unconfirmed: $error',
+              category: LogCategory.system,
+            );
+            _notifyRetryableWork();
+            return DmReactionDeletionOutcome.unconfirmed;
+        }
+      } finally {
+        // After the outcome is recorded, so the copy cannot delay or change it.
+        await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
       Log.warning(
@@ -1135,30 +1194,36 @@ class DmReactionsRepository {
   }) async {
     try {
       final inboxByRecipient = await inboxes;
-      final result = await _fanOutRumor(
+      final fanOut = await _fanOutRumor(
         messageService: messageService,
+        ownerPubkey: ownerPubkey,
         rumor: deletion,
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
       );
-      switch (result) {
-        case NIP17SendSuccess():
-          await _reactionsDao.markDeletionSent(
-            id: rumorId,
-            ownerPubkey: ownerPubkey,
-          );
-          return DmReactionDeletionOutcome.sent;
-        case NIP17SendFailure(:final blocked):
-          if (blocked) {
-            await _reactionsDao.markDeletionRefused(
+      try {
+        switch (fanOut.result) {
+          case NIP17SendSuccess():
+            await _reactionsDao.markDeletionSent(
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
-            return DmReactionDeletionOutcome.refused;
-          }
-          _notifyRetryableWork();
-          return DmReactionDeletionOutcome.unconfirmed;
+            return DmReactionDeletionOutcome.sent;
+          case NIP17SendFailure(:final blocked):
+            if (blocked) {
+              await _reactionsDao.markDeletionRefused(
+                id: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+              return DmReactionDeletionOutcome.refused;
+            }
+            _notifyRetryableWork();
+            return DmReactionDeletionOutcome.unconfirmed;
+        }
+      } finally {
+        // After the outcome is recorded, so the copy cannot delay or change it.
+        await fanOut.publishOwnCopy();
       }
     } on Object catch (e) {
       Log.warning(
@@ -1343,10 +1408,14 @@ class DmReactionsRepository {
   /// indefinitely, which (under a `sequential()` event transformer)
   /// quietly swallows every subsequent retry tap. The `_publishTimeout`
   /// cap converts those hangs into surfaced `NIP17SendFailure` results.
+  ///
+  /// Publishes the recipient's wrap only: the sender's own copy is handed to
+  /// [onSelfWrapDue] instead, so the fan-out publishes it once.
   Future<NIP17SendResult> _sendRumorWithTimeout({
     required NIP17MessageService messageService,
     required Event rumor,
     required String recipientPubkey,
+    required void Function(Event? prebuiltSelfWrap) onSelfWrapDue,
     List<String>? targetRelays,
     bool awaitRecipientOk = false,
   }) {
@@ -1359,6 +1428,7 @@ class DmReactionsRepository {
           // reachability for recipients who publish no kind-10050 (#7321).
           targetRelays: targetRelays,
           awaitRecipientOk: awaitRecipientOk,
+          onSelfWrapDue: onSelfWrapDue,
         )
         .timeout(
           _publishTimeout,
@@ -1792,9 +1862,21 @@ class DmReactionsRepository {
     return inboxes;
   }
 
-  /// Wrap [rumor] to each of [recipients] (each send also self-wraps for
-  /// cross-device recovery; self-wrap copies dedupe on the rumor id at the
-  /// receiver). Terminal success ONLY when EVERY recipient wrap lands.
+  /// Wrap [rumor] to each of [recipients], and hand back the sender's own
+  /// copy for the caller to publish once, for cross-device recovery.
+  /// Terminal success ONLY when EVERY recipient wrap lands.
+  ///
+  /// The own copy is published once per fan-out rather than once per
+  /// recipient, so a three-member group reaction leaves one copy, not three
+  /// (#8446). It is due when at least one recipient's send reached the point
+  /// where `sendRumor` would have published it — the wrap landed, or went
+  /// out without an `OK` — and its outcome never changes the result: the
+  /// recipients are what the result reports. So it is not published here:
+  /// the caller records the result first and then awaits
+  /// `publishOwnCopy`, and the chip does not wait on a relay the recipient
+  /// never needed. The caller's own call still waits for the copy, up to
+  /// [_publishTimeout]. A copy handed over only after this returns, by a send
+  /// that outlived its cap, is published detached.
   ///
   /// A group reaction persists as one row that can't track per-recipient
   /// delivery, so a partial fan-out (one member confirmed, another timed
@@ -1832,19 +1914,42 @@ class DmReactionsRepository {
   ///   unreadable-inbox downgrade is); a single hard rejection/offline member
   ///   makes the whole fan-out hard-failed so the sweep re-drives it without
   ///   the in-flight min-age hold.
-  Future<NIP17SendResult> _fanOutRumor({
+  Future<_FanOut> _fanOutRumor({
     required NIP17MessageService messageService,
+    required String ownerPubkey,
     required Event rumor,
     required List<String> recipients,
     Map<String, DmInboxLookup>? inboxByRecipient,
     bool awaitRecipientOk = false,
   }) async {
     if (recipients.isEmpty) {
-      return const NIP17SendResult.failure('No reaction wrap recipients');
+      return (
+        result: const NIP17SendResult.failure('No reaction wrap recipients'),
+        publishOwnCopy: _noOwnCopy,
+      );
     }
     final inboxes = inboxByRecipient ?? await _resolveInboxes(recipients);
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
+    var ownCopyDue = false;
+    var returned = false;
+    Event? prebuiltOwnCopy;
+    Future<void> publishOwnCopy() => _publishOwnCopy(
+      messageService: messageService,
+      rumor: rumor,
+      prebuiltSelfWrap: prebuiltOwnCopy,
+      ownerPubkey: ownerPubkey,
+    );
+    void onOwnCopyDue(Event? prebuiltSelfWrap) {
+      prebuiltOwnCopy ??= prebuiltSelfWrap;
+      if (ownCopyDue) return;
+      ownCopyDue = true;
+      // A send that outlived its cap can still land the wrap after this
+      // fan-out returned. Before #8446 that send published the copy itself, so
+      // publish it now rather than lose it. It never throws.
+      if (returned) unawaited(publishOwnCopy());
+    }
+
     for (final recipient in recipients) {
       final inbox = inboxes[recipient];
       final published = await _sendRumorWithTimeout(
@@ -1853,6 +1958,7 @@ class DmReactionsRepository {
         recipientPubkey: recipient,
         targetRelays: inbox?.relays,
         awaitRecipientOk: awaitRecipientOk,
+        onSelfWrapDue: onOwnCopyDue,
       );
       final result = inbox == null
           ? published
@@ -1864,6 +1970,18 @@ class DmReactionsRepository {
           failures.add(result);
       }
     }
+    final fanOut = (
+      result: _aggregateFanOut(lastSuccess, failures),
+      publishOwnCopy: ownCopyDue ? publishOwnCopy : _noOwnCopy,
+    );
+    returned = true;
+    return fanOut;
+  }
+
+  static NIP17SendResult _aggregateFanOut(
+    NIP17SendSuccess? lastSuccess,
+    List<NIP17SendFailure> failures,
+  ) {
     if (failures.isEmpty) {
       // Every recipient confirmed — terminal success.
       return lastSuccess ??
@@ -1877,6 +1995,58 @@ class DmReactionsRepository {
       summary,
       retryablePending: failures.every((f) => f.retryablePending),
     );
+  }
+
+  static Future<void> _noOwnCopy() async {
+    // Intentional no-op: no recipient's send reached the point where the
+    // sender's own copy is due.
+  }
+
+  /// Publish the sender's own copy of [rumor] for [_fanOutRumor], to
+  /// [ownerPubkey]'s own copy targets. Never throws: a copy that fails,
+  /// throws or outlives [_publishTimeout] is logged and dropped.
+  Future<void> _publishOwnCopy({
+    required NIP17MessageService messageService,
+    required Event rumor,
+    required Event? prebuiltSelfWrap,
+    required String ownerPubkey,
+  }) async {
+    Future<NIP17SendResult> publish() async => messageService.publishSelfWrap(
+      rumorEvent: rumor,
+      targetRelays: await _selfWrapTargets(ownerPubkey),
+      prebuiltSelfWrap: prebuiltSelfWrap,
+    );
+    try {
+      final published = await publish().timeout(_publishTimeout);
+      if (!published.success) {
+        Log.warning(
+          'DM reaction own copy not published for rumor ${rumor.id}: '
+          '${published.error}',
+          category: LogCategory.system,
+        );
+      }
+    } on Object catch (e) {
+      Log.warning(
+        'DM reaction own copy failed for rumor ${rumor.id}: $e',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  /// [ownerPubkey]'s own copy targets, or `null` for the plain pool when no
+  /// resolver is wired or it throws.
+  Future<List<String>?> _selfWrapTargets(String ownerPubkey) async {
+    final resolve = _resolveSelfWrapRelays;
+    if (resolve == null) return null;
+    try {
+      return await resolve(ownerPubkey);
+    } on Object catch (e) {
+      Log.warning(
+        'DM reaction own copy targets unresolved, using the pool: $e',
+        category: LogCategory.system,
+      );
+      return null;
+    }
   }
 
   /// Resolve the conversation id for an incoming reaction.
