@@ -602,7 +602,11 @@ void main() {
         final args = call.arguments as Map<dynamic, dynamic>;
         final key = args['key'] as String;
         final options = args['options'] as Map<dynamic, dynamic>;
-        final accessibility = options['accessibility'] as String;
+        final accessibility =
+            (options['accessibility'] ??
+                    options['fixtureStorageSlot'] ??
+                    options['preferencesKeyPrefix'])
+                as String;
         switch (call.method) {
           case 'read':
             return records[key]?.$2;
