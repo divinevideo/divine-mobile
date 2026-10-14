@@ -70,6 +70,12 @@ class ConversationTile extends ConsumerWidget {
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
     );
+    // Any member, not the named one: a room is refused whole when any member
+    // is, so a room that includes a retired key is closed wherever it sorts.
+    final isClosedThread = dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: currentUserPubkey,
+    ).any(isRetiredModerationAccount);
 
     final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
     final isResolving = ref.watch(
@@ -251,7 +257,7 @@ class ConversationTile extends ConsumerWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ] else if (isRetiredModerationAccount(otherPubkey)) ...[
+                      ] else if (isClosedThread) ...[
                         const SizedBox(height: 4),
                         const ClosedThreadSubtitle(maxLines: 2),
                       ] else if (conversation.lastMessageContent != null) ...[

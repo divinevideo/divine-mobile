@@ -822,7 +822,13 @@ class ConversationListBloc
                 )
                 .map((entry) => entry.name!.toLowerCase())
           : [peerName.toLowerCase()];
-      final preview = peerLabels != null && _retiredModerationAccount(other)
+      // Any member, as the row decides it: a room that includes a retired key
+      // is closed wherever that member sorts (#10151).
+      final isClosed = dmConversationPeerPubkeys(
+        participantPubkeys: c.participantPubkeys,
+        currentUserPubkey: userPubkey,
+      ).any(_retiredModerationAccount);
+      final preview = peerLabels != null && isClosed
           ? peerLabels.retiredConversationClosed.toLowerCase()
           : c.lastMessageContent?.toLowerCase() ?? '';
       return name.contains(normalized) ||

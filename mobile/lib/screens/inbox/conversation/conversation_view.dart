@@ -623,6 +623,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                 switch (threadWritability) {
                   DmThreadWritability.closedRetired => _ClosedThreadNotice(
                     currentPubkey: currentPubkey,
+                    isGroup: isGroup,
                   ),
                   DmThreadWritability.blockedByUs =>
                     const _BlockedThreadNotice(),
@@ -1148,10 +1149,19 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
 /// Replaces [MessageInputBar] rather than disabling it. `MessageInputBar` has
 /// no disabled state, and adding one would leave a focusable text field that
 /// still reads as "maybe this works".
+///
+/// A room that includes such a key is closed too, because a room send is
+/// refused whole when any member is. It keeps only the closed line: the reason
+/// and the way out describe Divine Moderation's move, and a room's members are
+/// whoever its author listed (#10151).
 class _ClosedThreadNotice extends StatelessWidget {
-  const _ClosedThreadNotice({required this.currentPubkey});
+  const _ClosedThreadNotice({
+    required this.currentPubkey,
+    required this.isGroup,
+  });
 
   final String currentPubkey;
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -1173,27 +1183,29 @@ class _ClosedThreadNotice extends StatelessWidget {
                 color: context.vineColors.primaryText,
               ),
             ),
-            Text(
-              l10n.dmRetiredThreadClosedBody,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.onSurfaceVariant,
+            if (!isGroup) ...[
+              Text(
+                l10n.dmRetiredThreadClosedBody,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurfaceVariant,
+                ),
               ),
-            ),
-            // `semanticLabel` is what makes this announce as a button:
-            // `DivineButton` only wires `Semantics(button: true)` when it is
-            // given one. The composer is gone here, so this is the screen's
-            // only control and the only route to a moderation account that
-            // reads — without the flag a screen reader gets a third line of
-            // prose after the title and body, naming no way out.
-            DivineButton(
-              label: l10n.dmRetiredThreadOpenSupport,
-              semanticLabel: l10n.dmRetiredThreadOpenSupport,
-              type: DivineButtonType.secondary,
-              expanded: true,
-              onPressed: currentPubkey.isEmpty
-                  ? null
-                  : () => _openCurrentSupportThread(context),
-            ),
+              // `semanticLabel` is what makes this announce as a button:
+              // `DivineButton` only wires `Semantics(button: true)` when it is
+              // given one. The composer is gone here, so this is the screen's
+              // only control and the only route to a moderation account that
+              // reads — without the flag a screen reader gets a third line of
+              // prose after the title and body, naming no way out.
+              DivineButton(
+                label: l10n.dmRetiredThreadOpenSupport,
+                semanticLabel: l10n.dmRetiredThreadOpenSupport,
+                type: DivineButtonType.secondary,
+                expanded: true,
+                onPressed: currentPubkey.isEmpty
+                    ? null
+                    : () => _openCurrentSupportThread(context),
+              ),
+            ],
           ],
         ),
       ),

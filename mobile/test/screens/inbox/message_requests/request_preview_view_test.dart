@@ -801,6 +801,26 @@ void main() {
         );
       });
 
+      // #10151. A room that includes a retired key can never be sent to, so
+      // it reads as closed wherever that member sorts, without the reason that
+      // belongs to the one-to-one.
+      testWidgets('a group with a retired moderation member reads as closed, '
+          'without the moderation reason', (tester) async {
+        when(() => mockPreviewCubit.state).thenReturn(
+          RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [otherPubkey, kLegacyModerationPubkeys.first],
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+        expect(find.text(l10n.dmRetiredThreadClosedBody), findsNothing);
+      });
+
       testWidgets('an ordinary request keeps the overture framing', (
         tester,
       ) async {

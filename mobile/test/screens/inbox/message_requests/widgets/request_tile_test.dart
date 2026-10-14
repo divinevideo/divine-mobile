@@ -268,6 +268,41 @@ void main() {
         expect(lockFinder(), findsOneWidget);
       });
 
+      // #10151. A room send is refused whole when any member is, so a room
+      // that includes a retired key is closed wherever that member sorts.
+      testWidgets('a group with a retired moderation member is marked closed', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              userProfileReactiveProvider(
+                otherPubkey,
+              ).overrideWith((ref) => Stream.value(null)),
+            ],
+            home: Scaffold(
+              body: RequestTile(
+                conversation: DmConversation(
+                  id: 'e' * 64,
+                  participantPubkeys: [
+                    currentPubkey,
+                    otherPubkey,
+                    kLegacyModerationPubkeys.first,
+                  ],
+                  isGroup: true,
+                  createdAt: nowUnix,
+                ),
+                currentUserPubkey: currentPubkey,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(lockFinder(), findsOneWidget);
+      });
+
       testWidgets('a live moderation request carries no lock', (tester) async {
         await pumpTileFor(tester, kModerationPubkeyHex);
 

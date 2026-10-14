@@ -2831,6 +2831,31 @@ void main() {
         ]);
       });
 
+      // #10151. A room that includes a retired key is closed wherever that
+      // member sorts, and its row says so, so search matches what it shows.
+      test('a room that includes it is found by the closed subtitle its row '
+          'shows', () async {
+        _stubStreams(
+          mockDmRepository,
+          accepted: [
+            _createConversation(
+              id: 'room',
+              isGroup: true,
+              participantPubkeys: [_testPubkey1, _testPubkey2, retired],
+              lastMessageContent: 'Your video was removed',
+            ),
+          ],
+        );
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(bloc, labels.retiredConversationClosed);
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
+        ]);
+      });
+
       test('is not found by hidden last-message content', () async {
         _stubStreams(
           mockDmRepository,

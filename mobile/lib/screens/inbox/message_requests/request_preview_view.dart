@@ -207,6 +207,12 @@ class RequestPreviewView extends ConsumerWidget {
                 isResolving: isIdentityResolving,
                 isVanished: isDeleted,
                 moderation: moderation,
+                // A room is refused whole when any member is, so a room that
+                // includes a retired key is as closed as the one-to-one.
+                isClosedThread: participantPubkeys.any(
+                  isRetiredModerationAccount,
+                ),
+                isGroup: participantPubkeys.length > 1,
               ),
             ),
             _ActionButtons(
@@ -326,11 +332,15 @@ class _ProfileContent extends StatelessWidget {
     required this.isResolving,
     required this.isVanished,
     required this.moderation,
+    required this.isClosedThread,
+    required this.isGroup,
   });
 
   final String displayName;
   final UserProfile? profile;
   final ProfileStats? stats;
+  final bool isClosedThread;
+  final bool isGroup;
 
   /// Whether counts are still expected to arrive for this account.
   ///
@@ -435,8 +445,8 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              if (isRetiredModerationAccount(otherPubkey))
-                const _ClosedNoticeDescription()
+              if (isClosedThread)
+                _ClosedNoticeDescription(isGroup: isGroup)
               else
                 _MessageCountDescription(
                   displayName: displayName,
@@ -703,8 +713,14 @@ class _StatsLineState extends State<_StatsLine> {
 /// Deliberately copy only. The thread behind "View messages" carries the
 /// redirect to the live support account, and this screen has been kept light
 /// on controls since #8090 pulled one back out of it.
+///
+/// A room keeps only the closed line: the reason describes Divine
+/// Moderation's move, and a room's members are whoever its author listed
+/// (#10151).
 class _ClosedNoticeDescription extends StatelessWidget {
-  const _ClosedNoticeDescription();
+  const _ClosedNoticeDescription({required this.isGroup});
+
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -722,13 +738,14 @@ class _ClosedNoticeDescription extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          Text(
-            l10n.dmRetiredThreadClosedBody,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.onSurfaceVariant,
+          if (!isGroup)
+            Text(
+              l10n.dmRetiredThreadClosedBody,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );

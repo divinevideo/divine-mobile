@@ -97,7 +97,12 @@ class RequestTile extends ConsumerWidget {
             locale: Localizations.localeOf(context).toLanguageTag(),
           )
         : '';
-    final isClosedThread = isRetiredModerationAccount(otherPubkey);
+    // Any member, not the named one: a room is refused whole when any member
+    // is, so a room that includes a retired key is closed wherever it sorts.
+    final isClosedThread = dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: currentUserPubkey,
+    ).any(isRetiredModerationAccount);
 
     return Semantics(
       button: true,

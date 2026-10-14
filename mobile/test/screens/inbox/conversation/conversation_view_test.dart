@@ -1714,6 +1714,22 @@ void main() {
         expect(find.text(l10n.dmRetiredThreadOpenSupport), findsOneWidget);
       });
 
+      // #10151. A room is refused whole when any member is, so a room that
+      // includes a retired key is closed too. The reason and the way out are
+      // the one-to-one's: a room's members are whoever its author listed.
+      testWidgets('closes a room that includes it, without the moderation '
+          'reason or the way out', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(counterparties: [otherPubkey, retired]),
+        );
+        await tester.pump();
+
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+        expect(find.text(l10n.dmRetiredThreadClosedBody), findsNothing);
+        expect(find.text(l10n.dmRetiredThreadOpenSupport), findsNothing);
+      });
+
       testWidgets('keeps the thread history readable', (tester) async {
         await tester.pumpWidget(buildSubject(counterparty: retired));
         await tester.pump();
