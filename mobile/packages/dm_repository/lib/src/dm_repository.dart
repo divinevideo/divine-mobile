@@ -279,14 +279,14 @@ const Duration _ownDmInboxAuthoritativeTimeout = Duration(seconds: 3);
 /// human-gated and unbounded, so a recipient-build timeout leaves the durable
 /// row pending for retry instead of red-failed.
 ///
-/// That covers the signing chain, not the whole send. Three awaited steps
-/// inside this cap are still unbounded and deliberately NOT in
-/// [DmBatchSendBudget.chainWorstCase]: `refreshPublicKey()` (a real round trip
-/// for any signer that doesn't cache the pubkey, e.g. a NIP-46 bunker —
-/// Keycast does cache it), the send-policy protected-minor check, and the
-/// connectivity probe. So this cap remains a genuine backstop for those, and
-/// [DmBatchSendBudget.chainWorstCase] is a floor on what a send can cost, not a
-/// ceiling. Bounding them is tracked separately.
+/// The steps around the signing chain are bounded too: the connectivity
+/// probe, the send-policy check and `refreshPublicKey()` ([DmSendBudget]'s
+/// pre-wrap steps, #7091), and the recipient's OK confirmation, which
+/// `NostrClient.publishEventAwaitOk` spends its whole `timeout` on, reconnect
+/// included (#8451). So [DmBatchSendBudget.chainWorstCase] is the ceiling on a
+/// send whose steps keep their bounds, and this cap, with the headroom it
+/// leaves for scheduling and local DB work, fires on a send that is stuck
+/// rather than slow.
 ///
 /// A 15s cap here (the original value) fired during routine slow-Keycast
 /// sends, turning sends that were still legitimately in flight into

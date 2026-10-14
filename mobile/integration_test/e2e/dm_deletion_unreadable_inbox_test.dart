@@ -290,7 +290,7 @@ void main() {
         await settledDeletionRow(stack.db, rumorId);
 
         // Same failure #7317's review round caught on `recoverFullSend`: a
-        // send-path fix the sweep then undoes is worth 160 seconds and nothing
+        // send-path fix the sweep then undoes is worth one sweep and nothing
         // else. Pre-#8515 this returned `unavailable`, not `unconfirmed` —
         // the first drive had already cleared the stored rumor, so the retry
         // could not even attempt. That is the unrepairability, made visible.
