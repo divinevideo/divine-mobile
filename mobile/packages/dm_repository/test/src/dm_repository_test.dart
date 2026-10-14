@@ -23681,6 +23681,9 @@ void main() {
             userPubkey: _validPubkeyA,
             signer: mockSigner,
           );
+          // The lost copy schedules a retry (#8506); stopping cancels it so it
+          // cannot fire into a later test.
+          addTearDown(repo.stopListening);
 
           final result = await repo.sendMessage(
             recipientPubkey: _validPubkeyB,
@@ -23818,6 +23821,9 @@ void main() {
             userPubkey: _validPubkeyA,
             signer: mockSigner,
           );
+          // The lost copy schedules a retry (#8506); stopping cancels it so it
+          // cannot fire into a later test.
+          addTearDown(repo.stopListening);
 
           final result = await repo.sendMessage(
             recipientPubkey: _validPubkeyB,
