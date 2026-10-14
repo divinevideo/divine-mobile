@@ -389,7 +389,23 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
         profile?.bestDisplayName ?? widget.displayNameHint ?? fallbackName;
 
     final followRepository = ref.read(followRepositoryProvider);
-    await followRepository.toggleFollow(widget.pubkey);
+    try {
+      // `unfollow`, never `toggleFollow`: the follow list can change while
+      // the sheet is open, and toggle would then follow the account.
+      await followRepository.unfollow(widget.pubkey);
+    } on Exception {
+      // FollowRepository has already logged the failure and left the follow
+      // in place; the user only needs to know the unfollow didn't happen.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.followersUpdateFollowFailed,
+            error: true,
+          ),
+        );
+      }
+      return;
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
