@@ -36,7 +36,7 @@ void main() {
       expect(outgoing, ['["REQ","sub1",{"kinds":[1]}]', '["CLOSE","sub1"]']);
     });
 
-    test('dispose closes both streams', () {
+    test('dispose closes both streams', () async {
       final transport = InMemoryNostrTransport();
 
       bool incomingClosed = false;
@@ -48,10 +48,60 @@ void main() {
         onDone: () => outgoingClosed = true,
       );
 
-      transport.dispose();
+      await transport.dispose();
 
       expect(incomingClosed, isTrue);
       expect(outgoingClosed, isTrue);
+    });
+
+    test('dispose completes only once a paused listener resumes', () async {
+      final transport = InMemoryNostrTransport();
+
+      final subscription = transport.incoming.listen(null)..pause();
+      addTearDown(subscription.cancel);
+
+      var disposed = false;
+      final disposal = transport.dispose().then((_) => disposed = true);
+      await pumpEventQueue();
+
+      expect(disposed, isFalse);
+
+      subscription.resume();
+      await disposal;
+
+      expect(disposed, isTrue);
+    });
+
+    test(
+      'dispose closes outgoing while a paused listener holds incoming open',
+      () async {
+        final transport = InMemoryNostrTransport();
+
+        final subscription = transport.incoming.listen(null)..pause();
+        addTearDown(subscription.cancel);
+
+        var outgoingClosed = false;
+        transport.outgoingFromClient.listen(
+          null,
+          onDone: () => outgoingClosed = true,
+        );
+
+        final disposal = transport.dispose();
+        await pumpEventQueue();
+
+        expect(outgoingClosed, isTrue);
+
+        subscription.resume();
+        await disposal;
+      },
+    );
+
+    test('dispose can be called more than once', () async {
+      final transport = InMemoryNostrTransport();
+
+      await transport.dispose();
+
+      await expectLater(transport.dispose(), completes);
     });
 
     test('ignores messages after disposal', () async {
@@ -63,7 +113,7 @@ void main() {
       transport.injectFromRelay('["EVENT","sub1",{"id":"abc"}]');
       await pumpEventQueue();
 
-      transport.dispose();
+      await transport.dispose();
 
       // These should be ignored
       transport.injectFromRelay('["EVENT","sub2",{"id":"def"}]');

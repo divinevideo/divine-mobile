@@ -9,6 +9,8 @@ abstract class NostrTransport {
   /// Send a message to the relay (client → server)
   void send(String json);
 
-  /// Clean up resources
-  void dispose();
+  /// Releases the transport's resources.
+  ///
+  /// The returned future completes once the transport has finished closing.
+  Future<void> dispose();
 }

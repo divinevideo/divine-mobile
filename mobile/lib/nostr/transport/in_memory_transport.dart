@@ -30,9 +30,12 @@ class InMemoryNostrTransport implements NostrTransport {
     }
   }
 
+  /// Closes both streams; safe to call more than once.
+  ///
+  /// Completes once every listener has received its done event, so a paused
+  /// listener holds the future open until it resumes or cancels.
   @override
-  void dispose() {
-    _incomingCtrl.close();
-    _outgoingCtrl.close();
+  Future<void> dispose() async {
+    await Future.wait([_incomingCtrl.close(), _outgoingCtrl.close()]);
   }
 }
