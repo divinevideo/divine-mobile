@@ -19,6 +19,8 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+const _logName = 'UploadFailureSheet';
+
 /// Shows a bottom sheet when a background upload fails.
 ///
 /// Offers retry for transient failures, or Account status for a confirmed
@@ -54,6 +56,24 @@ Future<void> showUploadFailureSheet(
 
   final messenger = ScaffoldMessenger.maybeOf(context);
 
+  void showSavedToDraftsSnackBar({required String viewDescription}) {
+    messenger?.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
+        actionLabel: context.l10n.contentWarningView,
+        onActionPressed: () {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          runDetached(
+            context.push<void>(LibraryScreen.draftsPath),
+            viewDescription,
+            logName: _logName,
+            category: LogCategory.video,
+          );
+        },
+      ),
+    );
+  }
+
   switch (result) {
     case 'retry':
       context.read<BackgroundPublishBloc>().add(
@@ -69,44 +89,20 @@ Future<void> showUploadFailureSheet(
       context.read<BackgroundPublishBloc>().add(
         BackgroundPublishVanished(draftId: upload.draft.id),
       );
-      messenger?.showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
-          actionLabel: context.l10n.contentWarningView,
-          onActionPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            runDetached(
-              context.push<void>(LibraryScreen.draftsPath),
-              'open drafts from upload failure',
-              logName: 'UploadFailureSheet',
-              category: LogCategory.video,
-            );
-          },
-        ),
+      showSavedToDraftsSnackBar(
+        viewDescription: 'open drafts from upload failure',
       );
     case 'account_status':
       context.read<BackgroundPublishBloc>().add(
         BackgroundPublishVanished(draftId: upload.draft.id),
       );
-      messenger?.showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
-          actionLabel: context.l10n.contentWarningView,
-          onActionPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            runDetached(
-              context.push<void>(LibraryScreen.draftsPath),
-              'open drafts from restricted upload',
-              logName: 'UploadFailureSheet',
-              category: LogCategory.video,
-            );
-          },
-        ),
+      showSavedToDraftsSnackBar(
+        viewDescription: 'open drafts from restricted upload',
       );
       runDetached(
         context.push<void>(RoutePaths.accountStatus, extra: true),
         'open account status for restricted upload',
-        logName: 'UploadFailureSheet',
+        logName: _logName,
         category: LogCategory.video,
       );
     case _:
