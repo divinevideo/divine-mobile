@@ -1709,9 +1709,8 @@ void main() {
       _expectDetachedStateErrorReported(reporter);
     });
 
-    testWidgets('a rejected screen-reader announcement does not escape', (
-      tester,
-    ) async {
+    testWidgets('a rejected screen-reader announcement is reported, not '
+        'left unhandled', (tester) async {
       final deletionService = _MockAccountDeletionService();
       final authService = _MockAuthService();
       final recoveryRepository = _MockAccountDeletionRecoveryRepository();
@@ -1719,9 +1718,10 @@ void main() {
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
       when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+      final reporter = _recordDetachedFailures();
       final rejected = _captureAnnouncements(
         tester,
-        rejectWith: PlatformException(code: 'announce-failed'),
+        rejectWith: StateError('announce failed'),
       );
 
       late BuildContext capturedContext;
@@ -1748,6 +1748,7 @@ void main() {
       expect(rejected, contains(unavailableText));
       expect(tester.takeException(), isNull);
       expect(find.text(unavailableText), findsOneWidget);
+      _expectDetachedStateErrorReported(reporter);
     });
 
     testWidgets(
