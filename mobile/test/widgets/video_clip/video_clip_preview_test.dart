@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoClipPreview widget
 // ABOUTME: Verifies rendering, DivineVideoPlayer integration, and button layout
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show SemanticsAction;
 
@@ -14,7 +15,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
@@ -26,8 +26,6 @@ import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/divine_video_player_channel.dart';
 import '../../helpers/go_router.dart';
-
-class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
 /// Reports a decoded first frame as soon as the controller subscribes, which
 /// is what drops [DivineVideoPlayer]'s placeholder from the tree.
@@ -54,18 +52,15 @@ class _FirstFrameStreamHandler extends MockStreamHandler {
   void onCancel(Object? arguments) {}
 }
 
+/// Stands in for the library's save, which the preview only hands off to.
+Future<void> _noSave() async {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late MockGoRouter mockGoRouter;
-  late _MockGallerySaveService mockGallerySaveService;
-
-  setUpAll(() {
-    registerFallbackValue(EditorVideo.file('/fallback.mp4'));
-  });
 
   setUp(() {
-    mockGallerySaveService = _MockGallerySaveService();
     DivineVideoPlayerController.resetIdCounterForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('divine_video_player'), (
@@ -119,13 +114,11 @@ void main() {
 
     Widget buildTestWidget({
       DivineVideoClip? clip,
+      Future<void> Function()? onSaveToGallery = _noSave,
       VoidCallback? onDelete,
       Widget? home,
     }) {
       return ProviderScope(
-        overrides: [
-          gallerySaveServiceProvider.overrideWithValue(mockGallerySaveService),
-        ],
         child: MockGoRouterProvider(
           goRouter: mockGoRouter,
           child: MaterialApp(
@@ -136,6 +129,7 @@ void main() {
                 Scaffold(
                   body: VideoClipPreview(
                     clip: clip ?? testClip,
+                    onSaveToGallery: onSaveToGallery,
                     onDelete: onDelete,
                   ),
                 ),
@@ -722,58 +716,58 @@ void main() {
       });
     });
 
-    group('save result snackbar', () {
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      final destination = GallerySaveService.destinationName;
+    group('save to gallery', () {
+      Finder saveButton() => find.byWidgetPredicate(
+        (w) => w is DivineIcon && w.icon == DivineIconName.downloadSimple,
+      );
 
-      Future<void> pumpAndSave(
-        WidgetTester tester,
-        GallerySaveResult result,
+      testWidgets('hands the save off and closes once it is done', (
+        tester,
+      ) async {
+        installMockDivineVideoPlayer();
+        // A clip whose file exists, so the preview does not close on load.
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_preview_save',
+        );
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final videoFile = File('${tempDir.path}/video.mp4')
+          ..writeAsBytesSync(const [0]);
+        final saving = Completer<void>();
+        var saves = 0;
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            clip: testClip.copyWith(video: EditorVideo.file(videoFile.path)),
+            onSaveToGallery: () {
+              saves++;
+              return saving.future;
+            },
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(saveButton());
+        await tester.pump();
+
+        expect(saves, 1);
+        // Checking and signing take a moment, so the button says so.
+        expect(saveButton(), findsNothing);
+        verifyNever(() => mockGoRouter.pop<Object?>(any()));
+
+        saving.complete();
+        await tester.pump();
+
+        verify(() => mockGoRouter.pop<Object?>(any())).called(1);
+      });
+
+      testWidgets('hides the save button without a save action', (
+        tester,
       ) async {
         installMockDivineVideoPlayer();
 
-        when(
-          () => mockGallerySaveService.saveVideoToGallery(any()),
-        ).thenAnswer((_) async => result);
-
-        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpWidget(buildTestWidget(onSaveToGallery: null));
         await tester.pump(const Duration(milliseconds: 100));
 
-        await tester.tap(
-          find.byWidgetPredicate(
-            (w) => w is DivineIcon && w.icon == DivineIconName.downloadSimple,
-          ),
-        );
-        await tester.pump();
-        await tester.pump();
-      }
-
-      testWidgets('shows saved message on $GallerySaveSuccess', (tester) async {
-        await pumpAndSave(tester, const GallerySaveSuccess());
-
-        expect(
-          find.text(l10n.libraryClipsSavedToDestination(1, destination)),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('shows permission message on $GallerySavePermissionDenied', (
-        tester,
-      ) async {
-        await pumpAndSave(tester, const GallerySavePermissionDenied());
-
-        expect(
-          find.text(l10n.libraryGalleryPermissionDenied(destination)),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('shows failure message on $GallerySaveFailure', (
-        tester,
-      ) async {
-        await pumpAndSave(tester, const GallerySaveFailure('disk full'));
-
-        expect(find.text(l10n.videoClipSaveFailed), findsOneWidget);
+        expect(saveButton(), findsNothing);
       });
     });
   });

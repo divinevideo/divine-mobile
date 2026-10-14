@@ -2021,14 +2021,6 @@
     "conversationRestorePausedTitle": "لم تكتمل استعادة هذه المحادثة",
     "inboxRestoreRetryAction": "إعادة المحاولة",
     "inboxRestoringMessages": "جارٍ استعادة رسائلك…",
-    "inboxReportedUser": "تم الإبلاغ عن {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "تم إلغاء حظر {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2142,6 +2134,18 @@
     "libraryGalleryImportItemNotVerified": "تعذّر التأكد من أنه صُوّر بـ Divine",
     "libraryGalleryImportItemCheckUnavailable": "تعذّر التحقق الآن. حاول مرة أخرى لاحقًا.",
     "libraryGalleryImportDone": "تم",
+    "librarySaveSelectedClipsTooltip": "حفظ المقاطع المحددة في معرض الصور",
+    "libraryClipsSavedWithoutProof": "{count, plural, =0{لم يُحفظ أي مقطع بدون إثباته.} =1{تم حفظ مقطع واحد بدون إثباته، لذلك لا يمكنه العودة إلى مقاطعك.} =2{تم حفظ مقطعين بدون إثباتهما، لذلك لا يمكنهما العودة إلى مقاطعك.} few{تم حفظ {count} مقاطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.} many{تم حفظ {count} مقطعًا بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.} other{تم حفظ {count} مقطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.}}",
+    "libraryClipsSavedWithoutProofDetails": "التفاصيل",
+    "libraryGallerySaveWarningTitle": "تم الحفظ بدون إثبات",
+    "libraryGallerySaveWarningIntro": "لا يمكن أن تعود من معرض الصور إلا المقاطع التي تحمل إثباتًا بأنها صُوّرت باستخدام Divine. تم حفظ نسخ هذه المقاطع بدون هذا الإثبات.",
+    "libraryGallerySaveWarningSigningUnavailable": "تعذّرت إضافة الإثبات الآن، ربما لأنك كنت غير متصل. حاول مرة أخرى لحفظ نسخة تحمل الإثبات.",
+    "libraryGallerySaveWarningStopMotion": "مقاطع الإيقاف الحركي مصنوعة من صور، والصور لا يمكنها أن تحمل إثباتًا.",
+    "libraryGallerySaveWarningSigningUnsupported": "لا يمكن لهذا الإصدار من Divine إضافة إثبات إلى المقاطع.",
+    "libraryGallerySaveWarningNoProof": "هذا المقطع ليس له إثبات، ولا يمكن لـ Divine إضافته لاحقًا.",
+    "libraryGallerySaveWarningSavedWithProof": "تم الحفظ مع الإثبات",
+    "libraryGallerySaveSigning": "جارٍ إضافة الإثبات إلى مقاطعك…",
+    "libraryGallerySaveProgress": "{total, plural, =0{جارٍ حفظ المقطع {current} من {total}…} =1{جارٍ حفظ مقطعك…} =2{جارٍ حفظ المقطع {current} من {total}…} few{جارٍ حفظ المقطع {current} من {total}…} many{جارٍ حفظ المقطع {current} من {total}…} other{جارٍ حفظ المقطع {current} من {total}…}}",
     "libraryNoClipsYetSubtitle": "ستُظهر مقاطع الفيديو المسجّلة هنا",
     "libraryNoClipsYetTitle": "لا توجد مقاطع بعد",
     "libraryNoDraftsYetSubtitle": "ستُظهر الفيديو الذي تحفظه كمسودة هنا",
@@ -3140,7 +3144,6 @@
     "inboxActionReportVanishedAccount": "الإبلاغ عن هذا الحساب",
     "inboxActionBlockVanishedAccount": "حظر هذا الحساب",
     "inboxActionUnblockVanishedAccount": "إلغاء حظر هذا الحساب",
-    "inboxReportedVanishedAccount": "تم الإبلاغ عن هذا الحساب",
     "inboxBlockedVanishedAccount": "تم حظر هذا الحساب",
     "inboxUnblockedVanishedAccount": "تم إلغاء حظر هذا الحساب",
     "inboxRemoveConfirmBodyVanishedAccount": "يؤدي هذا إلى إزالة المحادثة من صندوق الوارد. إذا راسلك مرة أخرى، تبدأ محادثة جديدة.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "ابحث أو أضف وسوماً",
     "videoMetadataTagsPickerEmptyHint": "أضف وسوماً ليكتشف الآخرون فيديوك",
     "videoMetadataTagsPickerNoResults": "لا توجد وسوم مطابقة",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, zero{يمكن أن يصل طول الوسم إلى {max} حرف.} one{يمكن أن يصل طول الوسم إلى {max} حرف.} two{يمكن أن يصل طول الوسم إلى {max} حرفين.} few{يمكن أن يصل طول الوسم إلى {max} أحرف.} many{يمكن أن يصل طول الوسم إلى {max} حرفًا.} other{يمكن أن يصل طول الوسم إلى {max} حرف.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, zero{يمكنك إضافة ما يصل إلى {max} وسم.} one{يمكنك إضافة ما يصل إلى {max} وسم.} two{يمكنك إضافة ما يصل إلى {max} وسمين.} few{يمكنك إضافة ما يصل إلى {max} وسوم.} many{يمكنك إضافة ما يصل إلى {max} وسمًا.} other{يمكنك إضافة ما يصل إلى {max} وسم.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, zero{{count} من {max} حرف} one{{count} من {max} حرف} two{{count} من {max} حرفين} few{{count} من {max} أحرف} many{{count} من {max} حرفًا} other{{count} من {max} حرف}}",
     "videoMetadataTagsPickerAddTag": "إضافة \"#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "تعذّر تعديل التعليق",
     "commentsErrorNotAuthenticatedInteract": "سجّل الدخول للتفاعل",
     "commentsErrorVoteFailed": "تعذّر التصويت على التعليق",
-    "commentsErrorReportFailed": "تعذّر الإبلاغ عن التعليق",
     "commentsErrorBlockFailed": "تعذّر حظر المستخدم",
     "commentsErrorDeleteFailed": "تعذّر حذف التعليق",
     "commentsHeaderCount": "{count, plural, zero{لا توجد تعليقات} one{تعليق واحد} two{تعليقان} few{{count} تعليقات} many{{count} تعليقًا} other{{count} تعليق}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "تعديل التعليق",
     "commentOptionsFlagContentLabel": "الإبلاغ عن المحتوى",
     "commentOptionsFlagContentSemanticLabel": "الإبلاغ عن هذا المحتوى",
-    "commentOptionsFlagReasonPrompt": "اختر سبب الإبلاغ عن هذا التعليق",
-    "commentOptionsFlagSubmit": "إرسال",
     "commentOptionsTitle": "خيارات",
     "commentsEmptyClassicVineMessage": "ما زلنا نعمل على استيراد التعليقات القديمة من الأرشيف. إنها ليست جاهزة بعد.",
     "commentsEmptyClassicVineTitle": "Vine الكلاسيكي",

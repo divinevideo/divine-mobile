@@ -102,9 +102,6 @@ class VideoEditorConstants {
   /// after the matrix is given a unique per-instance id.
   static const String tuneKindMetaKey = 'tuneKind';
 
-  /// Maximum number of tags allowed per video.
-  static const int tagLimit = 1 << 30; // ~1 billion
-
   /// Maximum number of characters allowed in a description.
   static const int descriptionLimit = 1_000;
 

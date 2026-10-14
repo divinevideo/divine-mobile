@@ -997,9 +997,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Отблокирай този акаунт';
 
   @override
-  String get inboxReportedVanishedAccount => 'Този акаунт е докладван';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Този акаунт е блокиран';
 
   @override
@@ -4874,6 +4871,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reportWhyReporting => 'Защо подаваш сигнал за това съдържание?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ще преглежда сигналите за съдържание до 24 часа и при нужда ще премахва съдържание или ще блокира акаунта, който го е публикувал.';
 
@@ -4896,6 +4896,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Моля, опиши проблема';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5797,11 +5800,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Качено — натисни Запази, за да приложиш';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'Докладвано $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'Блокиран $displayName';
   }
@@ -6671,6 +6669,67 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryGalleryImportDone => 'Готово';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Запази избраните клипове в галерията си';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count клипа са запазени без доказателствата си, затова не могат да се върнат сред клиповете ти.',
+      one: '1 клип е запазен без доказателството си, затова не може да се върне сред клиповете ти.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Подробности';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Запазени без доказателство';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'От галерията ти могат да се върнат само клипове с доказателство, че са заснети с Divine. Копията на тези клипове са запазени без него.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Доказателството не можа да се добави сега, може би защото беше офлайн. Опитай пак, за да запазиш копие с доказателство.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Стоп моушън клиповете са направени от снимки, които не могат да носят доказателство.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Тази версия на Divine не може да добавя доказателство към клипове.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Този клип няма доказателство и Divine не може да го добави впоследствие.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Запазен с доказателството си';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Добавяне на доказателство към клиповете ти…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Запазване на клип $current от $total…',
+      one: 'Клипът ти се запазва…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7082,13 +7141,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Сигнализирай това съдържание';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Избери причина да сигнализираш този коментар';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Изпрати';
 
   @override
   String get commentOptionsTitle => 'Опции';
@@ -8401,9 +8453,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Гласуването за коментара не мина';
-
-  @override
-  String get commentsErrorReportFailed => 'Коментарът не беше докладван';
 
   @override
   String get commentsErrorBlockFailed => 'Потребителят не беше блокиран';
@@ -11674,6 +11723,39 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Няма съвпадащи тагове';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Хаштаговете могат да са до $max знака.',
+      one: 'Хаштаговете могат да са до $max знак.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Можеш да добавиш до $max хаштага.',
+      one: 'Можеш да добавиш до $max хаштаг.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count от $max знака',
+      one: '$count от $max знак',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

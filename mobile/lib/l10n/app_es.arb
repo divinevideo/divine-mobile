@@ -2035,14 +2035,6 @@
     "conversationRestorePausedTitle": "Este chat no terminó de restaurarse",
     "inboxRestoreRetryAction": "Reintentar",
     "inboxRestoringMessages": "Restaurando tus mensajes…",
-    "inboxReportedUser": "Reportaste a {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "Desbloqueaste a {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2160,6 +2152,18 @@
     "libraryGalleryImportItemNotVerified": "No pudimos confirmar que se grabó con Divine",
     "libraryGalleryImportItemCheckUnavailable": "No se pudo revisar ahora. Probá más tarde.",
     "libraryGalleryImportDone": "Listo",
+    "librarySaveSelectedClipsTooltip": "Guardar los clips seleccionados en tu galería",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{Se guardó 1 clip sin su prueba, así que no puede volver a tus clips.} many{Se guardaron {count} clips sin su prueba, así que no pueden volver a tus clips.} other{Se guardaron {count} clips sin su prueba, así que no pueden volver a tus clips.}}",
+    "libraryClipsSavedWithoutProofDetails": "Detalles",
+    "libraryGallerySaveWarningTitle": "Guardados sin prueba",
+    "libraryGallerySaveWarningIntro": "Solo pueden volver de tu galería los clips con prueba de que se grabaron con Divine. Las copias de estos clips se guardaron sin ella.",
+    "libraryGallerySaveWarningSigningUnavailable": "No pudimos agregar su prueba en este momento, quizás porque no tenías conexión. Probá de nuevo para guardar una copia con prueba.",
+    "libraryGallerySaveWarningStopMotion": "Los clips de stop motion están hechos con fotos, que no pueden llevar prueba.",
+    "libraryGallerySaveWarningSigningUnsupported": "Esta versión de Divine no puede agregar prueba a los clips.",
+    "libraryGallerySaveWarningNoProof": "Este clip no tiene prueba, y Divine no puede agregársela después.",
+    "libraryGallerySaveWarningSavedWithProof": "Guardado con su prueba",
+    "libraryGallerySaveSigning": "Agregando la prueba a tus clips…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Guardando tu clip…} many{Guardando el clip {current} de {total}…} other{Guardando el clip {current} de {total}…}}",
     "libraryNoClipsYetSubtitle": "Tus clips de video grabados aparecerán aquí",
     "libraryNoClipsYetTitle": "Aún no hay clips",
     "libraryNoDraftsYetSubtitle": "Los videos que guardes como borrador aparecerán aquí",
@@ -3155,7 +3159,6 @@
     "inboxActionReportVanishedAccount": "Reportar esta cuenta",
     "inboxActionBlockVanishedAccount": "Bloquear esta cuenta",
     "inboxActionUnblockVanishedAccount": "Desbloquear esta cuenta",
-    "inboxReportedVanishedAccount": "Reportaste esta cuenta",
     "inboxBlockedVanishedAccount": "Bloqueaste esta cuenta",
     "inboxUnblockedVanishedAccount": "Desbloqueaste esta cuenta",
     "inboxRemoveConfirmBodyVanishedAccount": "Esto quita la conversación de tu bandeja de entrada. Si te vuelve a escribir, se inicia una conversación nueva.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Buscar o añadir etiquetas",
     "videoMetadataTagsPickerEmptyHint": "Añade etiquetas para que otros descubran tu vídeo",
     "videoMetadataTagsPickerNoResults": "Sin etiquetas coincidentes",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Los hashtags pueden tener hasta {max} carácter.} many{Los hashtags pueden tener hasta {max} de caracteres.} other{Los hashtags pueden tener hasta {max} caracteres.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Puedes añadir hasta {max} hashtag.} many{Puedes añadir hasta {max} de hashtags.} other{Puedes añadir hasta {max} hashtags.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} de {max} carácter} many{{count} de {max} de caracteres} other{{count} de {max} caracteres}}",
     "videoMetadataTagsPickerAddTag": "Añadir «#{tag}»",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "No se pudo editar el comentario",
     "commentsErrorNotAuthenticatedInteract": "Inicia sesión para participar",
     "commentsErrorVoteFailed": "No se pudo votar el comentario",
-    "commentsErrorReportFailed": "No se pudo denunciar el comentario",
     "commentsErrorBlockFailed": "No se pudo bloquear a la persona",
     "commentsErrorDeleteFailed": "No se pudo borrar el comentario",
     "commentsHeaderCount": "{count, plural, =1{{count} comentario} other{{count} comentarios}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Editar comentario",
     "commentOptionsFlagContentLabel": "Marcar contenido",
     "commentOptionsFlagContentSemanticLabel": "Marcar este contenido",
-    "commentOptionsFlagReasonPrompt": "Elegí un motivo para marcar este comentario",
-    "commentOptionsFlagSubmit": "Enviar",
     "commentOptionsTitle": "Opciones",
     "commentsEmptyClassicVineMessage": "Todavía estamos importando los comentarios viejos del archivo. Aún no están listos.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

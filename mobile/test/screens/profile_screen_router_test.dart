@@ -24,6 +24,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -31,8 +32,10 @@ import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
@@ -137,7 +140,7 @@ void main() {
   // URL -> ProfileScreenRouter -> ProfileViewSwitcher -> ProfileVideoFeedView
   // -> PooledFullscreenVideoFeedScreen. Assert the video the fullscreen feed
   // actually shows, so a dropped index anywhere in that chain fails (#7160).
-  group('profile feed URL opens the matching page', () {
+  group('profile routes', () {
     late _MockVideosRepository videosRepository;
     late _MockVideoEventService videoEventService;
     late _MockContentBlocklistRepository blocklistRepository;
@@ -149,7 +152,7 @@ void main() {
       registerFallbackValue(_FakeVideoEvent());
     });
 
-    setUp(() async {
+    Future<void> stubProfileDependencies() async {
       await CacheSync.init(dao: _InMemoryCacheDao());
 
       videosRepository = _MockVideosRepository();
@@ -222,19 +225,25 @@ void main() {
       when(
         () => blocklistRepository.stateStream,
       ).thenAnswer((_) => const Stream<ContentPolicyState>.empty());
-    });
+    }
 
-    Future<FullscreenFeedBloc> pumpProfileAt(
-      WidgetTester tester,
-      int index,
-    ) async {
-      final location = ProfileScreenRouter.pathForIndex(_npub, index);
+    /// Pumps [ProfileScreenRouter] at [location]. With [navigation], the
+    /// screen resolves its navigator to that mock instead of the real router.
+    Future<void> pumpProfileRoute(
+      WidgetTester tester, {
+      required String location,
+      required String path,
+      MockGoRouter? navigation,
+    }) async {
+      const profile = ProfileScreenRouter();
       final router = GoRouter(
         initialLocation: location,
         routes: [
           GoRoute(
-            path: ProfileScreenRouter.pathWithIndex,
-            builder: (_, _) => const ProfileScreenRouter(),
+            path: path,
+            builder: (_, _) => navigation == null
+                ? profile
+                : MockGoRouterProvider(goRouter: navigation, child: profile),
           ),
         ],
       );
@@ -295,127 +304,201 @@ void main() {
       });
       await tester.pump();
       await tester.pump();
+    }
 
+    Future<FullscreenFeedBloc> pumpProfileAt(
+      WidgetTester tester,
+      int index,
+    ) async {
+      await pumpProfileRoute(
+        tester,
+        location: ProfileScreenRouter.pathForIndex(_npub, index),
+        path: ProfileScreenRouter.pathWithIndex,
+      );
       final content = tester.element(find.byType(FullscreenFeedContent));
       return content.read<FullscreenFeedBloc>();
     }
 
-    testWidgets('index 0 in the URL opens the first video', (tester) async {
-      final bloc = await pumpProfileAt(tester, 0);
+    group('Library button', () {
+      setUp(stubProfileDependencies);
 
-      expect(bloc.state.currentVideo?.id, mockVideos[0].id);
+      testWidgets('opens the clips route', (tester) async {
+        final navigation = MockGoRouter();
+        when(() => navigation.push<void>(any())).thenAnswer((_) async {});
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
-    });
-
-    testWidgets('index 1 in the URL opens the second video', (tester) async {
-      final bloc = await pumpProfileAt(tester, 1);
-
-      expect(bloc.state.currentVideo?.id, mockVideos[1].id);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
-    });
-
-    testWidgets('successful background publish refreshes the profile feed', (
-      tester,
-    ) async {
-      await pumpProfileAt(tester, 0);
-      clearInteractions(videosRepository);
-
-      backgroundPublishStates.add(
-        const BackgroundPublishState(
-          recentlyPublished: [PublishedVideo(draftId: 'published-draft')],
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      verify(
-        () => videosRepository.getAuthorFeed(
-          authorPubkey: _authorPubkeyHex,
-          relaySeed: any(named: 'relaySeed'),
-          skipCache: true,
-        ),
-      ).called(1);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
-    });
-
-    testWidgets('failed background publish does not refresh the profile feed', (
-      tester,
-    ) async {
-      final draft = _MockDivineVideoDraft();
-      when(() => draft.id).thenReturn('failed-draft');
-      await pumpProfileAt(tester, 0);
-      clearInteractions(videosRepository);
-
-      backgroundPublishStates.add(
-        BackgroundPublishState(
-          uploads: [
-            BackgroundUpload(
-              draft: draft,
-              result: const PublishError(PublishErrorKind.generic),
-              progress: 1,
-            ),
-          ],
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      verifyNever(
-        () => videosRepository.getAuthorFeed(
-          authorPubkey: any(named: 'authorPubkey'),
-          relaySeed: any(named: 'relaySeed'),
-          skipCache: true,
-        ),
-      );
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 3));
-    });
-
-    testWidgets(
-      'vanished background upload does not refresh the profile feed',
-      (
-        tester,
-      ) async {
-        final draft = _MockDivineVideoDraft();
-        when(() => draft.id).thenReturn('vanished-draft');
-        await pumpProfileAt(tester, 0);
-
-        backgroundPublishStates.add(
-          BackgroundPublishState(
-            uploads: [
-              BackgroundUpload(draft: draft, result: null, progress: 0.5),
-            ],
-          ),
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          navigation: navigation,
         );
-        await tester.pump();
-        clearInteractions(videosRepository);
-
-        // The upload leaves the collection with no success result, exactly as
-        // BackgroundPublishVanished emits it. recentlyPublished stays empty, so
-        // this is not a publish and must not refresh the grid.
-        backgroundPublishStates.add(const BackgroundPublishState());
-        await tester.pump();
+        await tester.tap(find.byKey(const Key('library-button')));
         await tester.pump();
 
-        verifyNever(
-          () => videosRepository.getAuthorFeed(
-            authorPubkey: any(named: 'authorPubkey'),
-            relaySeed: any(named: 'relaySeed'),
-            skipCache: true,
-          ),
-        );
+        verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 3));
-      },
-    );
+      });
+
+      testWidgets('logs a rejected clips navigation instead of leaking it', (
+        tester,
+      ) async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final navigation = MockGoRouter();
+        when(
+          () => navigation.push<void>(any()),
+        ).thenAnswer((_) => Future<void>.error(Exception('push-failed')));
+
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          navigation: navigation,
+        );
+        await tester.tap(find.byKey(const Key('library-button')));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final logs = LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.message.contains('open profile clips'))
+            .toList();
+        expect(logs, hasLength(1));
+        final log = logs.single;
+        expect(log.name, 'ProfileScreenRouter');
+        expect(log.level, LogLevel.error);
+        expect(log.message, contains('push-failed'));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+    });
+
+    group('profile feed URL opens the matching page', () {
+      setUp(stubProfileDependencies);
+
+      testWidgets('index 0 in the URL opens the first video', (tester) async {
+        final bloc = await pumpProfileAt(tester, 0);
+
+        expect(bloc.state.currentVideo?.id, mockVideos[0].id);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('index 1 in the URL opens the second video', (tester) async {
+        final bloc = await pumpProfileAt(tester, 1);
+
+        expect(bloc.state.currentVideo?.id, mockVideos[1].id);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('successful background publish refreshes the profile feed', (
+        tester,
+      ) async {
+        await pumpProfileAt(tester, 0);
+        clearInteractions(videosRepository);
+
+        backgroundPublishStates.add(
+          const BackgroundPublishState(
+            recentlyPublished: [PublishedVideo(draftId: 'published-draft')],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        verify(
+          () => videosRepository.getAuthorFeed(
+            authorPubkey: _authorPubkeyHex,
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: true,
+          ),
+        ).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets(
+        'failed background publish does not refresh the profile feed',
+        (
+          tester,
+        ) async {
+          final draft = _MockDivineVideoDraft();
+          when(() => draft.id).thenReturn('failed-draft');
+          await pumpProfileAt(tester, 0);
+          clearInteractions(videosRepository);
+
+          backgroundPublishStates.add(
+            BackgroundPublishState(
+              uploads: [
+                BackgroundUpload(
+                  draft: draft,
+                  result: const PublishError(PublishErrorKind.generic),
+                  progress: 1,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(
+            () => videosRepository.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: true,
+            ),
+          );
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 3));
+        },
+      );
+
+      testWidgets(
+        'vanished background upload does not refresh the profile feed',
+        (
+          tester,
+        ) async {
+          final draft = _MockDivineVideoDraft();
+          when(() => draft.id).thenReturn('vanished-draft');
+          await pumpProfileAt(tester, 0);
+
+          backgroundPublishStates.add(
+            BackgroundPublishState(
+              uploads: [
+                BackgroundUpload(draft: draft, result: null, progress: 0.5),
+              ],
+            ),
+          );
+          await tester.pump();
+          clearInteractions(videosRepository);
+
+          // The upload leaves the collection with no success result, exactly as
+          // BackgroundPublishVanished emits it. recentlyPublished stays empty, so
+          // this is not a publish and must not refresh the grid.
+          backgroundPublishStates.add(const BackgroundPublishState());
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(
+            () => videosRepository.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: true,
+            ),
+          );
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 3));
+        },
+      );
+    });
   });
 
   // A divine:///profile/<npub> or https://divine.video/profile/<npub> deep
@@ -481,9 +564,7 @@ void main() {
     });
   });
 
-  // A sibling group, deliberately not nested inside the feed group above:
-  // that group's setUp registers 19 stubs, which stay uncounted by the
-  // shared-setUp ratchet only while it has no descendant groups.
+  // Grid detection does not need the profile body dependencies above.
   group('own-profile grid detection', () {
     late _MockContentBlocklistRepository blocklistRepository;
 

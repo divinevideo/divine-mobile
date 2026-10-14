@@ -188,6 +188,34 @@ void main() {
         ]),
       );
     });
+
+    test('publishes hashtags lowercased, deduplicated and within limits', () {
+      final tags = <List<String>>[];
+      final pastedList = 'VineHashtagsMasterList' * 10;
+      addVideoMetadataTags(
+        tags,
+        upload: PendingUpload.create(
+          localVideoPath: '/tmp/video.mp4',
+          nostrPubkey: _self,
+          hashtags: [
+            'FunnyDivines',
+            'funnydivines',
+            pastedList,
+            for (var i = 0; i < 12; i++) 'tag$i',
+          ],
+        ),
+        publishedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+
+      final hashtags = [
+        for (final tag in tags)
+          if (tag.first == 't') tag[1],
+      ];
+      expect(hashtags, [
+        'funnydivines',
+        for (var i = 0; i < 9; i++) 'tag$i',
+      ]);
+    });
   });
 
   group('addVideoCreditTags', () {

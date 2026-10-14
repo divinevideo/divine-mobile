@@ -954,9 +954,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Nyahsekat akaun ini';
 
   @override
-  String get inboxReportedVanishedAccount => 'Akaun ini dilaporkan';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Akaun ini disekat';
 
   @override
@@ -4820,6 +4817,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportWhyReporting => 'Mengapa anda melaporkan kandungan ini?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.';
 
@@ -4842,6 +4842,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Sila terangkan isu itu';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5743,11 +5746,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Dimuat naik — ketik Simpan untuk menggunakan';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName dilaporkan';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName disekat';
   }
@@ -6613,6 +6611,66 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryGalleryImportDone => 'Selesai';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Simpan klip yang dipilih ke galeri anda';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
+      one: '1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Butiran';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Disimpan tanpa bukti';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Hanya klip yang ada bukti dirakam dengan Divine boleh kembali dari galeri anda. Salinan klip-klip ini disimpan tanpa bukti itu.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Buktinya tidak dapat ditambah sekarang, mungkin kerana anda di luar talian. Cuba lagi untuk menyimpan salinan yang ada buktinya.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Klip stop-motion dibuat daripada foto, dan foto tidak boleh membawa bukti.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Versi Divine ini tidak dapat menambah bukti pada klip.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Klip ini tiada bukti, dan Divine tidak dapat menambahnya kemudian.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Disimpan dengan buktinya';
+
+  @override
+  String get libraryGallerySaveSigning => 'Menambah bukti pada klip anda…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Menyimpan klip $current daripada $total…',
+      one: 'Menyimpan klip anda…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7017,13 +7075,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Tandakan kandungan ini';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pilih sebab untuk menandakan komen ini';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Hantar';
 
   @override
   String get commentOptionsTitle => 'Pilihan';
@@ -8332,9 +8383,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Gagal mengundi komen';
-
-  @override
-  String get commentsErrorReportFailed => 'Gagal melaporkan komen';
 
   @override
   String get commentsErrorBlockFailed => 'Gagal menyekat pengguna';
@@ -11576,6 +11624,36 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Tiada tag sepadan';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtag boleh mencapai $max aksara.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Anda boleh menambah sehingga $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count daripada $max aksara',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

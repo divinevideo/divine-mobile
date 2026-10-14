@@ -13,18 +13,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
-import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/clip_library_service.dart';
-import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
-
-class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
 /// A clip manager whose library revision moves the way a bake landing in the
 /// library moves it.
@@ -81,9 +77,6 @@ void main() {
         ProviderScope(
           overrides: [
             clipLibraryServiceProvider.overrideWithValue(library),
-            gallerySaveServiceProvider.overrideWithValue(
-              _MockGallerySaveService(),
-            ),
             sharedPreferencesProvider.overrideWithValue(prefs),
             clipManagerProvider.overrideWith(_BakingClipManager.new),
           ],

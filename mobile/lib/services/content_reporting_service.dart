@@ -332,7 +332,12 @@ class ContentReportingService implements ReportChannelDriver {
                 'recipientPubkey': recipient,
                 'content': sanitizeDiagnosticText(
                   moderationContent ??
-                      'Content Report\nReason: ${reason.name}\nEvent: $eventId\nDetails: $safeDetails',
+                      [
+                        'Content Report',
+                        'Reason: ${reason.name}',
+                        'Event: $eventId',
+                        if (_hasNote(safeDetails)) 'Details: $safeDetails',
+                      ].join('\n'),
                 ),
                 'tags': moderationTags.isEmpty
                     ? moderationDmTags(reason: reason)
@@ -508,30 +513,13 @@ class ContentReportingService implements ReportChannelDriver {
       // The report sheet's shape: a user report names the account (#9622).
       moderationContent:
           moderationContent ??
-          'User Report\nReason: ${reason.name}\nUser Pubkey: $userPubkey\n'
-              'Details: $details',
+          [
+            'User Report',
+            'Reason: ${reason.name}',
+            'User Pubkey: $userPubkey',
+            if (_hasNote(details)) 'Details: $details',
+          ].join('\n'),
       moderationTags: moderationTags,
-    );
-  }
-
-  /// Quick report for common violations.
-  ///
-  /// Same contract as [reportContent]: failures come back as a returned
-  /// value, so the result must be read.
-  @useResult
-  Future<ReportResult> quickReport({
-    required String eventId,
-    required String authorPubkey,
-    required ContentFilterReason reason,
-  }) async {
-    final details = _getQuickReportDetails(reason);
-
-    return reportContent(
-      eventId: eventId,
-      authorPubkey: authorPubkey,
-      reason: reason,
-      details: details,
-      hashtags: ['quick-report'],
     );
   }
 
@@ -764,6 +752,15 @@ class ContentReportingService implements ReportChannelDriver {
   static bool _isValidEventId(String eventId) =>
       NostrHexUtils.isValidEventId(eventId);
 
+  /// Whether the reporter wrote a note. The note is optional for every reason
+  /// but Other, and an empty one is sent as empty rather than filled in, so
+  /// every projection of the report leaves its `Details` line out instead of
+  /// writing a blank one. The reason already travels in its own line and in
+  /// the report's tags, so a missing line can only mean the reporter said
+  /// nothing (#10003). The moderation DM the report sheet builds follows the
+  /// same rule.
+  static bool _hasNote(String details) => details.trim().isNotEmpty;
+
   /// Format report content for NIP-56 compliance (kind 1984)
   String _formatNip56ReportContent(
     ContentFilterReason reason,
@@ -773,7 +770,7 @@ class ContentReportingService implements ReportChannelDriver {
     final buffer = StringBuffer();
     buffer.writeln('CONTENT REPORT - NIP-56');
     buffer.writeln('Reason: ${reason.name}');
-    buffer.writeln('Details: $details');
+    if (_hasNote(details)) buffer.writeln('Details: $details');
 
     if (additionalContext != null) {
       buffer.writeln('Additional Context: $additionalContext');
@@ -810,11 +807,13 @@ class ContentReportingService implements ReportChannelDriver {
     description.writeln('Author Pubkey: $authorPubkey');
     description.writeln();
     description.writeln('Violation Type: ${reason.name}');
-    description.writeln();
-    description.writeln('Reporter Details:');
-    // Per-field, before assembly: redaction spans lines, so sanitizing the
-    // finished blob lets one reporter field erase the ones after it.
-    description.writeln(sanitizeDiagnosticText(details));
+    if (_hasNote(details)) {
+      description.writeln();
+      description.writeln('Reporter Details:');
+      // Per-field, before assembly: redaction spans lines, so sanitizing the
+      // finished blob lets one reporter field erase the ones after it.
+      description.writeln(sanitizeDiagnosticText(details));
+    }
 
     if (additionalContext != null) {
       description.writeln();
@@ -999,34 +998,6 @@ class ContentReportingService implements ReportChannelDriver {
         );
       case ReportChannel.moderation:
         return await deliverModerationDm?.call(report) ?? false;
-    }
-  }
-
-  /// Get quick report details for common violations
-  String _getQuickReportDetails(ContentFilterReason reason) {
-    switch (reason) {
-      case ContentFilterReason.spam:
-        return 'This content appears to be spam or unwanted promotional material.';
-      case ContentFilterReason.harassment:
-        return 'This content contains harassment, profanity, or abusive behavior.';
-      case ContentFilterReason.violence:
-        return 'This content contains violent or extremist material.';
-      case ContentFilterReason.sexualContent:
-        return 'This content contains nudity, pornography, or sexual material.';
-      case ContentFilterReason.copyright:
-        return 'This content appears to violate copyright.';
-      case ContentFilterReason.falseInformation:
-        return 'This content contains misinformation or false claims.';
-      case ContentFilterReason.childSafety:
-        return 'This content raises child safety concerns.';
-      case ContentFilterReason.csam:
-        return 'This content depicts child sexual abuse.';
-      case ContentFilterReason.underageUser:
-        return 'This account holder appears to be under 16 years old.';
-      case ContentFilterReason.aiGenerated:
-        return 'This content appears to be deceptive AI-generated media.';
-      case ContentFilterReason.other:
-        return 'This content violates community guidelines.';
     }
   }
 

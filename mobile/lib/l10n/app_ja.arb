@@ -2021,14 +2021,6 @@
     "conversationRestorePausedTitle": "このチャットの復元が終わっていないよ",
     "inboxRestoreRetryAction": "再試行",
     "inboxRestoringMessages": "メッセージを復元中…",
-    "inboxReportedUser": "{displayName}を報告したよ",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName}のブロックを解除したよ",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2142,6 +2134,18 @@
     "libraryGalleryImportItemNotVerified": "Divineで撮影されたことを確認できませんでした",
     "libraryGalleryImportItemCheckUnavailable": "今は確認できません。後でもう一度お試しください。",
     "libraryGalleryImportDone": "完了",
+    "librarySaveSelectedClipsTooltip": "選択したクリップをギャラリーに保存",
+    "libraryClipsSavedWithoutProof": "{count, plural, other{{count}件のクリップを証明なしで保存しました。このため、クリップに戻すことはできません。}}",
+    "libraryClipsSavedWithoutProofDetails": "詳細",
+    "libraryGallerySaveWarningTitle": "証明なしで保存済み",
+    "libraryGallerySaveWarningIntro": "ギャラリーから戻せるのは、Divineで撮影したことを証明できるクリップだけです。これらのクリップのコピーは証明なしで保存されました。",
+    "libraryGallerySaveWarningSigningUnavailable": "オフラインだったなどの理由で、今は証明を追加できませんでした。もう一度試すと、証明付きのコピーを保存できます。",
+    "libraryGallerySaveWarningStopMotion": "ストップモーションのクリップは写真から作られていて、写真には証明を付けられません。",
+    "libraryGallerySaveWarningSigningUnsupported": "このバージョンのDivineでは、クリップに証明を追加できません。",
+    "libraryGallerySaveWarningNoProof": "このクリップには証明がなく、Divineで後から追加することもできません。",
+    "libraryGallerySaveWarningSavedWithProof": "証明付きで保存しました",
+    "libraryGallerySaveSigning": "クリップに証明を追加しています…",
+    "libraryGallerySaveProgress": "{total, plural, other{{total}件中{current}件目のクリップを保存しています…}}",
     "libraryNoClipsYetSubtitle": "録画したクリップがここに表示されます",
     "libraryNoClipsYetTitle": "まだクリップがありません",
     "libraryNoDraftsYetSubtitle": "下書きとして保存した動画がここに表示されます",
@@ -3140,7 +3144,6 @@
     "inboxActionReportVanishedAccount": "このアカウントを報告",
     "inboxActionBlockVanishedAccount": "このアカウントをブロック",
     "inboxActionUnblockVanishedAccount": "このアカウントのブロックを解除",
-    "inboxReportedVanishedAccount": "このアカウントを報告したよ",
     "inboxBlockedVanishedAccount": "このアカウントをブロックしたよ",
     "inboxUnblockedVanishedAccount": "このアカウントのブロックを解除したよ",
     "inboxRemoveConfirmBodyVanishedAccount": "この会話が受信トレイから削除されます。相手からまたメッセージが届くと、新しい会話が始まります。",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "タグを検索または追加",
     "videoMetadataTagsPickerEmptyHint": "タグを追加して動画を見つけてもらおう",
     "videoMetadataTagsPickerNoResults": "一致するタグがありません",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, other{ハッシュタグは{max}文字までです。}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{ハッシュタグは{max}個まで追加できます。}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{max}文字中{count}文字}}",
     "videoMetadataTagsPickerAddTag": "「#{tag}」を追加",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "コメントを編集できませんでした",
     "commentsErrorNotAuthenticatedInteract": "参加するにはログインしてください",
     "commentsErrorVoteFailed": "コメントへの投票に失敗しました",
-    "commentsErrorReportFailed": "コメントを報告できませんでした",
     "commentsErrorBlockFailed": "ユーザーをブロックできませんでした",
     "commentsErrorDeleteFailed": "コメントを削除できませんでした",
     "commentsHeaderCount": "{count, plural, other{コメント {count} 件}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "コメントを編集",
     "commentOptionsFlagContentLabel": "コンテンツにフラグを付ける",
     "commentOptionsFlagContentSemanticLabel": "このコンテンツにフラグを付ける",
-    "commentOptionsFlagReasonPrompt": "このコメントにフラグを付ける理由を選んでね",
-    "commentOptionsFlagSubmit": "送信",
     "commentOptionsTitle": "オプション",
     "commentsEmptyClassicVineMessage": "アーカイブから昔のコメントをインポートする作業をまだ進めてるよ。まだ準備できてないんだ。",
     "commentsEmptyClassicVineTitle": "クラシック Vine",

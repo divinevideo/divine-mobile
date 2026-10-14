@@ -963,9 +963,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-unblock ang account na ito';
 
   @override
-  String get inboxReportedVanishedAccount => 'Na-report ang account na ito';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Na-block ang account na ito';
 
   @override
@@ -4856,6 +4853,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportWhyReporting => 'Bakit mo rine-report ang content na ito?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Aaksyunan ng Divine ang mga content report sa loob ng 24 oras sa pamamagitan ng pag-alis ng content at pag-eject sa user na nagbigay ng masamang content.';
 
@@ -4878,6 +4878,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Pakilarawan ang problema';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5779,11 +5782,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Na-upload na — i-tap ang I-save para ilapat';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'Na-report si $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'Na-block si $displayName';
   }
@@ -6651,6 +6649,68 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryGalleryImportDone => 'Tapos na';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'I-save ang mga napiling clip sa gallery mo';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
+      one:
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Mga detalye';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Na-save nang walang proof';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Ang mga clip lang na may proof na kinunan sila gamit ang Divine ang puwedeng bumalik mula sa gallery mo. Na-save nang walang proof ang mga kopya ng mga clip na ito.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Hindi maidagdag ang proof nito ngayon, baka dahil offline ka. Subukan ulit para mag-save ng kopyang may proof.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Gawa sa mga litrato ang mga stop-motion clip, at hindi puwedeng magdala ng proof ang mga iyon.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Hindi kayang magdagdag ng proof sa mga clip ng bersyong ito ng Divine.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Walang proof ang clip na ito, at hindi na ito maidadagdag ng Divine pagkatapos.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Na-save nang may proof';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Idinadagdag ang proof sa mga clip mo…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Sine-save ang clip $current sa $total…',
+      one: 'Sine-save ang clip $current sa $total…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7059,13 +7119,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'I-flag ang content na ito';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Pumili ng dahilan sa pag-flag sa komentong ito';
-
-  @override
-  String get commentOptionsFlagSubmit => 'I-submit';
 
   @override
   String get commentOptionsTitle => 'Mga Option';
@@ -8386,9 +8439,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Hindi naiboto ang komento';
-
-  @override
-  String get commentsErrorReportFailed => 'Hindi na-report ang komento';
 
   @override
   String get commentsErrorBlockFailed => 'Hindi na-block ang user';
@@ -11664,6 +11714,39 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Walang tugmang tag';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hanggang $max character lang ang hashtag.',
+      one: 'Hanggang $max character lang ang hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+      one: 'Hanggang $max hashtag lang ang puwede mong idagdag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count sa $max character',
+      one: '$count sa $max character',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

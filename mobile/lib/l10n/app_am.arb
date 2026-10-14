@@ -411,7 +411,6 @@
     "inboxActionReportVanishedAccount": "ሪፖርት ይህን መለያ",
     "inboxActionBlockVanishedAccount": "አግድ ይህን መለያ",
     "inboxActionUnblockVanishedAccount": "እገዳን አንሳ ይህን መለያ",
-    "inboxReportedVanishedAccount": "ሪፖርት ተደርጓል ይህን መለያ",
     "inboxBlockedVanishedAccount": "ታግዷል ይህን መለያ",
     "inboxUnblockedVanishedAccount": "እገዳው ተነስቷል ይህን መለያ",
     "inboxRemoveConfirmBodyVanishedAccount": "ይህ ውይይቱን ከመልእክት ሳጥንህ ያስወግዳል። እንደገና መልእክት ከላከልህ አዲስ ውይይት ይጀምራል።",
@@ -2302,14 +2301,6 @@
     "categoryVlogging": "ቭሎግ ማድረግ",
     "categoryWrestling": "ትግል",
     "profileSetupUploadStaged": "ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ",
-    "inboxReportedUser": "ሪፖርት ተደርጓል {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxBlockedUser": "ታግዷል {displayName}",
     "@inboxBlockedUser": {
         "placeholders": {
@@ -2552,6 +2543,18 @@
     "libraryGalleryImportItemNotVerified": "በDivine መቀረጹን ማረጋገጥ አልተቻለም",
     "libraryGalleryImportItemCheckUnavailable": "አሁን ማረጋገጥ አልተቻለም። ቆይተው እንደገና ይሞክሩ።",
     "libraryGalleryImportDone": "ተጠናቋል",
+    "librarySaveSelectedClipsTooltip": "የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{{count} ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።} other{{count} ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።}}",
+    "libraryClipsSavedWithoutProofDetails": "ዝርዝሮች",
+    "libraryGallerySaveWarningTitle": "ያለ ማረጋገጫ ተቀምጧል",
+    "libraryGallerySaveWarningIntro": "ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።",
+    "libraryGallerySaveWarningSigningUnavailable": "ማረጋገጫው አሁን ሊታከል አልቻለም፣ ምናልባት ከመስመር ውጭ ስለነበሩ ይሆናል። ማረጋገጫ ያለው ቅጂ ለማስቀመጥ እንደገና ይሞክሩ።",
+    "libraryGallerySaveWarningStopMotion": "የስቶፕ ሞሽን ክሊፖች ከፎቶዎች የተሠሩ ናቸው፣ ፎቶዎች ደግሞ ማረጋገጫ መያዝ አይችሉም።",
+    "libraryGallerySaveWarningSigningUnsupported": "ይህ የDivine ስሪት ለክሊፖች ማረጋገጫ ማከል አይችልም።",
+    "libraryGallerySaveWarningNoProof": "ይህ ክሊፕ ማረጋገጫ የለውም፣ Divine ደግሞ በኋላ ሊያክልለት አይችልም።",
+    "libraryGallerySaveWarningSavedWithProof": "ከማረጋገጫው ጋር ተቀምጧል",
+    "libraryGallerySaveSigning": "ለክሊፖችዎ ማረጋገጫ እየታከለ ነው…",
+    "libraryGallerySaveProgress": "{total, plural, =1{ክሊፕዎ እየተቀመጠ ነው…} other{ክሊፕ {current} ከ{total} እየተቀመጠ ነው…}}",
     "libraryClipsDeletedCount": "{count, plural, =1{{count} ክሊፕ ተሰርዟል} other{{count} ክሊፖች ተሰርዘዋል}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -3874,6 +3877,9 @@
     "videoMetadataTagsPickerSearchHint": "መለያዎችን ይፈልጉ ወይም ያክሉ",
     "videoMetadataTagsPickerEmptyHint": "ሰዎች ቪዲዮዎን እንዲያገኙ መለያዎችን ያክሉ",
     "videoMetadataTagsPickerNoResults": "ተዛማጅ መለያዎች የሉም",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{ሃሽታጎች እስከ {max} ቁምፊ ሊኖራቸው ይችላሉ።} other{ሃሽታጎች እስከ {max} ቁምፊዎች ሊኖራቸው ይችላሉ።}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{እስከ {max} ሃሽታግ ማከል ይችላሉ።} other{እስከ {max} ሃሽታጎች ማከል ይችላሉ።}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{ከ{max} ቁምፊ {count}} other{ከ{max} ቁምፊዎች {count}}}",
     "videoMetadataTagsPickerAddTag": "\"#{tag}\" ያክሉ",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3992,7 +3998,6 @@
     "commentsErrorEditFailed": "አስተያየቱን ማረም አልተሳካም",
     "commentsErrorNotAuthenticatedInteract": "ለመሳተፍ እባክህ ግባ",
     "commentsErrorVoteFailed": "በአስተያየቱ ላይ መምረጥ አልተሳካም",
-    "commentsErrorReportFailed": "አስተያየቱን ሪፖርት ማድረግ አልተሳካም",
     "commentsErrorBlockFailed": "ተጠቃሚውን ማገድ አልተሳካም",
     "commentsErrorDeleteFailed": "አስተያየቱን መሰረዝ አልተሳካም",
     "commentsHeaderCount": "{count, plural, =1{{count} አስተያየት} other{{count} አስተያየቶች}}",
@@ -4417,8 +4422,6 @@
     "commentOptionsEditSemanticLabel": "አስተያየት አርትዕ",
     "commentOptionsFlagContentLabel": "ይዘት ምልክት አድርግ",
     "commentOptionsFlagContentSemanticLabel": "ይህን ይዘት ምልክት አድርግ",
-    "commentOptionsFlagReasonPrompt": "ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ",
-    "commentOptionsFlagSubmit": "አስገባ",
     "commentOptionsTitle": "አማራጮች",
     "commentsEmptyClassicVineMessage": "አሮጌ አስተያየቶችን ከማህደሩ ማስመጣት ላይ አሁንም እየሰራን ነው። እስካሁን ዝግጁ አይደሉም።",
     "commentsEmptyClassicVineTitle": "ክላሲክ Vine",

@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Questa chat non è stata ripristinata del tutto",
     "inboxRestoreRetryAction": "Riprova",
     "inboxRestoringMessages": "Ripristino dei messaggi…",
-    "inboxReportedUser": "{displayName} segnalato/a",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} sbloccato/a",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2152,6 +2144,18 @@
     "libraryGalleryImportItemNotVerified": "Impossibile confermare che sia stato girato con Divine",
     "libraryGalleryImportItemCheckUnavailable": "Impossibile controllare adesso. Riprova più tardi.",
     "libraryGalleryImportDone": "Fatto",
+    "librarySaveSelectedClipsTooltip": "Salva i clip selezionati nella tua galleria",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 clip è stato salvato senza la sua prova, quindi non può tornare tra i tuoi clip.} many{{count} clip sono stati salvati senza la loro prova, quindi non possono tornare tra i tuoi clip.} other{{count} clip sono stati salvati senza la loro prova, quindi non possono tornare tra i tuoi clip.}}",
+    "libraryClipsSavedWithoutProofDetails": "Dettagli",
+    "libraryGallerySaveWarningTitle": "Salvati senza prova",
+    "libraryGallerySaveWarningIntro": "Dalla tua galleria possono tornare solo i clip con la prova che sono stati girati con Divine. Le copie di questi clip sono state salvate senza.",
+    "libraryGallerySaveWarningSigningUnavailable": "Non è stato possibile aggiungere la sua prova adesso, forse perché eri offline. Riprova per salvare una copia con la prova.",
+    "libraryGallerySaveWarningStopMotion": "I clip in stop motion sono fatti di foto, che non possono portare una prova.",
+    "libraryGallerySaveWarningSigningUnsupported": "Questa versione di Divine non può aggiungere la prova ai clip.",
+    "libraryGallerySaveWarningNoProof": "Questo clip non ha una prova, e Divine non può aggiungerla in seguito.",
+    "libraryGallerySaveWarningSavedWithProof": "Salvato con la sua prova",
+    "libraryGallerySaveSigning": "Aggiunta della prova ai tuoi clip…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Salvataggio del tuo clip…} many{Salvataggio del clip {current} di {total}…} other{Salvataggio del clip {current} di {total}…}}",
     "libraryNoClipsYetSubtitle": "Le clip registrate appariranno qui",
     "libraryNoClipsYetTitle": "Ancora nessuna clip",
     "libraryNoDraftsYetSubtitle": "I video salvati come bozza appariranno qui",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Segnala questo account",
     "inboxActionBlockVanishedAccount": "Blocca questo account",
     "inboxActionUnblockVanishedAccount": "Sblocca questo account",
-    "inboxReportedVanishedAccount": "Questo account è stato segnalato",
     "inboxBlockedVanishedAccount": "Questo account è stato bloccato",
     "inboxUnblockedVanishedAccount": "Questo account è stato sbloccato",
     "inboxRemoveConfirmBodyVanishedAccount": "Questo rimuove la conversazione dalla tua posta in arrivo. Se ti scrive di nuovo, inizia una nuova conversazione.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Cerca o aggiungi tag",
     "videoMetadataTagsPickerEmptyHint": "Aggiungi tag per far scoprire il tuo video",
     "videoMetadataTagsPickerNoResults": "Nessun tag corrispondente",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Gli hashtag possono avere fino a {max} carattere.} many{Gli hashtag possono avere fino a {max} di caratteri.} other{Gli hashtag possono avere fino a {max} caratteri.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Puoi aggiungere fino a {max} hashtag.} many{Puoi aggiungere fino a {max} di hashtag.} other{Puoi aggiungere fino a {max} hashtag.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} di {max} carattere} many{{count} di {max} di caratteri} other{{count} di {max} caratteri}}",
     "videoMetadataTagsPickerAddTag": "Aggiungi «#{tag}»",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Non è stato possibile modificare il commento",
     "commentsErrorNotAuthenticatedInteract": "Accedi per interagire",
     "commentsErrorVoteFailed": "Non è stato possibile votare il commento",
-    "commentsErrorReportFailed": "Non è stato possibile segnalare il commento",
     "commentsErrorBlockFailed": "Non è stato possibile bloccare l'utente",
     "commentsErrorDeleteFailed": "Non è stato possibile eliminare il commento",
     "commentsHeaderCount": "{count, plural, =1{{count} commento} other{{count} commenti}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Modifica commento",
     "commentOptionsFlagContentLabel": "Segnala contenuto",
     "commentOptionsFlagContentSemanticLabel": "Segnala questo contenuto",
-    "commentOptionsFlagReasonPrompt": "Seleziona un motivo per segnalare questo commento",
-    "commentOptionsFlagSubmit": "Invia",
     "commentOptionsTitle": "Opzioni",
     "commentsEmptyClassicVineMessage": "Stiamo ancora importando i vecchi commenti dall'archivio. Non sono ancora pronti.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

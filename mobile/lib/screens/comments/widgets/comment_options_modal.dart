@@ -4,9 +4,8 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 
 /// Result of a comment options modal action.
 sealed class CommentOptionResult {
@@ -16,14 +15,6 @@ sealed class CommentOptionResult {
 /// User chose to delete their own comment.
 class CommentDeleteResult extends CommentOptionResult {
   const CommentDeleteResult();
-}
-
-/// User chose to report another user's comment.
-class CommentReportResult extends CommentOptionResult {
-  const CommentReportResult({required this.reason, this.details = ''});
-
-  final ContentFilterReason reason;
-  final String details;
 }
 
 /// User chose to block another user from comments.
@@ -95,10 +86,14 @@ class CommentOptionsModal {
     );
   }
 
-  /// Shows the options modal for another user's comment with an integrated
-  /// flag content flow. Closes the modal and returns the result directly.
+  /// Shows the options modal for another user's comment.
+  ///
+  /// Flag Content opens the shared report form ([ReportContentDialog]) for
+  /// the comment, which submits the report itself, so that path returns
+  /// `null`. Block User returns a [CommentBlockUserResult].
   static Future<CommentOptionResult?> showForOtherUserIntegrated(
     BuildContext context, {
+    required String commentId,
     required String authorPubkey,
   }) async {
     final navigator = Navigator.of(context);
@@ -139,9 +134,13 @@ class CommentOptionsModal {
     }
 
     if (action == 'flag' && context.mounted) {
-      // Show flag content sheet as a follow-up
-      final reportResult = await _FlagContentSheet.show(context);
-      return reportResult;
+      // Comments are reported on the same terms as everything else: the
+      // same reasons, and the same note rules (#10003).
+      await ReportContentDialog.showForComment(
+        context,
+        commentId: commentId,
+        authorPubkey: authorPubkey,
+      );
     }
 
     return null;
@@ -197,219 +196,6 @@ class _OptionTile extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Text(label, style: VineTheme.titleMediumFont(color: color)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Bottom sheet for selecting a report reason when flagging content.
-class _FlagContentSheet extends StatefulWidget {
-  const _FlagContentSheet({required this.onSubmit});
-
-  final void Function(CommentReportResult result) onSubmit;
-
-  static Future<CommentReportResult?> show(BuildContext context) {
-    final navigator = Navigator.of(context);
-    return VineBottomSheet.show<CommentReportResult>(
-      context: context,
-      scrollable: false,
-      expanded: false,
-      isScrollControlled: true,
-      title: Text(
-        context.l10n.commentOptionsFlagContentLabel,
-        style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
-      ),
-      body: _FlagContentSheet(
-        onSubmit: navigator.pop,
-      ),
-    );
-  }
-
-  @override
-  State<_FlagContentSheet> createState() => _FlagContentSheetState();
-}
-
-class _FlagContentSheetState extends State<_FlagContentSheet> {
-  ContentFilterReason? _selectedReason;
-
-  @override
-  Widget build(BuildContext context) {
-    // The reasons scroll while Submit stays pinned below them, so Submit is
-    // always visible — even with all 11 reasons under large accessibility
-    // text scales, which otherwise pushed it off-screen in a plain Column.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Flexible(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                  child: Text(
-                    context.l10n.commentOptionsFlagReasonPrompt,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.onSurfaceMuted,
-                    ),
-                  ),
-                ),
-                for (final reason in ContentFilterReason.values)
-                  _ReasonRadioTile(
-                    reason: reason,
-                    isSelected: _selectedReason == reason,
-                    onTap: () {
-                      setState(() {
-                        _selectedReason = reason;
-                      });
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _selectedReason != null
-                  ? () {
-                      widget.onSubmit(
-                        CommentReportResult(
-                          reason: _selectedReason!,
-                          details: context.l10n.reportReasonTitle(
-                            _selectedReason!,
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedReason != null
-                    ? VineTheme.vineGreen
-                    : context.vineColors.containerLow,
-                foregroundColor: _selectedReason != null
-                    // The fill above is the fixed brand green, so its label
-                    // has to be fixed too — the palette `background` token
-                    // goes near-white on light and drops to 2.08:1.
-                    ? VineTheme.onPrimary
-                    : context.vineColors.onSurfaceMuted,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                context.l10n.commentOptionsFlagSubmit,
-                style: VineTheme.labelLargeFont(
-                  color: _selectedReason != null
-                      ? VineTheme.onPrimary
-                      : context.vineColors.onSurfaceMuted,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Accent for the selected reason's ring and dot.
-///
-/// The ring is the only thing that marks which of the eleven reasons is
-/// chosen, and the brand green reaches just 2.22:1 on the light sheet
-/// surface. [VineTheme.primaryAccessible] is the same hue at 3.17:1, which
-/// clears the 3:1 floor a non-text indicator has to meet.
-Color _selectedIndicatorOf(BuildContext context) => context.vineColors.isLight
-    ? VineTheme.primaryAccessible
-    : VineTheme.vineGreen;
-
-class _ReasonRadioTile extends StatelessWidget {
-  const _ReasonRadioTile({
-    required this.reason,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final ContentFilterReason reason;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label:
-          '${context.l10n.reportReasonTitle(reason)}. '
-          '${context.l10n.reportReasonSubtitle(reason)}',
-      // excludeSemantics drops the child subtree — including the
-      // GestureDetector's tap action — so the action is re-declared here.
-      onTap: onTap,
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          color: VineTheme.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected
-                        ? _selectedIndicatorOf(context)
-                        : context.vineColors.onSurfaceMuted,
-                    width: 2,
-                  ),
-                ),
-                child: isSelected
-                    ? Center(
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _selectedIndicatorOf(context),
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.reportReasonTitle(reason),
-                      style: VineTheme.bodyLargeFont(
-                        color: isSelected
-                            ? context.vineColors.onSurface
-                            : context.vineColors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      context.l10n.reportReasonSubtitle(reason),
-                      style: VineTheme.bodySmallFont(
-                        color: context.vineColors.onSurfaceMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),

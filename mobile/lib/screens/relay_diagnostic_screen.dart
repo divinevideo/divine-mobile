@@ -19,6 +19,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -93,7 +94,12 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshDiagnostics();
+    runDetached(
+      _refreshDiagnostics(),
+      'refresh relay diagnostics',
+      logName: 'RelayDiagnostic',
+      category: LogCategory.system,
+    );
   }
 
   Future<void> _refreshDiagnostics() async {
@@ -106,6 +112,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     // Get relay stats from NostrClient
     try {
       final stats = await nostrService.getRelayStats();
+      if (!mounted) return;
       setState(() {
         _relayStats = stats;
       });

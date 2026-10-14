@@ -11,7 +11,6 @@ import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
-import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -37,15 +36,13 @@ class _ClipPickerBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final clipLibraryService = ref.watch(clipLibraryServiceProvider);
-    final gallerySaveService = ref.watch(gallerySaveServiceProvider);
 
     return BlocProvider<ClipsLibraryBloc>(
       // The library service is rebuilt on account switches; re-key so the bloc
       // never keeps serving the previous identity's clips.
-      key: ValueKey((clipLibraryService, gallerySaveService)),
+      key: ValueKey(clipLibraryService),
       create: (_) => ClipsLibraryBloc(
         clipLibraryService: clipLibraryService,
-        gallerySaveService: gallerySaveService,
         sharedPreferences: ref.read(sharedPreferencesProvider),
         clipTypeFilter: LibraryClipTypeFilter.video,
       )..add(const ClipsLibraryLoadRequested()),

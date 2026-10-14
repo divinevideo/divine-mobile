@@ -1,5 +1,5 @@
 // ABOUTME: Tests for CommentReactionsBloc — votes (up/down/switch), vote-count
-// ABOUTME: batch fetch, report, block (with outbox), delete (with outbox).
+// ABOUTME: batch fetch, block (with outbox), delete (with outbox).
 // ABOUTME: Asserts #4478 cache-fix: rootAddressableId threaded into
 // ABOUTME: CommentsRepository.deleteComment.
 
@@ -11,8 +11,6 @@ import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/content_moderation_types.dart';
-import 'package:openvine/services/content_reporting_service.dart';
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
@@ -20,22 +18,14 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
-class _MockContentReportingService extends Mock
-    implements ContentReportingService {}
-
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(ContentFilterReason.spam);
-  });
-
   group(CommentReactionsBloc, () {
     late _MockCommentsRepository mockCommentsRepository;
     late _MockAuthService mockAuthService;
     late _MockLikesRepository mockLikesRepository;
-    late _MockContentReportingService mockContentReportingService;
     late _MockContentBlocklistRepository mockContentBlocklistRepository;
 
     String validId(String suffix) {
@@ -49,7 +39,6 @@ void main() {
       mockCommentsRepository = _MockCommentsRepository();
       mockAuthService = _MockAuthService();
       mockLikesRepository = _MockLikesRepository();
-      mockContentReportingService = _MockContentReportingService();
       mockContentBlocklistRepository = _MockContentBlocklistRepository();
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
@@ -70,9 +59,6 @@ void main() {
           authService: mockAuthService,
           likesRepository: mockLikesRepository,
           commentsRepository: mockCommentsRepository,
-          contentReportingServiceFuture: Future.value(
-            mockContentReportingService,
-          ),
           contentBlocklistRepository: mockContentBlocklistRepository,
           rootEventId: validId('root'),
           rootAddressableId: rootAddressableId,
@@ -522,171 +508,6 @@ void main() {
           expect(b.state.downvotedCommentIds.contains(validId('c1')), isFalse);
           expect(b.state.error, isNull);
         },
-      );
-    });
-
-    group('CommentReportRequested', () {
-      blocTest<CommentReactionsBloc, CommentReactionsState>(
-        'calls ContentReportingService.reportContent and emits no state',
-        setUp: () {
-          when(
-            () => mockContentReportingService.reportContent(
-              eventId: any(named: 'eventId'),
-              authorPubkey: any(named: 'authorPubkey'),
-              reason: any(named: 'reason'),
-              details: any(named: 'details'),
-            ),
-          ).thenAnswer(
-            (_) async => ReportResult.createSuccess(
-              'rid',
-              delivery: ReportDelivery.reached,
-            ),
-          );
-        },
-        build: createBloc,
-        act: (b) => b.add(
-          CommentReportRequested(
-            commentId: validId('c1'),
-            authorPubkey: validId('a1'),
-            reason: ContentFilterReason.spam,
-          ),
-        ),
-        expect: () => isEmpty,
-        verify: (_) {
-          verify(
-            () => mockContentReportingService.reportContent(
-              eventId: validId('c1'),
-              authorPubkey: validId('a1'),
-              reason: ContentFilterReason.spam,
-              details: any(named: 'details'),
-            ),
-          ).called(1);
-        },
-      );
-
-      blocTest<CommentReactionsBloc, CommentReactionsState>(
-        'emits no error when the report is deliberately refused',
-        setUp: () {
-          when(
-            () => mockContentReportingService.reportContent(
-              eventId: any(named: 'eventId'),
-              authorPubkey: any(named: 'authorPubkey'),
-              reason: any(named: 'reason'),
-              details: any(named: 'details'),
-            ),
-          ).thenAnswer(
-            (_) async => ReportResult.createSuccess(
-              'rid',
-              delivery: ReportDelivery.refused,
-            ),
-          );
-        },
-        build: createBloc,
-        act: (b) => b.add(
-          CommentReportRequested(
-            commentId: validId('c1'),
-            authorPubkey: validId('a1'),
-            reason: ContentFilterReason.spam,
-          ),
-        ),
-        expect: () => isEmpty,
-      );
-
-      blocTest<CommentReactionsBloc, CommentReactionsState>(
-        'emits reportFailed when reporting throws',
-        setUp: () {
-          when(
-            () => mockContentReportingService.reportContent(
-              eventId: any(named: 'eventId'),
-              authorPubkey: any(named: 'authorPubkey'),
-              reason: any(named: 'reason'),
-              details: any(named: 'details'),
-            ),
-          ).thenThrow(Exception('boom'));
-        },
-        build: createBloc,
-        act: (b) => b.add(
-          CommentReportRequested(
-            commentId: validId('c1'),
-            authorPubkey: validId('a1'),
-            reason: ContentFilterReason.spam,
-          ),
-        ),
-        errors: () => [isA<Exception>()],
-        expect: () => [
-          isA<CommentReactionsState>().having(
-            (s) => s.error,
-            'error',
-            ReactionsError.reportFailed,
-          ),
-        ],
-      );
-
-      // #6595: the sibling test above stubs a throw, which the handler
-      // already caught before the fix — so it passed either way. These two
-      // stub the shapes reportContent actually produces: a RETURNED failure
-      // and a success that reached no channel. Both showed nothing.
-      blocTest<CommentReactionsBloc, CommentReactionsState>(
-        'emits reportFailed when reporting returns a failure',
-        setUp: () {
-          when(
-            () => mockContentReportingService.reportContent(
-              eventId: any(named: 'eventId'),
-              authorPubkey: any(named: 'authorPubkey'),
-              reason: any(named: 'reason'),
-              details: any(named: 'details'),
-            ),
-          ).thenAnswer((_) async => ReportResult.failure('Not authenticated'));
-        },
-        build: createBloc,
-        act: (b) => b.add(
-          CommentReportRequested(
-            commentId: validId('c1'),
-            authorPubkey: validId('a1'),
-            reason: ContentFilterReason.spam,
-          ),
-        ),
-        expect: () => [
-          isA<CommentReactionsState>().having(
-            (s) => s.error,
-            'error',
-            ReactionsError.reportFailed,
-          ),
-        ],
-      );
-
-      blocTest<CommentReactionsBloc, CommentReactionsState>(
-        'emits reportFailed when the report reached no channel',
-        setUp: () {
-          when(
-            () => mockContentReportingService.reportContent(
-              eventId: any(named: 'eventId'),
-              authorPubkey: any(named: 'authorPubkey'),
-              reason: any(named: 'reason'),
-              details: any(named: 'details'),
-            ),
-          ).thenAnswer(
-            (_) async => ReportResult.createSuccess(
-              'rid',
-              delivery: ReportDelivery.localOnly,
-            ),
-          );
-        },
-        build: createBloc,
-        act: (b) => b.add(
-          CommentReportRequested(
-            commentId: validId('c1'),
-            authorPubkey: validId('a1'),
-            reason: ContentFilterReason.spam,
-          ),
-        ),
-        expect: () => [
-          isA<CommentReactionsState>().having(
-            (s) => s.error,
-            'error',
-            ReactionsError.reportFailed,
-          ),
-        ],
       );
     });
 

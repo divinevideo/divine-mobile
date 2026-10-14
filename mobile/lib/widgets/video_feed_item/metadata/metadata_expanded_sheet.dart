@@ -151,7 +151,7 @@ class _OverviewSection extends ConsumerWidget {
       builder: (context, _) {
         final l10n = context.l10n;
         final title = video.captionTitle;
-        final description = video.displayContent.trim();
+        final description = video.chipCaptionDescription;
 
         final formattedDate =
             !statsVisibility.showPublishedDate || video.hasUnknownOriginalDate
@@ -169,7 +169,7 @@ class _OverviewSection extends ConsumerWidget {
         final hasBadges =
             video.shouldShowProofModeBadge || video.shouldShowNotDivineBadge;
         final hasTags =
-            video.categories.isNotEmpty || video.allHashtags.isNotEmpty;
+            video.categories.isNotEmpty || video.displayableHashtags.isNotEmpty;
 
         final titleCluster = <Widget>[
           if (hasTitle)

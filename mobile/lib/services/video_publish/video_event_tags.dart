@@ -1,6 +1,7 @@
 // ABOUTME: Pure tag builders for a NIP-71 video event: reply threading, text
 // ABOUTME: tracks, descriptive metadata, and creator credits.
 
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show
         ClipSourceCredit,
@@ -99,7 +100,11 @@ void addVideoMetadataTags(
   if (title != null) tags.add(['title', title]);
   if (description != null) tags.add(['summary', description]);
 
-  for (final hashtag in upload.hashtags ?? const <String>[]) {
+  // Drafts saved by older builds can still carry over-long, mixed-case or
+  // too many tags, so the publish path applies the same rules as the picker.
+  for (final hashtag in HashtagExtractor.normalizeVideoHashtags(
+    upload.hashtags ?? const <String>[],
+  )) {
     tags.add(['t', hashtag]);
   }
 

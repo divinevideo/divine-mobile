@@ -577,6 +577,10 @@ const _knownUntranslatedDebt = <String>{
   // rather than shipping a guess.
   'inboxConversationPreviewSenderPrefix',
 
+  // One report form with an optional note for every reason (#10003).
+  'reportDetailsOptional',
+  'reportWhyReportingComment',
+
   // Reporting a list (#9896).
   'listReportAction',
 

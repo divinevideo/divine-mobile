@@ -963,9 +963,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'እገዳን አንሳ ይህን መለያ';
 
   @override
-  String get inboxReportedVanishedAccount => 'ሪፖርት ተደርጓል ይህን መለያ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ታግዷል ይህን መለያ';
 
   @override
@@ -4716,6 +4713,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportWhyReporting => 'ይህን ይዘት ለምን ሪፖርት ያደርጋሉ?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine ይዘቱን በማስወገድ እና አጸያፊ ይዘቱን ያቀረበውን ተጠቃሚ በማስወጣት የይዘት ሪፖርቶችን በ24 ሰዓታት ውስጥ ይሰራል።';
 
@@ -4736,6 +4736,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'እባክህ ችግሩን ግለጽ';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5612,11 +5615,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileSetupUploadStaged => 'ተሰቅሏል — ለመተግበር አስቀምጥን ጠቅ ያድርጉ';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'ሪፖርት ተደርጓል $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'ታግዷል $displayName';
   }
@@ -6461,6 +6459,63 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryGalleryImportDone => 'ተጠናቋል';
 
   @override
+  String get librarySaveSelectedClipsTooltip => 'የተመረጡ ክሊፖችን ወደ ጋለሪዎ ያስቀምጡ';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ያለ ማረጋገጫቸው ተቀምጠዋል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችሉም።',
+      one: '$count ክሊፕ ያለ ማረጋገጫው ተቀምጧል፣ ስለዚህ ወደ ክሊፖችዎ መመለስ አይችልም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'ዝርዝሮች';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'ያለ ማረጋገጫ ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ከጋለሪዎ መመለስ የሚችሉት በDivine እንደተቀረጹ ማረጋገጫ ያላቸው ክሊፖች ብቻ ናቸው። የእነዚህ ክሊፖች ቅጂዎች ያለዚያ ማረጋገጫ ተቀምጠዋል።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'ማረጋገጫው አሁን ሊታከል አልቻለም፣ ምናልባት ከመስመር ውጭ ስለነበሩ ይሆናል። ማረጋገጫ ያለው ቅጂ ለማስቀመጥ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'የስቶፕ ሞሽን ክሊፖች ከፎቶዎች የተሠሩ ናቸው፣ ፎቶዎች ደግሞ ማረጋገጫ መያዝ አይችሉም።';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'ይህ የDivine ስሪት ለክሊፖች ማረጋገጫ ማከል አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'ይህ ክሊፕ ማረጋገጫ የለውም፣ Divine ደግሞ በኋላ ሊያክልለት አይችልም።';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'ከማረጋገጫው ጋር ተቀምጧል';
+
+  @override
+  String get libraryGallerySaveSigning => 'ለክሊፖችዎ ማረጋገጫ እየታከለ ነው…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'ክሊፕ $current ከ$total እየተቀመጠ ነው…',
+      one: 'ክሊፕዎ እየተቀመጠ ነው…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6853,13 +6908,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'ይህን ይዘት ምልክት አድርግ';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ይህን አስተያየት ምልክት ለማድረግ ምክንያት ይምረጡ';
-
-  @override
-  String get commentOptionsFlagSubmit => 'አስገባ';
 
   @override
   String get commentOptionsTitle => 'አማራጮች';
@@ -8140,9 +8188,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'በአስተያየቱ ላይ መምረጥ አልተሳካም';
-
-  @override
-  String get commentsErrorReportFailed => 'አስተያየቱን ሪፖርት ማድረግ አልተሳካም';
 
   @override
   String get commentsErrorBlockFailed => 'ተጠቃሚውን ማገድ አልተሳካም';
@@ -11276,6 +11321,39 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'ተዛማጅ መለያዎች የሉም';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ሃሽታጎች እስከ $max ቁምፊዎች ሊኖራቸው ይችላሉ።',
+      one: 'ሃሽታጎች እስከ $max ቁምፊ ሊኖራቸው ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'እስከ $max ሃሽታጎች ማከል ይችላሉ።',
+      one: 'እስከ $max ሃሽታግ ማከል ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ከ$max ቁምፊዎች $count',
+      one: 'ከ$max ቁምፊ $count',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

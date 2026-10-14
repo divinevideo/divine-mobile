@@ -1651,12 +1651,6 @@ abstract class AppLocalizations {
   /// **'Unblock this account'**
   String get inboxActionUnblockVanishedAccount;
 
-  /// Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported this account'**
-  String get inboxReportedVanishedAccount;
-
   /// Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar.
   ///
   /// In en, this message translates to:
@@ -8191,6 +8185,12 @@ abstract class AppLocalizations {
   /// **'Why are you reporting this content?'**
   String get reportWhyReporting;
 
+  /// Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this comment?'**
+  String get reportWhyReportingComment;
+
   /// No description provided for @reportPolicyNotice.
   ///
   /// In en, this message translates to:
@@ -8232,6 +8232,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please describe the issue'**
   String get reportDetailsRequired;
+
+  /// Label above the content report note field when the selected reason is anything but Other. The note is optional there; Other uses reportDetailsRequired instead because it needs a description.
+  ///
+  /// In en, this message translates to:
+  /// **'Add details (optional)'**
+  String get reportDetailsOptional;
 
   /// Shown above the content report details field to warn that photos, screenshots, and GIFs cannot be attached.
   ///
@@ -9823,12 +9829,6 @@ abstract class AppLocalizations {
   /// **'Uploaded — tap Save to apply'**
   String get profileSetupUploadStaged;
 
-  /// No description provided for @inboxReportedUser.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported {displayName}'**
-  String inboxReportedUser(String displayName);
-
   /// No description provided for @inboxBlockedUser.
   ///
   /// In en, this message translates to:
@@ -11281,6 +11281,78 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get libraryGalleryImportDone;
 
+  /// Accessibility label for the clip library selection toolbar button that saves the selected clips to the device gallery, and its row in the toolbar's overflow menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Save selected clips to your gallery'**
+  String get librarySaveSelectedClipsTooltip;
+
+  /// Snackbar after saving library clips to the device gallery when some copies carry no C2PA proof that they were shot with Divine, so the gallery import would turn them away. {count} is how many such clips were saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 clip was saved without its proof, so it can\'t come back into your clips.} other{{count} clips were saved without their proof, so they can\'t come back into your clips.}}'**
+  String libraryClipsSavedWithoutProof(int count);
+
+  /// Snackbar action that opens the page listing the clips saved to the gallery without their proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get libraryClipsSavedWithoutProofDetails;
+
+  /// App bar title of the page listing clips whose gallery copy carries no proof that they were shot with Divine.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved without proof'**
+  String get libraryGallerySaveWarningTitle;
+
+  /// Text at the top of the page listing clips saved to the gallery without their C2PA proof, explaining that the gallery import will not take those copies back into the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Only clips with proof that they were shot with Divine can come back from your gallery. The copies of these clips were saved without it.'**
+  String get libraryGallerySaveWarningIntro;
+
+  /// Row on the saved-without-proof page: signing the clip could not run, e.g. offline. Retrying saves another copy that carries the proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Its proof couldn\'t be added just now, maybe because you were offline. Try again to save a copy with it.'**
+  String get libraryGallerySaveWarningSigningUnavailable;
+
+  /// Row on the saved-without-proof page for a stop-motion clip, which is rendered from still photos that carry no proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop-motion clips are made from photos, which can\'t carry proof.'**
+  String get libraryGallerySaveWarningStopMotion;
+
+  /// Row on the saved-without-proof page when this build of the app cannot sign clips at all.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Divine can\'t add proof to clips.'**
+  String get libraryGallerySaveWarningSigningUnsupported;
+
+  /// Row on the saved-without-proof page for a clip that has no proof and cannot be signed later, e.g. footage the app did not record.
+  ///
+  /// In en, this message translates to:
+  /// **'This clip has no proof, and Divine can\'t add it afterwards.'**
+  String get libraryGallerySaveWarningNoProof;
+
+  /// Row on the saved-without-proof page once trying again saved a copy of the clip that carries its proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved with its proof'**
+  String get libraryGallerySaveWarningSavedWithProof;
+
+  /// Shown over the clip library while the app signs its own clips that were left without C2PA proof, before saving them to the gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding proof to your clips…'**
+  String get libraryGallerySaveSigning;
+
+  /// Shown over the clip library while selected clips are saved to the device gallery one after another. {current} is the clip being saved, {total} how many are being saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, =1{Saving your clip…} other{Saving clip {current} of {total}…}}'**
+  String libraryGallerySaveProgress(int current, int total);
+
   /// No description provided for @libraryClipsDeletedCount.
   ///
   /// In en, this message translates to:
@@ -11952,18 +12024,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Flag this content'**
   String get commentOptionsFlagContentSemanticLabel;
-
-  /// No description provided for @commentOptionsFlagReasonPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a reason for flagging this comment'**
-  String get commentOptionsFlagReasonPrompt;
-
-  /// No description provided for @commentOptionsFlagSubmit.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit'**
-  String get commentOptionsFlagSubmit;
 
   /// No description provided for @commentOptionsTitle.
   ///
@@ -14086,12 +14146,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to vote on comment'**
   String get commentsErrorVoteFailed;
-
-  /// Snackbar shown when submitting an NIP-56 comment report fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to report comment'**
-  String get commentsErrorReportFailed;
 
   /// Snackbar shown when blocking a comment author (kind-30000 mute list publish) fails.
   ///
@@ -19454,6 +19508,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matching tags'**
   String get videoMetadataTagsPickerNoResults;
+
+  /// Helper under the tags picker field when a hashtag is at or over the length limit.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{Hashtags can be up to {max} character.} other{Hashtags can be up to {max} characters.}}'**
+  String videoMetadataTagsPickerTagTooLong(int max);
+
+  /// Helper under the tags picker field once a video has the maximum number of hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{You can add up to {max} hashtag.} other{You can add up to {max} hashtags.}}'**
+  String videoMetadataTagsPickerTagLimitReached(int max);
+
+  /// Screen-reader label for the tags picker character counter, which is shown visually as count/max.
+  ///
+  /// In en, this message translates to:
+  /// **'{max, plural, one{{count} of {max} character} other{{count} of {max} characters}}'**
+  String videoMetadataTagsPickerCharacterCount(int count, int max);
 
   /// No description provided for @videoMetadataTagsPickerAddTag.
   ///

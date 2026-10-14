@@ -899,9 +899,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '取消屏蔽此账号';
 
   @override
-  String get inboxReportedVanishedAccount => '已举报此账号';
-
-  @override
   String get inboxBlockedVanishedAccount => '已屏蔽此账号';
 
   @override
@@ -4516,6 +4513,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportWhyReporting => '你为什么要举报该内容？';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。';
 
@@ -4536,6 +4536,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '请描述问题';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly => '仅限文字——无法在此附加照片或 GIF。';
@@ -5395,11 +5398,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileSetupUploadStaged => '已上传——点保存生效';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '已举报 $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '已屏蔽 $displayName';
   }
@@ -6226,6 +6224,61 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryGalleryImportDone => '完成';
 
   @override
+  String get librarySaveSelectedClipsTooltip => '将所选片段保存到相册';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+      one: '1 个片段在没有证明的情况下保存，因此无法回到你的片段库。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '详情';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '已保存但没有证明';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      '只有能证明是用 Divine 拍摄的片段才能从相册找回。这些片段的副本保存时没有附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      '暂时无法添加证明，可能是因为你当时处于离线状态。重试即可保存一份带证明的副本。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion => '定格动画片段由照片组成，照片无法附带证明。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      '此版本的 Divine 无法为片段添加证明。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof => '这个片段没有证明，Divine 也无法事后添加。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '已连同证明一起保存';
+
+  @override
+  String get libraryGallerySaveSigning => '正在为你的片段添加证明…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '正在保存第 $current 个片段，共 $total 个…',
+      one: '正在保存你的片段…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6604,12 +6657,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => '标记此内容';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => '选择标记该评论的原因';
-
-  @override
-  String get commentOptionsFlagSubmit => '提交';
 
   @override
   String get commentOptionsTitle => '选项';
@@ -7837,9 +7884,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => '评论投票失败';
-
-  @override
-  String get commentsErrorReportFailed => '评论举报失败';
 
   @override
   String get commentsErrorBlockFailed => '屏蔽用户失败';
@@ -10864,6 +10908,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => '没有匹配的标签';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '话题标签最多 $max 个字符。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '最多可以添加 $max 个话题标签。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count/$max 个字符',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

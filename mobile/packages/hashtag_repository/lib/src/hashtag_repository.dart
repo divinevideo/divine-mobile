@@ -36,8 +36,9 @@ class HashtagRepository {
 
   /// Searches for hashtags matching [query].
   ///
-  /// Returns a list of hashtag name strings sorted by popularity/trending.
-  /// When [query] is null or empty, returns popular hashtags without filtering.
+  /// Returns a list of hashtag name strings sorted by popularity/trending,
+  /// leaving out tags over [HashtagExtractor.maxHashtagLength]. When [query]
+  /// is null or empty, returns popular hashtags without filtering by query.
   /// [limit] defaults to 20.
   ///
   /// The search strategy is:
@@ -59,10 +60,13 @@ class HashtagRepository {
         offset: offset,
       );
 
-      if (query == null || query.isEmpty) return remoteResults;
+      final usable = remoteResults
+          .where(HashtagExtractor.isWithinLengthLimit)
+          .toList();
+      if (query == null || query.isEmpty) return usable;
 
       final lowerQuery = query.toLowerCase();
-      final filtered = remoteResults
+      final filtered = usable
           .where((tag) => tag.toLowerCase().contains(lowerQuery))
           .toList();
 
@@ -80,11 +84,15 @@ class HashtagRepository {
     return searchHashtagsLocally(query: query ?? '', limit: limit);
   }
 
-  /// Searches locally cached hashtags without performing a network request.
+  /// Searches locally cached hashtags without performing a network request,
+  /// leaving out tags over [HashtagExtractor.maxHashtagLength].
   List<String> searchHashtagsLocally({required String query, int limit = 20}) {
     final trimmed = query.trim();
     if (trimmed.isEmpty || _localSearch == null) return const [];
-    return _localSearch(trimmed, limit);
+    return _localSearch(
+      trimmed,
+      limit,
+    ).where(HashtagExtractor.isWithinLengthLimit).toList();
   }
 
   /// Counts locally cached hashtag matches.

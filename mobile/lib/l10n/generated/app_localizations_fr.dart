@@ -1008,9 +1008,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Débloquer ce compte';
 
   @override
-  String get inboxReportedVanishedAccount => 'Ce compte a été signalé';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Ce compte a été bloqué';
 
   @override
@@ -4898,6 +4895,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportWhyReporting => 'Pourquoi signales-tu ce contenu ?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine agira sur les signalements de contenu dans les 24 heures en retirant le contenu et en excluant l\'utilisateur qui a fourni le contenu en infraction.';
 
@@ -4920,6 +4920,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Décris le problème';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5822,11 +5825,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Importée — touchez Enregistrer pour appliquer';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName signalé(e)';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName bloqué(e)';
   }
@@ -6698,6 +6696,70 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryGalleryImportDone => 'Terminé';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Enregistrer les clips sélectionnés dans ta galerie';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.',
+      many:
+          '$count clips ont été enregistrés sans leur preuve, donc ils ne peuvent pas revenir dans tes clips.',
+      one:
+          '$count clip a été enregistré sans sa preuve, donc il ne peut pas revenir dans tes clips.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Détails';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Enregistrés sans preuve';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Seuls les clips qui prouvent avoir été filmés avec Divine peuvent revenir depuis ta galerie. Les copies de ces clips ont été enregistrées sans cette preuve.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Impossible d\'ajouter sa preuve pour l\'instant, peut-être parce que tu étais hors ligne. Réessaie pour enregistrer une copie avec sa preuve.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Les clips en stop motion sont faits de photos, qui ne peuvent pas porter de preuve.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Cette version de Divine ne peut pas ajouter de preuve aux clips.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Ce clip n\'a pas de preuve, et Divine ne peut pas l\'ajouter après coup.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Enregistré avec sa preuve';
+
+  @override
+  String get libraryGallerySaveSigning => 'Ajout de la preuve à tes clips…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Enregistrement du clip $current sur $total…',
+      many: 'Enregistrement du clip $current sur $total…',
+      one: 'Enregistrement de ton clip…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7111,13 +7173,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Signaler ce contenu';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Choisis une raison pour signaler ce commentaire';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Envoyer';
 
   @override
   String get commentOptionsTitle => 'Options';
@@ -8444,10 +8499,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get commentsErrorVoteFailed =>
       'Impossible de voter pour le commentaire';
-
-  @override
-  String get commentsErrorReportFailed =>
-      'Impossible de signaler le commentaire';
 
   @override
   String get commentsErrorBlockFailed => 'Impossible de bloquer l\'utilisateur';
@@ -11743,6 +11794,42 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Aucun tag correspondant';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Les hashtags peuvent contenir jusqu\'à $max caractères.',
+      many: 'Les hashtags peuvent contenir jusqu\'à $max de caractères.',
+      one: 'Les hashtags peuvent contenir jusqu\'à $max caractère.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Tu peux ajouter jusqu\'à $max hashtags.',
+      many: 'Tu peux ajouter jusqu\'à $max de hashtags.',
+      one: 'Tu peux ajouter jusqu\'à $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count sur $max caractères',
+      many: '$count sur $max de caractères',
+      one: '$count sur $max caractère',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

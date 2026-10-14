@@ -2028,14 +2028,6 @@
     "conversationRestorePausedTitle": "Chat ini belum selesai dipulihkan",
     "inboxRestoreRetryAction": "Coba lagi",
     "inboxRestoringMessages": "Memulihkan pesan Anda…",
-    "inboxReportedUser": "{displayName} dilaporkan",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} tidak diblokir lagi",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2149,6 +2141,18 @@
     "libraryGalleryImportItemNotVerified": "Tidak dapat memastikan klip ini direkam dengan Divine",
     "libraryGalleryImportItemCheckUnavailable": "Tidak bisa dicek sekarang. Coba lagi nanti.",
     "libraryGalleryImportDone": "Selesai",
+    "librarySaveSelectedClipsTooltip": "Simpan klip terpilih ke galerimu",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 klip disimpan tanpa buktinya, jadi tidak bisa kembali ke klipmu.} other{{count} klip disimpan tanpa buktinya, jadi tidak bisa kembali ke klipmu.}}",
+    "libraryClipsSavedWithoutProofDetails": "Detail",
+    "libraryGallerySaveWarningTitle": "Disimpan tanpa bukti",
+    "libraryGallerySaveWarningIntro": "Hanya klip dengan bukti bahwa klip itu direkam dengan Divine yang bisa kembali dari galerimu. Salinan klip-klip ini disimpan tanpa bukti itu.",
+    "libraryGallerySaveWarningSigningUnavailable": "Buktinya tidak bisa ditambahkan sekarang, mungkin karena kamu sedang offline. Coba lagi untuk menyimpan salinan yang ada buktinya.",
+    "libraryGallerySaveWarningStopMotion": "Klip stop-motion dibuat dari foto, dan foto tidak bisa membawa bukti.",
+    "libraryGallerySaveWarningSigningUnsupported": "Versi Divine ini tidak bisa menambahkan bukti ke klip.",
+    "libraryGallerySaveWarningNoProof": "Klip ini tidak punya bukti, dan Divine tidak bisa menambahkannya belakangan.",
+    "libraryGallerySaveWarningSavedWithProof": "Disimpan dengan buktinya",
+    "libraryGallerySaveSigning": "Menambahkan bukti ke klipmu…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Menyimpan klipmu…} other{Menyimpan klip {current} dari {total}…}}",
     "libraryNoClipsYetSubtitle": "Klip video yang kamu rekam akan muncul di sini",
     "libraryNoClipsYetTitle": "Belum ada klip",
     "libraryNoDraftsYetSubtitle": "Video yang kamu simpan sebagai draf akan muncul di sini",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Laporkan akun ini",
     "inboxActionBlockVanishedAccount": "Blokir akun ini",
     "inboxActionUnblockVanishedAccount": "Buka blokir akun ini",
-    "inboxReportedVanishedAccount": "Akun ini dilaporkan",
     "inboxBlockedVanishedAccount": "Akun ini diblokir",
     "inboxUnblockedVanishedAccount": "Blokir akun ini dibuka",
     "inboxRemoveConfirmBodyVanishedAccount": "Ini menghapus percakapan dari kotak masukmu. Jika dia mengirim pesan lagi, percakapan baru dimulai.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Cari atau tambahkan tag",
     "videoMetadataTagsPickerEmptyHint": "Tambahkan tag agar orang menemukan videomu",
     "videoMetadataTagsPickerNoResults": "Tidak ada tag yang cocok",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag bisa sampai {max} karakter.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Kamu bisa menambahkan hingga {max} hashtag.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count} dari {max} karakter}}",
     "videoMetadataTagsPickerAddTag": "Tambahkan \"#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Komentar gagal diedit",
     "commentsErrorNotAuthenticatedInteract": "Masuk dulu untuk berinteraksi",
     "commentsErrorVoteFailed": "Gagal memberi suara pada komentar",
-    "commentsErrorReportFailed": "Komentar gagal dilaporkan",
     "commentsErrorBlockFailed": "Pengguna gagal diblokir",
     "commentsErrorDeleteFailed": "Komentar gagal dihapus",
     "commentsHeaderCount": "{count, plural, other{{count} Komentar}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Edit komentar",
     "commentOptionsFlagContentLabel": "Tandai Konten",
     "commentOptionsFlagContentSemanticLabel": "Tandai konten ini",
-    "commentOptionsFlagReasonPrompt": "Pilih alasan untuk menandai komentar ini",
-    "commentOptionsFlagSubmit": "Kirim",
     "commentOptionsTitle": "Opsi",
     "commentsEmptyClassicVineMessage": "Kami masih mengerjakan impor komentar lama dari arsip. Belum siap sekarang.",
     "commentsEmptyClassicVineTitle": "Vine Klasik",

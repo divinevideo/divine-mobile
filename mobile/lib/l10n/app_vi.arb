@@ -433,7 +433,6 @@
   "inboxActionReportVanishedAccount": "Báo cáo tài khoản này",
   "inboxActionBlockVanishedAccount": "Chặn tài khoản này",
   "inboxActionUnblockVanishedAccount": "Bỏ chặn tài khoản này",
-  "inboxReportedVanishedAccount": "Đã báo cáo tài khoản này",
   "inboxBlockedVanishedAccount": "Đã chặn tài khoản này",
   "inboxUnblockedVanishedAccount": "Đã bỏ chặn tài khoản này",
   "inboxRemoveConfirmBodyVanishedAccount": "Thao tác này xóa cuộc trò chuyện khỏi hộp thư đến. Nếu họ nhắn tin cho bạn lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.",
@@ -2711,14 +2710,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "Đã báo cáo {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "Đã chặn {displayName}",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3336,6 +3327,18 @@
   "libraryGalleryImportItemNotVerified": "Không thể xác nhận clip được quay bằng Divine",
   "libraryGalleryImportItemCheckUnavailable": "Hiện không kiểm tra được. Thử lại sau nhé.",
   "libraryGalleryImportDone": "Xong",
+  "librarySaveSelectedClipsTooltip": "Lưu các clip đã chọn vào thư viện ảnh",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.} other{Đã lưu {count} clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.}}",
+  "libraryClipsSavedWithoutProofDetails": "Chi tiết",
+  "libraryGallerySaveWarningTitle": "Đã lưu không có bằng chứng",
+  "libraryGallerySaveWarningIntro": "Chỉ những clip có bằng chứng được quay bằng Divine mới có thể quay lại từ thư viện ảnh. Bản sao của các clip này đã được lưu mà không có bằng chứng đó.",
+  "libraryGallerySaveWarningSigningUnavailable": "Hiện chưa thêm được bằng chứng, có thể vì bạn đang ngoại tuyến. Thử lại để lưu một bản sao có bằng chứng.",
+  "libraryGallerySaveWarningStopMotion": "Clip stop-motion được tạo từ ảnh, mà ảnh thì không thể mang bằng chứng.",
+  "libraryGallerySaveWarningSigningUnsupported": "Phiên bản Divine này không thể thêm bằng chứng vào clip.",
+  "libraryGallerySaveWarningNoProof": "Clip này không có bằng chứng, và Divine không thể thêm vào sau.",
+  "libraryGallerySaveWarningSavedWithProof": "Đã lưu kèm bằng chứng",
+  "libraryGallerySaveSigning": "Đang thêm bằng chứng vào clip của bạn…",
+  "libraryGallerySaveProgress": "{total, plural, =1{Đang lưu clip của bạn…} other{Đang lưu clip {current}/{total}…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{Đã xóa 1 clip} other{Đã xóa {count} clip}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -3515,8 +3518,6 @@
   "commentOptionsEditSemanticLabel": "Sửa bình luận",
   "commentOptionsFlagContentLabel": "Gắn cờ nội dung",
   "commentOptionsFlagContentSemanticLabel": "Gắn cờ nội dung này",
-  "commentOptionsFlagReasonPrompt": "Chọn lý do gắn cờ bình luận này",
-  "commentOptionsFlagSubmit": "Gửi",
   "commentOptionsTitle": "Tùy chọn",
   "commentsEmptyClassicVineMessage": "Bọn mình vẫn đang nhập các bình luận cũ từ kho lưu trữ. Chưa xong đâu.",
   "commentsEmptyClassicVineTitle": "Vine kinh điển",
@@ -4338,10 +4339,6 @@
   "commentsErrorVoteFailed": "Không bình chọn được bình luận",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "Không báo cáo được bình luận",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "Không chặn được người dùng",
   "@commentsErrorBlockFailed": {
@@ -5870,6 +5867,9 @@
   "videoMetadataTagsPickerSearchHint": "Tìm hoặc thêm thẻ",
   "videoMetadataTagsPickerEmptyHint": "Thêm thẻ để giúp mọi người khám phá video của bạn",
   "videoMetadataTagsPickerNoResults": "Không có thẻ phù hợp",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, other{Hashtag có thể dài tối đa {max} ký tự.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, other{Bạn có thể thêm tối đa {max} hashtag.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, other{{count}/{max} ký tự}}",
   "videoMetadataTagsPickerAddTag": "Thêm \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

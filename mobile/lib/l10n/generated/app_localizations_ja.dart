@@ -876,9 +876,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'このアカウントのブロックを解除';
 
   @override
-  String get inboxReportedVanishedAccount => 'このアカウントを報告したよ';
-
-  @override
   String get inboxBlockedVanishedAccount => 'このアカウントをブロックしたよ';
 
   @override
@@ -4538,6 +4535,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportWhyReporting => 'このコンテンツを報告する理由は?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine はコンテンツの報告に24時間以内に対応して、問題のあるコンテンツを削除し、違反ユーザーを排除するよ。';
 
@@ -4558,6 +4558,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '問題の内容を記入してください';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly => 'テキストのみです。ここには写真やGIFを添付できません。';
@@ -5425,11 +5428,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileSetupUploadStaged => 'アップロードしたよ — 適用するには「保存」をタップしてね';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayNameを報告したよ';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayNameをブロックしたよ';
   }
@@ -6265,6 +6263,61 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryGalleryImportDone => '完了';
 
   @override
+  String get librarySaveSelectedClipsTooltip => '選択したクリップをギャラリーに保存';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを証明なしで保存しました。このため、クリップに戻すことはできません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '詳細';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '証明なしで保存済み';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'ギャラリーから戻せるのは、Divineで撮影したことを証明できるクリップだけです。これらのクリップのコピーは証明なしで保存されました。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'オフラインだったなどの理由で、今は証明を追加できませんでした。もう一度試すと、証明付きのコピーを保存できます。';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'ストップモーションのクリップは写真から作られていて、写真には証明を付けられません。';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'このバージョンのDivineでは、クリップに証明を追加できません。';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'このクリップには証明がなく、Divineで後から追加することもできません。';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '証明付きで保存しました';
+
+  @override
+  String get libraryGallerySaveSigning => 'クリップに証明を追加しています…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件中$current件目のクリップを保存しています…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6646,12 +6699,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'このコンテンツにフラグを付ける';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => 'このコメントにフラグを付ける理由を選んでね';
-
-  @override
-  String get commentOptionsFlagSubmit => '送信';
 
   @override
   String get commentOptionsTitle => 'オプション';
@@ -7912,9 +7959,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'コメントへの投票に失敗しました';
-
-  @override
-  String get commentsErrorReportFailed => 'コメントを報告できませんでした';
 
   @override
   String get commentsErrorBlockFailed => 'ユーザーをブロックできませんでした';
@@ -10989,6 +11033,36 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => '一致するタグがありません';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ハッシュタグは$max文字までです。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ハッシュタグは$max個まで追加できます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max文字中$count文字',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

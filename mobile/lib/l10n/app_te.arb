@@ -571,10 +571,6 @@
   "@inboxActionUnblockVanishedAccount": {
     "description": "Unblock action for a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
   },
-  "inboxReportedVanishedAccount": "ఈ ఖాతాను నివేదించారు",
-  "@inboxReportedVanishedAccount": {
-    "description": "Confirmation after reporting a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
-  },
   "inboxBlockedVanishedAccount": "ఈ ఖాతాను బ్లాక్ చేసారు",
   "@inboxBlockedVanishedAccount": {
     "description": "Confirmation after blocking a direct-message peer whose account was deleted. A complete sentence so each locale controls its grammar."
@@ -3202,14 +3198,6 @@
   "@profileSetupUploadStaged": {
     "description": "Snackbar shown after a profile picture upload succeeds on the profile edit screen. The new picture is staged in the form but not yet published; the user must tap Save for it to take effect."
   },
-  "inboxReportedUser": "నివేదించబడింది {displayName}",
-  "@inboxReportedUser": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
   "inboxBlockedUser": "నిరోధించబడింది {displayName}",
   "@inboxBlockedUser": {
     "placeholders": {
@@ -3944,6 +3932,18 @@
   "libraryGalleryImportItemNotVerified": "Divineతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం",
   "libraryGalleryImportItemCheckUnavailable": "ప్రస్తుతం తనిఖీ చేయడం సాధ్యపడలేదు. తర్వాత మళ్లీ ప్రయత్నించండి.",
   "libraryGalleryImportDone": "పూర్తయింది",
+  "librarySaveSelectedClipsTooltip": "ఎంచుకున్న క్లిప్‌లను మీ గ్యాలరీలో సేవ్ చేయండి",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.} other{{count} క్లిప్‌లు వాటి రుజువు లేకుండా సేవ్ అయ్యాయి, కాబట్టి అవి మీ క్లిప్‌లలోకి తిరిగి రాలేవు.}}",
+  "libraryClipsSavedWithoutProofDetails": "వివరాలు",
+  "libraryGallerySaveWarningTitle": "రుజువు లేకుండా సేవ్ అయ్యాయి",
+  "libraryGallerySaveWarningIntro": "Divineతో చిత్రీకరించినట్లు రుజువు ఉన్న క్లిప్‌లు మాత్రమే మీ గ్యాలరీ నుండి తిరిగి రాగలవు. ఈ క్లిప్‌ల కాపీలు ఆ రుజువు లేకుండా సేవ్ అయ్యాయి.",
+  "libraryGallerySaveWarningSigningUnavailable": "దీని రుజువును ఇప్పుడు జోడించలేకపోయాం, బహుశా మీరు ఆఫ్‌లైన్‌లో ఉన్నందుకు కావచ్చు. రుజువు ఉన్న కాపీని సేవ్ చేయడానికి మళ్లీ ప్రయత్నించండి.",
+  "libraryGallerySaveWarningStopMotion": "స్టాప్-మోషన్ క్లిప్‌లు ఫోటోలతో తయారవుతాయి, ఫోటోలు రుజువును మోయలేవు.",
+  "libraryGallerySaveWarningSigningUnsupported": "Divine యొక్క ఈ వెర్షన్ క్లిప్‌లకు రుజువును జోడించలేదు.",
+  "libraryGallerySaveWarningNoProof": "ఈ క్లిప్‌కు రుజువు లేదు, Divine దాన్ని తర్వాత జోడించలేదు.",
+  "libraryGallerySaveWarningSavedWithProof": "దాని రుజువుతో సేవ్ అయింది",
+  "libraryGallerySaveSigning": "మీ క్లిప్‌లకు రుజువు జోడిస్తున్నాం…",
+  "libraryGallerySaveProgress": "{total, plural, =1{మీ క్లిప్‌ను సేవ్ చేస్తున్నాం…} other{{total}లో క్లిప్ {current}ని సేవ్ చేస్తున్నాం…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 క్లిప్ తొలగించబడింది} other{{count}క్లిప్‌లు తొలగించబడ్డాయి}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {
@@ -4155,8 +4155,6 @@
   "commentOptionsEditSemanticLabel": "వ్యాఖ్యను సవరించండి",
   "commentOptionsFlagContentLabel": "ఫ్లాగ్ కంటెంట్",
   "commentOptionsFlagContentSemanticLabel": "ఈ కంటెంట్‌ను ఫ్లాగ్ చేయండి",
-  "commentOptionsFlagReasonPrompt": "ఈ వ్యాఖ్యను ఫ్లాగ్ చేయడానికి కారణాన్ని ఎంచుకోండి",
-  "commentOptionsFlagSubmit": "సమర్పించండి",
   "commentOptionsTitle": "ఎంపికలు",
   "commentsEmptyClassicVineMessage": "మేము ఇప్పటికీ ఆర్కైవ్ నుండి పాత వ్యాఖ్యలను దిగుమతి చేసే పనిలో ఉన్నాము. వారు ఇంకా సిద్ధంగా లేరు.",
   "commentsEmptyClassicVineTitle": "క్లాసిక్ Vine",
@@ -5111,10 +5109,6 @@
   "commentsErrorVoteFailed": "వ్యాఖ్యపై ఓటు వేయడం విఫలమైంది",
   "@commentsErrorVoteFailed": {
     "description": "Snackbar shown when up/down-voting a comment fails to publish to the relay."
-  },
-  "commentsErrorReportFailed": "వ్యాఖ్యను నివేదించడంలో విఫలమైంది",
-  "@commentsErrorReportFailed": {
-    "description": "Snackbar shown when submitting an NIP-56 comment report fails."
   },
   "commentsErrorBlockFailed": "వినియోగదారుని నిరోధించడంలో విఫలమైంది",
   "@commentsErrorBlockFailed": {
@@ -6853,6 +6847,9 @@
   "videoMetadataTagsPickerSearchHint": "ట్యాగ్‌లను శోధించండి లేదా జోడించండి",
   "videoMetadataTagsPickerEmptyHint": "వ్యక్తులు మీ వీడియోను కనుగొనడంలో సహాయపడటానికి ట్యాగ్‌లను జోడించండి",
   "videoMetadataTagsPickerNoResults": "సరిపోలే ట్యాగ్‌లు లేవు",
+  "videoMetadataTagsPickerTagTooLong": "{max, plural, one{హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా {max} అక్షరం వరకు ఉండవచ్చు.} other{హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా {max} అక్షరాల వరకు ఉండవచ్చు.}}",
+  "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{మీరు గరిష్టంగా {max} హ్యాష్‌ట్యాగ్ జోడించవచ్చు.} other{మీరు గరిష్టంగా {max} హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు.}}",
+  "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{max} అక్షరంలో {count}} other{{max} అక్షరాలలో {count}}}",
   "videoMetadataTagsPickerAddTag": "\"# జోడించండి{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
     "placeholders": {

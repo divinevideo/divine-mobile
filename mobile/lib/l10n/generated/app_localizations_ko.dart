@@ -879,9 +879,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => '이 계정 차단 해제';
 
   @override
-  String get inboxReportedVanishedAccount => '이 계정을 신고했어요';
-
-  @override
   String get inboxBlockedVanishedAccount => '이 계정을 차단했어요';
 
   @override
@@ -4555,6 +4552,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportWhyReporting => '이 콘텐츠를 왜 신고하시나요?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine은 24시간 이내에 신고된 콘텐츠를 조치하여 콘텐츠를 삭제하고 문제가 된 콘텐츠를 제공한 사용자를 퇴출해요.';
 
@@ -4575,6 +4575,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => '문제를 설명해 주세요';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5445,11 +5448,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileSetupUploadStaged => '업로드됐어요 — 적용하려면 저장을 탭하세요';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName을(를) 신고했어요';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName을(를) 차단했어요';
   }
@@ -6286,6 +6284,63 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryGalleryImportDone => '완료';
 
   @override
+  String get librarySaveSelectedClipsTooltip => '선택한 클립을 갤러리에 저장';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개가 증명 없이 저장돼서 클립으로 다시 가져올 수 없어요.',
+      one: '클립 1개가 증명 없이 저장돼서 클립으로 다시 가져올 수 없어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => '자세히';
+
+  @override
+  String get libraryGallerySaveWarningTitle => '증명 없이 저장됨';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Divine으로 촬영했다는 증명이 있는 클립만 갤러리에서 다시 가져올 수 있어요. 이 클립들의 사본은 증명 없이 저장됐어요.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      '오프라인이었던 탓인지 지금은 증명을 추가하지 못했어요. 다시 시도하면 증명이 있는 사본을 저장해요.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      '스톱모션 클립은 사진으로 만들어져서 증명을 담을 수 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      '이 버전의 Divine은 클립에 증명을 추가할 수 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      '이 클립에는 증명이 없고, Divine이 나중에 추가할 수도 없어요.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => '증명과 함께 저장됨';
+
+  @override
+  String get libraryGallerySaveSigning => '클립에 증명을 추가하는 중…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '클립 $total개 중 $current번째 저장 중…',
+      one: '클립을 저장하는 중…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6668,12 +6723,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => '이 콘텐츠 신고';
-
-  @override
-  String get commentOptionsFlagReasonPrompt => '이 댓글을 신고하는 이유를 선택해주세요';
-
-  @override
-  String get commentOptionsFlagSubmit => '제출';
 
   @override
   String get commentOptionsTitle => '옵션';
@@ -7928,9 +7977,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => '댓글 투표에 실패했어요';
-
-  @override
-  String get commentsErrorReportFailed => '댓글을 신고하지 못했어요';
 
   @override
   String get commentsErrorBlockFailed => '사용자를 차단하지 못했어요';
@@ -11005,6 +11051,36 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => '일치하는 태그 없음';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max자까지 쓸 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '해시태그는 최대 $max개까지 추가할 수 있어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max자 중 $count자',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

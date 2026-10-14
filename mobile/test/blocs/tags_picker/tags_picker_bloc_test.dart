@@ -55,7 +55,7 @@ void main() {
         act: (b) => b.add(const TagsPickerTagsAdded(['FOO', 'bar'])),
         expect: () => [
           isA<TagsPickerState>().having((s) => s.selectedTags, 'selectedTags', {
-            'Foo',
+            'foo',
             'bar',
           }),
         ],
@@ -210,6 +210,34 @@ void main() {
       );
 
       blocTest<TagsPickerBloc, TagsPickerState>(
+        'keeps a too-long notice when the cleared field sends an empty query',
+        build: createBloc,
+        seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),
+        act: (b) => b.add(const TagsPickerQueryChanged('')),
+        wait: debounce,
+        expect: () => const <TagsPickerState>[],
+        verify: (b) {
+          expect(b.state.notice, equals(TagsPickerNotice.tagTooLong));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'clears a too-long notice once a new query is typed',
+        build: createBloc,
+        seed: () => const TagsPickerState(notice: TagsPickerNotice.tagTooLong),
+        act: (b) => b.add(const TagsPickerQueryChanged('fu')),
+        wait: debounce,
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.searching)
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+          isA<TagsPickerState>()
+              .having((s) => s.status, 'status', TagsPickerStatus.success)
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
         'clears search state immediately on TagsPickerSearchCleared',
         build: createBloc,
         seed: () => const TagsPickerState(
@@ -302,9 +330,169 @@ void main() {
       // Sanitization is the bloc's job (TagsPickerTagsAdded). The parser
       // must not silently drop tokens that contain non-alphanumeric chars,
       // otherwise the bloc never sees them and can't normalize them.
-      final r = parseTagsPickerInput(text: '#foo, #bar', previousText: '');
-      expect(r.completed, ['#foo', '#bar']);
+      final r = parseTagsPickerInput(text: 'foo!, bar?', previousText: '');
+      expect(r.completed, ['foo!', 'bar?']);
       expect(r.remainder, '');
+    });
+    test('treats line breaks, tabs, Unicode spaces and # as separators', () {
+      final r = parseTagsPickerInput(
+        text: '#vines\n#vine\tvinevideo\u00a0funny#comedy',
+        previousText: '',
+      );
+      expect(r.completed, ['vines', 'vine', 'vinevideo', 'funny', 'comedy']);
+      expect(r.remainder, '');
+    });
+
+    test('commits an over-long pasted word so the bloc can reject it', () {
+      final long = 'a' * (HashtagExtractor.maxHashtagLength + 1);
+      final r = parseTagsPickerInput(text: long, previousText: '');
+      expect(r.completed, [long]);
+      expect(r.remainder, isEmpty);
+    });
+
+    test('keeps a word of exactly the maximum length in the field', () {
+      final word = 'a' * HashtagExtractor.maxHashtagLength;
+      final r = parseTagsPickerInput(text: word, previousText: '');
+      expect(r.completed, isEmpty);
+      expect(r.remainder, word);
+    });
+  });
+
+  group('$TagsPickerBloc hashtag limits', () {
+    late _MockHashtagRepository repo;
+
+    setUp(() {
+      repo = _MockHashtagRepository();
+    });
+
+    TagsPickerBloc createBloc({Set<String> initial = const <String>{}}) =>
+        TagsPickerBloc(hashtagRepository: repo, initialTags: initial);
+
+    final tooLong = 'a' * (HashtagExtractor.maxHashtagLength + 1);
+    final maxLength = 'b' * HashtagExtractor.maxHashtagLength;
+    final ten = [for (var i = 0; i < 10; i++) 'tag$i'];
+
+    group('TagsPickerTagsAdded', () {
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'stores tags in lowercase',
+        build: createBloc,
+        act: (b) => b.add(const TagsPickerTagsAdded(['FunnyDivines'])),
+        expect: () => [
+          isA<TagsPickerState>().having((s) => s.selectedTags, 'selectedTags', {
+            'funnydivines',
+          }),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'rejects a tag over the length limit instead of truncating it',
+        build: createBloc,
+        act: (b) => b.add(TagsPickerTagsAdded(['ok', tooLong])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', {'ok'})
+              .having((s) => s.notice, 'notice', TagsPickerNotice.tagTooLong),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'accepts a tag of exactly the maximum length',
+        build: createBloc,
+        act: (b) => b.add(TagsPickerTagsAdded([maxLength])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', {maxLength})
+              .having((s) => s.notice, 'notice', TagsPickerNotice.none),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'adds at most ${HashtagExtractor.maxHashtagsPerVideo} tags',
+        build: createBloc,
+        act: (b) => b.add(TagsPickerTagsAdded([...ten, 'eleven'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', ten.toSet())
+              .having((s) => s.isAtTagLimit, 'isAtTagLimit', isTrue),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'ignores further tags once the limit is reached',
+        build: () => createBloc(initial: ten.toSet()),
+        act: (b) => b.add(const TagsPickerTagsAdded(['eleven'])),
+        expect: () => const <TagsPickerState>[],
+      );
+    });
+
+    group('TagsPickerSuggestionSelected', () {
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'is ignored once the limit is reached',
+        build: () => createBloc(initial: ten.toSet()),
+        act: (b) => b.add(const TagsPickerSuggestionSelected('eleven')),
+        expect: () => const <TagsPickerState>[],
+      );
+    });
+
+    group('TagsPickerTagRemoved', () {
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'clears a too-long notice',
+        build: createBloc,
+        seed: () => const TagsPickerState(
+          selectedTags: {'foo'},
+          notice: TagsPickerNotice.tagTooLong,
+        ),
+        act: (b) => b.add(const TagsPickerTagRemoved('foo')),
+        expect: () => [
+          isA<TagsPickerState>().having(
+            (s) => s.notice,
+            'notice',
+            TagsPickerNotice.none,
+          ),
+        ],
+      );
+    });
+
+    group('initial tags', () {
+      test('are normalized like committed tags', () async {
+        final bloc = createBloc(
+          initial: {
+            'FunnyDivines',
+            tooLong,
+            ...ten.map((t) => t.toUpperCase()),
+          },
+        );
+        expect(bloc.state.selectedTags, hasLength(10));
+        expect(bloc.state.selectedTags, contains('funnydivines'));
+        expect(bloc.state.selectedTags, isNot(contains(tooLong)));
+        await bloc.close();
+      });
+    });
+
+    group('suggestions', () {
+      test('are lowercased, deduplicated and exclude over-long tags', () {
+        final state = TagsPickerState(
+          query: 'fun',
+          searchResults: ['FunnyDivines', 'funnydivines', tooLong, 'funny'],
+          status: TagsPickerStatus.success,
+        );
+        expect(state.suggestions, ['funnydivines', 'funny']);
+      });
+    });
+
+    group('canAddQuery', () {
+      test('is false once the limit is reached', () {
+        final state = TagsPickerState(
+          query: 'eleven',
+          selectedTags: ten.toSet(),
+        );
+        expect(state.canAddQuery, isFalse);
+      });
+
+      test('is false for a query over the length limit', () {
+        final state = TagsPickerState(query: tooLong);
+        expect(state.canAddQuery, isFalse);
+      });
     });
   });
 }

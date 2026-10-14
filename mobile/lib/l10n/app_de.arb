@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Dieser Chat ist noch nicht vollständig wiederhergestellt",
     "inboxRestoreRetryAction": "Erneut versuchen",
     "inboxRestoringMessages": "Deine Nachrichten werden wiederhergestellt…",
-    "inboxReportedUser": "{displayName} gemeldet",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} entblockt",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2152,6 +2144,18 @@
     "libraryGalleryImportItemNotVerified": "Nicht als mit Divine gedreht bestätigt",
     "libraryGalleryImportItemCheckUnavailable": "Gerade nicht prüfbar. Versuch es später nochmal.",
     "libraryGalleryImportDone": "Fertig",
+    "librarySaveSelectedClipsTooltip": "Ausgewählte Clips in deiner Galerie speichern",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 Clip wurde ohne seinen Nachweis gespeichert und kann deshalb nicht zurück in deine Clips.} other{{count} Clips wurden ohne ihren Nachweis gespeichert und können deshalb nicht zurück in deine Clips.}}",
+    "libraryClipsSavedWithoutProofDetails": "Details",
+    "libraryGallerySaveWarningTitle": "Ohne Nachweis gespeichert",
+    "libraryGallerySaveWarningIntro": "Aus deiner Galerie kommen nur Clips zurück, die nachweisen, dass sie mit Divine gedreht wurden. Diese Clips wurden ohne diesen Nachweis gespeichert.",
+    "libraryGallerySaveWarningSigningUnavailable": "Der Nachweis konnte gerade nicht hinzugefügt werden, vielleicht weil du offline warst. Versuch es nochmal, um eine Kopie mit Nachweis zu speichern.",
+    "libraryGallerySaveWarningStopMotion": "Stop-Motion-Clips bestehen aus Fotos, und die können keinen Nachweis tragen.",
+    "libraryGallerySaveWarningSigningUnsupported": "Diese Version von Divine kann Clips keinen Nachweis hinzufügen.",
+    "libraryGallerySaveWarningNoProof": "Dieser Clip hat keinen Nachweis, und Divine kann ihn nicht nachträglich hinzufügen.",
+    "libraryGallerySaveWarningSavedWithProof": "Mit Nachweis gespeichert",
+    "libraryGallerySaveSigning": "Deine Clips bekommen ihren Nachweis…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Dein Clip wird gespeichert…} other{Clip {current} von {total} wird gespeichert…}}",
     "libraryNoClipsYetSubtitle": "Deine aufgenommenen Videoclips erscheinen hier",
     "libraryNoClipsYetTitle": "Noch keine Clips",
     "libraryNoDraftsYetSubtitle": "Videos, die du als Entwurf speicherst, erscheinen hier",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Dieses Konto melden",
     "inboxActionBlockVanishedAccount": "Dieses Konto blockieren",
     "inboxActionUnblockVanishedAccount": "Dieses Konto entblocken",
-    "inboxReportedVanishedAccount": "Dieses Konto wurde gemeldet",
     "inboxBlockedVanishedAccount": "Dieses Konto wurde blockiert",
     "inboxUnblockedVanishedAccount": "Dieses Konto wurde entblockt",
     "inboxRemoveConfirmBodyVanishedAccount": "Dadurch wird die Unterhaltung aus deinem Posteingang entfernt. Wenn dir diese Person wieder schreibt, beginnt eine neue Unterhaltung.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Tags suchen oder hinzufügen",
     "videoMetadataTagsPickerEmptyHint": "Tags hinzufügen, damit andere dein Video entdecken",
     "videoMetadataTagsPickerNoResults": "Keine passenden Tags",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtags dürfen bis zu {max} Zeichen lang sein.} other{Hashtags dürfen bis zu {max} Zeichen lang sein.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Du kannst bis zu {max} Hashtag hinzufügen.} other{Du kannst bis zu {max} Hashtags hinzufügen.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} von {max} Zeichen} other{{count} von {max} Zeichen}}",
     "videoMetadataTagsPickerAddTag": "„#{tag}\" hinzufügen",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Kommentar konnte nicht bearbeitet werden",
     "commentsErrorNotAuthenticatedInteract": "Melde dich an, um mitzumachen",
     "commentsErrorVoteFailed": "Abstimmen über den Kommentar fehlgeschlagen",
-    "commentsErrorReportFailed": "Kommentar konnte nicht gemeldet werden",
     "commentsErrorBlockFailed": "Person konnte nicht blockiert werden",
     "commentsErrorDeleteFailed": "Kommentar konnte nicht gelöscht werden",
     "commentsHeaderCount": "{count, plural, =1{{count} Kommentar} other{{count} Kommentare}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Kommentar bearbeiten",
     "commentOptionsFlagContentLabel": "Inhalt melden",
     "commentOptionsFlagContentSemanticLabel": "Diesen Inhalt melden",
-    "commentOptionsFlagReasonPrompt": "Wähle einen Grund für die Meldung dieses Kommentars",
-    "commentOptionsFlagSubmit": "Absenden",
     "commentOptionsTitle": "Optionen",
     "commentsEmptyClassicVineMessage": "Wir arbeiten noch daran, alte Kommentare aus dem Archiv zu importieren. Sie sind noch nicht bereit.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Ten czat nie został jeszcze w pełni odzyskany",
     "inboxRestoreRetryAction": "Spróbuj ponownie",
     "inboxRestoringMessages": "Odzyskiwanie wiadomości…",
-    "inboxReportedUser": "Zgłoszono {displayName}",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "Odblokowano {displayName}",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2152,6 +2144,18 @@
     "libraryGalleryImportItemNotVerified": "Nie udało się potwierdzić, że nagrano go w Divine",
     "libraryGalleryImportItemCheckUnavailable": "Nie można teraz sprawdzić. Spróbuj ponownie później.",
     "libraryGalleryImportDone": "Gotowe",
+    "librarySaveSelectedClipsTooltip": "Zapisz wybrane klipy w galerii",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{Zapisano 1 klip bez jego dowodu, więc nie może wrócić do twoich klipów.} few{Zapisano {count} klipy bez ich dowodu, więc nie mogą wrócić do twoich klipów.} many{Zapisano {count} klipów bez ich dowodu, więc nie mogą wrócić do twoich klipów.} other{Zapisano {count} klipów bez ich dowodu, więc nie mogą wrócić do twoich klipów.}}",
+    "libraryClipsSavedWithoutProofDetails": "Szczegóły",
+    "libraryGallerySaveWarningTitle": "Zapisane bez dowodu",
+    "libraryGallerySaveWarningIntro": "Z galerii mogą wrócić tylko klipy z dowodem, że nagrano je w Divine. Kopie tych klipów zapisano bez niego.",
+    "libraryGallerySaveWarningSigningUnavailable": "Nie udało się teraz dodać dowodu, może dlatego, że nie było połączenia. Spróbuj ponownie, żeby zapisać kopię z dowodem.",
+    "libraryGallerySaveWarningStopMotion": "Klipy poklatkowe składają się ze zdjęć, które nie mogą mieć dowodu.",
+    "libraryGallerySaveWarningSigningUnsupported": "Ta wersja Divine nie może dodawać dowodu do klipów.",
+    "libraryGallerySaveWarningNoProof": "Ten klip nie ma dowodu, a Divine nie może go dodać później.",
+    "libraryGallerySaveWarningSavedWithProof": "Zapisano z dowodem",
+    "libraryGallerySaveSigning": "Dodawanie dowodu do twoich klipów…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Zapisywanie klipu…} few{Zapisywanie klipu {current} z {total}…} many{Zapisywanie klipu {current} z {total}…} other{Zapisywanie klipu {current} z {total}…}}",
     "libraryNoClipsYetSubtitle": "Nagrane klipy wideo pojawią się tutaj",
     "libraryNoClipsYetTitle": "Brak klipów",
     "libraryNoDraftsYetSubtitle": "Wideo zapisane jako wersja robocza pojawi się tutaj",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Zgłoś to konto",
     "inboxActionBlockVanishedAccount": "Zablokuj to konto",
     "inboxActionUnblockVanishedAccount": "Odblokuj to konto",
-    "inboxReportedVanishedAccount": "Zgłoszono to konto",
     "inboxBlockedVanishedAccount": "Zablokowano to konto",
     "inboxUnblockedVanishedAccount": "Odblokowano to konto",
     "inboxRemoveConfirmBodyVanishedAccount": "To usuwa rozmowę z Twojej skrzynki odbiorczej. Jeśli ta osoba znów do Ciebie napisze, rozpocznie się nowa rozmowa.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Szukaj lub dodaj tagi",
     "videoMetadataTagsPickerEmptyHint": "Dodaj tagi, aby inni odkryli Twój film",
     "videoMetadataTagsPickerNoResults": "Brak pasujących tagów",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtag może mieć maksymalnie {max} znak.} few{Hashtag może mieć maksymalnie {max} znaki.} many{Hashtag może mieć maksymalnie {max} znaków.} other{Hashtag może mieć maksymalnie {max} znaku.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Możesz dodać maksymalnie {max} hashtag.} few{Możesz dodać maksymalnie {max} hashtagi.} many{Możesz dodać maksymalnie {max} hashtagów.} other{Możesz dodać maksymalnie {max} hashtaga.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} z {max} znaku} few{{count} z {max} znaków} many{{count} z {max} znaków} other{{count} z {max} znaku}}",
     "videoMetadataTagsPickerAddTag": "Dodaj „#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Nie udało się edytować komentarza",
     "commentsErrorNotAuthenticatedInteract": "Zaloguj się, aby brać udział",
     "commentsErrorVoteFailed": "Nie udało się zagłosować na komentarz",
-    "commentsErrorReportFailed": "Nie udało się zgłosić komentarza",
     "commentsErrorBlockFailed": "Nie udało się zablokować użytkownika",
     "commentsErrorDeleteFailed": "Nie udało się usunąć komentarza",
     "commentsHeaderCount": "{count, plural, one{{count} komentarz} few{{count} komentarze} many{{count} komentarzy} other{{count} komentarza}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Edytuj komentarz",
     "commentOptionsFlagContentLabel": "Zgłoś treść",
     "commentOptionsFlagContentSemanticLabel": "Zgłoś tę treść",
-    "commentOptionsFlagReasonPrompt": "Wybierz powód zgłoszenia tego komentarza",
-    "commentOptionsFlagSubmit": "Wyślij",
     "commentOptionsTitle": "Opcje",
     "commentsEmptyClassicVineMessage": "Wciąż pracujemy nad importem starych komentarzy z archiwum. Nie są jeszcze gotowe.",
     "commentsEmptyClassicVineTitle": "Klasyczny Vine",

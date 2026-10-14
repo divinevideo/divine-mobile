@@ -20,6 +20,28 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/report_content_confirmation.dart';
 import 'package:openvine/widgets/support_capped_text_field.dart';
 
+/// The kinds of list that can be reported, with their NIP-51 event kinds.
+enum ReportedListKind {
+  /// A people list: a NIP-51 follow set.
+  people(30000),
+
+  /// A video list: a NIP-51 curation set of videos.
+  videos(30005);
+
+  const ReportedListKind(this.nostrKind);
+
+  final int nostrKind;
+}
+
+/// What the report form's heading names as the thing being reported.
+enum ReportedSubject {
+  /// A video, list, message, or account: the general wording.
+  content,
+
+  /// A comment.
+  comment,
+}
+
 /// Shows a [VineBottomSheet] for reporting content or a user.
 ///
 /// Usage:
@@ -34,20 +56,12 @@ import 'package:openvine/widgets/support_capped_text_field.dart';
 ///   context,
 ///   userPubkey: pubkey,
 /// );
+/// await ReportContentDialog.showForComment(
+///   context,
+///   commentId: comment.id,
+///   authorPubkey: comment.authorPubkey,
+/// );
 /// ```
-/// The kinds of list that can be reported, with their NIP-51 event kinds.
-enum ReportedListKind {
-  /// A people list: a NIP-51 follow set.
-  people(30000),
-
-  /// A video list: a NIP-51 curation set of videos.
-  videos(30005);
-
-  const ReportedListKind(this.nostrKind);
-
-  final int nostrKind;
-}
-
 class ReportContentDialog extends ConsumerWidget {
   ReportContentDialog({
     super.key,
@@ -60,6 +74,7 @@ class ReportContentDialog extends ConsumerWidget {
     this.reasons = ContentFilterReason.values,
     this.additionalContext,
     this.addressableCoordinate,
+    this.subject = ReportedSubject.content,
     this.isFromShareMenu = false,
     this.draggableController,
     this.scrollController,
@@ -112,11 +127,14 @@ class ReportContentDialog extends ConsumerWidget {
   /// as an `a` tag beside the NIP-56 targets.
   final String? addressableCoordinate;
 
+  /// What the heading names as the thing being reported.
+  final ReportedSubject subject;
+
   final bool isFromShareMenu;
 
   /// Optional controller used to programmatically expand the bottom sheet
-  /// to full height when the "Other" reason is selected (so the details
-  /// field is reachable above the keyboard).
+  /// to full height when the details field takes focus (so it is reachable
+  /// above the keyboard).
   final DraggableScrollableController? draggableController;
 
   /// Scroll controller handed down by the enclosing [VineBottomSheet].
@@ -169,6 +187,35 @@ class ReportContentDialog extends ConsumerWidget {
             authorPubkey: senderPubkey,
             moderationKindLabel: 'DM Message Report',
             moderationEventLabel: 'Message ID',
+            draggableController: controller,
+            scrollController: scrollController,
+          ),
+        )
+        .whenComplete(controller.dispose);
+  }
+
+  /// Shows the bottom sheet for reporting a comment.
+  ///
+  /// The same form, reasons, and note rules as every other report; only the
+  /// heading and the moderation-DM labels name a comment.
+  static Future<void> showForComment(
+    BuildContext context, {
+    required String commentId,
+    required String authorPubkey,
+  }) {
+    final controller = DraggableScrollableController();
+    return context
+        .showVideoPausingVineBottomSheet<void>(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: VineTheme.bottomSheetDismissFloor,
+          draggableController: controller,
+          buildScrollBody: (scrollController) => ReportContentDialog(
+            eventId: commentId,
+            authorPubkey: authorPubkey,
+            moderationKindLabel: 'Comment Report',
+            moderationEventLabel: 'Comment ID',
+            subject: ReportedSubject.comment,
             draggableController: controller,
             scrollController: scrollController,
           ),
@@ -273,6 +320,7 @@ class ReportContentDialog extends ConsumerWidget {
       ),
       child: _ReportContentView(
         reasons: reasons,
+        subject: subject,
         isFromShareMenu: isFromShareMenu,
         draggableController: draggableController,
         scrollController: scrollController,
@@ -286,12 +334,14 @@ class ReportContentDialog extends ConsumerWidget {
 class _ReportContentView extends StatefulWidget {
   const _ReportContentView({
     required this.reasons,
+    required this.subject,
     required this.isFromShareMenu,
     this.draggableController,
     this.scrollController,
   });
 
   final List<ContentFilterReason> reasons;
+  final ReportedSubject subject;
   final bool isFromShareMenu;
   final DraggableScrollableController? draggableController;
   final ScrollController? scrollController;
@@ -305,21 +355,38 @@ class _ReportContentViewState extends State<_ReportContentView> {
   final TextEditingController _detailsController = TextEditingController();
   final FocusNode _detailsFocusNode = FocusNode();
   final GlobalKey _detailsFieldKey = GlobalKey();
-  final GlobalKey _otherCardKey = GlobalKey();
+
+  /// One key per reason card, kept for the form's life, so picking a reason
+  /// leaves every card the same element: the selection border animates and a
+  /// screen reader stays on the card it tapped. The selected one is the
+  /// anchor the note scrolls under.
+  final Map<ContentFilterReason, GlobalKey> _cardKeys = {};
+  GlobalKey _cardKey(ContentFilterReason reason) =>
+      _cardKeys.putIfAbsent(reason, GlobalKey.new);
+
+  final GlobalKey _detailsBoxKey = GlobalKey();
   final ScrollController _fallbackScrollController = ScrollController();
 
-  /// The inline error under the form. Widget-local: it is already-localized
-  /// display text, which is exactly what must not live in cubit state.
+  /// The inline error for a failed submit, shown in the footer. Widget-local:
+  /// it is already-localized display text, which is exactly what must not
+  /// live in cubit state.
   String? _errorMessage;
 
+  /// Whether Report was tapped under Other with no note. Shown inside the
+  /// note box, beside the field it asks the reporter to fill in.
+  bool _noteRequired = false;
+
   /// Whether the reporter just tried to insert an image the report cannot
-  /// carry. Held here, not in the details field, because reselecting the
-  /// reason unmounts and rebuilds that field from scratch, which would drop
-  /// this one-shot notice if it lived there. The notice renders above the
-  /// field (see [_ReportFormBody]) so the keyboard cannot cover it.
+  /// carry. Held here, beside the other form state, so the one-shot notice
+  /// does not depend on the field's own State surviving. The notice renders
+  /// above the field (see [_ReportFormBody]) so the keyboard cannot cover it.
   bool _imageInsertionRejected = false;
 
   bool _scrollWhenKeyboardOpens = false;
+
+  /// The scroll viewport's height when its metrics last changed, so a change
+  /// can be told apart as the view shrinking (keyboard opening) or growing.
+  double? _lastViewportHeight;
   double _previousViewInsetsBottom = 0;
 
   ScrollController get _scrollController =>
@@ -331,6 +398,33 @@ class _ReportContentViewState extends State<_ReportContentView> {
       _selectedReason != null && !isSubmitting;
 
   @override
+  void initState() {
+    super.initState();
+    _detailsFocusNode.addListener(_onDetailsFocusChanged);
+  }
+
+  /// The details field shows for every reason, so whichever way it takes
+  /// focus (tapped, or focused for the reporter on picking Other) the sheet
+  /// grows and the field is scrolled clear of the keyboard once it opens.
+  void _onDetailsFocusChanged() {
+    if (!_detailsFocusNode.hasFocus) return;
+    final controller = widget.draggableController;
+    if (controller != null && controller.isAttached) {
+      runDetached(
+        controller.animateTo(
+          0.95,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        ),
+        'expand report sheet for details',
+        logName: 'ReportContentDialog',
+        category: LogCategory.ui,
+      );
+    }
+    _scrollWhenKeyboardOpens = true;
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final currentBottom = MediaQuery.viewInsetsOf(context).bottom;
@@ -339,22 +433,38 @@ class _ReportContentViewState extends State<_ReportContentView> {
         currentBottom > 100) {
       _scrollWhenKeyboardOpens = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final ctx = _otherCardKey.currentContext;
-        if (ctx == null) return;
-        runDetached(
-          Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          ),
-          'scroll report details into view',
-          logName: 'ReportContentDialog',
-          category: LogCategory.ui,
-        );
+        if (mounted) _scrollNoteIntoView();
       });
     }
     _previousViewInsetsBottom = currentBottom;
+  }
+
+  /// Scrolls the note into view. Normally the chosen card goes to the top,
+  /// with its note right under it, so the reason stays in view above the
+  /// field it qualifies. While the missing-note error shows, the end of the
+  /// note box, where that error is, is kept visible instead: the box sits
+  /// low enough that pinning the card can push the error behind the footer.
+  void _scrollNoteIntoView({bool animate = true}) {
+    final selected = _selectedReason;
+    final (anchor, policy) = _noteRequired
+        ? (_detailsBoxKey, ScrollPositionAlignmentPolicy.keepVisibleAtEnd)
+        : (
+            selected == null ? null : _cardKey(selected),
+            ScrollPositionAlignmentPolicy.explicit,
+          );
+    final ctx = anchor?.currentContext;
+    if (ctx == null) return;
+    runDetached(
+      Scrollable.ensureVisible(
+        ctx,
+        duration: animate ? const Duration(milliseconds: 250) : Duration.zero,
+        curve: Curves.easeOut,
+        alignmentPolicy: policy,
+      ),
+      'scroll report details into view',
+      logName: 'ReportContentDialog',
+      category: LogCategory.ui,
+    );
   }
 
   void _onReasonSelected(ContentFilterReason reason) {
@@ -362,23 +472,12 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() {
       _selectedReason = reason;
       _errorMessage = null;
+      _noteRequired = false;
     });
 
+    // Other is the one reason whose note is required, so it takes the
+    // reporter straight to the field. The focus listener does the rest.
     if (reason == ContentFilterReason.other && !wasOther) {
-      final controller = widget.draggableController;
-      if (controller != null && controller.isAttached) {
-        runDetached(
-          controller.animateTo(
-            0.95,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          ),
-          'expand report sheet for details',
-          logName: 'ReportContentDialog',
-          category: LogCategory.ui,
-        );
-      }
-      _scrollWhenKeyboardOpens = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _detailsFocusNode.requestFocus();
@@ -421,29 +520,55 @@ class _ReportContentViewState extends State<_ReportContentView> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
-            child: submitted
-                ? const ReportConfirmationBody()
-                : _ReportFormBody(
-                    reasons: widget.reasons,
-                    selectedReason: _selectedReason,
-                    onReasonSelected: _onReasonSelected,
-                    detailsController: _detailsController,
-                    detailsFocusNode: _detailsFocusNode,
-                    detailsFieldKey: _detailsFieldKey,
-                    otherCardKey: _otherCardKey,
-                    onDetailsChanged: _onDetailsChanged,
-                    imageInsertionRejected: _imageInsertionRejected,
-                    onImageInserted: _onImageInsertionRejected,
-                  ),
+          child: NotificationListener<ScrollMetricsNotification>(
+            // The keyboard, the footer riding it, and the sheet growing for
+            // the note all shrink the viewport over several frames, after a
+            // scroll aimed at the old size has run. While the missing-note
+            // error shows, follow each shrink so it stays in view. Only this
+            // view's own changes count, not the note field's inner scroll,
+            // and only shrinking: a view that grows, as when the keyboard
+            // closes, gives the reporter room and is no reason to move them.
+            // A reporter's own scrolling does not send this notification.
+            onNotification: (notification) {
+              if (notification.depth != 0) return false;
+              final height = notification.metrics.viewportDimension;
+              final last = _lastViewportHeight;
+              _lastViewportHeight = height;
+              if (_noteRequired && last != null && height < last) {
+                _scrollNoteIntoView(animate: false);
+              }
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
+              child: submitted
+                  ? const ReportConfirmationBody()
+                  : _ReportFormBody(
+                      reasons: widget.reasons,
+                      subject: widget.subject,
+                      selectedReason: _selectedReason,
+                      onReasonSelected: _onReasonSelected,
+                      detailsController: _detailsController,
+                      detailsFocusNode: _detailsFocusNode,
+                      detailsFieldKey: _detailsFieldKey,
+                      cardKey: _cardKey,
+                      detailsBoxKey: _detailsBoxKey,
+                      onDetailsChanged: _onDetailsChanged,
+                      imageInsertionRejected: _imageInsertionRejected,
+                      noteRequired: _noteRequired,
+                      onImageInserted: _onImageInsertionRejected,
+                    ),
+            ),
           ),
         ),
-        // The error rides the footer rather than the end of the scroll
-        // content: with the submit action pinned, the user can submit from
-        // any scroll offset, and an error appended below eleven reason cards
-        // lands off-screen — the tap would look like it did nothing.
+        // A failed submit's error rides the footer rather than the end of the
+        // scroll content: with the submit action pinned, the user can submit
+        // from any scroll offset, and an error appended below eleven reason
+        // cards lands off-screen — the tap would look like it did nothing.
+        // Other's missing note is the exception: its error sits in the note
+        // box, which is scrolled into view instead (see
+        // [_scrollNoteIntoView]).
         VineKeyboardAwareFooter(
           includeSafeArea: true,
           child: Padding(
@@ -476,9 +601,12 @@ class _ReportContentViewState extends State<_ReportContentView> {
   }
 
   void _onDetailsChanged() {
-    if (_errorMessage == null && !_imageInsertionRejected) return;
+    if (_errorMessage == null && !_noteRequired && !_imageInsertionRejected) {
+      return;
+    }
     setState(() {
       _errorMessage = null;
+      _noteRequired = false;
       _imageInsertionRejected = false;
     });
   }
@@ -488,8 +616,23 @@ class _ReportContentViewState extends State<_ReportContentView> {
     if (cubit.state.isSubmitting) return;
     if (_selectedReason == ContentFilterReason.other &&
         _detailsController.text.trim().isEmpty) {
-      setState(() {
-        _errorMessage = context.l10n.reportOtherRequiresDetails;
+      if (_noteRequired) {
+        // Already on screen, so its live region stays quiet. Say it again
+        // or a screen-reader user's repeat tap gets no answer at all.
+        announceDetached(
+          context,
+          context.l10n.reportOtherRequiresDetails,
+          description: 'announce the required report note again',
+          logName: 'ReportContentDialog',
+        );
+      } else {
+        setState(() => _noteRequired = true);
+      }
+      _detailsFocusNode.requestFocus();
+      // The note box can sit behind the footer, so bring the error into view
+      // and the Report tap visibly did something.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollNoteIntoView();
       });
       return;
     }
@@ -510,8 +653,11 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() => _errorMessage = null);
     final l10n = context.l10n;
     final selectedReasonTitle = l10n.reportReasonTitle(reason);
-    final detailsText = _detailsController.text.trim();
-    final details = detailsText.isEmpty ? selectedReasonTitle : detailsText;
+    // Sent as typed, and empty when nothing was: the reason already travels
+    // in its own field and tags, and a filled-in label would read to a
+    // moderator as words the reporter wrote (#10003). The field shows for
+    // every reason, so what is sent is always what the reporter can see.
+    final details = _detailsController.text.trim();
 
     await cubit.submit(
       reason: reason,
@@ -548,7 +694,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
   @override
   void dispose() {
     _detailsController.dispose();
-    _detailsFocusNode.dispose();
+    _detailsFocusNode
+      ..removeListener(_onDetailsFocusChanged)
+      ..dispose();
     _fallbackScrollController.dispose();
     super.dispose();
   }
@@ -561,27 +709,35 @@ class _ReportContentViewState extends State<_ReportContentView> {
 class _ReportFormBody extends StatelessWidget {
   const _ReportFormBody({
     required this.reasons,
+    required this.subject,
     required this.selectedReason,
     required this.onReasonSelected,
     required this.detailsController,
     required this.detailsFocusNode,
     required this.detailsFieldKey,
-    required this.otherCardKey,
+    required this.cardKey,
+    required this.detailsBoxKey,
     required this.onDetailsChanged,
     required this.imageInsertionRejected,
+    required this.noteRequired,
     required this.onImageInserted,
   });
 
   final List<ContentFilterReason> reasons;
+  final ReportedSubject subject;
   final ContentFilterReason? selectedReason;
   final ValueChanged<ContentFilterReason> onReasonSelected;
   final TextEditingController detailsController;
   final FocusNode detailsFocusNode;
   final GlobalKey detailsFieldKey;
 
-  /// Anchors the "Other" card so it can be scrolled back into view once the
-  /// keyboard pushes the details field up.
-  final GlobalKey otherCardKey;
+  /// The stable key of each reason card; the selected one is scrolled back
+  /// into view once the keyboard pushes the details field up.
+  final GlobalKey Function(ContentFilterReason reason) cardKey;
+
+  /// Keeps the note box one element as it moves under a newly picked
+  /// reason, so its state, such as the limit-reached notice, moves with it.
+  final GlobalKey detailsBoxKey;
 
   /// Clears a pending validation error (and the image-rejection notice) as
   /// soon as the user edits the details.
@@ -591,18 +747,28 @@ class _ReportFormBody extends StatelessWidget {
   /// notice shown above the field.
   final bool imageInsertionRejected;
 
+  /// Whether Report was tapped under Other with no note; drives the error
+  /// shown under the field.
+  final bool noteRequired;
+
   /// Forwarded to the details field's content-insertion handler.
   final VoidCallback onImageInserted;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final detailsLabel = selectedReason == ContentFilterReason.other
+        ? l10n.reportDetailsRequired
+        : l10n.reportDetailsOptional;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
         Text(
-          l10n.reportWhyReporting,
+          switch (subject) {
+            ReportedSubject.content => l10n.reportWhyReporting,
+            ReportedSubject.comment => l10n.reportWhyReportingComment,
+          },
           style: VineTheme.titleMediumFont(
             color: context.vineColors.primaryText,
           ),
@@ -615,9 +781,9 @@ class _ReportFormBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...reasons.map(
-          (reason) => Padding(
-            key: reason == ContentFilterReason.other ? otherCardKey : null,
+        for (final reason in reasons) ...[
+          Padding(
+            key: cardKey(reason),
             padding: const EdgeInsets.only(bottom: 8),
             child: _ReasonCard(
               title: l10n.reportReasonTitle(reason),
@@ -626,44 +792,62 @@ class _ReportFormBody extends StatelessWidget {
               onTap: () => onReasonSelected(reason),
             ),
           ),
-        ),
-        if (selectedReason == ContentFilterReason.other) ...[
-          const SizedBox(height: 4),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.vineColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 4,
-                children: [
-                  Text(
-                    l10n.reportDetailsRequired,
-                    style: VineTheme.labelSmallFont(
-                      color: context.vineColors.accentPositive,
-                    ),
+          // Opens under whichever reason is picked, so every reporter sees
+          // they can say why without scrolling for it. The note is optional
+          // except under Other, which has no meaning without one. The text
+          // lives in the shared controller, so a note typed under one reason
+          // is still on screen, and is what gets sent, after switching.
+          if (reason == selectedReason)
+            Padding(
+              key: detailsBoxKey,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.vineColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      // The field announces this label itself (see
+                      // [_CappedDetailsField]), so the visible copy is kept
+                      // out of the tree rather than read twice.
+                      ExcludeSemantics(
+                        child: Text(
+                          detailsLabel,
+                          style: VineTheme.labelSmallFont(
+                            color: context.vineColors.accentPositive,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        l10n.reportDetailsTextOnly,
+                        style: VineTheme.labelSmallFont(
+                          color: context.vineColors.onSurfaceVariant,
+                        ),
+                      ),
+                      if (imageInsertionRejected)
+                        const _ImageNotAttachedNotice(),
+                      _CappedDetailsField(
+                        label: detailsLabel,
+                        fieldKey: detailsFieldKey,
+                        controller: detailsController,
+                        focusNode: detailsFocusNode,
+                        onChanged: onDetailsChanged,
+                        onImageInserted: onImageInserted,
+                      ),
+                      if (noteRequired)
+                        _InlineError(
+                          message: l10n.reportOtherRequiresDetails,
+                        ),
+                    ],
                   ),
-                  Text(
-                    l10n.reportDetailsTextOnly,
-                    style: VineTheme.labelSmallFont(
-                      color: context.vineColors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (imageInsertionRejected) const _ImageNotAttachedNotice(),
-                  _CappedDetailsField(
-                    fieldKey: detailsFieldKey,
-                    controller: detailsController,
-                    focusNode: detailsFocusNode,
-                    onChanged: onDetailsChanged,
-                    onImageInserted: onImageInserted,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
         ],
       ],
     );
@@ -828,12 +1012,18 @@ class _RadioIndicator extends StatelessWidget {
 /// truncated, which cannot be derived by comparing `String.length` to the cap.
 class _CappedDetailsField extends StatefulWidget {
   const _CappedDetailsField({
+    required this.label,
     required this.fieldKey,
     required this.controller,
     required this.focusNode,
     required this.onChanged,
     required this.onImageInserted,
   });
+
+  /// The box's visible label (required or optional), announced as the
+  /// field's own label. The field has no decoration label of its own, so
+  /// without this a screen reader reaches an unnamed text field.
+  final String label;
 
   final GlobalKey fieldKey;
   final TextEditingController controller;
@@ -876,36 +1066,46 @@ class _CappedDetailsFieldState extends State<_CappedDetailsField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,
       children: [
-        TextField(
-          key: widget.fieldKey,
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          enableInteractiveSelection: true,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: _onChanged,
-          // Without a configuration Flutter advertises an empty mime-type
-          // list, so Android refuses the insert itself and shows a system
-          // toast that vanishes and never mentions the report. Declaring the
-          // default image types moves that moment into the app, where the
-          // handler can answer it in our own words. #8223 chose not to hide
-          // the keyboard's image button, so it stays live.
-          contentInsertionConfiguration: ContentInsertionConfiguration(
-            onContentInserted: (_) => widget.onImageInserted(),
-          ),
-          style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
-          minLines: 3,
-          maxLines: 5,
-          inputFormatters: [
-            ReportingLengthLimiter(
-              BugReportConfig.maxFreeTextFieldLength,
-              _onTruncated,
+        // Merged so the label lands on the text field's own node: a parent
+        // label alone becomes a separate node a screen reader reads apart
+        // from the field.
+        MergeSemantics(
+          child: Semantics(
+            label: widget.label,
+            child: TextField(
+              key: widget.fieldKey,
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              enableInteractiveSelection: true,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: _onChanged,
+              // Without a configuration Flutter advertises an empty mime-type
+              // list, so Android refuses the insert itself and shows a system
+              // toast that vanishes and never mentions the report. Declaring
+              // the default image types moves that moment into the app, where
+              // the handler can answer it in our own words. #8223 chose not to
+              // hide the keyboard's image button, so it stays live.
+              contentInsertionConfiguration: ContentInsertionConfiguration(
+                onContentInserted: (_) => widget.onImageInserted(),
+              ),
+              style: VineTheme.bodyLargeFont(
+                color: context.vineColors.primaryText,
+              ),
+              minLines: 3,
+              maxLines: 5,
+              inputFormatters: [
+                ReportingLengthLimiter(
+                  BugReportConfig.maxFreeTextFieldLength,
+                  _onTruncated,
+                ),
+              ],
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isCollapsed: true,
+              ),
             ),
-          ],
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            isCollapsed: true,
           ),
         ),
         if (_truncated)

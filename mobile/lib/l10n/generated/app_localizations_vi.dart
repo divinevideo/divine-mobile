@@ -952,9 +952,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Bỏ chặn tài khoản này';
 
   @override
-  String get inboxReportedVanishedAccount => 'Đã báo cáo tài khoản này';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Đã chặn tài khoản này';
 
   @override
@@ -4790,6 +4787,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportWhyReporting => 'Tại sao bạn báo cáo nội dung này?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.';
 
@@ -4811,6 +4811,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Vui lòng mô tả vấn đề';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5708,11 +5711,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profileSetupUploadStaged => 'Đã tải lên — chạm Lưu để áp dụng';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'Đã báo cáo $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'Đã chặn $displayName';
   }
@@ -6574,6 +6572,66 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryGalleryImportDone => 'Xong';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Lưu các clip đã chọn vào thư viện ảnh';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Đã lưu $count clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.',
+      one: 'Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Chi tiết';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Đã lưu không có bằng chứng';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Chỉ những clip có bằng chứng được quay bằng Divine mới có thể quay lại từ thư viện ảnh. Bản sao của các clip này đã được lưu mà không có bằng chứng đó.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Hiện chưa thêm được bằng chứng, có thể vì bạn đang ngoại tuyến. Thử lại để lưu một bản sao có bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clip stop-motion được tạo từ ảnh, mà ảnh thì không thể mang bằng chứng.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Phiên bản Divine này không thể thêm bằng chứng vào clip.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Clip này không có bằng chứng, và Divine không thể thêm vào sau.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Đã lưu kèm bằng chứng';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Đang thêm bằng chứng vào clip của bạn…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đang lưu clip $current/$total…',
+      one: 'Đang lưu clip của bạn…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6979,13 +7037,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get commentOptionsFlagContentSemanticLabel => 'Gắn cờ nội dung này';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Chọn lý do gắn cờ bình luận này';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Gửi';
 
   @override
   String get commentOptionsTitle => 'Tùy chọn';
@@ -8291,9 +8342,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Không bình chọn được bình luận';
-
-  @override
-  String get commentsErrorReportFailed => 'Không báo cáo được bình luận';
 
   @override
   String get commentsErrorBlockFailed => 'Không chặn được người dùng';
@@ -11519,6 +11567,36 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Không có thẻ phù hợp';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtag có thể dài tối đa $max ký tự.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Bạn có thể thêm tối đa $max hashtag.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count/$max ký tự',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

@@ -1185,6 +1185,55 @@ class VideoEvent {
   String? get captionTitle =>
       isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
 
+  /// Description to show in surfaces that render [allHashtags] as chips.
+  ///
+  /// Drops hashtags that end a line when each is already a chip, and the line
+  /// itself once nothing else is left on it. The Vine archive import repeats
+  /// the caption's hashtags on a line of their own, so the raw description
+  /// would show them as text twice above the chips. Hashtags inside a
+  /// sentence stay, since removing them would break the sentence. A dropped
+  /// line between two blank lines takes one of them along; everything else
+  /// is returned trimmed and otherwise as written.
+  late final String chipCaptionDescription = _withoutTrailingChipHashtags(
+    displayContent,
+  );
+
+  static final _lineToken = RegExp(r'\S+');
+  static final _hashtagToken = RegExp(r'^#([^#]+)$');
+
+  String _withoutTrailingChipHashtags(String text) {
+    final chips = {for (final tag in allHashtags) tag.toLowerCase()};
+    final lines = <String>[];
+    var lastKeptBlank = false;
+    var dropBlankLine = false;
+    for (final line in text.split('\n')) {
+      final tokens = _lineToken.allMatches(line).toList();
+      var keep = tokens.length;
+      while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, chips)) {
+        keep--;
+      }
+      if (keep == 0 && tokens.isNotEmpty) {
+        dropBlankLine = lastKeptBlank;
+        continue;
+      }
+      if (dropBlankLine && tokens.isEmpty) {
+        dropBlankLine = false;
+        continue;
+      }
+      dropBlankLine = false;
+      lastKeptBlank = tokens.isEmpty;
+      lines.add(
+        keep < tokens.length ? line.substring(0, tokens[keep - 1].end) : line,
+      );
+    }
+    return lines.join('\n').trim();
+  }
+
+  static bool _isChipHashtag(String token, Set<String> chips) {
+    final match = _hashtagToken.firstMatch(token);
+    return match != null && chips.contains(match[1]!.toLowerCase());
+  }
+
   /// Zalgo-safe embedded author name for display.
   ///
   /// Returns `null` when no embedded author name is set. Profile display-name

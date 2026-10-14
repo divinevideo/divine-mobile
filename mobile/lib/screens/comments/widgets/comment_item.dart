@@ -268,27 +268,19 @@ class _CommentItemState extends ConsumerState<CommentItem> {
     } else {
       result = await CommentOptionsModal.showForOtherUserIntegrated(
         context,
+        commentId: widget.comment.id,
         authorPubkey: widget.comment.authorPubkey,
       );
     }
 
     // Not gated on [mounted]: the author can delete the comment while the
-    // sheet is open, which removes its row, and a report, block or delete
-    // chosen then must still reach the sheet-level blocs captured above.
+    // sheet is open, which removes its row, and a block or delete chosen
+    // then must still reach the sheet-level blocs captured above.
     if (result == null) return;
 
     switch (result) {
       case CommentDeleteResult():
         reactionsBloc.add(CommentDeleteRequested(widget.comment.id));
-      case CommentReportResult(:final reason, :final details):
-        reactionsBloc.add(
-          CommentReportRequested(
-            commentId: widget.comment.id,
-            authorPubkey: widget.comment.authorPubkey,
-            reason: reason,
-            details: details,
-          ),
-        );
       case CommentBlockUserResult(:final authorPubkey):
         reactionsBloc.add(CommentBlockUserRequested(authorPubkey));
       case CommentEditResult(:final commentId, :final content):

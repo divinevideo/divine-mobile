@@ -19,9 +19,10 @@ class C2paTrustAnchors {
   /// Concatenated `CERTIFICATE` PEM blocks, and nothing else.
   final String pem;
 
-  /// True when fetched from the server during this load. A cached bundle can
-  /// predate a key rotation, so a check that fails on one is worth repeating
-  /// with fresh anchors.
+  /// True when fetched from the server during this load, or by a request
+  /// less than [C2paTrustAnchorService.refetchInterval] before it. A cached
+  /// bundle can predate a key rotation, so a check that fails on one is worth
+  /// repeating with fresh anchors.
   final bool isFresh;
 }
 
@@ -53,8 +54,27 @@ class C2paTrustAnchorService {
   /// Age after which a cached bundle is no longer used, even offline.
   static const Duration maxStaleAge = Duration(days: 7);
 
-  /// Upper bound on the anchor request.
+  /// Upper bound on the anchor request, both attempts together.
   static const Duration requestTimeout = Duration(seconds: 10);
+
+  /// How long the first attempt at the request may take before it is
+  /// abandoned and asked again.
+  ///
+  /// On a mobile network the first connection after a quiet spell can hang
+  /// until it times out while the next one answers at once: on a Galaxy S26
+  /// on LTE the bundle normally arrives in about 0.3 s, but the first request
+  /// after twenty minutes hung for the full [requestTimeout] three times out
+  /// of three, and the one right after it took 0.3 s (#10064).
+  static const Duration attemptTimeout = Duration(seconds: 3);
+
+  /// Shortest gap between two requests for the bundle.
+  ///
+  /// A check refetches the bundle for every clip whose signer it does not
+  /// trust, in case the keys rotated, and a gallery save or import checks
+  /// clips one after another. Within this gap the last request's answer is
+  /// reused, a bundle and a failure alike, so a slow or missing network costs
+  /// one [requestTimeout] rather than one per clip (#10064).
+  static const Duration refetchInterval = Duration(minutes: 1);
 
   /// Largest bundle accepted. The live one is under 2 KB.
   static const int maxBundleBytes = 64 * 1024;
@@ -75,6 +95,12 @@ class C2paTrustAnchorService {
   final http.Client _httpClient;
   final DateTime Function() _now;
 
+  /// The last request's answer, null when it failed, and when it was made.
+  ({String? pem, DateTime at})? _lastRequest;
+
+  /// The request still running, which a second load waits for.
+  Future<String?>? _request;
+
   /// Keeps only the `CERTIFICATE` blocks of [bundle], dropping the comment
   /// lines the server writes between them. Returns null when there are none.
   @visibleForTesting
@@ -90,11 +116,17 @@ class C2paTrustAnchorService {
   ///
   /// Uses a cached bundle younger than [refreshInterval] without a request,
   /// unless [forceRefresh] is set. Otherwise fetches, and falls back to a
-  /// cached bundle younger than [maxStaleAge] when the fetch fails. Never
-  /// throws.
+  /// cached bundle younger than [maxStaleAge] when the fetch fails. A request
+  /// made less than [refetchInterval] ago is not repeated: its bundle is
+  /// returned as fresh, and after its failure the cache is used straight
+  /// away. Never throws.
   Future<C2paTrustAnchors?> load({bool forceRefresh = false}) async {
     final url = _anchorsUrl;
     final cacheKey = '$_cacheKeyPrefix${url.host}';
+    final recent = _recentRequest();
+    if (recent?.pem case final pem?) {
+      return C2paTrustAnchors(pem: pem, isFresh: true);
+    }
     final stored = await _readCache(cacheKey);
     final age = stored == null ? null : _now().difference(stored.fetchedAt);
     // A bundle dated in the future was cached while the clock ran ahead. Its
@@ -104,11 +136,9 @@ class C2paTrustAnchorService {
       return C2paTrustAnchors(pem: cached.pem, isFresh: false);
     }
 
-    final fetched = await _fetch(url);
-    if (fetched != null) {
-      await _writeCache(cacheKey, _CachedBundle(fetched, _now()));
-      return C2paTrustAnchors(pem: fetched, isFresh: true);
-    }
+    // A request that failed moments ago would most likely fail again.
+    final fetched = recent == null ? await _fetchOnce(url, cacheKey) : null;
+    if (fetched != null) return C2paTrustAnchors(pem: fetched, isFresh: true);
 
     if (cached != null && age! < maxStaleAge) {
       return C2paTrustAnchors(pem: cached.pem, isFresh: false);
@@ -116,9 +146,42 @@ class C2paTrustAnchorService {
     return null;
   }
 
+  /// The last request, when it was made less than [refetchInterval] ago.
+  ({String? pem, DateTime at})? _recentRequest() {
+    final last = _lastRequest;
+    if (last == null) return null;
+    final since = _now().difference(last.at);
+    return since.isNegative || since >= refetchInterval ? null : last;
+  }
+
+  /// Fetches the bundle and caches it, sharing a request already running.
+  Future<String?> _fetchOnce(Uri url, String cacheKey) {
+    return _request ??= () async {
+      try {
+        final pem = await _fetch(url);
+        _lastRequest = (pem: pem, at: _now());
+        if (pem != null) {
+          await _writeCache(cacheKey, _CachedBundle(pem, _now()));
+        }
+        return pem;
+      } finally {
+        _request = null;
+      }
+    }();
+  }
+
+  /// Gets [url], asking once more when the first attempt hangs.
+  Future<http.Response> _get(Uri url) async {
+    try {
+      return await _httpClient.get(url).timeout(attemptTimeout);
+    } on TimeoutException {
+      return _httpClient.get(url).timeout(requestTimeout - attemptTimeout);
+    }
+  }
+
   Future<String?> _fetch(Uri url) async {
     try {
-      final response = await _httpClient.get(url).timeout(requestTimeout);
+      final response = await _get(url);
       if (response.statusCode != 200) {
         Log.warning(
           'Trust anchor request returned ${response.statusCode}',

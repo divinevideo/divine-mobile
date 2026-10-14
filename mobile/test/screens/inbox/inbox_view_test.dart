@@ -25,6 +25,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
@@ -42,6 +43,9 @@ import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/go_router.dart';
@@ -63,6 +67,9 @@ class _MockDmUnreadCountCubit extends MockCubit<int>
 class _MockNotificationBadgeCubit extends MockCubit<int>
     implements NotificationBadgeCubit {}
 
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
+
 class _MockAuthService extends MockAuthService {
   _MockAuthService(this.pubkey) {
     when(() => authState).thenReturn(AuthState.authenticated);
@@ -80,16 +87,17 @@ class _MockAuthService extends MockAuthService {
 }
 
 void main() {
-  setUpAll(
-    () => registerFallbackValue(
+  setUpAll(() {
+    registerFallbackValue(
       DmConversation(
         id: 'fallback',
         participantPubkeys: const [],
         isGroup: false,
         createdAt: 0,
       ),
-    ),
-  );
+    );
+    registerFallbackValue(ContentFilterReason.spam);
+  });
 
   const currentPubkey =
       'aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd';
@@ -1999,9 +2007,6 @@ void main() {
         when(
           () => actionsCubit.unblockUser(otherPubkey),
         ).thenAnswer((_) async {});
-        when(
-          () => actionsCubit.reportUser(otherPubkey),
-        ).thenAnswer((_) async => true);
         final conversation = DmConversation(
           id: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           participantPubkeys: const [currentPubkey, otherPubkey],
@@ -2450,7 +2455,9 @@ void main() {
           );
         });
 
-        testWidgets('confirms reporting a vanished peer', (tester) async {
+        testWidgets('reporting a vanished peer opens the report form', (
+          tester,
+        ) async {
           final l10n = lookupAppLocalizations(const Locale('en'));
           await pumpVanishedConversation(tester);
 
@@ -2459,7 +2466,13 @@ void main() {
           await tester.tap(find.text(l10n.inboxActionReportVanishedAccount));
           await tester.pumpAndSettle();
 
-          expect(find.text(l10n.inboxReportedVanishedAccount), findsOneWidget);
+          expect(find.byType(ReportContentDialog), findsOneWidget);
+          expect(
+            tester
+                .widget<ReportContentDialog>(find.byType(ReportContentDialog))
+                .userPubkey,
+            otherPubkey,
+          );
         });
 
         testWidgets('confirms blocking a vanished peer', (tester) async {
@@ -3143,11 +3156,11 @@ void main() {
       );
     });
 
-    group('report action feedback', () {
-      // #6387: reportUser returns false when the report reached no channel
-      // off this device. Without an else the user got no feedback at all,
-      // which is less than the (false) confirmation it replaced.
-      late _MockConversationActionsCubit reportCubit;
+    group('report action', () {
+      // Report opens the same form Report opens from inside the conversation
+      // (#10003): a reason, an optional note, and the form's own outcome,
+      // instead of a fixed reason and a canned note.
+      late _MockContentReportingService reportingService;
 
       final conversation = DmConversation(
         id: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
@@ -3159,11 +3172,23 @@ void main() {
       );
 
       setUp(() {
-        reportCubit = _MockConversationActionsCubit();
+        reportingService = _MockContentReportingService();
+        when(
+          () => reportingService.reportUser(
+            userPubkey: any(named: 'userPubkey'),
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            relatedEventIds: any(named: 'relatedEventIds'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              ReportResult.createSuccess('r', delivery: ReportDelivery.queued),
+        );
       });
 
       Widget buildReportSubject() => buildSubject(
-        actionsCubit: reportCubit,
         wrapInScaffold: true,
         state: ConversationListState(
           status: ConversationListStatus.loaded,
@@ -3175,6 +3200,9 @@ void main() {
           fetchUserProfileProvider(
             otherPubkey,
           ).overrideWith((ref) async => null),
+          contentReportingServiceProvider.overrideWith(
+            (ref) async => reportingService,
+          ),
         ],
       );
 
@@ -3198,45 +3226,60 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      testWidgets('confirms when the report reached a channel', (tester) async {
-        when(() => reportCubit.reportUser(any())).thenAnswer((_) async => true);
+      testWidgets(
+        'opens the report form for the counterparty and files a user report '
+        'with the chosen reason and note',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(800, 1600));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final l10n = lookupAppLocalizations(const Locale('en'));
 
-        await tester.pumpWidget(buildReportSubject());
-        await longPressAndReport(tester);
+          await tester.pumpWidget(buildReportSubject());
+          await longPressAndReport(tester);
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(
-          find.text(
-            l10n.inboxReportedUser(
-              UserProfile.defaultDisplayNameFor(otherPubkey),
+          expect(find.byType(ReportContentDialog), findsOneWidget);
+
+          await tester.tap(find.text(l10n.reportReasonSpam));
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.descendant(
+              of: find.byType(ReportContentDialog),
+              matching: find.byType(TextField),
             ),
-          ),
-          findsOneWidget,
-        );
-      });
+            'weird DM',
+          );
+          await tester.tap(
+            find.widgetWithText(DivineButton, l10n.reportSubmit),
+          );
+          await tester.pumpAndSettle();
 
-      testWidgets('surfaces an error when the report reached no channel', (
-        tester,
-      ) async {
-        when(
-          () => reportCubit.reportUser(any()),
-        ).thenAnswer((_) async => false);
-
-        await tester.pumpWidget(buildReportSubject());
-        await longPressAndReport(tester);
-
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.reportFailed), findsOneWidget);
-        // Silence is the regression, so the confirmation must not render.
-        expect(
-          find.text(
-            l10n.inboxReportedUser(
-              UserProfile.defaultDisplayNameFor(otherPubkey),
+          verify(
+            () => reportingService.reportUser(
+              userPubkey: otherPubkey,
+              reason: ContentFilterReason.spam,
+              details: 'weird DM',
+              relatedEventIds: any(named: 'relatedEventIds'),
+              moderationContent: any(named: 'moderationContent'),
+              moderationTags: any(named: 'moderationTags'),
             ),
-          ),
-          findsNothing,
-        );
-      });
+          ).called(1);
+          verifyNever(
+            () => reportingService.reportContent(
+              eventId: any(named: 'eventId'),
+              authorPubkey: any(named: 'authorPubkey'),
+              reason: any(named: 'reason'),
+              details: any(named: 'details'),
+              sourceRelay: any(named: 'sourceRelay'),
+              additionalContext: any(named: 'additionalContext'),
+              hashtags: any(named: 'hashtags'),
+              moderationContent: any(named: 'moderationContent'),
+              moderationTags: any(named: 'moderationTags'),
+              addressableCoordinate: any(named: 'addressableCoordinate'),
+            ),
+          );
+          expect(find.text(l10n.reportReceivedTitle), findsOneWidget);
+        },
+      );
     });
 
     group('remove confirmation copy', () {

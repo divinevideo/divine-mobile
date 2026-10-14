@@ -968,9 +968,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'Avblockera det här kontot';
 
   @override
-  String get inboxReportedVanishedAccount => 'Det här kontot har rapporterats';
-
-  @override
   String get inboxBlockedVanishedAccount => 'Det här kontot har blockerats';
 
   @override
@@ -4817,6 +4814,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportWhyReporting => 'Varför rapporterar du det här innehållet?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine agerar på innehållsrapporter inom 24 timmar genom att ta bort innehållet och stänga av användaren som tillhandahöll det felaktiga innehållet.';
 
@@ -4839,6 +4839,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'Beskriv problemet';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5733,11 +5736,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Uppladdad — tryck på Spara för att tillämpa';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return '$displayName rapporterad';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return '$displayName blockerad';
   }
@@ -6601,6 +6599,65 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryGalleryImportDone => 'Klar';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Spara valda klipp i ditt galleri';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count klipp sparades utan sina bevis och kan därför inte komma tillbaka till dina klipp.',
+      one: '1 klipp sparades utan sitt bevis och kan därför inte komma tillbaka till dina klipp.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Detaljer';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Sparade utan bevis';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Bara klipp med bevis på att de filmats med Divine kan komma tillbaka från ditt galleri. Kopiorna av de här klippen sparades utan det.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Beviset kunde inte läggas till just nu, kanske för att du var offline. Försök igen för att spara en kopia med bevis.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Stop motion-klipp består av foton, och de kan inte bära något bevis.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Den här versionen av Divine kan inte lägga till bevis i klipp.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Det här klippet har inget bevis, och Divine kan inte lägga till det i efterhand.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Sparat med bevis';
+
+  @override
+  String get libraryGallerySaveSigning => 'Lägger till bevis i dina klipp…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Sparar klipp $current av $total…',
+      one: 'Sparar ditt klipp…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7006,13 +7063,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'Flagga det här innehållet';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'Välj en anledning till att flagga den här kommentaren';
-
-  @override
-  String get commentOptionsFlagSubmit => 'Skicka';
 
   @override
   String get commentOptionsTitle => 'Alternativ';
@@ -8320,9 +8370,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'Kunde inte rösta på kommentaren';
-
-  @override
-  String get commentsErrorReportFailed => 'Kunde inte rapportera kommentaren';
 
   @override
   String get commentsErrorBlockFailed => 'Kunde inte blockera användaren';
@@ -11567,6 +11614,39 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'Inga matchande taggar';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Hashtaggar kan vara upp till $max tecken.',
+      one: 'Hashtaggar kan vara upp till $max tecken.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'Du kan lägga till upp till $max hashtaggar.',
+      one: 'Du kan lägga till upp till $max hashtagg.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$count av $max tecken',
+      one: '$count av $max tecken',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {

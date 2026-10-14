@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +31,7 @@ import 'package:openvine/screens/feed/feed_tuning_snackbar.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page/feed_empty_widget.dart';
 import 'package:openvine/screens/feed/video_feed_page/feed_error_widget.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
@@ -598,10 +598,11 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
       // would mislead screen-reader users — the visible failure state
       // already carries its own copy.
       if (status == VideoFeedStatus.success) {
-        SemanticsService.sendAnnouncement(
-          View.of(context),
+        announceDetached(
+          context,
           context.l10n.feedRefreshed,
-          Directionality.of(context),
+          description: 'announce feed refresh complete',
+          logName: 'VideoFeedPage',
         );
       }
     } finally {

@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Această conversație nu s-a restaurat complet",
     "inboxRestoreRetryAction": "Reîncearcă",
     "inboxRestoringMessages": "Se restaurează mesajele tale…",
-    "inboxReportedUser": "{displayName} a fost raportat(ă)",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} a fost deblocat(ă)",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2152,6 +2144,18 @@
     "libraryGalleryImportItemNotVerified": "Nu am putut confirma că a fost filmat cu Divine",
     "libraryGalleryImportItemCheckUnavailable": "Nu se poate verifica acum. Încearcă din nou mai târziu.",
     "libraryGalleryImportDone": "Gata",
+    "librarySaveSelectedClipsTooltip": "Salvează clipurile selectate în galeria ta",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 clip a fost salvat fără dovada lui, așa că nu se poate întoarce printre clipurile tale.} few{{count} clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.} other{{count} de clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.}}",
+    "libraryClipsSavedWithoutProofDetails": "Detalii",
+    "libraryGallerySaveWarningTitle": "Salvate fără dovadă",
+    "libraryGallerySaveWarningIntro": "Din galeria ta se pot întoarce doar clipurile cu dovada că au fost filmate cu Divine. Copiile acestor clipuri au fost salvate fără ea.",
+    "libraryGallerySaveWarningSigningUnavailable": "Dovada nu a putut fi adăugată acum, poate pentru că erai offline. Încearcă din nou ca să salvezi o copie cu dovadă.",
+    "libraryGallerySaveWarningStopMotion": "Clipurile stop-motion sunt făcute din fotografii, care nu pot purta o dovadă.",
+    "libraryGallerySaveWarningSigningUnsupported": "Această versiune de Divine nu poate adăuga dovezi clipurilor.",
+    "libraryGallerySaveWarningNoProof": "Acest clip nu are dovadă, iar Divine nu o mai poate adăuga ulterior.",
+    "libraryGallerySaveWarningSavedWithProof": "Salvat cu dovada lui",
+    "libraryGallerySaveSigning": "Se adaugă dovada la clipurile tale…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Se salvează clipul tău…} few{Se salvează clipul {current} din {total}…} other{Se salvează clipul {current} din {total}…}}",
     "libraryNoClipsYetSubtitle": "Clipurile înregistrate apar aici",
     "libraryNoClipsYetTitle": "Încă nu ai clipuri",
     "libraryNoDraftsYetSubtitle": "Videoclipurile salvate ca ciornă apar aici",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Raportează acest cont",
     "inboxActionBlockVanishedAccount": "Blochează acest cont",
     "inboxActionUnblockVanishedAccount": "Deblochează acest cont",
-    "inboxReportedVanishedAccount": "Acest cont a fost raportat",
     "inboxBlockedVanishedAccount": "Acest cont a fost blocat",
     "inboxUnblockedVanishedAccount": "Acest cont a fost deblocat",
     "inboxRemoveConfirmBodyVanishedAccount": "Astfel, conversația este eliminată din inbox. Dacă îți scrie din nou, începe o conversație nouă.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Caută sau adaugă etichete",
     "videoMetadataTagsPickerEmptyHint": "Adaugă etichete pentru ca alții să-ți descopere videoclipul",
     "videoMetadataTagsPickerNoResults": "Nicio etichetă potrivită",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtagurile pot avea până la {max} caracter.} few{Hashtagurile pot avea până la {max} caractere.} other{Hashtagurile pot avea până la {max} de caractere.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Poți adăuga până la {max} hashtag.} few{Poți adăuga până la {max} hashtaguri.} other{Poți adăuga până la {max} de hashtaguri.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} din {max} caracter} few{{count} din {max} caractere} other{{count} din {max} de caractere}}",
     "videoMetadataTagsPickerAddTag": "Adaugă „#{tag}\"",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Nu am putut edita comentariul",
     "commentsErrorNotAuthenticatedInteract": "Autentifică-te ca să interacționezi",
     "commentsErrorVoteFailed": "Nu am putut vota comentariul",
-    "commentsErrorReportFailed": "Nu am putut raporta comentariul",
     "commentsErrorBlockFailed": "Nu am putut bloca utilizatorul",
     "commentsErrorDeleteFailed": "Nu am putut șterge comentariul",
     "commentsHeaderCount": "{count, plural, =1{{count} comentariu} few{{count} comentarii} other{{count} de comentarii}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Editează comentariul",
     "commentOptionsFlagContentLabel": "Semnalează conținutul",
     "commentOptionsFlagContentSemanticLabel": "Semnalează acest conținut",
-    "commentOptionsFlagReasonPrompt": "Alege un motiv pentru semnalarea acestui comentariu",
-    "commentOptionsFlagSubmit": "Trimite",
     "commentOptionsTitle": "Opțiuni",
     "commentsEmptyClassicVineMessage": "Încă lucrăm la importarea comentariilor vechi din arhivă. Nu sunt gata încă.",
     "commentsEmptyClassicVineTitle": "Classic Vine",

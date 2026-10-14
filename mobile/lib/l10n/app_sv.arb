@@ -2031,14 +2031,6 @@
     "conversationRestorePausedTitle": "Den här chatten har inte återställts klart",
     "inboxRestoreRetryAction": "Försök igen",
     "inboxRestoringMessages": "Återställer dina meddelanden…",
-    "inboxReportedUser": "{displayName} rapporterad",
-    "@inboxReportedUser": {
-        "placeholders": {
-            "displayName": {
-                "type": "String"
-            }
-        }
-    },
     "inboxUnblockedUser": "{displayName} avblockerad",
     "@inboxUnblockedUser": {
         "placeholders": {
@@ -2152,6 +2144,18 @@
     "libraryGalleryImportItemNotVerified": "Kunde inte bekräfta att det är filmat med Divine",
     "libraryGalleryImportItemCheckUnavailable": "Går inte att kolla just nu. Försök igen senare.",
     "libraryGalleryImportDone": "Klar",
+    "librarySaveSelectedClipsTooltip": "Spara valda klipp i ditt galleri",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 klipp sparades utan sitt bevis och kan därför inte komma tillbaka till dina klipp.} other{{count} klipp sparades utan sina bevis och kan därför inte komma tillbaka till dina klipp.}}",
+    "libraryClipsSavedWithoutProofDetails": "Detaljer",
+    "libraryGallerySaveWarningTitle": "Sparade utan bevis",
+    "libraryGallerySaveWarningIntro": "Bara klipp med bevis på att de filmats med Divine kan komma tillbaka från ditt galleri. Kopiorna av de här klippen sparades utan det.",
+    "libraryGallerySaveWarningSigningUnavailable": "Beviset kunde inte läggas till just nu, kanske för att du var offline. Försök igen för att spara en kopia med bevis.",
+    "libraryGallerySaveWarningStopMotion": "Stop motion-klipp består av foton, och de kan inte bära något bevis.",
+    "libraryGallerySaveWarningSigningUnsupported": "Den här versionen av Divine kan inte lägga till bevis i klipp.",
+    "libraryGallerySaveWarningNoProof": "Det här klippet har inget bevis, och Divine kan inte lägga till det i efterhand.",
+    "libraryGallerySaveWarningSavedWithProof": "Sparat med bevis",
+    "libraryGallerySaveSigning": "Lägger till bevis i dina klipp…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Sparar ditt klipp…} other{Sparar klipp {current} av {total}…}}",
     "libraryNoClipsYetSubtitle": "Dina inspelade videoklipp visas här",
     "libraryNoClipsYetTitle": "Inga klipp än",
     "libraryNoDraftsYetSubtitle": "Videor du sparar som utkast visas här",
@@ -3147,7 +3151,6 @@
     "inboxActionReportVanishedAccount": "Rapportera det här kontot",
     "inboxActionBlockVanishedAccount": "Blockera det här kontot",
     "inboxActionUnblockVanishedAccount": "Avblockera det här kontot",
-    "inboxReportedVanishedAccount": "Det här kontot har rapporterats",
     "inboxBlockedVanishedAccount": "Det här kontot har blockerats",
     "inboxUnblockedVanishedAccount": "Det här kontot har avblockerats",
     "inboxRemoveConfirmBodyVanishedAccount": "Det här tar bort konversationen från din inkorg. Om personen skriver till dig igen startar en ny konversation.",
@@ -3762,6 +3765,9 @@
     "videoMetadataTagsPickerSearchHint": "Sök eller lägg till taggar",
     "videoMetadataTagsPickerEmptyHint": "Lägg till taggar så att andra hittar din video",
     "videoMetadataTagsPickerNoResults": "Inga matchande taggar",
+    "videoMetadataTagsPickerTagTooLong": "{max, plural, one{Hashtaggar kan vara upp till {max} tecken.} other{Hashtaggar kan vara upp till {max} tecken.}}",
+    "videoMetadataTagsPickerTagLimitReached": "{max, plural, one{Du kan lägga till upp till {max} hashtagg.} other{Du kan lägga till upp till {max} hashtaggar.}}",
+    "videoMetadataTagsPickerCharacterCount": "{max, plural, one{{count} av {max} tecken} other{{count} av {max} tecken}}",
     "videoMetadataTagsPickerAddTag": "Lägg till ”#{tag}”",
     "@videoMetadataTagsPickerAddTag": {
         "placeholders": {
@@ -3880,7 +3886,6 @@
     "commentsErrorEditFailed": "Kunde inte redigera kommentaren",
     "commentsErrorNotAuthenticatedInteract": "Logga in för att vara med",
     "commentsErrorVoteFailed": "Kunde inte rösta på kommentaren",
-    "commentsErrorReportFailed": "Kunde inte rapportera kommentaren",
     "commentsErrorBlockFailed": "Kunde inte blockera användaren",
     "commentsErrorDeleteFailed": "Kunde inte radera kommentaren",
     "commentsHeaderCount": "{count, plural, =1{{count} kommentar} other{{count} kommentarer}}",
@@ -4305,8 +4310,6 @@
     "commentOptionsEditSemanticLabel": "Redigera kommentar",
     "commentOptionsFlagContentLabel": "Flagga innehåll",
     "commentOptionsFlagContentSemanticLabel": "Flagga det här innehållet",
-    "commentOptionsFlagReasonPrompt": "Välj en anledning till att flagga den här kommentaren",
-    "commentOptionsFlagSubmit": "Skicka",
     "commentOptionsTitle": "Alternativ",
     "commentsEmptyClassicVineMessage": "Vi jobbar fortfarande med att importera gamla kommentarer från arkivet. De är inte klara än.",
     "commentsEmptyClassicVineTitle": "Klassiska Vine",

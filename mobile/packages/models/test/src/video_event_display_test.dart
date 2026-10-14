@@ -1,5 +1,5 @@
-// ABOUTME: Tests for VideoEvent.displayTitle and displayContent zalgo-safe
-// ABOUTME: getters, and for the constructor's UTF-16 well-formedness boundary.
+// ABOUTME: Tests for VideoEvent display getters: title, caption and content,
+// ABOUTME: author name, original date, and the UTF-16 well-formedness boundary.
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -55,6 +55,125 @@ void main() {
       final malformed = String.fromCharCodes([0xD800, 0x61, 0xDC00]);
 
       expect(build(title: malformed).displayTitle, equals('\uFFFDa\uFFFD'));
+    });
+  });
+
+  group('VideoEvent.chipCaptionDescription', () {
+    test('drops the hashtag line the Vine archive import appends', () {
+      expect(
+        build(
+          content:
+              '#windowsxp #glenn\n\nOriginal stats: 3 loops - 2 likes'
+              '\n\n#windowsxp #glenn',
+          rawTags: const {'platform': 'vine'},
+          hashtags: const ['windowsxp', 'glenn'],
+        ).chipCaptionDescription,
+        equals('Original stats: 3 loops - 2 likes'),
+      );
+    });
+
+    test('drops hashtags that end a sentence and keeps the sentence', () {
+      expect(
+        build(
+          content: 'Two startup sounds together. #windowsxp #outoftune',
+          hashtags: const ['windowsxp', 'outoftune'],
+        ).chipCaptionDescription,
+        equals('Two startup sounds together.'),
+      );
+    });
+
+    test('keeps hashtags inside a sentence', () {
+      expect(
+        build(
+          content: 'I love #pizza so much',
+          hashtags: const ['pizza'],
+        ).chipCaptionDescription,
+        equals('I love #pizza so much'),
+      );
+    });
+
+    test('matches chips without regard to case', () {
+      expect(
+        build(
+          content: 'Caption #WindowsXP',
+          hashtags: const ['windowsxp'],
+        ).chipCaptionDescription,
+        equals('Caption'),
+      );
+    });
+
+    test('keeps trailing hashtags that are not chips', () {
+      expect(
+        build(
+          content: 'Caption #notachip #glenn',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('Caption #notachip'),
+      );
+    });
+
+    test('drops the synthetic classic hashtag for an original Vine', () {
+      expect(
+        build(
+          content: 'Caption #classic',
+          rawTags: const {'platform': 'vine'},
+        ).chipCaptionDescription,
+        equals('Caption'),
+      );
+    });
+
+    test('keeps one blank line between paragraphs around a dropped line', () {
+      expect(
+        build(
+          content: 'First\n\n#glenn\n\nSecond',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond'),
+      );
+    });
+
+    test('keeps the blank line after a dropped line that follows text', () {
+      expect(
+        build(
+          content: 'First\n#glenn\n\nSecond',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond'),
+      );
+    });
+
+    test('keeps blank lines that no dropped line left behind', () {
+      expect(
+        build(
+          content: 'First\n\n#glenn\nSecond\n\n\n\nThird #glenn',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\n\nSecond\n\n\n\nThird'),
+      );
+    });
+
+    test('leaves a caption with no removable hashtag as written', () {
+      expect(
+        build(
+          content: 'Verse one\n\n\n\nVerse two  \nChorus',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('Verse one\n\n\n\nVerse two  \nChorus'),
+      );
+    });
+
+    test('strips a very long run of trailing chip hashtags quickly', () {
+      final video = build(
+        content: 'Caption ${List.filled(20000, '#a').join(' ')}',
+        hashtags: const ['a'],
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final description = video.chipCaptionDescription;
+      stopwatch.stop();
+
+      expect(description, equals('Caption'));
+      expect(stopwatch.elapsedMilliseconds, lessThan(2000));
     });
   });
 

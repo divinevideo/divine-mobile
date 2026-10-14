@@ -1010,9 +1010,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxActionUnblockVanishedAccount => 'ఈ ఖాతాను అన్‌బ్లాక్ చేయండి';
 
   @override
-  String get inboxReportedVanishedAccount => 'ఈ ఖాతాను నివేదించారు';
-
-  @override
   String get inboxBlockedVanishedAccount => 'ఈ ఖాతాను బ్లాక్ చేసారు';
 
   @override
@@ -4990,6 +4987,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportWhyReporting => 'మీరు ఈ కంటెంట్‌ను ఎందుకు నివేదిస్తున్నారు?';
 
   @override
+  String get reportWhyReportingComment => 'Why are you reporting this comment?';
+
+  @override
   String get reportPolicyNotice =>
       'Divine కంటెంట్‌ని తీసివేసి, ఆక్షేపణీయ కంటెంట్‌ని అందించిన వినియోగదారుని ఎజెక్ట్ చేయడం ద్వారా 24 గంటలలోపు కంటెంట్ నివేదికలపై పని చేస్తుంది.';
 
@@ -5012,6 +5012,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get reportDetailsRequired => 'దయచేసి సమస్యను వివరించండి';
+
+  @override
+  String get reportDetailsOptional => 'Add details (optional)';
 
   @override
   String get reportDetailsTextOnly =>
@@ -5926,11 +5929,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'అప్‌లోడ్ చేయబడింది — దరఖాస్తు చేయడానికి సేవ్ చేయి నొక్కండి';
 
   @override
-  String inboxReportedUser(String displayName) {
-    return 'నివేదించబడింది $displayName';
-  }
-
-  @override
   String inboxBlockedUser(String displayName) {
     return 'నిరోధించబడింది $displayName';
   }
@@ -6811,6 +6809,66 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryGalleryImportDone => 'పూర్తయింది';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'ఎంచుకున్న క్లిప్‌లను మీ గ్యాలరీలో సేవ్ చేయండి';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count క్లిప్‌లు వాటి రుజువు లేకుండా సేవ్ అయ్యాయి, కాబట్టి అవి మీ క్లిప్‌లలోకి తిరిగి రాలేవు.',
+      one: '1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'వివరాలు';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'రుజువు లేకుండా సేవ్ అయ్యాయి';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Divineతో చిత్రీకరించినట్లు రుజువు ఉన్న క్లిప్‌లు మాత్రమే మీ గ్యాలరీ నుండి తిరిగి రాగలవు. ఈ క్లిప్‌ల కాపీలు ఆ రుజువు లేకుండా సేవ్ అయ్యాయి.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'దీని రుజువును ఇప్పుడు జోడించలేకపోయాం, బహుశా మీరు ఆఫ్‌లైన్‌లో ఉన్నందుకు కావచ్చు. రుజువు ఉన్న కాపీని సేవ్ చేయడానికి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'స్టాప్-మోషన్ క్లిప్‌లు ఫోటోలతో తయారవుతాయి, ఫోటోలు రుజువును మోయలేవు.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine యొక్క ఈ వెర్షన్ క్లిప్‌లకు రుజువును జోడించలేదు.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'ఈ క్లిప్‌కు రుజువు లేదు, Divine దాన్ని తర్వాత జోడించలేదు.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'దాని రుజువుతో సేవ్ అయింది';
+
+  @override
+  String get libraryGallerySaveSigning => 'మీ క్లిప్‌లకు రుజువు జోడిస్తున్నాం…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$totalలో క్లిప్ $currentని సేవ్ చేస్తున్నాం…',
+      one: 'మీ క్లిప్‌ను సేవ్ చేస్తున్నాం…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7223,13 +7281,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get commentOptionsFlagContentSemanticLabel =>
       'ఈ కంటెంట్‌ను ఫ్లాగ్ చేయండి';
-
-  @override
-  String get commentOptionsFlagReasonPrompt =>
-      'ఈ వ్యాఖ్యను ఫ్లాగ్ చేయడానికి కారణాన్ని ఎంచుకోండి';
-
-  @override
-  String get commentOptionsFlagSubmit => 'సమర్పించండి';
 
   @override
   String get commentOptionsTitle => 'ఎంపికలు';
@@ -8573,9 +8624,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get commentsErrorVoteFailed => 'వ్యాఖ్యపై ఓటు వేయడం విఫలమైంది';
-
-  @override
-  String get commentsErrorReportFailed => 'వ్యాఖ్యను నివేదించడంలో విఫలమైంది';
 
   @override
   String get commentsErrorBlockFailed => 'వినియోగదారుని నిరోధించడంలో విఫలమైంది';
@@ -11874,6 +11922,39 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataTagsPickerNoResults => 'సరిపోలే ట్యాగ్‌లు లేవు';
+
+  @override
+  String videoMetadataTagsPickerTagTooLong(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా $max అక్షరాల వరకు ఉండవచ్చు.',
+      one: 'హ్యాష్‌ట్యాగ్‌లు గరిష్టంగా $max అక్షరం వరకు ఉండవచ్చు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerTagLimitReached(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్‌లు జోడించవచ్చు.',
+      one: 'మీరు గరిష్టంగా $max హ్యాష్‌ట్యాగ్ జోడించవచ్చు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataTagsPickerCharacterCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '$max అక్షరాలలో $count',
+      one: '$max అక్షరంలో $count',
+    );
+    return '$_temp0';
+  }
 
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
