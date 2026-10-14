@@ -16966,6 +16966,9 @@ void main() {
           );
 
           final repository = createRepository();
+          // The refusal schedules a retry (#8506); stopping cancels it so it
+          // cannot fire into a later test.
+          addTearDown(repository.stopListening);
           final result = await repository.sendMessage(
             recipientPubkey: _validPubkeyB,
             content: 'Hello!',
@@ -16974,13 +16977,21 @@ void main() {
 
           // The NIP-17 copy still governs what the user sees.
           expect(result.success, isTrue);
-          // But the refusal is on the record.
+          // But the refusal is on the record, as the first of the attempts
+          // the copy gets. Only running out of attempts is an error.
+          expect(
+            logsContaining(
+              'no relay accepted the legacy kind-4 copy',
+              level: LogLevel.warning,
+            ),
+            hasLength(1),
+          );
           expect(
             logsContaining(
               'no relay accepted the legacy kind-4 copy',
               level: LogLevel.error,
             ),
-            hasLength(1),
+            isEmpty,
           );
         },
       );

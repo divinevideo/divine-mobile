@@ -40,6 +40,7 @@ import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
@@ -356,6 +357,17 @@ typedef _OwnDmInboxRead = ({
 
 /// What one NIP-04 recovery sweep heard back about one page.
 typedef _Nip04PageAnswer = ({bool anyRelaySentEose, Set<String> closedRelays});
+
+/// A signed legacy kind-4 copy, and what a retry re-checks before
+/// republishing it (#8506).
+typedef _Nip04Copy = ({
+  Event signed,
+  String recipientPubkey,
+  String messageId,
+  String conversationId,
+  String ownerPubkey,
+  int generation,
+});
 
 /// Why a recipient's NIP-17 DM inbox lookup returned what it did.
 ///
@@ -694,6 +706,11 @@ class DmRepository {
 
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
+
+  /// Pending retries of legacy kind-4 copies no relay accepted. Cancelled by
+  /// [stopListening] and [_resetState], so no retry outlives the session that
+  /// signed its copy (#8506).
+  final Set<Timer> _nip04CopyRetryTimers = {};
 
   /// Backoff retry for deferred history drains. A relay reconnect cancels it,
   /// except while an ambiguous NIP-04 refusal awaits confirmation: a
@@ -1210,6 +1227,7 @@ class DmRepository {
     }
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _cancelNip04CopyRetries();
     // Drop a pending read-marker publish and any un-flushed read cursors so
     // they never leak across an account switch. #4977.
     _readMarkerDebounce?.cancel();
@@ -1238,6 +1256,13 @@ class DmRepository {
 
   /// Delay before attempting to re-subscribe after stream closure.
   static const _reconnectDelay = Duration(seconds: 2);
+
+  /// Waits before republishing a legacy kind-4 copy no relay accepted, one per
+  /// retry, so a copy is published at most `length + 1` times (#8506).
+  static const _nip04CopyRetryDelays = [
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+  ];
 
   /// Schedule a single reconnect attempt, cancelling any pending one.
   ///
@@ -2703,6 +2728,7 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _cancelNip04CopyRetries();
     _resetNip04RefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
@@ -5852,6 +5878,8 @@ class DmRepository {
             _sendNip04Message(
               recipientPubkey: recipientPubkey,
               content: content,
+              messageId: result.rumorEventId!,
+              conversationId: conversationId,
               replyToId: replyToId,
             ).catchError((Object e) {
               // Thrown failures only — a signer that reports by THROWING
@@ -8816,18 +8844,34 @@ class DmRepository {
   /// unawaited, so a returned failure that logged nothing was invisible on both
   /// devices — the sender saw a delivered message and the legacy recipient
   /// never got one (#8262).
+  ///
+  /// A copy no relay accepted is published again, up to
+  /// [_nip04CopyRetryDelays] more times, while its message and its latch last
+  /// (#8506). Preparation runs once: retrying it would re-encrypt and re-sign,
+  /// and the recipient could see the same message twice under two ids.
   Future<void> _sendNip04Message({
     required String recipientPubkey,
     required String content,
+    required String messageId,
+    required String conversationId,
     String? replyToId,
   }) async {
+    final ownerPubkey = _userPubkey;
+    final generation = _resetGeneration;
     final signed = await _prepareNip04Copy(
       recipientPubkey: recipientPubkey,
       content: content,
       replyToId: replyToId,
     );
     if (signed == null) return;
-    await _publishNip04Copy(signed, recipientPubkey: recipientPubkey);
+    await _attemptNip04Copy((
+      signed: signed,
+      recipientPubkey: recipientPubkey,
+      messageId: messageId,
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+      generation: generation,
+    ), attempt: 1);
   }
 
   /// Encrypts, builds and signs the kind-4 copy, or logs why it could not and
@@ -8886,33 +8930,131 @@ class DmRepository {
     return signed;
   }
 
-  /// Publishes the signed kind-4 copy and logs the outcome. Returns whether
-  /// any relay accepted it.
-  Future<bool> _publishNip04Copy(
-    Event signed, {
-    required String recipientPubkey,
+  /// Publishes [copy] as attempt number [attempt], and schedules the next
+  /// attempt when no relay accepted it.
+  ///
+  /// Every attempt publishes the same signed event. An `OK` deadline can pass
+  /// after a relay stored the event, and a relay answers the repeat with
+  /// `duplicate:` on `true` (01.md:169), so the recipient still sees one
+  /// message.
+  Future<void> _attemptNip04Copy(
+    _Nip04Copy copy, {
+    required int attempt,
   }) async {
+    final attempts = _nip04CopyRetryDelays.length + 1;
+    final recipient = pubkeyForLogs(copy.recipientPubkey);
+    final eventId = copy.signed.id;
+    if (attempt > 1) {
+      final stopReason = await _nip04CopyRetryStopReason(copy);
+      if (stopReason != null) {
+        Log.info(
+          'NIP-04 fallback: not retrying the legacy kind-4 copy for '
+          '$recipient (event $eventId) — $stopReason',
+          category: LogCategory.system,
+        );
+        return;
+      }
+    }
+
     // OK-confirm the kind 4. `publishEvent` reports success on a WebSocket
     // frame write, so a relay answering `OK false` — rate limited, blocked by
     // policy, caught by a spam filter — came back as a delivered message.
     // Branch on the OK boolean and never on the reason prefix: NIP-01 puts
     // `duplicate:` and `pow:` on `true` (01.md:166-167).
-    final outcome = await _nostrClient.publishEventAwaitOk(signed);
-    if (!outcome.acceptedByAny) {
-      Log.error(
-        'NIP-04 fallback: no relay accepted the legacy kind-4 copy for '
-        '${pubkeyForLogs(recipientPubkey)} (event ${signed.id}) — '
-        '${outcome.summary}',
-        category: LogCategory.system,
-      );
-      return false;
+    String failure;
+    try {
+      final outcome = await _nostrClient.publishEventAwaitOk(copy.signed);
+      if (outcome.acceptedByAny) {
+        _logNip04CopyAccepted(copy, outcome, attempt: attempt);
+        return;
+      }
+      failure = outcome.summary;
+    } on Object catch (e) {
+      failure = 'the publish threw: $e';
     }
 
+    if (attempt >= attempts) {
+      Log.error(
+        'NIP-04 fallback: no relay accepted the legacy kind-4 copy for '
+        '$recipient (event $eventId) after $attempts attempts — $failure; '
+        'giving up, so this message will not reach them over NIP-04',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    // A publish can outlast the session that signed the copy; a timer armed
+    // after the teardown would never be cancelled by it.
+    if (_ingestSessionEnded(copy.ownerPubkey, copy.generation)) {
+      Log.info(
+        'NIP-04 fallback: not retrying the legacy kind-4 copy for $recipient '
+        '(event $eventId) — the account session that signed it has ended',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    final delay = _nip04CopyRetryDelays[attempt - 1];
+    Log.warning(
+      'NIP-04 fallback: no relay accepted the legacy kind-4 copy for '
+      '$recipient (event $eventId) on attempt $attempt/$attempts — $failure; '
+      'retrying in ${delay.inSeconds}s',
+      category: LogCategory.system,
+    );
+    late final Timer retry;
+    retry = Timer(delay, () {
+      _nip04CopyRetryTimers.remove(retry);
+      unawaited(_attemptNip04Copy(copy, attempt: attempt + 1));
+    });
+    _nip04CopyRetryTimers.add(retry);
+  }
+
+  /// Why a pending retry of [copy] must not run, or `null` when it may.
+  ///
+  /// A retry republishes cleartext metadata, so it needs the same standing the
+  /// first attempt had: the session that signed it, a message the user has not
+  /// deleted, and a thread still latched to NIP-04.
+  Future<String?> _nip04CopyRetryStopReason(_Nip04Copy copy) async {
+    const sessionEnded = 'the account session that signed it has ended';
+    if (_ingestSessionEnded(copy.ownerPubkey, copy.generation)) {
+      return sessionEnded;
+    }
+    try {
+      final message = await _directMessagesDao.getMessageById(
+        copy.messageId,
+        ownerPubkey: copy.ownerPubkey,
+      );
+      // Delete-for-everyone keeps the row as dedup evidence; removing the
+      // conversation deletes it.
+      if (message == null || message.isDeleted) {
+        return 'the message was deleted';
+      }
+      final conversation = await _conversationsDao.getConversation(
+        copy.conversationId,
+        ownerPubkey: copy.ownerPubkey,
+      );
+      if (conversation?.dmProtocol != 'nip04') {
+        return 'the thread is no longer latched to nip04';
+      }
+    } on Object catch (e) {
+      return 'its message could not be read back: $e';
+    }
+    return _ingestSessionEnded(copy.ownerPubkey, copy.generation)
+        ? sessionEnded
+        : null;
+  }
+
+  void _logNip04CopyAccepted(
+    _Nip04Copy copy,
+    PublishOutcome outcome, {
+    required int attempt,
+  }) {
+    final attempts = _nip04CopyRetryDelays.length + 1;
+    final recipient = pubkeyForLogs(copy.recipientPubkey);
+    final eventId = copy.signed.id;
     // Partial acceptance still counts as sent, but a relay that refused is
     // worth a line: a policy or rate-limit refusal is invisible otherwise.
     if (outcome.rejectedBy.isNotEmpty) {
       Log.warning(
-        'NIP-04 fallback: legacy kind-4 copy (event ${signed.id}) refused by '
+        'NIP-04 fallback: legacy kind-4 copy (event $eventId) refused by '
         '${outcome.rejectedBy.length} relay(s) but accepted elsewhere — '
         '${outcome.summary}',
         category: LogCategory.system,
@@ -8925,12 +9067,20 @@ class DmRepository {
     // support log for a latched thread reads as an ordinary private send with
     // no trace that a public-metadata copy went out beside it (#8519).
     Log.info(
-      'NIP-04 fallback: published the legacy kind-4 copy for '
-      '${pubkeyForLogs(recipientPubkey)} (event ${signed.id}) — this thread is '
-      'still latched to nip04, so its metadata is public',
+      'NIP-04 fallback: published the legacy kind-4 copy for $recipient '
+      '(event $eventId) on attempt $attempt/$attempts — this thread is still '
+      'latched to nip04, so its metadata is public',
       category: LogCategory.system,
     );
-    return true;
+  }
+
+  /// Cancels every pending kind-4 copy retry. Shared by [_resetState] and
+  /// [stopListening].
+  void _cancelNip04CopyRetries() {
+    for (final retry in _nip04CopyRetryTimers) {
+      retry.cancel();
+    }
+    _nip04CopyRetryTimers.clear();
   }
 
   // -------------------------------------------------------------------------
