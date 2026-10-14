@@ -597,8 +597,8 @@ void main() {
           .toList();
       expect(logs, hasLength(1));
       final log = logs.single;
-      expect(log.name, 'OtherProfileView');
-      expect(log.level, LogLevel.error);
+      expect(log.name, equals('OtherProfileView'));
+      expect(log.level, equals(LogLevel.error));
       expect(log.message, contains('push-failed'));
     });
   });

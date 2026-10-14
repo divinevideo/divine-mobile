@@ -136,10 +136,6 @@ void main() {
     video('profile-video-2'),
   ];
 
-  // The URL is the source of truth for which profile video plays, through
-  // URL -> ProfileScreenRouter -> ProfileViewSwitcher -> ProfileVideoFeedView
-  // -> PooledFullscreenVideoFeedScreen. Assert the video the fullscreen feed
-  // actually shows, so a dropped index anywhere in that chain fails (#7160).
   group('profile routes', () {
     late _MockVideosRepository videosRepository;
     late _MockVideoEventService videoEventService;
@@ -332,7 +328,8 @@ void main() {
           path: ProfileScreenRouter.pathWithNpub,
           navigation: navigation,
         );
-        await tester.tap(find.byKey(const Key('library-button')));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.profileMyLibraryLabel));
         await tester.pump();
 
         verify(() => navigation.push<void>(LibraryScreen.draftsPath)).called(1);
@@ -357,7 +354,8 @@ void main() {
           path: ProfileScreenRouter.pathWithNpub,
           navigation: navigation,
         );
-        await tester.tap(find.byKey(const Key('library-button')));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.profileMyLibraryLabel));
         await tester.pump();
 
         expect(tester.takeException(), isNull);
@@ -367,8 +365,8 @@ void main() {
             .toList();
         expect(logs, hasLength(1));
         final log = logs.single;
-        expect(log.name, 'ProfileScreenRouter');
-        expect(log.level, LogLevel.error);
+        expect(log.name, equals('ProfileScreenRouter'));
+        expect(log.level, equals(LogLevel.error));
         expect(log.message, contains('push-failed'));
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -376,6 +374,10 @@ void main() {
       });
     });
 
+    // The URL is the source of truth for which profile video plays, through
+    // URL -> ProfileScreenRouter -> ProfileViewSwitcher -> ProfileVideoFeedView
+    // -> PooledFullscreenVideoFeedScreen. Assert the video the fullscreen feed
+    // actually shows, so a dropped index anywhere in that chain fails (#7160).
     group('profile feed URL opens the matching page', () {
       setUp(stubProfileDependencies);
 
