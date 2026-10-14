@@ -105,8 +105,9 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
           // in-memory list is the authority. The mount-time load can still be
           // in flight when the user taps Follow; its revalidation read
           // resolves with the relay-lagged pre-edit snapshot and would
-          // otherwise revert the button (#5144). Defer to the repository instead of the stale
-          // emission; let the emission only drive the refreshing indicator.
+          // otherwise revert the button (#5144). Defer to the repository
+          // instead of the stale emission; let the emission only drive the
+          // refreshing indicator.
           final pubkeys = state.hasLocalFollowEdit
               ? _followRepository.followingPubkeys
               : result.data.pubkeys;

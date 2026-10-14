@@ -1,5 +1,5 @@
 // ABOUTME: Tests for MyFollowingBloc - current user's following list
-// ABOUTME: Tests CacheSync stream, follow/unfollow operations, and blocklist filtering
+// ABOUTME: Tests CacheSync stream, follow/unfollow, and blocklist filtering
 
 import 'dart:async';
 
