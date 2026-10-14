@@ -213,19 +213,19 @@ void main() {
       expect(_energy(energies!, 30), greaterThan(0));
     });
 
-    test('rests the visualizer when a sound cannot be downloaded', () async {
+    test('leaves out a sound that cannot be downloaded', () async {
       final file = _ToneFile();
 
       final energies = await audioEnergiesOnExport(
         sounds: [song],
-        clips: const [],
+        clips: [_clip('a', duration: const Duration(seconds: 1))],
         videoEnd: _ms(1000),
         localPathFor: (url) async => throw Exception('offline'),
         resolver: VideoEditorAudioLevelResolver(extractAudio: file.call),
       );
 
-      expect(energies, isNull);
-      expect(file.reads, isEmpty);
+      expect(file.reads.single.video.file?.path, endsWith('a.mp4'));
+      expect(_energy(energies!, 30), greaterThan(0));
     });
   });
 

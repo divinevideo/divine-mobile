@@ -67,16 +67,31 @@ List<AudioLevelPart> audioLevelSourcesFor({
 ///
 /// An export downloads its sounds once, with the stall timeout and retries of
 /// its audio fetcher, and reads the visualizer's sound from the same files it
-/// muxes.
+/// muxes. A sound whose download fails is left out, so the others still
+/// move the visualizer; [onDownloadFailed] hears of it.
 Future<List<AudioLevelPart>> withLocalNetworkSounds(
   List<AudioLevelPart> parts, {
   required Future<String> Function(String url) localPathFor,
-}) async => [
-  for (final part in parts)
-    if (part.source.media.networkUrl case final url?)
+  void Function(Object error, StackTrace stackTrace)? onDownloadFailed,
+}) async {
+  final local = <AudioLevelPart>[];
+  for (final part in parts) {
+    final url = part.source.media.networkUrl;
+    if (url == null) {
+      local.add(part);
+      continue;
+    }
+    final String path;
+    try {
+      path = await localPathFor(url);
+    } on Exception catch (error, stackTrace) {
+      onDownloadFailed?.call(error, stackTrace);
+      continue;
+    }
+    local.add(
       AudioLevelPart(
         source: BeatSourcePart(
-          media: EditorVideo.file(File(await localPathFor(url))),
+          media: EditorVideo.file(File(path)),
           fileLength: part.source.fileLength,
           from: part.source.from,
           to: part.source.to,
@@ -86,20 +101,21 @@ Future<List<AudioLevelPart>> withLocalNetworkSounds(
         volume: part.volume,
         fadeIn: part.fadeIn,
         fadeOut: part.fadeOut,
-      )
-    else
-      part,
-];
+      ),
+    );
+  }
+  return local;
+}
 
 /// The band energies of everything among [sounds] and [clips] that plays on
 /// an exported video ending at [videoEnd], or `null` when none could be read;
 /// see [VideoEditorAudioLevelResolver.energiesOnOutput].
 ///
 /// A network sound is read from the local copy [localPathFor] returns, see
-/// [withLocalNetworkSounds]. A sound that cannot be read, or downloaded,
-/// leaves the visualizers at rest rather than failing the export, as a
-/// missing beat does for effects on the beat; the mux tries the download
-/// again and fails the export if the sound is still out of reach.
+/// [withLocalNetworkSounds]. A sound that cannot be downloaded or read is
+/// left out rather than failing the export, as a missing beat is for effects
+/// on the beat; the mux tries the download again and fails the export if the
+/// sound is still out of reach.
 Future<Float32List?> audioEnergiesOnExport({
   required List<AudioEvent> sounds,
   required List<DivineVideoClip> clips,
@@ -107,24 +123,26 @@ Future<Float32List?> audioEnergiesOnExport({
   required Future<String> Function(String url) localPathFor,
   VideoEditorAudioLevelResolver? resolver,
 }) async {
+  void logFailure(Object error, StackTrace stackTrace) => Log.error(
+    'Could not read the sound for the audio visualizer',
+    name: 'VideoEditorAudioLevelResolver',
+    category: LogCategory.video,
+    error: error,
+    stackTrace: stackTrace,
+  );
   final reader = resolver ?? VideoEditorAudioLevelResolver();
+  final parts = await withLocalNetworkSounds(
+    audioLevelSourcesFor(sounds: sounds, clips: clips, videoEnd: videoEnd),
+    localPathFor: localPathFor,
+    onDownloadFailed: logFailure,
+  );
   try {
-    final parts = await withLocalNetworkSounds(
-      audioLevelSourcesFor(sounds: sounds, clips: clips, videoEnd: videoEnd),
-      localPathFor: localPathFor,
-    );
     await reader.read(parts);
-    return reader.energiesOnOutput(parts, videoEnd: videoEnd);
   } on Exception catch (error, stackTrace) {
-    Log.error(
-      'Could not read the sound for the audio visualizer',
-      name: 'VideoEditorAudioLevelResolver',
-      category: LogCategory.video,
-      error: error,
-      stackTrace: stackTrace,
-    );
+    logFailure(error, stackTrace);
     return null;
   }
+  return reader.energiesOnOutput(parts, videoEnd: videoEnd);
 }
 
 /// Reads how loud sounds are in each frequency band and adds them up on the
