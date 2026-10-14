@@ -325,21 +325,12 @@ void main() {
       testWidgets('Account status action removes retry and opens status', (
         tester,
       ) async {
-        final goRouter = MockGoRouter();
-        when(
-          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async {});
-        final upload = BackgroundUpload(
-          draft: mockDraft,
-          progress: 1,
-          result: const PublishError(PublishErrorKind.accountRestricted),
+        final goRouter = buildGoRouter();
+        await openFailureSheet(
+          tester,
+          kind: PublishErrorKind.accountRestricted,
+          goRouter: goRouter,
         );
-
-        await tester.pumpWidget(
-          buildSubject(upload: upload, goRouter: goRouter),
-        );
-        await tester.tap(find.text('Open Sheet'));
-        await tester.pumpAndSettle();
         await tester.tap(
           find.text(l10n.uploadFailureSheetAccountStatusButton),
         );
