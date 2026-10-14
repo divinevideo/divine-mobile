@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for profile statistics cache operations.
-// ABOUTME: Provides upsert with expiry checking.
+// ABOUTME: Provides upsert, freshness-checked reads, and 30-day retention.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
@@ -20,19 +20,10 @@ const profileStatsCacheDuration = Duration(minutes: 5);
 /// older than this window. [ProfileStatsDao.deleteExpired] enforces it, called
 /// from `AppDatabase.runStartupCleanup`. Rows are never deleted because they
 /// are merely stale; stale rows remain available through
-/// [ProfileStatsDao.getStatsRaw] while a refresh runs.
+/// [ProfileStatsDao.getStatsRaw] while a refresh runs. This also keeps the
+/// persisted follower-count baseline across restarts, which the relay
+/// fallback stabilizes partial observations against.
 const profileStatsRetention = Duration(days: 30);
-
-/// How long follower/following counts stay useful after they were written.
-///
-/// Follower counts live in this row and have coordinated REST and relay
-/// writers. The relay fallback stabilizes partial observations against the
-/// persisted value, which only works if the baseline survives a restart.
-///
-/// This is a freshness signal for readers; it never causes a deletion. It must
-/// stay comfortably shorter than [profileStatsRetention], so the baseline is
-/// still on disk for as long as `FollowRepository` would trust it.
-const profileFollowerCountsCacheDuration = Duration(hours: 48);
 
 @DriftAccessor(tables: [ProfileStats, VanishedProfiles])
 class ProfileStatsDao extends DatabaseAccessor<AppDatabase>

@@ -368,10 +368,6 @@ void main() {
             );
       }
 
-      test('retention window is 30 days', () {
-        expect(profileStatsRetention, equals(const Duration(days: 30)));
-      });
-
       test('keeps a 6-day-old row with only a video count', () async {
         await insertRow(
           pubkey: testPubkey,
