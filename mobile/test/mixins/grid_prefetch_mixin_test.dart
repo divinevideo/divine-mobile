@@ -50,11 +50,7 @@ List<VideoEvent> _createMockVideos(int count) {
 void main() {
   late _MockMediaCacheManager mockCache;
   late _MockFeatureFlagService mockFeatureFlagService;
-  bool? previousInfiniteVideoFeedSupportOverride;
-
   setUp(() {
-    previousInfiniteVideoFeedSupportOverride =
-        InfiniteVideoFeed.debugIsSupportedOverride;
     InfiniteVideoFeed.debugIsSupportedOverride = false;
     mockCache = _MockMediaCacheManager();
     when(
@@ -76,8 +72,7 @@ void main() {
   });
 
   tearDown(() {
-    InfiniteVideoFeed.debugIsSupportedOverride =
-        previousInfiniteVideoFeedSupportOverride;
+    InfiniteVideoFeed.debugIsSupportedOverride = null;
   });
 
   group(GridPrefetchMixin, () {
