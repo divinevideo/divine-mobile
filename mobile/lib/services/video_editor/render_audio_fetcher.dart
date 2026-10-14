@@ -96,7 +96,14 @@ class RenderAudioFetcher {
   /// not the blob we asked for.
   final int maxBytes;
 
+  /// Downloads this fetcher made or is making, by URL.
+  final Map<Uri, Future<String>> _downloads = {};
+
   /// A local path for [audio], downloading it when it lives on the network.
+  ///
+  /// A URL this fetcher downloaded before, or is downloading, is not fetched
+  /// again: a render that reads a sound for its audio visualizer and then
+  /// muxes it gets the same file. A download that failed is tried again.
   ///
   /// Throws [RenderAudioFetchException] when every download attempt failed,
   /// and whatever [EditorAudio.safeFilePath] throws for the other sources.
@@ -109,6 +116,26 @@ class RenderAudioFetcher {
     if (audio.type != EditorAudioType.network) return audio.safeFilePath();
 
     final url = Uri.parse(audio.networkUrl!);
+    final pending = _downloads[url];
+    if (pending != null) return pending;
+    final download = _downloadWithRetries(url, logName: logName);
+    _downloads[url] = download;
+    try {
+      return await download;
+    } catch (_) {
+      if (identical(_downloads[url], download)) {
+        // Forgotten so the next request downloads it again. This future was
+        // awaited above, including its error.
+        unawaited(_downloads.remove(url));
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> _downloadWithRetries(
+    Uri url, {
+    required String logName,
+  }) async {
     final scope = AsyncScope(debugName: _logName);
     try {
       return await scope.retryWithBackoff(

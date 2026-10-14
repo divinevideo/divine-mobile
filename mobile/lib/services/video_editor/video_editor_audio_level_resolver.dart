@@ -13,6 +13,7 @@ import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:openvine/utils/wav_decoding.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A stretch of sound on the exported video and how loud it plays there.
 class AudioLevelPart extends Equatable {
@@ -89,6 +90,42 @@ Future<List<AudioLevelPart>> withLocalNetworkSounds(
     else
       part,
 ];
+
+/// The band energies of everything among [sounds] and [clips] that plays on
+/// an exported video ending at [videoEnd], or `null` when none could be read;
+/// see [VideoEditorAudioLevelResolver.energiesOnOutput].
+///
+/// A network sound is read from the local copy [localPathFor] returns, see
+/// [withLocalNetworkSounds]. A sound that cannot be read, or downloaded,
+/// leaves the visualizers at rest rather than failing the export, as a
+/// missing beat does for effects on the beat; the mux tries the download
+/// again and fails the export if the sound is still out of reach.
+Future<Float32List?> audioEnergiesOnExport({
+  required List<AudioEvent> sounds,
+  required List<DivineVideoClip> clips,
+  required Duration videoEnd,
+  required Future<String> Function(String url) localPathFor,
+  VideoEditorAudioLevelResolver? resolver,
+}) async {
+  final reader = resolver ?? VideoEditorAudioLevelResolver();
+  try {
+    final parts = await withLocalNetworkSounds(
+      audioLevelSourcesFor(sounds: sounds, clips: clips, videoEnd: videoEnd),
+      localPathFor: localPathFor,
+    );
+    await reader.read(parts);
+    return reader.energiesOnOutput(parts, videoEnd: videoEnd);
+  } on Exception catch (error, stackTrace) {
+    Log.error(
+      'Could not read the sound for the audio visualizer',
+      name: 'VideoEditorAudioLevelResolver',
+      category: LogCategory.video,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return null;
+  }
+}
 
 /// Reads how loud sounds are in each frequency band and adds them up on the
 /// exported video.

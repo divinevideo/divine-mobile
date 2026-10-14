@@ -183,6 +183,52 @@ void main() {
     });
   });
 
+  group('audioEnergiesOnExport', () {
+    final song = AudioEvent(
+      id: 'song',
+      pubkey: 'a' * 64,
+      createdAt: 1735689600,
+      url: 'https://media.example/song',
+      duration: 30,
+    );
+
+    test('reads a network sound from its downloaded copy', () async {
+      final file = _ToneFile();
+      final downloads = <String>[];
+
+      final energies = await audioEnergiesOnExport(
+        sounds: [song],
+        clips: const [],
+        videoEnd: _ms(1000),
+        localPathFor: (url) async {
+          downloads.add(url);
+          return '/tmp/song.m4a';
+        },
+        resolver: VideoEditorAudioLevelResolver(extractAudio: file.call),
+      );
+
+      expect(downloads, ['https://media.example/song']);
+      expect(file.reads.single.video.file?.path, '/tmp/song.m4a');
+      expect(file.reads.single.video.networkUrl, isNull);
+      expect(_energy(energies!, 30), greaterThan(0));
+    });
+
+    test('rests the visualizer when a sound cannot be downloaded', () async {
+      final file = _ToneFile();
+
+      final energies = await audioEnergiesOnExport(
+        sounds: [song],
+        clips: const [],
+        videoEnd: _ms(1000),
+        localPathFor: (url) async => throw Exception('offline'),
+        resolver: VideoEditorAudioLevelResolver(extractAudio: file.call),
+      );
+
+      expect(energies, isNull);
+      expect(file.reads, isEmpty);
+    });
+  });
+
   group(VideoEditorAudioLevelResolver, () {
     late _ToneFile file;
     late VideoEditorAudioLevelResolver resolver;

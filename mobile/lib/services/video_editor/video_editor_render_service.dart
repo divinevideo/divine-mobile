@@ -28,6 +28,7 @@ import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -612,6 +613,8 @@ class VideoEditorRenderService {
       );
       if (detachedPass.isActive) tempFilePaths.add(detachedPass.basePath);
 
+      // Shared, so the visualizer and the mux download a sound once.
+      final audioFetcher = RenderAudioFetcher();
       // Read once for both passes: an audio visualizer can sit below or above
       // a detached clip.
       final audioEnergies = await _audioEnergiesOnOutput(
@@ -619,6 +622,8 @@ class VideoEditorRenderService {
         parameters: parameters,
         clips: clips,
         maxOutputDuration: maxOutputDuration,
+        audioFetcher: audioFetcher,
+        tempFilePaths: tempFilePaths,
       );
 
       await _concatenateSegments(
@@ -633,6 +638,7 @@ class VideoEditorRenderService {
         imageLayerOverride: detachedPass.baseImageLayers,
         tempFilePaths: tempFilePaths,
         audioEnergies: audioEnergies,
+        audioFetcher: audioFetcher,
       );
 
       final outputPath = await detachedPass.composite(
@@ -861,6 +867,7 @@ class VideoEditorRenderService {
     List<ExportedLayer>? imageLayerOverride,
     List<String>? tempFilePaths,
     Float32List? audioEnergies,
+    RenderAudioFetcher? audioFetcher,
   }) async {
     // Overlap transitions shorten the rendered output, so the true video
     // length is the transition-mapped output duration, capped by
@@ -882,6 +889,7 @@ class VideoEditorRenderService {
       logName: _logName,
       videoDuration: videoContentDuration,
       audioEvents: parameters?.audioTracksFromMeta ?? const [],
+      fetcher: audioFetcher,
       tempFilePaths: tempFilePaths,
     );
 
@@ -1328,17 +1336,16 @@ class VideoEditorRenderService {
     }
   }
 
-  /// The band energies of everything that plays on the exported video, for
-  /// its audio visualizers, or `null` when [capturedLayers] holds none.
-  ///
-  /// A sound that cannot be read leaves the visualizers at rest rather than
-  /// failing the export, as a missing beat does for effects on the beat: the
-  /// sounds themselves were fetched for the export already.
+  /// [audioEnergiesOnExport] for the audio visualizers, or `null` when
+  /// [capturedLayers] holds none. Downloads go through [audioFetcher], which
+  /// the mux reuses, into [tempFilePaths].
   static Future<Float32List?> _audioEnergiesOnOutput({
     required List<ExportedLayer> capturedLayers,
     required CompleteParameters? parameters,
     required List<DivineVideoClip> clips,
     required Duration? maxOutputDuration,
+    required RenderAudioFetcher audioFetcher,
+    required List<String> tempFilePaths,
   }) async {
     if (!capturedLayers.any(
       (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
@@ -1348,29 +1355,21 @@ class VideoEditorRenderService {
     final outputDuration = TransitionTimelineMap.fromClips(
       clips,
     ).outputDuration;
-    final videoEnd =
-        maxOutputDuration != null && maxOutputDuration < outputDuration
-        ? maxOutputDuration
-        : outputDuration;
-    final parts = audioLevelSourcesFor(
+    return audioEnergiesOnExport(
       sounds: parameters?.audioTracksFromMeta ?? const [],
       clips: clips,
-      videoEnd: videoEnd,
+      videoEnd: maxOutputDuration != null && maxOutputDuration < outputDuration
+          ? maxOutputDuration
+          : outputDuration,
+      localPathFor: (url) async {
+        final path = await audioFetcher.localPathFor(
+          EditorAudio.network(url),
+          logName: _logName,
+        );
+        if (!tempFilePaths.contains(path)) tempFilePaths.add(path);
+        return path;
+      },
     );
-    final resolver = VideoEditorAudioLevelResolver();
-    try {
-      await resolver.read(parts);
-    } on Exception catch (error, stackTrace) {
-      Log.error(
-        'Could not read the sound for the audio visualizer',
-        name: _logName,
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return null;
-    }
-    return resolver.energiesOnOutput(parts, videoEnd: videoEnd);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -137,6 +137,48 @@ void main() {
       },
     );
 
+    test('downloads a URL once and hands every request the file', () async {
+      var requests = 0;
+      final shared = fetcher(
+        () => MockClient((request) async {
+          requests++;
+          return http.Response.bytes(_wavBytes(), 200);
+        }),
+      );
+      final audio = EditorAudio.network(_url.toString());
+
+      final paths = await Future.wait([
+        shared.localPathFor(audio, logName: 't'),
+        shared.localPathFor(audio, logName: 't'),
+      ]);
+      final later = await shared.localPathFor(audio, logName: 't');
+
+      expect(requests, 1);
+      expect(paths, [later, later]);
+      expect(File(later).readAsBytesSync(), _wavBytes());
+    });
+
+    test('downloads a URL again after a failed download', () async {
+      var attempts = 0;
+      final shared = fetcher(
+        () => MockClient((request) async {
+          attempts++;
+          if (attempts == 1) return http.Response('gone', 404);
+          return http.Response.bytes(_wavBytes(), 200);
+        }),
+      );
+      final audio = EditorAudio.network(_url.toString());
+
+      await expectLater(
+        shared.localPathFor(audio, logName: 't'),
+        throwsA(isA<RenderAudioFetchException>()),
+      );
+      final path = await shared.localPathFor(audio, logName: 't');
+
+      expect(attempts, 2);
+      expect(File(path).readAsBytesSync(), _wavBytes());
+    });
+
     test('does not retry a missing blob', () async {
       var attempts = 0;
       await expectLater(
