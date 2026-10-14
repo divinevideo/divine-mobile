@@ -1822,7 +1822,7 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// This method should be called during app startup to remove:
   /// - Expired Nostr events (based on expire_at timestamp, including NULL)
-  /// - Expired profile stats (older than 5 minutes)
+  /// - Profile stats older than the 30-day `profileStatsRetention` window
   /// - Notification cache rows written more than 7 days ago
   /// - `video_metrics` rows orphaned by an `event` deletion above
   /// - `user_profiles` rows beyond the row cap, oldest by `last_fetched`
@@ -1832,7 +1832,7 @@ class AppDatabase extends _$AppDatabase {
     // Delete expired events (also deletes events with NULL expire_at)
     final expiredEventsDeleted = await nostrEventsDao.deleteExpiredEvents(null);
 
-    // Delete expired profile stats (5 minute expiry)
+    // Delete profile stats past the 30-day retention window
     final expiredProfileStatsDeleted = await profileStatsDao.deleteExpired();
 
     // Delete notification cache rows written more than 7 days ago. Retention

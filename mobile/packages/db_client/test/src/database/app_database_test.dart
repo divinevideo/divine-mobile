@@ -17,6 +17,8 @@ void main() {
   /// Valid 64-char hex pubkey for testing
   const testPubkey =
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const testPubkey2 =
+      'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
 
   /// Helper to create a valid Nostr Event for testing.
   Event createEvent({
@@ -181,10 +183,9 @@ void main() {
       });
 
       test(
-        'deletes expired profile stats that hold no follower counts',
+        'deletes profile stats older than the 30-day retention window',
         () async {
-          // Insert stats with old cachedAt using proper Drift insert
-          final oldTime = DateTime.now().subtract(const Duration(minutes: 10));
+          final oldTime = DateTime.now().subtract(const Duration(days: 31));
           await database
               .into(database.profileStats)
               .insert(
@@ -195,22 +196,21 @@ void main() {
                 ),
               );
 
-          // Run cleanup (default expiry is 5 minutes, entry is 10 minutes old)
           final result = await database.runStartupCleanup();
 
-          // Expired stats should be deleted
-          final stats = await database.profileStatsDao.getStats(testPubkey);
-          expect(stats, isNull);
-
+          expect(
+            await database.profileStatsDao.getStatsRaw(testPubkey),
+            isNull,
+          );
           expect(result.expiredProfileStatsDeleted, equals(1));
         },
       );
 
       test(
-        'keeps expired profile stats that still hold follower counts',
+        'keeps profile stats that are stale but inside the retention window',
         () async {
-          // Startup cleanup runs on every cold start, so deleting this row
-          // is how the follower baseline used to vanish overnight (#6902).
+          // A 10-minute-old row is a freshness miss for getStats, not a
+          // deletion: startup cleanup only removes rows older than 30 days.
           final oldTime = DateTime.now().subtract(const Duration(minutes: 10));
           await database
               .into(database.profileStats)
@@ -222,12 +222,27 @@ void main() {
                   cachedAt: oldTime,
                 ),
               );
+          await database
+              .into(database.profileStats)
+              .insert(
+                ProfileStatsCompanion.insert(
+                  pubkey: testPubkey2,
+                  videoCount: const Value(5),
+                  cachedAt: oldTime,
+                ),
+              );
 
           final result = await database.runStartupCleanup();
 
           expect(result.expiredProfileStatsDeleted, equals(0));
-          final row = await database.profileStatsDao.getStatsRaw(testPubkey);
-          expect(row!.followerCount, equals(100));
+          final withCounts = await database.profileStatsDao.getStatsRaw(
+            testPubkey,
+          );
+          expect(withCounts!.followerCount, equals(100));
+          final videoOnly = await database.profileStatsDao.getStatsRaw(
+            testPubkey2,
+          );
+          expect(videoOnly!.videoCount, equals(5));
         },
       );
 
