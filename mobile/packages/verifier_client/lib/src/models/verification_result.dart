@@ -15,6 +15,8 @@ class VerificationResult extends Equatable {
     required this.cached,
     this.error,
     this.code,
+    this.canonicalProof,
+    this.canonicalIdentity,
   });
 
   /// Parses a [VerificationResult] from the verifier API JSON shape.
@@ -27,6 +29,8 @@ class VerificationResult extends Equatable {
       cached: json['cached'] as bool? ?? false,
       error: json['error'] as String?,
       code: json['code'] as String?,
+      canonicalProof: _nonEmptyString(json['canonical_proof']),
+      canonicalIdentity: _nonEmptyString(json['canonical_identity']),
     );
   }
 
@@ -58,6 +62,25 @@ class VerificationResult extends Equatable {
   /// and must keep it for values a newer service invents.
   final String? code;
 
+  /// The proof to publish instead of the one sent, when the verifier
+  /// confirmed the claim and reduced the proof to a simpler stable form: a
+  /// TikTok share or photo link becomes its post number, for example.
+  ///
+  /// Null when the proof sent was already in that form, on a rejection, and
+  /// from deployments older than the field.
+  final String? canonicalProof;
+
+  /// The account to publish instead of the one sent, when the verifier
+  /// confirmed the claim under a different account string. It may be the
+  /// same account tidied (a Mastodon `@user@server` becomes `server/@user`)
+  /// or found on a different host: a Mastodon server whose handles use one
+  /// domain and whose website uses another is confirmed on the website's
+  /// domain, and that domain is returned.
+  ///
+  /// Null when the account sent was already in that form, on a rejection,
+  /// and from deployments older than the field.
+  final String? canonicalIdentity;
+
   @override
   List<Object?> get props => [
     platform,
@@ -67,5 +90,12 @@ class VerificationResult extends Equatable {
     cached,
     error,
     code,
+    canonicalProof,
+    canonicalIdentity,
   ];
 }
+
+// A clean value is optional extra, so a malformed one is ignored rather than
+// failing the parse: in a batch that would fail every claim's result.
+String? _nonEmptyString(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;

@@ -94,5 +94,99 @@ void main() {
         );
       });
     });
+
+    group('clean values', () {
+      test('parses the clean proof and account the verifier sends', () {
+        final result = VerificationResult.fromJson(const {
+          'platform': 'tiktok',
+          'identity': 'alice',
+          'verified': true,
+          'checked_at': 1,
+          'cached': false,
+          'canonical_proof': '7123456789012345678',
+          'canonical_identity': 'alice_2',
+        });
+
+        expect(result.canonicalProof, '7123456789012345678');
+        expect(result.canonicalIdentity, 'alice_2');
+      });
+
+      test('are null when the verifier omits them', () {
+        final result = VerificationResult.fromJson(const {
+          'platform': 'tiktok',
+          'identity': 'alice',
+          'verified': true,
+          'checked_at': 1,
+          'cached': false,
+        });
+
+        expect(result.canonicalProof, isNull);
+        expect(result.canonicalIdentity, isNull);
+      });
+
+      test('treat an empty value as absent, so nothing publishes it', () {
+        final result = VerificationResult.fromJson(const {
+          'platform': 'tiktok',
+          'identity': 'alice',
+          'verified': true,
+          'checked_at': 1,
+          'cached': false,
+          'canonical_proof': '',
+          'canonical_identity': '',
+        });
+
+        expect(result.canonicalProof, isNull);
+        expect(result.canonicalIdentity, isNull);
+      });
+
+      // A malformed field must not fail the parse: one bad result in a batch
+      // would otherwise fail loading every claim.
+      for (final (kind, wrong) in <(String, Object)>[
+        ('number', 7123456789),
+        ('map', <String, dynamic>{}),
+      ]) {
+        test('ignore a canonical_proof that is a $kind', () {
+          final result = VerificationResult.fromJson({
+            'platform': 'tiktok',
+            'identity': 'alice',
+            'verified': true,
+            'checked_at': 1,
+            'cached': false,
+            'canonical_proof': wrong,
+          });
+
+          expect(result.canonicalProof, isNull);
+        });
+
+        test('ignore a canonical_identity that is a $kind', () {
+          final result = VerificationResult.fromJson({
+            'platform': 'tiktok',
+            'identity': 'alice',
+            'verified': true,
+            'checked_at': 1,
+            'cached': false,
+            'canonical_identity': wrong,
+          });
+
+          expect(result.canonicalIdentity, isNull);
+        });
+      }
+
+      test('are part of equality', () {
+        VerificationResult withClean({String? proof, String? identity}) =>
+            VerificationResult(
+              platform: 'tiktok',
+              identity: 'alice',
+              verified: true,
+              checkedAt: 1,
+              cached: false,
+              canonicalProof: proof,
+              canonicalIdentity: identity,
+            );
+
+        expect(withClean(proof: '1'), isNot(withClean(proof: '2')));
+        expect(withClean(identity: 'a'), isNot(withClean(identity: 'b')));
+      });
+    });
   });
 }
