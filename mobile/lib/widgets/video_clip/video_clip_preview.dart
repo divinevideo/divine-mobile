@@ -7,31 +7,31 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/gallery_save_service.dart';
-import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Creates the transparent route used to fly a library thumbnail into preview.
 Route<void> videoClipPreviewRoute({
   required DivineVideoClip clip,
+  Future<void> Function()? onSaveToGallery,
   VoidCallback? onDelete,
 }) {
   return PageRouteBuilder<void>(
     opaque: false,
-    pageBuilder: (_, _, _) => VideoClipPreview(clip: clip, onDelete: onDelete),
+    pageBuilder: (_, _, _) => VideoClipPreview(
+      clip: clip,
+      onSaveToGallery: onSaveToGallery,
+      onDelete: onDelete,
+    ),
     transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(opacity: animation, child: child);
     },
@@ -40,21 +40,29 @@ Route<void> videoClipPreviewRoute({
   );
 }
 
-class VideoClipPreview extends ConsumerStatefulWidget {
-  const VideoClipPreview({required this.clip, this.onDelete, super.key});
+class VideoClipPreview extends StatefulWidget {
+  const VideoClipPreview({
+    required this.clip,
+    this.onSaveToGallery,
+    this.onDelete,
+    super.key,
+  });
 
   /// The clip to preview, containing file path, duration, and other metadata.
   final DivineVideoClip clip;
+
+  /// Saves the clip to the device gallery and reports how it went; the
+  /// preview closes once it is done. If null, the save button is hidden.
+  final Future<void> Function()? onSaveToGallery;
 
   /// Called when the delete button is tapped. If null, delete button is hidden.
   final VoidCallback? onDelete;
 
   @override
-  ConsumerState<VideoClipPreview> createState() =>
-      _VideoClipPreviewSheetState();
+  State<VideoClipPreview> createState() => _VideoClipPreviewSheetState();
 }
 
-class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
+class _VideoClipPreviewSheetState extends State<VideoClipPreview> {
   /// Video player controller for the clip, null until initialized.
   DivineVideoPlayerController? _controller;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
@@ -191,85 +199,18 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
     super.dispose();
   }
 
-  /// Saves the current clip to the device gallery/camera roll.
-  ///
-  /// Shows a snackbar with the result and handles permission denied.
+  /// Saves the clip with [VideoClipPreview.onSaveToGallery], then closes.
   Future<void> _saveToGallery() async {
-    if (_isSaving) return;
+    final save = widget.onSaveToGallery;
+    if (save == null || _isSaving) return;
 
     setState(() => _isSaving = true);
-
-    DivineVideoClip? materialized;
     try {
-      final gallerySaveService = ref.read(gallerySaveServiceProvider);
-      // Stop-motion clips render their mp4 on demand; a normal clip passes
-      // through unchanged.
-      try {
-        materialized = await StopMotionRenderService.materialize(widget.clip);
-      } on RenderCanceledException {
-        materialized = null;
-      }
-      if (!mounted) return;
-      if (materialized == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: VineTheme.transparent,
-            elevation: 0,
-            behavior: SnackBarBehavior.floating,
-            content: DivineSnackbarContainer(
-              label: context.l10n.videoClipSaveFailed,
-              error: true,
-            ),
-          ),
-        );
-        return;
-      }
-      final result = await gallerySaveService.saveVideoToGallery(
-        materialized.requireVideo,
-      );
-
-      if (!mounted) return;
-
-      if (result case GallerySaveFailure(:final reason)) {
-        Log.warning('Failed to save clip to gallery: $reason');
-      }
-
-      final l10n = context.l10n;
-      final destination = GallerySaveService.destinationName;
-      final (message, isError) = switch (result) {
-        GallerySaveSuccess() => (
-          l10n.libraryClipsSavedToDestination(1, destination),
-          false,
-        ),
-        GallerySavePermissionDenied() => (
-          l10n.libraryGalleryPermissionDenied(destination),
-          true,
-        ),
-        GallerySaveFailure() => (l10n.videoClipSaveFailed, true),
-      };
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
-
-      context.pop();
-    } catch (e, s) {
-      Log.error('Failed to save clip to gallery', error: e, stackTrace: s);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            context.l10n.videoClipSaveFailed,
-            error: true,
-          ),
-        );
-      }
+      await save();
     } finally {
-      await StopMotionRenderService.cleanupMaterializedOutput(
-        sourceClip: widget.clip,
-        materializedClip: materialized,
-      );
       if (mounted) setState(() => _isSaving = false);
     }
+    if (mounted) context.pop();
   }
 
   @override
@@ -325,7 +266,9 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
                     // Action buttons row
                     _ActionButtonsRow(
                       isSaving: _isSaving,
-                      onSave: _saveToGallery,
+                      onSave: widget.onSaveToGallery == null
+                          ? null
+                          : _saveToGallery,
                       onDelete: widget.onDelete,
                     ),
                   ],
@@ -446,7 +389,7 @@ class _ClipMedia extends StatelessWidget {
 class _ActionButtonsRow extends StatelessWidget {
   const _ActionButtonsRow({
     required this.isSaving,
-    required this.onSave,
+    this.onSave,
     this.onDelete,
   });
 
@@ -455,8 +398,8 @@ class _ActionButtonsRow extends StatelessWidget {
   /// Whether a save operation is currently in progress.
   final bool isSaving;
 
-  /// Called when the save button is tapped.
-  final VoidCallback onSave;
+  /// Called when the save button is tapped. If null, save button is hidden.
+  final VoidCallback? onSave;
 
   /// Called when the delete button is tapped. If null, delete button is hidden.
   final VoidCallback? onDelete;
@@ -470,29 +413,42 @@ class _ActionButtonsRow extends StatelessWidget {
         mainAxisAlignment: .center,
         spacing: 32,
         children: [
-          // Save to gallery button
-          Semantics(
-            button: true,
-            label: context.l10n.videoClipSaveTo(
-              GallerySaveService.destinationName,
-            ),
-            child: GestureDetector(
-              onTap: onSave,
-              child: Container(
-                padding: const EdgeInsets.all(_buttonPadding),
-                decoration: ShapeDecoration(
-                  color: VineTheme.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+          if (onSave != null)
+            // Save to gallery button
+            Semantics(
+              button: true,
+              label: context.l10n.videoClipSaveTo(
+                GallerySaveService.destinationName,
+              ),
+              child: GestureDetector(
+                onTap: isSaving ? null : onSave,
+                child: Container(
+                  padding: const EdgeInsets.all(_buttonPadding),
+                  decoration: ShapeDecoration(
+                    color: VineTheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                ),
-                child: const DivineIcon(
-                  icon: DivineIconName.downloadSimple,
-                  color: VineTheme.onPrimary,
+                  // Checking and signing a clip can take a few seconds.
+                  child: isSaving
+                      ? const SizedBox.square(
+                          dimension: 24,
+                          child: Padding(
+                            padding: EdgeInsets.all(2),
+                            child: DivineCircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: VineTheme.onPrimary,
+                            ),
+                          ),
+                        )
+                      : const DivineIcon(
+                          icon: DivineIconName.downloadSimple,
+                          color: VineTheme.onPrimary,
+                        ),
                 ),
               ),
             ),
-          ),
           if (onDelete != null)
             // Delete button
             Semantics(

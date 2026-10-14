@@ -6650,6 +6650,68 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryGalleryImportDone => 'Tapos na';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'I-save ang mga napiling clip sa gallery mo';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
+      one:
+          'Na-save ang $count clip nang walang proof, kaya hindi na makakabalik ang mga ito sa clips mo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Mga detalye';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Na-save nang walang proof';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Ang mga clip lang na may proof na kinunan sila gamit ang Divine ang puwedeng bumalik mula sa gallery mo. Na-save nang walang proof ang mga kopya ng mga clip na ito.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Hindi maidagdag ang proof nito ngayon, baka dahil offline ka. Subukan ulit para mag-save ng kopyang may proof.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Gawa sa mga litrato ang mga stop-motion clip, at hindi puwedeng magdala ng proof ang mga iyon.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Hindi kayang magdagdag ng proof sa mga clip ng bersyong ito ng Divine.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Walang proof ang clip na ito, at hindi na ito maidadagdag ng Divine pagkatapos.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Na-save nang may proof';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Idinadagdag ang proof sa mga clip mo…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Sine-save ang clip $current sa $total…',
+      one: 'Sine-save ang clip $current sa $total…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

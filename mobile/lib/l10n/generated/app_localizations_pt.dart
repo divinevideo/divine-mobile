@@ -6654,6 +6654,70 @@ class AppLocalizationsPt extends AppLocalizations {
   String get libraryGalleryImportDone => 'Concluído';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Salvar os clipes selecionados na sua galeria';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
+      many:
+          '$count clipes foram salvos sem a prova deles, então eles não podem voltar para os seus clipes.',
+      one:
+          '$count clipe foi salvo sem a prova dele, então ele não pode voltar para os seus clipes.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Detalhes';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Salvos sem prova';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Só podem voltar da sua galeria os clipes com prova de que foram gravados com o Divine. As cópias destes clipes foram salvas sem ela.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Não deu para adicionar a prova agora, talvez porque você estava offline. Tente de novo para salvar uma cópia com a prova.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clipes em stop motion são feitos de fotos, que não podem ter prova.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Esta versão do Divine não consegue adicionar prova aos clipes.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Este clipe não tem prova, e o Divine não consegue adicioná-la depois.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Salvo com a prova';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Adicionando a prova aos seus clipes…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Salvando o clipe $current de $total…',
+      many: 'Salvando o clipe $current de $total…',
+      one: 'Salvando seu clipe…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -3932,6 +3932,18 @@
   "libraryGalleryImportItemNotVerified": "Divineతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం",
   "libraryGalleryImportItemCheckUnavailable": "ప్రస్తుతం తనిఖీ చేయడం సాధ్యపడలేదు. తర్వాత మళ్లీ ప్రయత్నించండి.",
   "libraryGalleryImportDone": "పూర్తయింది",
+  "librarySaveSelectedClipsTooltip": "ఎంచుకున్న క్లిప్‌లను మీ గ్యాలరీలో సేవ్ చేయండి",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.} other{{count} క్లిప్‌లు వాటి రుజువు లేకుండా సేవ్ అయ్యాయి, కాబట్టి అవి మీ క్లిప్‌లలోకి తిరిగి రాలేవు.}}",
+  "libraryClipsSavedWithoutProofDetails": "వివరాలు",
+  "libraryGallerySaveWarningTitle": "రుజువు లేకుండా సేవ్ అయ్యాయి",
+  "libraryGallerySaveWarningIntro": "Divineతో చిత్రీకరించినట్లు రుజువు ఉన్న క్లిప్‌లు మాత్రమే మీ గ్యాలరీ నుండి తిరిగి రాగలవు. ఈ క్లిప్‌ల కాపీలు ఆ రుజువు లేకుండా సేవ్ అయ్యాయి.",
+  "libraryGallerySaveWarningSigningUnavailable": "దీని రుజువును ఇప్పుడు జోడించలేకపోయాం, బహుశా మీరు ఆఫ్‌లైన్‌లో ఉన్నందుకు కావచ్చు. రుజువు ఉన్న కాపీని సేవ్ చేయడానికి మళ్లీ ప్రయత్నించండి.",
+  "libraryGallerySaveWarningStopMotion": "స్టాప్-మోషన్ క్లిప్‌లు ఫోటోలతో తయారవుతాయి, ఫోటోలు రుజువును మోయలేవు.",
+  "libraryGallerySaveWarningSigningUnsupported": "Divine యొక్క ఈ వెర్షన్ క్లిప్‌లకు రుజువును జోడించలేదు.",
+  "libraryGallerySaveWarningNoProof": "ఈ క్లిప్‌కు రుజువు లేదు, Divine దాన్ని తర్వాత జోడించలేదు.",
+  "libraryGallerySaveWarningSavedWithProof": "దాని రుజువుతో సేవ్ అయింది",
+  "libraryGallerySaveSigning": "మీ క్లిప్‌లకు రుజువు జోడిస్తున్నాం…",
+  "libraryGallerySaveProgress": "{total, plural, =1{మీ క్లిప్‌ను సేవ్ చేస్తున్నాం…} other{{total}లో క్లిప్ {current}ని సేవ్ చేస్తున్నాం…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 క్లిప్ తొలగించబడింది} other{{count}క్లిప్‌లు తొలగించబడ్డాయి}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

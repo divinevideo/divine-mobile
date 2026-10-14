@@ -128,18 +128,5 @@ void main() {
         expect(ClipsLibraryDeleteClip(clip1).props, [clip1]);
       });
     });
-
-    group(ClipsLibrarySaveToGallery, () {
-      test('supports value equality', () {
-        expect(
-          const ClipsLibrarySaveToGallery(),
-          equals(const ClipsLibrarySaveToGallery()),
-        );
-      });
-
-      test('props are empty', () {
-        expect(const ClipsLibrarySaveToGallery().props, isEmpty);
-      });
-    });
   });
 }

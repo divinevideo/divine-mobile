@@ -6587,6 +6587,75 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryGalleryImportDone => 'تم';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'حفظ المقاطع المحددة في معرض الصور';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'تم حفظ $count مقطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      many:
+          'تم حفظ $count مقطعًا بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      few:
+          'تم حفظ $count مقاطع بدون إثباتها، لذلك لا يمكنها العودة إلى مقاطعك.',
+      two: 'تم حفظ مقطعين بدون إثباتهما، لذلك لا يمكنهما العودة إلى مقاطعك.',
+      one: 'تم حفظ مقطع واحد بدون إثباته، لذلك لا يمكنه العودة إلى مقاطعك.',
+      zero: 'لم يُحفظ أي مقطع بدون إثباته.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'التفاصيل';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'تم الحفظ بدون إثبات';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'لا يمكن أن تعود من معرض الصور إلا المقاطع التي تحمل إثباتًا بأنها صُوّرت باستخدام Divine. تم حفظ نسخ هذه المقاطع بدون هذا الإثبات.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'تعذّرت إضافة الإثبات الآن، ربما لأنك كنت غير متصل. حاول مرة أخرى لحفظ نسخة تحمل الإثبات.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'مقاطع الإيقاف الحركي مصنوعة من صور، والصور لا يمكنها أن تحمل إثباتًا.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'لا يمكن لهذا الإصدار من Divine إضافة إثبات إلى المقاطع.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'هذا المقطع ليس له إثبات، ولا يمكن لـ Divine إضافته لاحقًا.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'تم الحفظ مع الإثبات';
+
+  @override
+  String get libraryGallerySaveSigning => 'جارٍ إضافة الإثبات إلى مقاطعك…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'جارٍ حفظ المقطع $current من $total…',
+      many: 'جارٍ حفظ المقطع $current من $total…',
+      few: 'جارٍ حفظ المقطع $current من $total…',
+      two: 'جارٍ حفظ المقطع $current من $total…',
+      one: 'جارٍ حفظ مقطعك…',
+      zero: 'جارٍ حفظ المقطع $current من $total…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

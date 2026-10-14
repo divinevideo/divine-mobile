@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/clip_gallery_save/clip_gallery_save_cubit.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
@@ -26,7 +27,6 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
-import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
@@ -129,7 +129,6 @@ class LibraryScreen extends ConsumerWidget {
     }
 
     final clipLibraryService = ref.watch(clipLibraryServiceProvider);
-    final gallerySaveService = ref.watch(gallerySaveServiceProvider);
     final draftStorageService = ref.watch(draftStorageServiceProvider);
 
     return MultiBlocProvider(
@@ -137,7 +136,6 @@ class LibraryScreen extends ConsumerWidget {
         BlocProvider<ClipsLibraryBloc>(
           key: ValueKey((
             clipLibraryService,
-            gallerySaveService,
             clipTypeFilter,
             allowsMixedClipTypes,
           )),
@@ -147,7 +145,6 @@ class LibraryScreen extends ConsumerWidget {
                 : ref.read(clipManagerProvider).clips.map((c) => c.id).toSet();
             return ClipsLibraryBloc(
               clipLibraryService: clipLibraryService,
-              gallerySaveService: gallerySaveService,
               sharedPreferences: ref.read(sharedPreferencesProvider),
               clipTypeFilter: clipTypeFilter,
               allowsMixedClipTypes: allowsMixedClipTypes,
@@ -168,6 +165,7 @@ class LibraryScreen extends ConsumerWidget {
         ),
         if (_offersGalleryImport(selectionMode: selectionMode))
           const GalleryClipImportProvider(),
+        const ClipGallerySaveProvider(),
       ],
       child: _LibraryView(
         initialTabIndex: initialTabIndex,
@@ -542,6 +540,18 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     await GalleryClipImportPage.open(context, importCubit);
   }
 
+  /// Saves the selected [clips] to the device gallery, then clears the
+  /// selection, as the move and delete actions do.
+  Future<void> _saveToGallery(
+    BuildContext context,
+    ClipsLibraryBloc clipsBloc,
+    List<DivineVideoClip> clips,
+  ) async {
+    final outcome = await saveClipsToGallery(context, clips);
+    if (outcome == null || clipsBloc.isClosed) return;
+    clipsBloc.add(const ClipsLibraryClearSelection());
+  }
+
   void _exitLibrarySelectionMode(ClipsLibraryBloc clipsBloc) {
     clipsBloc.add(const ClipsLibraryExitSelectionMode());
   }
@@ -563,6 +573,9 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     final isPreparing = publishState == VideoPublishState.preparing;
 
     final clipsBloc = context.read<ClipsLibraryBloc>();
+    final isSavingToGallery = context.select(
+      (ClipGallerySaveCubit cubit) => cubit.state.isSaving,
+    );
     final offersGalleryImport = _offersGalleryImport(
       selectionMode: widget.selectionMode,
     );
@@ -595,48 +608,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
             context.read<ClipsLibraryBloc>().add(
               const ClipsLibraryAutoOpenSelectionMode(),
             );
-          },
-        ),
-        BlocListener<ClipsLibraryBloc, ClipsLibraryState>(
-          listenWhen: (prev, curr) =>
-              curr.lastGallerySaveResult != null &&
-              prev.lastGallerySaveResult != curr.lastGallerySaveResult,
-          listener: (context, state) {
-            final result = state.lastGallerySaveResult;
-            if (result == null) return;
-
-            switch (result) {
-              case GallerySaveResultSuccess(
-                :final successCount,
-                :final failureCount,
-              ):
-                final label = failureCount == 0
-                    ? context.l10n.libraryClipsSavedToDestination(
-                        successCount,
-                        GallerySaveService.destinationName,
-                      )
-                    : context.l10n.libraryClipsSavePartialResult(
-                        successCount,
-                        failureCount,
-                      );
-                _showSnackBar(context, label: label, error: failureCount > 0);
-              case GallerySaveResultPermissionDenied():
-                _showSnackBar(
-                  context,
-                  label: context.l10n.libraryGalleryPermissionDenied(
-                    GallerySaveService.destinationName,
-                  ),
-                  error: true,
-                );
-              case GallerySaveResultError():
-                _showSnackBar(
-                  context,
-                  label: context.l10n.libraryClipsSaveFailed(
-                    GallerySaveService.destinationName,
-                  ),
-                  error: true,
-                );
-            }
           },
         ),
         BlocListener<ClipsLibraryBloc, ClipsLibraryState>(
@@ -828,6 +799,16 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                     ),
                                     'manage library category',
                                   ),
+                            onSaveSelectedClips: hasVisibleSelection
+                                ? () => _detach(
+                                    _saveToGallery(
+                                      context,
+                                      clipsBloc,
+                                      clipsState.visibleSelectedClips,
+                                    ),
+                                    'save selected library clips to gallery',
+                                  )
+                                : null,
                             onMoveSelectedClips: hasVisibleSelection
                                 ? () => _detach(
                                     ClipCategoryActions.runMoveFlow(
@@ -875,7 +856,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                 // Deleting is deliberately absent: a soft delete finishes in a
                 // few frames, so the scrim only read as the screen flashing
                 // black. Its feedback is the clips leaving the grid plus Undo.
-                if (clipsState.isSavingToGallery || isPreparing)
+                if (isPreparing)
                   Material(
                     color: VineTheme.scrim65,
                     child: Center(
@@ -886,17 +867,18 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                           const DivineCircularProgressIndicator(
                             color: VineTheme.vineGreen,
                           ),
-                          if (isPreparing)
-                            Text(
-                              context.l10n.libraryPreparingVideo,
-                              style: VineTheme.bodyMediumFont(
-                                color: context.vineColors.primaryText,
-                              ),
+                          Text(
+                            context.l10n.libraryPreparingVideo,
+                            style: VineTheme.bodyMediumFont(
+                              color: context.vineColors.primaryText,
                             ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
+                  )
+                else if (isSavingToGallery)
+                  const _GallerySaveProgress(),
               ],
             ),
           );
@@ -1017,6 +999,64 @@ class _LibraryContent extends StatelessWidget {
         Radius.circular(VineTheme.shellInnerCornerRadius),
       ),
       child: Material(color: tabBackgroundColor, child: content),
+    );
+  }
+}
+
+/// Covers the library while clips are saved to the gallery, saying how far
+/// the save got, since signing and checking each clip can take a while.
+class _GallerySaveProgress extends StatelessWidget {
+  const _GallerySaveProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    final isSigning = context.select(
+      (ClipGallerySaveCubit cubit) =>
+          cubit.state.status == ClipGallerySaveStatus.signing,
+    );
+    final doneCount = context.select(
+      (ClipGallerySaveCubit cubit) => cubit.state.doneCount,
+    );
+    final savingCount = context.select(
+      (ClipGallerySaveCubit cubit) => cubit.state.savingCount,
+    );
+    final label = isSigning
+        ? context.l10n.libraryGallerySaveSigning
+        : context.l10n.libraryGallerySaveProgress(
+            (doneCount + 1).clamp(1, savingCount),
+            savingCount,
+          );
+
+    return Material(
+      color: VineTheme.scrim65,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 16,
+            children: [
+              // Not a fraction of the clips: one clip can take seconds, and
+              // a ring that stands still at its start reads as stuck.
+              const ExcludeSemantics(
+                child: DivineCircularProgressIndicator(
+                  color: VineTheme.vineGreen,
+                ),
+              ),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

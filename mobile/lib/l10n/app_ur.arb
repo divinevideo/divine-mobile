@@ -3327,6 +3327,18 @@
   "libraryGalleryImportItemNotVerified": "تصدیق نہیں ہو سکی کہ یہ Divine سے بنی ہے",
   "libraryGalleryImportItemCheckUnavailable": "ابھی جانچ نہیں ہو سکی۔ بعد میں دوبارہ کوشش کریں۔",
   "libraryGalleryImportDone": "ہو گیا",
+  "librarySaveSelectedClipsTooltip": "منتخب کلپس اپنی گیلری میں محفوظ کریں",
+  "libraryClipsSavedWithoutProof": "{count, plural, =1{1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔} other{{count} کلپس اپنے ثبوت کے بغیر محفوظ ہوئیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتیں۔}}",
+  "libraryClipsSavedWithoutProofDetails": "تفصیلات",
+  "libraryGallerySaveWarningTitle": "ثبوت کے بغیر محفوظ",
+  "libraryGallerySaveWarningIntro": "آپ کی گیلری سے صرف وہی کلپس واپس آ سکتی ہیں جن کے پاس ثبوت ہو کہ وہ Divine سے بنائی گئی ہیں۔ ان کلپس کی کاپیاں اس ثبوت کے بغیر محفوظ ہوئیں۔",
+  "libraryGallerySaveWarningSigningUnavailable": "ابھی اس کا ثبوت شامل نہیں ہو سکا، شاید اس لیے کہ آپ آف لائن تھے۔ ثبوت والی کاپی محفوظ کرنے کے لیے دوبارہ کوشش کریں۔",
+  "libraryGallerySaveWarningStopMotion": "اسٹاپ موشن کلپس تصاویر سے بنتی ہیں، اور تصاویر ثبوت نہیں رکھ سکتیں۔",
+  "libraryGallerySaveWarningSigningUnsupported": "Divine کا یہ ورژن کلپس میں ثبوت شامل نہیں کر سکتا۔",
+  "libraryGallerySaveWarningNoProof": "اس کلپ کا کوئی ثبوت نہیں، اور Divine بعد میں اسے شامل نہیں کر سکتا۔",
+  "libraryGallerySaveWarningSavedWithProof": "ثبوت کے ساتھ محفوظ ہو گئی",
+  "libraryGallerySaveSigning": "آپ کی کلپس میں ثبوت شامل ہو رہا ہے…",
+  "libraryGallerySaveProgress": "{total, plural, =1{آپ کی کلپ محفوظ ہو رہی ہے…} other{کلپ {current} از {total} محفوظ ہو رہی ہے…}}",
   "libraryClipsDeletedCount": "{count, plural, =1{1 کلپ حذف ہو گئی} other{{count} کلپس حذف ہو گئیں}}",
   "@libraryClipsDeletedCount": {
     "placeholders": {

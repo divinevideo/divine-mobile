@@ -6614,6 +6614,66 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryGalleryImportDone => 'ہو گیا';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'منتخب کلپس اپنی گیلری میں محفوظ کریں';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count کلپس اپنے ثبوت کے بغیر محفوظ ہوئیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتیں۔',
+      one: '1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'تفصیلات';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'ثبوت کے بغیر محفوظ';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'آپ کی گیلری سے صرف وہی کلپس واپس آ سکتی ہیں جن کے پاس ثبوت ہو کہ وہ Divine سے بنائی گئی ہیں۔ ان کلپس کی کاپیاں اس ثبوت کے بغیر محفوظ ہوئیں۔';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'ابھی اس کا ثبوت شامل نہیں ہو سکا، شاید اس لیے کہ آپ آف لائن تھے۔ ثبوت والی کاپی محفوظ کرنے کے لیے دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'اسٹاپ موشن کلپس تصاویر سے بنتی ہیں، اور تصاویر ثبوت نہیں رکھ سکتیں۔';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Divine کا یہ ورژن کلپس میں ثبوت شامل نہیں کر سکتا۔';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'اس کلپ کا کوئی ثبوت نہیں، اور Divine بعد میں اسے شامل نہیں کر سکتا۔';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'ثبوت کے ساتھ محفوظ ہو گئی';
+
+  @override
+  String get libraryGallerySaveSigning => 'آپ کی کلپس میں ثبوت شامل ہو رہا ہے…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'کلپ $current از $total محفوظ ہو رہی ہے…',
+      one: 'آپ کی کلپ محفوظ ہو رہی ہے…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

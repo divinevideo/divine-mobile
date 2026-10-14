@@ -6776,6 +6776,68 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryGalleryImportDone => 'Gata';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Salvează clipurile selectate în galeria ta';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count de clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
+      few:
+          '$count clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
+      one: '1 clip a fost salvat fără dovada lui, așa că nu se poate întoarce printre clipurile tale.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Detalii';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Salvate fără dovadă';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'Din galeria ta se pot întoarce doar clipurile cu dovada că au fost filmate cu Divine. Copiile acestor clipuri au fost salvate fără ea.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Dovada nu a putut fi adăugată acum, poate pentru că erai offline. Încearcă din nou ca să salvezi o copie cu dovadă.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Clipurile stop-motion sunt făcute din fotografii, care nu pot purta o dovadă.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Această versiune de Divine nu poate adăuga dovezi clipurilor.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Acest clip nu are dovadă, iar Divine nu o mai poate adăuga ulterior.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof => 'Salvat cu dovada lui';
+
+  @override
+  String get libraryGallerySaveSigning => 'Se adaugă dovada la clipurile tale…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Se salvează clipul $current din $total…',
+      few: 'Se salvează clipul $current din $total…',
+      one: 'Se salvează clipul tău…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

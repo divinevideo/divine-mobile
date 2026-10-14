@@ -15,6 +15,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/clip_category_actions.dart';
 import 'package:openvine/widgets/library/clip_category_chips.dart';
+import 'package:openvine/widgets/library/clip_gallery_save.dart';
 import 'package:openvine/widgets/library/drag_select_region.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
@@ -310,6 +311,10 @@ class _FilterContent extends StatelessWidget {
       context,
       videoClipPreviewRoute(
         clip: clip,
+        // Saved like a selection, so a copy without proof is named too.
+        onSaveToGallery: () async {
+          await saveClipsToGallery(context, [clip]);
+        },
         onDelete: () => _confirmDeleteClip(context, clip),
       ),
     );

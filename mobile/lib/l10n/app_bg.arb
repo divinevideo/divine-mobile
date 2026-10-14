@@ -2335,6 +2335,18 @@
     "libraryGalleryImportItemNotVerified": "Не успяхме да потвърдим, че е заснет с Divine",
     "libraryGalleryImportItemCheckUnavailable": "Не може да се провери сега. Опитай пак по-късно.",
     "libraryGalleryImportDone": "Готово",
+    "librarySaveSelectedClipsTooltip": "Запази избраните клипове в галерията си",
+    "libraryClipsSavedWithoutProof": "{count, plural, =1{1 клип е запазен без доказателството си, затова не може да се върне сред клиповете ти.} other{{count} клипа са запазени без доказателствата си, затова не могат да се върнат сред клиповете ти.}}",
+    "libraryClipsSavedWithoutProofDetails": "Подробности",
+    "libraryGallerySaveWarningTitle": "Запазени без доказателство",
+    "libraryGallerySaveWarningIntro": "От галерията ти могат да се върнат само клипове с доказателство, че са заснети с Divine. Копията на тези клипове са запазени без него.",
+    "libraryGallerySaveWarningSigningUnavailable": "Доказателството не можа да се добави сега, може би защото беше офлайн. Опитай пак, за да запазиш копие с доказателство.",
+    "libraryGallerySaveWarningStopMotion": "Стоп моушън клиповете са направени от снимки, които не могат да носят доказателство.",
+    "libraryGallerySaveWarningSigningUnsupported": "Тази версия на Divine не може да добавя доказателство към клипове.",
+    "libraryGallerySaveWarningNoProof": "Този клип няма доказателство и Divine не може да го добави впоследствие.",
+    "libraryGallerySaveWarningSavedWithProof": "Запазен с доказателството си",
+    "libraryGallerySaveSigning": "Добавяне на доказателство към клиповете ти…",
+    "libraryGallerySaveProgress": "{total, plural, =1{Клипът ти се запазва…} other{Запазване на клип {current} от {total}…}}",
     "libraryClipsDeletedCount": "{count, plural, =1{1 клип е изтрит} other{{count} клипа са изтрити}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {

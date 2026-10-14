@@ -1,6 +1,9 @@
 // ABOUTME: Tests for fetching and caching the ProofSign C2PA trust anchors.
 
+import 'dart:async';
+
 import 'package:cache_sync/cache_sync.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -148,6 +151,88 @@ void main() {
           expect(anchors, isNull);
         },
       );
+
+      test('asks once more when the first attempt hangs', () {
+        fakeAsync((async) {
+          final service = C2paTrustAnchorService(
+            now: () => now,
+            httpClient: MockClient((request) {
+              requests++;
+              // The first connection after a quiet spell hangs; the next
+              // answers at once.
+              return requests == 1
+                  ? Completer<http.Response>().future
+                  : Future.value(http.Response(_bundle, 200));
+            }),
+          );
+          C2paTrustAnchors? anchors;
+
+          unawaited(service.load().then((value) => anchors = value));
+          async.elapse(C2paTrustAnchorService.attemptTimeout);
+
+          expect(requests, equals(2));
+          expect(anchors!.isFresh, isTrue);
+        });
+      });
+
+      group('refetch interval', () {
+        test('reuses a request made moments ago as fresh', () async {
+          final service = createService();
+          await service.load(forceRefresh: true);
+          now = now.add(const Duration(seconds: 30));
+
+          final anchors = await service.load(forceRefresh: true);
+
+          expect(requests, equals(1));
+          expect(anchors!.isFresh, isTrue);
+        });
+
+        test('waits no second time right after a request failed', () async {
+          await createService().load();
+          now = now.add(const Duration(days: 2));
+          final service = createService(
+            respond: () => http.Response('unavailable', 503),
+          );
+          await service.load();
+
+          final anchors = await service.load(forceRefresh: true);
+
+          expect(requests, equals(2));
+          expect(anchors, isNotNull);
+          expect(anchors!.isFresh, isFalse);
+        });
+
+        test('asks again once the interval has passed', () async {
+          final service = createService(
+            respond: () => http.Response('unavailable', 503),
+          );
+          await service.load();
+          now = now.add(C2paTrustAnchorService.refetchInterval);
+
+          await service.load();
+
+          expect(requests, equals(2));
+        });
+
+        test('shares a request that is still running', () async {
+          final response = Completer<http.Response>();
+          final service = C2paTrustAnchorService(
+            now: () => now,
+            httpClient: MockClient((request) {
+              requests++;
+              return response.future;
+            }),
+          );
+
+          final first = service.load();
+          final second = service.load();
+          response.complete(http.Response(_bundle, 200));
+
+          expect((await first)!.isFresh, isTrue);
+          expect((await second)!.isFresh, isTrue);
+          expect(requests, equals(1));
+        });
+      });
 
       test('rejects a response without a certificate', () async {
         final anchors = await createService(

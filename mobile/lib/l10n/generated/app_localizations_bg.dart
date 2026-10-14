@@ -6670,6 +6670,67 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryGalleryImportDone => 'Готово';
 
   @override
+  String get librarySaveSelectedClipsTooltip =>
+      'Запази избраните клипове в галерията си';
+
+  @override
+  String libraryClipsSavedWithoutProof(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count клипа са запазени без доказателствата си, затова не могат да се върнат сред клиповете ти.',
+      one: '1 клип е запазен без доказателството си, затова не може да се върне сред клиповете ти.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryClipsSavedWithoutProofDetails => 'Подробности';
+
+  @override
+  String get libraryGallerySaveWarningTitle => 'Запазени без доказателство';
+
+  @override
+  String get libraryGallerySaveWarningIntro =>
+      'От галерията ти могат да се върнат само клипове с доказателство, че са заснети с Divine. Копията на тези клипове са запазени без него.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnavailable =>
+      'Доказателството не можа да се добави сега, може би защото беше офлайн. Опитай пак, за да запазиш копие с доказателство.';
+
+  @override
+  String get libraryGallerySaveWarningStopMotion =>
+      'Стоп моушън клиповете са направени от снимки, които не могат да носят доказателство.';
+
+  @override
+  String get libraryGallerySaveWarningSigningUnsupported =>
+      'Тази версия на Divine не може да добавя доказателство към клипове.';
+
+  @override
+  String get libraryGallerySaveWarningNoProof =>
+      'Този клип няма доказателство и Divine не може да го добави впоследствие.';
+
+  @override
+  String get libraryGallerySaveWarningSavedWithProof =>
+      'Запазен с доказателството си';
+
+  @override
+  String get libraryGallerySaveSigning =>
+      'Добавяне на доказателство към клиповете ти…';
+
+  @override
+  String libraryGallerySaveProgress(int current, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Запазване на клип $current от $total…',
+      one: 'Клипът ти се запазва…',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String libraryClipsDeletedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

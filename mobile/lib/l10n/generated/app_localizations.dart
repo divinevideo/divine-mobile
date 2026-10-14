@@ -11281,6 +11281,78 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get libraryGalleryImportDone;
 
+  /// Accessibility label for the clip library selection toolbar button that saves the selected clips to the device gallery, and its row in the toolbar's overflow menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Save selected clips to your gallery'**
+  String get librarySaveSelectedClipsTooltip;
+
+  /// Snackbar after saving library clips to the device gallery when some copies carry no C2PA proof that they were shot with Divine, so the gallery import would turn them away. {count} is how many such clips were saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 clip was saved without its proof, so it can\'t come back into your clips.} other{{count} clips were saved without their proof, so they can\'t come back into your clips.}}'**
+  String libraryClipsSavedWithoutProof(int count);
+
+  /// Snackbar action that opens the page listing the clips saved to the gallery without their proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get libraryClipsSavedWithoutProofDetails;
+
+  /// App bar title of the page listing clips whose gallery copy carries no proof that they were shot with Divine.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved without proof'**
+  String get libraryGallerySaveWarningTitle;
+
+  /// Text at the top of the page listing clips saved to the gallery without their C2PA proof, explaining that the gallery import will not take those copies back into the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Only clips with proof that they were shot with Divine can come back from your gallery. The copies of these clips were saved without it.'**
+  String get libraryGallerySaveWarningIntro;
+
+  /// Row on the saved-without-proof page: signing the clip could not run, e.g. offline. Retrying saves another copy that carries the proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Its proof couldn\'t be added just now, maybe because you were offline. Try again to save a copy with it.'**
+  String get libraryGallerySaveWarningSigningUnavailable;
+
+  /// Row on the saved-without-proof page for a stop-motion clip, which is rendered from still photos that carry no proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop-motion clips are made from photos, which can\'t carry proof.'**
+  String get libraryGallerySaveWarningStopMotion;
+
+  /// Row on the saved-without-proof page when this build of the app cannot sign clips at all.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Divine can\'t add proof to clips.'**
+  String get libraryGallerySaveWarningSigningUnsupported;
+
+  /// Row on the saved-without-proof page for a clip that has no proof and cannot be signed later, e.g. footage the app did not record.
+  ///
+  /// In en, this message translates to:
+  /// **'This clip has no proof, and Divine can\'t add it afterwards.'**
+  String get libraryGallerySaveWarningNoProof;
+
+  /// Row on the saved-without-proof page once trying again saved a copy of the clip that carries its proof.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved with its proof'**
+  String get libraryGallerySaveWarningSavedWithProof;
+
+  /// Shown over the clip library while the app signs its own clips that were left without C2PA proof, before saving them to the gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding proof to your clips…'**
+  String get libraryGallerySaveSigning;
+
+  /// Shown over the clip library while selected clips are saved to the device gallery one after another. {current} is the clip being saved, {total} how many are being saved.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, =1{Saving your clip…} other{Saving clip {current} of {total}…}}'**
+  String libraryGallerySaveProgress(int current, int total);
+
   /// No description provided for @libraryClipsDeletedCount.
   ///
   /// In en, this message translates to:

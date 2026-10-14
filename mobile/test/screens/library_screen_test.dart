@@ -29,6 +29,7 @@ import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/screens/clip_gallery_save/clip_gallery_save_warning_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
@@ -1124,26 +1125,22 @@ void main() {
       });
     });
 
-    group('gallery save failure', () {
-      // The failure arm of the gallery-save switch used to render
-      // `e.toString()` straight into the snackbar, while its two sibling arms
-      // both localized. Nothing covered it. This drives a real
-      // GallerySaveService throw through the bloc and pins the localized copy
-      // — and pins that the raw exception text does NOT reach the screen.
-      testWidgets('shows localized copy and never the raw exception text', (
-        tester,
-      ) async {
-        final clip = DivineVideoClip(
-          id: 'clip-save-fail',
-          video: EditorVideo.file('/test/save-fail.mp4'),
-          duration: const Duration(seconds: 4),
-          recordedAt: DateTime(2026),
-          targetAspectRatio: models.AspectRatio.vertical,
-          originalAspectRatio: 9 / 16,
-          thumbnailPath: '/test/save-fail.jpg',
-          ghostFramePath: '/test/save-fail_ghost.jpg',
-        );
+    group('save to gallery', () {
+      late _MockClipProvenanceVerifier verifier;
 
+      final clip = DivineVideoClip(
+        id: 'clip-save',
+        video: EditorVideo.file('/test/save.mp4'),
+        duration: const Duration(seconds: 4),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: models.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+        thumbnailPath: '/test/save.jpg',
+        ghostFramePath: '/test/save_ghost.jpg',
+      );
+
+      setUp(() {
+        verifier = _MockClipProvenanceVerifier();
         when(
           () => mockClipLibraryService.getAllClips(),
         ).thenAnswer((_) async => [clip]);
@@ -1152,42 +1149,141 @@ void main() {
         ).thenAnswer((_) async => [clip]);
         when(
           () => mockGallerySaveService.saveVideoToGallery(any()),
-        ).thenThrow(Exception('boom-secret-path-/Users/someone/clip.mp4'));
+        ).thenAnswer((_) async => const GallerySaveSuccess());
+      });
 
+      void verifiesAs(ClipProvenanceStatus status) => when(
+        () => verifier.verify(any()),
+      ).thenAnswer((_) async => ClipProvenanceResult(status));
+
+      Future<void> saveSelectedClip(WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-              gallerySaveServiceProvider.overrideWithValue(
-                mockGallerySaveService,
-              ),
-              clipLibraryServiceProvider.overrideWithValue(
-                mockClipLibraryService,
-              ),
-              draftStorageServiceProvider.overrideWithValue(
-                mockDraftStorageService,
-              ),
-              clipManagerProvider.overrideWith(ClipManagerNotifier.new),
+          buildWidget(
+            initialTabIndex: 1,
+            tabsMode: LibraryTabsMode.withoutSounds,
+            extraOverrides: [
+              clipProvenanceVerifierProvider.overrideWithValue(verifier),
             ],
-            child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              theme: VineTheme.theme,
-              home: const LibraryScreen(
-                initialTabIndex: 1,
-                tabsMode: LibraryTabsMode.withoutSounds,
-              ),
-            ),
           ),
         );
         await tester.pumpAndSettle();
+        tester
+            .element(find.byType(ClipsTab))
+            .read<ClipsLibraryBloc>()
+            .add(ClipsLibraryToggleSelection(clip));
+        await tester.pumpAndSettle();
 
-        final bloc =
-            tester.element(find.byType(ClipsTab)).read<ClipsLibraryBloc>()
-              ..add(ClipsLibraryToggleSelection(clip));
+        await tester.tap(
+          find.bySemanticsLabel(en.librarySaveSelectedClipsTooltip),
+        );
         await tester.pumpAndSettle();
-        bloc.add(const ClipsLibrarySaveToGallery());
+      }
+
+      testWidgets('saves the selected clips and says so', (tester) async {
+        verifiesAs(ClipProvenanceStatus.verified);
+
+        await saveSelectedClip(tester);
+
+        verify(
+          () => mockGallerySaveService.saveVideoToGallery(any()),
+        ).called(1);
+        expect(
+          find.text(
+            en.libraryClipsSavedToDestination(
+              1,
+              GallerySaveService.destinationName,
+            ),
+          ),
+          findsOneWidget,
+        );
+        final bloc = tester
+            .element(find.byType(ClipsTab))
+            .read<ClipsLibraryBloc>();
+        expect(bloc.state.selectedClipIds, isEmpty);
+      });
+
+      testWidgets('shows how far the save got', (tester) async {
+        verifiesAs(ClipProvenanceStatus.verified);
+        final second = clip.copyWith(
+          id: 'clip-save-2',
+          video: EditorVideo.file('/test/save-2.mp4'),
+        );
+        when(
+          () => mockClipLibraryService.getAllClips(),
+        ).thenAnswer((_) async => [clip, second]);
+        when(
+          () => mockClipLibraryService.recoverMissingAssets(any()),
+        ).thenAnswer((_) async => [clip, second]);
+        final firstSave = Completer<GallerySaveResult>();
+        when(
+          () => mockGallerySaveService.saveVideoToGallery(any()),
+        ).thenAnswer((_) => firstSave.future);
+
+        await tester.pumpWidget(
+          buildWidget(
+            initialTabIndex: 1,
+            tabsMode: LibraryTabsMode.withoutSounds,
+            extraOverrides: [
+              clipProvenanceVerifierProvider.overrideWithValue(verifier),
+            ],
+          ),
+        );
         await tester.pumpAndSettle();
+        tester.element(find.byType(ClipsTab)).read<ClipsLibraryBloc>()
+          ..add(ClipsLibraryToggleSelection(clip))
+          ..add(ClipsLibraryToggleSelection(second));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.bySemanticsLabel(en.librarySaveSelectedClipsTooltip),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(en.libraryGallerySaveProgress(1, 2)), findsOneWidget);
+
+        firstSave.complete(const GallerySaveSuccess());
+        await tester.pumpAndSettle();
+
+        expect(find.text(en.libraryGallerySaveProgress(1, 2)), findsNothing);
+      });
+
+      testWidgets(
+        'warns about a clip saved without its proof and names it on request',
+        (tester) async {
+          verifiesAs(ClipProvenanceStatus.noCredentials);
+
+          await saveSelectedClip(tester);
+
+          expect(
+            find.text(en.libraryClipsSavedWithoutProof(1)),
+            findsOneWidget,
+          );
+
+          await tester.tap(find.text(en.libraryClipsSavedWithoutProofDetails));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(ClipGallerySaveWarningPage), findsOneWidget);
+          // Test builds carry no signing token, so nothing could sign it.
+          expect(
+            find.text(en.libraryGallerySaveWarningSigningUnsupported),
+            findsOneWidget,
+          );
+          expect(find.text(en.commonRetry), findsNothing);
+        },
+      );
+
+      // The failure arm used to render `e.toString()` straight into the
+      // snackbar; this pins the localized copy and that the raw exception
+      // text does NOT reach the screen.
+      testWidgets('shows localized copy and never the raw exception text', (
+        tester,
+      ) async {
+        verifiesAs(ClipProvenanceStatus.verified);
+        when(
+          () => mockGallerySaveService.saveVideoToGallery(any()),
+        ).thenThrow(Exception('boom-secret-path-/Users/someone/clip.mp4'));
+
+        await saveSelectedClip(tester);
 
         expect(
           find.text(
