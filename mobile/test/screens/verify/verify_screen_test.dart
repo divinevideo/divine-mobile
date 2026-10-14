@@ -11,12 +11,34 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockVerifyCubit extends MockCubit<VerifyState> implements VerifyCubit {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -39,6 +61,8 @@ void main() {
 
   group(VerifyView, () {
     late _MockVerifyCubit cubit;
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
 
     setUpAll(() {
       registerFallbackValue(_github);
@@ -48,6 +72,13 @@ void main() {
       cubit = _MockVerifyCubit();
       when(cubit.load).thenAnswer((_) async {});
       when(() => cubit.removeClaim(any())).thenAnswer((_) async {});
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
     });
 
     /// The claim a connect flow hands back when it links Mastodon.
@@ -344,11 +375,13 @@ void main() {
     testWidgets('keeps the link confirmation when its announcement fails', (
       tester,
     ) async {
+      var announcementRejected = false;
       tester.binding.defaultBinaryMessenger
           .setMockDecodedMessageHandler<Object?>(
             SystemChannels.accessibility,
             (Object? message) async {
               if (message is Map && message['type'] == 'announce') {
+                announcementRejected = true;
                 throw StateError('announcement failed');
               }
               return null;
@@ -368,6 +401,15 @@ void main() {
       await tester.tap(find.text('finish link'));
       await tester.pumpAndSettle();
 
+      expect(announcementRejected, isTrue);
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
       expect(
         find.text(l10n.verifyLinkedConfirmation('Mastodon')),
         findsOneWidget,

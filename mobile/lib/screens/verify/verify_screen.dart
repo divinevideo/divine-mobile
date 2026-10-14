@@ -2,7 +2,6 @@
 // ABOUTME: platforms still on offer. Replaces the verifier.divine.video trip.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +16,7 @@ import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
 import 'package:openvine/screens/verify/widgets/verify_how_it_works_sheet.dart';
 import 'package:openvine/screens/verify/widgets/verify_platform_row.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -309,15 +309,11 @@ class _VerifyContent extends StatelessWidget {
     final message = context.l10n.verifyLinkedConfirmation(
       verifyPlatformLabel(linked.platform),
     );
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
-      ),
-      'announce linked identity',
+    announceDetached(
+      context,
+      message,
+      description: 'announce linked identity',
       logName: 'VerifyView',
-      category: LogCategory.auth,
     );
     ScaffoldMessenger.of(context)
         .showSnackBar(DivineSnackbarContainer.snackBar(message));
