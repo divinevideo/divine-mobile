@@ -1,6 +1,8 @@
 // ABOUTME: Compact room message with the same peer identity as Divine DMs.
 // ABOUTME: Shows the message, timestamp, reactions, and recoverable send state.
 
+import 'dart:async';
+
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,9 +36,11 @@ class ChatMessageTile extends ConsumerWidget {
 
   void _openProfile(BuildContext context) {
     FocusScope.of(context).unfocus();
-    context.push<void>(
-      OtherProfileScreen.pathForNpub(
-        NostrKeyUtils.encodePubKey(message.author),
+    unawaited(
+      context.push<void>(
+        OtherProfileScreen.pathForNpub(
+          NostrKeyUtils.encodePubKey(message.author),
+        ),
       ),
     );
   }
