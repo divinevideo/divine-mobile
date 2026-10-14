@@ -9286,6 +9286,61 @@ class AppLocalizationsBg extends AppLocalizations {
       'Отвори редактора на стикери';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'Визуализатор';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'Добави визуализатор, който се движи със звука';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'Цвят на визуализатора';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'Ленти';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'Огледало';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'Вълна';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'Кръг';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'Добави визуализатор';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'Плътност';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'По-малко';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'Повече';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'Реакция';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'Спокойна';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'Жива';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'Ширина на лентите';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'Тесни';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'Широки';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'Примерен ритъм';
+
+  @override
   String get videoEditorSaveDraftTitle => 'Да запазим черновата?';
 
   @override

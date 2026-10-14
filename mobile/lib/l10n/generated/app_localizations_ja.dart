@@ -8756,6 +8756,61 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'スタンプエディタを開く';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'ビジュアライザー';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      '音に合わせて動くビジュアライザーを追加します';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'ビジュアライザーの色';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'バー';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'ミラー';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'ウェーブ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'サークル';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ビジュアライザーを追加';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '密度';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '少なめ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '多め';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '反応';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '穏やか';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '活発';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'バーの幅';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '細い';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '太い';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'サンプルビート';
+
+  @override
   String get videoEditorSaveDraftTitle => '下書きを保存しますか？';
 
   @override

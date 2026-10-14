@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -15,6 +16,7 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/services/video_editor/native_render_task_registry.dart'
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
+import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -609,6 +612,15 @@ class VideoEditorRenderService {
       );
       if (detachedPass.isActive) tempFilePaths.add(detachedPass.basePath);
 
+      // Read once for both passes: an audio visualizer can sit below or above
+      // a detached clip.
+      final audioEnergies = await _audioEnergiesOnOutput(
+        capturedLayers: parameters?.capturedLayers ?? const [],
+        parameters: parameters,
+        clips: clips,
+        maxOutputDuration: maxOutputDuration,
+      );
+
       await _concatenateSegments(
         clips: clips,
         segments: result.segments,
@@ -620,6 +632,7 @@ class VideoEditorRenderService {
         maxOutputDuration: maxOutputDuration,
         imageLayerOverride: detachedPass.baseImageLayers,
         tempFilePaths: tempFilePaths,
+        audioEnergies: audioEnergies,
       );
 
       final outputPath = await detachedPass.composite(
@@ -629,6 +642,7 @@ class VideoEditorRenderService {
         taskId: effectiveTaskId,
         tempFilePaths: tempFilePaths,
         maxOutputDuration: maxOutputDuration,
+        audioEnergies: audioEnergies,
       );
 
       // Fire-and-forget: temp cleanup is non-critical and handles
@@ -846,6 +860,7 @@ class VideoEditorRenderService {
     CropParameters? globalTransform,
     List<ExportedLayer>? imageLayerOverride,
     List<String>? tempFilePaths,
+    Float32List? audioEnergies,
   }) async {
     // Overlap transitions shorten the rendered output, so the true video
     // length is the transition-mapped output duration, capped by
@@ -921,6 +936,7 @@ class VideoEditorRenderService {
         // removed every valid video layer. Keep its unreadable-layer raster
         // fallback instead of filtering again by the kind marker.
         excludeDetachedClips: imageLayerOverride == null,
+        audioEnergies: audioEnergies,
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1100,6 +1116,8 @@ class VideoEditorRenderService {
   /// A censor layer (an area hidden behind a blur or pixelation) becomes a
   /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
   /// it hides whatever is composited before it, in its place in the list.
+  /// An audio visualizer is drawn by the export from [audioEnergies], see
+  /// [audioVisualizerImageLayer].
   ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
@@ -1110,6 +1128,7 @@ class VideoEditorRenderService {
     required double targetAspectRatio,
     required TransitionTimelineMap timelineMap,
     bool excludeDetachedClips = true,
+    Float32List? audioEnergies,
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
     final mapping = ExportLayerMapping(
@@ -1126,6 +1145,7 @@ class VideoEditorRenderService {
             bodySize: bodySize,
             mapping: mapping,
             timelineMap: timelineMap,
+            audioEnergies: audioEnergies,
           ),
     ];
   }
@@ -1136,8 +1156,21 @@ class VideoEditorRenderService {
     required Size bodySize,
     required ExportLayerMapping mapping,
     required TransitionTimelineMap timelineMap,
+    Float32List? audioEnergies,
   }) {
     final layer = item.layer;
+    if (AudioVisualizerLayerData.of(layer) case final visualizer?) {
+      return [
+        audioVisualizerImageLayer(
+          item,
+          visualizer,
+          bodySize: bodySize,
+          mapping: mapping,
+          timelineMap: timelineMap,
+          energies: audioEnergies,
+        ),
+      ];
+    }
     if (layer is PaintLayer && layer.isCensor) {
       return [
         censorImageLayer(
@@ -1293,6 +1326,51 @@ class VideoEditorRenderService {
       );
       return const [];
     }
+  }
+
+  /// The band energies of everything that plays on the exported video, for
+  /// its audio visualizers, or `null` when [capturedLayers] holds none.
+  ///
+  /// A sound that cannot be read leaves the visualizers at rest rather than
+  /// failing the export, as a missing beat does for effects on the beat: the
+  /// sounds themselves were fetched for the export already.
+  static Future<Float32List?> _audioEnergiesOnOutput({
+    required List<ExportedLayer> capturedLayers,
+    required CompleteParameters? parameters,
+    required List<DivineVideoClip> clips,
+    required Duration? maxOutputDuration,
+  }) async {
+    if (!capturedLayers.any(
+      (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
+    )) {
+      return null;
+    }
+    final outputDuration = TransitionTimelineMap.fromClips(
+      clips,
+    ).outputDuration;
+    final videoEnd =
+        maxOutputDuration != null && maxOutputDuration < outputDuration
+        ? maxOutputDuration
+        : outputDuration;
+    final parts = audioLevelSourcesFor(
+      sounds: parameters?.audioTracksFromMeta ?? const [],
+      clips: clips,
+      videoEnd: videoEnd,
+    );
+    final resolver = VideoEditorAudioLevelResolver();
+    try {
+      await resolver.read(parts);
+    } on Exception catch (error, stackTrace) {
+      Log.error(
+        'Could not read the sound for the audio visualizer',
+        name: _logName,
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+    return resolver.energiesOnOutput(parts, videoEnd: videoEnd);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

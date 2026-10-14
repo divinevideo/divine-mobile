@@ -9203,6 +9203,61 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'اسٹیکر ایڈیٹر کھولیں';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'آڈیو ویژولائزر';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'آواز کے ساتھ حرکت کرنے والا ویژولائزر شامل کریں';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'ویژولائزر کا رنگ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'پٹیاں';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'آئینہ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'لہر';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'دائرہ';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ویژولائزر شامل کریں';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'کثافت';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'کم';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'زیادہ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'ردِعمل';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'پُرسکون';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'پُرجوش';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'پٹی کی چوڑائی';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'پتلی';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'چوڑی';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'نمونہ بیٹ';
+
+  @override
   String get videoEditorSaveDraftTitle => 'اپنا مسودہ محفوظ کریں؟';
 
   @override

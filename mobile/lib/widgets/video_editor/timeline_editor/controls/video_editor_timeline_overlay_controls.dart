@@ -14,11 +14,13 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
@@ -96,6 +98,8 @@ class _LayerOverlayControls extends StatelessWidget {
     final isTextLayer = layer is TextLayer;
     final isDetachedClip =
         layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
+    final isAudioVisualizer =
+        layer != null && AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
 
     // Drawings and stickers can be multi-selected and combined when the
     // selected layer is itself mergeable and at least one more layer of its
@@ -115,7 +119,11 @@ class _LayerOverlayControls extends StatelessWidget {
       times: [for (final time in item.keyframeTimes) item.startTime + time],
       builder: (context, isOnKeyframe) => VideoEditorTimelineControls(
         onDelete: () => _removeLayer(context: context),
-        onEdit: isTextLayer ? () => _editTextLayer(context: context) : null,
+        onEdit: isTextLayer
+            ? () => _editTextLayer(context: context)
+            : isAudioVisualizer
+            ? () => _editAudioVisualizer(context: context)
+            : null,
         onDuplicated: () => _duplicateLayer(context: context),
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
@@ -185,6 +193,12 @@ class _LayerOverlayControls extends StatelessWidget {
     if (editor != null && layer != null) {
       editor.removeLayer(layer);
     }
+  }
+
+  Future<void> _editAudioVisualizer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editAudioVisualizerLayer(context, layer);
   }
 
   Future<void> _editTextLayer({required BuildContext context}) async {

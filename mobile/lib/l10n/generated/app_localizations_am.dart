@@ -8997,6 +8997,61 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => 'ተለጣፊ አርታዒን ክፈት';
 
   @override
+  String get videoEditorAudioVisualizerLabel => 'የድምፅ ምስላዊ';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      'ከድምፁ ጋር የሚንቀሳቀስ ምስላዊ ማከል';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => 'የምስላዊው ቀለም';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => 'አሞሌዎች';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => 'መስታወት';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => 'ሞገድ';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => 'ክብ';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => 'ምስላዊ ያክሉ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => 'ጥግግት';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => 'ያነሰ';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => 'ብዙ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => 'ምላሽ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => 'ረጋ ያለ';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => 'ሕያው';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => 'የአሞሌ ስፋት';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => 'ቀጭን';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => 'ሰፊ';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => 'የናሙና ምት';
+
+  @override
   String get videoEditorSaveDraftTitle => 'ረቂቅዎን ይቆጥቡ?';
 
   @override

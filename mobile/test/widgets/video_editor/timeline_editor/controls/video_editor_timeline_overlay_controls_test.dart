@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:models/models.dart' hide AspectRatio;
+import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
@@ -47,7 +49,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ChromaKey, EditorVideo;
+    show AudioVisualizerStyle, ChromaKey, EditorVideo;
 import 'package:riverpod/misc.dart' show Override;
 import 'package:sound_service/sound_service.dart';
 
@@ -118,6 +120,7 @@ void main() {
               BlocProvider<ClipEditorBloc>.value(value: clipBloc),
             if (effectsCubit != null)
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
+            BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
           ],
           child: VideoEditorScope(
             editorKey: GlobalKey(),
@@ -299,6 +302,75 @@ void main() {
       expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
       // A drifting hidden area would uncover what it hides.
       expect(find.text(l10n.videoEditorKeyframesLabel), findsNothing);
+    });
+
+    group('audio visualizer', () {
+      const item = TimelineOverlayItem(
+        id: 'visualizer-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+
+      WidgetLayer visualizerLayer() {
+        final meta = const AudioVisualizerLayerData().toMeta();
+        return WidgetLayer(
+          id: item.id,
+          width: 100,
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          exportConfigs: WidgetLayerExportConfigs(id: item.id, meta: meta),
+        );
+      }
+
+      setUpAll(() => registerFallbackValue(visualizerLayer()));
+
+      testWidgets('offers Edit, and the sheet changes its look', (
+        tester,
+      ) async {
+        final editor = _MockProImageEditorState();
+        final mainBloc = _MockVideoEditorMainBloc();
+        final layer = visualizerLayer();
+        when(() => editor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+
+        await tester.tap(find.text(l10n.videoEditorEditLabel));
+        // The sheet's preview loops while it is open, so it never settles.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text(l10n.videoEditorAudioVisualizerStyleCircle));
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorDoneLabel).last);
+        await tester.pumpAndSettle();
+
+        final replaced =
+            verify(
+                  () => editor.replaceLayer(
+                    index: 0,
+                    layer: captureAny(named: 'layer'),
+                  ),
+                ).captured.single
+                as WidgetLayer;
+        expect(
+          AudioVisualizerLayerData.of(replaced)?.style,
+          AudioVisualizerStyle.circle,
+        );
+        // A ring takes less of the width than a row of bars.
+        expect(
+          replaced.width,
+          closeTo(
+            100 *
+                VideoEditorConstants.audioVisualizerWidthFactor(
+                  AudioVisualizerStyle.circle,
+                ) /
+                VideoEditorConstants.audioVisualizerWidthFactor(
+                  AudioVisualizerStyle.bars,
+                ),
+            1e-9,
+          ),
+        );
+      });
     });
 
     testWidgets('offers saved styles for a text layer only', (tester) async {

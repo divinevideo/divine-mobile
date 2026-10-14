@@ -15593,6 +15593,114 @@ abstract class AppLocalizations {
   /// **'Open sticker editor'**
   String get videoEditorOpenStickerSemanticLabel;
 
+  /// Name of the editor tool and overlay that draws bars or a wave moving with the video's sound. Shown on its tile, as the sheet title and on its timeline bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer'**
+  String get videoEditorAudioVisualizerLabel;
+
+  /// No description provided for @videoEditorOpenAudioVisualizerSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a visualizer that moves with the sound'**
+  String get videoEditorOpenAudioVisualizerSemanticLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerColorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer color'**
+  String get videoEditorAudioVisualizerColorLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars'**
+  String get videoEditorAudioVisualizerStyleBars;
+
+  /// Visualizer style: bars that grow up and down from the middle line.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror'**
+  String get videoEditorAudioVisualizerStyleMirrored;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleWave.
+  ///
+  /// In en, this message translates to:
+  /// **'Wave'**
+  String get videoEditorAudioVisualizerStyleWave;
+
+  /// No description provided for @videoEditorAudioVisualizerStyleCircle.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get videoEditorAudioVisualizerStyleCircle;
+
+  /// No description provided for @videoEditorAudioVisualizerAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add visualizer'**
+  String get videoEditorAudioVisualizerAdd;
+
+  /// Slider in the audio visualizer sheet: how many frequency bands (bars) the visualizer shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Density'**
+  String get videoEditorAudioVisualizerDensityLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerDensityFewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer'**
+  String get videoEditorAudioVisualizerDensityFewer;
+
+  /// No description provided for @videoEditorAudioVisualizerDensityMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get videoEditorAudioVisualizerDensityMore;
+
+  /// Slider in the audio visualizer sheet: how strongly and quickly the bars react to the sound, from calm to lively.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaction'**
+  String get videoEditorAudioVisualizerReactionLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerReactionCalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get videoEditorAudioVisualizerReactionCalm;
+
+  /// No description provided for @videoEditorAudioVisualizerReactionLively.
+  ///
+  /// In en, this message translates to:
+  /// **'Lively'**
+  String get videoEditorAudioVisualizerReactionLively;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar width'**
+  String get videoEditorAudioVisualizerBarWidthLabel;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthThin.
+  ///
+  /// In en, this message translates to:
+  /// **'Thin'**
+  String get videoEditorAudioVisualizerBarWidthThin;
+
+  /// No description provided for @videoEditorAudioVisualizerBarWidthWide.
+  ///
+  /// In en, this message translates to:
+  /// **'Wide'**
+  String get videoEditorAudioVisualizerBarWidthWide;
+
+  /// Small label on the live preview of the audio visualizer sheet while it moves with a built-in drum loop instead of the video's own sound (still being read, or the video has none).
+  ///
+  /// In en, this message translates to:
+  /// **'Sample beat'**
+  String get videoEditorAudioVisualizerPreviewSampleBeat;
+
   /// No description provided for @videoEditorSaveDraftTitle.
   ///
   /// In en, this message translates to:

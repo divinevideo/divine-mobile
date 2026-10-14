@@ -13,6 +13,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -381,6 +382,8 @@ class TimelineOverlayBloc
     TextLayer(:final text) => text,
     PaintLayer() => 'Drawing',
     EmojiLayer(:final emoji) => emoji,
+    WidgetLayer() when AudioVisualizerLayerData.isAudioVisualizerLayer(layer) =>
+      'Visualizer',
     WidgetLayer() => 'Sticker',
     _ => 'Layer',
   };

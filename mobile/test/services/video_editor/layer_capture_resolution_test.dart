@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -164,6 +165,23 @@ void main() {
       expect(
         capturePixelRatioForLayer(_detachedLayer(), const Size(80, 140), 4.9),
         4.9,
+      );
+    });
+
+    test('holds an audio visualizer to its small extent', () {
+      // The export draws the visualizer itself; only its size is read.
+      final meta = const AudioVisualizerLayerData().toMeta();
+      final layer = WidgetLayer(
+        widget: const SizedBox.shrink(),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: 'visualizer', meta: meta),
+      );
+      const size = Size(300, 100);
+      final ratio = capturePixelRatioForLayer(layer, size, 4.9);
+
+      expect(
+        size.longestSide * ratio,
+        closeTo(audioVisualizerCaptureExtent, 1e-9),
       );
     });
   });

@@ -18,6 +18,7 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
@@ -595,6 +597,45 @@ void main() {
       expect(built.offset, const Offset(90, 270));
       expect(built.size, const Size(120, 60));
       expect(built.endTime, const Duration(milliseconds: 3600));
+    });
+
+    test('draws an audio visualizer from the sound, in its place on the '
+        'output timeline', () {
+      const data = AudioVisualizerLayerData();
+      final visualizer = pie.ExportedLayer(
+        layer: pie.WidgetLayer(
+          widget: const SizedBox(),
+          width: 60,
+          meta: data.toMeta(),
+          exportConfigs: pie.WidgetLayerExportConfigs(
+            id: 'visualizer',
+            meta: data.toMeta(),
+          ),
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 4),
+        ),
+        // The export does not read the visualizer's raster.
+        bytes: Uint8List(0),
+        logicalSize: const Size(60, 20),
+      );
+      final energies = Float32List(10 * audioBandCount)..fillRange(0, 48, 1);
+
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(), visualizer],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+        audioEnergies: energies,
+      )!;
+
+      expect(layers.map((l) => l.audioVisualizer != null), [false, true]);
+      final built = layers[1];
+      expect(built.offset, const Offset(60, 270));
+      expect(built.size, const Size(180, 60));
+      expect(built.endTime, const Duration(milliseconds: 3600));
+      expect(built.audioVisualizer!.frameCount, 10);
+      expect(built.audioVisualizer!.bandCount, data.bandCount);
     });
 
     group('word-highlighted captions', () {

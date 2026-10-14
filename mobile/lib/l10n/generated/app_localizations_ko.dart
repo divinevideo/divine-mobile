@@ -8774,6 +8774,61 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpenStickerSemanticLabel => '스티커 편집기 열기';
 
   @override
+  String get videoEditorAudioVisualizerLabel => '비주얼라이저';
+
+  @override
+  String get videoEditorOpenAudioVisualizerSemanticLabel =>
+      '소리에 맞춰 움직이는 비주얼라이저를 추가해요';
+
+  @override
+  String get videoEditorAudioVisualizerColorLabel => '비주얼라이저 색상';
+
+  @override
+  String get videoEditorAudioVisualizerStyleBars => '막대';
+
+  @override
+  String get videoEditorAudioVisualizerStyleMirrored => '미러';
+
+  @override
+  String get videoEditorAudioVisualizerStyleWave => '웨이브';
+
+  @override
+  String get videoEditorAudioVisualizerStyleCircle => '원형';
+
+  @override
+  String get videoEditorAudioVisualizerAdd => '비주얼라이저 추가';
+
+  @override
+  String get videoEditorAudioVisualizerDensityLabel => '밀도';
+
+  @override
+  String get videoEditorAudioVisualizerDensityFewer => '적게';
+
+  @override
+  String get videoEditorAudioVisualizerDensityMore => '많이';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLabel => '반응';
+
+  @override
+  String get videoEditorAudioVisualizerReactionCalm => '잔잔하게';
+
+  @override
+  String get videoEditorAudioVisualizerReactionLively => '역동적으로';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthLabel => '막대 너비';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthThin => '가늘게';
+
+  @override
+  String get videoEditorAudioVisualizerBarWidthWide => '굵게';
+
+  @override
+  String get videoEditorAudioVisualizerPreviewSampleBeat => '샘플 비트';
+
+  @override
   String get videoEditorSaveDraftTitle => '임시저장 하시겠어요?';
 
   @override

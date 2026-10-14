@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
@@ -53,7 +54,10 @@ import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
@@ -681,6 +685,53 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     }
   }
 
+  /// Opens the audio visualizer sheet and adds the visualizer picked there.
+  ///
+  /// A row of bars or a wave sits in the lower part of the video, over
+  /// [VideoEditorConstants.audioVisualizerWidthFactor] of its width; a ring
+  /// sits in the middle. Both are measured on the video as it shows, which
+  /// can be narrower than the canvas body around it. The sheet's preview
+  /// follows the sound [soundLevels] reads.
+  Future<void> _addAudioVisualizer(
+    VideoEditorAudioVisualizerCubit soundLevels,
+  ) async {
+    final data = await showAudioVisualizerSheet(
+      context,
+      soundLevels: soundLevels,
+    );
+    final editor = _editor;
+    if (data == null || editor == null || !mounted) return;
+    final clip = _clip;
+    final geometry = VideoEditorCanvasGeometry(
+      bodySize: _bodySizeNotifier.value,
+      originalAspectRatio: clip?.originalAspectRatio ?? 9 / 16,
+      targetAspectRatio: clip?.targetAspectRatio.value,
+    );
+    final video = geometry.targetSize;
+    final scale = geometry.fittedBoxScale;
+    final layer = audioVisualizerWidgetLayer(
+      data,
+      width:
+          video.width *
+          VideoEditorConstants.audioVisualizerWidthFactor(data.style) /
+          scale,
+      offset: data.style == AudioVisualizerStyle.circle
+          ? Offset.zero
+          : Offset(
+              0,
+              video.height *
+                  VideoEditorConstants.audioVisualizerLowerOffset /
+                  scale,
+            ),
+    );
+    Log.debug(
+      'Adding audio visualizer layer: ${data.style.name}',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    editor.addLayer(layer, blockSelectLayer: true);
+  }
+
   /// Opens the text editor screen to add or edit a text layer.
   ///
   /// If [layer] is provided, the editor is initialized with its values for
@@ -1099,6 +1150,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         BlocProvider(create: (_) => VideoEditorFilterBloc()),
         BlocProvider(create: (_) => VideoEditorTuneBloc()),
         BlocProvider(create: (_) => VideoEditorEffectsCubit()),
+        BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
         BlocProvider(create: (_) => VideoEditorDrawBloc()),
         BlocProvider(create: (_) => VideoEditorTextBloc()),
         BlocProvider.value(value: _timelineOverlayBloc),
@@ -1169,6 +1221,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               },
               onAddStickers: () =>
                   _runDetached(_addStickers(), 'open sticker picker'),
+              onAddAudioVisualizer: () => _runDetached(
+                _addAudioVisualizer(
+                  context.read<VideoEditorAudioVisualizerCubit>(),
+                ),
+                'open audio visualizer sheet',
+              ),
               onAddEditTextLayer: ([layer]) {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final textBloc = context.read<VideoEditorTextBloc>();

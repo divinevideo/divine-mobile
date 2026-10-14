@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
@@ -298,6 +299,57 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Fallback Label'), findsNothing);
+      });
+
+      testWidgets('names an audio visualizer with its icon instead of '
+          'mounting it', (tester) async {
+        final visualizerItem = TimelineOverlayItem(
+          id: 'visualizer-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 3),
+          label: 'Visualizer',
+          layer: buildStickerLayer(
+            meta: const AudioVisualizerLayerData().toMeta(),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: TimelineOverlayItemTile(
+                item: visualizerItem,
+                width: 120,
+                height: 40,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        );
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(TimelineOverlayItemTile)),
+        );
+        expect(
+          find.text(l10n.videoEditorAudioVisualizerLabel),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is DivineIcon && widget.icon == .equalizer,
+          ),
+          findsOneWidget,
+        );
+        // The layer's own widget repaints with the playhead; the bar shows
+        // its name instead.
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SizedBox && widget.width == 40,
+          ),
+          findsNothing,
+        );
       });
 
       testWidgets('names a combined sticker by how many it holds', (
