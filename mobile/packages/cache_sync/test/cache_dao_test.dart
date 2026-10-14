@@ -222,7 +222,7 @@ void main() {
 
       test('deletes oldest entry until enough bytes are freed', () async {
         await dao.write(key: 'old', payload: 'aaaa'); // 4 bytes, written first
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'new', payload: 'bbbb'); // 4 bytes, written later
 
         await dao.evictOldest(4);
@@ -233,9 +233,9 @@ void main() {
 
       test('evicts multiple entries when one is not enough', () async {
         await dao.write(key: 'a', payload: 'aa'); // 2
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'b', payload: 'bb'); // 2
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'c', payload: 'cc'); // 2 — newest, kept
 
         await dao.evictOldest(4);
@@ -250,7 +250,7 @@ void main() {
       setUp(() async {
         await db.close();
         db = CacheDatabase.test(NativeDatabase.memory());
-        dao = CacheDaoImpl(db, maxSizeBytes: 10);
+        dao = CacheDaoImpl(db, maxSizeBytes: 10, now: () => clock);
       });
 
       test('keeps entries within limit', () async {
@@ -263,7 +263,7 @@ void main() {
 
       test('evicts oldest entry when limit is exceeded', () async {
         await dao.write(key: 'old', payload: 'aaaaaaaaaa'); // 10
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         // 10 + 10 = 20 > limit 10, 'old' is evicted
         await dao.write(key: 'new', payload: 'bbbbbbbbbb');
 
