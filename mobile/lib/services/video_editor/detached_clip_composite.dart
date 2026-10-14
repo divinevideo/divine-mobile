@@ -4,7 +4,6 @@
 import 'dart:math' as math;
 import 'dart:ui' show Size;
 
-import 'package:meta/meta.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping, exportedLayerTopLeft;
@@ -136,7 +135,7 @@ PartitionedLayers partitionDetachedClipLayers(
 ///
 /// The recovery uses the sum of the measured dimensions, with the clip's
 /// aspect ratio supplying the constraint that separates width from height.
-@visibleForTesting
+/// An audio visualizer's export layer undoes the same growth.
 Size unrotatedLayerBox({
   required Size boundingBox,
   required double rotation,

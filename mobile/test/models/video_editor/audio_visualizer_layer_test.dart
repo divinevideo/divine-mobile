@@ -166,37 +166,6 @@ void main() {
     });
   });
 
-  group('audioVisualizerUnrotatedSize', () {
-    test('keeps an upright box as it is', () {
-      expect(
-        audioVisualizerUnrotatedSize(
-          const Size(90, 30),
-          rotation: 0,
-          aspectRatio: 3,
-        ),
-        const Size(90, 30),
-      );
-    });
-
-    test('works the unturned box out of a turned one', () {
-      const box = Size(90, 30);
-      final cos = math.cos(0.5).abs();
-      final sin = math.sin(0.5).abs();
-      final turned = Size(
-        box.width * cos + box.height * sin,
-        box.width * sin + box.height * cos,
-      );
-      final size = audioVisualizerUnrotatedSize(
-        turned,
-        rotation: 0.5,
-        aspectRatio: 3,
-      );
-
-      expect(size.width, closeTo(90, 1e-9));
-      expect(size.height, closeTo(30, 1e-9));
-    });
-  });
-
   group('audioVisualizerImageLayer', () {
     // A 100 x 200 body mapped onto a 300 x 600 frame: three frame pixels per
     // body pixel, with the body's top-left on the frame's.

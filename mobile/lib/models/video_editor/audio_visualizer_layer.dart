@@ -1,7 +1,6 @@
 // ABOUTME: An audio visualizer overlay: the look a creator picked, kept in the
 // ABOUTME: meta of its widget layer on the canvas.
 
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -11,6 +10,8 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/detached_clip_composite.dart'
+    show unrotatedLayerBox;
 import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
@@ -197,8 +198,8 @@ pve.ImageLayer audioVisualizerImageLayer(
   Float32List? energies,
 }) {
   final layer = item.layer;
-  final size = audioVisualizerUnrotatedSize(
-    item.logicalSize,
+  final size = unrotatedLayerBox(
+    boundingBox: item.logicalSize,
     rotation: layer.rotation,
     aspectRatio: data.aspectRatio,
   );
@@ -246,21 +247,4 @@ pve.ImageLayer audioVisualizerImageLayer(
     ),
     keyframeClock: layer.divineKeyframeClockForExport(timelineMap: timelineMap),
   );
-}
-
-/// The unturned box of a visualizer whose box, turned by [rotation], has the
-/// bounding box [rotatedBox], for a visualizer [aspectRatio] times as wide as
-/// it is tall.
-Size audioVisualizerUnrotatedSize(
-  Size rotatedBox, {
-  required double rotation,
-  required double aspectRatio,
-}) {
-  if (rotation == 0) return rotatedBox;
-  final cos = math.cos(rotation).abs();
-  final sin = math.sin(rotation).abs();
-  // rotatedBox.width = width * cos + height * sin, with height =
-  // width / aspectRatio.
-  final width = rotatedBox.width / (cos + sin / aspectRatio);
-  return Size(width, width / aspectRatio);
 }
