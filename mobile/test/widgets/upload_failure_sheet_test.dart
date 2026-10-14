@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,19 +63,28 @@ void main() {
   Widget buildSubject({
     required BackgroundUpload upload,
     MockGoRouter? goRouter,
+    ValueListenable<bool>? openerVisible,
   }) {
+    final opener = Builder(
+      builder: (context) => ElevatedButton(
+        onPressed: () => showUploadFailureSheet(context, upload),
+        child: const Text('Open Sheet'),
+      ),
+    );
     final app = MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: BlocProvider<BackgroundPublishBloc>.value(
         value: mockBloc,
         child: Scaffold(
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () => showUploadFailureSheet(context, upload),
-              child: const Text('Open Sheet'),
-            ),
-          ),
+          body: openerVisible == null
+              ? opener
+              : ValueListenableBuilder<bool>(
+                  valueListenable: openerVisible,
+                  builder: (_, visible, child) =>
+                      visible ? child! : const SizedBox.shrink(),
+                  child: opener,
+                ),
         ),
       ),
     );
@@ -102,6 +112,7 @@ void main() {
     WidgetTester tester, {
     required PublishErrorKind kind,
     required MockGoRouter goRouter,
+    ValueListenable<bool>? openerVisible,
   }) async {
     final upload = BackgroundUpload(
       draft: mockDraft,
@@ -109,7 +120,13 @@ void main() {
       result: PublishError(kind),
     );
 
-    await tester.pumpWidget(buildSubject(upload: upload, goRouter: goRouter));
+    await tester.pumpWidget(
+      buildSubject(
+        upload: upload,
+        goRouter: goRouter,
+        openerVisible: openerVisible,
+      ),
+    );
     await tester.tap(find.text('Open Sheet'));
     await tester.pumpAndSettle();
   }
@@ -446,6 +463,32 @@ void main() {
             findsNothing,
           );
         });
+      });
+
+      // The snackbar outlives the widget that opened the sheet; its action
+      // must not resolve anything through that widget's context.
+      testWidgets('View opens drafts after the sheet opener is gone', (
+        tester,
+      ) async {
+        final openerVisible = ValueNotifier<bool>(true);
+        addTearDown(openerVisible.dispose);
+        final goRouter = buildGoRouter();
+        await openFailureSheet(
+          tester,
+          kind: PublishErrorKind.generic,
+          goRouter: goRouter,
+          openerVisible: openerVisible,
+        );
+        await tester.tap(find.text(l10n.uploadFailureSheetSaveToDraftsButton));
+        await tester.pumpAndSettle();
+        openerVisible.value = false;
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.contentWarningView));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verify(() => goRouter.push<void>(RoutePaths.libraryDrafts)).called(1);
       });
 
       group('when navigation is rejected', () {

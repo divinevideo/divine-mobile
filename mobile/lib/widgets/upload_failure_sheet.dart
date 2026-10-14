@@ -54,7 +54,20 @@ Future<void> showUploadFailureSheet(
 
   if (!context.mounted) return;
 
+  // Resolved once, up front: a snackbar action fires seconds later, when this
+  // context may no longer reach its ancestors. Both fail closed when absent.
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final router = GoRouter.maybeOf(context);
+
+  void pushDetached(String location, String description, {Object? extra}) {
+    if (router == null) return;
+    runDetached(
+      router.push<void>(location, extra: extra),
+      description,
+      logName: _logName,
+      category: LogCategory.ui,
+    );
+  }
 
   void showSavedToDraftsSnackBar({required String viewDescription}) {
     messenger?.showSnackBar(
@@ -62,13 +75,8 @@ Future<void> showUploadFailureSheet(
         context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
         actionLabel: context.l10n.contentWarningView,
         onActionPressed: () {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          runDetached(
-            context.push<void>(LibraryScreen.draftsPath),
-            viewDescription,
-            logName: _logName,
-            category: LogCategory.ui,
-          );
+          messenger.hideCurrentSnackBar();
+          pushDetached(LibraryScreen.draftsPath, viewDescription);
         },
       ),
     );
@@ -99,11 +107,10 @@ Future<void> showUploadFailureSheet(
       showSavedToDraftsSnackBar(
         viewDescription: 'open drafts from restricted upload',
       );
-      runDetached(
-        context.push<void>(RoutePaths.accountStatus, extra: true),
+      pushDetached(
+        RoutePaths.accountStatus,
         'open account status for restricted upload',
-        logName: _logName,
-        category: LogCategory.ui,
+        extra: true,
       );
     case _:
       // Sheet was popped externally (e.g. during route transition).
