@@ -228,10 +228,17 @@ class VideoEditorAudioLevelResolver {
         // transient read failure.
         anyRead = true;
         _remember(part.source, _StretchEnergies.silent);
-      } on Exception catch (error) {
-        // A platform error, no audio from the platform, or a network sound the
-        // plugin could not fetch.
+      } on Exception catch (error, stackTrace) {
+        // A platform failure, no audio from the platform, or a network sound
+        // that could not be fetched. The other parts are still read.
         failure = error;
+        Log.warning(
+          'Could not read a sound for the audio visualizer',
+          name: 'VideoEditorAudioLevelResolver',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
       } finally {
         if (identical(_readsInFlight[stretch], pending)) {
           // Removal only relinquishes the cache's reference. This future was
