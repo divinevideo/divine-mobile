@@ -113,7 +113,12 @@ class _ProfileSetupScreenViewState
                 actions: [
                   DiVineAppBarAction(
                     icon: SvgIconSource(DivineIconName.info.assetPath),
-                    onPressed: () => _showNostrInfoSheet(context),
+                    onPressed: () => runDetached(
+                      _showNostrInfoSheet(context),
+                      'show Nostr info sheet',
+                      logName: 'ProfileSetupView',
+                      category: LogCategory.ui,
+                    ),
                     tooltip: context.l10n.profileSetupAboutNostr,
                     semanticLabel: context.l10n.profileSetupAboutNostr,
                   ),
