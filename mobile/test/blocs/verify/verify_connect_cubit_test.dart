@@ -1133,6 +1133,9 @@ void main() {
           ]);
           expect(cubit.state.status, VerifyConnectStatus.linked);
           expect(cubit.state.linkedClaim?.identity, 'jack');
+          // Linked, so no account is left waiting to approve, as on the proof
+          // path.
+          expect(cubit.state.signedInAccount, isNull);
 
           // The sign-in is used up, so approving again publishes nothing more.
           await cubit.approveSignIn();

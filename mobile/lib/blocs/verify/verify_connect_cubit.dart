@@ -357,8 +357,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       addError(error, stackTrace);
       return _failKeepingSignIn(VerifyConnectError.publishFailed);
     }
-    // A sign-in started over this one owns the state now. Closing the page
-    // while publishing is left to emitIfOpen.
+    // Defence in depth: nothing replaces _pending while approve holds isBusy.
+    // Closing the page while publishing is left to emitIfOpen.
     if (!identical(_pending, pending)) return;
     _pending = null;
     emitIfOpen(
@@ -366,6 +366,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         status: VerifyConnectStatus.linked,
         identity: pending.claim.identity,
         linkedClaim: pending.claim,
+        clearSignedInAccount: true,
       ),
     );
   }
