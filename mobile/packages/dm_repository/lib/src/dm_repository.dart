@@ -8957,11 +8957,13 @@ class DmRepository {
   /// `RpcException`, a bunker request `TimeoutException` — is left to the
   /// caller.
   ///
-  /// Encryption and the reply lookup await the signer and the database, and
-  /// an account switch or a stop can land in between. A copy whose session,
-  /// identified by [ownerPubkey] and [generation], ended meanwhile is
-  /// abandoned rather than built under the incoming account and signed with
-  /// the outgoing signer.
+  /// Encryption, the reply lookup and signing await the signer and the
+  /// database, and an account switch or a stop can land in between. A copy
+  /// whose session, identified by [ownerPubkey] and [generation], ended
+  /// meanwhile is abandoned: before signing, rather than built under the
+  /// incoming account and signed with the outgoing signer; after signing,
+  /// because a copy with no live session has no standing to publish, as a
+  /// retry has none.
   Future<Event?> _prepareNip04Copy({
     required String recipientPubkey,
     required String content,
@@ -8996,13 +8998,14 @@ class DmRepository {
     // NIP-04 reply tags are public. Resolve through the stored row so only a
     // kind-4 id already visible to the peer can leave this private store.
     final replyTag = await _resolveNip04ReplyTag(replyToId);
+    void logSessionEnded() => Log.info(
+      'NIP-04 fallback: the account session ended while the legacy kind-4 '
+      'copy for ${pubkeyForLogs(recipientPubkey)} was being prepared — it '
+      'was not sent',
+      category: LogCategory.system,
+    );
     if (_ingestSessionEnded(ownerPubkey, generation)) {
-      Log.info(
-        'NIP-04 fallback: the account session ended while the legacy kind-4 '
-        'copy for ${pubkeyForLogs(recipientPubkey)} was being prepared — it '
-        'was not sent',
-        category: LogCategory.system,
-      );
+      logSessionEnded();
       return null;
     }
     final event = Event(ownerPubkey, EventKind.directMessage, [
@@ -9018,6 +9021,10 @@ class DmRepository {
         'sent',
         category: LogCategory.system,
       );
+      return null;
+    }
+    if (_ingestSessionEnded(ownerPubkey, generation)) {
+      logSessionEnded();
       return null;
     }
     return signed;

@@ -41,6 +41,20 @@ class _ScriptedEncryptSigner extends LocalNostrSigner {
   }
 }
 
+/// A local signer that holds the kind-4 copy's signature until each test
+/// releases it.
+class _ScriptedSignSigner extends LocalNostrSigner {
+  _ScriptedSignSigner(super._privateKey, this._beforeSign);
+
+  final Future<void> Function() _beforeSign;
+
+  @override
+  Future<Event?> signEvent(Event event) async {
+    if (event.kind == EventKind.directMessage) await _beforeSign();
+    return super.signEvent(event);
+  }
+}
+
 /// A message DAO that runs [onGetMessageById] as a read starts, so a test can
 /// end the session while a retry reads its message back.
 class _HookedMessagesDao extends DirectMessagesDao {
@@ -593,6 +607,31 @@ void main() {
               messageService: messageService,
             );
             encrypting.complete('ciphertext?iv=aXY=');
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+
+      test(
+        'publishes nothing when another account signs in while the copy is '
+        'being signed',
+        () {
+          fakeAsync((async) {
+            final signing = Completer<void>();
+            final repository = buildRepository(
+              signer: _ScriptedSignSigner(_privateKey, () => signing.future),
+            );
+            sendOverLatchedThread(async, repository);
+            expect(kind4Attempts, isEmpty, reason: 'still signing');
+
+            repository.setCredentials(
+              userPubkey: _otherOwner,
+              signer: LocalNostrSigner(_otherPrivateKey),
+              messageService: messageService,
+            );
+            signing.complete();
 
             async.elapse(const Duration(seconds: 30));
             expect(kind4Attempts, isEmpty);
