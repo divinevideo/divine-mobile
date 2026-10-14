@@ -39,7 +39,7 @@ void main() {
       ($) async {
         final tester = $.tester;
         await runWithAppErrorHandlers(() async {
-          app.main();
+          await app.main();
           await tester.pumpAndSettle();
           await grantCameraAndMicrophone($);
 
