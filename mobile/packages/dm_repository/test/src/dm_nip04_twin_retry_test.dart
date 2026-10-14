@@ -41,6 +41,25 @@ class _ScriptedEncryptSigner extends LocalNostrSigner {
   }
 }
 
+/// A message DAO that runs [onGetMessageById] as a read starts, so a test can
+/// end the session while a retry reads its message back.
+class _HookedMessagesDao extends DirectMessagesDao {
+  _HookedMessagesDao(super.attachedDatabase);
+
+  void Function()? onGetMessageById;
+  int hookedReads = 0;
+
+  @override
+  Future<DirectMessageRow?> getMessageById(String id, {String? ownerPubkey}) {
+    final hook = onGetMessageById;
+    if (hook != null) {
+      hookedReads++;
+      hook();
+    }
+    return super.getMessageById(id, ownerPubkey: ownerPubkey);
+  }
+}
+
 const _owner =
     'a4f5c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8';
 const _peer =
@@ -696,6 +715,31 @@ void main() {
           });
         },
       );
+
+      test('when the repository is stopped while the retry reads back its '
+          'message', () {
+        fakeAsync((async) {
+          final hooked = _HookedMessagesDao(db);
+          messagesDao = hooked;
+          final repository = buildRepository();
+          sendOverLatchedThread(
+            async,
+            repository,
+            first: (e) async => _unanswered(e),
+          );
+          expect(kind4Attempts, hasLength(1));
+
+          hooked.onGetMessageById = () => unawaited(repository.stopListening());
+          async.elapse(const Duration(seconds: 30));
+
+          expect(
+            hooked.hookedReads,
+            1,
+            reason: 'the retry reached its read-back before the stop',
+          );
+          expect(kind4Attempts, hasLength(1));
+        });
+      });
 
       test('when another account signs in during the backoff', () {
         fakeAsync((async) {
