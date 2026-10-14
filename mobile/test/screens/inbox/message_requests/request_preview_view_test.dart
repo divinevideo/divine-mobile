@@ -516,12 +516,14 @@ void main() {
         String counterparty, {
         List<Override> extraOverrides = const [],
         UserProfile? profile,
+        bool isRemovalProtected = false,
       }) {
         when(() => mockPreviewCubit.state).thenReturn(
           RequestPreviewState(
             status: RequestPreviewStatus.loaded,
             messageCount: 1,
             participantPubkeys: [counterparty],
+            isRemovalProtected: isRemovalProtected,
           ),
         );
 
@@ -601,6 +603,9 @@ void main() {
             buildModerationSubject(
               retired,
               extraOverrides: [retiredKeyCustody(custody)],
+              // What the cubit reports for a one-to-one with this key: the
+              // removal policy is keyed on the pubkey, never on custody.
+              isRemovalProtected: true,
               // The key's holder controls its kind-0, so the test gives it one
               // that tries to look official.
               profile: UserProfile(
@@ -701,7 +706,10 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          buildModerationSubject(kLegacyModerationPubkeys.first),
+          buildModerationSubject(
+            kLegacyModerationPubkeys.first,
+            isRemovalProtected: true,
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -720,7 +728,12 @@ void main() {
       ) async {
         // The pin lifts a current-key thread out of Requests today, so this is
         // insurance for the next rotation rather than a live path.
-        await tester.pumpWidget(buildModerationSubject(kModerationPubkeyHex));
+        await tester.pumpWidget(
+          buildModerationSubject(
+            kModerationPubkeyHex,
+            isRemovalProtected: true,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(
@@ -729,7 +742,11 @@ void main() {
         );
       });
 
-      testWidgets('a group with a moderation participant offers no removal', (
+      // #10151. A room's members are whoever its author listed, so naming a
+      // moderation account does not make it a notice. The repository says
+      // which conversations are protected; the view must not second-guess it
+      // from the participants.
+      testWidgets('a group with a moderation participant offers removal', (
         tester,
       ) async {
         when(() => mockPreviewCubit.state).thenReturn(
@@ -745,7 +762,7 @@ void main() {
 
         expect(
           find.text(l10n.messageRequestDeclineAndRemoveButton),
-          findsNothing,
+          findsOneWidget,
         );
       });
 

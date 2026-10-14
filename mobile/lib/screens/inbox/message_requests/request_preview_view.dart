@@ -79,9 +79,9 @@ class RequestPreviewView extends ConsumerWidget {
     // fallback rejects it with "Pubkey cannot be empty" and the relay fallback
     // then goes looking for the empty string.
     //
-    // `loaded` is gated on the pubkey rather than the status because
-    // `_resolveParticipants` returns `[]` for a conversation the local
-    // database does not have, reaching this same layout without ever failing.
+    // `loaded` is gated on the pubkey rather than the status because the
+    // cubit resolves no participants for a conversation the local database
+    // does not have, reaching this same layout without ever failing.
     if (status == RequestPreviewStatus.loading) {
       return _UnresolvedRequestScaffold(
         child: DivineCircularProgressIndicator(
@@ -798,6 +798,9 @@ class _ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final conversationId = context.read<RequestPreviewCubit>().conversationId;
+    final isRemovalProtected = context.select(
+      (RequestPreviewCubit cubit) => cubit.state.isRemovalProtected,
+    );
 
     return _ActionBar(
       children: [
@@ -818,9 +821,11 @@ class _ActionButtons extends StatelessWidget {
         ),
         // An enforcement notice is not a request to decline. Removing it is
         // permanent and it is the user's only copy of why they were actioned,
-        // so the action is not offered (#6971). The cubit refuses it too, for
-        // the unresolved states below that cannot name the peer.
-        if (!participantPubkeys.any(isModerationAccount))
+        // so the action is not offered (#6971). Which conversations those are
+        // is the repository's answer, not the participants' identities: a
+        // room that names the moderation account is not its notice (#10151).
+        // The cubit refuses it too, for the unresolved states below.
+        if (!isRemovalProtected)
           _DeclineAndRemoveButton(displayName: displayName),
       ],
     );
@@ -830,9 +835,9 @@ class _ActionButtons extends StatelessWidget {
 /// The one action that survives an unresolved counterparty: `declineRequest`
 /// takes the conversation ID, not the participants.
 ///
-/// Not rendered at all once the peer resolves to a Divine moderation identity
-/// — see [_ActionButtons]. It stays here because this branch has no peer to
-/// test, so the refusal comes back from the cubit instead.
+/// Not rendered at all once the repository reports the conversation protected
+/// — see [_ActionButtons]. It stays on the unresolved branches, which have no
+/// such answer yet, so a refusal comes back from the cubit instead.
 ///
 /// [displayName] is null on the unresolved-counterparty states, where there is
 /// no name to put in the confirmation snackbar; the decline still runs.

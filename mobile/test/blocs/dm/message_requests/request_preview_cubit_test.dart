@@ -17,6 +17,8 @@ void main() {
       'aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd';
   const otherPubkey =
       '1122334411223344112233441122334411223344112233441122334411223344';
+  const thirdPubkey =
+      '5566778855667788556677885566778855667788556677885566778855667788';
   const conversationId =
       'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
   const inviteMessage = DmMessage(
@@ -65,6 +67,9 @@ void main() {
     test('does not emit or throw when closed mid-load', () async {
       final completer = Completer<int>();
       when(
+        () => mockDmRepository.getConversation(any()),
+      ).thenAnswer((_) async => null);
+      when(
         () => mockDmRepository.countMessagesInConversation(any()),
       ).thenAnswer((_) => completer.future);
       when(
@@ -96,6 +101,20 @@ void main() {
       blocTest<RequestPreviewCubit, RequestPreviewState>(
         'emits loaded with message count and provided pubkeys',
         setUp: () {
+          // A stored row naming someone else, so the expected participants
+          // can only have come from the provided ones.
+          final stored = DmConversation(
+            id: conversationId,
+            participantPubkeys: const [testPubkey, thirdPubkey],
+            isGroup: false,
+            createdAt: 1700000000,
+          );
+          when(
+            () => mockDmRepository.getConversation(any()),
+          ).thenAnswer((_) async => stored);
+          when(() => mockDmRepository.isRemovalProtected(stored)).thenReturn(
+            false,
+          );
           when(
             () => mockDmRepository.countMessagesInConversation(any()),
           ).thenAnswer((_) async => 5);
@@ -118,7 +137,6 @@ void main() {
           verify(
             () => mockDmRepository.countMessagesInConversation(conversationId),
           ).called(1);
-          verifyNever(() => mockDmRepository.getConversation(any()));
           verify(
             () => mockDmRepository.getMessages(conversationId, limit: 10),
           ).called(1);
@@ -128,16 +146,20 @@ void main() {
       blocTest<RequestPreviewCubit, RequestPreviewState>(
         'resolves pubkeys from DB when none provided',
         setUp: () {
+          final stored = DmConversation(
+            id: conversationId,
+            participantPubkeys: const [testPubkey, otherPubkey],
+            isGroup: false,
+            createdAt: 1700000000,
+          );
           when(
             () => mockDmRepository.countMessagesInConversation(any()),
           ).thenAnswer((_) async => 3);
-          when(() => mockDmRepository.getConversation(any())).thenAnswer(
-            (_) async => DmConversation(
-              id: conversationId,
-              participantPubkeys: const [testPubkey, otherPubkey],
-              isGroup: false,
-              createdAt: 1700000000,
-            ),
+          when(
+            () => mockDmRepository.getConversation(any()),
+          ).thenAnswer((_) async => stored);
+          when(() => mockDmRepository.isRemovalProtected(stored)).thenReturn(
+            false,
           );
           when(
             () =>
@@ -159,6 +181,44 @@ void main() {
             () => mockDmRepository.getConversation(conversationId),
           ).called(1);
         },
+      );
+
+      // #10151. The Decline gate asks the repository about the row its removal
+      // will act on, so the button and the refusal cannot disagree.
+      blocTest<RequestPreviewCubit, RequestPreviewState>(
+        'carries the removal protection the repository reports for the '
+        'stored conversation',
+        setUp: () {
+          final stored = DmConversation(
+            id: conversationId,
+            participantPubkeys: const [testPubkey, otherPubkey],
+            isGroup: false,
+            createdAt: 1700000000,
+          );
+          when(
+            () => mockDmRepository.getConversation(any()),
+          ).thenAnswer((_) async => stored);
+          when(
+            () => mockDmRepository.isRemovalProtected(stored),
+          ).thenReturn(true);
+          when(
+            () => mockDmRepository.countMessagesInConversation(any()),
+          ).thenAnswer((_) async => 1);
+          when(
+            () =>
+                mockDmRepository.getMessages(any(), limit: any(named: 'limit')),
+          ).thenAnswer((_) async => const []);
+        },
+        build: () => buildCubit(initialParticipantPubkeys: [otherPubkey]),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [otherPubkey],
+            isRemovalProtected: true,
+          ),
+        ],
       );
 
       blocTest<RequestPreviewCubit, RequestPreviewState>(
@@ -324,6 +384,9 @@ void main() {
       blocTest<RequestPreviewCubit, RequestPreviewState>(
         'restricted + all counterparties approved loads normally',
         setUp: () {
+          when(
+            () => mockDmRepository.getConversation(any()),
+          ).thenAnswer((_) async => null);
           when(
             () => mockDmRepository.countMessagesInConversation(any()),
           ).thenAnswer((_) async => 2);
