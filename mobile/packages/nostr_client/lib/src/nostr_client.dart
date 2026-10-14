@@ -814,6 +814,13 @@ class NostrClient {
   ///  * a short settle window elapses after the first answer, or
   ///  * [timeout] elapses.
   ///
+  /// [timeout] covers the reconnect as well as the `OK` wait. When no relay is
+  /// connected and none was named, the reconnect in front of the send is spent
+  /// from it, and one [PublishTracker.defaultSettleWindow] stays back for the
+  /// send. A reconnect still running by then is abandoned and the publish goes
+  /// ahead with whatever connected, or reports that no relay was reached when
+  /// nothing did. Signing an event that arrives unsigned is not part of it.
+  ///
   /// It does **not** complete on the first acceptance. A publish that one
   /// relay accepts and another rejects reports both, and relays that were
   /// targeted but never reached are reported in
@@ -866,8 +873,33 @@ class NostrClient {
     final hasExplicitTargets =
         effectiveTargets != null && effectiveTargets.isNotEmpty;
 
+    var sendTimeout = timeout;
     if (_relayManager.connectedRelays.isEmpty && !hasExplicitTargets) {
-      await retryDisconnectedRelays();
+      // One deadline for the reconnect and the send, as the read paths keep
+      // (#7091). A settle window stays back for the send: a relay that
+      // connects at the deadline must still get time to answer (#8451).
+      final reserve = timeout < PublishTracker.defaultSettleWindow
+          ? timeout
+          : PublishTracker.defaultSettleWindow;
+      final reconnecting = clock.stopwatch()..start();
+      var abandoned = false;
+      await retryDisconnectedRelays().timeout(
+        timeout - reserve,
+        onTimeout: () {
+          abandoned = true;
+        },
+      );
+      final left = timeout - reconnecting.elapsed;
+      sendTimeout = left.isNegative ? Duration.zero : left;
+      if (abandoned) {
+        Log.info(
+          'Reconnect still dialling after '
+          '${reconnecting.elapsed.inMilliseconds}ms; carrying on with '
+          'whatever connected',
+          name: 'NostrClient',
+          category: LogCategory.relay,
+        );
+      }
       if (_relayManager.connectedRelays.isEmpty) {
         return rollbackOnFailure(
           PublishOutcome(
@@ -887,7 +919,7 @@ class NostrClient {
             event,
             targetRelays: effectiveTargets,
             tempRelays: effectiveTargets,
-            timeout: timeout,
+            timeout: sendTimeout,
           ) ??
           PublishOutcome(
             eventId: event.id,

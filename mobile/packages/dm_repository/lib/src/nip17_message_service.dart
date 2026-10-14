@@ -523,6 +523,8 @@ class NIP17MessageService {
   /// with `awaitRecipientOk: true` (reaction sends and message sends). Kept
   /// well under the caller's outer publish cap so the confirmation resolves
   /// with headroom for the subsequent self-wrap before that timeout fires.
+  /// With no relay connected and none named, the reconnect in front of the
+  /// send is spent from it too (#8451).
   static const Duration _recipientOkConfirmTimeout =
       DmSendBudget.recipientOkConfirm;
 

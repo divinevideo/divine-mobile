@@ -28144,7 +28144,7 @@ void main() {
           // Persistently unreadable — the same state the original send saw.
           // Without this fix the sweep re-resolves to null, publishes to the
           // pool, scores the OK as success and deletes the row, converging on
-          // exactly the pre-fix outcome ~160s later.
+          // exactly the pre-fix outcome one sweep later.
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),

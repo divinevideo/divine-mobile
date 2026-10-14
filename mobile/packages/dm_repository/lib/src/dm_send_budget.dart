@@ -224,6 +224,10 @@ abstract final class DmSendBudget {
 
   /// OK-confirmation window for the recipient wrap.
   ///
+  /// The wait for that leg, reconnect included: with no relay connected and
+  /// none named, `NostrClient.publishEventAwaitOk` spends it on the reconnect
+  /// in front of the send first (#8451).
+  ///
   /// Read by `NIP17MessageService._recipientOkConfirmTimeout`.
   static const Duration recipientOkConfirm = Duration(
     seconds: _recipientOkConfirmSeconds,
