@@ -117,13 +117,18 @@ class VideoEditorAudioVisualizerCubit
     }
     final current = state.input;
     if (current == null || !_resolver.hasRead(current.parts)) return;
+    final energies = _resolver.energiesOnOutput(
+      current.parts,
+      videoEnd: current.videoEnd,
+    );
     emitIfOpen(
       state.copyWith(
-        energies: _resolver.energiesOnOutput(
-          current.parts,
-          videoEnd: current.videoEnd,
-        ),
-        status: VideoEditorAudioLevelStatus.ready,
+        energies: energies,
+        // Clips without an audio track read as silence: nothing plays, as
+        // when every clip is muted.
+        status: energies.every((energy) => energy == 0)
+            ? VideoEditorAudioLevelStatus.noSound
+            : VideoEditorAudioLevelStatus.ready,
       ),
     );
   }

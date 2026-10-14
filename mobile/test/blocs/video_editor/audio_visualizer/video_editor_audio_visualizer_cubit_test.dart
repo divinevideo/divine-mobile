@@ -128,6 +128,14 @@ void main() {
       expect(silentState.status, VideoEditorAudioLevelStatus.noSound);
       expect(silentState.energies!.every((energy) => energy == 0), isTrue);
 
+      // A clip without an audio track plays nothing either.
+      final noTrack = buildCubit(failure: const AudioNoTrackException())
+        ..syncSources(sounds: const [], clips: [mutedClip.copyWith(volume: 1)])
+        ..setActive(isActive: true);
+      final noTrackState = await settled(noTrack);
+      expect(noTrackState.status, VideoEditorAudioLevelStatus.noSound);
+      expect(noTrackState.energies!.every((energy) => energy == 0), isTrue);
+
       final unreadable = buildCubit(failure: PlatformException(code: 'gone'))
         ..syncSources(sounds: [music], clips: [mutedClip])
         ..setActive(isActive: true);
@@ -136,6 +144,7 @@ void main() {
         VideoEditorAudioLevelStatus.failed,
       );
       await silent.close();
+      await noTrack.close();
       await unreadable.close();
     });
   });
