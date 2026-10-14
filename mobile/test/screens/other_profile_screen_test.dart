@@ -503,6 +503,36 @@ void main() {
         ).called(1);
       },
     );
+
+    testWidgets('tells the user when unfollowing from More fails', (
+      tester,
+    ) async {
+      when(
+        () => followRepository.toggleFollow(targetPubkey),
+      ).thenAnswer((_) async => throw Exception('publish failed'));
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildSubject(container: container));
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.bySemanticsLabel(l10n.profileMoreTooltip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(
+        find.textContaining(l10n.profileUnfollowDisplayName('')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.followersUpdateFollowFailed), findsOneWidget);
+      expect(
+        find.textContaining(l10n.profileUnfollowedUser('')),
+        findsNothing,
+      );
+    });
   });
 
   group('navigation', () {
