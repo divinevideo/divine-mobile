@@ -11,10 +11,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart'
     as dialog_api
@@ -23,6 +26,8 @@ import 'package:openvine/widgets/delete_account_dialog.dart'
     hide executeAccountDeletion;
 import 'package:profile_repository/profile_repository.dart';
 
+import '../helpers/go_router.dart';
+
 class _MockAccountDeletionService extends Mock
     implements AccountDeletionService {}
 
@@ -30,6 +35,49 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockAccountDeletionRecoveryRepository extends Mock
     implements AccountDeletionRecoveryRepository {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    reports.add((error: error, reason: reason));
+  }
+}
+
+/// Routes reportable detached failures to a recorder for this test only.
+_RecordingCrashReporter _recordDetachedFailures() {
+  final original = detachedFailureReporter;
+  final reporter = _RecordingCrashReporter();
+  detachedFailureReporter = reporter;
+  addTearDown(() => detachedFailureReporter = original);
+  return reporter;
+}
+
+/// Asserts a StateError reached the reporter through `runDetached`, which is
+/// what proves the failure was supervised rather than dropped.
+void _expectDetachedStateErrorReported(_RecordingCrashReporter reporter) {
+  final report = reporter.reports.single;
+  expect(report.reason, equals('runDetached AccountDeletion'));
+  expect(
+    report.error,
+    isA<Reportable<Object>>().having(
+      (r) => r.unwrap(),
+      'unwrap',
+      isA<StateError>(),
+    ),
+  );
+}
 
 const _recoverableAttempt = AccountDeletionAttempt(
   id: 'attempt-id',
@@ -1627,6 +1675,53 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Bug report form'), findsOneWidget);
+    });
+
+    testWidgets('a rejected support-report push is reported, not left '
+        'unhandled', (tester) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+      final reporter = _recordDetachedFailures();
+      final goRouter = MockGoRouter();
+      when(
+        () => goRouter.push<void>(RoutePaths.supportReportBug),
+      ).thenAnswer((_) => Future<void>.error(StateError('push failed')));
+
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        MockGoRouterProvider(
+          goRouter: goRouter,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return const Scaffold(body: SizedBox.shrink());
+              },
+            ),
+          ),
+        ),
+      );
+
+      await runDeletion(
+        context: capturedContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_englishL10n().supportReportBug));
+      await tester.pumpAndSettle();
+
+      verify(() => goRouter.push<void>(RoutePaths.supportReportBug)).called(1);
+      expect(tester.takeException(), isNull);
+      _expectDetachedStateErrorReported(reporter);
     });
 
     testWidgets('a rejected screen-reader announcement does not escape', (
