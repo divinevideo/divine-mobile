@@ -2,7 +2,6 @@
 // ABOUTME: platforms still on offer. Replaces the verifier.divine.video trip.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +15,11 @@ import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
 import 'package:openvine/screens/verify/widgets/verify_how_it_works_sheet.dart';
 import 'package:openvine/screens/verify/widgets/verify_platform_row.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Route host for the verify dashboard.
 class VerifyPage extends ConsumerWidget {
@@ -48,8 +50,16 @@ class VerifyPage extends ConsumerWidget {
       // Re-create on a repository swap: the captured signer and client belong
       // to the identity that was current when the flow opened.
       key: ValueKey((repository, pubkey)),
-      create: (_) =>
-          VerifyCubit(repository: repository, pubkey: pubkey)..load(),
+      create: (_) {
+        final cubit = VerifyCubit(repository: repository, pubkey: pubkey);
+        runDetached(
+          cubit.load(),
+          'load identity claims',
+          logName: 'VerifyPage',
+          category: LogCategory.auth,
+        );
+        return cubit;
+      },
       child: const VerifyView(),
     );
   }
@@ -163,7 +173,12 @@ class _VerifyLoadFailure extends StatelessWidget {
             DivineButton(
               label: l10n.verifyRetry,
               type: DivineButtonType.secondary,
-              onPressed: () => context.read<VerifyCubit>().load(),
+              onPressed: () => runDetached(
+                context.read<VerifyCubit>().load(),
+                'retry loading identity claims',
+                logName: 'VerifyView',
+                category: LogCategory.auth,
+              ),
             ),
           ],
         ),
@@ -275,7 +290,8 @@ class _VerifyContent extends StatelessWidget {
       secondaryButtonText: l10n.commonCancel,
       onSecondaryPressed: () => navigator.pop(false),
     );
-    if (confirmed != true) return;
+    // The prompt outlives a cubit that an identity change closed under it.
+    if (confirmed != true || cubit.isClosed) return;
     await cubit.removeClaim(claim);
   }
 
@@ -294,10 +310,11 @@ class _VerifyContent extends StatelessWidget {
     final message = context.l10n.verifyLinkedConfirmation(
       verifyPlatformLabel(linked.platform),
     );
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       message,
-      Directionality.of(context),
+      description: 'announce linked identity',
+      logName: 'VerifyView',
     );
     ScaffoldMessenger.of(
       context,

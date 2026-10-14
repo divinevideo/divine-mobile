@@ -3,19 +3,50 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+import '../../helpers/test_provider_overrides.dart';
+
 class _MockVerifyCubit extends MockCubit<VerifyState> implements VerifyCubit {}
+
+class _MockIdentityClaimsRepository extends Mock
+    implements IdentityClaimsRepository {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -38,6 +69,8 @@ void main() {
 
   group(VerifyView, () {
     late _MockVerifyCubit cubit;
+    late CrashReporter originalReporter;
+    late _RecordingCrashReporter reporter;
 
     setUpAll(() {
       registerFallbackValue(_github);
@@ -47,6 +80,13 @@ void main() {
       cubit = _MockVerifyCubit();
       when(cubit.load).thenAnswer((_) async {});
       when(() => cubit.removeClaim(any())).thenAnswer((_) async {});
+      originalReporter = detachedFailureReporter;
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+    });
+
+    tearDown(() {
+      detachedFailureReporter = originalReporter;
     });
 
     /// The claim a connect flow hands back when it links Mastodon.
@@ -149,6 +189,29 @@ void main() {
       verify(cubit.load).called(1);
     });
 
+    testWidgets('reports a retry that fails instead of leaking it', (
+      tester,
+    ) async {
+      when(cubit.load).thenAnswer((_) async {
+        throw StateError('retry failed');
+      });
+      await pump(tester, VerifyState(status: VerifyStatus.failure));
+      expect(reporter.recordedErrors, isEmpty);
+
+      await tester.tap(find.text(l10n.verifyRetry));
+      await tester.pump();
+
+      verify(cubit.load).called(1);
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
+    });
+
     testWidgets('marks each link verified or not', (tester) async {
       await pump(tester, ready());
 
@@ -233,6 +296,7 @@ void main() {
     }
 
     testWidgets('unlinks the tapped account once confirmed', (tester) async {
+      when(() => cubit.isClosed).thenReturn(false);
       await pump(tester, ready());
 
       await tapUnlink(tester, 'jack');
@@ -258,6 +322,21 @@ void main() {
 
       verifyNever(() => cubit.removeClaim(any()));
       expect(find.text('jack'), findsOne);
+    });
+
+    testWidgets('drops the unlink when the cubit closed behind the prompt', (
+      tester,
+    ) async {
+      await pump(tester, ready());
+
+      await tapUnlink(tester, 'jack');
+      // The prompt lives on the navigator, so an identity change can close the
+      // cubit and leave the prompt open. Unlinking on it throws.
+      when(() => cubit.isClosed).thenReturn(true);
+      await tester.tap(find.text(l10n.verifyUnlinkConfirmCta));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => cubit.removeClaim(any()));
     });
 
     /// Drives the state change the error listener reacts to.
@@ -328,6 +407,50 @@ void main() {
       verifyNever(cubit.load);
     });
 
+    testWidgets('keeps the link confirmation when its announcement fails', (
+      tester,
+    ) async {
+      var announcementRejected = false;
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            (Object? message) async {
+              if (message is Map && message['type'] == 'announce') {
+                announcementRejected = true;
+                throw StateError('announcement failed');
+              }
+              return null;
+            },
+          );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+
+      await pump(tester, ready());
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('finish link'));
+      await tester.pumpAndSettle();
+
+      expect(announcementRejected, isTrue);
+      expect(
+        reporter.recordedErrors.single,
+        isA<Reportable<Object>>().having(
+          (r) => r.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      );
+      expect(
+        find.text(l10n.verifyLinkedConfirmation('Mastodon')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('says nothing when the flow is left without linking', (
       tester,
     ) async {
@@ -364,6 +487,57 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('connect mastodon'), findsOneWidget);
+    });
+  });
+
+  group(VerifyPage, () {
+    late _MockIdentityClaimsRepository repository;
+
+    setUp(() {
+      repository = _MockIdentityClaimsRepository();
+      when(repository.supportedPlatforms).thenAnswer(
+        (_) async => const [
+          VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+        ],
+      );
+      when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+        (_) async => const IdentityClaimStatus(
+          claims: [_github],
+          verifiedKeys: {'github:octocat'},
+          verifierReachable: true,
+        ),
+      );
+    });
+
+    testWidgets('reads the signed-in identity links as soon as it opens', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            identityClaimsRepositoryProvider.overrideWithValue(repository),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: _pubkey,
+              ),
+            ),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.authenticated,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: const VerifyPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      verify(() => repository.claimsWithVerdicts(_pubkey)).called(1);
+      expect(find.text('octocat'), findsOneWidget);
     });
   });
 }
