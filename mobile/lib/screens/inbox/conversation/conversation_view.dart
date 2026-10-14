@@ -215,8 +215,8 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           await ClipboardUtils.copyPubkey(context, npub);
         case MoreSheetResult.unfollow:
           try {
-            // `unfollow`, never `toggleFollow`: the follow list can change
-            // while the sheet is open, and toggle would then follow them.
+            // The user chose Unfollow; don't decide again from a follow list
+            // that can change while the sheet is open (#6903).
             await followRepository.unfollow(otherPubkey);
           } on Exception {
             // FollowRepository has already logged the failure and left the

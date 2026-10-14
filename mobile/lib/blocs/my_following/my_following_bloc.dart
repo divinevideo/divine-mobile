@@ -8,6 +8,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'my_following_event.dart';
@@ -42,8 +43,8 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       _onLoadRequested,
       transformer: restartable(),
     );
-    on<MyFollowingToggleRequested>(
-      _onToggleRequested,
+    on<MyFollowingEditRequested>(
+      _onEditRequested,
       transformer: droppable(),
     );
     on<MyFollowingBlocklistChanged>(_onBlocklistChanged);
@@ -100,12 +101,13 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       await emit.forEach<CacheResult<FollowingSnapshot>>(
         _followRepository.watchMyFollowingCached(),
         onData: (result) {
-          // Once the user has toggled locally, the repository's in-memory list
-          // is the authority. The mount-time load can still be in flight when
-          // the user taps Follow; its revalidation read resolves with the
-          // relay-lagged pre-toggle snapshot and would otherwise revert the
-          // button (#5144). Defer to the repository instead of the stale
-          // emission; let the emission only drive the refreshing indicator.
+          // Once the user has followed or unfollowed here, the repository's
+          // in-memory list is the authority. The mount-time load can still be
+          // in flight when the user taps Follow; its revalidation read
+          // resolves with the relay-lagged pre-edit snapshot and would
+          // otherwise revert the button (#5144). Defer to the repository
+          // instead of the stale emission; let the emission only drive the
+          // refreshing indicator.
           final pubkeys = state.hasLocalFollowEdit
               ? _followRepository.followingPubkeys
               : result.data.pubkeys;
@@ -149,53 +151,70 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
     }
   }
 
-  /// Handle follow toggle request.
+  /// Follow or unfollow exactly what the event names.
+  ///
+  /// The button that sent the event was drawn from an earlier state, so
+  /// deciding again from [FollowRepository.isFollowing] would reverse the
+  /// user's choice whenever the follow list changed in between — another
+  /// device, a cold list being replaced (#6903), a rollback. `follow` and
+  /// `unfollow` are no-ops when there is nothing to do.
   ///
   /// Delegates to the repository, which updates the in-memory follow set and
   /// emits on [FollowRepository.followingStream]. That stream drives
-  /// [_onRepositoryUpdated] — the single source of post-toggle reactivity — so
+  /// [_onRepositoryUpdated] — the single source of post-edit reactivity — so
   /// the button reflects the new state immediately and optimistically.
   ///
   /// We deliberately do NOT re-dispatch [MyFollowingListLoadRequested] here.
   /// That re-load re-read [FollowRepository.watchMyFollowingCached], whose
-  /// stale-while-revalidate cache served a pre-toggle disk snapshot first and
+  /// stale-while-revalidate cache served a pre-edit disk snapshot first and
   /// reverted the button (#5144). The repository invalidates that cache on
   /// mutation, so the next load (on the next mount) is fresh.
   ///
-  /// Before the toggle we set [MyFollowingState.hasLocalFollowEdit] so that an
+  /// Before the edit we set [MyFollowingState.hasLocalFollowEdit] so that an
   /// already-in-flight mount-time load (its revalidation read can still
-  /// resolve with the relay-lagged pre-toggle list) defers to the repository
+  /// resolve with the relay-lagged pre-edit list) defers to the repository
   /// instead of reverting the button — see [_onLoadRequested] — and so the
   /// feed badge can tell a follow made from it apart from one that predates
   /// the item.
   ///
-  /// Uses [droppable] transformer to prevent concurrent toggles from
-  /// racing each other (e.g. rapid taps toggling follow/unfollow/follow).
-  Future<void> _onToggleRequested(
-    MyFollowingToggleRequested event,
+  /// Follow and Unfollow share one [droppable] bucket, so two contact-list
+  /// publishes never race: an edit sent while another is still publishing is
+  /// dropped, not queued.
+  Future<void> _onEditRequested(
+    MyFollowingEditRequested event,
     Emitter<MyFollowingState> emit,
   ) async {
-    // Clear previous toggle error state before retrying.
+    // Clear the previous failure so a retry's failure is a new transition.
     if (state.status == MyFollowingStatus.toggleFailure) {
       emit(state.copyWith(status: MyFollowingStatus.success));
     }
 
-    // Marked before the toggle resolves rather than after: the repository
+    // Marked before the edit resolves rather than after: the repository
     // updates its in-memory list and emits synchronously, so the badge shows
     // the new state before the network round trip completes, and it must
-    // already know by then that this follow was made here.
+    // already know by then that this edit was made here.
     if (!state.hasLocalFollowEdit) {
       emit(state.copyWith(hasLocalFollowEdit: true));
     }
 
     try {
-      await _followRepository.toggleFollow(event.pubkey);
-    } catch (e) {
+      switch (event) {
+        case MyFollowingFollowRequested(:final pubkey):
+          await _followRepository.follow(pubkey);
+        case MyFollowingUnfollowRequested(:final pubkey):
+          await _followRepository.unfollow(pubkey);
+      }
+    } catch (e, stackTrace) {
+      final action = switch (event) {
+        MyFollowingFollowRequested() => 'follow',
+        MyFollowingUnfollowRequested() => 'unfollow',
+      };
       Log.error(
-        'Failed to toggle follow for user: $e',
+        'Failed to $action ${pubkeyForLogs(event.pubkey)}: $e',
         name: 'MyFollowingBloc',
         category: LogCategory.system,
       );
+      addError(e, stackTrace);
       if (isClosed || emit.isDone) return;
       emit(state.copyWith(status: MyFollowingStatus.toggleFailure));
     }

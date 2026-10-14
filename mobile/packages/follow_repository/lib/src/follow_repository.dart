@@ -762,10 +762,10 @@ class FollowRepository {
   /// contract.
   ///
   /// Ongoing follow/unfollow reactivity is handled by [followingStream]
-  /// (the in-memory single source of truth). Local toggles and cross-device
-  /// kind 3 updates invalidate the [_myFollowingCacheKey] entry via
-  /// [_invalidateMyFollowingCache], so the next [watchMyFollowingCached] read
-  /// (on a later mount) never serves a pre-mutation snapshot (#5144).
+  /// (the in-memory single source of truth). Local follows and unfollows and
+  /// cross-device kind 3 updates invalidate the [_myFollowingCacheKey] entry
+  /// via [_invalidateMyFollowingCache], so the next [watchMyFollowingCached]
+  /// read (on a later mount) never serves a pre-mutation snapshot (#5144).
   Stream<CacheResult<FollowingSnapshot>> watchMyFollowingCached() {
     return CacheSync.watchOne<FollowingSnapshot>(
       key: _myFollowingCacheKey(_nostrClient.publicKey),
@@ -2015,15 +2015,6 @@ class FollowRepository {
         category: LogCategory.system,
       );
       return false;
-    }
-  }
-
-  /// Toggle follow status for a user.
-  Future<void> toggleFollow(String pubkey) async {
-    if (isFollowing(pubkey)) {
-      await unfollow(pubkey);
-    } else {
-      await follow(pubkey);
     }
   }
 

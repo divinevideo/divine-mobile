@@ -11,7 +11,7 @@ enum MyFollowingStatus {
   /// Data loaded successfully (may be from cache while refreshing).
   success,
 
-  /// Follow toggle failed (list data remains available).
+  /// A follow or unfollow request failed (list data remains available).
   toggleFailure,
 
   /// An error occurred while loading data.
@@ -48,11 +48,11 @@ final class MyFollowingState extends Equatable {
   /// True while stale cache data is shown and a fresh fetch is in progress.
   final bool isRefreshing;
 
-  /// True once the user has toggled follow/unfollow in this bloc's lifetime.
+  /// True once the user has followed or unfollowed through this bloc.
   ///
-  /// After a local toggle the repository's in-memory list is the authority.
+  /// After a local edit the repository's in-memory list is the authority.
   /// An in-flight `watchMyFollowingCached` revalidation can still resolve with
-  /// the relay-lagged pre-toggle snapshot; this flag tells the load handler to
+  /// the relay-lagged pre-edit snapshot; this flag tells the load handler to
   /// defer to the repository instead of letting that stale emission revert the
   /// button (#5144).
   final bool hasLocalFollowEdit;

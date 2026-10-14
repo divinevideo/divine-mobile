@@ -508,15 +508,8 @@ void main() {
       tester,
     ) async {
       // The sheet offered Unfollow (the bloc said following), but the follow
-      // list no longer has the account by the time the user taps it. The stub
-      // mirrors FollowRepository.toggleFollow, which would follow it here.
-      when(
-        () => followRepository.toggleFollow(targetPubkey),
-      ).thenAnswer(
-        (_) => followRepository.isFollowing(targetPubkey)
-            ? followRepository.unfollow(targetPubkey)
-            : followRepository.follow(targetPubkey),
-      );
+      // list no longer has the account by the time the user taps it.
+      when(() => followRepository.isFollowing(targetPubkey)).thenReturn(false);
       when(
         () => followRepository.follow(targetPubkey),
       ).thenAnswer((_) async {});

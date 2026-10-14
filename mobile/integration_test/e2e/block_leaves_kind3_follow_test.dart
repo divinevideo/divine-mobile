@@ -353,33 +353,5 @@ void main() {
             'contradiction (#6903)',
       );
     });
-
-    // A permanent trap, kept green so nobody re-wires block → toggleFollow.
-    // `toggleFollow` branches on the same cold `isFollowing`, so hooking it
-    // to a block would FOLLOW the account the user just blocked. The shipped
-    // fix touches neither: it omits blocked accounts at the publish boundary
-    // and leaves the local list alone.
-    testWidgets('toggleFollow on a cold list follows instead of unfollowing', (
-      tester,
-    ) async {
-      final relay = await FakeRelay.start();
-      addTearDown(relay.stop);
-
-      final warm = await buildStack(relay);
-      await warm.follows.follow(targetPubkey);
-      await relay.awaitPublished(3);
-
-      final cold = await buildStack(relay, initializeFollows: false);
-      await cold.follows.toggleFollow(targetPubkey);
-      await relay.awaitPublished(3, count: 2);
-
-      expect(
-        cold.follows.followingPubkeys,
-        contains(targetPubkey),
-        reason:
-            'toggleFollow read isFollowing() as false and took the follow '
-            'branch — nothing on the block path may call toggleFollow()',
-      );
-    });
   });
 }

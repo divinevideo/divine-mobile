@@ -79,7 +79,8 @@ Widget _buildSubject(_TestAuthService authService, String tilePubkey) {
         body: UserProfileTile(
           pubkey: tilePubkey,
           isFollowing: false,
-          onToggleFollow: () {},
+          onFollow: () {},
+          onUnfollow: () {},
         ),
       ),
     ),

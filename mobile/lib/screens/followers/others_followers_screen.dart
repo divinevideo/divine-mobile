@@ -201,11 +201,12 @@ class _FollowersListBody extends StatelessWidget {
               pubkey: userPubkey,
               onTap: () => context.pushOtherProfile(userPubkey),
               isFollowing: isFollowing,
-              onToggleFollow: () {
-                context.read<MyFollowingBloc>().add(
-                  MyFollowingToggleRequested(userPubkey),
-                );
-              },
+              onFollow: () => context.read<MyFollowingBloc>().add(
+                MyFollowingFollowRequested(userPubkey),
+              ),
+              onUnfollow: () => context.read<MyFollowingBloc>().add(
+                MyFollowingUnfollowRequested(userPubkey),
+              ),
             );
           },
         );

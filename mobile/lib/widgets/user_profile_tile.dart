@@ -23,7 +23,7 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 /// A tile widget for displaying user profile information in lists.
 ///
 /// Uses callback mode for follow button behavior - the parent widget
-/// controls the follow state via [isFollowing] and [onToggleFollow].
+/// controls the follow state via [isFollowing], [onFollow] and [onUnfollow].
 ///
 /// Set [showFollowButton] to false to hide the follow button entirely.
 class UserProfileTile extends ConsumerWidget {
@@ -33,7 +33,8 @@ class UserProfileTile extends ConsumerWidget {
     this.onTap,
     this.showFollowButton = true,
     this.isFollowing,
-    this.onToggleFollow,
+    this.onFollow,
+    this.onUnfollow,
     this.index,
     this.addToListEntryPoint = PeopleListEntryPoint.followersList,
     this.padding = const EdgeInsets.all(16),
@@ -52,9 +53,18 @@ class UserProfileTile extends ConsumerWidget {
   /// Required when [showFollowButton] is true.
   final bool? isFollowing;
 
-  /// Callback to toggle follow state.
-  /// Required when [showFollowButton] is true.
-  final VoidCallback? onToggleFollow;
+  /// Called when the user taps Follow.
+  ///
+  /// The follow button renders only when [isFollowing], [onFollow] and
+  /// [onUnfollow] are all set.
+  final VoidCallback? onFollow;
+
+  /// Called after the user confirms Unfollow.
+  ///
+  /// Kept apart from [onFollow] so the action is the one the user chose on
+  /// the row they saw, even if the follow list changes while the sheet is
+  /// open.
+  final VoidCallback? onUnfollow;
 
   /// Optional index for semantic labeling in lists (e.g., Maestro tests).
   final int? index;
@@ -196,14 +206,18 @@ class UserProfileTile extends ConsumerWidget {
               ],
 
               // Follow button
-              if (showFollowButton &&
-                  !isCurrentUser &&
-                  isFollowing != null &&
-                  onToggleFollow != null) ...[
+              if ((isFollowing, onFollow, onUnfollow)
+                  case (
+                    final following?,
+                    final follow?,
+                    final unfollow?,
+                  )
+                  when showFollowButton && !isCurrentUser) ...[
                 const SizedBox(width: 12),
                 _FollowButton(
-                  isFollowing: isFollowing!,
-                  onToggleFollow: onToggleFollow!,
+                  isFollowing: following,
+                  onFollow: follow,
+                  onUnfollow: unfollow,
                   displayName: displayName,
                   index: index,
                 ),
@@ -220,13 +234,15 @@ class UserProfileTile extends ConsumerWidget {
 class _FollowButton extends StatelessWidget {
   const _FollowButton({
     required this.isFollowing,
-    required this.onToggleFollow,
+    required this.onFollow,
+    required this.onUnfollow,
     required this.displayName,
     this.index,
   });
 
   final bool isFollowing;
-  final VoidCallback onToggleFollow;
+  final VoidCallback onFollow;
+  final VoidCallback onUnfollow;
   final String displayName;
   final int? index;
 
@@ -237,7 +253,7 @@ class _FollowButton extends StatelessWidget {
     );
 
     if (result == true && context.mounted) {
-      onToggleFollow();
+      onUnfollow();
     }
   }
 
@@ -268,7 +284,7 @@ class _FollowButton extends StatelessWidget {
       semanticLabel: position == null
           ? l10n.followUserSemanticLabel
           : l10n.followUserIndexedSemanticLabel('$position'),
-      onPressed: onToggleFollow,
+      onPressed: onFollow,
     );
   }
 }

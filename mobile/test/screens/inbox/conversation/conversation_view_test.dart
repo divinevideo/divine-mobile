@@ -418,15 +418,6 @@ void main() {
           followingPubkeys: const [otherPubkey],
         );
         when(() => followRepository.isFollowing(otherPubkey)).thenReturn(true);
-        // Mirrors FollowRepository.toggleFollow, which follows the account
-        // when the list no longer has it.
-        when(
-          () => followRepository.toggleFollow(otherPubkey),
-        ).thenAnswer(
-          (_) => followRepository.isFollowing(otherPubkey)
-              ? followRepository.unfollow(otherPubkey)
-              : followRepository.follow(otherPubkey),
-        );
         when(
           () => followRepository.follow(otherPubkey),
         ).thenAnswer((_) async {});
