@@ -2,11 +2,11 @@
 // ABOUTME: band over time, for an audio visualizer in the preview and export.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
@@ -61,6 +61,35 @@ List<AudioLevelPart> audioLevelSourcesFor({
   ];
 }
 
+/// [parts] with every sound that streams from the network read from the local
+/// copy [localPathFor] returns for its URL instead.
+///
+/// An export downloads its sounds once, with the stall timeout and retries of
+/// its audio fetcher, and reads the visualizer's sound from the same files it
+/// muxes.
+Future<List<AudioLevelPart>> withLocalNetworkSounds(
+  List<AudioLevelPart> parts, {
+  required Future<String> Function(String url) localPathFor,
+}) async => [
+  for (final part in parts)
+    if (part.source.media.networkUrl case final url?)
+      AudioLevelPart(
+        source: BeatSourcePart(
+          media: EditorVideo.file(File(await localPathFor(url))),
+          fileLength: part.source.fileLength,
+          from: part.source.from,
+          to: part.source.to,
+          at: part.source.at,
+          speed: part.source.speed,
+        ),
+        volume: part.volume,
+        fadeIn: part.fadeIn,
+        fadeOut: part.fadeOut,
+      )
+    else
+      part,
+];
+
 /// Reads how loud sounds are in each frequency band and adds them up on the
 /// exported video.
 ///
@@ -90,9 +119,10 @@ class VideoEditorAudioLevelResolver {
   /// Reads every part of [parts] that has not been read yet.
   ///
   /// A part without sound, such as a clip recorded without a microphone,
-  /// adds nothing. Throws when no part could be read at all.
+  /// adds nothing, and so does a part that fails to read while another one
+  /// is read. Throws when no part could be read at all.
   Future<void> read(List<AudioLevelPart> parts) async {
-    PlatformException? failure;
+    Exception? failure;
     var anyRead = false;
     for (final part in parts) {
       final stretch = _Stretch.of(part.source);
@@ -112,7 +142,8 @@ class VideoEditorAudioLevelResolver {
         // transient read failure.
         anyRead = true;
         _energies[stretch] = _StretchEnergies.silent;
-      } on PlatformException catch (error) {
+      } on Exception catch (error) {
+        // A platform error, or a network sound the plugin could not fetch.
         failure = error;
         _energies[stretch] = _StretchEnergies.silent;
       } finally {

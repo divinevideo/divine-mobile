@@ -136,6 +136,53 @@ void main() {
     });
   });
 
+  group('withLocalNetworkSounds', () {
+    test('reads a network sound from its local copy', () async {
+      final network = AudioLevelPart(
+        source: BeatSourcePart(
+          media: EditorVideo.network('https://media.example/song'),
+          fileLength: const Duration(seconds: 30),
+          from: _ms(1000),
+          to: _ms(4000),
+          at: _ms(500),
+          speed: 1.5,
+        ),
+        volume: 0.5,
+        fadeIn: _ms(100),
+        fadeOut: _ms(200),
+      );
+      final local = _part();
+      final requested = <String>[];
+
+      final parts = await withLocalNetworkSounds(
+        [network, local],
+        localPathFor: (url) async {
+          requested.add(url);
+          return '/tmp/song.mp3';
+        },
+      );
+
+      expect(requested, ['https://media.example/song']);
+      expect(parts[0].source.media.file?.path, '/tmp/song.mp3');
+      expect(parts[0].source.media.networkUrl, isNull);
+      expect(
+        (
+          parts[0].source.fileLength,
+          parts[0].source.from,
+          parts[0].source.to,
+          parts[0].source.at,
+          parts[0].source.speed,
+        ),
+        (const Duration(seconds: 30), _ms(1000), _ms(4000), _ms(500), 1.5),
+      );
+      expect(
+        (parts[0].volume, parts[0].fadeIn, parts[0].fadeOut),
+        (0.5, _ms(100), _ms(200)),
+      );
+      expect(parts[1], same(local));
+    });
+  });
+
   group(VideoEditorAudioLevelResolver, () {
     late _ToneFile file;
     late VideoEditorAudioLevelResolver resolver;
@@ -261,6 +308,37 @@ void main() {
               .energiesOnOutput([_part()], videoEnd: _ms(1000))
               .every((energy) => energy == 0),
           isTrue,
+        );
+      });
+
+      test('reads the other parts when one fails to read', () async {
+        final mixed = VideoEditorAudioLevelResolver(
+          extractAudio: (configs) async {
+            if (configs.video.networkUrl != null) {
+              throw Exception('Failed to load video');
+            }
+            return file(configs);
+          },
+        );
+        final unreachable = AudioLevelPart(
+          source: BeatSourcePart(
+            media: EditorVideo.network('https://media.example/song'),
+            fileLength: const Duration(seconds: 30),
+            from: Duration.zero,
+            to: const Duration(seconds: 1),
+            at: Duration.zero,
+          ),
+        );
+
+        await mixed.read([unreachable, _part()]);
+
+        expect(mixed.hasRead([_part()]), isTrue);
+        expect(
+          _energy(
+            mixed.energiesOnOutput([unreachable, _part()], videoEnd: _ms(1000)),
+            30,
+          ),
+          greaterThan(0),
         );
       });
 
