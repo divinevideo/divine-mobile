@@ -1480,14 +1480,14 @@ void main() {
           ).toJson(),
         );
         expect(
-          await cacheDao.read(myFollowingKey(testCurrentUserPubkey)),
+          await cacheDao.readEntry(myFollowingKey(testCurrentUserPubkey)),
           isNotNull,
         );
 
         await repository.follow(testTargetPubkey);
 
         expect(
-          await cacheDao.read(myFollowingKey(testCurrentUserPubkey)),
+          await cacheDao.readEntry(myFollowingKey(testCurrentUserPubkey)),
           isNull,
         );
       });
@@ -1516,7 +1516,7 @@ void main() {
         await repository.unfollow(testTargetPubkey);
 
         expect(
-          await cacheDao.read(myFollowingKey(testCurrentUserPubkey)),
+          await cacheDao.readEntry(myFollowingKey(testCurrentUserPubkey)),
           isNull,
         );
       });
@@ -1550,7 +1550,7 @@ void main() {
             ).toJson(),
           );
           expect(
-            await cacheDao.read(myFollowingKey(testCurrentUserPubkey)),
+            await cacheDao.readEntry(myFollowingKey(testCurrentUserPubkey)),
             isNotNull,
           );
 
@@ -1570,7 +1570,7 @@ void main() {
 
           expect(repository.followingPubkeys, contains(testTargetPubkey));
           expect(
-            await cacheDao.read(myFollowingKey(testCurrentUserPubkey)),
+            await cacheDao.readEntry(myFollowingKey(testCurrentUserPubkey)),
             isNull,
           );
         },

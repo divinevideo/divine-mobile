@@ -1,8 +1,16 @@
 import 'package:cache_sync/src/cache_dao.dart';
+import 'package:cache_sync/src/cache_entry.dart';
 
 /// In-memory [CacheDao] for use in tests.
 class FakeCacheDao implements CacheDao {
-  FakeCacheDao({this.maxSizeBytes});
+  FakeCacheDao({this.maxSizeBytes, DateTime Function()? now})
+    : now = now ?? _systemNow;
+
+  /// Clock used for write timestamps and expiry checks. Reassign it in a test
+  /// to move time deterministically.
+  DateTime Function() now;
+
+  static DateTime _systemNow() => DateTime.now().toUtc();
 
   /// Maximum total payload size in characters. `null` = unlimited.
   final int? maxSizeBytes;
@@ -10,15 +18,14 @@ class FakeCacheDao implements CacheDao {
   final Map<String, _Entry> _store = {};
 
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     final entry = _store[key];
     if (entry == null) return null;
-    if (entry.expiresAt != null &&
-        DateTime.now().toUtc().isAfter(entry.expiresAt!)) {
-      _store.remove(key);
-      return null;
-    }
-    return entry.payload;
+    final expiresAt = entry.expiresAt;
+    return CacheEntry(
+      payload: entry.payload,
+      isStale: expiresAt != null && now().isAfter(expiresAt),
+    );
   }
 
   @override
@@ -27,9 +34,11 @@ class FakeCacheDao implements CacheDao {
     required String payload,
     Duration? ttl,
   }) async {
+    final written = now();
     _store[key] = _Entry(
       payload: payload,
-      expiresAt: ttl != null ? DateTime.now().toUtc().add(ttl) : null,
+      cachedAt: written,
+      expiresAt: ttl != null ? written.add(ttl) : null,
     );
     final limit = maxSizeBytes;
     if (limit != null) {
@@ -71,7 +80,7 @@ class FakeCacheDao implements CacheDao {
   /// All stored cache keys (for assertions on key shape).
   Iterable<String> get keys => _store.keys;
 
-  /// Raw payload access without TTL check (for assertions).
+  /// Raw payload access that ignores expiry (for assertions).
   String? rawRead(String key) => _store[key]?.payload;
 }
 
@@ -90,9 +99,12 @@ class ThrowingCacheDao implements CacheDao {
   final bool throwOnDelete;
 
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     if (throwOnRead) throw StateError('cache read failed');
-    return readPayload;
+    final payload = readPayload;
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: false);
   }
 
   @override
@@ -120,8 +132,7 @@ class ThrowingCacheDao implements CacheDao {
 }
 
 class _Entry {
-  _Entry({required this.payload, this.expiresAt})
-    : cachedAt = DateTime.now().toUtc();
+  _Entry({required this.payload, required this.cachedAt, this.expiresAt});
 
   final String payload;
   final DateTime? expiresAt;

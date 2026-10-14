@@ -29,7 +29,12 @@ class _InMemoryCacheDao implements CacheDao {
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: false);
+  }
 
   @override
   Future<void> write({
@@ -183,12 +188,15 @@ void main() {
           expect(bloc.state.savedEventIds, [newestId, secondId, firstId]);
           expect(fetchedIds.where((id) => id == secondId), hasLength(1));
           expect(fetchedIds.where((id) => id == newestId), hasLength(1));
-          final persisted = await cacheDao.read(snapshotCacheKey);
-          expect(ProfileVideoListSnapshot.fromJson(persisted!).itemIds, [
-            newestId,
-            secondId,
-            firstId,
-          ]);
+          final persisted = await cacheDao.readEntry(snapshotCacheKey);
+          expect(
+            ProfileVideoListSnapshot.fromJson(persisted!.payload).itemIds,
+            [
+              newestId,
+              secondId,
+              firstId,
+            ],
+          );
         },
       );
     }
@@ -238,9 +246,9 @@ void main() {
       await refresh.future;
       await pumpEventQueue();
       expect(bloc.state.nextPageOffset, ProfileTabPagination.pageSize * 2);
-      final persisted = await cacheDao.read(snapshotCacheKey);
+      final persisted = await cacheDao.readEntry(snapshotCacheKey);
       expect(
-        ProfileVideoListSnapshot.fromJson(persisted!).nextPageOffset,
+        ProfileVideoListSnapshot.fromJson(persisted!.payload).nextPageOffset,
         ProfileTabPagination.pageSize * 2,
       );
       // A new gesture after completion still loads the next page.

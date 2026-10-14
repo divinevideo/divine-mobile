@@ -4,7 +4,7 @@ part of 'cache_database.dart';
 
 // ignore_for_file: type=lint
 class $CacheEntriesTable extends CacheEntries
-    with TableInfo<$CacheEntriesTable, CacheEntry> {
+    with TableInfo<$CacheEntriesTable, CacheRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -67,7 +67,7 @@ class $CacheEntriesTable extends CacheEntries
   static const String $name = 'cache_entries';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CacheEntry> instance, {
+    Insertable<CacheRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -108,9 +108,9 @@ class $CacheEntriesTable extends CacheEntries
   @override
   Set<GeneratedColumn> get $primaryKey => {cacheKey};
   @override
-  CacheEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CacheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CacheEntry(
+    return CacheRow(
       cacheKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cache_key'],
@@ -136,12 +136,12 @@ class $CacheEntriesTable extends CacheEntries
   }
 }
 
-class CacheEntry extends DataClass implements Insertable<CacheEntry> {
+class CacheRow extends DataClass implements Insertable<CacheRow> {
   final String cacheKey;
   final String payload;
   final DateTime cachedAt;
   final DateTime? expiresAt;
-  const CacheEntry({
+  const CacheRow({
     required this.cacheKey,
     required this.payload,
     required this.cachedAt,
@@ -170,12 +170,12 @@ class CacheEntry extends DataClass implements Insertable<CacheEntry> {
     );
   }
 
-  factory CacheEntry.fromJson(
+  factory CacheRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CacheEntry(
+    return CacheRow(
       cacheKey: serializer.fromJson<String>(json['cacheKey']),
       payload: serializer.fromJson<String>(json['payload']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
@@ -193,19 +193,19 @@ class CacheEntry extends DataClass implements Insertable<CacheEntry> {
     };
   }
 
-  CacheEntry copyWith({
+  CacheRow copyWith({
     String? cacheKey,
     String? payload,
     DateTime? cachedAt,
     Value<DateTime?> expiresAt = const Value.absent(),
-  }) => CacheEntry(
+  }) => CacheRow(
     cacheKey: cacheKey ?? this.cacheKey,
     payload: payload ?? this.payload,
     cachedAt: cachedAt ?? this.cachedAt,
     expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
   );
-  CacheEntry copyWithCompanion(CacheEntriesCompanion data) {
-    return CacheEntry(
+  CacheRow copyWithCompanion(CacheEntriesCompanion data) {
+    return CacheRow(
       cacheKey: data.cacheKey.present ? data.cacheKey.value : this.cacheKey,
       payload: data.payload.present ? data.payload.value : this.payload,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
@@ -215,7 +215,7 @@ class CacheEntry extends DataClass implements Insertable<CacheEntry> {
 
   @override
   String toString() {
-    return (StringBuffer('CacheEntry(')
+    return (StringBuffer('CacheRow(')
           ..write('cacheKey: $cacheKey, ')
           ..write('payload: $payload, ')
           ..write('cachedAt: $cachedAt, ')
@@ -229,14 +229,14 @@ class CacheEntry extends DataClass implements Insertable<CacheEntry> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CacheEntry &&
+      (other is CacheRow &&
           other.cacheKey == this.cacheKey &&
           other.payload == this.payload &&
           other.cachedAt == this.cachedAt &&
           other.expiresAt == this.expiresAt);
 }
 
-class CacheEntriesCompanion extends UpdateCompanion<CacheEntry> {
+class CacheEntriesCompanion extends UpdateCompanion<CacheRow> {
   final Value<String> cacheKey;
   final Value<String> payload;
   final Value<DateTime> cachedAt;
@@ -258,7 +258,7 @@ class CacheEntriesCompanion extends UpdateCompanion<CacheEntry> {
   }) : cacheKey = Value(cacheKey),
        payload = Value(payload),
        cachedAt = Value(cachedAt);
-  static Insertable<CacheEntry> custom({
+  static Insertable<CacheRow> custom({
     Expression<String>? cacheKey,
     Expression<String>? payload,
     Expression<DateTime>? cachedAt,
@@ -439,17 +439,17 @@ class $$CacheEntriesTableTableManager
         RootTableManager<
           _$CacheDatabase,
           $CacheEntriesTable,
-          CacheEntry,
+          CacheRow,
           $$CacheEntriesTableFilterComposer,
           $$CacheEntriesTableOrderingComposer,
           $$CacheEntriesTableAnnotationComposer,
           $$CacheEntriesTableCreateCompanionBuilder,
           $$CacheEntriesTableUpdateCompanionBuilder,
           (
-            CacheEntry,
-            BaseReferences<_$CacheDatabase, $CacheEntriesTable, CacheEntry>,
+            CacheRow,
+            BaseReferences<_$CacheDatabase, $CacheEntriesTable, CacheRow>,
           ),
-          CacheEntry,
+          CacheRow,
           PrefetchHooks Function()
         > {
   $$CacheEntriesTableTableManager(_$CacheDatabase db, $CacheEntriesTable table)
@@ -503,17 +503,14 @@ typedef $$CacheEntriesTableProcessedTableManager =
     ProcessedTableManager<
       _$CacheDatabase,
       $CacheEntriesTable,
-      CacheEntry,
+      CacheRow,
       $$CacheEntriesTableFilterComposer,
       $$CacheEntriesTableOrderingComposer,
       $$CacheEntriesTableAnnotationComposer,
       $$CacheEntriesTableCreateCompanionBuilder,
       $$CacheEntriesTableUpdateCompanionBuilder,
-      (
-        CacheEntry,
-        BaseReferences<_$CacheDatabase, $CacheEntriesTable, CacheEntry>,
-      ),
-      CacheEntry,
+      (CacheRow, BaseReferences<_$CacheDatabase, $CacheEntriesTable, CacheRow>),
+      CacheRow,
       PrefetchHooks Function()
     >;
 

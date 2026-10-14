@@ -424,13 +424,15 @@ void main() {
       expect(events[0].data.count, 10);
     });
 
-    test('expired cached entry refetches live data', () async {
+    test('expired cached entry is served stale, then refreshed live', () async {
+      var clock = DateTime.utc(2026, 10, 14);
+      dao.now = () => clock;
       await dao.write(
         key: 'target:others_followers',
         payload: const FollowersSnapshot(pubkeys: ['stale'], count: 1).toJson(),
-        ttl: const Duration(microseconds: 1),
+        ttl: const Duration(hours: 1),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 5));
+      clock = clock.add(const Duration(hours: 2));
 
       final repo = _TestableFollowRepository(
         nostrClient: mockNostrClient,
@@ -441,12 +443,14 @@ void main() {
 
       final events = await repo
           .watchOthersFollowersCached('target')
-          .take(1)
+          .take(2)
           .toList();
 
-      expect(events, hasLength(1));
-      expect(events[0].isLive, isTrue);
-      expect(events[0].data.pubkeys, ['fresh']);
+      expect(events, hasLength(2));
+      expect(events[0].isLive, isFalse);
+      expect(events[0].data.pubkeys, ['stale']);
+      expect(events[1].isLive, isTrue);
+      expect(events[1].data.pubkeys, ['fresh']);
     });
 
     test('uses cacheFirst policy for fresh cached profile lists', () async {

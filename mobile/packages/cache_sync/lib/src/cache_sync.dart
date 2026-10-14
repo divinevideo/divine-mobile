@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cache_sync/src/cache_dao.dart';
 import 'package:cache_sync/src/cache_dao_impl.dart';
 import 'package:cache_sync/src/cache_database.dart';
+import 'package:cache_sync/src/cache_entry.dart';
 import 'package:cache_sync/src/cache_fetch_policy.dart';
 import 'package:cache_sync/src/cache_result.dart';
 
@@ -51,11 +52,13 @@ abstract final class CacheSync {
   /// Watches a single value backed by a [Future] fetch.
   ///
   /// Emits at most two events per call:
-  ///   1. A [CacheResult.cached] if a non-expired cached value exists.
+  ///   1. A [CacheResult.cached] if a cached value exists, fresh or stale. An
+  ///      entry whose [ttl] has passed is served and kept, never deleted.
   ///   2. A [CacheResult.live] once the [fetch] Future resolves.
   ///
-  /// When [policy] is [CacheFetchPolicy.cacheFirst], a fresh cached value ends
-  /// the stream without calling [fetch].
+  /// The [ttl] only decides when to refresh. When [policy] is
+  /// [CacheFetchPolicy.cacheFirst], a fresh cached value ends the stream
+  /// without calling [fetch]; a stale one is emitted and then refreshed.
   ///
   /// If [toJson] returns an empty string the result is **not** written to the
   /// cache. This lets callers signal "do not cache this response" by returning
@@ -91,8 +94,10 @@ abstract final class CacheSync {
   /// a one-shot [Future]. Each live event from [source] is written to the
   /// cache and re-emitted as [CacheResult.live].
   ///
-  /// When [policy] is [CacheFetchPolicy.cacheFirst], a fresh cached value ends
-  /// the stream without subscribing to [source].
+  /// A cached value is served whether fresh or stale; the [ttl] only decides
+  /// when to refresh. When [policy] is [CacheFetchPolicy.cacheFirst], a fresh
+  /// cached value ends the stream without subscribing to [source]; a stale one
+  /// is emitted and then [source] is subscribed to.
   ///
   /// Errors from [source] are forwarded as stream errors.
   static Stream<CacheResult<T>> watchStream<T>({
@@ -123,20 +128,35 @@ abstract final class CacheSync {
     return controller.stream;
   }
 
-  /// Reads the cached value for [key], or `null` when absent, expired, or
+  /// Reads the cached value for [key], or `null` when absent, stale, or
   /// corrupt.
   ///
   /// This is the direct disk-read counterpart to [watchOne] — it never
-  /// performs a network fetch. A cache entry that fails [fromJson] is
-  /// deleted and `null` is returned.
+  /// performs a network fetch. A stale entry returns `null` but is **not**
+  /// deleted; use [readEntry] to read it. A cache entry that fails [fromJson]
+  /// is deleted and `null` is returned.
   static Future<T?> read<T>({
     required String key,
     required T Function(String json) fromJson,
   }) async {
-    final cached = await _dao.read(key);
-    if (cached == null || cached.isEmpty) return null;
+    final entry = await readEntry<T>(key: key, fromJson: fromJson);
+    if (entry == null || entry.isStale) return null;
+    return entry.data;
+  }
+
+  /// Reads the cached value for [key] together with whether its TTL passed.
+  ///
+  /// Returns `null` when the entry is absent or corrupt (a corrupt entry is
+  /// deleted). A stale entry is returned with `isStale: true` and is kept, so
+  /// callers can show it and refresh in the background.
+  static Future<({T data, bool isStale})?> readEntry<T>({
+    required String key,
+    required T Function(String json) fromJson,
+  }) async {
+    final entry = await _dao.readEntry(key);
+    if (entry == null || entry.payload.isEmpty) return null;
     try {
-      return fromJson(cached);
+      return (data: fromJson(entry.payload), isStale: entry.isStale);
     } on Object {
       await _dao.delete(key);
       return null;
@@ -206,22 +226,15 @@ abstract final class CacheSync {
     required CacheFetchPolicy policy,
   }) async {
     // 1. Serve from cache when applicable.
-    var servedCachedValue = false;
-    if (policy != CacheFetchPolicy.networkOnly) {
-      final cached = await _readPayloadBestEffort(key);
-      if (cached != null && cached.isNotEmpty) {
-        try {
-          controller.add(CacheResult.cached(fromJson(cached)));
-          servedCachedValue = true;
-        } on Object {
-          // Corrupted cache entry — ignore and fetch fresh.
-          await _deletePayloadBestEffort(key);
-        }
-      }
-    }
+    final servedFresh = await _serveCached(
+      controller: controller,
+      key: key,
+      fromJson: fromJson,
+      policy: policy,
+    );
 
     if (policy == CacheFetchPolicy.cacheOnly ||
-        (policy == CacheFetchPolicy.cacheFirst && servedCachedValue)) {
+        (policy == CacheFetchPolicy.cacheFirst && servedFresh)) {
       await controller.close();
       return;
     }
@@ -256,21 +269,15 @@ abstract final class CacheSync {
     required void Function(StreamIterator<T> iterator) registerIterator,
   }) async {
     // 1. Serve from cache when applicable.
-    var servedCachedValue = false;
-    if (policy != CacheFetchPolicy.networkOnly) {
-      final cached = await _readPayloadBestEffort(key);
-      if (cached != null && cached.isNotEmpty) {
-        try {
-          controller.add(CacheResult.cached(fromJson(cached)));
-          servedCachedValue = true;
-        } on Object {
-          await _deletePayloadBestEffort(key);
-        }
-      }
-    }
+    final servedFresh = await _serveCached(
+      controller: controller,
+      key: key,
+      fromJson: fromJson,
+      policy: policy,
+    );
 
     if (policy == CacheFetchPolicy.cacheOnly ||
-        (policy == CacheFetchPolicy.cacheFirst && servedCachedValue)) {
+        (policy == CacheFetchPolicy.cacheFirst && servedFresh)) {
       await controller.close();
       return;
     }
@@ -304,9 +311,31 @@ abstract final class CacheSync {
     }
   }
 
-  static Future<String?> _readPayloadBestEffort(String key) async {
+  /// Emits the cached value for [key] (fresh or stale) when [policy] reads
+  /// the cache, and reports whether a **fresh** one was served.
+  ///
+  /// A corrupt entry is deleted and treated as absent.
+  static Future<bool> _serveCached<T>({
+    required StreamController<CacheResult<T>> controller,
+    required String key,
+    required T Function(String json) fromJson,
+    required CacheFetchPolicy policy,
+  }) async {
+    if (policy == CacheFetchPolicy.networkOnly) return false;
+    final cached = await _readEntryBestEffort(key);
+    if (cached == null || cached.payload.isEmpty) return false;
     try {
-      return await _dao.read(key);
+      controller.add(CacheResult.cached(fromJson(cached.payload)));
+    } on Object {
+      await _deletePayloadBestEffort(key);
+      return false;
+    }
+    return !cached.isStale;
+  }
+
+  static Future<CacheEntry?> _readEntryBestEffort(String key) async {
+    try {
+      return await _dao.readEntry(key);
     } on Object {
       return null;
     }

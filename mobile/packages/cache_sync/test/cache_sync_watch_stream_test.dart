@@ -7,9 +7,16 @@ import 'fake_cache_dao.dart';
 
 void main() {
   late FakeCacheDao dao;
+  late DateTime clock;
+
+  Future<void> writeStale(String key, String payload) async {
+    await dao.write(key: key, payload: payload, ttl: const Duration(hours: 1));
+    clock = clock.add(const Duration(hours: 2));
+  }
 
   setUp(() async {
-    dao = FakeCacheDao();
+    clock = DateTime.utc(2026, 10, 14);
+    dao = FakeCacheDao(now: () => clock);
     await CacheSync.init(dao: dao);
   });
 
@@ -274,5 +281,104 @@ void main() {
         await source.close();
       },
     );
+
+    group('stale entries', () {
+      test('cacheFirst emits a stale value then the live values', () async {
+        await writeStale('ws:stale:first', '10');
+        var subscriptions = 0;
+
+        final events = await CacheSync.watchStream<int>(
+          key: 'ws:stale:first',
+          source: () {
+            subscriptions++;
+            return Stream.fromIterable([42]);
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          ttl: const Duration(hours: 1),
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(
+          events,
+          equals([const CacheResult.cached(10), const CacheResult.live(42)]),
+        );
+        expect(subscriptions, equals(1));
+      });
+
+      test('cacheFirst subscribes when nothing is cached', () async {
+        final events = await CacheSync.watchStream<int>(
+          key: 'ws:missing:first',
+          source: () => Stream.fromIterable([42]),
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(events, equals([const CacheResult.live(42)]));
+      });
+
+      test('cacheFirst ends on a fresh value without subscribing', () async {
+        await dao.write(
+          key: 'ws:fresh:first',
+          payload: '10',
+          ttl: const Duration(hours: 1),
+        );
+        var subscriptions = 0;
+
+        final events = await CacheSync.watchStream<int>(
+          key: 'ws:fresh:first',
+          source: () {
+            subscriptions++;
+            return Stream.fromIterable([42]);
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(events, equals([const CacheResult.cached(10)]));
+        expect(subscriptions, equals(0));
+      });
+
+      test(
+        'cacheAndNetwork serves an expired value before the source',
+        () async {
+          await writeStale('ws:stale:both', '10');
+
+          final events = await CacheSync.watchStream<int>(
+            key: 'ws:stale:both',
+            source: () => Stream.fromIterable([42]),
+            fromJson: int.parse,
+            toJson: (v) => '$v',
+          ).toList();
+
+          expect(
+            events,
+            equals([const CacheResult.cached(10), const CacheResult.live(42)]),
+          );
+        },
+      );
+
+      test('cacheOnly emits an expired value without subscribing', () async {
+        await writeStale('ws:stale:only', '10');
+        var subscriptions = 0;
+
+        final events = await CacheSync.watchStream<int>(
+          key: 'ws:stale:only',
+          source: () {
+            subscriptions++;
+            return Stream.fromIterable([42]);
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheOnly,
+        ).toList();
+
+        expect(events, equals([const CacheResult.cached(10)]));
+        expect(subscriptions, equals(0));
+        expect(dao.rawRead('ws:stale:only'), equals('10'));
+      });
+    });
   });
 }

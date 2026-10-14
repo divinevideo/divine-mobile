@@ -25,7 +25,7 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeCacheDao implements CacheDao {
   @override
-  Future<String?> read(String key) async => null;
+  Future<CacheEntry?> readEntry(String key) async => null;
 
   @override
   Future<void> write({

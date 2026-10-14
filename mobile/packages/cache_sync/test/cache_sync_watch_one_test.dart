@@ -5,9 +5,16 @@ import 'fake_cache_dao.dart';
 
 void main() {
   late FakeCacheDao dao;
+  late DateTime clock;
+
+  Future<void> writeStale(String key, String payload) async {
+    await dao.write(key: key, payload: payload, ttl: const Duration(hours: 1));
+    clock = clock.add(const Duration(hours: 2));
+  }
 
   setUp(() async {
-    dao = FakeCacheDao();
+    clock = DateTime.utc(2026, 10, 14);
+    dao = FakeCacheDao(now: () => clock);
     await CacheSync.init(dao: dao);
   });
 
@@ -248,6 +255,123 @@ void main() {
       ).drain<void>();
 
       expect(dao.rawRead('ttl:key'), equals('5'));
+    });
+
+    group('stale entries', () {
+      test('cacheFirst emits a stale value then the live value', () async {
+        await writeStale('stale:first', '10');
+        var fetchCalls = 0;
+
+        final events = await CacheSync.watchOne<int>(
+          key: 'stale:first',
+          fetch: () async {
+            fetchCalls++;
+            return 42;
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          ttl: const Duration(hours: 1),
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(
+          events,
+          equals([const CacheResult.cached(10), const CacheResult.live(42)]),
+        );
+        expect(fetchCalls, equals(1));
+      });
+
+      test('cacheFirst fetches when nothing is cached', () async {
+        final events = await CacheSync.watchOne<int>(
+          key: 'missing:first',
+          fetch: () async => 42,
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(events, equals([const CacheResult.live(42)]));
+      });
+
+      test('cacheFirst ends on a fresh value without fetching', () async {
+        await dao.write(
+          key: 'fresh:first',
+          payload: '10',
+          ttl: const Duration(hours: 1),
+        );
+        var fetchCalls = 0;
+
+        final events = await CacheSync.watchOne<int>(
+          key: 'fresh:first',
+          fetch: () async {
+            fetchCalls++;
+            return 42;
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheFirst,
+        ).toList();
+
+        expect(events, equals([const CacheResult.cached(10)]));
+        expect(fetchCalls, equals(0));
+      });
+
+      test('cacheAndNetwork serves an expired value before fetching', () async {
+        await writeStale('stale:both', '10');
+
+        final events = await CacheSync.watchOne<int>(
+          key: 'stale:both',
+          fetch: () async => 42,
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+        ).toList();
+
+        expect(
+          events,
+          equals([const CacheResult.cached(10), const CacheResult.live(42)]),
+        );
+      });
+
+      test('cacheOnly emits an expired value without fetching', () async {
+        await writeStale('stale:only', '10');
+        var fetchCalls = 0;
+
+        final events = await CacheSync.watchOne<int>(
+          key: 'stale:only',
+          fetch: () async {
+            fetchCalls++;
+            return 42;
+          },
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheOnly,
+        ).toList();
+
+        expect(events, equals([const CacheResult.cached(10)]));
+        expect(fetchCalls, equals(0));
+        expect(dao.rawRead('stale:only'), equals('10'));
+      });
+
+      test('keeps the stale row when the refresh fails', () async {
+        await writeStale('stale:err', '10');
+
+        final stream = CacheSync.watchOne<int>(
+          key: 'stale:err',
+          fetch: () async => throw StateError('offline'),
+          fromJson: int.parse,
+          toJson: (v) => '$v',
+          policy: CacheFetchPolicy.cacheFirst,
+        );
+
+        await expectLater(
+          stream,
+          emitsInOrder([
+            const CacheResult.cached(10),
+            emitsError(isA<StateError>()),
+          ]),
+        );
+        expect(dao.rawRead('stale:err'), equals('10'));
+      });
     });
   });
 }

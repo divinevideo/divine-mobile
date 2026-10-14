@@ -10,15 +10,14 @@ class _FakeCacheDao implements CacheDao {
   final Map<String, ({String payload, DateTime? expiresAt})> store = {};
 
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     final entry = store[key];
     if (entry == null) return null;
     final expiresAt = entry.expiresAt;
-    if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt)) {
-      store.remove(key);
-      return null;
-    }
-    return entry.payload;
+    return CacheEntry(
+      payload: entry.payload,
+      isStale: expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt),
+    );
   }
 
   @override

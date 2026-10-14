@@ -25,7 +25,12 @@ class _InMemoryCacheDao implements CacheDao {
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: false);
+  }
 
   @override
   Future<void> write({

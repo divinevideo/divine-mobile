@@ -20,6 +20,7 @@
 library;
 
 export 'src/cache_dao.dart';
+export 'src/cache_entry.dart';
 export 'src/cache_fetch_policy.dart';
 export 'src/cache_result.dart';
 export 'src/cache_sync.dart';

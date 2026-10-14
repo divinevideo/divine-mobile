@@ -13,7 +13,12 @@ class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> store = {};
 
   @override
-  Future<String?> read(String key) async => store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: false);
+  }
 
   @override
   Future<void> write({
