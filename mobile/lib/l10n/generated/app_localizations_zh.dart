@@ -6150,7 +6150,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get librarySortVerticalFirst => '竖屏优先';
 
   @override
-  String get libraryDeleteClipsWarning => '此操作无法撤销。视频文件将从你的设备上永久删除。';
+  String get libraryDeleteClipsWarning => '此操作无法撤销。';
 
   @override
   String get libraryPreparingVideo => '正在准备视频...';
@@ -6372,6 +6372,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDeleteClipMessage => '确定要删除这个片段吗？';
 
   @override
+  String get libraryDeleteClipTrashNote => '片段会先进入回收站，你仍然可以恢复它。';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds 秒';
   }
@@ -6387,6 +6390,16 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return '已归档。$label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return '尚未保存到你的相册。$label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return '已保存到你的相册，但没有内容凭证。$label';
   }
 
   @override
@@ -10948,6 +10961,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => '按住开始录制，松开停止';
+
+  @override
+  String get settingsBackUpRecordings => '将录制内容备份到相册';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      '为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。';
 
   @override
   String uploadPublishedCountMessage(int count) {

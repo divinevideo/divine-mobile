@@ -6620,8 +6620,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticaux d\'abord';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Action irréversible. Les fichiers vidéo seront définitivement supprimés de ton appareil.';
+  String get libraryDeleteClipsWarning => 'Action irréversible.';
 
   @override
   String get libraryPreparingVideo => 'Préparation de la vidéo...';
@@ -6860,6 +6859,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Supprimer ce clip ?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Il passe d\'abord par la corbeille, tu peux donc encore le restaurer.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6875,6 +6878,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Archivé. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Pas encore dans ta galerie. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Dans ta galerie sans Content Credentials. $label';
   }
 
   @override
@@ -11841,6 +11854,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'L\'enregistrement démarre en maintenant appuyé et s\'arrête en relâchant';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'Sauvegarder les enregistrements dans ta galerie';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Garde une copie de chaque nouvel enregistrement dans ta galerie. Les autres apps et les sauvegardes photo dans le cloud peuvent la voir.';
 
   @override
   String uploadPublishedCountMessage(int count) {

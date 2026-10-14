@@ -6454,8 +6454,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get librarySortVerticalFirst => 'Vertikal terlebih dahulu';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Tindakan ini tidak bisa dibatalkan. File video akan dihapus permanen dari perangkatmu.';
+  String get libraryDeleteClipsWarning => 'Tindakan ini tidak bisa dibatalkan.';
 
   @override
   String get libraryPreparingVideo => 'Menyiapkan video...';
@@ -6687,6 +6686,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Yakin ingin menghapus klip ini?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip masuk ke sampah dulu, jadi kamu masih bisa memulihkannya.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds dtk';
   }
@@ -6702,6 +6705,16 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Diarsipkan. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Belum ada di galerimu. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Ada di galerimu tanpa kredensial konten. $label';
   }
 
   @override
@@ -11566,6 +11579,13 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Rekaman dimulai saat menahan dan berhenti saat dilepas';
+
+  @override
+  String get settingsBackUpRecordings => 'Cadangkan rekaman ke galeri';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Menyimpan salinan setiap rekaman baru ke galerimu. Aplikasi lain dan cadangan foto di cloud bisa melihatnya di sana.';
 
   @override
   String uploadPublishedCountMessage(int count) {

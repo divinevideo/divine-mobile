@@ -6383,8 +6383,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get librarySortVerticalFirst => 'ቁመት በመጀመሪያ';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'ይህ እርምጃ ሊቀለበስ አይችልም። የቪዲዮ ፋይሎቹ እስከመጨረሻው ከመሣሪያዎ ይወገዳሉ።';
+  String get libraryDeleteClipsWarning => 'ይህ እርምጃ ሊቀለበስ አይችልም።';
 
   @override
   String get libraryPreparingVideo => 'ቪዲዮ በማዘጋጀት ላይ...';
@@ -6611,6 +6610,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryDeleteClipMessage => 'እርግጠኛ ነዎት ይህን ክሊፕ መሰረዝ ይፈልጋሉ?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'ክሊፑ መጀመሪያ ወደ ቆሻሻ መጣያው ይሄዳል፣ ስለዚህ አሁንም መመለስ ይችላሉ።';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds ሰከ';
   }
@@ -6626,6 +6629,16 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'መዝገብ ውስጥ ተቀምጧል። $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ገና በጋለሪዎ ውስጥ የለም። $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'ያለ የይዘት መታወቂያዎች በጋለሪዎ ውስጥ አለ። $label';
   }
 
   @override
@@ -11364,6 +11377,13 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => 'ሲይዙ ቀረጻ ይጀምራል፣ ሲለቁ ይቆማል';
+
+  @override
+  String get settingsBackUpRecordings => 'ቀረጻዎችን ወደ ጋለሪ ምትኬ ማስቀመጥ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'የእያንዳንዱን አዲስ ቀረጻ ቅጂ በጋለሪዎ ያስቀምጣል። ሌሎች መተግበሪያዎች እና የደመና የፎቶ ምትኬዎች እዚያ ሊያዩት ይችላሉ።';
 
   @override
   String uploadPublishedCountMessage(int count) {

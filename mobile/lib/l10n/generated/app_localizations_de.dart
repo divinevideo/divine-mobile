@@ -6615,7 +6615,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Das kann nicht rückgängig gemacht werden. Die Videodateien werden dauerhaft von deinem Gerät entfernt.';
+      'Das kann nicht rückgängig gemacht werden.';
 
   @override
   String get libraryPreparingVideo => 'Video wird vorbereitet …';
@@ -6852,6 +6852,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Diesen Clip wirklich löschen?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Der Clip kommt zuerst in den Papierkorb, du kannst ihn also noch wiederherstellen.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds Sek';
   }
@@ -6867,6 +6871,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Archiviert. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Noch nicht in deiner Galerie. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'In deiner Galerie ohne Content Credentials. $label';
   }
 
   @override
@@ -11796,6 +11810,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Die Aufnahme beginnt, wenn du gedrückt hältst, und stoppt, wenn du loslässt';
+
+  @override
+  String get settingsBackUpRecordings => 'Aufnahmen in der Galerie sichern';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Legt eine Kopie jeder neuen Aufnahme in deiner Galerie ab. Andere Apps und Cloud-Fotobackups können sie dort sehen.';
 
   @override
   String uploadPublishedCountMessage(int count) {

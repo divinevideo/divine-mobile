@@ -6698,8 +6698,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get librarySortVerticalFirst => 'Verticalele mai întâi';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Nu se poate anula. Fișierele video vor fi eliminate definitiv de pe dispozitiv.';
+  String get libraryDeleteClipsWarning => 'Nu se poate anula.';
 
   @override
   String get libraryPreparingVideo => 'Se pregătește videoclipul...';
@@ -6934,6 +6933,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Ștergi acest clip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Clipul ajunge mai întâi în coș, așa că îl poți restaura în continuare.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6949,6 +6952,16 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Arhivat. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Încă nu e în galeria ta. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'În galeria ta fără acreditări de conținut. $label';
   }
 
   @override
@@ -11903,6 +11916,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Înregistrarea începe când ții apăsat și se oprește când eliberezi';
+
+  @override
+  String get settingsBackUpRecordings => 'Salvează înregistrările în galerie';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.';
 
   @override
   String uploadPublishedCountMessage(int count) {

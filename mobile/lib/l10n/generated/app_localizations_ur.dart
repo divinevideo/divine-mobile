@@ -6536,8 +6536,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get librarySortVerticalFirst => 'پہلے عمودی';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'یہ کارروائی واپس نہیں ہو سکتی۔ ویڈیو فائلیں آپ کی ڈیوائس سے مستقل طور پر ہٹا دی جائیں گی۔';
+  String get libraryDeleteClipsWarning => 'یہ کارروائی واپس نہیں ہو سکتی۔';
 
   @override
   String get libraryPreparingVideo => 'ویڈیو تیار ہو رہی ہے...';
@@ -6771,6 +6770,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'کیا آپ واقعی یہ کلپ حذف کرنا چاہتے ہیں؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'کلپ پہلے ٹریش میں جاتی ہے، اس لیے آپ اسے ابھی بھی بحال کر سکتے ہیں۔';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6786,6 +6789,16 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'آرکائیو شدہ۔ $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ابھی آپ کی گیلری میں نہیں۔ $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'آپ کی گیلری میں مواد اسناد کے بغیر۔ $label';
   }
 
   @override
@@ -11656,6 +11669,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے';
+
+  @override
+  String get settingsBackUpRecordings => 'ریکارڈنگز کا گیلری میں بیک اپ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔';
 
   @override
   String uploadPublishedCountMessage(int count) {

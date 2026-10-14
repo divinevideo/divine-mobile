@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
@@ -267,6 +268,38 @@ void main() {
           ),
         );
       });
+
+      for (final status in ClipGalleryBackupStatus.values) {
+        testWidgets('announces a gallery backup that is ${status.name}', (
+          tester,
+        ) async {
+          final clip = createClip().copyWith(
+            galleryBackup: ClipGalleryBackup(
+              status: status,
+              recordingPath: '/path/to/clip.mp4',
+            ),
+          );
+          await tester.pumpWidget(buildWidget(clip: clip));
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final label = l10n.videoClipSemanticLabel('5.00');
+
+          final semantics = tester.getSemantics(
+            find.byType(VideoClipThumbnailCard),
+          );
+
+          // A finished backup is the normal case and stays quiet.
+          expect(
+            semantics.label,
+            equals(switch (status) {
+              ClipGalleryBackupStatus.pending =>
+                l10n.videoClipBackupPendingSemanticLabel(label),
+              ClipGalleryBackupStatus.savedUnsigned =>
+                l10n.videoClipBackupUnsignedSemanticLabel(label),
+              ClipGalleryBackupStatus.saved => label,
+            }),
+          );
+        });
+      }
 
       testWidgets('announces the selection position when selected', (
         tester,

@@ -330,7 +330,8 @@ class _FilterContent extends StatelessWidget {
       sticker: .alert,
       title: context.l10n.libraryDeleteClipTitle,
       subtitle: context.l10n.libraryDeleteClipMessage,
-      additionalText: context.l10n.libraryDeleteClipsWarning,
+      // The clip only moves to the trash, and a copy in the gallery stays.
+      additionalText: context.l10n.libraryDeleteClipTrashNote,
       primaryButtonText: context.l10n.libraryDeleteConfirm,
       secondaryButtonText: context.l10n.commonCancel,
       onPrimaryPressed: () => navigator.pop(true),

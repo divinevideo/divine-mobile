@@ -6572,8 +6572,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get librarySortVerticalFirst => 'Unahin ang patayo';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Hindi na ito mababawi. Permanenteng maaalis sa device mo ang mga video file.';
+  String get libraryDeleteClipsWarning => 'Hindi na ito mababawi.';
 
   @override
   String get libraryPreparingVideo => 'Hinahanda ang video...';
@@ -6810,6 +6809,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Sigurado ka bang gusto mong burahin ang clip na ito?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Mapupunta muna ang clip sa trash, kaya puwede mo pa itong i-restore.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6825,6 +6828,16 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Naka-archive. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Wala pa sa gallery mo. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Nasa gallery mo nang walang content credentials. $label';
   }
 
   @override
@@ -11759,6 +11772,14 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Magsisimulang mag-record kapag pinindot nang matagal at titigil kapag inalis';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'I-back up ang mga recording sa gallery';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Nagse-save ng kopya ng bawat bagong recording sa gallery mo. Makikita ito roon ng ibang app at ng mga cloud photo backup.';
 
   @override
   String uploadPublishedCountMessage(int count) {

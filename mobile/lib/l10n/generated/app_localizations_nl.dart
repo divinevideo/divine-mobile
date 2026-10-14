@@ -6560,7 +6560,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDeleteClipsWarning =>
-      'Dit kan niet ongedaan worden gemaakt. De videobestanden worden permanent van je apparaat verwijderd.';
+      'Dit kan niet ongedaan worden gemaakt.';
 
   @override
   String get libraryPreparingVideo => 'Video voorbereiden...';
@@ -6796,6 +6796,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Weet je zeker dat je deze clip wilt verwijderen?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'De clip gaat eerst naar de prullenbak, dus je kunt hem nog terugzetten.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6811,6 +6815,16 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Gearchiveerd. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Nog niet in je galerij. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'In je galerij zonder content credentials. $label';
   }
 
   @override
@@ -11716,6 +11730,13 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Opname start wanneer je ingedrukt houdt en stopt wanneer je loslaat';
+
+  @override
+  String get settingsBackUpRecordings => 'Opnames back-uppen naar je galerij';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Zet een kopie van elke nieuwe opname in je galerij. Andere apps en fotoback-ups in de cloud kunnen die daar zien.';
 
   @override
   String uploadPublishedCountMessage(int count) {

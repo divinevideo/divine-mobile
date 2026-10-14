@@ -27,10 +27,15 @@ Route<void> videoClipPreviewRoute({
 }) {
   return PageRouteBuilder<void>(
     opaque: false,
-    pageBuilder: (_, _, _) => VideoClipPreview(
-      clip: clip,
-      onSaveToGallery: onSaveToGallery,
-      onDelete: onDelete,
+    // A bare route has no Material above it, and its text would fall back to
+    // the yellow double underline.
+    pageBuilder: (_, _, _) => Material(
+      type: MaterialType.transparency,
+      child: VideoClipPreview(
+        clip: clip,
+        onSaveToGallery: onSaveToGallery,
+        onDelete: onDelete,
+      ),
     ),
     transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(opacity: animation, child: child);

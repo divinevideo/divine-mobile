@@ -6690,8 +6690,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get librarySortVerticalFirst => 'Najpierw pionowe';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Tego nie cofniesz. Pliki wideo zostaną trwale usunięte z urządzenia.';
+  String get libraryDeleteClipsWarning => 'Tego nie cofniesz.';
 
   @override
   String get libraryPreparingVideo => 'Przygotowywanie wideo...';
@@ -6936,6 +6935,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Na pewno usunąć ten klip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Klip najpierw trafia do kosza, więc wciąż możesz go przywrócić.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds s';
   }
@@ -6951,6 +6954,16 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Zarchiwizowano. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Jeszcze nie ma w twojej galerii. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'W twojej galerii bez poświadczeń treści. $label';
   }
 
   @override
@@ -11889,6 +11902,13 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Nagrywanie rozpoczyna się po przytrzymaniu i zatrzymuje się po zwolnieniu';
+
+  @override
+  String get settingsBackUpRecordings => 'Kopia nagrań w galerii';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Zapisuje kopię każdego nowego nagrania w galerii. Inne aplikacje i kopie zapasowe zdjęć w chmurze mogą ją tam zobaczyć.';
 
   @override
   String uploadPublishedCountMessage(int count) {

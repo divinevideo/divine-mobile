@@ -6730,8 +6730,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get librarySortVerticalFirst => 'వర్టికల్ ఫస్ట్';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'ఈ చర్య రద్దు చేయబడదు. వీడియో ఫైల్‌లు మీ పరికరం నుండి శాశ్వతంగా తీసివేయబడతాయి.';
+  String get libraryDeleteClipsWarning => 'ఈ చర్య రద్దు చేయబడదు.';
 
   @override
   String get libraryPreparingVideo => 'వీడియోని సిద్ధం చేస్తోంది...';
@@ -6969,6 +6968,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీరు ఖచ్చితంగా ఈ క్లిప్‌ని తొలగించాలనుకుంటున్నారా?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'క్లిప్ ముందుగా ట్రాష్‌లోకి వెళ్తుంది, కాబట్టి మీరు దాన్ని ఇంకా పునరుద్ధరించవచ్చు.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$secondsసె';
   }
@@ -6984,6 +6987,16 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'ఆర్కైవ్ చేయబడింది. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ఇంకా మీ గ్యాలరీలో లేదు. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'కంటెంట్ ఆధారాలు లేకుండా మీ గ్యాలరీలో ఉంది. $label';
   }
 
   @override
@@ -11966,6 +11979,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'మీరు నొక్కి ఉంచినప్పుడు రికార్డింగ్ ప్రారంభించండి, ఆపై మీరు విడుదల చేసినప్పుడు ఆపివేయండి';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'రికార్డింగ్‌లను గ్యాలరీకి బ్యాకప్ చేయండి';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'ప్రతి కొత్త రికార్డింగ్ కాపీని మీ గ్యాలరీలో సేవ్ చేస్తుంది. ఇతర యాప్‌లు మరియు క్లౌడ్ ఫోటో బ్యాకప్‌లు దాన్ని అక్కడ చూడగలవు.';
 
   @override
   String uploadPublishedCountMessage(int count) {

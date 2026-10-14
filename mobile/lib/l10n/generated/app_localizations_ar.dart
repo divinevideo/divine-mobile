@@ -6509,8 +6509,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get librarySortVerticalFirst => 'العمودي أولاً';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'لا يمكن التراجع. ستُزال ملفات الفيديو نهائيًا من جهازك.';
+  String get libraryDeleteClipsWarning => 'لا يمكن التراجع.';
 
   @override
   String get libraryPreparingVideo => 'جاري تجهيز الفيديو...';
@@ -6751,6 +6750,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryDeleteClipMessage => 'هل تريد حذف هذا المقطع؟';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'يُنقل المقطع إلى سلة المهملات أولًا، لذا يمكن استعادته.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds ث';
   }
@@ -6766,6 +6769,16 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'مؤرشف. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'ليس في معرض الصور بعد. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'في معرض الصور دون بيانات اعتماد المحتوى. $label';
   }
 
   @override
@@ -11628,6 +11641,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'يبدأ التسجيل عند الضغط المطوّل ويتوقف عند الإفراج';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'النسخ الاحتياطي للتسجيلات في معرض الصور';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.';
 
   @override
   String uploadPublishedCountMessage(int count) {

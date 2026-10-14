@@ -15,12 +15,14 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/account_state_resume_refresher.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -87,8 +89,27 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
           stackTrace: st,
         );
       }
+      if (!mounted) return;
+      _finishPendingGalleryBackups();
     });
   }
+
+  /// Copies recordings to the gallery that were waiting for their signature,
+  /// for example because they were taken offline (#10067).
+  ///
+  /// A backup is never worth breaking startup or resume for, so anything that
+  /// fails, reading the service included, is only logged.
+  void _finishPendingGalleryBackups() => runDetached(
+    () async {
+      if (!ref.read(authServiceProvider).isAuthenticated) return;
+      await ref
+          .read(recordingGalleryBackupServiceProvider)
+          .finishPendingBackups();
+    }(),
+    'finish pending gallery backups',
+    logName: 'AppLifecycleHandler',
+    category: LogCategory.video,
+  );
 
   @override
   void dispose() {
@@ -141,6 +162,9 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         // subscriptions sent to stale sockets will timeout (30s) with no response.
         _reconnectRelays();
         unawaited(_clearAppBadge());
+        // Coming back is often coming back online, so recordings waiting for
+        // their signature may be backed up now.
+        _finishPendingGalleryBackups();
         unawaited(
           ref
               .read(notificationRefreshCoordinatorProvider)

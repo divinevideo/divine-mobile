@@ -6188,7 +6188,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get librarySortVerticalFirst => '縦長を先に';
 
   @override
-  String get libraryDeleteClipsWarning => 'この操作は取り消せません。動画ファイルは端末から完全に削除されます。';
+  String get libraryDeleteClipsWarning => 'この操作は取り消せません。';
 
   @override
   String get libraryPreparingVideo => '動画を準備しています…';
@@ -6410,6 +6410,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDeleteClipMessage => 'このクリップを削除しますか？';
 
   @override
+  String get libraryDeleteClipTrashNote => 'クリップはまずゴミ箱に移動するため、まだ復元できます。';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds秒';
   }
@@ -6425,6 +6428,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'アーカイブ済み。$label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'まだギャラリーにありません。$label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'コンテンツ認証情報なしでギャラリーに保存済み。$label';
   }
 
   @override
@@ -11073,6 +11086,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generalSettingsHoldToRecordSubtitle => '長押しすると録画が始まり、離すと止まります';
+
+  @override
+  String get settingsBackUpRecordings => '録画をギャラリーにバックアップ';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      '新しい録画のコピーをギャラリーに保存します。他のアプリやクラウドの写真バックアップからも見えます。';
 
   @override
   String uploadPublishedCountMessage(int count) {

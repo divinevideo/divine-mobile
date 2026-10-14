@@ -6586,8 +6586,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get librarySortVerticalFirst => 'Първо вертикални';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Това действие не може да бъде отменено. Видео файловете ще бъдат премахнати за постоянно от твоето устройство.';
+  String get libraryDeleteClipsWarning => 'Това не може да бъде отменено.';
 
   @override
   String get libraryPreparingVideo => 'Видеоклипът се подготвя...';
@@ -6830,6 +6829,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Сигурен ли си, че искаш да изтриеш този клип?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Клипът първо отива в кошчето, така че още можеш да го възстановиш.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds сек';
   }
@@ -6845,6 +6848,16 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Архивирано. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Още не е в галерията ти. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'В галерията ти без удостоверения за съдържание. $label';
   }
 
   @override
@@ -11767,6 +11780,14 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Записът започва при задържане и спира при отпускане';
+
+  @override
+  String get settingsBackUpRecordings =>
+      'Резервно копие на записите в галерията';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Запазва копие на всеки нов запис в галерията ти. Други приложения и облачните архиви на снимки могат да го виждат там.';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -6619,8 +6619,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get librarySortVerticalFirst => 'Vertical First';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'This action cannot be undone. The video files will be permanently removed from your device.';
+  String get libraryDeleteClipsWarning => 'This can\'t be undone.';
 
   @override
   String get libraryPreparingVideo => 'Preparing video...';
@@ -6853,6 +6852,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete this clip?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'It goes to the trash first, so you can still restore it.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '${seconds}s';
   }
@@ -6868,6 +6871,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Archived. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Not in your gallery yet. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'In your gallery without content credentials. $label';
   }
 
   @override
@@ -11745,6 +11758,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Start recording when you press and hold, then stop when you release';
+
+  @override
+  String get settingsBackUpRecordings => 'Back up recordings to your gallery';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.';
 
   @override
   String uploadPublishedCountMessage(int count) {

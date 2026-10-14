@@ -6495,8 +6495,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get librarySortVerticalFirst => 'Dọc trước';
 
   @override
-  String get libraryDeleteClipsWarning =>
-      'Không thể hoàn tác thao tác này. Các tệp video sẽ bị xóa vĩnh viễn khỏi thiết bị của bạn.';
+  String get libraryDeleteClipsWarning => 'Không thể hoàn tác thao tác này.';
 
   @override
   String get libraryPreparingVideo => 'Đang chuẩn bị video...';
@@ -6730,6 +6729,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryDeleteClipMessage => 'Bạn có chắc muốn xóa clip này không?';
 
   @override
+  String get libraryDeleteClipTrashNote =>
+      'Clip sẽ vào thùng rác trước, nên bạn vẫn có thể khôi phục.';
+
+  @override
   String libraryClipDuration(String seconds) {
     return '$seconds giây';
   }
@@ -6745,6 +6748,16 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String videoClipArchivedSemanticLabel(String label) {
     return 'Đã lưu trữ. $label';
+  }
+
+  @override
+  String videoClipBackupPendingSemanticLabel(String label) {
+    return 'Chưa có trong thư viện ảnh của bạn. $label';
+  }
+
+  @override
+  String videoClipBackupUnsignedSemanticLabel(String label) {
+    return 'Có trong thư viện ảnh của bạn nhưng không có chứng nhận nội dung. $label';
   }
 
   @override
@@ -11608,6 +11621,13 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get generalSettingsHoldToRecordSubtitle =>
       'Bắt đầu quay khi bạn nhấn giữ, dừng khi bạn thả ra';
+
+  @override
+  String get settingsBackUpRecordings => 'Sao lưu bản quay vào thư viện ảnh';
+
+  @override
+  String get settingsBackUpRecordingsSubtitle =>
+      'Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.';
 
   @override
   String uploadPublishedCountMessage(int count) {
