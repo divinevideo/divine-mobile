@@ -72,6 +72,14 @@ void main() {
       expect(disposed, isTrue);
     });
 
+    test('dispose can be called more than once', () async {
+      final transport = InMemoryNostrTransport();
+
+      await transport.dispose();
+
+      await expectLater(transport.dispose(), completes);
+    });
+
     test('ignores messages after disposal', () async {
       final transport = InMemoryNostrTransport();
 
