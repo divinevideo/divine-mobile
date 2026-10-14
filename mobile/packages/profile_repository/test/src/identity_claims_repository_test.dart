@@ -2182,7 +2182,7 @@ void main() {
               proof: IdentityClaim.oauthProof,
             ),
           ),
-          throwsA(isA<IdentityClaimPublishException>()),
+          throwsA(isA<IdentityClaimNotSignedException>()),
         );
       });
     });
@@ -2724,7 +2724,7 @@ void main() {
               proof: 'abc',
             ),
           ),
-          throwsA(isA<IdentityClaimPublishException>()),
+          throwsA(isA<IdentityClaimNotSignedException>()),
         );
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
@@ -2751,7 +2751,13 @@ void main() {
               proof: 'abc',
             ),
           ),
-          throwsA(isA<IdentityClaimPublishException>()),
+          // Signed, so not the signer's refusal: callers tell the two apart.
+          throwsA(
+            allOf(
+              isA<IdentityClaimPublishException>(),
+              isNot(isA<IdentityClaimNotSignedException>()),
+            ),
+          ),
         );
         verifyNever(
           () => identityEventsDao.upsertEvent(
@@ -2924,6 +2930,82 @@ void main() {
         );
 
         expect(tags.map((t) => t[1]), isNot(contains('telegram:chan')));
+      });
+
+      group('relinking a claim removed here', () {
+        // A relay that still serves the event from before the unlink.
+        void stubStaleRead() => stubIdentityEvents([
+          _event(
+            id: _eventId(10),
+            kind: 10011,
+            tags: [
+              ['i', 'telegram:chan', 'chan/2'],
+              ['i', 'github:octocat', 'abc'],
+            ],
+          ),
+        ]);
+        const telegram = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'telegram',
+          identity: 'chan',
+          proof: 'chan/2',
+        );
+        const bluesky = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'bluesky',
+          identity: 'alice.bsky.social',
+          proof: IdentityClaim.oauthProof,
+        );
+
+        test(
+          'that no relay took does not bring the claim back on the next write',
+          () async {
+            stubStaleRead();
+            await repo.removeClaim(telegram);
+            var relaysRefuse = true;
+            when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+              invocation,
+            ) async {
+              final event = invocation.positionalArguments.single as Event;
+              return PublishOutcome(
+                eventId: event.id,
+                acceptedBy: relaysRefuse ? const [] : const ['wss://a'],
+                rejectedBy: relaysRefuse
+                    ? const {'wss://a': 'blocked'}
+                    : const {},
+                noResponseFrom: const [],
+              );
+            });
+            await expectLater(
+              () => repo.publishClaim(telegram),
+              throwsA(isA<IdentityClaimPublishException>()),
+            );
+
+            relaysRefuse = false;
+            final tags = await repo.publishClaim(bluesky);
+
+            expect(tags.map((t) => t[1]), isNot(contains('telegram:chan')));
+          },
+        );
+
+        test(
+          'that a relay took is merged like any linked claim, in place',
+          () async {
+            stubStaleRead();
+            await repo.removeClaim(telegram);
+            await repo.publishClaim(telegram);
+
+            final tags = await repo.publishClaim(bluesky);
+
+            // The stale read's copy stays where it was, as for a claim never
+            // unlinked, rather than being dropped and added back at the end.
+            expect(tags.map((t) => t[1]), [
+              'telegram:chan',
+              'github:octocat',
+              'bluesky:alice.bsky.social',
+            ]);
+          },
+        );
       });
 
       test(
@@ -3906,6 +3988,16 @@ void main() {
       const exception = IdentityClaimPublishException('nope');
 
       expect(exception.toString(), contains('nope'));
+    });
+
+    test('IdentityClaimNotSignedException names itself and its message', () {
+      const exception = IdentityClaimNotSignedException('declined');
+
+      expect(exception, isA<IdentityClaimPublishException>());
+      expect(
+        exception.toString(),
+        'IdentityClaimNotSignedException: declined',
+      );
     });
   });
 }

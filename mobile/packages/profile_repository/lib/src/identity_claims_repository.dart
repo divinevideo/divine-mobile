@@ -58,6 +58,19 @@ class IdentityClaimPublishException implements Exception {
   String toString() => 'IdentityClaimPublishException: $message';
 }
 
+/// The identity event was never signed: the signer declined or failed.
+///
+/// A kind of [IdentityClaimPublishException], so callers that only need to
+/// know the write did not happen can keep catching that; callers that tell
+/// the person what went wrong can tell this apart from no relay taking it.
+class IdentityClaimNotSignedException extends IdentityClaimPublishException {
+  /// Creates an [IdentityClaimNotSignedException].
+  const IdentityClaimNotSignedException(super.message);
+
+  @override
+  String toString() => 'IdentityClaimNotSignedException: $message';
+}
+
 /// Every claim on a profile's identity event, with the verifier's verdict.
 ///
 /// Unlike the rendering paths, this keeps unverified claims: the surface that
@@ -483,8 +496,11 @@ class IdentityClaimsRepository {
   /// Throws:
   ///
   /// * [StateError] if the repository was built without write dependencies.
-  /// * [IdentityClaimPublishException] if the event cannot be signed, or no
-  ///   relay confirms it.
+  /// * [IdentityClaimReadException] if the claims already on the identity
+  ///   event cannot be read, so writing would drop them.
+  /// * [IdentityClaimNotSignedException], a kind of
+  ///   [IdentityClaimPublishException], if the event cannot be signed.
+  /// * [IdentityClaimPublishException] if no relay confirms it.
   Future<List<List<String>>> publishClaim(
     IdentityClaim claim, {
     String? replacingIdentity,
@@ -499,7 +515,12 @@ class IdentityClaimsRepository {
   /// value, for a sign-in the verifier confirms before it is published
   /// (#10119). [replacingIdentity] is as for [publishClaim].
   ///
-  /// Throws the same exceptions as [publishClaim].
+  /// Throws:
+  ///
+  /// * [StateError] if the repository was built without write dependencies.
+  /// * [IdentityClaimReadException] if the claims already on the identity
+  ///   event cannot be read, so writing would drop them.
+  /// * [IdentityClaimNotSignedException] if the event cannot be signed.
   Future<SignedIdentityClaim> signClaim(
     IdentityClaim claim, {
     String? confirmBinding,
@@ -549,13 +570,14 @@ class IdentityClaimsRepository {
   Future<List<List<String>>> publishSignedClaim(
     SignedIdentityClaim signed,
   ) async {
-    // Linking again undoes an earlier unlink from this session.
-    _lastRemovedKeys[signed.pubkey]?.remove(signed.claimKey);
     final published = await _publishSignedIdentityEvent(
       signed.pubkey,
       signed.event,
       signed.tags,
     );
+    // Linking again undoes an earlier unlink from this session, once a relay
+    // has the event with it: a relink no relay took leaves the unlink standing.
+    _lastRemovedKeys[signed.pubkey]?.remove(signed.claimKey);
     // Counted as removed only once a relay has the event without it.
     if (signed.replacedKey case final replacedKey?) {
       (_lastRemovedKeys[signed.pubkey] ??= <String>{}).add(replacedKey);
@@ -1065,7 +1087,7 @@ class IdentityClaimsRepository {
           : max(_nowSeconds(), replaced.createdAt + 1),
     );
     if (event == null) {
-      throw const IdentityClaimPublishException(
+      throw const IdentityClaimNotSignedException(
         'Could not sign the identity event',
       );
     }
