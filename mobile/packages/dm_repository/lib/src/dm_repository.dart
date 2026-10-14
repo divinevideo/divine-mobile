@@ -3499,9 +3499,9 @@ class DmRepository {
           // `!isSentByMe` is load-bearing on this duplicate branch. The `else`
           // above is reached by a peer's rumor AND by a self-authored 1:1 rumor
           // with no send batch token; clearing here on our own self-wrap would
-          // invert *this* path into "clear when *I* speak NIP-17". It does not
-          // cover a unique self-authored NIP-17, which is not a twin and still
-          // hits the persist upsert's `dmProtocol: 'nip17'` below.
+          // invert *this* path into "clear when *I* speak NIP-17". A unique
+          // self-authored NIP-17 is not a twin; the persist upsert below keeps
+          // the stored protocol for it, for the same reason.
           // Ledger first, unlatch second, and the unlatch can never throw
           // out of
           // here. It is an opportunistic upgrade on evidence we happen to be
@@ -3631,7 +3631,13 @@ class DmRepository {
             currentUserHasSent:
                 isSentByMe || (existing?.currentUserHasSent ?? false),
             ownerPubkey: ownerPubkey,
-            dmProtocol: 'nip17',
+            // A peer's NIP-17 proves they read it. Our own proves nothing
+            // about them: a send held pending stores no message, so its
+            // self-wrap lands here first, and writing 'nip17' for it would
+            // unlatch a legacy peer for good (#8506).
+            dmProtocol: isSentByMe
+                ? (existing?.dmProtocol ?? 'nip17')
+                : 'nip17',
           );
           // A newer message reopens a removed conversation: the row is
           // recreated above, while the tombstone is deliberately kept so
