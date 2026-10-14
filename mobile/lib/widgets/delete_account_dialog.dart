@@ -587,7 +587,11 @@ Future<void> executeAccountDeletion({
     );
     dismissProgressSheet();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Resolved while the context is live: the action can fire up to 12
+    // seconds later, after the caller route has left the tree.
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.maybeOf(context);
+    messenger.showSnackBar(
       DivineSnackbarContainer.snackBar(
         message,
         error: true,
@@ -595,9 +599,10 @@ Future<void> executeAccountDeletion({
         actionLabel: offerSupport ? reportBugText : null,
         onActionPressed: offerSupport
             ? () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                messenger.hideCurrentSnackBar();
+                if (router == null) return;
                 runDetached(
-                  context.push<void>(RoutePaths.supportReportBug),
+                  router.push<void>(RoutePaths.supportReportBug),
                   'open support report from account deletion snackbar',
                   logName: screenName,
                   category: LogCategory.auth,

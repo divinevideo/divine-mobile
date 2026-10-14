@@ -1561,6 +1561,74 @@ void main() {
       expect(find.text('Bug report form'), findsOneWidget);
     });
 
+    testWidgets('Report a bug opens the form after the caller route closed', (
+      tester,
+    ) async {
+      final deletionService = _MockAccountDeletionService();
+      final authService = _MockAuthService();
+      final recoveryRepository = _MockAccountDeletionRecoveryRepository();
+      when(
+        authService.checkAccountDeletionReadiness,
+      ).thenAnswer((_) async => AccountDeletionReadiness.ready);
+      when(recoveryRepository.prepare).thenThrow(_missingCoordinatorRoute);
+
+      late BuildContext callerContext;
+      final router = GoRouter(
+        initialLocation: '/caller',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(body: SizedBox.shrink()),
+            routes: [
+              GoRoute(
+                path: 'caller',
+                builder: (_, _) => Builder(
+                  builder: (context) {
+                    callerContext = context;
+                    return const Scaffold(body: Text(_callerScreenMarker));
+                  },
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.supportReportBug,
+            builder: (_, _) => const Scaffold(body: Text('Bug report form')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+
+      await runDeletion(
+        context: callerContext,
+        deletionService: deletionService,
+        authService: authService,
+        deletionRecoveryRepository: recoveryRepository,
+      );
+      await tester.pumpAndSettle();
+
+      // The snackbar outlives the route that showed it: back out of the
+      // caller while it is still on screen.
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text(_callerScreenMarker), findsNothing);
+      expect(callerContext.mounted, isFalse);
+
+      final l10n = _englishL10n();
+      await tester.tap(find.text(l10n.supportReportBug));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Bug report form'), findsOneWidget);
+    });
+
     testWidgets('a rejected screen-reader announcement does not escape', (
       tester,
     ) async {
