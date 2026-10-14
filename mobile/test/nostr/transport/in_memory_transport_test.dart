@@ -36,7 +36,7 @@ void main() {
       expect(outgoing, ['["REQ","sub1",{"kinds":[1]}]', '["CLOSE","sub1"]']);
     });
 
-    test('dispose closes both streams', () {
+    test('dispose closes both streams', () async {
       final transport = InMemoryNostrTransport();
 
       bool incomingClosed = false;
@@ -48,7 +48,7 @@ void main() {
         onDone: () => outgoingClosed = true,
       );
 
-      transport.dispose();
+      await transport.dispose();
 
       expect(incomingClosed, isTrue);
       expect(outgoingClosed, isTrue);
@@ -63,7 +63,7 @@ void main() {
       transport.injectFromRelay('["EVENT","sub1",{"id":"abc"}]');
       await pumpEventQueue();
 
-      transport.dispose();
+      await transport.dispose();
 
       // These should be ignored
       transport.injectFromRelay('["EVENT","sub2",{"id":"def"}]');

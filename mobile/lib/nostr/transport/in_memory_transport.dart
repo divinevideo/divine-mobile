@@ -31,8 +31,7 @@ class InMemoryNostrTransport implements NostrTransport {
   }
 
   @override
-  void dispose() {
-    _incomingCtrl.close();
-    _outgoingCtrl.close();
+  Future<void> dispose() async {
+    await Future.wait([_incomingCtrl.close(), _outgoingCtrl.close()]);
   }
 }

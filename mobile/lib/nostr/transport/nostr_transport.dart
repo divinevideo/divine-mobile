@@ -10,5 +10,5 @@ abstract class NostrTransport {
   void send(String json);
 
   /// Clean up resources
-  void dispose();
+  Future<void> dispose();
 }
