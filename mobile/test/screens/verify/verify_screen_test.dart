@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -147,6 +148,18 @@ void main() {
       await tester.tap(find.text(l10n.verifyRetry));
 
       verify(cubit.load).called(1);
+    });
+
+    testWidgets('observes a failed retry request', (tester) async {
+      when(cubit.load).thenAnswer((_) async {
+        throw StateError('retry failed');
+      });
+      await pump(tester, VerifyState(status: VerifyStatus.failure));
+
+      await tester.tap(find.text(l10n.verifyRetry));
+      await tester.pump();
+
+      expect(find.text(l10n.verifyLoadFailed), findsOneWidget);
     });
 
     testWidgets('marks each link verified or not', (tester) async {
@@ -326,6 +339,39 @@ void main() {
       // Drawn from what was published, not from a fresh relay read that may
       // not carry the event yet.
       verifyNever(cubit.load);
+    });
+
+    testWidgets('keeps the link confirmation when its announcement fails', (
+      tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            (Object? message) async {
+              if (message is Map && message['type'] == 'announce') {
+                throw StateError('announcement failed');
+              }
+              return null;
+            },
+          );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+
+      await pump(tester, ready());
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('finish link'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.verifyLinkedConfirmation('Mastodon')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('says nothing when the flow is left without linking', (
