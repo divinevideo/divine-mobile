@@ -187,6 +187,83 @@ void main() {
       },
     );
 
+    group('undelivered message', () {
+      const author =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const messageId =
+          '5555555555555555555555555555555555555555555555555555555555555555';
+      late _ChatCubit cubit;
+
+      setUp(() {
+        cubit = _ChatCubit();
+        when(cubit.visibleMessages).thenReturn([
+          ChatMessage(
+            id: messageId,
+            channelId: 'general',
+            author: author,
+            body: 'Hello room',
+            createdAt: 1,
+          ),
+        ]);
+        whenListen(cubit, const Stream<ChatState>.empty());
+      });
+
+      Future<AppLocalizations> pumpRoom(
+        WidgetTester tester,
+        ChatState state,
+      ) async {
+        when(() => cubit.state).thenReturn(state);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              fetchUserProfileProvider(author)
+                  .overrideWith((ref) async => null),
+              profileIdentityResolvingProvider(author).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<ChatCubit>.value(
+                value: cubit,
+                child: const ChatScreen(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        return lookupAppLocalizations(const Locale('en'));
+      }
+
+      testWidgets('is marked as failed and can be retried', (tester) async {
+        when(() => cubit.retry(messageId)).thenAnswer((_) async {});
+        final l10n = await pumpRoom(
+          tester,
+          const ChatState(pendingIds: [messageId]),
+        );
+        expect(find.text(l10n.dmStatusFailed), findsOneWidget);
+
+        await tester.tap(find.text(l10n.dmSendFailedRetry));
+
+        verify(() => cubit.retry(messageId)).called(1);
+      });
+
+      testWidgets('is not marked once it is delivered', (tester) async {
+        final l10n = await pumpRoom(tester, const ChatState());
+        expect(find.text('Hello room'), findsOneWidget);
+        expect(find.text(l10n.dmStatusFailed), findsNothing);
+        expect(find.text(l10n.dmSendFailedRetry), findsNothing);
+      });
+
+      testWidgets('is announced above the conversation', (tester) async {
+        final l10n = await pumpRoom(
+          tester,
+          const ChatState(sendFailed: true, pendingIds: [messageId]),
+        );
+        expect(find.text(l10n.dmSendFailedMessage), findsOneWidget);
+      });
+    });
+
     group('composer', () {
       late _ChatCubit cubit;
 
