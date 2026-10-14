@@ -90,6 +90,20 @@ void main() {
     return tester.state<_TestWidgetState>(find.byType(_TestWidget));
   }
 
+  List<List<String>> prefetchedKeysPerCall() {
+    final calls = verify(
+      () => mockCache.preCacheFiles(
+        captureAny(),
+        batchSize: any(named: 'batchSize'),
+        authHeadersProvider: any(named: 'authHeadersProvider'),
+      ),
+    ).captured;
+    return [
+      for (final items in calls.cast<List<({String url, String key})>>())
+        [for (final item in items) item.key],
+    ];
+  }
+
   void verifyNothingPrefetched() {
     verifyNever(
       () => mockCache.preCacheFiles(
@@ -111,13 +125,10 @@ void main() {
         expect(videos.length, greaterThan(AppConstants.gridPrefetchLimit));
 
         state.prefetchGridVideos(videos);
-        verify(
-          () => mockCache.preCacheFiles(
-            any(),
-            batchSize: any(named: 'batchSize'),
-            authHeadersProvider: any(named: 'authHeadersProvider'),
-          ),
-        ).called(1);
+
+        expect(prefetchedKeysPerCall(), [
+          List.generate(AppConstants.gridPrefetchLimit, (i) => 'video-$i'),
+        ]);
       });
 
       testWidgets('does not prefetch an empty list', (tester) async {
