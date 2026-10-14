@@ -39,6 +39,15 @@ class _ScriptedEncryptSigner extends LocalNostrSigner {
     encryptCalls++;
     return _encrypt();
   }
+
+  /// How many times the kind-4 copy was signed.
+  int signCalls = 0;
+
+  @override
+  Future<Event?> signEvent(Event event) {
+    if (event.kind == EventKind.directMessage) signCalls++;
+    return super.signEvent(event);
+  }
 }
 
 /// A local signer that holds the kind-4 copy's signature until each test
@@ -332,6 +341,13 @@ void main() {
             first: (e) async => _unanswered(e),
           );
 
+          async.elapse(const Duration(milliseconds: 2100));
+          expect(kind4Attempts, hasLength(2));
+          async.elapse(const Duration(milliseconds: 3800));
+          expect(kind4Attempts, hasLength(2), reason: 'the second wait is 4 s');
+          async.elapse(const Duration(milliseconds: 200));
+          expect(kind4Attempts, hasLength(3));
+
           async.elapse(const Duration(seconds: 60));
           expect(kind4Attempts, hasLength(3));
           expect(kind4Attempts.map((e) => e.id).toSet(), hasLength(1));
@@ -383,11 +399,21 @@ void main() {
             _privateKey,
             () async => throw TimeoutException('bunker did not answer'),
           );
-          sendOverLatchedThread(async, buildRepository(signer: signer));
+          final sent = sendOverLatchedThread(
+            async,
+            buildRepository(signer: signer),
+          );
 
           async.elapse(const Duration(seconds: 30));
           expect(kind4Attempts, isEmpty);
           expect(signer.encryptCalls, equals(1));
+          expect(
+            logsNaming(
+              sent.rumorEventId!,
+            ).where((l) => l.level == LogLevel.error),
+            hasLength(1),
+            reason: 'the thrown failure names the message whose copy it lost',
+          );
         });
       });
     });
@@ -398,10 +424,11 @@ void main() {
       FakeAsync async, {
       List<List<String>> tags = const [],
       String? replyToId,
+      int kind = EventKind.privateDirectMessage,
     }) {
       final rumor = Event(
         _owner,
-        EventKind.privateDirectMessage,
+        kind,
         [
           ['p', _peer],
           ...tags,
@@ -498,6 +525,13 @@ void main() {
 
             async.elapse(const Duration(seconds: 30));
             expect(kind4Attempts, isEmpty);
+            expect(
+              logsNaming(
+                rumorId,
+              ).where((l) => l.message.contains('no legacy kind-4 copy')),
+              hasLength(1),
+              reason: 'a skipped copy is on the record',
+            );
           });
         },
       );
@@ -556,6 +590,83 @@ void main() {
         },
       );
 
+      test('retries a recovered copy no relay accepted', () {
+        fakeAsync((async) {
+          final repository = buildRepository();
+          _resolve(async, seedLatchedThread());
+          final rumorId = queueUndeliveredSend(async, tags: [batchTag]);
+          kind4Answers.add((e) async => _unanswered(e));
+
+          _resolve(async, repository.recoverFullSend(rumorId: rumorId));
+
+          async.elapse(const Duration(seconds: 30));
+          expect(kind4Attempts, hasLength(2));
+          expect(kind4Attempts.last.id, equals(kind4Attempts.first.id));
+        });
+      });
+
+      test('sends no kind 4 for a recovered file message', () {
+        fakeAsync((async) {
+          final repository = buildRepository();
+          _resolve(async, seedLatchedThread());
+          final rumorId = queueUndeliveredSend(
+            async,
+            tags: [batchTag],
+            kind: EventKind.fileMessage,
+          );
+
+          final result = _resolve(
+            async,
+            repository.recoverFullSend(rumorId: rumorId),
+          );
+          expect(result.success, isTrue);
+
+          async.elapse(const Duration(seconds: 30));
+          expect(kind4Attempts, isEmpty);
+        });
+      });
+
+      test(
+        'sends no kind 4 for a recovered send cancelled while it published',
+        () {
+          fakeAsync((async) {
+            final repository = buildRepository();
+            _resolve(async, seedLatchedThread());
+            final rumorId = queueUndeliveredSend(async, tags: [batchTag]);
+            // The user stops the send while its publish is on the wire, so
+            // recovery finds no queue row and stores nothing.
+            when(
+              () => messageService.sendRumor(
+                rumorEvent: any(named: 'rumorEvent'),
+                recipientPubkey: any(named: 'recipientPubkey'),
+                targetRelays: any(named: 'targetRelays'),
+                selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+                awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                selfWrapOnSoftUnconfirmed: any(
+                  named: 'selfWrapOnSoftUnconfirmed',
+                ),
+                recipientWrapBuildTimeout: any(
+                  named: 'recipientWrapBuildTimeout',
+                ),
+                selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
+              ),
+            ).thenAnswer((_) async {
+              await OutgoingDmsDao(db).deleteById(rumorId);
+              return NIP17SendResult.success(
+                rumorEventId: rumorId,
+                messageEventId: _wrapId,
+                recipientPubkey: _peer,
+              );
+            });
+
+            _resolve(async, repository.recoverFullSend(rumorId: rumorId));
+
+            async.elapse(const Duration(seconds: 30));
+            expect(kind4Attempts, isEmpty);
+          });
+        },
+      );
+
       test('sends no kind 4 when the thread is no longer latched', () {
         fakeAsync((async) {
           final repository = buildRepository();
@@ -592,12 +703,11 @@ void main() {
         () {
           fakeAsync((async) {
             final encrypting = Completer<String?>();
-            final repository = buildRepository(
-              signer: _ScriptedEncryptSigner(
-                _privateKey,
-                () => encrypting.future,
-              ),
+            final signer = _ScriptedEncryptSigner(
+              _privateKey,
+              () => encrypting.future,
             );
+            final repository = buildRepository(signer: signer);
             sendOverLatchedThread(async, repository);
             expect(kind4Attempts, isEmpty, reason: 'still encrypting');
 
@@ -610,6 +720,13 @@ void main() {
 
             async.elapse(const Duration(seconds: 30));
             expect(kind4Attempts, isEmpty);
+            expect(
+              signer.signCalls,
+              equals(0),
+              reason:
+                  'the outgoing signer is not asked to sign for an ended '
+                  'session',
+            );
           });
         },
       );
@@ -715,11 +832,19 @@ void main() {
           expect(kind4Attempts, hasLength(1));
 
           async.elapse(const Duration(seconds: 1));
+          expect(async.pendingTimers, hasLength(1), reason: 'retry armed');
           _resolve(async, repository.stopListening());
           expect(
             async.pendingTimers,
             isEmpty,
             reason: 'stopping cancels the armed retry instead of leaving it',
+          );
+          expect(
+            logsNaming(kind4Attempts.single.id).where(
+              (l) => l.message.contains('cancelled the pending retry'),
+            ),
+            hasLength(1),
+            reason: 'a cancelled retry is on the record',
           );
 
           async.elapse(const Duration(seconds: 30));
@@ -741,12 +866,22 @@ void main() {
             expect(kind4Attempts, hasLength(1));
 
             _resolve(async, repository.stopListening());
-            inFlight.complete(_unanswered(kind4Attempts.single));
+            final refusal = _unanswered(kind4Attempts.single);
+            inFlight.complete(refusal);
             async.flushMicrotasks();
             expect(
               async.pendingTimers,
               isEmpty,
               reason: 'a failure that lands after the stop arms no retry',
+            );
+            expect(
+              logsNaming(kind4Attempts.single.id).where(
+                (l) =>
+                    l.message.contains('not retrying') &&
+                    l.message.contains(refusal.summary),
+              ),
+              hasLength(1),
+              reason: 'the refusal is still on the record',
             );
 
             async.elapse(const Duration(seconds: 30));
@@ -773,10 +908,42 @@ void main() {
 
           expect(
             hooked.hookedReads,
-            1,
+            equals(1),
             reason: 'the retry reached its read-back before the stop',
           );
           expect(kind4Attempts, hasLength(1));
+        });
+      });
+
+      test('when reading back its message fails, with a warning', () {
+        fakeAsync((async) {
+          final hooked = _HookedMessagesDao(db);
+          messagesDao = hooked;
+          final repository = buildRepository();
+          sendOverLatchedThread(
+            async,
+            repository,
+            first: (e) async => _unanswered(e),
+          );
+          expect(kind4Attempts, hasLength(1));
+
+          hooked.onGetMessageById = () => throw StateError('database closed');
+          async.elapse(const Duration(seconds: 30));
+
+          expect(
+            hooked.hookedReads,
+            equals(1),
+            reason: 'the retry reached its read-back',
+          );
+          expect(kind4Attempts, hasLength(1));
+          expect(
+            logsNaming(kind4Attempts.single.id).where(
+              (l) =>
+                  l.level == LogLevel.warning &&
+                  l.message.contains('could not read back'),
+            ),
+            hasLength(1),
+          );
         });
       });
 
@@ -791,6 +958,7 @@ void main() {
           expect(kind4Attempts, hasLength(1));
 
           async.elapse(const Duration(seconds: 1));
+          expect(async.pendingTimers, hasLength(1), reason: 'retry armed');
           repository.setCredentials(
             userPubkey: _otherOwner,
             signer: LocalNostrSigner(_otherPrivateKey),

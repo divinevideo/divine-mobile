@@ -254,6 +254,11 @@ void main() {
           author: _owner,
           content: 'my reply, sent while their inbox could not be read',
         );
+        expect(
+          await messagesDao.getMessageById('8' * 64, ownerPubkey: _owner),
+          isNotNull,
+          reason: 'the echo was stored, so it reached the persist upsert',
+        );
 
         expect(await storedProtocol(), 'nip04');
       },

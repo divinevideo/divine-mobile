@@ -16929,8 +16929,8 @@ void main() {
       );
 
       test(
-        'a relay answering OK false is reported as a lost legacy copy, not '
-        'as a delivered one (#8262)',
+        'a relay answering OK false is reported as a failed attempt, not as '
+        'a delivered copy (#8262)',
         () async {
           await LogCaptureService().clearAllLogs();
           stubSendRumor(
@@ -23708,9 +23708,9 @@ void main() {
       );
 
       test(
-        'NIP-17 send succeeds even when NIP-04 fallback gets PublishFailed',
+        'NIP-17 send succeeds even when no relay accepts the NIP-04 fallback',
         () async {
-          // The NIP-04 fallback is fire-and-forget; PublishFailed must not
+          // The NIP-04 fallback is fire-and-forget; a refused copy must not
           // bubble up and fail the overall sendMessage result.
           final mockSigner = _MockNostrSigner();
           when(mockSigner.getPublicKey).thenAnswer(
@@ -23810,8 +23810,20 @@ void main() {
           );
 
           when(
-            () => mockNostrClient.publishEvent(any()),
-          ).thenAnswer((_) async => const PublishFailed());
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+              diagnosticTag: any(named: 'diagnosticTag'),
+            ),
+          ).thenAnswer(
+            (_) async => const PublishOutcome(
+              eventId: 'nip04-refused',
+              acceptedBy: <String>[],
+              rejectedBy: {'wss://relay.divine.video': 'error: unavailable'},
+              noResponseFrom: <String>[],
+            ),
+          );
 
           final repo = DmRepository(
             nostrClient: mockNostrClient,

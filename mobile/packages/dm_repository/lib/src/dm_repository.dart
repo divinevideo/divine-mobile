@@ -707,10 +707,10 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
-  /// Pending retries of legacy kind-4 copies no relay accepted. Cancelled by
-  /// [stopListening] and [_resetState], so no retry outlives the session that
-  /// signed its copy (#8506).
-  final Set<Timer> _nip04CopyRetryTimers = {};
+  /// Pending retries of legacy kind-4 copies no relay accepted, with the copy
+  /// each will republish. Cancelled by [stopListening] and [_resetState], so
+  /// no retry outlives the session that signed its copy (#8506).
+  final Map<Timer, _Nip04Copy> _nip04CopyRetryTimers = {};
 
   /// Backoff retry for deferred history drains. A relay reconnect cancels it,
   /// except while an ambiguous NIP-04 refusal awaits confirmation: a
@@ -6668,9 +6668,10 @@ class DmRepository {
             participantsJson = jsonEncode(pairParticipants);
             isGroup = false;
           }
-          // Mirror sendMessage: once we successfully publish a NIP-17
-          // message ourselves, mark the conversation NIP-17 so the
-          // legacy NIP-04 fallback path doesn't fire on future sends.
+          // Mirror sendMessage: a conversation with no protocol yet becomes
+          // NIP-17 once we publish a NIP-17 message ourselves (#3663). A
+          // thread latched to nip04 keeps it, so the kind-4 copy below can
+          // still go out.
           final nextProtocol = existing?.dmProtocol ?? 'nip17';
           protocol = nextProtocol;
           await _upsertSentConversationAndMarkRead(
@@ -6709,21 +6710,28 @@ class DmRepository {
         // copy was never sent at all (#8506). Plain text only: the queue row
         // does not record that a share or an invite opted out of the copy,
         // and both carry tags a plain message never has.
-        if (persistedLocally &&
-            !isGroupRow &&
-            protocol != 'nip17' &&
-            _isPlainTextRumor(
-              rumor,
-              recipientPubkey: row.recipientPubkey,
-              replyToId: row.replyToId,
-            )) {
-          _fireNip04Copy(
+        if (persistedLocally && !isGroupRow && protocol != 'nip17') {
+          if (_isPlainTextRumor(
+            rumor,
             recipientPubkey: row.recipientPubkey,
-            content: row.content,
-            messageId: result.rumorEventId!,
-            conversationId: row.conversationId,
             replyToId: row.replyToId,
-          );
+          )) {
+            _fireNip04Copy(
+              recipientPubkey: row.recipientPubkey,
+              content: row.content,
+              messageId: result.rumorEventId!,
+              conversationId: row.conversationId,
+              replyToId: row.replyToId,
+            );
+          } else {
+            Log.info(
+              'NIP-04 fallback: no legacy kind-4 copy for recovered message '
+              '$rumorId to ${pubkeyForLogs(row.recipientPubkey)} — it is not '
+              'a plain-text message, and the queue row cannot say whether a '
+              'share or an invite opted out of the copy',
+              category: LogCategory.system,
+            );
+          }
         }
       } on Object catch (e, stackTrace) {
         Log.error(
@@ -8880,10 +8888,13 @@ class DmRepository {
         messageId: messageId,
         conversationId: conversationId,
         replyToId: replyToId,
-      ).catchError((Object e) {
+      ).catchError((Object e, StackTrace stackTrace) {
         Log.error(
-          'NIP-04 fallback threw — the legacy kind-4 copy was not sent: $e',
+          'NIP-04 fallback threw — the legacy kind-4 copy of message '
+          '$messageId for ${pubkeyForLogs(recipientPubkey)} was not sent: $e',
           category: LogCategory.system,
+          error: e,
+          stackTrace: stackTrace,
         );
       }),
     );
@@ -8960,10 +8971,10 @@ class DmRepository {
   /// Encryption, the reply lookup and signing await the signer and the
   /// database, and an account switch or a stop can land in between. A copy
   /// whose session, identified by [ownerPubkey] and [generation], ended
-  /// meanwhile is abandoned: before signing, rather than built under the
-  /// incoming account and signed with the outgoing signer; after signing,
-  /// because a copy with no live session has no standing to publish, as a
-  /// retry has none.
+  /// meanwhile is abandoned: before signing, so the outgoing account's signer,
+  /// which may be a remote Keycast or bunker signer, is not asked to sign for
+  /// a session that is over; after signing, because a copy with no live
+  /// session has no standing to publish, as a retry has none.
   Future<Event?> _prepareNip04Copy({
     required String recipientPubkey,
     required String content,
@@ -9061,16 +9072,17 @@ class DmRepository {
     // policy, caught by a spam filter — came back as a delivered message.
     // Branch on the OK boolean and never on the reason prefix: NIP-01 puts
     // `duplicate:` and `pow:` on `true` (01.md:166-167).
+    PublishOutcome? outcome;
     String failure;
     try {
-      final outcome = await _nostrClient.publishEventAwaitOk(copy.signed);
-      if (outcome.acceptedByAny) {
-        _logNip04CopyAccepted(copy, outcome, attempt: attempt);
-        return;
-      }
+      outcome = await _nostrClient.publishEventAwaitOk(copy.signed);
       failure = outcome.summary;
     } on Object catch (e) {
       failure = 'the publish threw: $e';
+    }
+    if (outcome != null && outcome.acceptedByAny) {
+      _logNip04CopyAccepted(copy, outcome, attempt: attempt);
+      return;
     }
 
     if (attempt >= attempts) {
@@ -9086,8 +9098,9 @@ class DmRepository {
     // after the teardown would never be cancelled by it.
     if (_ingestSessionEnded(copy.ownerPubkey, copy.generation)) {
       Log.info(
-        'NIP-04 fallback: not retrying the legacy kind-4 copy for $recipient '
-        '(event $eventId) — the account session that signed it has ended',
+        'NIP-04 fallback: no relay accepted the legacy kind-4 copy for '
+        '$recipient (event $eventId) on attempt $attempt/$attempts — '
+        '$failure; not retrying, the account session that signed it has ended',
         category: LogCategory.system,
       );
       return;
@@ -9102,9 +9115,22 @@ class DmRepository {
     late final Timer retry;
     retry = Timer(delay, () {
       _nip04CopyRetryTimers.remove(retry);
-      unawaited(_attemptNip04Copy(copy, attempt: attempt + 1));
+      unawaited(
+        _attemptNip04Copy(copy, attempt: attempt + 1).catchError((
+          Object e,
+          StackTrace stackTrace,
+        ) {
+          Log.error(
+            'NIP-04 fallback: retrying the legacy kind-4 copy for $recipient '
+            '(event $eventId) threw: $e',
+            category: LogCategory.system,
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }),
+      );
     });
-    _nip04CopyRetryTimers.add(retry);
+    _nip04CopyRetryTimers[retry] = copy;
   }
 
   /// Why a pending retry of [copy] must not run, or `null` when it may.
@@ -9134,8 +9160,15 @@ class DmRepository {
       if (conversation?.dmProtocol != 'nip04') {
         return 'the thread is no longer latched to nip04';
       }
-    } on Object catch (e) {
-      return 'its message could not be read back: $e';
+    } on Object catch (e, stackTrace) {
+      Log.warning(
+        'NIP-04 fallback: could not read back the message or thread of the '
+        'legacy kind-4 copy (event ${copy.signed.id}): $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return 'its message or thread could not be read back';
     }
     return _ingestSessionEnded(copy.ownerPubkey, copy.generation)
         ? sessionEnded
@@ -9177,8 +9210,15 @@ class DmRepository {
   /// Cancels every pending kind-4 copy retry. Shared by [_resetState] and
   /// [stopListening].
   void _cancelNip04CopyRetries() {
-    for (final retry in _nip04CopyRetryTimers) {
+    for (final MapEntry(key: retry, value: copy)
+        in _nip04CopyRetryTimers.entries) {
       retry.cancel();
+      Log.info(
+        'NIP-04 fallback: cancelled the pending retry of the legacy kind-4 '
+        'copy for ${pubkeyForLogs(copy.recipientPubkey)} (event '
+        '${copy.signed.id}) — the account session ended before it ran',
+        category: LogCategory.system,
+      );
     }
     _nip04CopyRetryTimers.clear();
   }
