@@ -348,7 +348,7 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                   ),
                 ),
                 'show profile setup publish confirmation',
-                logName: 'ProfileSetupListeners',
+                logName: 'ProfileSetupScreen',
                 category: LogCategory.ui,
               );
             } else if (state.status == ProfileEditorStatus.failure) {
@@ -397,7 +397,7 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                       ),
                     ),
                     'show reserved username dialog',
-                    logName: 'ProfileSetupListeners',
+                    logName: 'ProfileSetupScreen',
                     category: LogCategory.ui,
                   );
                 // claimFailed (server rejected) and claimNetworkError

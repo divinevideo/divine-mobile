@@ -116,7 +116,7 @@ class _ProfileSetupScreenViewState
                     onPressed: () => runDetached(
                       _showNostrInfoSheet(context),
                       'show Nostr info sheet',
-                      logName: 'ProfileSetupView',
+                      logName: 'ProfileSetupScreen',
                       category: LogCategory.ui,
                     ),
                     tooltip: context.l10n.profileSetupAboutNostr,
@@ -299,7 +299,7 @@ class _ProfileSetupScreenViewState
         onTertiaryPressed: context.pop,
       ),
       'show profile setup leave confirmation',
-      logName: 'ProfileSetupView',
+      logName: 'ProfileSetupScreen',
       category: LogCategory.ui,
     );
   }
