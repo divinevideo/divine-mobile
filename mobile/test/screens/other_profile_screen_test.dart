@@ -528,6 +528,13 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text(l10n.followersUpdateFollowFailed), findsOneWidget);
+
+      // A second snackbar waits in the queue until the visible one goes, so
+      // dismiss the error before checking that no confirmation follows it.
+      ScaffoldMessenger.of(
+        tester.element(find.byType(OtherProfileView)),
+      ).removeCurrentSnackBar();
+      await tester.pump();
       expect(
         find.textContaining(l10n.profileUnfollowedUser('')),
         findsNothing,
