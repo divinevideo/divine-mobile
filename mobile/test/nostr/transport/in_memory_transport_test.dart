@@ -54,6 +54,24 @@ void main() {
       expect(outgoingClosed, isTrue);
     });
 
+    test('dispose completes only once a paused listener resumes', () async {
+      final transport = InMemoryNostrTransport();
+
+      final subscription = transport.incoming.listen(null)..pause();
+      addTearDown(subscription.cancel);
+
+      var disposed = false;
+      final disposal = transport.dispose().then((_) => disposed = true);
+      await pumpEventQueue();
+
+      expect(disposed, isFalse);
+
+      subscription.resume();
+      await disposal;
+
+      expect(disposed, isTrue);
+    });
+
     test('ignores messages after disposal', () async {
       final transport = InMemoryNostrTransport();
 
