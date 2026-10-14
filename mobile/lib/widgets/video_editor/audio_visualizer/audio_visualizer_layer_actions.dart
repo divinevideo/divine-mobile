@@ -42,14 +42,17 @@ WidgetLayer audioVisualizerWidgetLayer(
 Future<void> editAudioVisualizerLayer(BuildContext context, Layer layer) async {
   final data = AudioVisualizerLayerData.of(layer);
   if (data == null) return;
+  // Captured before the await: the timeline bar that opened the sheet can
+  // unmount while the sheet is up, and the edit would be lost with it.
+  final scope = VideoEditorScope.of(context);
   final picked = await showAudioVisualizerSheet(
     context,
     initial: data,
     soundLevels: context.read<VideoEditorAudioVisualizerCubit>(),
   );
-  if (picked == null || picked == data || !context.mounted) return;
+  if (picked == null || picked == data) return;
 
-  final editor = VideoEditorScope.of(context).editor;
+  final editor = scope.editor;
   if (editor == null) return;
   final index = editor.activeLayers.indexWhere((l) => l.id == layer.id);
   if (index < 0) return;
