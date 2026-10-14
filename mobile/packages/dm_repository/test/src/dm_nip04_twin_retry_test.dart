@@ -31,8 +31,14 @@ class _ScriptedEncryptSigner extends LocalNostrSigner {
 
   final Future<String?> Function() _encrypt;
 
+  /// How many times the kind-4 copy was encrypted. Preparation runs once.
+  int encryptCalls = 0;
+
   @override
-  Future<String?> encrypt(dynamic pubkey, dynamic plaintext) => _encrypt();
+  Future<String?> encrypt(dynamic pubkey, dynamic plaintext) {
+    encryptCalls++;
+    return _encrypt();
+  }
 }
 
 const _owner =
@@ -329,28 +335,26 @@ void main() {
     group('preparation failures', () {
       test('send nothing, and never retry, when encryption returns null', () {
         fakeAsync((async) {
-          final repository = buildRepository(
-            signer: _ScriptedEncryptSigner(_privateKey, () async => null),
-          );
-          sendOverLatchedThread(async, repository);
+          final signer = _ScriptedEncryptSigner(_privateKey, () async => null);
+          sendOverLatchedThread(async, buildRepository(signer: signer));
 
           async.elapse(const Duration(seconds: 30));
           expect(kind4Attempts, isEmpty);
+          expect(signer.encryptCalls, equals(1));
         });
       });
 
       test('send nothing, and never retry, when encryption throws', () {
         fakeAsync((async) {
-          final repository = buildRepository(
-            signer: _ScriptedEncryptSigner(
-              _privateKey,
-              () async => throw TimeoutException('bunker did not answer'),
-            ),
+          final signer = _ScriptedEncryptSigner(
+            _privateKey,
+            () async => throw TimeoutException('bunker did not answer'),
           );
-          sendOverLatchedThread(async, repository);
+          sendOverLatchedThread(async, buildRepository(signer: signer));
 
           async.elapse(const Duration(seconds: 30));
           expect(kind4Attempts, isEmpty);
+          expect(signer.encryptCalls, equals(1));
         });
       });
     });
