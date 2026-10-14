@@ -12,12 +12,35 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/mixins/grid_prefetch_mixin.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+}
 
 /// Test widget that uses GridPrefetchMixin for testing
 class _TestWidget extends ConsumerStatefulWidget {
@@ -214,33 +237,79 @@ void main() {
       });
     });
 
-    testWidgets('contains failures from both prefetch entry points', (
-      tester,
-    ) async {
-      when(
-        () => mockCache.preCacheFiles(
-          any(),
-          batchSize: any(named: 'batchSize'),
-          authHeadersProvider: any(named: 'authHeadersProvider'),
-        ),
-      ).thenAnswer((_) async => throw StateError('prefetch failed'));
+    group('when the cache fails', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+      late LogCaptureService logCapture;
 
-      final state = await pumpTestWidget(tester);
-      final videos = _createMockVideos(10);
+      setUp(() async {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        when(
+          () => mockCache.preCacheFiles(
+            any(),
+            batchSize: any(named: 'batchSize'),
+            authHeadersProvider: any(named: 'authHeadersProvider'),
+          ),
+        ).thenAnswer((_) async => throw StateError('prefetch failed'));
+      });
 
-      state
-        ..prefetchGridVideos(videos)
-        ..prefetchAroundIndex(5, videos);
-      await tester.pump();
+      tearDown(() async {
+        detachedFailureReporter = originalReporter;
+        await logCapture.clearAllLogs();
+      });
 
-      expect(tester.takeException(), isNull);
-      verify(
-        () => mockCache.preCacheFiles(
-          any(),
-          batchSize: any(named: 'batchSize'),
-          authHeadersProvider: any(named: 'authHeadersProvider'),
-        ),
-      ).called(2);
+      void expectFailureObserved(WidgetTester tester, String message) {
+        expect(tester.takeException(), isNull);
+
+        final logs = logCapture
+            .getRecentLogs()
+            .where((entry) => entry.name == 'GridPrefetch')
+            .where((entry) => entry.level == LogLevel.error);
+        expect(logs, hasLength(1));
+        expect(logs.single.category, LogCategory.video);
+        expect(logs.single.message, message);
+        expect(
+          reporter.recordedErrors.single,
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        );
+      }
+
+      testWidgets('prefetchGridVideos logs and reports the failure', (
+        tester,
+      ) async {
+        final state = await pumpTestWidget(tester);
+
+        state.prefetchGridVideos(_createMockVideos(10));
+        await tester.pump();
+
+        expectFailureObserved(
+          tester,
+          'Failed to prefetch grid videos: Bad state: prefetch failed',
+        );
+      });
+
+      testWidgets('prefetchAroundIndex logs and reports the failure', (
+        tester,
+      ) async {
+        final state = await pumpTestWidget(tester);
+
+        state.prefetchAroundIndex(5, _createMockVideos(10));
+        await tester.pump();
+
+        expectFailureObserved(
+          tester,
+          'Failed to prefetch videos around a grid item: '
+          'Bad state: prefetch failed',
+        );
+      });
     });
 
     group('bandwidth gating', () {
