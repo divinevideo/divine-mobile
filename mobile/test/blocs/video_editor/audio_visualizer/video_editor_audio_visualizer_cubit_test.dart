@@ -38,7 +38,7 @@ void main() {
     /// read with [failure].
     VideoEditorAudioVisualizerCubit buildCubit({
       List<AudioExtractConfigs>? reads,
-      Exception? failure,
+      Object? failure,
     }) => VideoEditorAudioVisualizerCubit(
       resolver: VideoEditorAudioLevelResolver(
         extractAudio: (configs) async {
@@ -146,6 +146,22 @@ void main() {
       await silent.close();
       await noTrack.close();
       await unreadable.close();
+    });
+
+    test('says it cannot read the sound when the platform returns no '
+        'audio', () async {
+      final cubit =
+          buildCubit(
+              failure: ArgumentError('Failed to extract audio from video'),
+            )
+            ..syncSources(sounds: [music], clips: [mutedClip])
+            ..setActive(isActive: true);
+
+      expect(
+        (await settled(cubit)).status,
+        VideoEditorAudioLevelStatus.failed,
+      );
+      await cubit.close();
     });
   });
 }

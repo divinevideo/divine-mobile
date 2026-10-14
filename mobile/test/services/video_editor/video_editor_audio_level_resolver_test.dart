@@ -389,6 +389,35 @@ void main() {
       });
 
       test(
+        'throws when the platform returns no audio for any part',
+        () async {
+          final empty = VideoEditorAudioLevelResolver(
+            extractAudio: (_) async =>
+                throw ArgumentError('Failed to extract audio from video'),
+          );
+
+          await expectLater(
+            empty.read([_part(), _part(file: 'other')]),
+            throwsA(
+              isA<AudioLevelReadException>().having(
+                (error) => error.cause,
+                'cause',
+                isA<ArgumentError>(),
+              ),
+            ),
+          );
+        },
+      );
+
+      test('lets a programming error through as itself', () async {
+        final broken = VideoEditorAudioLevelResolver(
+          extractAudio: (_) async => throw RangeError.index(3, const [1]),
+        );
+
+        await expectLater(broken.read([_part()]), throwsA(isA<RangeError>()));
+      });
+
+      test(
         'throws when nothing could be read, and tries again later',
         () async {
           var fail = true;
@@ -401,7 +430,13 @@ void main() {
 
           await expectLater(
             flaky.read([_part()]),
-            throwsA(isA<PlatformException>()),
+            throwsA(
+              isA<AudioLevelReadException>().having(
+                (error) => error.cause,
+                'cause',
+                isA<PlatformException>(),
+              ),
+            ),
           );
           expect(flaky.hasRead([_part()]), isFalse);
 

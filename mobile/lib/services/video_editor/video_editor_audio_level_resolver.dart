@@ -145,6 +145,18 @@ Future<Float32List?> audioEnergiesOnExport({
   return reader.energiesOnOutput(parts, videoEnd: videoEnd);
 }
 
+/// Why sound could not be read for an audio visualizer: [cause] is the
+/// failure underneath. [VideoEditorAudioLevelResolver.read] throws it when no
+/// part could be read at all.
+class AudioLevelReadException implements Exception {
+  const AudioLevelReadException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'AudioLevelReadException: $cause';
+}
+
 /// Reads how loud sounds are in each frequency band and adds them up on the
 /// exported video.
 ///
@@ -174,8 +186,9 @@ class VideoEditorAudioLevelResolver {
   /// Reads every part of [parts] that has not been read yet.
   ///
   /// A part without sound, such as a clip recorded without a microphone,
-  /// adds nothing, and so does a part that fails to read while another one
-  /// is read. Throws when no part could be read at all.
+  /// adds nothing, and a part that cannot be read leaves the others to be
+  /// read. Throws an [AudioLevelReadException] when no part could be read at
+  /// all.
   Future<void> read(List<AudioLevelPart> parts) async {
     Exception? failure;
     var anyRead = false;
@@ -198,7 +211,8 @@ class VideoEditorAudioLevelResolver {
         anyRead = true;
         _energies[stretch] = _StretchEnergies.silent;
       } on Exception catch (error) {
-        // A platform error, or a network sound the plugin could not fetch.
+        // A platform error, no audio from the platform, or a network sound the
+        // plugin could not fetch.
         failure = error;
         _energies[stretch] = _StretchEnergies.silent;
       } finally {
@@ -214,7 +228,9 @@ class VideoEditorAudioLevelResolver {
       for (final part in parts) {
         _energies.remove(_Stretch.of(part.source));
       }
-      throw failure;
+      throw failure is AudioLevelReadException
+          ? failure
+          : AudioLevelReadException(failure);
     }
   }
 
@@ -292,18 +308,28 @@ class VideoEditorAudioLevelResolver {
     final start = source.from > context ? source.from - context : Duration.zero;
     final fileLength = source.fileLength;
     final end = source.to + context;
-    final wav = await _extractAudio(
-      AudioExtractConfigs(
-        // The plugin stores a temporary copy of an asset or network source
-        // on the object it is given; a copy keeps the cache key unchanged.
-        video: source.media.copyWith(),
-        format: AudioFormat.wav,
-        startTime: start,
-        endTime: fileLength == null
-            ? null
-            : (end < fileLength ? end : fileLength),
-      ),
-    );
+    final Uint8List wav;
+    try {
+      wav = await _extractAudio(
+        AudioExtractConfigs(
+          // The plugin stores a temporary copy of an asset or network source
+          // on the object it is given; a copy keeps the cache key unchanged.
+          video: source.media.copyWith(),
+          format: AudioFormat.wav,
+          startTime: start,
+          endTime: fileLength == null
+              ? null
+              : (end < fileLength ? end : fileLength),
+        ),
+      );
+      // The plugin reports a platform that returned no audio as a plain
+      // ArgumentError: an operational failure, not a bug here. A RangeError
+      // is one, so it is let through.
+      // ignore: avoid_catching_errors
+    } on ArgumentError catch (error) {
+      if (error is RangeError) rethrow;
+      throw AudioLevelReadException(error);
+    }
     return _StretchEnergies(start, await compute(_energiesInWav, wav));
   }
 }
