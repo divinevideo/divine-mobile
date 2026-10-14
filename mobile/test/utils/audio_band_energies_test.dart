@@ -145,6 +145,18 @@ void main() {
       expect(levels[30 * 24 + 12], 1);
     });
 
+    test('draws bands merged from one or two bands alike', () {
+      // 32 bands take one band of 48 and two in turn. With the same energy in
+      // every band, only the lift towards the highs may tell them apart.
+      final energies = Float32List(audioBandCount)
+        ..fillRange(0, audioBandCount, 1);
+      final levels = audioVisualizerLevels(energies, bandCount: 32);
+
+      for (var band = 1; band < 32; band++) {
+        expect(levels[band], greaterThanOrEqualTo(levels[band - 1]));
+      }
+    });
+
     test('moves a quiet sound as much as a loud one', () {
       final loud = audioVisualizerLevels(
         bandEnergies(_tone(1000), sampleRate: _sampleRate),

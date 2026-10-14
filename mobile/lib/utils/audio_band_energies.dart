@@ -102,9 +102,12 @@ Float32List bandEnergies(Float32List samples, {required int sampleRate}) {
 /// band energies from [bandEnergies] (or several of them added up), row
 /// after row: from 0 (silent) to 1 (the loudest moment), in the same rows.
 ///
-/// Neighbouring bands are merged into [bandCount] bands. A level follows the
-/// loudness in decibels, measured against the loudest band of the loudest
-/// row, so a quiet video moves as much as a loud one.
+/// Neighbouring bands are merged into [bandCount] bands, each at the mean
+/// energy of the bands it covers: a [bandCount] that does not divide
+/// [audioBandCount] merges one band into some and two into others, and a
+/// sum would draw every other bar 3 dB taller. A level follows the loudness
+/// in decibels, measured against the loudest band of the loudest row, so a
+/// quiet video moves as much as a loud one.
 ///
 /// [reaction] runs from 0 (calm) to 1 (lively): the livelier, the further a
 /// bar swings between quiet and loud and the faster it falls; below the
@@ -144,7 +147,8 @@ Float32List audioVisualizerLevels(
       // The octave of the band's middle above the lowest band.
       final octave = (from + to) / 2 / audioBandCount * _octaves;
       final value = sum > 0
-          ? 10 * math.log(sum) / math.ln10 + _tiltPerOctave * octave
+          ? 10 * math.log(sum / (to - from)) / math.ln10 +
+                _tiltPerOctave * octave
           : double.negativeInfinity;
       decibels[row * bandCount + band] = value;
       if (value > loudest) loudest = value;
