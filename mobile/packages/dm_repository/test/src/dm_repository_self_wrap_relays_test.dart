@@ -3,6 +3,7 @@
 // ABOUTME: the configured pool UNION the user's advertised kind-10050 DM
 // ABOUTME: inbox, because targetRelays FILTERS the pool rather than adding.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -261,6 +262,50 @@ void main() {
           reason:
               'a copy queued under one account must never be routed by the '
               'inbox of whoever is signed in now',
+        );
+      },
+    );
+
+    test(
+      'gives no targets when the account switches during the lookup (#8446)',
+      () async {
+        final lookup =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) => lookup.future);
+        final repository = buildRepository();
+
+        final pending = repository.resolveSelfWrapTargetRelays(_ownerPubkey);
+        repository.setCredentials(
+          userPubkey: _recipientPubkey,
+          signer: LocalNostrSigner(_privateKey),
+          messageService: messageService,
+        );
+        lookup.complete((
+          events: [
+            Event(_ownerPubkey, EventKind.dmRelaysList, [
+              for (final relay in _advertisedInbox) ['relay', relay],
+            ], ''),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ));
+
+        expect(
+          await pending,
+          isNull,
+          reason:
+              'the lookup began for the previous account; its answer must '
+              'not route a copy once someone else is signed in',
         );
       },
     );
