@@ -1264,6 +1264,7 @@ void main() {
         'removed_conversations',
         'removed_message_ids',
         'vanished_profiles',
+        'personal_events',
       ];
       expect(
         [

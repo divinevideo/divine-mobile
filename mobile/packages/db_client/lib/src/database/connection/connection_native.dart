@@ -208,6 +208,11 @@ const _salvageSuffix = '.corruption_salvage';
 /// `vanished_profiles` could be read from the server again, but until then a
 /// cached profile of an account that asked to be erased can be shown.
 ///
+/// `personal_events` holds the user's own signed events, which nothing refills
+/// from the relays. "Try Again" re-sends the signed video kept here, and an
+/// edit of an own video reads its raw tags here before asking a relay. It is
+/// bounded by `maxDurablePersonalEventsPerOwner`.
+///
 /// This overlaps the [_localOnlyDataQueries] legacy-migration probe but is not
 /// identical: salvage drops `direct_messages` / `conversations` (re-drainable)
 /// and copies tables the probe does not check, such as `dm_message_reactions`
@@ -229,6 +234,7 @@ const salvageableLocalOnlyTables = <String>[
   'dm_message_reactions',
   'removed_conversations',
   'removed_message_ids',
+  'personal_events',
   'personal_reactions',
   'personal_reposts',
   'vanished_profiles',
@@ -258,9 +264,6 @@ const tablesDroppedBySalvage = <String>[
   // row given the rows that existed then; kept without those rows, the rebuild
   // would skip them, and a message its sender deleted would be shown again.
   'processed_gift_wraps',
-  // A cache of the user's own signed events. A publish retry signs again when
-  // its event is missing here.
-  'personal_events',
   // Watch history. SharedPreferences holds the recent part, which is all the
   // feed looks at.
   'seen_videos',
