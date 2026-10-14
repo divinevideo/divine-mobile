@@ -17,6 +17,18 @@ class _MockIdentityClaimsRepository extends Mock
 
 class _MockAnalyticsEventSink extends Mock implements AnalyticsEventSink {}
 
+/// A source whose every byte is zero, so the start secret is 'A' x 43.
+class _ZeroRandom implements Random {
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  bool nextBool() => false;
+}
+
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _returnUrl = 'https://divine.video/app/callback';
@@ -125,13 +137,14 @@ void main() {
     VerifyConnectCubit build(
       VerifierPlatform platform, {
       VerifyOAuthLauncher? launchOAuth,
+      Random? random,
     }) => VerifyConnectCubit(
       repository: repository,
       pubkey: _pubkey,
       platform: platform,
       oauthReturnUrl: _returnUrl,
       analytics: analytics,
-      random: Random(1),
+      random: random ?? Random(1),
       wait: (_) async {},
       launchOAuth:
           launchOAuth ??
@@ -427,7 +440,7 @@ void main() {
     group('connectWithOAuth', () {
       blocTest<VerifyConnectCubit, VerifyConnectState>(
         'starts with a start check and a sign-in id, then waits for approval naming the account',
-        build: () => build(_twitter),
+        build: () => build(_twitter, random: _ZeroRandom()),
         act: (cubit) => cubit.connectWithOAuth(),
         verify: (cubit) {
           expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
@@ -440,7 +453,10 @@ void main() {
               ),
             ),
           );
-          expect(startedCheck, matches(RegExp(r'^[A-Za-z0-9_-]{43}$')));
+          // The secret from an all-zero source is 'A' x 43. The start sends
+          // its hash, never the secret itself.
+          expect(startedCheck, SignInSecrets.startCheckFor('A' * 43));
+          expect(startedCheck, isNot('A' * 43));
           expect(
             launched,
             equals([Uri.parse('https://provider.example/authorize?state=s')]),
@@ -567,6 +583,24 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
           verifyNever(() => repository.publishClaim(any()));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'treats an empty code as not confirmed',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': 'jack',
+            'oauth_confirm': '',
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          expect(cubit.state.signedInAccount, isNull);
         },
       );
 
