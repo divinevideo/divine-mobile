@@ -10,7 +10,9 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/profile_setup/widgets/widgets.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/nostr_info_sheet_content.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class ProfileSetupScreenView extends ConsumerStatefulWidget {
   const ProfileSetupScreenView({required this.isNewUser, super.key});
@@ -266,28 +268,34 @@ class _ProfileSetupScreenViewState
     required String? pubkey,
   }) {
     final canSave = pubkey != null && state.isSaveReady;
-    VineBottomSheetPrompt.show<void>(
-      context: context,
-      sticker: .alert,
-      title: context.l10n.profileSetupUnsavedChangesTitle,
-      subtitle: context.l10n.profileSetupUnsavedChangesSubtitle,
-      primaryButtonText: canSave
-          ? context.l10n.profileSetupUnsavedChangesSaveButton
-          : null,
-      secondaryButtonText: context.l10n.profileSetupUnsavedChangesDiscardButton,
-      tertiaryButtonText: context.l10n.profileSetupUnsavedChangesKeepButton,
-      onPrimaryPressed: !canSave
-          ? null
-          : () {
-              context.pop();
-              _saveProfile(context, pubkey: pubkey);
-            },
-      onSecondaryPressed: () {
-        context.pop();
-        context.read<ProfileEditorBloc>().add(const ProfileEditDiscarded());
-        _leaveProfileSetup(context);
-      },
-      onTertiaryPressed: context.pop,
+    runDetached(
+      VineBottomSheetPrompt.show<void>(
+        context: context,
+        sticker: .alert,
+        title: context.l10n.profileSetupUnsavedChangesTitle,
+        subtitle: context.l10n.profileSetupUnsavedChangesSubtitle,
+        primaryButtonText: canSave
+            ? context.l10n.profileSetupUnsavedChangesSaveButton
+            : null,
+        secondaryButtonText:
+            context.l10n.profileSetupUnsavedChangesDiscardButton,
+        tertiaryButtonText: context.l10n.profileSetupUnsavedChangesKeepButton,
+        onPrimaryPressed: !canSave
+            ? null
+            : () {
+                context.pop();
+                _saveProfile(context, pubkey: pubkey);
+              },
+        onSecondaryPressed: () {
+          context.pop();
+          context.read<ProfileEditorBloc>().add(const ProfileEditDiscarded());
+          _leaveProfileSetup(context);
+        },
+        onTertiaryPressed: context.pop,
+      ),
+      'show profile setup leave confirmation',
+      logName: 'ProfileSetupView',
+      category: LogCategory.ui,
     );
   }
 
@@ -350,15 +358,14 @@ class _ProfileSetupScreenViewState
     });
   }
 
-  void _showNostrInfoSheet(BuildContext context) {
+  Future<void> _showNostrInfoSheet(BuildContext context) async {
     // Unfocus any field before opening sheet
     FocusManager.instance.primaryFocus?.unfocus();
-    VineBottomSheet.show<void>(
+    await VineBottomSheet.show<void>(
       context: context,
       children: const [NostrInfoSheetContent()],
-    ).then((_) {
-      // Unfocus after sheet is dismissed to prevent auto-focus on form fields
-      FocusManager.instance.primaryFocus?.unfocus();
-    });
+    );
+    // Unfocus after sheet is dismissed to prevent auto-focus on form fields.
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 }
