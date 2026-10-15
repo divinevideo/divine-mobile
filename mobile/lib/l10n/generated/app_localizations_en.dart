@@ -12684,6 +12684,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Or post a proof';
 
   @override
@@ -12747,6 +12758,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get verifyErrorOauthFailed =>
       'That didn\'t go through. Give it another go.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Enter your handle first.';

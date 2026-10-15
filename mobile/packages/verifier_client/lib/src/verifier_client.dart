@@ -11,6 +11,7 @@ import 'package:verifier_client/src/exceptions.dart';
 import 'package:verifier_client/src/models/identity_claim.dart';
 import 'package:verifier_client/src/models/verification_result.dart';
 import 'package:verifier_client/src/models/verifier_platform.dart';
+import 'package:verifier_client/src/signin_confirmation.dart';
 
 /// HTTP client for `https://verifier.divine.video`.
 ///
@@ -104,27 +105,28 @@ class VerifierClient {
     ];
   }
 
-  /// Builds the verifier URL that starts the OAuth flow for [platform].
+  /// Starts [platform]'s sign-in so the account owner can confirm it, and
+  /// returns the provider page to open.
   ///
-  /// Purely local; fetching it is what actually starts the flow, which
-  /// [resolveOAuthLaunchUri] does exactly once. The verifier then redirects to
-  /// [returnUrl] with `oauth_verified`, `platform` and `identity` query
-  /// parameters on success, or `oauth_error` on failure.
+  /// [startCheck] is [SignInSecrets.startCheckFor] of a secret the caller
+  /// keeps for [confirmSignIn]; it travels only in this request's body. The
+  /// verifier returns to [returnUrl] with `platform` and `identity`, and the
+  /// one-time code as `#oauth_confirm=<code>` (or in the query, if it is set
+  /// to).
   ///
-  /// [returnUrl] must be an origin the verifier allowlists
-  /// (`divine-identify-verification-service/src/routes/auth.ts`), otherwise
-  /// the start endpoint rejects the request with HTTP 400.
+  /// Returns null when this deployment has no sign-in for [platform] (503).
   ///
-  /// [handle] is required for `bluesky`, which resolves the user's PDS before
-  /// it can start the flow, and ignored for every other platform.
-  ///
-  /// Throws [ArgumentError] if [platform] has no OAuth flow.
-  Uri oauthStartUri({
+  /// Throws [ArgumentError] for a platform without sign-in, or Bluesky
+  /// without a handle; [VerifierApiException] for other refusals or a
+  /// provider page that isn't https; [VerifierTimeoutException] and
+  /// [VerifierNetworkException] as [verifyBatch] does.
+  Future<Uri?> startSignIn({
     required String platform,
     required String pubkey,
     required String returnUrl,
+    required String startCheck,
     String? handle,
-  }) {
+  }) async {
     if (!VerifierPlatform.oauthPlatforms.contains(platform)) {
       throw ArgumentError.value(
         platform,
@@ -133,81 +135,87 @@ class VerifierClient {
             '${VerifierPlatform.oauthPlatforms.join(', ')}',
       );
     }
-    if (platform == 'bluesky' && (handle == null || handle.trim().isEmpty)) {
+    final bareHandle = handle?.trim() ?? '';
+    if (platform == 'bluesky' && bareHandle.isEmpty) {
       throw ArgumentError.value(
         handle,
         'handle',
         'is required to start the bluesky OAuth flow',
       );
     }
-    return _uriFor('/auth/$platform/start').replace(
-      queryParameters: <String, String>{
-        'pubkey': pubkey,
-        'return_url': returnUrl,
-        if (handle != null && handle.trim().isNotEmpty) 'handle': handle.trim(),
-      },
-    );
+    final body = jsonEncode(<String, String>{
+      'pubkey': pubkey,
+      'return_url': returnUrl,
+      'start_check': startCheck,
+      if (bareHandle.isNotEmpty) 'handle': bareHandle,
+    });
+    final Map<String, dynamic> json;
+    try {
+      json = await _post('/auth/$platform/start', body);
+    } on VerifierApiException catch (e) {
+      if (e.statusCode == 503) return null;
+      rethrow;
+    }
+    final url = json['url'];
+    final target = url is String ? Uri.tryParse(url) : null;
+    // The session has to land on a provider's https page, not on whatever a
+    // malformed answer happens to name.
+    if (target == null || target.scheme != 'https' || target.host.isEmpty) {
+      throw const VerifierApiException(
+        200,
+        'verifier answered a sign-in start without an https url',
+      );
+    }
+    return target;
   }
 
-  /// Starts [platform]'s OAuth flow and returns the URL to open in a browser.
+  /// Asks the verifier to count a sign-in: [event] is the signed kind 10011
+  /// whose new claim carries [SignInSecrets.confirmBindingFor]. Send the same
+  /// [event] again after a lost answer; a re-signed one is refused as used.
   ///
-  /// [oauthStartUri] answers with a 302 to the provider's authorization
-  /// endpoint. Resolving that redirect here and launching the session on its
-  /// target — rather than on the start URL again — keeps one tap to one start
-  /// request. A start request is not free: it mints server-side OAuth state,
-  /// spends the deployment's per-IP budget and, for Bluesky, resolves the PDS
-  /// and pushes a PAR to it.
-  ///
-  /// Returns null when this deployment cannot start the flow. A platform
-  /// having an OAuth route in the code does not mean the credentials are
-  /// configured: without them the endpoint answers 503
-  /// `{"error":"… OAuth not configured"}` instead of redirecting, and a
-  /// browser session opened on that page strands the user on a JSON error
-  /// with no way back.
-  ///
-  /// Falls back to the start URL when the verifier could not be reached at
-  /// all — a request that never landed is not evidence the flow is
-  /// unavailable, and the browser session reports the problem better than
-  /// refusing here would.
-  ///
-  /// Throws the same [ArgumentError]s as [oauthStartUri].
-  Future<Uri?> resolveOAuthLaunchUri({
-    required String platform,
-    required String pubkey,
-    required String returnUrl,
-    String? handle,
+  /// Throws [SignInConfirmException] for a refusal, [VerifierApiException]
+  /// for a server error or a success that doesn't name the linked account,
+  /// and the timeout and network exceptions as [verifyBatch].
+  Future<SignInConfirmation> confirmSignIn({
+    required String code,
+    required String startSecret,
+    required Map<String, dynamic> event,
   }) async {
-    final startUri = oauthStartUri(
-      platform: platform,
-      pubkey: pubkey,
-      returnUrl: returnUrl,
-      handle: handle,
+    final body = jsonEncode(<String, dynamic>{
+      'code': code,
+      'start_secret': startSecret,
+      'event': event,
+    });
+    final res = await _fetch(_postRequest('/auth/confirm', body));
+    Map<String, dynamic>? json;
+    try {
+      json = jsonDecode(res.body) as Map<String, dynamic>;
+    } on Object {
+      json = null;
+    }
+    // Neither the code nor the secret goes into an exception message: they
+    // are what the verifier redeems.
+    if (res.statusCode >= 500) {
+      throw VerifierApiException(
+        res.statusCode,
+        'verifier returned ${res.statusCode}',
+      );
+    }
+    if (res.statusCode == 200 && json?['linked'] == true) {
+      final platform = json!['platform'];
+      final identity = json['identity'];
+      if (platform is! String || identity is! String) {
+        throw const VerifierApiException(
+          200,
+          'verifier confirmed a sign-in without naming the account',
+        );
+      }
+      return SignInConfirmation(platform: platform, identity: identity);
+    }
+    throw SignInConfirmException(
+      res.statusCode,
+      SignInRefusal.fromCode(json?['code']),
     );
-    final request = http.Request('GET', startUri)..followRedirects = false;
-    final http.StreamedResponse response;
-    try {
-      response = await _httpClient.send(request).timeout(_timeout);
-    } on Object {
-      return startUri;
-    }
-    try {
-      await response.stream.drain<void>();
-    } on Object {
-      // Only the status line and Location matter; a body that fails to drain
-      // does not change what the redirect said.
-    }
-    if (response.statusCode < 300 || response.statusCode >= 400) return null;
-    final location = response.headers['location'];
-    if (location == null || location.isEmpty) return null;
-    final Uri target;
-    try {
-      target = startUri.resolveUri(Uri.parse(location));
-    } on FormatException {
-      return null;
-    }
-    // The session has to land on the provider, not on whatever scheme a
-    // malformed Location happens to name.
-    return target.scheme == 'https' ? target : null;
   }
 
   /// Drops the verifier's cached OAuth verification for a claim.
@@ -265,31 +273,38 @@ class VerifierClient {
     return _send(() => _httpClient.get(uri));
   }
 
-  Future<Map<String, dynamic>> _post(String path, String body) {
+  Future<Map<String, dynamic>> _post(String path, String body) =>
+      _send(_postRequest(path, body));
+
+  Future<http.Response> Function() _postRequest(String path, String body) {
     final uri = _uriFor(path);
-    return _send(
-      () => _httpClient.post(
-        uri,
-        headers: const {'content-type': 'application/json'},
-        body: body,
-      ),
+    return () => _httpClient.post(
+      uri,
+      headers: const {'content-type': 'application/json'},
+      body: body,
     );
   }
 
   Future<Map<String, dynamic>> _send(
     Future<http.Response> Function() request,
   ) async {
+    final res = await _fetch(request);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw VerifierApiException(
+        res.statusCode,
+        'verifier returned ${res.statusCode}: ${res.body}',
+      );
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Sends [request] with the timeout, mapping transport failures to the
+  /// client's exceptions. Callers read the status themselves.
+  Future<http.Response> _fetch(
+    Future<http.Response> Function() request,
+  ) async {
     try {
-      final res = await request().timeout(_timeout);
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw VerifierApiException(
-          res.statusCode,
-          'verifier returned ${res.statusCode}: ${res.body}',
-        );
-      }
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    } on VerifierClientException {
-      rethrow;
+      return await request().timeout(_timeout);
     } on TimeoutException catch (e) {
       throw VerifierTimeoutException(e.toString());
     } on SocketException catch (e) {

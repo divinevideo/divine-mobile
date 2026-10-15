@@ -9,6 +9,7 @@ environment:
 resolution: workspace
 
 dependencies:
+  crypto: ^3.0.7
   equatable: ^2.0.8
   http: ^1.4.0
   meta: ^1.17.0

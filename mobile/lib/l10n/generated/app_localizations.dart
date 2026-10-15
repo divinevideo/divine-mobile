@@ -21111,6 +21111,24 @@ abstract class AppLocalizations {
   /// **'Continue with {platform}'**
   String verifyConnectOauthCta(String platform);
 
+  /// Shown after signing in at a platform, before linking the account it returned to the person's Divine account.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in to {platform} as {account}.'**
+  String verifyConnectSignedInTitle(String platform, String account);
+
+  /// Button that confirms linking the signed-in account.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to my Divine account'**
+  String get verifyConnectSignedInCta;
+
+  /// Button that drops a sign-in without linking it.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get verifyConnectSignedInCancel;
+
   /// Section header above the proof-post form. Reads as an alternative when a sign-in route is also offered.
   ///
   /// In en, this message translates to:
@@ -21218,6 +21236,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That didn\'t go through. Give it another go.'**
   String get verifyErrorOauthFailed;
+
+  /// The verifier didn't confirm a sign-in link; the person needs to sign in again.
+  ///
+  /// In en, this message translates to:
+  /// **'That sign-in couldn\'t be confirmed. Sign in again.'**
+  String get verifyErrorSignInNotConfirmed;
+
+  /// Error shown when linking an account stops because the person's signer declined or failed to sign the update. It can follow a platform sign-in or a proof post that checked out; either way nothing was published, and the person can try again.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing didn\'t go through, so nothing was linked. Try again.'**
+  String get verifyErrorNotSigned;
 
   /// Error shown when Bluesky sign-in is started without a handle, which it needs to find the user's server.
   ///

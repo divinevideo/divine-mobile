@@ -96,9 +96,34 @@ Uri parseAppOAuthCallback(String callback) {
 
   // Providers append junk fragments to their redirects (Instagram `#_`,
   // Facebook `#_=_`), and a browser carries that fragment across the server's
-  // fragment-less 302 to this URL (RFC 9110 §10.2.2). Nothing reads a
-  // fragment, so drop it rather than reject the outcome the query carries.
-  return uri.hasFragment ? uri.removeFragment() : uri;
+  // fragment-less 302 to this URL (RFC 9110 §10.2.2). The verifier sends a
+  // sign-in's one-time code after the # (divinevideo/divine-mobile#10119):
+  // keep that, as a query value, and drop the rest. An empty code is no code.
+  if (!uri.hasFragment) return _withoutEmptyCode(uri);
+  final code = _fragmentValue(uri.fragment, 'oauth_confirm');
+  final withoutFragment = uri.removeFragment();
+  if (code == null || code.isEmpty) return _withoutEmptyCode(withoutFragment);
+  return withoutFragment.replace(
+    queryParameters: {
+      ...withoutFragment.queryParametersAll,
+      'oauth_confirm': [code],
+    },
+  );
+}
+
+Uri _withoutEmptyCode(Uri uri) {
+  if (uri.queryParameters['oauth_confirm']?.isEmpty != true) return uri;
+  return uri.replace(
+    queryParameters: {...uri.queryParametersAll}..remove('oauth_confirm'),
+  );
+}
+
+String? _fragmentValue(String fragment, String name) {
+  try {
+    return Uri.splitQueryString(fragment)[name];
+  } on FormatException {
+    return null;
+  }
 }
 
 bool _hasExactRawAuthority(String callback) {
