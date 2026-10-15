@@ -57,52 +57,60 @@ void main() {
 
   setUp(resetNavigationState);
 
-  testWidgets(
-    'pushed hashtag reports its URL and pop restores the source URL',
-    (tester) async {
-      final previous = GoRouter.optionURLReflectsImperativeAPIs;
-      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
-      final container = ProviderContainer(
-        overrides: getStandardTestOverrides(),
-      );
-      addTearDown(container.dispose);
-      container.read(goRouterProvider);
-      // Use lightweight pages with the production router's reporting policy.
-      final router = GoRouter(
-        initialLocation: '/explore/tab/popular',
-        routes: [
-          GoRoute(
-            path: '/explore/tab/:tab',
-            builder: (_, _) => const Text('Explore'),
+  group('navigation', () {
+    testWidgets(
+      'pushed hashtag reports its URL and pop restores the source URL',
+      (tester) async {
+        final previous = GoRouter.optionURLReflectsImperativeAPIs;
+        addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
+        final container = ProviderContainer(
+          overrides: getStandardTestOverrides(),
+        );
+        addTearDown(container.dispose);
+        container.read(goRouterProvider);
+        // Use lightweight pages with the production router's reporting policy.
+        final router = GoRouter(
+          initialLocation: '/explore/tab/popular',
+          routes: [
+            GoRoute(
+              path: '/explore/tab/:tab',
+              builder: (_, _) => const Text('Explore'),
+            ),
+            GoRoute(
+              path: '/hashtag/:tag',
+              builder: (_, state) => Text('#${state.pathParameters['tag']}'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           ),
-          GoRoute(
-            path: '/hashtag/:tag',
-            builder: (_, state) => Text('#${state.pathParameters['tag']}'),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
-      unawaited(router.push<void>('/hashtag/twerk'));
-      await tester.pumpAndSettle();
-      final reported = router.routeInformationParser.restoreRouteInformation(
-        router.routerDelegate.currentConfiguration,
-      );
-      expect(reported?.uri.path, '/hashtag/twerk');
-      router.pop();
-      await tester.pumpAndSettle();
-      expect(
-        router.routeInformationParser
-            .restoreRouteInformation(
-              router.routerDelegate.currentConfiguration,
-            )
-            ?.uri
-            .path,
-        '/explore/tab/popular',
-      );
-    },
-  );
+        );
+        await tester.pumpAndSettle();
+        unawaited(router.push<void>('/hashtag/twerk'));
+        await tester.pumpAndSettle();
+        final reported = router.routeInformationParser.restoreRouteInformation(
+          router.routerDelegate.currentConfiguration,
+        );
+        expect(reported?.uri.path, '/hashtag/twerk');
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(
+          router.routeInformationParser
+              .restoreRouteInformation(
+                router.routerDelegate.currentConfiguration,
+              )
+              ?.uri
+              .path,
+          '/explore/tab/popular',
+        );
+      },
+    );
+  });
 
   group('dispose', () {
     test(

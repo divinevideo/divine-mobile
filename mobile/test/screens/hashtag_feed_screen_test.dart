@@ -88,38 +88,45 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('relay arrivals render while the REST request is still pending', (
-    tester,
-  ) async {
-    final pending = Completer<HashtagFeedVideosResult>();
-    addTearDown(() {
-      if (!pending.isCompleted) {
-        pending.complete(const HashtagFeedVideosResult.success([]));
-      }
-    });
-    when(
-      () => videosRepository.getHashtagFeedVideos(
-        hashtag: any(named: 'hashtag'),
-      ),
-    ).thenAnswer((_) => pending.future);
-    void Function()? videoChanged;
-    when(() => videoEventService.addListener(any())).thenAnswer((invocation) {
-      videoChanged = invocation.positionalArguments.first as void Function();
-    });
-    await pumpScreen(tester, 'fast');
-    when(() => hashtagService.getVideosByHashtags(any()))
-        .thenReturn([_video('relay-video')]);
-    videoChanged!();
-    await tester.pump();
-    expect(
-      tester
-          .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
-          .videos
-          .single
-          .id,
-      'relay-video',
+  group('renders', () {
+    testWidgets(
+      'relay arrivals render while the REST request is still pending',
+      (
+        tester,
+      ) async {
+        final pending = Completer<HashtagFeedVideosResult>();
+        addTearDown(() {
+          if (!pending.isCompleted) {
+            pending.complete(const HashtagFeedVideosResult.success([]));
+          }
+        });
+        when(
+          () => videosRepository.getHashtagFeedVideos(
+            hashtag: any(named: 'hashtag'),
+          ),
+        ).thenAnswer((_) => pending.future);
+        void Function()? videoChanged;
+        when(() => videoEventService.addListener(any()))
+            .thenAnswer((invocation) {
+              videoChanged =
+                  invocation.positionalArguments.first as void Function();
+            });
+        await pumpScreen(tester, 'fast');
+        when(() => hashtagService.getVideosByHashtags(any()))
+            .thenReturn([_video('relay-video')]);
+        videoChanged!();
+        await tester.pump();
+        expect(
+          tester
+              .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+              .videos
+              .single
+              .id,
+          'relay-video',
+        );
+        expect(pending.isCompleted, isFalse);
+      },
     );
-    expect(pending.isCompleted, isFalse);
   });
 
   group(HashtagFeedScreen, () {
