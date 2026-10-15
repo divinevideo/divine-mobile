@@ -172,12 +172,12 @@ class UserRankingSignalsLoader {
     if (repository == null || pubkeys.isEmpty) return;
     final stats = await _profileStatsDao.getStatsRawMany(pubkeys);
     final cutoff = _now().subtract(const Duration(days: 7));
-    final stale = pubkeys
-        .where((pubkey) {
-          final row = stats[pubkey];
-          return row == null || row.cachedAt.isBefore(cutoff);
-        })
-        .toList(growable: false);
+    // Sorted so the request carries which accounts are stale, not how close
+    // each one is: the ranked order is derived from private message history.
+    final stale = pubkeys.where((pubkey) {
+      final row = stats[pubkey];
+      return row == null || row.cachedAt.isBefore(cutoff);
+    }).toList()..sort();
     if (stale.isNotEmpty) await repository.refreshStatsForPubkeys(stale);
   }
 }
