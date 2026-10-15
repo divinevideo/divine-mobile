@@ -45,8 +45,8 @@ class ConversationActionsSheet {
 
   /// Whether the sheet would offer any action for a conversation.
   ///
-  /// A group holding a removal-protected member has none. Callers check this
-  /// before [show] rather than open an empty sheet.
+  /// A group offers only Remove, so a group that cannot be removed has none.
+  /// Callers check this before [show] rather than open an empty sheet.
   static bool hasActions({required bool isGroup, required bool canRemove}) =>
       _actionsFor(isGroup: isGroup, canRemove: canRemove).isNotEmpty;
 

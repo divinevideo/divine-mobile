@@ -1393,6 +1393,43 @@ void main() {
         );
       });
 
+      // #10151. A room's members are whoever its author listed, so a room is
+      // never titled for the moderation account in it, even in production,
+      // where that account's own profile carries Divine's name.
+      testWidgets('titles a room that includes the moderation account for '
+          'another member', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: [kModerationPubkeyHex, otherPubkey],
+            extraOverrides: [
+              fetchUserProfileProvider(kModerationPubkeyHex).overrideWith(
+                (ref) => Future.value(
+                  UserProfile(
+                    pubkey: kModerationPubkeyHex,
+                    displayName: l10n.inboxSupportRowTitle,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: 'f' * 64,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.text(
+            l10n.inboxGroupConversationTitle(
+              UserProfile.defaultDisplayNameFor(otherPubkey),
+              1,
+            ),
+          ),
+          findsWidgets,
+        );
+        expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+      });
+
       testWidgets('leaves an ordinary thread on its generated name', (
         tester,
       ) async {
@@ -1712,6 +1749,22 @@ void main() {
         expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
         expect(find.text(l10n.dmRetiredThreadClosedBody), findsOneWidget);
         expect(find.text(l10n.dmRetiredThreadOpenSupport), findsOneWidget);
+      });
+
+      // #10151. A room is refused whole when any member is, so a room that
+      // includes a retired key is closed too. The reason and the way out are
+      // the one-to-one's: a room's members are whoever its author listed.
+      testWidgets('closes a room that includes it, without the moderation '
+          'reason or the way out', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(counterparties: [otherPubkey, retired]),
+        );
+        await tester.pump();
+
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+        expect(find.text(l10n.dmRetiredThreadClosedBody), findsNothing);
+        expect(find.text(l10n.dmRetiredThreadOpenSupport), findsNothing);
       });
 
       testWidgets('keeps the thread history readable', (tester) async {

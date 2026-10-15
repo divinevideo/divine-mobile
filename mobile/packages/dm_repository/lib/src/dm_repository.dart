@@ -9835,13 +9835,15 @@ class DmRepository {
   /// synchronous question the UI asks.
   ///
   /// Self is excluded, so a signed-in moderation account can still clear its
-  /// own threads. **Any** other participant is enough, which covers a group
-  /// that happens to include one — `.any`, never `.first`.
+  /// own threads. Only a one-to-one is protected: a room's members are whoever
+  /// its author named, so a protected account in a room does not make the room
+  /// that account's thread (#10151). Two distinct members is a one-to-one even
+  /// while no account is signed in.
   bool isRemovalProtected(DmConversation conversation) {
+    final members = conversation.participantPubkeys.toSet();
+    if (members.length != 2) return false;
     final me = _userPubkey;
-    return conversation.participantPubkeys.any(
-      (pubkey) => pubkey != me && _removalPolicy(pubkey),
-    );
+    return members.any((pubkey) => pubkey != me && _removalPolicy(pubkey));
   }
 
   /// What a removal request resolves to before any row is touched.

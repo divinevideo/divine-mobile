@@ -44,6 +44,73 @@ void main() {
     });
   });
 
+  // #10151. A room's members are whoever its author listed, so a room never
+  // borrows Divine's identity from one of them.
+  group(dmConversationNamedPeer, () {
+    const me =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const official =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const otherOfficial =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+    const former =
+        'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+    const alice =
+        'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+    ModerationPresentation presentationOf(String pubkey) => switch (pubkey) {
+      official || otherOfficial => ModerationPresentation.official,
+      former => ModerationPresentation.former,
+      _ => ModerationPresentation.ordinary,
+    };
+
+    ({String pubkey, ModerationPresentation moderation}) namedPeerOf(
+      List<String> participantPubkeys,
+    ) => dmConversationNamedPeer(
+      participantPubkeys: participantPubkeys,
+      currentUserPubkey: me,
+      moderationPresentation: presentationOf,
+    );
+
+    test('names a one-to-one for its peer, as that peer is presented', () {
+      expect(
+        namedPeerOf([me, official]),
+        equals((pubkey: official, moderation: ModerationPresentation.official)),
+      );
+    });
+
+    test('names a room for its first member that is not a moderation key', () {
+      expect(
+        namedPeerOf([me, official, alice]),
+        equals((pubkey: alice, moderation: ModerationPresentation.ordinary)),
+      );
+    });
+
+    test(
+      'withdraws official branding from a room of moderation keys alone',
+      () {
+        expect(
+          namedPeerOf([me, official, otherOfficial]),
+          equals((
+            pubkey: official,
+            moderation: ModerationPresentation.ordinary,
+          )),
+        );
+      },
+    );
+
+    // Only a room's author can make every other member a moderation key, and
+    // the author of a room holding a former key may be someone outside the
+    // team. Naming it for the official key would show Divine's own profile.
+    test('names a room with no ordinary member for a former key ahead of an '
+        'official one', () {
+      expect(
+        namedPeerOf([me, official, former]),
+        equals((pubkey: former, moderation: ModerationPresentation.former)),
+      );
+    });
+  });
+
   group(dmPeerName, () {
     group('precedence', () {
       test('vanished outranks every other branch', () {

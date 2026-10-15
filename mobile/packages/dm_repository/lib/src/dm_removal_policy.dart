@@ -30,8 +30,8 @@ enum ConversationRemovalOutcome {
 /// membership over shipped identities, with no account state to await.
 ///
 /// The predicate answers about a *peer*. `DmRepository` owns excluding self and
-/// scanning every participant, so a group is judged by all of its members and
-/// no caller can get that wrong.
+/// applying it to one-to-ones only, so no caller can get either wrong: a room's
+/// members are whoever its author named, so a room is never protected.
 typedef DmConversationRemovalPolicy = bool Function(String peerPubkeyHex);
 
 /// Default policy: nothing is protected. Preserves existing behaviour wherever

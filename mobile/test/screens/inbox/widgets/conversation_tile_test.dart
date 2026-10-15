@@ -1181,6 +1181,96 @@ void main() {
           expect(lockFinder(), findsOneWidget);
         });
 
+        // #10151. A room send is refused whole when any member is, so a room
+        // that includes a retired key is closed wherever that member sorts.
+        testWidgets('a group with a retired member is marked closed, not '
+            'previewed', (tester) async {
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                fetchUserProfileProvider(
+                  otherPubkey,
+                ).overrideWith((ref) async => null),
+              ],
+              home: Scaffold(
+                body: ConversationTile(
+                  conversation: DmConversation(
+                    id: 'e' * 64,
+                    participantPubkeys: [
+                      currentPubkey,
+                      otherPubkey,
+                      kLegacyModerationPubkeys.first,
+                    ],
+                    isGroup: true,
+                    createdAt: nowUnix,
+                    lastMessageContent: 'the last thing said',
+                  ),
+                  currentUserPubkey: currentPubkey,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(lockFinder(), findsOneWidget);
+          expect(find.text('the last thing said'), findsNothing);
+        });
+
+        // #10151. A room's members are whoever its author listed, so a room
+        // is never named for the moderation account in it, even in
+        // production, where that account's own profile carries Divine's name.
+        testWidgets('a room that includes the moderation account is named for '
+            'another member', (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                fetchUserProfileProvider(moderationPubkey).overrideWith(
+                  (ref) async => UserProfile(
+                    pubkey: moderationPubkey,
+                    displayName: l10n.inboxSupportRowTitle,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: 'f' * 64,
+                  ),
+                ),
+                fetchUserProfileProvider(
+                  otherPubkey,
+                ).overrideWith((ref) async => null),
+              ],
+              home: Scaffold(
+                body: ConversationTile(
+                  conversation: DmConversation(
+                    id: 'e' * 64,
+                    participantPubkeys: [
+                      currentPubkey,
+                      moderationPubkey,
+                      otherPubkey,
+                    ],
+                    isGroup: true,
+                    createdAt: nowUnix,
+                  ),
+                  currentUserPubkey: currentPubkey,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(
+              l10n.inboxGroupConversationTitle(
+                UserProfile.defaultDisplayNameFor(otherPubkey),
+                1,
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+        });
+
         testWidgets('a live moderation thread carries no lock', (
           tester,
         ) async {

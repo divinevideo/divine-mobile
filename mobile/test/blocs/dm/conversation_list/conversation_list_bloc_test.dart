@@ -2759,6 +2759,81 @@ void main() {
       });
     });
 
+    // #10151. The index matches the string the row renders, and a room is
+    // never named for the moderation account in it.
+    group('a room that includes the moderation account', () {
+      setUp(stubPeerSearchDependencies);
+      setUp(() => stubVanished(const {}));
+
+      DmConversation room() => _createConversation(
+        id: 'room',
+        isGroup: true,
+        participantPubkeys: [_testPubkey1, kModerationPubkeyHex, _testPubkey2],
+      );
+
+      test("is not found by Divine's name", () async {
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(bloc, labels.moderation);
+
+        expect(state.visibleConversations, isEmpty);
+      });
+
+      // The row resolves the named member's profile, so search has to resolve
+      // that member too, not the first one listed.
+      test('is found by the real name of the member it is named for', () async {
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer(
+          (_) async => {
+            _testPubkey2: UserProfile(
+              pubkey: _testPubkey2,
+              displayName: 'Alice',
+              rawData: const {},
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+              eventId: _testConversationId1,
+            ),
+          },
+        );
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        bloc.add(const ConversationListStarted());
+        await bloc.stream.firstWhere(
+          (s) => s.status == ConversationListStatus.loaded,
+        );
+        bloc.add(const ConversationListSearchQueryChanged('alice'));
+        final state = await firstMatch(
+          bloc,
+          (s) => s.searchQuery == 'alice' && s.visibleConversations.isNotEmpty,
+        );
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
+        ]);
+      });
+
+      test('is found by the member it is named for', () async {
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(
+          bloc,
+          UserProfile.defaultDisplayNameFor(_testPubkey2),
+        );
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
+        ]);
+      });
+    });
+
     group('a retired Divine Moderation key', () {
       setUp(stubPeerSearchDependencies);
       // Rotated away from, so `_extractPinnedSupport` leaves it in the list as
@@ -2828,6 +2903,31 @@ void main() {
 
         expect(state.visibleConversations.map((c) => c.id).toList(), [
           'retired',
+        ]);
+      });
+
+      // #10151. A room that includes a retired key is closed wherever that
+      // member sorts, and its row says so, so search matches what it shows.
+      test('a room that includes it is found by the closed subtitle its row '
+          'shows', () async {
+        _stubStreams(
+          mockDmRepository,
+          accepted: [
+            _createConversation(
+              id: 'room',
+              isGroup: true,
+              participantPubkeys: [_testPubkey1, _testPubkey2, retired],
+              lastMessageContent: 'Your video was removed',
+            ),
+          ],
+        );
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(bloc, labels.retiredConversationClosed);
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
         ]);
       });
 
