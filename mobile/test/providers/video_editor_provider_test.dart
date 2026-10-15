@@ -1827,6 +1827,20 @@ void main() {
           expect(renderedHistories, hasLength(1));
         });
 
+        test('renders again once a post that lost its render ends', () async {
+          final notifier = postDetails.read(videoEditorProvider.notifier)
+            ..setPosting(value: true);
+          landTakeProof();
+          await pumpEventQueue();
+
+          notifier.setPosting(value: false);
+          await pumpEventQueue();
+
+          final state = postDetails.read(videoEditorProvider);
+          expect(renderedHistories, hasLength(2));
+          expect(state.finalRenderedClip?.id, 'rendered-2');
+        });
+
         group('while the new render runs', () {
           late Completer<void> gate;
           late List<List<DivineVideoClip>> renderedClips;
@@ -1869,6 +1883,19 @@ void main() {
             final state = postDetails.read(videoEditorProvider);
             expect(renderedClips.last.single.proofManifestJson, isNotNull);
             expect(state.finalRenderedClip?.id, 'rendered-3');
+          });
+
+          test('does not finish into the next editor session', () async {
+            await pumpEventQueue();
+
+            await postDetails.read(videoEditorProvider.notifier).reset();
+            gate.complete();
+            await pumpEventQueue();
+
+            expect(
+              postDetails.read(videoEditorProvider).finalRenderedClip,
+              isNull,
+            );
           });
         });
       });

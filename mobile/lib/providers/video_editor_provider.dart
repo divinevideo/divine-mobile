@@ -274,8 +274,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
   }
 
-  /// Renders again after [invalidateFinalRenderedClip] discarded the render
-  /// Post details was showing.
+  /// Renders again when Post details waits on a render it no longer has:
+  /// [invalidateFinalRenderedClip] discarded it, or a post lost it
+  /// ([setPosting]).
   ///
   /// The user cannot edit from Post details, so this is background work that
   /// finished after the export, most often the take's provenance signing.
@@ -366,6 +367,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _finalRenderAwaited = false;
+    // A render still running belongs to the session this ends; its result
+    // must not land in the next one.
+    _renderGeneration++;
     _autosaveTimer?.cancel();
     draftId = null;
     if (!keepAutosavedDraft) {
@@ -1798,6 +1802,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   void setPosting({required bool value}) {
     if (!ref.mounted) return;
     state = state.copyWith(isPosting: value);
+    // A take update during the handoff threw the render away and failed the
+    // post; render again so the user can post once it is done.
+    if (!value && state.finalRenderedClip == null && !state.isProcessing) {
+      _renderAgainIfAwaited();
+    }
   }
 
   /// Publish the video to the Nostr network.
