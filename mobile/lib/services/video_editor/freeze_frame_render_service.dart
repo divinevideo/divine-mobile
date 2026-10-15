@@ -181,6 +181,7 @@ class FreezeFrameRenderService {
       videoAspectRatio: source.targetAspectRatio.value,
       thumbnailPath: imagePath,
       isFreezeFrame: true,
+      mask: source.mask,
       // The rendered still carries no sound; a zero volume says so to every
       // control that offers to turn it up.
       volume: 0,
