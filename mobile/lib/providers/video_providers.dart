@@ -443,11 +443,9 @@ SubscribedListVideoCache? subscribedListVideoCache(Ref ref) {
 /// relay-ready client instead made Share a dead tap for that whole window
 /// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
 ///
-/// When a [DmRepository] is available the service sends videos via NIP-17
-/// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
+/// The service sends videos as NIP-17 DMs through the [DmRepository].
 @riverpod
 VideoSharingService? videoSharingService(Ref ref) {
-  final nostrService = ref.watch(nostrServiceProvider);
   final authService = ref.watch(authServiceProvider);
   final profileRepository = ref.watch(profileReadRepositoryProvider);
   final dmRepository = ref.watch(dmRepositoryProvider);
@@ -457,7 +455,6 @@ VideoSharingService? videoSharingService(Ref ref) {
   }
 
   return VideoSharingService(
-    nostrService: nostrService,
     authService: authService,
     profileRepository: profileRepository,
     dmRepository: dmRepository,
