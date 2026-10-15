@@ -197,6 +197,72 @@ void main() {
         },
       );
 
+      test(
+        'does not page Following from the cached window and resumes on the '
+        'fresh cursor',
+        () async {
+          final cached = _video(''.padLeft(64, 'a'));
+          final fresh = _video(''.padLeft(64, 'b'));
+          final next = _video(''.padLeft(64, 'c'));
+          when(() => followRepository.followingPubkeys).thenReturn(['author']);
+          when(
+            () => followRepository.followingStream,
+          ).thenAnswer((_) => BehaviorSubject.seeded(['author']));
+          when(
+            () => homeFeedCache.readVideos(pubkey: null, mode: 'following'),
+          ).thenAnswer((_) async => [cached]);
+          final requestedCursors = <String?>[];
+          when(
+            () => videosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((call) {
+            final cursor = call.namedArguments[#cursor] as String?;
+            requestedCursors.add(cursor);
+            if (cursor == null) return freshResult.future;
+            return Future.value(HomeFeedResult(videos: [next], hasMore: false));
+          });
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          final cachedReady = bloc.stream.firstWhere(
+            (s) => s.videos.isNotEmpty,
+          );
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await cachedReady;
+
+          // The cached window carries no cursor, and Following has no `until`
+          // fallback, so any request here would re-fetch the first page.
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+          expect(requestedCursors, equals([null]));
+          expect(bloc.state.hasMore, isFalse);
+
+          final freshReady = bloc.stream.firstWhere(
+            (s) => s.paginationCursor == 'p:fresh',
+          );
+          freshResult.complete(
+            HomeFeedResult(
+              videos: [fresh],
+              hasMore: true,
+              paginationCursor: 'p:fresh',
+            ),
+          );
+          await freshReady;
+          expect(bloc.state.hasMore, isTrue);
+
+          final nextReady = bloc.stream.firstWhere(
+            (s) => s.videos.any((v) => v.id == next.id),
+          );
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await nextReady;
+          expect(requestedCursors, equals([null, 'p:fresh']));
+        },
+      );
+
       // The regression this pins (#7719): `_onStarted` used to call
       // `_loadVideos` with the default `skipCache: false`, so the fetch that
       // exists to refresh the feed was itself answered from the repository's
