@@ -167,8 +167,8 @@ void main() {
         videoEnd: _ms(2000),
       );
 
-      expect(parts[0].equalizer, _boostAt1kHz);
-      expect(parts[1].equalizer, _boostAt1kHz.withGain(0, -6));
+      expect(parts[0].equalizer, equals(_boostAt1kHz));
+      expect(parts[1].equalizer, equals(_boostAt1kHz.withGain(0, -6)));
     });
 
     test('follows a detached clip from where its layer plays', () {
@@ -187,11 +187,11 @@ void main() {
       );
 
       expect(parts, hasLength(1));
-      expect(parts.single.source.at, _ms(500));
-      expect(parts.single.source.from, _ms(200));
-      expect(parts.single.source.to, _ms(1200));
-      expect(parts.single.volume, 0.5);
-      expect(parts.single.equalizer, _boostAt1kHz);
+      expect(parts.single.source.at, equals(_ms(500)));
+      expect(parts.single.source.from, equals(_ms(200)));
+      expect(parts.single.source.to, equals(_ms(1200)));
+      expect(parts.single.volume, equals(0.5));
+      expect(parts.single.equalizer, equals(_boostAt1kHz));
     });
 
     test('blends one clip out and the next in across an overlap', () {
@@ -205,10 +205,10 @@ void main() {
       );
 
       expect(parts, hasLength(2));
-      expect(parts[0].source.to, _ms(2000));
-      expect(parts[0].blendOut, _dissolve);
-      expect(parts[1].source.at, _ms(1500));
-      expect(parts[1].blendIn, _dissolve);
+      expect(parts[0].source.to, equals(_ms(2000)));
+      expect(parts[0].blendOut, equals(_dissolve));
+      expect(parts[1].source.at, equals(_ms(1500)));
+      expect(parts[1].blendIn, equals(_dissolve));
     });
 
     test('fades a clip against silence across an overlap with a muted '
@@ -222,8 +222,8 @@ void main() {
         videoEnd: _ms(3500),
       );
 
-      expect(parts.single.source.to, _ms(2000));
-      expect(parts.single.blendOut, _dissolve);
+      expect(parts.single.source.to, equals(_ms(2000)));
+      expect(parts.single.blendOut, equals(_dissolve));
     });
 
     test('blends the first clip in at the loop restart', () {
@@ -235,13 +235,13 @@ void main() {
 
       expect(parts, hasLength(2));
       // The head of the clip plays at the end of the video, blended in.
-      expect(parts[0].source.from, Duration.zero);
-      expect(parts[0].source.to, _ms(500));
-      expect(parts[0].source.at, _ms(2000));
-      expect(parts[0].blendIn, _dissolve);
-      expect(parts[1].source.from, _ms(500));
-      expect(parts[1].source.at, Duration.zero);
-      expect(parts[1].blendOut, _dissolve);
+      expect(parts[0].source.from, equals(Duration.zero));
+      expect(parts[0].source.to, equals(_ms(500)));
+      expect(parts[0].source.at, equals(_ms(2000)));
+      expect(parts[0].blendIn, equals(_dissolve));
+      expect(parts[1].source.from, equals(_ms(500)));
+      expect(parts[1].source.at, equals(Duration.zero));
+      expect(parts[1].blendOut, equals(_dissolve));
     });
   });
 
