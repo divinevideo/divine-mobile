@@ -2018,8 +2018,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         return;
       }
 
+      // [updated] is built from the clip as it was when the toggle started.
+      // A split's poster decode can land on it during the render, so keep
+      // the thumbnail the clip has now rather than the one it had then.
       final newClips = List<DivineVideoClip>.of(currentClips)
-        ..[currentIndex] = updated;
+        ..[currentIndex] = updated.copyWith(
+          thumbnailPath: currentClips[currentIndex].thumbnailPath,
+        );
       emit(
         state.copyWith(
           clips: List.unmodifiable(newClips),

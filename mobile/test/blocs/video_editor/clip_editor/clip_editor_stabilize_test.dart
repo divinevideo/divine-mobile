@@ -271,6 +271,36 @@ void main() {
       expect(state.clips.single.stabilization, isNotNull);
     });
 
+    test('keeps a poster that lands while the render runs', () async {
+      // A split decodes its halves' posters after it returns. One landing on
+      // a clip mid-render must not be overwritten by the clip as it was.
+      final release = Completer<void>();
+      final bloc = seeded(
+        [_longClip().copyWith(thumbnailPath: '/documents/old_thumb.jpg')],
+        stabilize:
+            ({required sourceClip, required renderId, onProgress}) async {
+              await release.future;
+              return _fakeStabilize(sourceClip: sourceClip, renderId: renderId);
+            },
+      );
+      final done = toggle(bloc);
+      await bloc.stream.firstWhere((s) => s.isStabilizing);
+      bloc.add(
+        const ClipEditorClipThumbnailUpdated(
+          clipId: 'clip',
+          thumbnailPath: '/documents/new_thumb.jpg',
+        ),
+      );
+      await bloc.stream.firstWhere(
+        (s) => s.clips.single.thumbnailPath == '/documents/new_thumb.jpg',
+      );
+      release.complete();
+
+      final clip = (await done).clips.single;
+      expect(clip.stabilization, isNotNull);
+      expect(clip.thumbnailPath, '/documents/new_thumb.jpg');
+    });
+
     group('a later re-render drops the record', () {
       // Turning stabilization off swaps the raw footage back in. Kept after
       // a reverse or a transform, the record would silently undo that edit.
