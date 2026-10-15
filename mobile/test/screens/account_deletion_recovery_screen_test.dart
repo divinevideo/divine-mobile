@@ -479,6 +479,13 @@ void main() {
       );
       verify(cubit.retrySignOut).called(1);
       verifyNever(cubit.cancel);
+      await tester.tap(
+        find.widgetWithText(DivineButton, l10n.supportContactSupport),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Support center'), findsOneWidget);
+      expect(cubit.state.attempt?.id, 'accepted');
+      verifyNever(cubit.cancel);
     });
 
     testWidgets('fail-closed loading keeps sign out reachable', (tester) async {
