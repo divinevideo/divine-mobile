@@ -1,5 +1,6 @@
 // ABOUTME: Recipient kind-10050 lookup against a real NostrClient query pool.
-// ABOUTME: A saturated pool must not starve the indexer leg (#10004).
+// ABOUTME: A saturated pool (#10004) or a relay lock (#10148) must not leave
+// ABOUTME: it unread.
 
 import 'dart:async';
 
@@ -92,6 +93,10 @@ const _busyOutsideUrl = 'wss://busy-outside.example';
 
 /// A [DmRepository] over a real [NostrClient] and relay pool: one pooled
 /// relay, and a [_ScriptedRelay] for each temp relay a read dials.
+///
+/// [lockedToHost] admits only relays on that host, as a non-production build
+/// locks its relays to the environment's own; null admits every relay, as
+/// production does.
 Future<
   ({
     DmRepository repository,
@@ -102,7 +107,7 @@ Future<
     Stream<_ScriptedRelay> dialled,
   })
 >
-_harness() async {
+_harness({String? lockedToHost}) async {
   final tempRelays = <String, _ScriptedRelay>{};
   final dialled = StreamController<_ScriptedRelay>.broadcast();
   addTearDown(dialled.close);
@@ -120,7 +125,12 @@ _harness() async {
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenReturn([_poolRelayUrl]);
   when(() => relayManager.configuredRelays).thenReturn([_poolRelayUrl]);
-  when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+  when(() => relayManager.isRelayAllowed(any())).thenAnswer(
+    (invocation) =>
+        lockedToHost == null ||
+        Uri.tryParse(invocation.positionalArguments.single as String)?.host ==
+            lockedToHost,
+  );
   when(() => relayManager.diagnosticsSink).thenReturn(null);
   when(relayManager.dispose).thenAnswer((_) async {});
   final client = NostrClient.forTesting(
@@ -372,6 +382,90 @@ void main() {
           ),
         );
         await busy;
+      },
+    );
+  });
+
+  group('recipient kind-10050 lookup in a build locked to its own relay host '
+      '(#10148)', () {
+    final poolHost = Uri.parse(_poolRelayUrl).host;
+    final published = NIP17SendResult.success(
+      rumorEventId: 'rumor',
+      messageEventId: 'wrap',
+      recipientPubkey: 'recipient',
+    );
+
+    List<String> logLines(String containing) => LogCaptureService()
+        .getRecentLogs()
+        .map((entry) => entry.message)
+        .where((message) => message.contains(containing))
+        .toList();
+
+    test(
+      'a recipient with no inbox list resolves absent when the lock refuses '
+      'the indexer, so the send counts as delivered',
+      () async {
+        unawaited(LogCaptureService().clearAllLogs());
+        final h = await _harness(lockedToHost: poolHost);
+        final recipient = await h.nostr.ensurePublicKey();
+
+        final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
+        // The environment's own relay answers, and has no list.
+        await h.pooled.deliver(['EOSE', await h.pooled.awaitReq(0)]);
+        final inbox = await lookup;
+
+        expect(
+          h.tempRelays.keys.where((url) => url.startsWith(_indexerUrl)),
+          isEmpty,
+          reason: 'the lock refuses the indexer',
+        );
+        expect(inbox.state, DmInboxResolution.absent);
+        expect(
+          downgradeFallbackPoolDelivery(published, inbox.state),
+          isA<NIP17SendSuccess>(),
+          reason: 'an absent inbox does not hold the send pending',
+        );
+        expect(logLines('was inconclusive'), isEmpty);
+        expect(
+          logLines('not asking the indexer $_indexerUrl'),
+          hasLength(1),
+          reason: 'the skip is on the record',
+        );
+      },
+    );
+
+    test(
+      'a recipient whose write relays the lock refuses, and who has no inbox '
+      'list, resolves absent',
+      () async {
+        unawaited(LogCaptureService().clearAllLogs());
+        final h = await _harness(lockedToHost: poolHost);
+        final recipient = await h.nostr.ensurePublicKey();
+        final relayList = (await h.nostr.nostrSigner.signEvent(
+          Event(recipient, EventKind.relayListMetadata, const [
+            ['r', _outboxRelayUrl],
+          ], ''),
+        ))!;
+
+        final lookup = h.repository.resolveDmInboxRelaysDetailed(recipient);
+        // The environment's own relay has their relay list and no inbox list.
+        final poolSub = await h.pooled.awaitReq(0);
+        await h.pooled.deliver(['EVENT', poolSub, relayList.toJson()]);
+        await h.pooled.deliver(['EOSE', poolSub]);
+        final inbox = await lookup;
+
+        expect(
+          h.tempRelays.keys.where((url) => url.startsWith(_outboxRelayUrl)),
+          isEmpty,
+          reason: 'the lock refuses the write relay',
+        );
+        expect(inbox.state, DmInboxResolution.absent);
+        expect(logLines('was inconclusive'), isEmpty);
+        expect(
+          logLines('not asking their write relays $_outboxRelayUrl'),
+          hasLength(1),
+          reason: 'the skip is on the record',
+        );
       },
     );
   });

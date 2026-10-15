@@ -381,10 +381,12 @@ enum DmInboxResolution {
   /// The recipient advertises a kind-10050 and we read it.
   found,
 
-  /// Every relay asked answered — the pool, the indexer, and up to four
-  /// dialable write relays from the recipient's NIP-65 list — and none holds
-  /// an inbox list. NIP-17 calls this "not ready to receive messages"; we
-  /// still fall back to the default pool so reachability is preserved (#570).
+  /// Every relay asked answered — the pool, any indexer this build may
+  /// dial, and up to four dialable write relays from the recipient's NIP-65
+  /// list — and none holds an inbox list. A build locked to its own relay
+  /// host asks only that host. NIP-17 calls this "not ready to receive
+  /// messages"; we still fall back to the default pool so reachability is
+  /// preserved (#570).
   absent,
 
   /// We could not read the recipient's inbox: no relay took the REQ, nothing
@@ -694,7 +696,9 @@ class DmRepository {
   /// Read-only indexers used to locate somebody else's kind-10050.
   /// Kept separate from [_dmInboxDiscoveryRelays], whose members are selected
   /// because they accept publication of Divine's own list. Read coverage and
-  /// write acceptance are different relay capabilities (#7317).
+  /// write acceptance are different relay capabilities (#7317). Only the ones
+  /// the client admits are asked, so a build locked to its own relay host asks
+  /// none and the pool's answer decides (#10148).
   final List<String> _dmInboxLookupRelays;
   final List<String> _dmInboxTaggedRelays;
 
@@ -4748,6 +4752,16 @@ class DmRepository {
       // the list was written can neither confirm it nor see a list held only
       // there (#8433).
       //
+      // A build locked to its own relay host refuses the indexer, and a leg
+      // whose every relay is refused never leaves this device. Read as
+      // unreadable, it held every send to someone with no inbox list (#10148).
+      final lookupRelays = isRecipient
+          ? _relaysTheLockAdmits(
+              _dmInboxLookupRelays,
+              pubkey: pubkey,
+              leg: 'the indexer',
+            )
+          : const <String>[];
       final queryFutures = [
         _observedLeg(
           () => _nostrClient.queryEventsDetailed(
@@ -4760,12 +4774,12 @@ class DmRepository {
                 : _dmInboxQueryTimeout,
           ),
         ),
-        if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
+        if (lookupRelays.isNotEmpty)
           _observedLeg(
             () => _nostrClient.queryEventsDetailed(
               filter,
               useCache: false,
-              tempRelays: _dmInboxLookupRelays,
+              tempRelays: lookupRelays,
               relayTypes: const [RelayType.temp],
               requireAllRelaysSettled: true,
               timeout: _dmInboxDiscoveryQueryTimeout,
@@ -4999,6 +5013,30 @@ class DmRepository {
     return (read: result, skippedReason: skippedReason);
   }
 
+  /// The [relays] this build's relay lock admits. Any it refuses are logged
+  /// for [pubkey]'s inbox lookup, so a lookup that skipped them reads as
+  /// such in a support log rather than as a recipient with no list (#10148).
+  List<String> _relaysTheLockAdmits(
+    Iterable<String> relays, {
+    required String pubkey,
+    required String leg,
+  }) {
+    final admitted = <String>[];
+    final refused = <String>[];
+    for (final relay in relays) {
+      (_nostrClient.isRelayAllowed(relay) ? admitted : refused).add(relay);
+    }
+    if (refused.isNotEmpty) {
+      Log.info(
+        'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)}: not asking '
+        '$leg ${refused.join(', ')} — this build locks relays to its own host '
+        '(#10148)',
+        category: LogCategory.system,
+      );
+    }
+    return admitted;
+  }
+
   /// Why a leg that did not settle was inconclusive, for the log line.
   static String _unsettledLegReason(String? skippedReason) =>
       skippedReason == null
@@ -5015,7 +5053,8 @@ class DmRepository {
   /// is scored as delivery to relays the recipient never reads (#7317).
   /// [relayLists] are the recipient's kind-10002 events the earlier legs
   /// returned; the newest wins. Relays the earlier legs already asked are
-  /// skipped, and the rest pass the same remote-relay policy as an inbox list.
+  /// skipped, and the rest must pass the same remote-relay policy as an inbox
+  /// list and this build's relay lock.
   Future<_OwnDmInboxRead> _queryRecipientWriteRelays(
     String pubkey,
     List<Event> relayLists, {
@@ -5049,13 +5088,15 @@ class DmRepository {
       ])
         RelayAddrUtil.handle(url),
     };
-    // Relays the policy refuses or the cap leaves out are skipped the same way
-    // on every retry, so reading them as "unreadable" would turn a recipient
-    // with no inbox list into a permanent send failure.
-    final targets = writeRelays
-        .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
-        .take(_dmInboxOutboxRelayCap)
-        .toList();
+    // Relays the policy or this build's relay lock refuses, or the cap leaves
+    // out, are skipped the same way on every retry in this environment, so
+    // reading them as "unreadable" would turn a recipient with no inbox list
+    // into a permanent send failure (#10148).
+    final targets = _relaysTheLockAdmits(
+      writeRelays.where((url) => !asked.contains(RelayAddrUtil.handle(url))),
+      pubkey: pubkey,
+      leg: 'their write relays',
+    ).take(_dmInboxOutboxRelayCap).toList();
     if (targets.isEmpty) return absent;
 
     // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
