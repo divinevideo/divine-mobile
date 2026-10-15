@@ -2056,7 +2056,13 @@ class FollowRepository {
     try {
       final result = await _nostrClient
           .readEvents([
-            Filter(kinds: const [EventKind.contactList], p: [pubkey]),
+            // Match the REST bound so ordinary EOSE below the limit can
+            // complete even when a relay advertises no NIP-11 max_limit.
+            Filter(
+              kinds: const [EventKind.contactList],
+              p: [pubkey],
+              limit: 5000,
+            ),
           ], requireAllRelaysSettled: true)
           .timeout(_fetchFollowersTimeout);
       return (
