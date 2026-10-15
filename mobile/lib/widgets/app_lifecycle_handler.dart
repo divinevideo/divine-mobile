@@ -72,7 +72,9 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
       await settled.future;
       if (!mounted) return;
 
-      ref.read(videoPublishProvider.notifier).resumePendingPublishes(context);
+      await ref
+          .read(videoPublishProvider.notifier)
+          .resumePendingPublishes(context);
       await ref.read(clipLibraryServiceProvider).migrateOldClips();
       await ref.read(draftStorageServiceProvider).migrateOldDrafts();
       // Hard-delete trashed clips past the 30-day retention window.
@@ -160,7 +162,12 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         // Force reconnect relays - WebSocket connections are often silently
         // dropped by iOS/Android when app is backgrounded. Without this,
         // subscriptions sent to stale sockets will timeout (30s) with no response.
-        _reconnectRelays();
+        runDetached(
+          _reconnectRelays(),
+          'reconnect relays after app resume',
+          logName: 'AppLifecycleHandler',
+          category: LogCategory.system,
+        );
         unawaited(_clearAppBadge());
         // Coming back is often coming back online, so recordings waiting for
         // their signature may be backed up now.
