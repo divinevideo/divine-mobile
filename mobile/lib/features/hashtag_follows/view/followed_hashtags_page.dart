@@ -8,11 +8,12 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.dart';
 import 'package:openvine/features/hashtag_follows/view/hashtag_follows_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 
 class FollowedHashtagsPage extends StatelessWidget {
   const FollowedHashtagsPage({super.key});
-  static const path = '/followed-hashtags';
+  static const String path = RoutePaths.followedHashtags;
 
   @override
   Widget build(BuildContext context) => Scaffold(

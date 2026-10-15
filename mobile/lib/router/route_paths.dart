@@ -32,6 +32,7 @@ abstract final class RoutePaths {
   static const emailVerification = '/verify-email';
   static const explore = '/explore';
   static const followersBase = '/followers';
+  static const followedHashtags = '/followed-hashtags';
   static const followingBase = '/following';
 
   /// Subject segment of [followingNew].
