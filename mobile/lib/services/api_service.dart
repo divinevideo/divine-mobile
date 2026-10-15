@@ -164,12 +164,13 @@ class ApiService {
   /// Submit a recorded parental consent video plus parent email for an open
   /// minor-account review case. The video is uploaded as multipart/form-data.
   ///
-  /// The NIP-98 auth token is intentionally created without a payload tag:
-  /// [Nip98AuthService] hashes the string it is given, and a multipart body
-  /// cannot be represented as such a string without loading the whole video
-  /// into memory, so a matching body digest cannot be produced here.
-  /// relay-manager authenticates this route on the signed url+method and the
-  /// [email] field carried in the multipart body.
+  /// The signed NIP-98 event authenticates the account, URL and method, not
+  /// the multipart email or video bytes. The shared auth helper adds the hash
+  /// of an empty string when no payload is supplied. That tag stays for
+  /// compatibility with the current helper; this route checks case ownership
+  /// without validating that tag against the streamed multipart body. Enabling
+  /// payload verification on the server requires a coordinated client change
+  /// to hash the exact multipart bytes before sending them.
   Future<void> submitMinorAccountReviewParentConsent({
     required String caseId,
     required String email,

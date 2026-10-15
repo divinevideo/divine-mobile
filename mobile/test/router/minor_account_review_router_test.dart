@@ -759,6 +759,39 @@ void main() {
       );
     });
 
+    testWidgets(
+      'sends a 13-15 case without the video option from the record consent '
+      'route to Support Center',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            ...routerOverrides(),
+            nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => restrictedStatus(
+                resolution: MinorReviewResolutionType.supportReviewOnly,
+              ),
+            ),
+            isFeatureEnabledProvider(
+              FeatureFlag.minorConsentInAppRecording,
+            ).overrideWithValue(true),
+          ],
+        );
+        registerContainerTearDown(tester, container);
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+        final router = container.read(goRouterProvider);
+        router.go(MinorAccountReviewRecordConsentScreen.path);
+        await tester.pumpAndSettle();
+
+        expect(
+          router.routeInformationProvider.value.uri.toString(),
+          SupportCenterScreen.path,
+        );
+      },
+    );
+
     testWidgets('redirects under-13 cases away from parent contact', (
       tester,
     ) async {
