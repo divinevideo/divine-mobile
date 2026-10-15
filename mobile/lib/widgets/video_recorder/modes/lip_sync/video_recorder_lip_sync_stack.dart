@@ -7,6 +7,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -24,18 +25,39 @@ import 'package:unified_logger/unified_logger.dart';
 /// is capture mode with an audio chip in the top bar, which adjusts or removes
 /// the sound, and the audio waveform progress bar overlaid while recording.
 /// Removing the sound brings the picker back.
-class VideoRecorderLipSyncStack extends ConsumerWidget {
+class VideoRecorderLipSyncStack extends ConsumerStatefulWidget {
   const VideoRecorderLipSyncStack({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VideoRecorderLipSyncStack> createState() =>
+      _VideoRecorderLipSyncStackState();
+}
+
+class _VideoRecorderLipSyncStackState
+    extends ConsumerState<VideoRecorderLipSyncStack> {
+  /// Whether the viewfinder shows rather than the picker.
+  ///
+  /// Held while the recorder leaves lip-sync or closes: both reset the editor
+  /// on the way out, and following that would swap in the picker during the
+  /// exit transition.
+  late bool _hasSound = ref.read(videoEditorProvider).selectedSound != null;
+
+  @override
+  Widget build(BuildContext context) {
     final hasSound = ref.watch(
       videoEditorProvider.select((s) => s.selectedSound != null),
     );
+    final isLipSync = context.select(
+      (VideoRecorderBloc b) =>
+          b.state.recorderMode == VideoRecorderMode.lipSync,
+    );
+    if (isLipSync && (ModalRoute.isCurrentOf(context) ?? true)) {
+      _hasSound = hasSound;
+    }
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
-      child: hasSound
+      child: _hasSound
           ? const VideoRecorderCaptureStack(
               fromEditor: false,
               topBarCenter: _LipSyncAudioButton(),

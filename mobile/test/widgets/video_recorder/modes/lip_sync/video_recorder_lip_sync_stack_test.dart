@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -76,6 +77,7 @@ void main() {
       when(() => recorderBloc.isClosed).thenReturn(false);
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.lipSync,
           recordingState: recordingState,
           isCameraInitialized: true,
           canRecord: true,
@@ -440,6 +442,92 @@ void main() {
 
         expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
         expect(find.byType(VideoEditorAudioChip), findsNothing);
+      });
+    });
+
+    group('leaving lip-sync', () {
+      GoRouter recorderRouter() {
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const Scaffold(body: Text('feed')),
+            ),
+            GoRoute(
+              path: '/recorder',
+              builder: (_, _) =>
+                  const Scaffold(body: VideoRecorderLipSyncStack()),
+            ),
+            GoRoute(
+              path: '/over',
+              builder: (_, _) => const Scaffold(body: Text('over')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        return router;
+      }
+
+      testWidgets('keeps the viewfinder while switching to another mode', (
+        tester,
+      ) async {
+        final widget = buildWidget(selectedSound: sound('a'));
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        final lipSync = recorderBloc.state;
+        whenListen(recorderBloc, states.stream, initialState: lipSync);
+        await tester.pumpWidget(widget);
+        await tester.pumpAndSettle();
+
+        // The bloc emits the new mode, then resets the editor.
+        states.add(lipSync.copyWith(recorderMode: VideoRecorderMode.capture));
+        await tester.pump();
+        editorNotifier.resetForClearAll();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
+      });
+
+      testWidgets('keeps the viewfinder while the recorder closes', (
+        tester,
+      ) async {
+        final router = recorderRouter();
+        await tester.pumpWidget(
+          buildWidget(selectedSound: sound('a'), router: router),
+        );
+        unawaited(router.push('/recorder'));
+        await tester.pumpAndSettle();
+
+        // Popping discards the session, which resets the editor.
+        router.pop();
+        editorNotifier.resetForClearAll();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(VideoRecorderLipSyncStack), findsOneWidget);
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+      });
+
+      testWidgets('follows a sound removed under another screen once it '
+          'returns', (tester) async {
+        final router = recorderRouter();
+        await tester.pumpWidget(
+          buildWidget(selectedSound: sound('a'), router: router),
+        );
+        unawaited(router.push('/recorder'));
+        await tester.pumpAndSettle();
+        unawaited(router.push('/over'));
+        await tester.pumpAndSettle();
+
+        editorNotifier.resetForClearAll();
+        await tester.pumpAndSettle();
+        router.pop();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+        expect(find.byType(VideoRecorderCaptureStack), findsNothing);
       });
     });
 
