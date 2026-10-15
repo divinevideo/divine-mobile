@@ -641,6 +641,20 @@ class FollowRepository {
     if (_isCurrentFollowerOwner(owner)) _cacheMyFollowers(owner, refs);
   }
 
+  /// Seeds follower relationships during [initialize] without letting a
+  /// failed table read skip the following-list steps that come after it.
+  Future<void> _restorePersistedMyFollowers() async {
+    try {
+      await _loadPersistedMyFollowers(_nostrClient.publicKey);
+    } catch (e) {
+      Log.error(
+        'Failed to load persisted followers: $e',
+        name: 'FollowRepository',
+        category: LogCategory.system,
+      );
+    }
+  }
+
   Future<void> _persistMyFollowers(
     String owner,
     List<_FollowerRef> refs, {
@@ -2296,7 +2310,7 @@ class FollowRepository {
     }
 
     try {
-      await _loadPersistedMyFollowers(_nostrClient.publicKey);
+      await _restorePersistedMyFollowers();
 
       // 1. Load from local storage first for immediate UI display
       await _loadFromLocalStorage();

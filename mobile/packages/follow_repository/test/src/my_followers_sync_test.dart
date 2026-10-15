@@ -87,6 +87,13 @@ class _MemoryFollowersDao extends Fake implements MyFollowersDao {
   }
 }
 
+class _UnreadableFollowersDao extends _MemoryFollowersDao {
+  @override
+  Future<List<({String pubkey, int? followedAt})>> followersOf(
+    String owner,
+  ) async => throw StateError('database is locked');
+}
+
 class _PartialRelay extends RelayBase {
   _PartialRelay(super.url, super.relayStatus, this.follower);
   final String follower;
@@ -247,6 +254,22 @@ void main() {
         await repository.initialize();
         expect(repository.relationshipTo(first), FollowRelationship.mutual);
         verifyNever(() => client.queryEvents(any()));
+      },
+    );
+    test(
+      'initialize still loads the following list when persisted followers '
+      'cannot be read',
+      () async {
+        dao = _UnreadableFollowersDao();
+        await repository.dispose();
+        repository = build();
+        SharedPreferences.setMockInitialValues({
+          'following_list_$owner': jsonEncode([first]),
+        });
+        await repository.initialize();
+        expect(repository.isInitialized, isTrue);
+        expect(repository.followingPubkeys, [first]);
+        expect(repository.relationshipTo(first), FollowRelationship.youFollow);
       },
     );
     test('seed replaces the table on full success', () async {
