@@ -13,10 +13,12 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/blocs/follow_list_search/follow_list_search_bloc.dart';
 import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/followers/my_followers_screen.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
@@ -34,6 +36,14 @@ class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.owner);
+  final String owner;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: owner);
+}
 
 class _FakeCacheDao implements CacheDao {
   @override
@@ -125,16 +135,19 @@ void main() {
       WidgetTester tester, {
       UserRankingSignalsLoader? loader,
       Override? rankingOverride,
+      List<Override> additionalOverrides = const [],
     }) async {
       await tester.pumpWidget(
         testMaterialApp(
           rankingSignalsLoader: loader,
-          home: const MyFollowersScreen(displayName: 'Alice'),
+          home: ProviderScope(
+            overrides: [?rankingOverride, ...additionalOverrides],
+            child: const MyFollowersScreen(displayName: 'Alice'),
+          ),
           mockProfileRepository: createMockProfileRepository(),
           mockNostrService: mockNostrClient,
           mockFollowRepository: mockFollowRepository,
           additionalOverrides: [
-            ?rankingOverride,
             contentBlocklistRepositoryProvider.overrideWithValue(
               mockBlocklistRepository,
             ),
@@ -193,6 +206,115 @@ void main() {
         expect(next.state.sortOrder, FollowListSort.oldestFirst);
         expect(visibleOrder(tester), order);
         expect(loaders, hasLength(2));
+      },
+    );
+
+    testWidgets(
+      'client readiness preserves same-owner sort and query but owner changes reset them',
+      (tester) async {
+        final version = StateProvider<int>((ref) => 0);
+        final freshProfiles = createMockProfileRepository();
+        final otherOwnerRepository = createMockFollowRepository();
+        when(otherOwnerRepository.watchMyFollowingCached).thenAnswer(
+          (_) => Stream.value(
+            const CacheResult.live(FollowingSnapshot(pubkeys: [], count: 0)),
+          ),
+        );
+        when(otherOwnerRepository.watchMyFollowersCached).thenAnswer(
+          (_) => Stream.value(
+            const CacheResult.live(FollowersSnapshot(pubkeys: [], count: 0)),
+          ),
+        );
+        when(() => mockNostrClient.publicKey).thenReturn('');
+        when(
+          () => mockFollowRepository.searchFollowList(
+            pubkey: currentUserPubkey,
+            query: 'alice',
+            kind: FollowListKind.followers,
+          ),
+        ).thenAnswer((_) async => {});
+        await pumpScreen(
+          tester,
+          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
+            ref.watch(version);
+            final loader = _MockRankingLoader();
+            when(() => loader.isEligible(any())).thenReturn(true);
+            when(() => loader.loadCachedDisplayNames(any()))
+                .thenAnswer((_) async => {});
+            when(() => loader.load(any())).thenAnswer(
+              (call) async => {
+                for (final key
+                    in call.positionalArguments.single as Iterable<String>)
+                  key: UserRankingSignals(pubkey: key),
+              },
+            );
+            return loader;
+          }),
+          additionalOverrides: [
+            nostrSessionProvider.overrideWith(
+              () => _TestNostrSession(currentUserPubkey),
+            ),
+            profileRepositoryProvider.overrideWith(
+              (ref) => ref.watch(version) == 0 ? null : freshProfiles,
+            ),
+            followRepositoryProvider.overrideWith(
+              (ref) =>
+                  ref.watch(nostrSessionProvider).pubkey == currentUserPubkey
+                  ? mockFollowRepository
+                  : otherOwnerRepository,
+            ),
+          ],
+        );
+        final context = tester.element(find.byType(TextField));
+        final container = ProviderScope.containerOf(context);
+        final old = context.read<MyFollowersBloc>();
+        old.add(const MyFollowersSortOrderChanged(FollowListSort.oldestFirst));
+        await tester.pump();
+        final order = old.state.followersPubkeys;
+        await tester.enterText(find.byType(TextField), 'alice');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(context.read<FollowListSearchBloc>().state.query, 'alice');
+
+        when(() => mockNostrClient.publicKey).thenReturn(currentUserPubkey);
+        container.read(version.notifier).state++;
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        final nextContext = tester.element(find.byType(TextField));
+        final next = nextContext.read<MyFollowersBloc>();
+        expect(old.isClosed, isTrue);
+        expect(next.state.sortOrder, FollowListSort.oldestFirst);
+        expect(next.state.followersPubkeys, order);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'alice',
+        );
+        expect(nextContext.read<FollowListSearchBloc>().state.query, 'alice');
+        verify(
+          () => mockFollowRepository.searchFollowList(
+            pubkey: currentUserPubkey,
+            query: 'alice',
+            kind: FollowListKind.followers,
+          ),
+        ).called(1);
+
+        when(() => mockNostrClient.publicKey).thenReturn('');
+        container
+            .read(nostrSessionProvider.notifier)
+            .update(
+              const NostrSessionReadiness.identityKnown(
+                pubkey: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+              ),
+            );
+        await tester.pumpAndSettle();
+        final otherContext = tester.element(find.byType(Scaffold));
+        final other = otherContext.read<MyFollowersBloc>();
+        expect(next.isClosed, isTrue);
+        expect(other.state.sortOrder, FollowListSort.smart);
+        expect(other.state.rawFollowersPubkeys, isEmpty);
+        expect(other.state.rankingSignals, isEmpty);
+        expect(otherContext.read<FollowListSearchBloc>().state.query, isEmpty);
       },
     );
 

@@ -19,12 +19,14 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:rxdart/rxdart.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_user_ranking_loader.dart';
 
 const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -257,6 +259,9 @@ void main() {
             // teardown timer would outlive the test.
             vanishedProfilePubkeysProvider.overrideWith(
               (ref) => Stream.value(const <String>{}),
+            ),
+            userRankingSignalsLoaderProvider.overrideWithValue(
+              testUserRankingLoader(),
             ),
             profileRepositoryProvider.overrideWithValue(profileRepo),
             followRepositoryProvider.overrideWithValue(followRepo),
