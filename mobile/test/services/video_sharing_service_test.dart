@@ -48,6 +48,47 @@ void main() {
     );
   });
 
+  /// Any `sendSharedVideo` call, for `when` and `verifyNever`.
+  Future<NIP17SendResult> anySharedVideoSend() =>
+      mockDmRepository.sendSharedVideo(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        baseContent: any(named: 'baseContent'),
+        videoKind: any(named: 'videoKind'),
+        videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
+        videoDTag: any(named: 'videoDTag'),
+        videoEventId: any(named: 'videoEventId'),
+        relayHint: any(named: 'relayHint'),
+        skipNip04Fallback: any(named: 'skipNip04Fallback'),
+      );
+
+  /// Makes every share publish.
+  void stubSharesSucceed() {
+    when(anySharedVideoSend).thenAnswer(
+      (_) async => NIP17SendResult.success(
+        rumorEventId: 'nip17-rumor-id',
+        messageEventId: 'nip17-msg-id',
+        recipientPubkey: _recipientPubkey,
+      ),
+    );
+  }
+
+  /// The message body of the first share handed to the DM repository.
+  String sharedMessage() {
+    final captured = verify(
+      () => mockDmRepository.sendSharedVideo(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        baseContent: captureAny(named: 'baseContent'),
+        videoKind: any(named: 'videoKind'),
+        videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
+        videoDTag: any(named: 'videoDTag'),
+        videoEventId: any(named: 'videoEventId'),
+        relayHint: any(named: 'relayHint'),
+        skipNip04Fallback: any(named: 'skipNip04Fallback'),
+      ),
+    ).captured;
+    return captured.first as String;
+  }
+
   group('$ShareableUser.fromProfile', () {
     UserProfile profileWith({
       String? nip05,
@@ -186,24 +227,7 @@ void main() {
       // Arrange - set up successful share
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(pubkey: _recipientPubkey),
       ).thenAnswer(
@@ -248,24 +272,7 @@ void main() {
       // Arrange - share with multiple users
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -346,41 +353,13 @@ void main() {
       expect(result.error, contains('Signing is not available'));
       // Never reached the signer: the gate short-circuits before any event is
       // created, rather than letting it fail 30s later on an RPC timeout.
-      verifyNever(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      );
+      verifyNever(anySharedVideoSend);
     });
 
     test('sends the video as a NIP-17 message, with no kind-4 copy', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -437,18 +416,7 @@ void main() {
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(
-          () => mockDmRepository.sendSharedVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            baseContent: any(named: 'baseContent'),
-            videoKind: any(named: 'videoKind'),
-            videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-            videoDTag: any(named: 'videoDTag'),
-            videoEventId: any(named: 'videoEventId'),
-            relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          ),
-        ).thenAnswer(
+        when(anySharedVideoSend).thenAnswer(
           (_) async => const NIP17SendResult.failure(
             'Recipient DM inbox unreadable; published to the fallback pool',
             retryablePending: true,
@@ -484,24 +452,7 @@ void main() {
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(
-          () => mockDmRepository.sendSharedVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            baseContent: any(named: 'baseContent'),
-            videoKind: any(named: 'videoKind'),
-            videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-            videoDTag: any(named: 'videoDTag'),
-            videoEventId: any(named: 'videoEventId'),
-            relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          ),
-        ).thenAnswer(
-          (_) async => NIP17SendResult.success(
-            rumorEventId: 'nip17-rumor-id',
-            messageEventId: 'nip17-msg-id',
-            recipientPubkey: _recipientPubkey,
-          ),
-        );
+        stubSharesSucceed();
         // The post-send recents refresh must be fire-and-forget: a hung
         // profile fetch must NOT delay the success result (the toast).
         final neverCompletes = Completer<UserProfile?>();
@@ -533,18 +484,7 @@ void main() {
     test('returns failure when NIP-17 send fails', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
+      when(anySharedVideoSend).thenAnswer(
         (_) async => const NIP17SendResult.failure('Relay rejected'),
       );
 
@@ -568,18 +508,7 @@ void main() {
       Future<ShareResult> shareWith(NIP17SendResult sendResult) {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(
-          () => mockDmRepository.sendSharedVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            baseContent: any(named: 'baseContent'),
-            videoKind: any(named: 'videoKind'),
-            videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-            videoDTag: any(named: 'videoDTag'),
-            videoEventId: any(named: 'videoEventId'),
-            relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          ),
-        ).thenAnswer((_) async => sendResult);
+        when(anySharedVideoSend).thenAnswer((_) async => sendResult);
 
         final now = DateTime.now();
         return service.shareVideoWithUser(
@@ -678,24 +607,7 @@ void main() {
     test('includes personal message in content', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -715,43 +627,13 @@ void main() {
         personalMessage: 'Check this out!',
       );
 
-      final captured = verify(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: captureAny(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).captured;
-
-      expect(captured.first as String, contains('Check this out!'));
+      expect(sharedMessage(), contains('Check this out!'));
     });
 
     test('share message contains quoted title and share URL', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -773,20 +655,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      final captured = verify(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: captureAny(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).captured;
-
-      final message = captured.first as String;
+      final message = sharedMessage();
       expect(message, contains('"Indigenous cultures"'));
       expect(message, contains('divine.video/video/'));
     });
@@ -794,24 +663,7 @@ void main() {
     test('share message without title contains only share URL', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -832,20 +684,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      final captured = verify(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: captureAny(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).captured;
-
-      final message = captured.first as String;
+      final message = sharedMessage();
       expect(message, contains('divine.video/video/'));
       expect(message, isNot(contains('"')));
     });
@@ -853,24 +692,7 @@ void main() {
     test('computes correct conversationId', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -898,24 +720,7 @@ void main() {
     test('updates sharing history on NIP-17 success', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
@@ -955,18 +760,7 @@ void main() {
         final bad = 'b' * 64;
         final goodC = 'c' * 64;
 
-        when(
-          () => mockDmRepository.sendSharedVideo(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            baseContent: any(named: 'baseContent'),
-            videoKind: any(named: 'videoKind'),
-            videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-            videoDTag: any(named: 'videoDTag'),
-            videoEventId: any(named: 'videoEventId'),
-            relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
-          ),
-        ).thenAnswer((invocation) async {
+        when(anySharedVideoSend).thenAnswer((invocation) async {
           final pubkey = invocation.namedArguments[#recipientPubkey] as String;
           if (pubkey == bad) throw StateError('boom');
           return NIP17SendResult.success(
@@ -1080,24 +874,7 @@ void main() {
       // Arrange - populate some history
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(
-        () => mockDmRepository.sendSharedVideo(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
-          relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: any(named: 'skipNip04Fallback'),
-        ),
-      ).thenAnswer(
-        (_) async => NIP17SendResult.success(
-          rumorEventId: 'nip17-rumor-id',
-          messageEventId: 'nip17-msg-id',
-          recipientPubkey: _recipientPubkey,
-        ),
-      );
+      stubSharesSucceed();
       when(
         () => mockProfileRepository.fetchFreshProfile(
           pubkey: any(named: 'pubkey'),
