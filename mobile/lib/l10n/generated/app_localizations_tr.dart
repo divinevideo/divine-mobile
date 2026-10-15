@@ -4212,25 +4212,25 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir videoda Sesi Kullan\'a dokunarak burada kaydedin.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Ses ekle';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Herkese açık paylaş';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Cihazından bir ses dosyası seç. Seslerim\'de gizli tut ya da Divine\'daki herkes kullanabilsin diye paylaş.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Bu ses dosyası okunamadı.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Hesap değiştirdin, bu yüzden ses eklenmedi.';
 
   @override
   String get soundsRemoveSavedSound => 'Sesi kaldır';
@@ -13170,16 +13170,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Güncelleme mevcut';
-
-  @override
-  String get soundUploadAction => 'Ses yükle';
-
-  @override
-  String get soundUploadTitle => 'Ses yükle';
-
-  @override
-  String get soundUploadIntro =>
-      'Bir beat, bir jingle ya da bir ses kaydı paylaş; Divine\'daki herkes onunla video yapabilsin.';
 
   @override
   String get soundUploadChooseFile => 'Bir ses dosyası seç';

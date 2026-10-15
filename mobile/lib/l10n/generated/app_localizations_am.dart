@@ -4176,25 +4176,24 @@ class AppLocalizationsAm extends AppLocalizations {
       'ድምፅን እዚህ ለማስቀመጥ በቪዲዮ ላይ ድምፅ ተጠቀም የሚለውን ይንኩ።';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'ድምፅ ያክሉ';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'በይፋ ያጋሩ';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'ከመሣሪያዎ የድምፅ ፋይል ይምረጡ። በየእኔ ድምፆች ውስጥ በግል ያስቀምጡት ወይም በ Divine ላይ ማንኛውም ሰው እንዲጠቀምበት ያጋሩት።';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'ያ የድምፅ ፋይል ሊነበብ አልቻለም።';
 
   @override
-  String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+  String get soundsImportAccountChanged => 'መለያ ስለቀየሩ ይህ ድምፅ አልታከለም።';
 
   @override
   String get soundsRemoveSavedSound => 'ድምፁን አስወግድ';
@@ -12915,16 +12914,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'ዝማኔ አለ';
-
-  @override
-  String get soundUploadAction => 'ድምፅ ይስቀሉ';
-
-  @override
-  String get soundUploadTitle => 'ድምፅ ይስቀሉ';
-
-  @override
-  String get soundUploadIntro =>
-      'ቢት፣ ጂንግል ወይም የተቀዳ ንግግር ያጋሩ፤ በ Divine ላይ ማንኛውም ሰው በዚያ ቪዲዮ መሥራት ይችላል።';
 
   @override
   String get soundUploadChooseFile => 'የኦዲዮ ፋይል ይምረጡ';

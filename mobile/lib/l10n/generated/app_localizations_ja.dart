@@ -4005,25 +4005,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsSavedEmptyDescription => '動画でサウンドを使用をタップして、ここに保存します。';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'サウンドを追加';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => '一般に公開';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'デバイスから音声ファイルを選んでください。マイサウンドに非公開で保存するか、Divine の誰でも使えるように共有できます。';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'このファイル形式には対応していません。音声ファイルを選んでください。';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'この音声ファイルを読み込めませんでした。';
 
   @override
-  String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+  String get soundsImportAccountChanged => 'アカウントが切り替わったため、このサウンドは追加されませんでした。';
 
   @override
   String get soundsRemoveSavedSound => 'サウンドを削除';
@@ -12597,16 +12596,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'アップデートがあります';
-
-  @override
-  String get soundUploadAction => 'サウンドをアップロード';
-
-  @override
-  String get soundUploadTitle => 'サウンドをアップロード';
-
-  @override
-  String get soundUploadIntro =>
-      'ビート、ジングル、セリフの録音を共有すると、Divine の誰でもそれを使って動画を作れます。';
 
   @override
   String get soundUploadChooseFile => '音声ファイルを選ぶ';

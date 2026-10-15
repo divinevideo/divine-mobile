@@ -4281,25 +4281,25 @@ class AppLocalizationsUr extends AppLocalizations {
       'کسی ویڈیو پر آواز استعمال کریں پر ٹیپ کریں تاکہ وہ یہاں محفوظ ہو جائے۔';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'ساؤنڈ شامل کریں';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'عوامی طور پر شیئر کریں';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'اپنے آلے سے کوئی آڈیو فائل منتخب کریں۔ اسے میری آوازیں میں نجی رکھیں یا شیئر کریں تاکہ Divine پر کوئی بھی اسے استعمال کر سکے۔';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'وہ آڈیو فائل پڑھی نہیں جا سکی۔';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'آپ نے اکاؤنٹ بدل لیا، اس لیے یہ ساؤنڈ شامل نہیں ہوا۔';
 
   @override
   String get soundsRemoveSavedSound => 'آواز ہٹائیں';
@@ -13237,16 +13237,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'اپ ڈیٹ دستیاب ہے';
-
-  @override
-  String get soundUploadAction => 'ساؤنڈ اپ لوڈ کریں';
-
-  @override
-  String get soundUploadTitle => 'ساؤنڈ اپ لوڈ کریں';
-
-  @override
-  String get soundUploadIntro =>
-      'کوئی بیٹ، جِنگل یا ریکارڈ کی ہوئی آواز شیئر کریں تاکہ Divine پر کوئی بھی اس پر ویڈیو بنا سکے۔';
 
   @override
   String get soundUploadChooseFile => 'آڈیو فائل منتخب کریں';

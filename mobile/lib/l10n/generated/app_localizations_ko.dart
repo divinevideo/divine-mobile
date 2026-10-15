@@ -4021,25 +4021,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsSavedEmptyDescription => '동영상에서 사운드 사용을 탭하여 여기에 저장하세요.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => '사운드 추가';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => '공개로 공유';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      '기기에서 오디오 파일을 골라 주세요. 내 사운드에 비공개로 두거나, Divine의 누구나 쓸 수 있게 공유할 수 있어요.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => '그 오디오 파일을 읽을 수 없어요.';
 
   @override
-  String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+  String get soundsImportAccountChanged => '계정을 바꿔서 이 사운드는 추가되지 않았어요.';
 
   @override
   String get soundsRemoveSavedSound => '사운드 제거';
@@ -12613,16 +12612,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => '업데이트 가능';
-
-  @override
-  String get soundUploadAction => '사운드 업로드';
-
-  @override
-  String get soundUploadTitle => '사운드 업로드';
-
-  @override
-  String get soundUploadIntro =>
-      '비트, 징글, 녹음한 대사를 공유하면 Divine의 누구나 그걸로 영상을 만들 수 있어요.';
 
   @override
   String get soundUploadChooseFile => '오디오 파일 선택';

@@ -4321,25 +4321,25 @@ class AppLocalizationsBg extends AppLocalizations {
       'Натисни Използвай звук във видео, за да го запазиш тук.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Добави звук';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Сподели публично';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Избери аудиофайл от устройството си. Запази го лично в Моите звуци или го сподели, за да може всеки в Divine да го използва.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Този тип файл не се поддържа. Избери аудиофайл.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Този аудиофайл не можа да се прочете.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Акаунтът беше сменен, затова звукът не беше добавен.';
 
   @override
   String get soundsRemoveSavedSound => 'Премахни звука';
@@ -13373,16 +13373,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Налична е актуализация';
-
-  @override
-  String get soundUploadAction => 'Качи звук';
-
-  @override
-  String get soundUploadTitle => 'Качи звук';
-
-  @override
-  String get soundUploadIntro =>
-      'Сподели бийт, джингъл или записана реплика, за да може всеки в Divine да направи видео около него.';
 
   @override
   String get soundUploadChooseFile => 'Избери аудиофайл';

@@ -3989,25 +3989,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsSavedEmptyDescription => '在视频上点“使用这个声音”，就会保存在这里。';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => '添加声音';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => '公开分享';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      '从你的设备中选择一个音频文件。可以私下保存在“我的声音”里，也可以分享出去，让 Divine 上的任何人都能使用。';
 
   @override
-  String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+  String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => '无法读取该音频文件。';
 
   @override
-  String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+  String get soundsImportAccountChanged => '你切换了账号，因此这个声音没有被添加。';
 
   @override
   String get soundsRemoveSavedSound => '移除声音';
@@ -12446,15 +12444,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => '有可用更新';
-
-  @override
-  String get soundUploadAction => '上传声音';
-
-  @override
-  String get soundUploadTitle => '上传声音';
-
-  @override
-  String get soundUploadIntro => '分享一段节拍、一段旋律或一句配音，Divine 上的任何人都能用它做视频。';
 
   @override
   String get soundUploadChooseFile => '选择音频文件';

@@ -4198,25 +4198,25 @@ class AppLocalizationsId extends AppLocalizations {
       'Ketuk Gunakan Suara pada video untuk menyimpannya di sini.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Tambah suara';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Bagikan ke publik';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Pilih file audio dari perangkatmu. Simpan secara pribadi di Suara Saya, atau bagikan agar siapa pun di Divine bisa memakainya.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Jenis file itu tidak didukung. Pilih file audio.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'File audio itu tidak bisa dibaca.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Kamu berganti akun, jadi suara ini tidak ditambahkan.';
 
   @override
   String get soundsRemoveSavedSound => 'Hapus suara';
@@ -13145,16 +13145,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Pembaruan tersedia';
-
-  @override
-  String get soundUploadAction => 'Unggah suara';
-
-  @override
-  String get soundUploadTitle => 'Unggah suara';
-
-  @override
-  String get soundUploadIntro =>
-      'Bagikan beat, jingle, atau rekaman suara supaya siapa pun di Divine bisa membuat video dengannya.';
 
   @override
   String get soundUploadChooseFile => 'Pilih file audio';

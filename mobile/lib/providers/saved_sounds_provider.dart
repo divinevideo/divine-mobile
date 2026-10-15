@@ -2,7 +2,7 @@
 // ABOUTME: Exposes the account-scoped saved sounds persistence service.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/blocs/sound_import/sound_import_cubit.dart';
+import 'package:openvine/blocs/add_sound/add_sound_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';

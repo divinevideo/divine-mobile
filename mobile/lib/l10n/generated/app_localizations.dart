@@ -7255,22 +7255,22 @@ abstract class AppLocalizations {
   /// **'Tap Use Sound on a video to save it here.'**
   String get soundsSavedEmptyDescription;
 
-  /// Label of the permanent button above the My Sounds list that opens the private file import flow.
+  /// Label of the button above the My Sounds list that adds an audio file from the device, and the title of the screen it opens.
   ///
   /// In en, this message translates to:
   /// **'Add sound'**
   String get soundsAddSound;
 
-  /// Heading shown on the import screen before a file is picked.
+  /// Switch on the Add sound screen. On, the sound is published for anyone on Divine to reuse (with a public credit) before it is saved to My Sounds; off, it stays private.
   ///
   /// In en, this message translates to:
-  /// **'Import a sound'**
-  String get soundsImportPromptTitle;
+  /// **'Share publicly'**
+  String get soundsAddSharePublicly;
 
-  /// Explains that an imported file is copied into the private library and does not make it public.
+  /// Shown on the Add sound screen before a file is picked. Explains the file can stay private or be shared publicly.
   ///
   /// In en, this message translates to:
-  /// **'Pick an audio file from your device. It stays private in My Sounds.'**
+  /// **'Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.'**
   String get soundsImportPromptDescription;
 
   /// Shown when the picked file's extension is not a supported audio container.
@@ -7285,10 +7285,10 @@ abstract class AppLocalizations {
   /// **'That audio file couldn\'t be read.'**
   String get soundsImportUnreadable;
 
-  /// Shown when the account changes while an import is in flight, so the copy was abandoned rather than saved into the new account.
+  /// Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account.
   ///
   /// In en, this message translates to:
-  /// **'You switched accounts, so this import was cancelled.'**
+  /// **'You switched accounts, so this sound wasn\'t added.'**
   String get soundsImportAccountChanged;
 
   /// No description provided for @soundsRemoveSavedSound.
@@ -22113,24 +22113,6 @@ abstract class AppLocalizations {
   /// **'Update available'**
   String get settingsUpdateAvailable;
 
-  /// Button on the Library Sounds tab that opens the standalone sound upload flow.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload a sound'**
-  String get soundUploadAction;
-
-  /// App bar title of the standalone sound upload screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload a sound'**
-  String get soundUploadTitle;
-
-  /// No description provided for @soundUploadIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.'**
-  String get soundUploadIntro;
-
   /// No description provided for @soundUploadChooseFile.
   ///
   /// In en, this message translates to:
@@ -22149,7 +22131,7 @@ abstract class AppLocalizations {
   /// **'Change'**
   String get soundUploadChangeFile;
 
-  /// No description provided for @soundUploadReuseNotice.
+  /// Subtitle of the Share publicly switch on the Add sound screen, saying what sharing the sound means.
   ///
   /// In en, this message translates to:
   /// **'Anyone on Divine can use this sound in their videos. You\'re credited every time.'**
@@ -22233,7 +22215,7 @@ abstract class AppLocalizations {
   /// **'Audio'**
   String get audioPickerTypeGroup;
 
-  /// Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save.
+  /// Button on the Add sound screen after the sound was shared publicly but saving it to the Library Sounds tab failed; tapping retries that save.
   ///
   /// In en, this message translates to:
   /// **'Retry saving to Sounds'**

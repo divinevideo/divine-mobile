@@ -4343,25 +4343,25 @@ class AppLocalizationsFr extends AppLocalizations {
       'Touche Utiliser le son sur une vidéo pour l\'enregistrer ici.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Ajouter un son';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Partager publiquement';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Choisis un fichier audio sur ton appareil. Garde-le privé dans Mes sons, ou partage-le pour que tout le monde sur Divine puisse l\'utiliser.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Ce type de fichier n\'est pas pris en charge. Choisis un fichier audio.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Impossible de lire ce fichier audio.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Tu as changé de compte, donc ce son n\'a pas été ajouté.';
 
   @override
   String get soundsRemoveSavedSound => 'Supprimer le son';
@@ -13451,16 +13451,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Mise à jour disponible';
-
-  @override
-  String get soundUploadAction => 'Importer un son';
-
-  @override
-  String get soundUploadTitle => 'Importer un son';
-
-  @override
-  String get soundUploadIntro =>
-      'Partage un beat, un jingle ou une phrase enregistrée pour que n\'importe qui sur Divine en fasse une vidéo.';
 
   @override
   String get soundUploadChooseFile => 'Choisir un fichier audio';

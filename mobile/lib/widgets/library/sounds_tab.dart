@@ -18,8 +18,7 @@ import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
-import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
-import 'package:openvine/screens/sounds/import_sound_page.dart';
+import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/library/saved_sound_card.dart';
@@ -30,8 +29,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// User-saved sounds tab for the Library screen.
 ///
 /// Shows sounds saved through the out-of-flow "Use Sound" actions plus files
-/// the user imported directly with the permanent Add sound action. Editor
-/// selection remains inside the recording/editor flow.
+/// the user added directly with the Add sound action, privately or shared.
+/// Editor selection remains inside the recording/editor flow.
 class SoundsTab extends ConsumerStatefulWidget {
   const SoundsTab({super.key});
 
@@ -46,9 +45,9 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
 
   /// Whether the search field has focus, so the keyboard is up.
   ///
-  /// The action rows above the list fold away while it is: with the keyboard
-  /// covering the lower half of the screen, two buttons the user is not about
-  /// to tap would otherwise leave almost no room for the results.
+  /// The Add sound action folds away while it is: with the keyboard covering
+  /// the lower half of the screen, a button the user is not about to tap
+  /// would otherwise leave almost no room for the results.
   bool _searching = false;
 
   /// Whether the keyboard was up at the last metrics change.
@@ -126,8 +125,8 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   /// Drops search focus when the keyboard goes away underneath it.
   ///
   /// Android's back button dismisses the IME without moving focus, which
-  /// would leave the field focused, its cursor blinking, and the action rows
-  /// folded away with no keyboard to make room for.
+  /// would leave the field focused, its cursor blinking, and the Add sound
+  /// action folded away with no keyboard to make room for.
   @override
   void didChangeMetrics() {
     if (!mounted) return;
@@ -380,7 +379,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     );
   }
 
-  /// Opens the private file import flow.
+  /// Opens the Add sound flow, which keeps the file private or shares it.
   ///
   /// Deliberately not the editor's catalog/trimming picker: adding a sound to
   /// the library imports the whole file and never starts a video, so nothing
@@ -388,13 +387,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   Future<void> _onAddSoundTap() async {
     await _stopPreview();
     if (!mounted) return;
-    await context.push<void>(ImportSoundPage.path);
-  }
-
-  Future<void> _onUploadSoundTap() async {
-    await _stopPreview();
-    if (!mounted) return;
-    await context.push(SoundUploadScreen.path);
+    await context.push<void>(AddSoundPage.path);
   }
 
   Future<void> _onOpenDetails(SavedSound sound) async {
@@ -431,12 +424,13 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
             onChanged: _onSearchChanged,
           ),
         ),
-        SliverToBoxAdapter(child: _AddSoundButton(onTap: _onAddSoundTap)),
+        // Importing copies the picked file with dart:io, which the web build
+        // cannot do.
         if (!kIsWeb)
           SliverToBoxAdapter(
-            child: _CollapsibleActions(
+            child: _CollapsibleAction(
               collapsed: _searching,
-              children: [_UploadSoundAction(onTap: _onUploadSoundTap)],
+              child: _AddSoundButton(onTap: _onAddSoundTap),
             ),
           ),
         if (locked)
@@ -651,34 +645,9 @@ class _SyncLockedBanner extends StatelessWidget {
 /// library.
 enum _OwnSoundRemoval { deleteEverywhere, removeLocally }
 
-/// Opens the standalone sound upload flow.
-class _UploadSoundAction extends StatelessWidget {
-  const _UploadSoundAction({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: DivineButton(
-        key: const Key('sounds_tab_upload_sound'),
-        label: context.l10n.soundUploadAction,
-        leadingIcon: DivineIconName.musicNotesSimple,
-        type: DivineButtonType.secondary,
-        expanded: true,
-        onPressed: onTap,
-      ),
-    );
-  }
-}
-
-/// Permanent Add sound action, shown above the saved cards in every state.
+/// The library's Add sound action, above the saved cards in every state.
 ///
-/// It used to be a debug-only "Add audio" launcher that opened the editor's
-/// catalog/trimming sheet, so release builds could not add a sound to the
-/// library at all (#8024 follow-up). It now always routes to the private file
-/// import flow and never opens the editor picker.
+/// Opens [AddSoundPage], where the sound is kept private or shared publicly.
 class _AddSoundButton extends StatelessWidget {
   const _AddSoundButton({required this.onTap});
 
@@ -691,19 +660,21 @@ class _AddSoundButton extends StatelessWidget {
       child: DivineButton(
         key: const Key('sounds_add_sound'),
         label: context.l10n.soundsAddSound,
+        leadingIcon: DivineIconName.plus,
         type: DivineButtonType.secondary,
+        expanded: true,
         onPressed: onTap,
       ),
     );
   }
 }
 
-/// Folds [children] away to nothing while [collapsed], animating the height.
-class _CollapsibleActions extends StatelessWidget {
-  const _CollapsibleActions({required this.collapsed, required this.children});
+/// Folds [child] away to nothing while [collapsed], animating the height.
+class _CollapsibleAction extends StatelessWidget {
+  const _CollapsibleAction({required this.collapsed, required this.child});
 
   final bool collapsed;
-  final List<Widget> children;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -712,12 +683,7 @@ class _CollapsibleActions extends StatelessWidget {
           ? Duration.zero
           : const Duration(milliseconds: 200),
       alignment: Alignment.topCenter,
-      child: collapsed
-          ? const SizedBox(width: double.infinity)
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: children,
-            ),
+      child: collapsed ? const SizedBox(width: double.infinity) : child,
     );
   }
 }

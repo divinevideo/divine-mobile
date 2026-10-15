@@ -4429,25 +4429,25 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీడియోను ఇక్కడ సేవ్ చేయడానికి సౌండ్ ఉపయోగించండి నొక్కండి.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'సౌండ్ జోడించండి';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'బహిరంగంగా పంచుకోండి';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'మీ పరికరం నుండి ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి. దాన్ని నా సౌండ్స్‌లో ప్రైవేట్‌గా ఉంచండి లేదా Divine లో ఎవరైనా వాడేలా పంచుకోండి.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'మీరు ఖాతా మార్చారు, కాబట్టి ఈ సౌండ్ జోడించబడలేదు.';
 
   @override
   String get soundsRemoveSavedSound => 'ధ్వనిని తీసివేయండి';
@@ -13590,16 +13590,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'అప్‌డేట్ అందుబాటులో ఉంది';
-
-  @override
-  String get soundUploadAction => 'సౌండ్ అప్‌లోడ్ చేయండి';
-
-  @override
-  String get soundUploadTitle => 'సౌండ్ అప్‌లోడ్ చేయండి';
-
-  @override
-  String get soundUploadIntro =>
-      'ఒక బీట్, జింగిల్ లేదా రికార్డ్ చేసిన మాటను పంచుకోండి; Divine లో ఎవరైనా దానితో వీడియో చేయవచ్చు.';
 
   @override
   String get soundUploadChooseFile => 'ఆడియో ఫైల్‌ను ఎంచుకోండి';

@@ -4354,11 +4354,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundsAddSound => 'Add sound';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Share publicly';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.';
 
   @override
   String get soundsImportUnsupportedFormat =>
@@ -4369,7 +4369,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'You switched accounts, so this sound wasn\'t added.';
 
   @override
   String get soundsRemoveSavedSound => 'Remove sound';
@@ -13335,16 +13335,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Update available';
-
-  @override
-  String get soundUploadAction => 'Upload a sound';
-
-  @override
-  String get soundUploadTitle => 'Upload a sound';
-
-  @override
-  String get soundUploadIntro =>
-      'Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.';
 
   @override
   String get soundUploadChooseFile => 'Choose an audio file';

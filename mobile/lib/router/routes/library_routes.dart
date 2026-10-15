@@ -1,21 +1,14 @@
-// ABOUTME: Library routes (drafts / clips / clips-only / sounds tabs, sound upload)
+// ABOUTME: Library routes (drafts / clips / clips-only / sounds tabs, add sound)
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/screens/library_screen.dart';
-import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
-import 'package:openvine/screens/sounds/import_sound_page.dart';
+import 'package:openvine/screens/sounds/add_sound_page.dart';
 
 List<RouteBase> libraryRoutes() {
   return [
-    GoRoute(
-      path: ImportSoundPage.path,
-      name: ImportSoundPage.routeName,
-      pageBuilder: (_, state) =>
-          fadeUpwardsPage(state: state, child: const ImportSoundPage()),
-    ),
     GoRoute(
       path: LibraryScreen.draftsPath,
       name: LibraryScreen.draftsRouteName,
@@ -57,12 +50,12 @@ List<RouteBase> libraryRoutes() {
         child: const LibraryScreen(initialTabIndex: 2),
       ),
       routes: [
-        // Nested so back from the upload lands on the Sounds tab, where the
-        // shared sound is already listed.
+        // Nested so back from Add sound lands on the Sounds tab, where the
+        // added sound is already listed.
         GoRoute(
-          path: SoundUploadScreen.subpath,
-          name: SoundUploadScreen.routeName,
-          builder: (_, _) => const SoundUploadScreen(),
+          path: AddSoundPage.subpath,
+          name: AddSoundPage.routeName,
+          builder: (_, _) => const AddSoundPage(),
         ),
       ],
     ),
