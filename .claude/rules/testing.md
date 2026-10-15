@@ -582,6 +582,7 @@ baseline described below is authoritative):
 - `text_sanitizer`
 - `time_formatter`
 - `tv_static_effect`
+- `user_ranking`
 - `videos_repository`
 
 A package is strict when its workflow omits `min_coverage` (the shared

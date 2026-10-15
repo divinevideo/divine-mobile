@@ -1,0 +1,16 @@
+name: user_ranking
+description: Pure-Dart closeness scoring and deterministic user-list ordering.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+# Matches the meta version pinned by the workspace Flutter SDK.
+dependencies:
+  meta: ^1.18.3
+
+dev_dependencies:
+  test: ^1.26.3
+  very_good_analysis: ^10.2.0
