@@ -21,6 +21,15 @@ class Relay implements RelayGateway {
   }
 }
 
+class FilterRecordingRelay extends Relay {
+  final filters = <Map<String, dynamic>>[];
+  @override
+  Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) {
+    filters.add(filter);
+    return super.subscribe(filter);
+  }
+}
+
 class NoLegacyCipher implements StreamCipher {
   @override
   String seal(String p, String s) => throw StateError('legacy not supported');
@@ -177,6 +186,70 @@ void main() {
   });
 
   group('received history', () {
+    test('asks the relay for no more wraps than it keeps', () async {
+      final relay = FilterRecordingRelay();
+      addTearDown(relay.events.close);
+      final stream = publicChannelKey('02' * 32, '03' * 32, 0);
+      final repo = ConcordRepository(
+        relay: relay,
+        store: InMemoryConcordStore('a' * 64),
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+        historyLimit: 3,
+      );
+      addTearDown(repo.close);
+      await repo.startChannel(
+        channelId: '03' * 32,
+        epoch: 0,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+        now: () => 100,
+      );
+      expect(relay.filters.single['limit'], 3);
+    });
+    test('does not show a wrap older than the history it keeps', () async {
+      final relay = Relay();
+      addTearDown(relay.events.close);
+      final stream = publicChannelKey('02' * 32, '03' * 32, 0);
+      final receiver = ConcordRepository(
+        relay: relay,
+        store: InMemoryConcordStore('a' * 64),
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+        historyLimit: 2,
+      );
+      addTearDown(receiver.close);
+      await receiver.startChannel(
+        channelId: '03' * 32,
+        epoch: 0,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+        now: () => 100,
+      );
+      final sender = ConcordRepository(
+        relay: relay,
+        store: InMemoryConcordStore('b' * 64),
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+      );
+      addTearDown(sender.close);
+      for (final createdAt in [20, 21, 10]) {
+        final wrap = await sender.sendSealedMessage(
+          channelId: '03' * 32,
+          author: schnorr.getPublicKey('01' * 32),
+          body: 'sent at $createdAt',
+          createdAt: createdAt,
+          ms: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        await receiver.ingestSealedWrap(wrap);
+      }
+      expect(receiver.timeline(now: 100).messages.map((m) => m.createdAt), [
+        20,
+        21,
+      ]);
+    });
     test('stores new wraps without rewriting earlier ciphertext', () async {
       final relay = Relay();
       addTearDown(relay.events.close);
