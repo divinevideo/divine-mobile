@@ -88,8 +88,10 @@ class AddSoundState extends Equatable {
 
   /// The sound as a relay acknowledged it, once shared.
   ///
-  /// Set while the My Sounds write is still pending or has failed, so a retry
-  /// saves this record instead of publishing a second event.
+  /// Set when the My Sounds write that follows the share settles, and kept
+  /// when that write fails, so a retry saves this record instead of
+  /// publishing a second event. Until then the save in flight is still the
+  /// share the user started, not a retry.
   final AudioEvent? publishedSound;
 
   final AddSoundFailure? failure;
@@ -99,10 +101,10 @@ class AddSoundState extends Equatable {
   bool get isBusy =>
       status == AddSoundStatus.importing || status == AddSoundStatus.saving;
 
-  /// Whether a relay already holds this sound.
+  /// Whether this sound was shared and its first My Sounds write has settled.
   ///
   /// The share is then settled: the file and the share choice are locked so
-  /// the pending My Sounds write stays bound to the published record.
+  /// a retried My Sounds write stays bound to the published record.
   bool get isPublished => publishedSound != null;
 
   /// Whether the save found the sound already present in the library.

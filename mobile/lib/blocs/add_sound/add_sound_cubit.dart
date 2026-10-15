@@ -245,8 +245,9 @@ class AddSoundCubit extends Cubit<AddSoundState>
     emitIfOpen(state.copyWith(status: AddSoundStatus.saving, failure: null));
 
     final AudioEvent record;
+    AudioEvent? published;
     if (sharePublicly) {
-      final published = state.publishedSound ?? await _publish(audio);
+      published = state.publishedSound ?? await _publish(audio);
       if (published == null) {
         if (isClosed) await _reclaim(audio);
         return;
@@ -273,7 +274,11 @@ class AddSoundCubit extends Cubit<AddSoundState>
       );
       savedToLibrary = true;
       emitIfOpen(
-        state.copyWith(status: AddSoundStatus.saved, savedResult: result),
+        state.copyWith(
+          status: AddSoundStatus.saved,
+          savedResult: result,
+          publishedSound: published,
+        ),
       );
     } catch (error, stackTrace) {
       Log.error(
@@ -289,6 +294,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
         state.copyWith(
           status: AddSoundStatus.ready,
           failure: AddSoundFailure.saveFailed,
+          publishedSound: published,
         ),
       );
     }
@@ -327,7 +333,6 @@ class AddSoundCubit extends Cubit<AddSoundState>
       );
       switch (result) {
         case LocalAudioPublished(audio: final published):
-          emitIfOpen(state.copyWith(publishedSound: published));
           return published;
         case LocalAudioPublishFailed(:final failure):
           _failSave(switch (failure) {
