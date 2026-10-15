@@ -4240,25 +4240,25 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chạm Dùng âm thanh trên một video để lưu nó vào đây.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Thêm âm thanh';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Chia sẻ công khai';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Chọn một tệp âm thanh từ thiết bị của bạn. Giữ riêng tư trong Âm thanh của tôi, hoặc chia sẻ để mọi người trên Divine đều dùng được.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Không đọc được tệp âm thanh đó.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Bạn đã đổi tài khoản nên âm thanh này chưa được thêm.';
 
   @override
   String get soundsRemoveSavedSound => 'Xóa âm thanh';
@@ -13185,16 +13185,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Có bản cập nhật';
-
-  @override
-  String get soundUploadAction => 'Tải lên âm thanh';
-
-  @override
-  String get soundUploadTitle => 'Tải lên âm thanh';
-
-  @override
-  String get soundUploadIntro =>
-      'Chia sẻ một đoạn beat, một đoạn nhạc hiệu hay một câu thoại để bất kỳ ai trên Divine cũng có thể dựng video từ đó.';
 
   @override
   String get soundUploadChooseFile => 'Chọn tệp âm thanh';

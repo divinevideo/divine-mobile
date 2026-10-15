@@ -2688,15 +2688,15 @@
   "soundsSavedEmptyDescription": "Tap Use Sound on a video to save it here.",
   "soundsAddSound": "Add sound",
   "@soundsAddSound": {
-    "description": "Label of the permanent button above the My Sounds list that opens the private file import flow."
+    "description": "Label of the button above the My Sounds list that adds an audio file from the device, and the title of the screen it opens."
   },
-  "soundsImportPromptTitle": "Import a sound",
-  "@soundsImportPromptTitle": {
-    "description": "Heading shown on the import screen before a file is picked."
+  "soundsAddSharePublicly": "Share publicly",
+  "@soundsAddSharePublicly": {
+    "description": "Switch on the Add sound screen. On, the sound is published for anyone on Divine to reuse (with a public credit) before it is saved to My Sounds; off, it stays private."
   },
-  "soundsImportPromptDescription": "Pick an audio file from your device. It stays private in My Sounds.",
+  "soundsImportPromptDescription": "Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.",
   "@soundsImportPromptDescription": {
-    "description": "Explains that an imported file is copied into the private library and does not make it public."
+    "description": "Shown on the Add sound screen before a file is picked. Explains the file can stay private or be shared publicly."
   },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {
@@ -2706,9 +2706,9 @@
   "@soundsImportUnreadable": {
     "description": "Shown when the picked file exists but cannot be opened or decoded as audio."
   },
-  "soundsImportAccountChanged": "You switched accounts, so this import was cancelled.",
+  "soundsImportAccountChanged": "You switched accounts, so this sound wasn't added.",
   "@soundsImportAccountChanged": {
-    "description": "Shown when the account changes while an import is in flight, so the copy was abandoned rather than saved into the new account."
+    "description": "Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account."
   },
   "soundsRemoveSavedSound": "Remove sound",
   "savedSoundSaveAction": "Save",
@@ -9640,17 +9640,13 @@
   "updateNewIn": "New in {version}:",
   "@updateNewIn": {"description": "Heading before highlights for an available app update.", "placeholders": {"version": {"type": "String"}}},
   "settingsUpdateAvailable": "Update available",
-  "soundUploadAction": "Upload a sound",
-  "@soundUploadAction": {"description": "Button on the Library Sounds tab that opens the standalone sound upload flow."},
-  "soundUploadTitle": "Upload a sound",
-  "@soundUploadTitle": {"description": "App bar title of the standalone sound upload screen."},
-  "soundUploadIntro": "Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.",
   "soundUploadChooseFile": "Choose an audio file",
   "soundUploadSupportedFormats": "AAC, M4A, MP3, or WAV",
   "@soundUploadSupportedFormats": {"description": "Hint under the file picker listing the accepted audio formats. The format names stay as written."},
   "soundUploadChangeFile": "Change",
   "@soundUploadChangeFile": {"description": "Small button next to the picked audio file that opens the file picker again."},
   "soundUploadReuseNotice": "Anyone on Divine can use this sound in their videos. You're credited every time.",
+  "@soundUploadReuseNotice": {"description": "Subtitle of the Share publicly switch on the Add sound screen, saying what sharing the sound means."},
   "soundUploadShareAction": "Share sound",
   "soundUploadShared": "Your sound is live and saved to Sounds.",
   "@soundUploadShared": {"description": "Snackbar after a standalone sound was published and added to the Library Sounds tab."},
@@ -9668,7 +9664,7 @@
   "audioPickerTypeGroup": "Audio",
   "@audioPickerTypeGroup": {"description": "Name of the audio file-type filter in the system file picker (desktop pickers show it as the filter label)."},
   "soundUploadRetrySaveAction": "Retry saving to Sounds",
-  "@soundUploadRetrySaveAction": {"description": "Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save."},
+  "@soundUploadRetrySaveAction": {"description": "Button on the Add sound screen after the sound was shared publicly but saving it to the Library Sounds tab failed; tapping retries that save."},
   "crosspostingBenefitTitle": "Take your loops everywhere",
   "@crosspostingBenefitTitle": {
     "description": "Headline of the crossposting benefit card in settings"

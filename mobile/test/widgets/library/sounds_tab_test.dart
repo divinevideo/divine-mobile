@@ -24,7 +24,7 @@ import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
-import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
+import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -200,14 +200,8 @@ void main() {
                         Text('sound detail ${state.pathParameters['id']}'),
                   ),
                   GoRoute(
-                    path: '/sounds/import',
-                    builder: (context, state) =>
-                        const Text('import sound page'),
-                  ),
-                  GoRoute(
-                    path: SoundUploadScreen.path,
-                    builder: (context, state) =>
-                        const Text('sound upload screen'),
+                    path: AddSoundPage.path,
+                    builder: (context, state) => const Text('add sound page'),
                   ),
                 ],
               ),
@@ -455,7 +449,7 @@ void main() {
       );
     });
 
-    testWidgets('shows the permanent Add sound action in an empty library', (
+    testWidgets('shows the Add sound action in an empty library', (
       tester,
     ) async {
       await pumpSoundsTab(tester);
@@ -464,7 +458,7 @@ void main() {
       expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
     });
 
-    testWidgets('shows the permanent Add sound action with saved sounds', (
+    testWidgets('shows the Add sound action with saved sounds', (
       tester,
     ) async {
       await SavedSoundsService(
@@ -477,7 +471,7 @@ void main() {
       expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
     });
 
-    testWidgets('Add sound opens the import flow, not the editor picker', (
+    testWidgets('Add sound opens the add flow, not the editor picker', (
       tester,
     ) async {
       await pumpSoundsTab(tester);
@@ -485,9 +479,9 @@ void main() {
       await tester.tap(find.byKey(const Key('sounds_add_sound')));
       await tester.pumpAndSettle();
 
-      // The library add action must route to the private file import, never
-      // the editor's catalog/trimming bottom sheet.
-      expect(find.text('import sound page'), findsOneWidget);
+      // The library add action must route to the Add sound flow, never the
+      // editor's catalog/trimming bottom sheet.
+      expect(find.text('add sound page'), findsOneWidget);
     });
 
     testWidgets('filters rich cards by personal hashtag', (tester) async {
@@ -568,32 +562,23 @@ void main() {
       expect(find.text('Original sound - rabble'), findsOneWidget);
     });
 
-    testWidgets('opens the sound upload flow from the upload row', (
+    testWidgets('folds the Add sound action away while searching', (
       tester,
     ) async {
-      await pumpSoundsTab(tester);
-
-      await tester.tap(find.byKey(const Key('sounds_tab_upload_sound')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('sound upload screen'), findsOneWidget);
-    });
-
-    testWidgets('folds the action rows away while searching', (tester) async {
       await SavedSoundsService(
         sharedPreferences,
       ).saveSound(_sound(id: 'sound1', title: 'Original sound - rabble'));
       final l10n = lookupAppLocalizations(const Locale('en'));
       await pumpSoundsTab(tester);
       expect(
-        tester.getSize(find.byKey(const Key('sounds_tab_upload_sound'))).height,
+        tester.getSize(find.byKey(const Key('sounds_add_sound'))).height,
         greaterThan(0),
       );
 
       await tester.tap(find.byType(TextField));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsNothing);
+      expect(find.byKey(const Key('sounds_add_sound')), findsNothing);
       expect(find.text('Original sound - rabble'), findsOneWidget);
 
       // Tapping anywhere outside the field drops focus and brings them back
@@ -603,7 +588,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsOneWidget);
+      expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
       expect(
         tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
         isFalse,
@@ -619,7 +604,7 @@ void main() {
       await tester.tap(find.byType(TextField));
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsNothing);
+      expect(find.byKey(const Key('sounds_add_sound')), findsNothing);
 
       // Android's back button hides the IME without moving focus.
       tester.view.viewInsets = FakeViewPadding.zero;
@@ -629,7 +614,7 @@ void main() {
         tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
         isFalse,
       );
-      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsOneWidget);
+      expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
     });
 
     group('own published sound', () {

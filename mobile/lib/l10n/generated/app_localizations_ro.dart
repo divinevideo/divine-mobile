@@ -4407,25 +4407,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Atinge Folosește sunetul pe un videoclip pentru a-l salva aici.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Adaugă sunet';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Împărtășește public';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Alege un fișier audio de pe dispozitiv. Păstrează-l privat în Sunetele mele sau împărtășește-l, ca oricine de pe Divine să-l poată folosi.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Fișierul audio nu a putut fi citit.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Ai schimbat contul, așa că sunetul nu a fost adăugat.';
 
   @override
   String get soundsRemoveSavedSound => 'Elimină sunetul';
@@ -13516,16 +13516,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Actualizare disponibilă';
-
-  @override
-  String get soundUploadAction => 'Încarcă un sunet';
-
-  @override
-  String get soundUploadTitle => 'Încarcă un sunet';
-
-  @override
-  String get soundUploadIntro =>
-      'Împărtășește un beat, un jingle sau o replică înregistrată, ca oricine de pe Divine să poată construi un video în jurul lui.';
 
   @override
   String get soundUploadChooseFile => 'Alege un fișier audio';

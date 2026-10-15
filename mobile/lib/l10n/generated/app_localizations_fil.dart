@@ -4299,25 +4299,25 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-tap ang Use Sound sa isang video para i-save ito dito.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Magdagdag ng sound';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'I-share sa publiko';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Pumili ng audio file mula sa device mo. Itago ito nang private sa Mga Sound Ko, o i-share para magamit ng kahit sino sa Divine.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Hindi suportado ang file type na iyan. Pumili ng audio file.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Hindi mabasa ang audio file na iyan.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Nagpalit ka ng account, kaya hindi naidagdag ang sound na ito.';
 
   @override
   String get soundsRemoveSavedSound => 'Alisin ang sound';
@@ -13362,16 +13362,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'May update';
-
-  @override
-  String get soundUploadAction => 'Mag-upload ng sound';
-
-  @override
-  String get soundUploadTitle => 'Mag-upload ng sound';
-
-  @override
-  String get soundUploadIntro =>
-      'I-share ang isang beat, jingle, o voice line para kahit sino sa Divine ay makagawa ng video gamit ito.';
 
   @override
   String get soundUploadChooseFile => 'Pumili ng audio file';

@@ -1,0 +1,153 @@
+// ABOUTME: State for the library's Add sound flow: the picked file, whether it
+// ABOUTME: is shared publicly, its public credit, and the save lifecycle.
+
+import 'package:equatable/equatable.dart';
+import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/services/saved_sounds_service.dart';
+
+const _unset = Object();
+
+enum AddSoundStatus {
+  /// Nothing picked yet.
+  idle,
+
+  /// The picker is open, or the picked file is being copied into library
+  /// storage and probed. A previous pick, if any, stays in [AddSoundState.audio].
+  importing,
+
+  /// A library-owned copy exists and can be previewed, named or credited, and
+  /// saved.
+  ready,
+
+  /// The sound is being shared and/or written to My Sounds.
+  saving,
+
+  /// The sound is durably in My Sounds.
+  saved,
+}
+
+/// Why the last pick, share, or save did not complete, mapped to copy by the
+/// view.
+///
+/// Transient: cleared when the next attempt starts, so the same failure twice
+/// in a row still reads as a change to a listener.
+enum AddSoundFailure {
+  /// The picked file is not one of the supported audio types.
+  unsupportedFormat,
+
+  /// The picker could not hand the file over, or the file could not be
+  /// copied or decoded.
+  unreadableFile,
+
+  /// The signed-in account changed mid-flow, so the pick was abandoned.
+  accountChanged,
+
+  /// Writing to My Sounds failed. When the sound was already shared,
+  /// retrying repeats only this write.
+  saveFailed,
+
+  /// No signed-in identity can sign the share.
+  notSignedIn,
+
+  /// Blossom rejected the upload, signing failed, or no relay acknowledged
+  /// the event. Retrying can help.
+  publishFailed,
+
+  /// The relay reports the account suspended or banned. Retrying cannot help.
+  accountRestricted,
+}
+
+class AddSoundState extends Equatable {
+  const AddSoundState({
+    this.status = AddSoundStatus.idle,
+    this.audio,
+    this.sharePublicly = false,
+    this.attribution,
+    this.publishedSound,
+    this.failure,
+    this.savedResult,
+  });
+
+  final AddSoundStatus status;
+
+  /// The library-owned copy for this pick, once it exists.
+  final AudioEvent? audio;
+
+  /// Whether saving also publishes the sound as a reusable Kind 1063.
+  final bool sharePublicly;
+
+  /// The public credit the sound ships with when [sharePublicly] is on.
+  final AudioShareAttribution? attribution;
+
+  /// The sound as a relay acknowledged it, once shared.
+  ///
+  /// Set while the My Sounds write is still pending or has failed, so a retry
+  /// saves this record instead of publishing a second event.
+  final AudioEvent? publishedSound;
+
+  final AddSoundFailure? failure;
+
+  final SavedSoundSaveResult? savedResult;
+
+  bool get isBusy =>
+      status == AddSoundStatus.importing || status == AddSoundStatus.saving;
+
+  /// Whether a relay already holds this sound.
+  ///
+  /// The share is then settled: the file and the share choice are locked so
+  /// the pending My Sounds write stays bound to the published record.
+  bool get isPublished => publishedSound != null;
+
+  /// Whether the save found the sound already present in the library.
+  bool get alreadyInLibrary => savedResult == SavedSoundSaveResult.alreadySaved;
+
+  /// Whether the file can be swapped and the share choice changed.
+  bool get canEdit => audio != null && !isBusy && !isPublished;
+
+  /// Whether the save action is enabled.
+  bool get canSave {
+    if (audio == null || status != AddSoundStatus.ready) return false;
+    if (!sharePublicly || isPublished) return true;
+    return attribution?.isValid ?? false;
+  }
+
+  AddSoundState copyWith({
+    AddSoundStatus? status,
+    Object? audio = _unset,
+    bool? sharePublicly,
+    Object? attribution = _unset,
+    Object? publishedSound = _unset,
+    Object? failure = _unset,
+    Object? savedResult = _unset,
+  }) {
+    return AddSoundState(
+      status: status ?? this.status,
+      audio: identical(audio, _unset) ? this.audio : audio as AudioEvent?,
+      sharePublicly: sharePublicly ?? this.sharePublicly,
+      attribution: identical(attribution, _unset)
+          ? this.attribution
+          : attribution as AudioShareAttribution?,
+      publishedSound: identical(publishedSound, _unset)
+          ? this.publishedSound
+          : publishedSound as AudioEvent?,
+      failure: identical(failure, _unset)
+          ? this.failure
+          : failure as AddSoundFailure?,
+      savedResult: identical(savedResult, _unset)
+          ? this.savedResult
+          : savedResult as SavedSoundSaveResult?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    status,
+    audio,
+    sharePublicly,
+    attribution,
+    publishedSound,
+    failure,
+    savedResult,
+  ];
+}

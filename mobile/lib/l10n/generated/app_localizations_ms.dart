@@ -4265,25 +4265,25 @@ class AppLocalizationsMs extends AppLocalizations {
       'Ketik Guna Bunyi pada video untuk menyimpannya di sini.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Tambah bunyi';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Kongsi secara umum';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Pilih fail audio daripada peranti anda. Simpan secara peribadi dalam Bunyi Saya, atau kongsikan supaya sesiapa sahaja di Divine boleh menggunakannya.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Jenis fail itu tidak disokong. Pilih fail audio.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Fail audio itu tidak dapat dibaca.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Anda telah menukar akaun, jadi bunyi ini tidak ditambah.';
 
   @override
   String get soundsRemoveSavedSound => 'Alih keluar bunyi';
@@ -13243,16 +13243,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Kemas kini tersedia';
-
-  @override
-  String get soundUploadAction => 'Muat naik bunyi';
-
-  @override
-  String get soundUploadTitle => 'Muat naik bunyi';
-
-  @override
-  String get soundUploadIntro =>
-      'Kongsi beat, jingle atau rakaman suara supaya sesiapa sahaja di Divine boleh membina video dengannya.';
 
   @override
   String get soundUploadChooseFile => 'Pilih fail audio';

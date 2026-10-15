@@ -4267,25 +4267,25 @@ class AppLocalizationsSv extends AppLocalizations {
       'Tryck på Använd ljud i en video för att spara det här.';
 
   @override
-  String get soundsAddSound => 'Add sound';
+  String get soundsAddSound => 'Lägg till ljud';
 
   @override
-  String get soundsImportPromptTitle => 'Import a sound';
+  String get soundsAddSharePublicly => 'Dela offentligt';
 
   @override
   String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. It stays private in My Sounds.';
+      'Välj en ljudfil från din enhet. Behåll den privat i Mina ljud eller dela den så att alla på Divine kan använda den.';
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'That file type isn\'t supported. Pick an audio file.';
+      'Den filtypen stöds inte. Välj en ljudfil.';
 
   @override
-  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+  String get soundsImportUnreadable => 'Ljudfilen kunde inte läsas.';
 
   @override
   String get soundsImportAccountChanged =>
-      'You switched accounts, so this import was cancelled.';
+      'Du bytte konto, så ljudet lades inte till.';
 
   @override
   String get soundsRemoveSavedSound => 'Ta bort ljud';
@@ -13250,16 +13250,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Uppdatering tillgänglig';
-
-  @override
-  String get soundUploadAction => 'Ladda upp ett ljud';
-
-  @override
-  String get soundUploadTitle => 'Ladda upp ett ljud';
-
-  @override
-  String get soundUploadIntro =>
-      'Dela en beat, en jingel eller en inspelad replik så att vem som helst på Divine kan bygga en video runt den.';
 
   @override
   String get soundUploadChooseFile => 'Välj en ljudfil';

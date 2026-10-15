@@ -50,7 +50,8 @@ abstract final class RoutePaths {
   static const libraryClipsOnly = '/clips-only';
   static const libraryDrafts = '/drafts';
   static const librarySounds = '/sounds';
-  static const importSound = '$librarySounds/import';
+  static const addSound = '$librarySounds/$addSoundSubpath';
+  static const addSoundSubpath = 'add';
   static const likedVideos = '/liked-videos';
   static const messageRequests = '/inbox/message-requests';
   static const minorAccountReview = '/account-review';
@@ -83,8 +84,6 @@ abstract final class RoutePaths {
   static const settingsNostrNetwork = '/settings/connections/nostr';
   static const settingsHelpAbout = '/settings/help-about';
   static const soundDetailBase = '/sound';
-  static const soundUpload = '$librarySounds/$soundUploadSubpath';
-  static const soundUploadSubpath = 'upload';
   static const storageManagement = '/storage-management';
   static const subtitleEditor = '/subtitle-edit';
   static const accountStatus = '/settings/account-status';
