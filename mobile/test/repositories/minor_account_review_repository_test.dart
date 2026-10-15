@@ -114,6 +114,42 @@ void main() {
     });
 
     group('submitParentConsent', () {
+      for (final (description, band, resolution) in [
+        ('a 16-plus case', 'age_16_plus_claimed', 'parent_video_or_email'),
+        ('a case without the video option', 'age_13_15', 'support_review_only'),
+      ]) {
+        test(
+          'uploads nothing into $description from the start endpoint',
+          () async {
+            when(() => apiService.startGreenlight()).thenAnswer(
+              (_) async => {
+                'restriction': {'status': 'active'},
+                'minorReviewCase': {
+                  'id': 'wrong-case',
+                  'state': 'open_reported',
+                  'suspectedAgeBand': band,
+                  'allowedResolution': resolution,
+                },
+              },
+            );
+            await expectLater(
+              repository.submitParentConsent(
+                caseId: null,
+                email: 'parent@example.com',
+                videoPath: '/tmp/consent.mp4',
+              ),
+              throwsA(isA<ApiException>()),
+            );
+            verifyNever(
+              () => apiService.submitMinorAccountReviewParentConsent(
+                caseId: any(named: 'caseId'),
+                email: any(named: 'email'),
+                videoPath: any(named: 'videoPath'),
+              ),
+            );
+          },
+        );
+      }
       test(
         'starts a real case before uploading a self-started consent video',
         () async {

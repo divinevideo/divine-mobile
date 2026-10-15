@@ -133,6 +133,7 @@ void main() {
           ProviderScope(
             overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
             child: const MaterialApp(
+              locale: Locale('es'),
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MinorAccountReviewParentConsentScreen(),
@@ -140,9 +141,12 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final l10n = lookupAppLocalizations(const Locale('en'));
+        final l10n = lookupAppLocalizations(const Locale('es'));
         expect(
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
           findsNothing,
         );
         await scrollUntilTappable(
@@ -151,10 +155,20 @@ void main() {
           200,
           scrollable: find.byType(Scrollable),
         );
+        expect(
+          find.widgetWithText(
+            ListTile,
+            l10n.minorAccountReviewRecordConsentTitle,
+          ),
+          findsOneWidget,
+        );
         await tester.tap(find.byType(DivineSwitch));
         await tester.pumpAndSettle();
         expect(
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
           findsOneWidget,
         );
         expect(prefs.getBool('ff_minorConsentInAppRecording'), isTrue);
@@ -396,14 +410,17 @@ void main() {
         final scrollable = find.byType(Scrollable);
         await scrollUntilTappable(
           tester,
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
           200,
           scrollable: scrollable,
         );
         final recordButton = tester.widget<DivineButton>(
-          find.ancestor(
-            of: find.text(l10n.minorAccountReviewParentConsentRecordCta),
-            matching: find.byType(DivineButton),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
           ),
         );
         expect(recordButton.type, DivineButtonType.primary);
@@ -424,12 +441,18 @@ void main() {
 
         await scrollUntilTappable(
           tester,
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
           -200,
           scrollable: scrollable,
         );
         await tester.tap(
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
         );
         // The captured screen shows an indeterminate camera-loading spinner
         // when no camera is initialized, so pump the route transition instead
@@ -468,7 +491,10 @@ void main() {
         );
 
         expect(
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
           findsNothing,
         );
         final emailButton = tester.widget<DivineButton>(

@@ -4,6 +4,7 @@
 import 'dart:async' show Completer;
 import 'dart:io' show Directory, File, SocketException;
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -418,7 +419,10 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(
-          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
         );
         await tester.pumpAndSettle();
         expect(
