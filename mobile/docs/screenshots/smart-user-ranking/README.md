@@ -1,6 +1,6 @@
 # Smart user ranking: delivery evidence
 
-Final fix implementation and measured code: `7c93bdbc3467b3a6ac60d6d7b2ccfbcf6b9fa64f`; host macOS 26.5.2 arm64, pinned Flutter 3.47.2 / Dart 3.13.2. The earlier architecture-correction implementation was `514bc5a9b0e990af4942d64755bfc9e1de93a48f`, rebased patch-equivalently onto `098d9912bc674c20a7499382d5000b38a955b23d`.
+Actual measured code: `7c93bdbc3467b3a6ac60d6d7b2ccfbcf6b9fa64f`; accessible rebased implementation: `c62776aab9ac14d95d852b4a4cdf5bf14e6e2299`. Host macOS 26.5.2 arm64, pinned Flutter 3.47.2 / Dart 3.13.2. The loader, scorer and measurement harness are unchanged after rebasing onto `6018b63e51152c630b300606b8db39ef3321703a`; the retained main-branch cached-follow authority predicate is outside this benchmark. This is provenance mapping, not a new measurement. The earlier architecture-correction implementation was `514bc5a9b0e990af4942d64755bfc9e1de93a48f`, rebased patch-equivalently onto `098d9912bc674c20a7499382d5000b38a955b23d`.
 
 These documentation captures render the real share sheet, new-message picker, and own-following screen with synthetic people and full-length synthetic keys. The images cover dark and light appearances at 390 × 844 logical pixels (DPR 1), encoded at 2× (780 × 1688). They are documentation PNGs, not CI golden references. The share-screen backdrop and video-thumbnail placeholder are fixture scaffolding; no production account, media, or user device was used.
 
