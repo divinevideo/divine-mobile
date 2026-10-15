@@ -174,8 +174,8 @@ nonces. Never generate new partials from an old approval after a crash/retry.
 **Keycast-assisted mode (default).** Preserve recoverable, encrypted signing
 material for every admin. For hosted-only admins, the backed-up group key and
 recoverable authorization relationship provide access after account recovery;
-a cached bunker token alone is not the backup. For admins with device-held group
-keys or FROST shares, back up that actual key/share package as well. A team roster
+a cached bunker token alone is not the backup. If a later threshold path uses
+device-held FROST shares, back up those share packages as well. A team roster
 or one central key is not a substitute for backing up distinct participant shares.
 
 Use Keycast's established encrypted key custody and authenticated account-recovery
