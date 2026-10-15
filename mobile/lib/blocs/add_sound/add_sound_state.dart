@@ -62,6 +62,7 @@ class AddSoundState extends Equatable {
   const AddSoundState({
     this.status = AddSoundStatus.idle,
     this.audio,
+    this.accountId,
     this.sharePublicly = false,
     this.attribution,
     this.publishedSound,
@@ -74,6 +75,11 @@ class AddSoundState extends Equatable {
   /// The library-owned copy for this pick, once it exists.
   final AudioEvent? audio;
 
+  /// The account [audio] was imported under. A save is refused once another
+  /// account is signed in, so one account's sound never lands in another's
+  /// library.
+  final String? accountId;
+
   /// Whether saving also publishes the sound as a reusable Kind 1063.
   final bool sharePublicly;
 
@@ -82,8 +88,10 @@ class AddSoundState extends Equatable {
 
   /// The sound as a relay acknowledged it, once shared.
   ///
-  /// Set while the My Sounds write is still pending or has failed, so a retry
-  /// saves this record instead of publishing a second event.
+  /// Set when the My Sounds write that follows the share settles, and kept
+  /// when that write fails, so a retry saves this record instead of
+  /// publishing a second event. Until then the save in flight is still the
+  /// share the user started, not a retry.
   final AudioEvent? publishedSound;
 
   final AddSoundFailure? failure;
@@ -93,10 +101,10 @@ class AddSoundState extends Equatable {
   bool get isBusy =>
       status == AddSoundStatus.importing || status == AddSoundStatus.saving;
 
-  /// Whether a relay already holds this sound.
+  /// Whether this sound was shared and its first My Sounds write has settled.
   ///
   /// The share is then settled: the file and the share choice are locked so
-  /// the pending My Sounds write stays bound to the published record.
+  /// a retried My Sounds write stays bound to the published record.
   bool get isPublished => publishedSound != null;
 
   /// Whether the save found the sound already present in the library.
@@ -115,6 +123,7 @@ class AddSoundState extends Equatable {
   AddSoundState copyWith({
     AddSoundStatus? status,
     Object? audio = _unset,
+    Object? accountId = _unset,
     bool? sharePublicly,
     Object? attribution = _unset,
     Object? publishedSound = _unset,
@@ -124,6 +133,9 @@ class AddSoundState extends Equatable {
     return AddSoundState(
       status: status ?? this.status,
       audio: identical(audio, _unset) ? this.audio : audio as AudioEvent?,
+      accountId: identical(accountId, _unset)
+          ? this.accountId
+          : accountId as String?,
       sharePublicly: sharePublicly ?? this.sharePublicly,
       attribution: identical(attribution, _unset)
           ? this.attribution
@@ -144,6 +156,7 @@ class AddSoundState extends Equatable {
   List<Object?> get props => [
     status,
     audio,
+    accountId,
     sharePublicly,
     attribution,
     publishedSound,

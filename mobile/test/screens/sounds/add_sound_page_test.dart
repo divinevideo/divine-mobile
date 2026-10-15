@@ -475,6 +475,76 @@ void main() {
         expect(librarySounds(), isEmpty);
       });
 
+      testWidgets('takes the keyboard off the credit while sharing', (
+        tester,
+      ) async {
+        final gate = Completer<LocalAudioPublishResult>();
+        when(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        ).thenAnswer((_) => gate.future);
+        await pumpView(tester);
+        await pickFile(tester);
+        await sharePublicly(tester);
+        final title = find.byKey(const Key('audio_credit_title'));
+        await tester.showKeyboard(title);
+        expect(tester.testTextInput.hasAnyClients, isTrue);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pump();
+
+        // Typing now would change the field but not the credit being shared,
+        // so a retry would publish a credit other than the one on screen.
+        expect(tester.testTextInput.hasAnyClients, isFalse);
+
+        gate.complete(
+          const LocalAudioPublishFailed(LocalAudioPublishFailure.relayRejected),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.showKeyboard(title);
+        expect(
+          tester.testTextInput.hasAnyClients,
+          isTrue,
+          reason: 'a failed share hands the credit back for editing',
+        );
+      });
+
+      testWidgets('keeps the share label while the first Sounds write runs', (
+        tester,
+      ) async {
+        when(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        ).thenAnswer((_) async => LocalAudioPublished(_publishedEvent()));
+        final service = _HeldSavedSoundsService(sharedPreferences);
+        final router = await pumpView(tester, savedSoundsService: service);
+        await pickFile(tester);
+        await sharePublicly(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pump();
+        await tester.pump();
+
+        // Published, and the Sounds write it leads to is in flight: nothing
+        // has failed, so nothing should read as a retry yet.
+        expect(service.isHolding, isTrue);
+        expect(saveButton(tester).isLoading, isTrue);
+        expect(saveButton(tester).label, l10n.soundUploadShareAction);
+
+        service.release();
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, '/');
+        expect(find.text(l10n.soundUploadShared), findsOneWidget);
+      });
+
       testWidgets('offers a save-only retry when Sounds fails after sharing', (
         tester,
       ) async {
@@ -568,6 +638,23 @@ void main() {
       });
     });
   });
+}
+
+/// Holds every save until [release] is called.
+class _HeldSavedSoundsService extends SavedSoundsService {
+  _HeldSavedSoundsService(super._preferences);
+
+  final _held = Completer<void>();
+  bool isHolding = false;
+
+  void release() => _held.complete();
+
+  @override
+  Future<SavedSoundSaveResult> saveSavedSound(SavedSound sound) async {
+    isHolding = true;
+    await _held.future;
+    return super.saveSavedSound(sound);
+  }
 }
 
 /// Fails the first save, then parks the retry until [release] is called.
