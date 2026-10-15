@@ -29,7 +29,6 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
     required this.fromEditor,
     this.topBarCenter,
     this.audioProgressBar,
-    this.recordButton = const RecordButton(),
     super.key,
   });
 
@@ -44,10 +43,6 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   /// supplies [VideoRecorderAudioProgressBar]; when set, the top bar's generic
   /// recording-progress bar is suppressed so the two don't overlap.
   final Widget? audioProgressBar;
-
-  /// The record button rendered at the bottom center. Defaults to the standard
-  /// [RecordButton]; lip-sync mode supplies one gated on audio selection.
-  final Widget recordButton;
 
   void _deleteLastClip(BuildContext context, WidgetRef ref) {
     unawaited(ref.read(clipManagerProvider.notifier).scheduleDeleteLastClip());
@@ -150,7 +145,7 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
                     ),
                   ),
 
-                  recordButton,
+                  const RecordButton(),
 
                   /// Dummy placeholder button
                   const Opacity(
