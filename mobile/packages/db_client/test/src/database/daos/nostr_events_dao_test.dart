@@ -21,6 +21,9 @@ void main() {
   const testPubkey2 =
       'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
 
+  const excludedPubkey =
+      'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
   /// Helper to create a valid Nostr Event for testing.
   Event createEvent({
     String pubkey = testPubkey,
@@ -107,6 +110,66 @@ void main() {
   });
 
   group('NostrEventsDao', () {
+    group('newestCreatedAtByAuthor', () {
+      test(
+        'groups videos by author and excludes other authors and kinds',
+        () async {
+          await dao.upsertEvent(createVideoEvent(createdAt: 100));
+          await dao.upsertEvent(createVideoEvent(createdAt: 200));
+          await dao.upsertEvent(createEvent(createdAt: 999));
+          await dao.upsertEvent(
+            createEvent(pubkey: testPubkey2, kind: 22, createdAt: 300),
+          );
+          await dao.upsertEvent(
+            createVideoEvent(
+              pubkey: excludedPubkey,
+              createdAt: 400,
+            ),
+          );
+
+          expect(
+            await dao.newestCreatedAtByAuthor(
+              authors: [testPubkey, testPubkey2, 'missing'],
+              kinds: [34236, 22],
+            ),
+            {testPubkey: 200, testPubkey2: 300},
+          );
+        },
+      );
+
+      test('returns empty when authors or kinds are empty', () async {
+        await dao.upsertEvent(createVideoEvent(createdAt: 100));
+        expect(
+          await dao.newestCreatedAtByAuthor(authors: [], kinds: [34236]),
+          isEmpty,
+        );
+        expect(
+          await dao.newestCreatedAtByAuthor(authors: [testPubkey], kinds: []),
+          isEmpty,
+        );
+      });
+
+      test('reads authors across the 500-key boundary', () async {
+        final authors = List.generate(
+          501,
+          (i) => i.toRadixString(16).padLeft(64, '0'),
+        );
+        await dao.cacheEventsBatch([
+          for (final author in authors)
+            createEvent(pubkey: author, kind: 22, createdAt: 100),
+        ]);
+
+        final result = await dao.newestCreatedAtByAuthor(
+          authors: authors,
+          kinds: [22],
+        );
+
+        expect(result, hasLength(501));
+        expect(result.keys, unorderedEquals(authors));
+        expect(result[authors.last], 100);
+      });
+    });
+
     group('upsertEvent', () {
       test('inserts a new event', () async {
         final event = createEvent();

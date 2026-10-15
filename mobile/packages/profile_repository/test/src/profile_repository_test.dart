@@ -3,6 +3,7 @@ import 'dart:convert';
 
 // Hide Drift table class to avoid collision with ProfileStats domain model.
 import 'package:db_client/db_client.dart' hide Filter, ProfileStats;
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -7191,6 +7192,145 @@ void main() {
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
       });
+    });
+
+    group('batched profile stats', () {
+      late AppDatabase database;
+      late MockFunnelcakeApiClient api;
+      late ProfileRepository repository;
+
+      setUp(() {
+        database = AppDatabase.test(NativeDatabase.memory());
+        api = MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        repository = ProfileRepository(
+          nostrClient: mockNostrClient,
+          httpClient: mockHttpClient,
+          userProfilesDao: database.userProfilesDao,
+          profileStatsDao: database.profileStatsDao,
+          funnelcakeApiClient: api,
+        );
+      });
+
+      tearDown(() async {
+        await database.close();
+      });
+
+      test('fetchBatchProfiles persists videoCount to profile_stats', () async {
+        when(() => api.getBulkProfiles([testPubkey])).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              testPubkey: UserProfileFound(
+                profile: UserProfileData.fromJson(testPubkey, const {
+                  'name': 'Creator',
+                }),
+                stats: ProfileStatsData.fromJson(const {'video_count': 42}),
+              ),
+            },
+          ),
+        );
+
+        final profiles = await repository.fetchBatchProfiles(
+          pubkeys: [testPubkey],
+        );
+
+        expect(profiles[testPubkey]!.name, 'Creator');
+        expect(
+          (await database.profileStatsDao.getStatsRaw(testPubkey))!.videoCount,
+          42,
+        );
+      });
+
+      test(
+        'refreshStatsForPubkeys chunks 250 pubkeys into 3 requests',
+        () async {
+          final pubkeys = List.generate(
+            250,
+            (i) => i.toRadixString(16).padLeft(64, '0'),
+          );
+          final requests = <List<String>>[];
+          when(() => api.getBulkProfiles(any())).thenAnswer((invocation) async {
+            final keys = invocation.positionalArguments.single as List<String>;
+            requests.add(List.of(keys));
+            return BulkProfilesResponse(
+              profiles: {
+                for (final key in keys)
+                  key: UserProfileFound(
+                    profile: UserProfileData.fromJson(key, const {
+                      'name': 'Creator',
+                    }),
+                    stats: ProfileStatsData.fromJson(const {'video_count': 7}),
+                  ),
+              },
+            );
+          });
+
+          await repository.refreshStatsForPubkeys(pubkeys);
+
+          expect(requests.map((keys) => keys.length), [100, 100, 50]);
+          expect(requests.expand((keys) => keys), orderedEquals(pubkeys));
+          for (final key in pubkeys) {
+            expect(
+              (await database.profileStatsDao.getStatsRaw(key))!.videoCount,
+              7,
+            );
+          }
+        },
+      );
+
+      test('refreshStatsForPubkeys skips empty inputs', () async {
+        await repository.refreshStatsForPubkeys([]);
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
+
+      test('refreshStatsForPubkeys tolerates unavailable API', () async {
+        when(() => api.isAvailable).thenReturn(false);
+        await repository.refreshStatsForPubkeys([testPubkey]);
+        expect(await database.profileStatsDao.getStatsRaw(testPubkey), isNull);
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
+
+      test('refreshStatsForPubkeys propagates API errors', () async {
+        when(() => api.getBulkProfiles(any())).thenThrow(
+          const FunnelcakeTimeoutException(),
+        );
+
+        await expectLater(
+          repository.refreshStatsForPubkeys([testPubkey]),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+        expect(await database.profileStatsDao.getStatsRaw(testPubkey), isNull);
+      });
+
+      test(
+        'refreshStatsForPubkeys caches unpublished stats and skips vanished',
+        () async {
+          when(() => api.getBulkProfiles(any())).thenAnswer(
+            (_) async => BulkProfilesResponse(
+              profiles: {
+                testPubkey: UserProfileNotPublished(
+                  pubkey: testPubkey,
+                  stats: ProfileStatsData.fromJson(const {'video_count': 5}),
+                ),
+                otherPubkey: const UserProfileVanished(pubkey: otherPubkey),
+              },
+            ),
+          );
+
+          await repository.refreshStatsForPubkeys([testPubkey, otherPubkey]);
+
+          expect(
+            (await database.profileStatsDao.getStatsRaw(
+              testPubkey,
+            ))!.videoCount,
+            5,
+          );
+          expect(
+            await database.profileStatsDao.getStatsRaw(otherPubkey),
+            isNull,
+          );
+        },
+      );
     });
 
     group('getBulkProfilesFromApi', () {

@@ -2824,6 +2824,27 @@ class ProfileRepository implements ProfileReader {
     return _funnelcakeApiClient.getBulkProfiles(pubkeys);
   }
 
+  /// Refreshes cached stats from REST in batches of at most 100 pubkeys.
+  ///
+  /// Does nothing when the API is unavailable. API and cache errors propagate
+  /// so callers can decide when to retry this background refresh.
+  Future<void> refreshStatsForPubkeys(List<String> pubkeys) async {
+    const batchSize = 100;
+    for (var start = 0; start < pubkeys.length; start += batchSize) {
+      final end = start + batchSize < pubkeys.length
+          ? start + batchSize
+          : pubkeys.length;
+      final response = await getBulkProfilesFromApi(
+        pubkeys.sublist(start, end),
+      );
+      if (response == null) return;
+      for (final entry in response.profiles.entries) {
+        if (entry.value is UserProfileVanished) continue;
+        await _cacheProfileStatsFromResult(entry.key, entry.value);
+      }
+    }
+  }
+
   /// Fetches profiles for multiple pubkeys using a layered
   /// strategy.
   ///
@@ -2903,6 +2924,7 @@ class ProfileRepository implements ProfileReader {
               remaining.remove(pubkey);
             case UserProfileFound():
               await _clearVanish(pubkey);
+              await _cacheProfileStatsFromResult(pubkey, result);
               final profile = UserProfile.fromUserProfileFound(
                 result,
                 eventIdPrefix: 'rest-bulk',
