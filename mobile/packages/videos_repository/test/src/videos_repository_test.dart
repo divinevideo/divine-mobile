@@ -2502,6 +2502,73 @@ void main() {
         );
 
         test(
+          'keeps walking past a short page while Funnelcake reports more, '
+          'and ends without a cursor when it stops',
+          () async {
+            // The client drops malformed rows, so a page shorter than `limit`
+            // is not the end. Only `has_more: false` is, and the cursor of the
+            // page before it must not leak out as the next page's start.
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final requestedBefore = <int?>[];
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              final before = invocation.namedArguments[#before] as int?;
+              requestedBefore.add(before);
+              if (before == null) {
+                return HomeFeedResponse(
+                  videos: [
+                    _createVideoStats(
+                      id: 'first-video',
+                      pubkey: 'followed-user',
+                      dTag: 'dtag-1',
+                      videoUrl: 'https://example.com/1.mp4',
+                      createdAt: 2900,
+                    ),
+                  ],
+                  hasMore: true,
+                  nextCursor: 2900,
+                );
+              }
+              return HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'last-video',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-2',
+                    videoUrl: 'https://example.com/2.mp4',
+                    createdAt: 2800,
+                  ),
+                ],
+              );
+            });
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+
+            expect(requestedBefore, equals([null, 2900]));
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video', 'last-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(result.hasMore, isFalse);
+          },
+        );
+
+        test(
           'falls back to the revision-time cursor when the feed omits one',
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
