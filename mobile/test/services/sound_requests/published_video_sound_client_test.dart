@@ -116,11 +116,14 @@ void main() {
       'ready resolution requires current source linkage and public permission',
       () async {
         var allowed = false;
+        var declined = false;
         final client = PublishedVideoSoundClient(
           ownerPubkey: owner,
           currentOwner: () => owner,
           readSource: (_) async => SoundRequestSource(
-            video: video(),
+            video: video().copyWith(
+              rawTags: {if (declined) 'allow_audio_reuse': 'false'},
+            ),
             allowReuse: allowed,
             requestable: true,
             audioEventId: soundId,
@@ -140,6 +143,8 @@ void main() {
         expect(await client.resolveReady(address, soundId), isNull);
         allowed = true;
         expect((await client.resolveReady(address, soundId))?.id, soundId);
+        declined = true;
+        expect(await client.resolveReady(address, soundId), isNull);
       },
     );
   });

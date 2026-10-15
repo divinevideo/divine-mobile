@@ -41,7 +41,10 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
         await _linkedOriginal(source) != null;
     return SoundRequestSource(
       video: source.video,
-      allowReuse: source.allowReuse,
+      allowReuse:
+          source.allowReuse &&
+          source.video.audioReuseConsent != AudioReuseConsent.declined &&
+          source.video.audioReuseConsent != AudioReuseConsent.invalid,
       requestable: source.requestable && original,
       audioEventId: source.audioEventId,
     );
