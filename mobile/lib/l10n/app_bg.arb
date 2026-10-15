@@ -2725,7 +2725,6 @@
     "videoRecorderCameraPreviewLabel": "Преглед от камерата",
     "videoRecorderCameraPreviewFocusHint": "Фокусиране на камерата",
     "videoRecorderSwitchToModeLabel": "Превключване към режим {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Добавете аудио преди запис",
     "videoRecorderStopMotionAssembleFailed": "Видеото не можа да се създаде. Опитайте отново.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Няма останали кадри} =1{Остава 1 кадър} other{Остават {count} кадъра}}",
     "@videoRecorderStopMotionShotsLeft": {

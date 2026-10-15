@@ -4533,10 +4533,6 @@
   "videoRecorderCameraPreviewLabel": "کیمرہ پیش منظر",
   "videoRecorderCameraPreviewFocusHint": "کیمرے کو فوکس کریں",
   "videoRecorderSwitchToModeLabel": "{mode} موڈ پر سوئچ کریں",
-  "videoRecorderLipSyncAddAudioFirst": "ریکارڈنگ سے پہلے آڈیو شامل کریں",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "ویڈیو نہیں بن سکی۔ دوبارہ کوشش کریں۔",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

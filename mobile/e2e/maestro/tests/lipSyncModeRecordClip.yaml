@@ -3,92 +3,29 @@ tags:
   - recorder
 ---
 #TC to record a lip-sync clip against a picked sound,
-# given the recorder is open on an idle lip-sync viewfinder with no sound,
-# validate picking one releases the shutter that lipSyncModeAudioGate just saw
-# refuse, and that recording against it produces a clip.
-#
-# This is the other half of the gate. On its own, lipSyncModeAudioGate only
-# proves the shutter says no — which is also what a permanently broken shutter
-# does. Together the two prove it says no *for the right reason*.
+# given the recorder is open on an idle lip-sync viewfinder with a sound picked
+# (lipSyncModePickSound) and no clips,
+# validate recording against it produces a clip, and delete it again.
 #
 # Needs real camera hardware, like every recording test: without it the bloc
-# never reports `isCameraInitialized` and the button stays disabled even once
-# the sound is in place.
-#
-# Drives a **bundled** sound, never a relay one. Every entry on the picker's
-# Divine tab comes from `assets/sounds/sounds_manifest.json` and ships with the
-# app, so this path has no live-content dependency — unlike the Community tab,
-# which is exactly the flakiness the rest of this suite fights. "Bruh Sound
-# Effect" is picked for being 864ms: comfortably under the 6.3s maximum clip
-# length, so `_handleDoneSelection` pops straight back instead of routing
-# through the trim screen a longer sound would need.
+# never reports `isCameraInitialized` and the record button stays disabled.
 #
 # Tap-to-toggle recording applies here as it does in capture mode:
 # `HoldToRecordPreferenceService` defaults to false, and a device where a
 # previous session turned it on will hang on the first wait.
 #Steps:
-# 1. Open the sound picker from the chip
-# 2. Search it down to one entry and select it
-# 3. Confirm: the chip carries the sound and the gate is gone
-# 4. Record a clip
-# 5. Delete it again
+# 1. Record a clip
+# 2. Delete it again
 
-# 1. Open the picker.
-- tapOn:
-    id: audio_chip
-
-# 2. Search. Typing rather than scrolling the manifest's 94 entries, and
-# asserting the title back, so a reordered or renamed manifest fails here
-# rather than silently recording against a different sound. The title comes
-# from the asset manifest, not from l10n, so it reads the same in every locale.
-- tapOn:
-    id: audio_search_field
-- inputText: "Bruh Sound Effect"
-
-# Dismiss the keyboard before going anywhere near the selection. The confirm
-# bar is anchored to the bottom of the sheet, so with the keyboard up it is
-# pushed off screen — the sound selects fine and the tile turns green, but the
-# done button is simply not in the hierarchy and the wait below times out
-# against a screen that looks correct in the failure screenshot.
-- hideKeyboard
-
-- extendedWaitUntil:
-    visible:
-      id: audio_sound_tile_0
-      text: ".*Bruh Sound Effect.*"
-    timeout: 10000
-- tapOn:
-    id: audio_sound_tile_0
-
-# 3. Confirm. Selecting starts a preview, and the done button is disabled while
-# the audio loads — hence waiting on `enabled` rather than tapping straight
-# away.
-- extendedWaitUntil:
-    visible:
-      id: audio_selection_done_button
-      enabled: true
-    timeout: 15000
-- tapOn:
-    id: audio_selection_done_button
-
-# The sheet closes and the chip swaps its "Add audio" placeholder for the
-# sound. That is the gate opening: the record button is only swapped for the
-# blocked one while the editor holds no selected sound.
-- extendedWaitUntil:
-    visible:
-      id: audio_chip
-      text: ".*Bruh Sound Effect.*"
-    timeout: 15000
-
-# 4. Record. The sound plays under the recording but does not end it; once a
-# sound is selected, lip-sync uses the same tap-to-toggle capture stack.
+# 1. Record. The sound plays under the recording but does not end it; once a
+# sound is picked, lip-sync uses the same tap-to-toggle capture stack.
 - runFlow: ../utils/recordCaptureClip.yaml
 
-# 5. Delete it again. This is teardown, not just symmetry: a clip left behind
+# 2. Delete it again. This is teardown, not just symmetry: a clip left behind
 # is written to the clip library and survives the run, so the next one would
-# start with a non-empty session and fail assertLipSyncMode.
+# start with a non-empty session and fail assertLipSyncViewfinder.
 #
-# The sound stays picked, which is fine — the flow is done with the gate, and a
-# relaunch clears the editor's selection anyway.
+# The sound stays picked, which is fine — a relaunch clears the editor's
+# selection anyway.
 - runFlow: ../utils/deleteLastRecorderClip.yaml
-- runFlow: ../asserts/assertLipSyncMode.yaml
+- runFlow: ../asserts/assertLipSyncViewfinder.yaml

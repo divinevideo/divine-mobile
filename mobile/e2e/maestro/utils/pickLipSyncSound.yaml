@@ -1,0 +1,54 @@
+appId: co.openvine.app.staging
+---
+#Utility: given the recorder is on lip-sync with no sound picked, pick a
+#bundled sound from the inline sound picker and wait for the viewfinder to come
+#up with it in the chip.
+#
+# Drives a **bundled** sound, never a relay one. Every entry on the picker's
+# Divine tab comes from `assets/sounds/sounds_manifest.json` and ships with the
+# app, so this path has no live-content dependency — unlike the Community tab,
+# which is exactly the flakiness the rest of this suite fights. "Bruh Sound
+# Effect" is picked for being 864ms: comfortably under the 6.3s maximum clip
+# length, so `_handleDoneSelection` hands the sound straight back instead of
+# routing through the trim screen a longer sound would need.
+
+# Search. Typing rather than scrolling the manifest's 94 entries, and asserting
+# the title back, so a reordered or renamed manifest fails here rather than
+# silently recording against a different sound. The title comes from the asset
+# manifest, not from l10n, so it reads the same in every locale.
+- tapOn:
+    id: audio_search_field
+- inputText: "Bruh Sound Effect"
+
+# Dismiss the keyboard before going anywhere near the selection. The confirm
+# bar is anchored to the bottom of the picker, so with the keyboard up it is
+# pushed off screen — the sound selects fine and the tile turns green, but the
+# done button is simply not in the hierarchy and the wait below times out
+# against a screen that looks correct in the failure screenshot.
+- hideKeyboard
+
+- extendedWaitUntil:
+    visible:
+      id: audio_sound_tile_0
+      text: ".*Bruh Sound Effect.*"
+    timeout: 10000
+- tapOn:
+    id: audio_sound_tile_0
+
+# Confirm. Selecting starts a preview, and the done button is disabled while
+# the audio loads — hence waiting on `enabled` rather than tapping straight
+# away.
+- extendedWaitUntil:
+    visible:
+      id: audio_selection_done_button
+      enabled: true
+    timeout: 15000
+- tapOn:
+    id: audio_selection_done_button
+
+# The picker gives way to the viewfinder, with the sound in its chip.
+- extendedWaitUntil:
+    visible:
+      id: audio_chip
+      text: ".*Bruh Sound Effect.*"
+    timeout: 15000

@@ -4533,10 +4533,6 @@
   "videoRecorderCameraPreviewLabel": "Pratonton kamera",
   "videoRecorderCameraPreviewFocusHint": "Fokuskan kamera",
   "videoRecorderSwitchToModeLabel": "Tukar kepada mod {mode}",
-  "videoRecorderLipSyncAddAudioFirst": "Tambah audio sebelum merakam",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "Tidak dapat mencipta video. Cuba lagi.",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

@@ -1,0 +1,56 @@
+appId: co.openvine.app.staging
+---
+# Lip-sync mode with a sound picked, idle: the viewfinder chrome and the sound
+# chip are up, and no clip is recorded yet. Before a sound is picked the mode
+# shows its sound picker instead; that state is assertLipSyncMode.
+#
+# Lip-sync renders the capture stack with the same control rail, so the sound
+# chip below is the *only* element that separates this screen from capture
+# mode's. assertCaptureMode asserts its absence for the same reason.
+
+# Mode wheel with Lip Sync armed. `selected` is load-bearing: the wheel renders
+# an entry for every mode in every mode, so a bare id assertion here passes
+# just as happily on the Capture tab.
+- assertVisible:
+    id: camera_mode_lipSync
+    selected: true
+- assertVisible:
+    id: camera_record_button
+- assertVisible:
+    id: camera_close_button
+- assertVisible:
+    id: camera_library_button
+
+# The sound chip, in the top-bar slot capture mode leaves empty.
+- assertVisible:
+    id: audio_chip
+
+# Control rail, top to bottom — identical to capture mode's, driven by the
+# same ../utils/driveCaptureRail.yaml.
+- assertVisible:
+    id: camera_flash_button
+- assertVisible:
+    id: camera_timer_button
+- assertVisible:
+    id: camera_aspect_ratio_button
+- assertVisible:
+    id: camera_switch_camera_button
+- assertVisible:
+    id: camera_stabilization_button
+
+# Classic's shutter, absent. A leak guard rather than a mode separator — the
+# record button above already fails this file on a classic viewfinder — and the
+# other half of why the shutter gets an id of its own rather than reusing
+# `camera_record_button`: the record button is pinned absent in
+# assertClassicMode and this one absent in every capture-stack mode, so the
+# pair is what proves which stack is up.
+- assertNotVisible:
+    id: camera_classic_shutter
+
+# Nothing recorded yet. Both buttons sit inside an AnimatedOpacity, and
+# RenderAnimatedOpacity drops its child from the semantics tree at opacity 0 —
+# so "not visible" here means "no clip in the session", not "scrolled away".
+- assertNotVisible:
+    id: camera_next_button
+- assertNotVisible:
+    id: camera_delete_clip_button

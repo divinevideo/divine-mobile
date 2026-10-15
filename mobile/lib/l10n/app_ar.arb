@@ -2926,7 +2926,6 @@
     "videoRecorderCameraPreviewLabel": "معاينة الكاميرا",
     "videoRecorderCameraPreviewFocusHint": "تركيز الكاميرا",
     "videoRecorderSwitchToModeLabel": "التبديل إلى وضع {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "أضف صوتًا قبل التسجيل",
     "videoRecorderStopMotionAssembleFailed": "تعذّر إنشاء الفيديو. حاول مرة أخرى.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{لم تتبقَّ لقطات} =1{تبقّت لقطة واحدة} two{تبقّت لقطتان} few{تبقّت {count} لقطات} many{تبقّت {count} لقطة} other{تبقّت {count} لقطة}}",
     "@videoRecorderStopMotionShotsLeft": {

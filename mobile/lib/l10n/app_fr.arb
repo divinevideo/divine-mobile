@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Aperçu de la caméra",
     "videoRecorderCameraPreviewFocusHint": "Faire la mise au point",
     "videoRecorderSwitchToModeLabel": "Passer au mode {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Ajoutez de l'audio avant d'enregistrer",
     "videoRecorderStopMotionAssembleFailed": "Impossible de créer la vidéo. Réessayez.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Aucune prise restante} =1{{count} prise restante} other{{count} prises restantes}}",
     "@videoRecorderStopMotionShotsLeft": {

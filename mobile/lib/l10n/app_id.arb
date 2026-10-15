@@ -2933,7 +2933,6 @@
     "videoRecorderCameraPreviewLabel": "Pratinjau kamera",
     "videoRecorderCameraPreviewFocusHint": "Fokuskan kamera",
     "videoRecorderSwitchToModeLabel": "Beralih ke mode {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Tambahkan audio sebelum merekam",
     "videoRecorderStopMotionAssembleFailed": "Tidak dapat membuat video. Coba lagi.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Tidak ada jepretan tersisa} other{Sisa {count} jepretan}}",
     "@videoRecorderStopMotionShotsLeft": {

@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, VineSound;
+import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
+import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -13,12 +19,16 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_chip.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/lip_sync/video_recorder_lip_sync_stack.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_audio_progress_bar.dart';
-import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,11 +36,15 @@ class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
     implements VideoRecorderBloc {}
 
+class _MockSavedSoundsBloc extends MockBloc<SavedSoundsEvent, SavedSoundsState>
+    implements SavedSoundsBloc {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(VideoRecorderLipSyncStack, () {
     late _MockVideoRecorderBloc recorderBloc;
+    late _MockSavedSoundsBloc savedSoundsBloc;
     late SharedPreferences testPrefs;
     late _TestClipManagerNotifier clipNotifier;
     late _TestVideoEditorNotifier editorNotifier;
@@ -39,19 +53,34 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       testPrefs = await SharedPreferences.getInstance();
       recorderBloc = _MockVideoRecorderBloc();
+      savedSoundsBloc = _MockSavedSoundsBloc();
     });
+
+    AudioEvent sound(String id) => AudioEvent(
+      id: id,
+      pubkey: 'pubkey',
+      createdAt: 1704067200,
+      url: 'https://example.com/audio/$id.mp3',
+      title: id,
+      duration: 5,
+    );
 
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
       AudioEvent? selectedSound,
       List<DivineVideoClip>? clips,
+      GoRouter? router,
     }) {
+      when(() => recorderBloc.isClosed).thenReturn(false);
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           recordingState: recordingState,
           isCameraInitialized: true,
           canRecord: true,
         ),
+      );
+      when(() => savedSoundsBloc.state).thenReturn(
+        const SavedSoundsState(status: SavedSoundsStatus.loaded),
       );
 
       clipNotifier = _TestClipManagerNotifier(clips: clips ?? []);
@@ -62,63 +91,183 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(testPrefs),
           clipManagerProvider.overrideWith(() => clipNotifier),
           videoEditorProvider.overrideWith(() => editorNotifier),
-        ],
-        child: BlocProvider<VideoRecorderBloc>.value(
-          value: recorderBloc,
-          child: const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: VideoRecorderLipSyncStack()),
+          // The sound picker's sources: bundled sounds only, enough to scroll.
+          soundLibraryServiceProvider.overrideWith(
+            (_) async => _FakeSoundLibraryService(),
           ),
+          trendingSoundsProvider.overrideWith(_FakeTrendingSounds.new),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<VideoRecorderBloc>.value(value: recorderBloc),
+            BlocProvider<SavedSoundsBloc>.value(value: savedSoundsBloc),
+            BlocProvider<SoundWaveformBloc>(create: (_) => SoundWaveformBloc()),
+          ],
+          child: router == null
+              ? const MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(body: VideoRecorderLipSyncStack()),
+                )
+              : MaterialApp.router(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  routerConfig: router,
+                ),
         ),
       );
     }
 
-    group('renders', () {
-      testWidgets('renders $VideoRecorderLipSyncStack', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
+    Future<void> pickInlineSound(WidgetTester tester, AudioEvent picked) async {
+      tester
+          .widget<AudioSelectionBottomSheet>(
+            find.byType(AudioSelectionBottomSheet),
+          )
+          .onSoundPicked!(picked);
+      await tester.pumpAndSettle();
+    }
 
-        expect(find.byType(VideoRecorderLipSyncStack), findsOneWidget);
-      });
-
-      testWidgets('reuses $VideoRecorderCaptureStack', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-
-        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
-      });
-
-      testWidgets('renders the $VideoEditorAudioChip in the top bar', (
+    group('before a sound is picked', () {
+      testWidgets('shows the sound picker instead of the viewfinder', (
         tester,
       ) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(VideoEditorAudioChip), findsOneWidget);
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+        expect(find.byType(VideoRecorderCaptureStack), findsNothing);
       });
 
-      testWidgets('wires in the $VideoRecorderAudioProgressBar', (
+      testWidgets('leaves the recorder from the close button left of the '
+          'categories', (tester) async {
+        final handle = tester.ensureSemantics();
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const Scaffold(body: Text('feed')),
+            ),
+            GoRoute(
+              path: '/recorder',
+              builder: (_, _) =>
+                  const Scaffold(body: VideoRecorderLipSyncStack()),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(buildWidget(router: router));
+        unawaited(router.push('/recorder'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsIdentifier(SemanticIds.cameraCloseButton),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoRecorderLipSyncStack), findsNothing);
+        expect(find.text('feed'), findsOneWidget);
+
+        handle.dispose();
+      });
+
+      testWidgets('pauses remote recording while the picker shows', (
         tester,
       ) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(VideoRecorderAudioProgressBar), findsOneWidget);
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordPaused()),
+        ).called(1);
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        );
+
+        await pickInlineSound(tester, sound('picked'));
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderRemoteRecordResumed()),
+        ).called(1);
+      });
+    });
+
+    group('sound picker scrolling', () {
+      testWidgets('keeps the categories in place while the search scrolls '
+          'away', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        final categories = find.byType(AudioCategoryBar);
+        final search = find.byType(TextField);
+        final categoriesTop = tester.getTopLeft(categories).dy;
+        final searchTop = tester.getTopLeft(search).dy;
+
+        await tester.drag(find.byType(TabBarView), const Offset(0, -40));
+        await tester.pumpAndSettle();
+
+        expect(tester.getTopLeft(categories).dy, categoriesTop);
+        expect(tester.getTopLeft(search).dy, lessThan(searchTop));
       });
 
-      testWidgets('shows the add-audio label when no sound selected', (
+      testWidgets('floats only the search back in on scrolling up', (
         tester,
       ) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        final search = find.byType(TextField).hitTestable();
+        final importAudio = find
+            .text(l10n.videoEditorAudioImportAudio)
+            .hitTestable();
+        expect(importAudio, findsOneWidget);
 
+        await tester.drag(find.byType(TabBarView), const Offset(0, -500));
+        await tester.pumpAndSettle();
+        expect(search, findsNothing);
+
+        await tester.drag(find.byType(TabBarView), const Offset(0, 160));
+        await tester.pumpAndSettle();
+
+        expect(search, findsOneWidget);
+        // Back without the list, or the import row above it, returning to the
+        // top.
+        expect(importAudio, findsNothing);
+        expect(find.text('Bundled sound 0').hitTestable(), findsNothing);
+      });
+    });
+
+    group('picking a sound', () {
+      testWidgets('swaps the picker for the viewfinder with the sound', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.videoEditorAudioAddAudio), findsOneWidget);
+        await pickInlineSound(tester, sound('picked'));
+
+        expect(editorNotifier.selectRecorderAudioTrackCalls, [sound('picked')]);
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
+        expect(find.textContaining('picked'), findsOneWidget);
       });
 
-      testWidgets('shows the selected sound title when a sound is selected', (
+      testWidgets('brings the picker back when the sound is removed', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(selectedSound: sound('a')));
+        await tester.pumpAndSettle();
+
+        tester
+            .widget<VideoEditorAudioChip>(find.byType(VideoEditorAudioChip))
+            .onSoundChanged(null);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoRecorderCaptureStack), findsNothing);
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+      });
+    });
+
+    group('with a sound picked', () {
+      testWidgets('shows the viewfinder with the sound in the top bar', (
         tester,
       ) async {
         await tester.pumpWidget(
@@ -135,84 +284,37 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
+        expect(find.byType(VideoEditorAudioChip), findsOneWidget);
         expect(find.textContaining('My Sound'), findsOneWidget);
       });
-    });
 
-    group('record button gating', () {
-      AudioEvent sound(String id) => AudioEvent(
-        id: id,
-        pubkey: 'pubkey',
-        createdAt: 1704067200,
-        url: 'https://example.com/audio/$id.mp3',
-        title: id,
-        duration: 5,
-      );
-
-      testWidgets('blocks the record button when no sound is selected', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-
-        final recordButton = tester.widget<RecordButton>(
-          find.byType(RecordButton),
-        );
-        expect(recordButton.onBlockedTap, isNotNull);
-      });
-
-      testWidgets('shows a snackbar when tapping the blocked record button', (
-        tester,
-      ) async {
-        final l10n = lookupAppLocalizations(const Locale('en'));
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byType(RecordButton));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text(l10n.videoRecorderLipSyncAddAudioFirst),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('does not block the record button when a sound is selected', (
+      testWidgets('wires in the $VideoRecorderAudioProgressBar', (
         tester,
       ) async {
         await tester.pumpWidget(buildWidget(selectedSound: sound('a')));
         await tester.pumpAndSettle();
 
-        final recordButton = tester.widget<RecordButton>(
-          find.byType(RecordButton),
-        );
-        expect(recordButton.onBlockedTap, isNull);
+        expect(find.byType(VideoRecorderAudioProgressBar), findsOneWidget);
       });
-    });
 
-    group('recording', () {
       testWidgets('hides the audio chip while recording', (tester) async {
         await tester.pumpWidget(
-          buildWidget(recordingState: VideoRecorderState.recording),
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            selectedSound: sound('a'),
+          ),
         );
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
+        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
         expect(find.byType(VideoEditorAudioChip), findsNothing);
       });
     });
 
     group('changing the sound selection', () {
-      AudioEvent sound(String id) => AudioEvent(
-        id: id,
-        pubkey: 'pubkey',
-        createdAt: 1704067200,
-        url: 'https://example.com/audio/$id.mp3',
-        title: id,
-        duration: 5,
-      );
-
       DivineVideoClip clip() => DivineVideoClip(
         id: 'clip1',
         video: EditorVideo.file('/test/clip1.mp4'),
@@ -271,6 +373,36 @@ void main() {
       });
     });
   });
+}
+
+class _FakeSoundLibraryService extends SoundLibraryService {
+  @override
+  List<VineSound> get sounds => [
+    for (var i = 0; i < 30; i++)
+      VineSound(
+        id: 'bundled-$i',
+        title: 'Bundled sound $i',
+        assetPath: 'assets/sounds/bundled-$i.mp3',
+        duration: const Duration(seconds: 3),
+      ),
+  ];
+
+  @override
+  List<VineSound> get customSounds => const [];
+
+  @override
+  bool get isLoaded => true;
+
+  @override
+  Future<void> loadSounds() async {}
+
+  @override
+  Future<void> loadCustomSounds() async {}
+}
+
+class _FakeTrendingSounds extends TrendingSounds {
+  @override
+  Future<List<AudioEvent>> build() async => const [];
 }
 
 class _TestClipManagerNotifier extends ClipManagerNotifier {

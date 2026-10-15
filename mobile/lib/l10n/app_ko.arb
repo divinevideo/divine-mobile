@@ -2472,7 +2472,6 @@
     "videoRecorderCameraPreviewLabel": "카메라 미리보기",
     "videoRecorderCameraPreviewFocusHint": "카메라 초점 맞추기",
     "videoRecorderSwitchToModeLabel": "{mode} 모드로 전환",
-    "videoRecorderLipSyncAddAudioFirst": "녹화하기 전에 오디오를 추가하세요",
     "videoRecorderStopMotionAssembleFailed": "동영상을 만들지 못했습니다. 다시 시도해 주세요.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{남은 컷 없음} other{{count}컷 남음}}",
     "@videoRecorderStopMotionShotsLeft": {

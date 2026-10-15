@@ -3312,6 +3312,27 @@ void main() {
             ),
           );
         });
+
+        test('is ignored on lip-sync before a sound is picked, which shows '
+            'the sound picker instead of a preview', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.lipSync,
+            ),
+          );
+          await pumpEventQueue();
+
+          trigger!();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+        });
       });
 
       group('opening into the Upload tab', () {

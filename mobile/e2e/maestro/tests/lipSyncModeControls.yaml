@@ -3,7 +3,8 @@ tags:
   - recorder
 ---
 #TC to drive the lip-sync control rail,
-# given the recorder is open on an idle lip-sync viewfinder with no clips,
+# given the recorder is open on an idle lip-sync viewfinder with a sound picked
+# (lipSyncModePickSound) and no clips,
 # validate each control actually changes recorder state, and leave every one
 # of them back on its default.
 #
@@ -15,8 +16,8 @@ tags:
 #
 # Preconditions are capture's too: no clips (the aspect-ratio control is
 # disabled once the session holds one) and real camera hardware for the lens
-# switch. Both hold here for free — nothing in the lip-sync flow records,
-# because recording needs a sound and picking one is out of scope.
+# switch. The flow therefore drives the rail after picking a sound, which is
+# what brings the viewfinder up, and before lipSyncModeRecordClip records.
 #Steps:
 # 1. Drive every rail control and restore it
 # 2. Validate the idle lip-sync viewfinder is unchanged
@@ -25,4 +26,4 @@ tags:
 
 # Everything back to default — and still lip-sync, which is the part the
 # shared rail util cannot assert for itself.
-- runFlow: ../asserts/assertLipSyncMode.yaml
+- runFlow: ../asserts/assertLipSyncViewfinder.yaml

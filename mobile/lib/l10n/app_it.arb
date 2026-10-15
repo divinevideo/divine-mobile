@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Anteprima fotocamera",
     "videoRecorderCameraPreviewFocusHint": "Metti a fuoco la fotocamera",
     "videoRecorderSwitchToModeLabel": "Passa alla modalità {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Aggiungi audio prima di registrare",
     "videoRecorderStopMotionAssembleFailed": "Impossibile creare il video. Riprova.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Nessuno scatto rimasto} =1{1 scatto rimasto} other{{count} scatti rimasti}}",
     "@videoRecorderStopMotionShotsLeft": {

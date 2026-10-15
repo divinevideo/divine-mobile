@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Cameravoorbeeld",
     "videoRecorderCameraPreviewFocusHint": "Camera scherpstellen",
     "videoRecorderSwitchToModeLabel": "Overschakelen naar de modus {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Voeg audio toe vóór de opname",
     "videoRecorderStopMotionAssembleFailed": "Kan de video niet maken. Probeer het opnieuw.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Geen opnames meer over} =1{Nog 1 opname over} other{Nog {count} opnames over}}",
     "@videoRecorderStopMotionShotsLeft": {

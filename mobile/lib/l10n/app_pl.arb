@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Podgląd aparatu",
     "videoRecorderCameraPreviewFocusHint": "Ustaw ostrość aparatu",
     "videoRecorderSwitchToModeLabel": "Przełącz na tryb {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Dodaj audio przed nagraniem",
     "videoRecorderStopMotionAssembleFailed": "Nie udało się utworzyć filmu. Spróbuj ponownie.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Brak wolnych ujęć} =1{Zostało 1 ujęcie} few{Zostały {count} ujęcia} many{Zostało {count} ujęć} other{Zostało {count} ujęcia}}",
     "@videoRecorderStopMotionShotsLeft": {

@@ -8575,9 +8575,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst => 'Kayıttan önce ses ekleyin';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Video oluşturulamadı. Tekrar deneyin.';
 

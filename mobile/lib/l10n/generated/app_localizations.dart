@@ -14621,12 +14621,6 @@ abstract class AppLocalizations {
   /// **'Switch to {mode} mode'**
   String videoRecorderSwitchToModeLabel(String mode);
 
-  /// Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound.
-  ///
-  /// In en, this message translates to:
-  /// **'Add audio before recording'**
-  String get videoRecorderLipSyncAddAudioFirst;
-
   /// Snackbar shown when assembling captured stop-motion frames into a video failed.
   ///
   /// In en, this message translates to:

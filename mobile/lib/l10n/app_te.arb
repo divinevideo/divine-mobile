@@ -5329,10 +5329,6 @@
       }
     }
   },
-  "videoRecorderLipSyncAddAudioFirst": "రికార్డింగ్ చేయడానికి ముందు ఆడియోను జోడించండి",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "వీడియోని సృష్టించడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

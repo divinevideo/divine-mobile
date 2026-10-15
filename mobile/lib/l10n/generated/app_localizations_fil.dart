@@ -8719,10 +8719,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Magdagdag ng audio bago mag-record';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Hindi magawa ang video. Subukan ulit.';
 

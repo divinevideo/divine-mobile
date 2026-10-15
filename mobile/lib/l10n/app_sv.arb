@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Kameraförhandsvisning",
     "videoRecorderCameraPreviewFocusHint": "Fokusera kameran",
     "videoRecorderSwitchToModeLabel": "Byt till läget {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Lägg till ljud innan inspelning",
     "videoRecorderStopMotionAssembleFailed": "Det gick inte att skapa videon. Försök igen.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Inga bilder kvar} =1{1 bild kvar} other{{count} bilder kvar}}",
     "@videoRecorderStopMotionShotsLeft": {

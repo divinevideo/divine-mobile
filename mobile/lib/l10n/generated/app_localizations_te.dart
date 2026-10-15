@@ -8904,10 +8904,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'రికార్డింగ్ చేయడానికి ముందు ఆడియోను జోడించండి';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'వీడియోని సృష్టించడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 

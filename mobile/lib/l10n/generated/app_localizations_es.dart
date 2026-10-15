@@ -8741,10 +8741,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Agrega audio antes de grabar';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'No se pudo crear el vídeo. Inténtalo de nuevo.';
 

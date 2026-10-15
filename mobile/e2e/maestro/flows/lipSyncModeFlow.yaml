@@ -1,8 +1,8 @@
 appId: co.openvine.app.staging
 ---
-#Lip-sync journey: create an account, open the recorder on lip-sync, drive its
-#control rail, prove the shutter is gated on picking a sound and then records
-#once one is picked, delete the clip, and sign the device back out.
+#Lip-sync journey: create an account, open the recorder on lip-sync's sound
+#picker, pick a sound to bring up the viewfinder, drive its control rail,
+#record a clip and delete it, and sign the device back out.
 #
 # Account creation is a precondition, not part of what is under test. The
 # recorder route itself is public — appRouterRedirect exempts it — but the only
@@ -12,15 +12,14 @@ appId: co.openvine.app.staging
 # Requires real camera hardware, for the lens switch in lipSyncModeControls
 # and for the recording in lipSyncModeRecordClip.
 #
-# The two shutter tests run in this order and cannot be swapped:
-# lipSyncModeAudioGate needs the editor to hold no sound, and
-# lipSyncModeRecordClip is what picks one. Between them they prove the gate
-# refuses without a sound *and* releases with one — either alone is also what a
-# permanently stuck shutter looks like.
+# Lip-sync opens on its sound picker and only shows the viewfinder once a sound
+# is picked, so lipSyncModePickSound runs before anything that needs the
+# camera. The rail runs before the recording, because the aspect-ratio control
+# is disabled once the session holds a clip.
 #
 # The sound comes from the picker's Divine tab, which is bundled with the app
 # rather than served by the relay, so the whole path stays deterministic. See
-# lipSyncModeRecordClip.
+# utils/pickLipSyncSound.
 
 - runFlow: ../tests/loginFreshInstall.yaml
 
@@ -46,8 +45,8 @@ appId: co.openvine.app.staging
 # armed rather than Capture. openLipSyncMode walks the wheel either way, and
 # tapping an armed mode is a no-op.
 - runFlow: ../utils/openLipSyncMode.yaml
+- runFlow: ../tests/lipSyncModePickSound.yaml
 - runFlow: ../tests/lipSyncModeControls.yaml
-- runFlow: ../tests/lipSyncModeAudioGate.yaml
 - runFlow: ../tests/lipSyncModeRecordClip.yaml
 
 # Leave the recorder before teardown: removeKeys drives Settings from the

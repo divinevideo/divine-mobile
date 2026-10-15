@@ -3,42 +3,27 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_chip.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_audio_progress_bar.dart';
-import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 
 /// Lip-sync mode stack.
 ///
-/// Identical to capture mode, with an audio-select chip added to the top bar
-/// so the user can pick a sound to lip-sync to, and the audio waveform
-/// progress bar overlaid while recording. Reuses the capture stack and only
-/// supplies the lip-sync-specific slots.
-class VideoRecorderLipSyncStack extends StatelessWidget {
+/// A lip-sync video starts from its sound, so until one is picked the mode
+/// shows the sound picker where the viewfinder goes. Once a sound is picked it
+/// is capture mode with an audio chip in the top bar, which adjusts or removes
+/// the sound, and the audio waveform progress bar overlaid while recording.
+/// Removing the sound brings the picker back.
+class VideoRecorderLipSyncStack extends ConsumerWidget {
   const VideoRecorderLipSyncStack({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const VideoRecorderCaptureStack(
-      fromEditor: false,
-      topBarCenter: _LipSyncAudioButton(),
-      audioProgressBar: VideoRecorderAudioProgressBar(),
-      recordButton: _LipSyncRecordButton(),
-    );
-  }
-}
-
-/// Record button gated on an audio selection.
-///
-/// Until a sound is picked it renders disabled (grayed) and a tap shows a
-/// snackbar telling the user to add audio first, rather than starting a
-/// recording that wouldn't be synced to anything.
-class _LipSyncRecordButton extends ConsumerWidget {
-  const _LipSyncRecordButton();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,21 +31,92 @@ class _LipSyncRecordButton extends ConsumerWidget {
       videoEditorProvider.select((s) => s.selectedSound != null),
     );
 
-    return RecordButton(
-      onBlockedTap: hasSound ? null : () => _showAddAudioSnackbar(context),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: hasSound
+          ? const VideoRecorderCaptureStack(
+              fromEditor: false,
+              topBarCenter: _LipSyncAudioButton(),
+              audioProgressBar: VideoRecorderAudioProgressBar(),
+            )
+          : const _LipSyncSoundPicker(),
     );
   }
+}
 
-  void _showAddAudioSnackbar(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..removeCurrentSnackBar()
-      ..showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          context.l10n.videoRecorderLipSyncAddAudioFirst,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 140),
-        ),
-      );
+/// The sound picker in place of the viewfinder, shown until a sound is picked.
+///
+/// The camera keeps running behind it, so the viewfinder is ready the moment a
+/// sound is picked. Remote record control is paused while it shows, which
+/// hands the volume keys back to the sound previews.
+class _LipSyncSoundPicker extends ConsumerStatefulWidget {
+  const _LipSyncSoundPicker();
+
+  @override
+  ConsumerState<_LipSyncSoundPicker> createState() =>
+      _LipSyncSoundPickerState();
+}
+
+class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
+  final _scrollController = ScrollController();
+  late final VideoRecorderBloc _recorderBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _recorderBloc = context.read<VideoRecorderBloc>()
+      ..add(const VideoRecorderRemoteRecordPaused());
   }
+
+  @override
+  void dispose() {
+    _recorderBloc.addIfOpen(const VideoRecorderRemoteRecordResumed());
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: ClipRRect(
+        borderRadius: const .vertical(bottom: .circular(32)),
+        // A Material rather than a ColoredBox: the sound rows are ListTiles,
+        // which paint their ink on the nearest Material.
+        child: Material(
+          color: context.vineColors.surface,
+          child: AudioSelectionBottomSheet(
+            scrollController: _scrollController,
+            onSoundPicked: (sound) => _adoptLipSyncSound(ref, sound),
+            // The viewfinder's top bar, and its close button, only shows once
+            // a sound is picked.
+            categoryBarLeading: DivineIconButton(
+              icon: .x,
+              semanticLabel: context.l10n.videoRecorderCloseLabel,
+              semanticIdentifier: SemanticIds.cameraCloseButton,
+              type: .secondary,
+              size: .small,
+              onPressed: () => closeVideoRecorder(context, ref),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Adopts the newly selected [sound], discarding any recorded clips first.
+///
+/// Recorded clips are synced to the previously selected sound, so changing
+/// the selection invalidates them. Clips are cleared before the new sound is
+/// stored because [ClipManagerNotifier.clearAll] resets the editor (which
+/// would otherwise wipe the just-selected sound).
+Future<void> _adoptLipSyncSound(WidgetRef ref, AudioEvent? sound) async {
+  final previousSound = ref.read(videoEditorProvider).selectedSound;
+  if (sound != previousSound && ref.read(clipManagerProvider).hasClips) {
+    await ref.read(clipManagerProvider.notifier).clearAll();
+  }
+  ref.read(videoEditorProvider.notifier).selectRecorderAudioTrack(sound);
 }
 
 /// Audio-select chip wired to the recorder's selected sound.
@@ -80,7 +136,7 @@ class _LipSyncAudioButton extends ConsumerWidget {
     return Flexible(
       child: VideoEditorAudioChip(
         selectedSound: selectedSound,
-        onSoundChanged: (sound) => _onSoundChanged(ref, sound),
+        onSoundChanged: (sound) => _adoptLipSyncSound(ref, sound),
         onSelectionStarted: () => context.read<VideoRecorderBloc>().add(
           const VideoRecorderRemoteRecordPaused(),
         ),
@@ -89,19 +145,5 @@ class _LipSyncAudioButton extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  /// Adopts the newly selected [sound], discarding any recorded clips first.
-  ///
-  /// Recorded clips are synced to the previously selected sound, so changing
-  /// the selection invalidates them. Clips are cleared before the new sound is
-  /// stored because [ClipManagerNotifier.clearAll] resets the editor (which
-  /// would otherwise wipe the just-selected sound).
-  Future<void> _onSoundChanged(WidgetRef ref, AudioEvent? sound) async {
-    final previousSound = ref.read(videoEditorProvider).selectedSound;
-    if (sound != previousSound && ref.read(clipManagerProvider).hasClips) {
-      await ref.read(clipManagerProvider.notifier).clearAll();
-    }
-    ref.read(videoEditorProvider.notifier).selectRecorderAudioTrack(sound);
   }
 }
