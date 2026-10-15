@@ -3664,8 +3664,9 @@ class DmRepository {
                 isSentByMe || (existing?.currentUserHasSent ?? false),
             ownerPubkey: ownerPubkey,
             // A peer's NIP-17 proves they read it. Our own proves nothing
-            // about them: a send held pending stores no message, so its
-            // self-wrap lands here first, and writing 'nip17' for it would
+            // about them, and our copy can arrive before any local row (sent
+            // from another device, or by a build that still published the
+            // copy of a held send, #10012). Writing 'nip17' for it would
             // unlatch a legacy peer for good (#8506).
             dmProtocol: isSentByMe
                 ? (existing?.dmProtocol ?? 'nip17')
