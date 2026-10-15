@@ -63,6 +63,21 @@ void main() {
         isNotNull,
       );
     });
+    test(
+      'unreadable intent remains held without authorizing a retry',
+      () async {
+        expect(await store.save(signed), isTrue);
+        await database.customStatement(
+          'UPDATE personal_events SET tags = ? WHERE id = ?',
+          ['not json', signed.id],
+        );
+        expect(await store.read(owner), isNull);
+        expect(await database.personalEventsDao.getAllForOwner(owner), isEmpty);
+        expect(await database.personalEventsDao.countForOwner(owner), 1);
+        expect(await store.read(owner), isNull);
+      },
+    );
+
     test('owner cleanup removes only that owner signed intent', () async {
       expect(await store.save(signed), isTrue);
       await database.personalEventsDao.deleteAllForOwner('b' * 64);

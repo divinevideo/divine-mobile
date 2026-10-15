@@ -297,10 +297,14 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
       try {
         events.add(_toEvent(row));
       } on FormatException {
-        // This table is a disposable cache. Quarantine a malformed JSON row
-        // instead of letting one bad event disable every synchronous cache
-        // reader for the rest of the signed-in session.
-        await (delete(personalEvents)..where((t) => t.id.equals(row.id))).go();
+        // Disposable cache rows can be quarantined by removal. An explicit
+        // outbound intent is durable evidence: hide it from cache readers,
+        // retaining the unreadable row for supported recovery.
+        if (row.retention != PersonalEventRetention.retryIntent.value) {
+          await (delete(
+            personalEvents,
+          )..where((t) => t.id.equals(row.id))).go();
+        }
       }
     }
     return events;
