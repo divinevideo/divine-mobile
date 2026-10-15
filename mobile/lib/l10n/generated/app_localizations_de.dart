@@ -9963,6 +9963,33 @@ class AppLocalizationsDe extends AppLocalizations {
       'Clip konnte nicht rückwärts gedreht werden. Bitte erneut versuchen.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilisieren';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Stabilisierung für ausgewählten Clip umschalten';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Einen Moment, wir stabilisieren deinen Clip';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Zoomt leicht hinein, damit das Bild ruhig bleibt.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Einen Moment, wir holen das Original zurück';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Stabilisieren nicht möglich: Clip ist lokal nicht verfügbar.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Clip konnte nicht stabilisiert werden. Bitte erneut versuchen.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Clip-Geschwindigkeit';
 
   @override

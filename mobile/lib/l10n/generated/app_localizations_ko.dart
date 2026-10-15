@@ -9370,6 +9370,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorReverseFailed => '클립을 역재생할 수 없었습니다. 다시 시도해 주세요.';
 
   @override
+  String get videoEditorStabilizeLabel => '흔들림 보정';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel => '선택한 클립의 흔들림 보정 전환';
+
+  @override
+  String get videoEditorStabilizeProgressLabel => '잠시만요. 클립의 흔들림을 보정하고 있어요';
+
+  @override
+  String get videoEditorStabilizeZoomHint => '화면을 안정시키려고 살짝 확대해요.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel => '잠시만요. 원본으로 되돌리고 있어요';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      '흔들림을 보정할 수 없어요: 클립을 이 기기에서 사용할 수 없어요.';
+
+  @override
+  String get videoEditorStabilizeFailed => '클립의 흔들림을 보정하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get videoEditorSpeedSheetTitle => '클립 속도';
 
   @override

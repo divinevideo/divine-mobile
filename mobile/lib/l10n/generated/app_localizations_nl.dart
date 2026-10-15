@@ -9882,6 +9882,33 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon clip niet omdraaien. Probeer het opnieuw.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabiliseren';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Stabilisatie voor geselecteerde clip in-/uitschakelen';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Een moment, we stabiliseren je clip';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Zoomt iets in om het beeld stil te houden.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Een moment, we halen het origineel terug';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Kan niet stabiliseren: clip is niet lokaal beschikbaar.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Kon clip niet stabiliseren. Probeer het opnieuw.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Clipsnelheid';
 
   @override

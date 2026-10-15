@@ -9812,6 +9812,31 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر عكس المقطع. يرجى المحاولة مجددًا.';
 
   @override
+  String get videoEditorStabilizeLabel => 'تثبيت';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel => 'تبديل تثبيت المقطع المحدد';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'لحظة من فضلك، جارٍ تثبيت المقطع';
+
+  @override
+  String get videoEditorStabilizeZoomHint => 'تكبير بسيط للصورة لتثبيت اللقطة.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'لحظة من فضلك، جارٍ استعادة الأصل';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'لا يمكن التثبيت: المقطع غير متاح محليًا.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'تعذّر تثبيت المقطع. يرجى المحاولة مجددًا.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'سرعة المقطع';
 
   @override

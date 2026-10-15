@@ -9749,6 +9749,33 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak dapat membalik klip. Silakan coba lagi.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilkan';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Aktifkan atau nonaktifkan stabilisasi untuk klip yang dipilih';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Tunggu sebentar, kami sedang menstabilkan klip kamu';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Sedikit memperbesar gambar agar bidikan tetap stabil.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Tunggu sebentar, kami sedang mengembalikan versi aslinya';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Tidak dapat menstabilkan: klip tidak tersedia secara lokal.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Tidak dapat menstabilkan klip. Coba lagi.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Kecepatan Klip';
 
   @override

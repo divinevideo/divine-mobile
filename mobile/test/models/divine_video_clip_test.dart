@@ -9,6 +9,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
@@ -795,6 +796,12 @@ void main() {
           ),
         ),
         derivedFrom: const [C2paEditSource(path: '/videos/recording.mp4')],
+        stabilization: const ClipStabilization(
+          rawSourcePath: '/videos/unsteady.mp4',
+          windowStart: Duration.zero,
+          sourceDuration: Duration(seconds: 3),
+          sourceDerivedFrom: [C2paEditSource(path: '/videos/take.mp4')],
+        ),
       );
 
       expect(populated.ownedFilePaths.nonNulls, <String>[
@@ -805,6 +812,8 @@ void main() {
         '/thumbs/clip.jpg',
         '/ghosts/clip.png',
         '/videos/pre-key.mp4',
+        '/videos/unsteady.mp4',
+        '/videos/take.mp4',
         '/backdrops/beach.jpg',
         '/videos/recording.mp4',
       ]);

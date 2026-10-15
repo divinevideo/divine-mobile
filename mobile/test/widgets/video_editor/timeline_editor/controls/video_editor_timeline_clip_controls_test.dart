@@ -18,6 +18,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
@@ -704,8 +705,108 @@ void main() {
       expect(controls.onFreezeFrame, isNull);
       expect(controls.onSpeed, isNull);
       expect(controls.onReversed, isNull);
+      expect(controls.onStabilize, isNull);
       expect(controls.onDetach, isNull);
       expect(controls.onExtractAudio, isNull);
+    });
+
+    group('stabilize', () {
+      testWidgets('dispatches ClipEditorClipStabilizeRequested when pressed', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        when(
+          () => bloc.state,
+        ).thenReturn(ClipEditorState(clips: [clip('clip-1')]));
+        await tester.pumpWidget(build());
+
+        await scrollUntilTappable(
+          tester,
+          find.bySemanticsLabel(l10n.videoEditorStabilizeSemanticLabel),
+          100,
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorStabilizeSemanticLabel),
+        );
+        await tester.pump();
+
+        verify(
+          () => bloc.add(
+            const ClipEditorClipStabilizeRequested(clipId: 'clip-1'),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('shows a stabilized clip highlighted', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip('clip-1').copyWith(
+                stabilization: const ClipStabilization(
+                  rawSourcePath: '/tmp/raw.mp4',
+                  windowStart: Duration.zero,
+                  sourceDuration: Duration(seconds: 3),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.isStabilized, isTrue);
+        expect(controls.isStabilizing, isFalse);
+      });
+
+      testWidgets('shows as busy only while the current clip renders', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [clip('clip-1'), clip('clip-2')],
+            isStabilizing: true,
+            stabilizingClipId: 'clip-2',
+          ),
+        );
+        await tester.pumpWidget(build());
+
+        expect(
+          tester
+              .widget<VideoEditorTimelineControls>(
+                find.byType(VideoEditorTimelineControls),
+              )
+              .isStabilizing,
+          isFalse,
+        );
+      });
+
+      testWidgets('waits for a recorded green screen to bake first', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip('clip-1').copyWith(
+                captureChromaKey: const ClipChromaKey(
+                  key: ChromaKey.greenScreen(),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpWidget(build());
+
+        expect(
+          tester
+              .widget<VideoEditorTimelineControls>(
+                find.byType(VideoEditorTimelineControls),
+              )
+              .onStabilize,
+          isNull,
+        );
+      });
     });
 
     testWidgets('Select button is hidden for a single clip', (tester) async {

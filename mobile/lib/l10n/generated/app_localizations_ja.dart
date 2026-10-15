@@ -9351,6 +9351,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorReverseFailed => 'クリップを逆再生できませんでした。もう一度お試しください。';
 
   @override
+  String get videoEditorStabilizeLabel => '手ぶれ補正';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel => '選択したクリップの手ぶれ補正を切り替え';
+
+  @override
+  String get videoEditorStabilizeProgressLabel => '少々お待ちください。クリップの手ぶれを補正しています';
+
+  @override
+  String get videoEditorStabilizeZoomHint => '映像を安定させるため、少しズームします。';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel => '少々お待ちください。元の映像に戻しています';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile => '手ぶれ補正できません：クリップがローカルで利用できません。';
+
+  @override
+  String get videoEditorStabilizeFailed => 'クリップの手ぶれを補正できませんでした。もう一度お試しください。';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'クリップの速度';
 
   @override

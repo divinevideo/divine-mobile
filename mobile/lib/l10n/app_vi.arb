@@ -5051,6 +5051,13 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorStabilizeLabel": "Chống rung",
+  "videoEditorStabilizeSemanticLabel": "Bật/tắt chống rung cho clip đã chọn",
+  "videoEditorStabilizeProgressLabel": "Một chút thôi, bọn mình đang chống rung clip của bạn",
+  "videoEditorStabilizeZoomHint": "Phóng to nhẹ để khung hình ổn định hơn.",
+  "videoEditorUnstabilizeProgressLabel": "Một chút thôi, bọn mình đang khôi phục bản gốc",
+  "videoEditorStabilizeNoLocalFile": "Không thể chống rung: clip không có sẵn trên máy.",
+  "videoEditorStabilizeFailed": "Không chống rung được clip. Vui lòng thử lại.",
   "videoEditorSpeedSheetTitle": "Tốc độ clip",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

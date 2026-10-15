@@ -201,12 +201,8 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
       if (row == null) return false;
       final data = rewrite(row.data);
       if (data == null || data == row.data) return false;
-      final rowsAffected =
-          await (update(
-            clips,
-          )..where((t) => t.id.equals(id))).write(
-            ClipsCompanion(data: Value(data)),
-          );
+      final rowsAffected = await (update(clips)..where((t) => t.id.equals(id)))
+          .write(ClipsCompanion(data: Value(data)));
       return rowsAffected > 0;
     });
   }
@@ -531,6 +527,9 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// owns. A filename found under one of these keys is live and must survive
   /// cleanup, even when no indexed column points at it.
   ///
+  /// `rawSourcePath` is a stabilized clip's unstabilized footage, kept to turn
+  /// stabilization off again; it is orphaned to the diff the same way.
+  ///
   /// `chromaKeySourcePath` and `backgroundImage` belong here for the same
   /// reason as the reverse caches: baking a green screen swaps the clip's
   /// `file_path` to the keyed render, which makes the pre-key original look
@@ -548,6 +547,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     'forwardVideoPath',
     'reversedVideoPath',
     'chromaKeySourcePath',
+    'rawSourcePath',
     'backgroundImage',
     'backgroundVideo',
     'path',

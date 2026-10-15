@@ -9256,6 +9256,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorReverseFailed => '无法倒放片段，请重试。';
 
   @override
+  String get videoEditorStabilizeLabel => '防抖';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel => '切换选中片段的防抖';
+
+  @override
+  String get videoEditorStabilizeProgressLabel => '稍等，正在为你的片段防抖';
+
+  @override
+  String get videoEditorStabilizeZoomHint => '会稍微放大画面，让镜头更稳。';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel => '稍等，正在恢复原片';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile => '无法防抖：片段不在本地。';
+
+  @override
+  String get videoEditorStabilizeFailed => '无法为片段防抖，请重试。';
+
+  @override
   String get videoEditorSpeedSheetTitle => '片段速度';
 
   @override

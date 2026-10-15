@@ -5051,6 +5051,13 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorStabilizeLabel": "مستحکم کریں",
+  "videoEditorStabilizeSemanticLabel": "منتخب کلپ کا استحکام ٹوگل کریں",
+  "videoEditorStabilizeProgressLabel": "ایک لمحہ، ہم آپ کی کلپ کو مستحکم کر رہے ہیں",
+  "videoEditorStabilizeZoomHint": "شاٹ کو مستحکم رکھنے کے لیے تصویر کو تھوڑا قریب کرتا ہے۔",
+  "videoEditorUnstabilizeProgressLabel": "ایک لمحہ، ہم اصل واپس لا رہے ہیں",
+  "videoEditorStabilizeNoLocalFile": "مستحکم نہیں ہو سکتا: کلپ مقامی طور پر دستیاب نہیں ہے۔",
+  "videoEditorStabilizeFailed": "کلپ مستحکم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
   "videoEditorSpeedSheetTitle": "کلپ رفتار",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

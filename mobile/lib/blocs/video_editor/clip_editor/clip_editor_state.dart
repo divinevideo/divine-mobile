@@ -28,6 +28,11 @@ class ClipEditorState extends Equatable {
     this.isReversing = false,
     this.reversingClipId,
     this.lastReverseResult,
+    this.isStabilizing = false,
+    this.stabilizingClipId,
+    this.stabilizeRenderId,
+    this.stabilizeProgress,
+    this.lastStabilizeResult,
     this.isTransforming = false,
     this.transformingClipId,
     this.lastTransformResult,
@@ -169,6 +174,26 @@ class ClipEditorState extends Equatable {
   /// Consumed by the widget layer to persist clip history after a successful
   /// reverse render.
   final ClipReverseResult? lastReverseResult;
+
+  /// Whether a clip is being stabilized, or its stabilization undone.
+  final bool isStabilizing;
+
+  /// The clip being stabilized while [isStabilizing].
+  final String? stabilizingClipId;
+
+  /// The render task the progress overlay follows while [isStabilizing] and
+  /// [stabilizeProgress] has nothing to report.
+  final String? stabilizeRenderId;
+
+  /// How far the running stabilization is, 0..1, or `null` while the step it
+  /// is on reports none.
+  final double? stabilizeProgress;
+
+  /// Last completed stabilization result.
+  ///
+  /// Consumed by the widget layer to reload the clip after a success and to
+  /// report a failure.
+  final ClipStabilizeResult? lastStabilizeResult;
 
   /// Whether a transform (crop/rotate/flip) render operation is running.
   final bool isTransforming;
@@ -407,6 +432,13 @@ class ClipEditorState extends Equatable {
     String? reversingClipId,
     bool clearReversingClipId = false,
     ClipReverseResult? lastReverseResult,
+    bool? isStabilizing,
+    String? stabilizingClipId,
+    bool clearStabilizingClipId = false,
+    String? stabilizeRenderId,
+    double? stabilizeProgress,
+    bool clearStabilizeProgress = false,
+    ClipStabilizeResult? lastStabilizeResult,
     bool? isTransforming,
     String? transformingClipId,
     bool? isChromaKeying,
@@ -489,6 +521,17 @@ class ClipEditorState extends Equatable {
           ? null
           : (reversingClipId ?? this.reversingClipId),
       lastReverseResult: lastReverseResult ?? this.lastReverseResult,
+      isStabilizing: isStabilizing ?? this.isStabilizing,
+      stabilizingClipId: clearStabilizingClipId
+          ? null
+          : (stabilizingClipId ?? this.stabilizingClipId),
+      stabilizeRenderId: clearStabilizingClipId
+          ? null
+          : (stabilizeRenderId ?? this.stabilizeRenderId),
+      stabilizeProgress: clearStabilizeProgress
+          ? null
+          : (stabilizeProgress ?? this.stabilizeProgress),
+      lastStabilizeResult: lastStabilizeResult ?? this.lastStabilizeResult,
       isTransforming: isTransforming ?? this.isTransforming,
       transformingClipId: clearTransformingClipId
           ? null
@@ -598,6 +641,12 @@ class ClipEditorState extends Equatable {
     isReversing,
     reversingClipId,
     identityHashCode(lastReverseResult),
+    isStabilizing,
+    stabilizingClipId,
+    stabilizeRenderId,
+    stabilizeProgress,
+    // Identity-only: each ClipStabilizeResult is a fresh instance.
+    identityHashCode(lastStabilizeResult),
     isTransforming,
     transformingClipId,
     identityHashCode(lastTransformResult),
@@ -729,6 +778,28 @@ final class ClipReverseDiscarded extends ClipReverseResult {}
 
 /// Reverse render failed.
 final class ClipReverseFailure extends ClipReverseResult {}
+
+// === STABILIZE RESULT ===
+
+/// One-shot signal describing the outcome of a stabilization toggle.
+sealed class ClipStabilizeResult {}
+
+/// The clip was stabilized ([stabilized] true) or restored (false); the
+/// widget should reload it and persist the clip state.
+final class ClipStabilizeSuccess extends ClipStabilizeResult {
+  ClipStabilizeSuccess({required this.stabilized});
+
+  final bool stabilized;
+}
+
+/// The clip has no locally available file to stabilize.
+final class ClipStabilizeNoLocalFile extends ClipStabilizeResult {}
+
+/// The render finished but the clip was removed in the meantime.
+final class ClipStabilizeDiscarded extends ClipStabilizeResult {}
+
+/// Stabilizing, or restoring the unstabilized footage, failed.
+final class ClipStabilizeFailure extends ClipStabilizeResult {}
 
 // === CHROMA KEY RESULT ===
 

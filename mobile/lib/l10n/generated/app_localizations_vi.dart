@@ -9795,6 +9795,33 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không đảo ngược được clip. Vui lòng thử lại.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Chống rung';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Bật/tắt chống rung cho clip đã chọn';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Một chút thôi, bọn mình đang chống rung clip của bạn';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Phóng to nhẹ để khung hình ổn định hơn.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Một chút thôi, bọn mình đang khôi phục bản gốc';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Không thể chống rung: clip không có sẵn trên máy.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Không chống rung được clip. Vui lòng thử lại.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Tốc độ clip';
 
   @override

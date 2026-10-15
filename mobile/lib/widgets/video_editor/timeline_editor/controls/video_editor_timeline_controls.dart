@@ -37,6 +37,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.hasOpacity = false,
     this.onReversed,
     this.isReversed = false,
+    this.onStabilize,
+    this.isStabilized = false,
+    this.isStabilizing = false,
     this.onExtractAudio,
     this.isExtractingAudio = false,
     this.isSplitting = false,
@@ -158,6 +161,16 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   final VoidCallback? onReversed;
   final bool isReversed;
+
+  /// Steadies a shaky clip, or restores it when [isStabilized].
+  final VoidCallback? onStabilize;
+
+  /// Whether the clip is stabilized, which highlights the action the way
+  /// [isReversed] does.
+  final bool isStabilized;
+
+  /// Whether the clip is being stabilized, which disables the action.
+  final bool isStabilizing;
   final VoidCallback? onExtractAudio;
   final bool isExtractingAudio;
 
@@ -339,6 +352,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel: context.l10n.videoEditorReverseClipSemanticLabel,
             onPressed: onReversed,
             type: isReversed ? .primary : .secondary,
+          ),
+        if (onStabilize != null)
+          TimelineActionButton(
+            icon: .userFocus,
+            label: context.l10n.videoEditorStabilizeLabel,
+            semanticLabel: context.l10n.videoEditorStabilizeSemanticLabel,
+            onPressed: isStabilizing ? null : onStabilize,
+            isLoading: isStabilizing,
+            type: isStabilized ? .primary : .secondary,
           ),
         if (onExtractAudio != null)
           TimelineActionButton(

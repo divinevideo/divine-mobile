@@ -14,6 +14,7 @@ import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -56,6 +57,7 @@ class DivineVideoClip {
     this.chromaKey,
     this.chromaKeySourcePath,
     this.captureChromaKey,
+    this.stabilization,
     this.derivedFrom,
     this.recordingSha256,
     this.galleryBackup,
@@ -251,6 +253,15 @@ class DivineVideoClip {
   /// [chromaKey] on success. Until then it seeds the chroma key screen for
   /// this clip.
   final ClipChromaKey? captureChromaKey;
+
+  /// Set when [video] is a stabilized render, recording what it was rendered
+  /// from so turning stabilization off restores the clip.
+  ///
+  /// Like [chromaKeySourcePath] it is cleared whenever another operation
+  /// re-renders the clip (transform, reverse) or it becomes a new logical
+  /// clip (split, duplicate): the footage stays steadied, but the record no
+  /// longer describes how to undo it.
+  final ClipStabilization? stabilization;
 
   /// The files this clip's [video] was edited from, when it is an editor
   /// intermediate rather than media in its own right.
@@ -505,6 +516,11 @@ class DivineVideoClip {
     yield thumbnailPath;
     yield ghostFramePath;
     yield chromaKeySourcePath;
+    // The unstabilized footage, kept to turn stabilization off again.
+    yield stabilization?.rawSourcePath;
+    yield* (stabilization?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
+      (source) => source.path,
+    );
     yield chromaKey?.backgroundImagePath;
     yield captureChromaKey?.backgroundImagePath;
     // An edit is signed against these, so they live as long as the clip.
@@ -599,6 +615,8 @@ class DivineVideoClip {
     bool clearChromaKey = false,
     ClipChromaKey? captureChromaKey,
     bool clearCaptureChromaKey = false,
+    ClipStabilization? stabilization,
+    bool clearStabilization = false,
     List<C2paEditSource>? derivedFrom,
     bool clearDerivedFrom = false,
     String? recordingSha256,
@@ -678,6 +696,9 @@ class DivineVideoClip {
       captureChromaKey: clearCaptureChromaKey
           ? null
           : (captureChromaKey ?? this.captureChromaKey),
+      stabilization: isNewLogicalClip || clearStabilization
+          ? null
+          : (stabilization ?? this.stabilization),
       derivedFrom: clearDerivedFrom ? null : (derivedFrom ?? this.derivedFrom),
       recordingSha256: clearRecordingSha256
           ? null
@@ -741,6 +762,7 @@ class DivineVideoClip {
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
       if (captureChromaKey != null)
         'captureChromaKey': captureChromaKey!.toJson(),
+      if (stabilization case final record?) 'stabilization': record.toJson(),
       if (derivedFrom case final sources?)
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
@@ -895,6 +917,11 @@ class DivineVideoClip {
       ),
       captureChromaKey: _chromaKeyFromJson(
         json['captureChromaKey'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
+      stabilization: ClipStabilization.fromJson(
+        json['stabilization'],
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
