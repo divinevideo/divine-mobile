@@ -43,8 +43,6 @@ class FakeOk {
 ///   instead of timing out into `retryablePending`
 /// - with [broadcast], `EVENT` is also forwarded to every OTHER open
 ///   subscription, which is what a multi-party test needs
-/// - with [echoToPublisher], `EVENT` also reaches the publisher's own matching
-///   subscriptions, as it would on a real relay
 class FakeRelay {
   FakeRelay._(
     this._server,
@@ -56,7 +54,6 @@ class FakeRelay {
     this.stallReqForAuthors,
     this.okDelayForRecipients,
     this.okFor,
-    this.echoToPublisher,
   );
 
   /// Starts a relay on a loopback port — ephemeral unless [port] is given.
@@ -89,14 +86,10 @@ class FakeRelay {
   /// [okFor] chooses the `OK` for one inbound `EVENT`: return a [FakeOk] to
   /// refuse it or confirm it late, or null for the default answer. It wins
   /// over [okConfirms] and [okDelayForRecipients]. A refused event is not
-  /// stored, so it is neither broadcast nor echoed. That is a relay refusing
-  /// some events — one kind, or the first few attempts — which is what a
-  /// client's retry has to be tested against; [okConfirms] can only stop
-  /// answering every event at once.
-  /// Set [echoToPublisher] true to deliver a published `EVENT` to the
-  /// publisher's own subscriptions that match it, as a real relay does. A
-  /// client that publishes and subscribes on one socket sees its own events
-  /// come back only this way, because [broadcast] skips the publisher.
+  /// stored, so it is not broadcast. That is a relay refusing some events —
+  /// one kind, or the first few attempts — which is what a client's retry has
+  /// to be tested against; [okConfirms] can only stop answering every event at
+  /// once.
   /// Pass a stopped relay's [FakeRelay.port] as [port] to bring "the same
   /// relay" back, which is what a client that remembers the URL sees when a
   /// relay recovers.
@@ -109,7 +102,6 @@ class FakeRelay {
     Set<String> stallReqForAuthors = const <String>{},
     Map<String, Duration> okDelayForRecipients = const <String, Duration>{},
     FakeOk? Function(Map<String, dynamic> event)? okFor,
-    bool echoToPublisher = false,
     int port = 0,
   }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
@@ -123,7 +115,6 @@ class FakeRelay {
       stallReqForAuthors,
       okDelayForRecipients,
       okFor,
-      echoToPublisher,
     );
     server.listen(relay._handle, onError: (_) {});
     return relay;
@@ -182,21 +173,10 @@ class FakeRelay {
   /// Chooses the `OK` for one inbound `EVENT`; see [start].
   final FakeOk? Function(Map<String, dynamic> event)? okFor;
 
-  /// Whether a published `EVENT` also reaches the publisher's own matching
-  /// subscriptions; see [start].
-  final bool echoToPublisher;
-
-  /// The filters of each live subscription, per socket, so an echo can match
-  /// an event against them.
-  final Map<WebSocket, Map<String, List<Map<String, dynamic>>>> _filters = {};
-
   /// How many `EVENT` frames this relay has fanned out to subscribers.
   /// Lets a multi-party test tell "the relay never forwarded it" apart from
   /// "the client received it and dropped it".
   int fannedOutFrames = 0;
-
-  /// How many `EVENT` frames this relay has echoed back to their publisher.
-  int echoedFrames = 0;
 
   /// Every frame this relay received, in arrival order.
   final List<List<dynamic>> receivedFrames = [];
@@ -240,7 +220,6 @@ class FakeRelay {
     final socket = await WebSocketTransformer.upgrade(req);
     _sockets.add(socket);
     _subscriptions[socket] = <String>{};
-    _filters[socket] = {};
 
     // A client can close mid-exchange, and `readyState` still reads as open
     // for a moment after the sink is gone. An unguarded write then throws
@@ -274,10 +253,6 @@ class FakeRelay {
         if (frame[0] == 'REQ' && frame.length >= 2) {
           final subId = frame[1] as String;
           _subscriptions[socket]?.add(subId);
-          _filters[socket]?[subId] = [
-            for (final filter in frame.skip(2))
-              if (filter is Map) filter.cast<String, dynamic>(),
-          ];
           if (_isStalled(frame)) return;
           if (reply != null && _wantsReply(frame)) {
             send(<dynamic>['EVENT', subId, reply]);
@@ -285,7 +260,6 @@ class FakeRelay {
           send(<dynamic>['EOSE', subId]);
         } else if (frame[0] == 'CLOSE' && frame.length >= 2) {
           _subscriptions[socket]?.remove(frame[1] as String);
-          _filters[socket]?.remove(frame[1] as String);
         } else if (frame[0] == 'EVENT' && frame.length >= 2) {
           final event = frame[1] as Map<String, dynamic>;
           final override = okFor?.call(event);
@@ -313,7 +287,6 @@ class FakeRelay {
             }
           }
           if (broadcast) _fanOut(from: socket, event: event);
-          if (echoToPublisher) _echo(to: socket, event: event);
         }
       },
       onError: (_) {},
@@ -388,62 +361,12 @@ class FakeRelay {
     }
   }
 
-  /// Delivers [event] to the subscriptions on [to] whose filters match it.
-  void _echo({required WebSocket to, required Map<String, dynamic> event}) {
-    if (to.readyState != WebSocket.open) return;
-    final subscriptions = _filters[to];
-    if (subscriptions == null) return;
-    for (final MapEntry(key: subId, value: filters) in subscriptions.entries) {
-      if (!filters.any((filter) => _matches(filter, event))) continue;
-      try {
-        to.add(jsonEncode(<dynamic>['EVENT', subId, event]));
-        echoedFrames++;
-        // Only an Error distinguishes "the client hung up" here.
-        // ignore: avoid_catching_errors
-      } on StateError {
-        // Publisher went away mid-echo; nothing to deliver.
-      }
-    }
-  }
-
-  /// Whether [event] matches [filter] on `ids`, `kinds`, `authors` and `#p`.
-  ///
-  /// Every other condition, `since` and `until` included, is ignored: this is
-  /// coarser than a real relay, as [broadcast] is.
-  static bool _matches(
-    Map<String, dynamic> filter,
-    Map<String, dynamic> event,
-  ) {
-    bool allows(String field, Object? value) {
-      final allowed = filter[field];
-      return allowed is! List || allowed.contains(value);
-    }
-
-    if (!allows('ids', event['id']) ||
-        !allows('kinds', event['kind']) ||
-        !allows('authors', event['pubkey'])) {
-      return false;
-    }
-    final wanted = filter['#p'];
-    if (wanted is! List) return true;
-    final tags = event['tags'];
-    return tags is List &&
-        tags.any(
-          (tag) =>
-              tag is List &&
-              tag.length >= 2 &&
-              tag[0] == 'p' &&
-              wanted.contains(tag[1]),
-        );
-  }
-
   Future<void> stop() async {
     for (final timer in _deferredOks) {
       timer.cancel();
     }
     _deferredOks.clear();
     _subscriptions.clear();
-    _filters.clear();
     for (final socket in _sockets) {
       await socket.close().catchError((_) => null);
     }

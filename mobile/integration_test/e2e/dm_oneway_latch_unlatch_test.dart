@@ -21,6 +21,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
@@ -582,17 +583,16 @@ void main() {
     });
 
     testWidgets(
-      'our own echo of a send held on an unreadable inbox keeps the thread '
-      'latched',
+      'a send held on an unreadable inbox publishes no self-copy, and our own '
+      'copy from another connection keeps the thread latched',
       (tester) async {
         // The recipient's kind-10050 lookup stalls, so the send is held
-        // (#7317) and stores nothing. The relay then hands our own self-wrap
-        // back on our subscription, as a real relay does, and the receive
-        // path is the first to store the message.
+        // (#7317) and its self-copy withheld (#10012). Our own NIP-17 copy can
+        // still reach us from elsewhere, and it proves nothing about the peer.
         const content = 'held on an unreadable inbox';
         final relay = await FakeRelay.start(
           stallReqForAuthors: {recipientPubkey},
-          echoToPublisher: true,
+          broadcast: true,
         );
         addTearDown(relay.stop);
         final stack = await buildLatchedStack(relay);
@@ -608,20 +608,60 @@ void main() {
           isTrue,
           reason: 'precondition: the send is held',
         );
-        await queuedRumorId(stack.db);
+        final queued = await stack.db.outgoingDmsDao.getById(
+          await queuedRumorId(stack.db),
+        );
+
+        bool giftWrapReached(String pubkey) => relay.receivedFrames.any(
+          (frame) =>
+              frame.length >= 2 &&
+              frame[0] == 'EVENT' &&
+              frame[1] is Map<String, dynamic> &&
+              (frame[1] as Map)['kind'] == EventKind.giftWrap &&
+              addressedTo(frame[1] as Map<String, dynamic>, pubkey),
+        );
+        expect(
+          giftWrapReached(recipientPubkey),
+          isTrue,
+          reason: 'precondition: the attempt published the recipient wrap',
+        );
+        expect(
+          await eventually(
+            () async => giftWrapReached(senderPubkey),
+            timeout: const Duration(seconds: 2),
+          ),
+          isFalse,
+          reason: 'a held attempt is not delivery, so it sends no self-copy',
+        );
+
+        Future<String?> preview() async =>
+            (await stack.db.conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: senderPubkey,
+            ))?.lastMessageContent;
+        expect(
+          await preview(),
+          isNot(content),
+          reason: 'precondition: the held send stored nothing',
+        );
+
+        final ownCopy = await buildGiftWrapFromHex(
+          senderPrivateKeyHex: senderKey,
+          rumorJson: jsonDecode(queued!.rumorEventJson) as Map<String, dynamic>,
+          receiverPublicKey: senderPubkey,
+        );
+        final otherConnection = WebSocketChannel.connect(Uri.parse(relay.url));
+        addTearDown(otherConnection.sink.close);
+        await otherConnection.ready;
+        otherConnection.sink.add(jsonEncode(['EVENT', ownCopy!.toJson()]));
 
         // The receive path writes the protocol in the same upsert as the
-        // preview, so the preview is what says the echo has been stored.
-        final echoStored = await eventually(
-          () async =>
-              (await stack.db.conversationsDao.getConversation(
-                conversationId,
-                ownerPubkey: senderPubkey,
-              ))?.lastMessageContent ==
-              content,
+        // preview, so the preview is what says the copy has been stored.
+        final copyStored = await eventually(
+          () async => await preview() == content,
           timeout: const Duration(seconds: 5),
         );
-        expect(echoStored, isTrue, reason: 'precondition: the echo was stored');
+        expect(copyStored, isTrue, reason: 'precondition: the copy was stored');
         expect(
           await storedProtocol(stack.db),
           'nip04',
