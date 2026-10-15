@@ -1,5 +1,5 @@
 // ABOUTME: Inline editor for the public credit a reusable sound ships with.
-// ABOUTME: Shared by the video publish screen and the standalone sound upload.
+// ABOUTME: Shared by the video publish screen and the library's Add sound page.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
