@@ -1305,8 +1305,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (after == null) {
       _loadGeneration++;
       _paginationGeneration++;
+      // Retain those invalidations before awaiting the follow-status read.
       emit(
-        updated.copyWith(
+        state.copyWith(
+          followedPeopleLists: followed,
           status: VideoFeedStatus.loading,
           videos: [],
           isLoadingMore: false,

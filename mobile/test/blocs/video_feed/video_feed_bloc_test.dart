@@ -4847,6 +4847,70 @@ void main() {
         }
 
         test(
+          'unfollow invalidates stale work before the follow check completes',
+          () async {
+            final fetchStarted = Completer<void>();
+            final staleFetch = Completer<List<VideoEvent>>();
+            final followCheckStarted = Completer<void>();
+            final followCheck = Completer<bool>();
+            when(
+              () => mockVideosRepository.getVideosByAuthors(
+                authorPubkeys: any(named: 'authorPubkeys'),
+                limit: any(named: 'limit'),
+                until: any(named: 'until'),
+              ),
+            ).thenAnswer((_) {
+              fetchStarted.complete();
+              return staleFetch.future;
+            });
+            when(
+              () => peopleListsRepository.isFollowingList(
+                viewerPubkey: viewer,
+                ownerPubkey: listOwner,
+                listId: 'crew',
+              ),
+            ).thenAnswer((_) {
+              followCheckStarted.complete();
+              return followCheck.future;
+            });
+            stubRecommended(createTestVideos(2, idPrefix: 'fresh'));
+            final bloc = createPeopleBloc();
+            addTearDown(bloc.close);
+            addTearDown(() {
+              if (!followCheck.isCompleted) followCheck.complete(false);
+              if (!staleFetch.isCompleted) staleFetch.complete([]);
+            });
+            bloc.emit(
+              VideoFeedBlocState(
+                status: VideoFeedStatus.success,
+                source: sourceFor(followedList()),
+                followedPeopleLists: [followedList()],
+                videos: createTestVideos(1),
+              ),
+            );
+            bloc.add(const VideoFeedRefreshRequested());
+            await fetchStarted.future;
+            final generation = bloc.state.coordination.loadGeneration;
+            bloc.add(const VideoFeedFollowedPeopleListsChanged([]));
+            await followCheckStarted.future;
+            staleFetch.complete(createTestVideos(1, idPrefix: 'stale'));
+            await pumpEventQueue();
+            expect(bloc.state.videos, isEmpty);
+            expect(
+              bloc.state.coordination.loadGeneration,
+              greaterThan(generation),
+            );
+            followCheck.complete(false);
+            await bloc.stream.firstWhere(
+              (state) =>
+                  state.source.type == VideoFeedSourceType.forYou &&
+                  state.status == VideoFeedStatus.success,
+            );
+            expect(bloc.state.videos.first.id, 'fresh-0');
+          },
+        );
+
+        test(
           'observes an unfollow while the restored feed is still loading',
           () async {
             final list = followedList();
