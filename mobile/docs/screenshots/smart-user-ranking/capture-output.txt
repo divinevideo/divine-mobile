@@ -1,0 +1,20 @@
+00:00 +0: loading /Users/rabble/code/divine/divine-mobile/.worktrees/smart-user-ranking/mobile/test/task17_capture_test.dart
+00:00 +0: documentation capture share-sheet dark
+[18:46:06.507] [SYSTEM] ContentBlocklistRepository initialized with 0 blocked accounts
+[18:46:06.664] [SYSTEM] Content filter preferences loaded: 20 categories
+[18:46:06.667] [SYSTEM] Skipping bookmark sync - user not authenticated
+[18:46:07.141] [SYSTEM] 📱 Seen DB hydrated: 0 rows, merged to 0 total
+[18:46:07.141] [SYSTEM] 📱️ SeenVideosService initialized with 0 seen videos (0 with metrics)
+00:01 +1: documentation capture dm-picker dark
+00:01 +2: documentation capture following dark
+[18:46:07.501] [SYSTEM] ContentBlocklistRepository initialized with 0 blocked accounts
+00:01 +3: documentation capture share-sheet light
+[18:46:07.686] [SYSTEM] ContentBlocklistRepository initialized with 0 blocked accounts
+[18:46:07.721] [SYSTEM] Content filter preferences loaded: 20 categories
+[18:46:07.722] [SYSTEM] Skipping bookmark sync - user not authenticated
+[18:46:07.734] [SYSTEM] 📱 Seen DB hydrated: 0 rows, merged to 0 total
+[18:46:07.734] [SYSTEM] 📱️ SeenVideosService initialized with 0 seen videos (0 with metrics)
+00:02 +4: documentation capture dm-picker light
+00:02 +5: documentation capture following light
+[18:46:07.888] [SYSTEM] ContentBlocklistRepository initialized with 0 blocked accounts
+00:02 +6: All tests passed!
