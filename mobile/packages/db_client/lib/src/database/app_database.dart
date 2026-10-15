@@ -279,6 +279,19 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 24 && to >= 24) {
         await m.createTable(soundRequestStates);
+        await _addColumnIfMissing(
+          'conversations',
+          'is_dismissed',
+          'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+        );
+      }
+      // Earlier table rebuilds use the current definition. Honor intermediate
+      // targets by withholding a column that belongs to v24.
+      if (to < 24 &&
+          (await _columnNames('conversations')).contains('is_dismissed')) {
+        await customStatement(
+          'ALTER TABLE conversations DROP COLUMN is_dismissed',
+        );
       }
     },
     beforeOpen: (details) async {
@@ -344,7 +357,15 @@ class AppDatabase extends _$AppDatabase {
     );
 
     await m.alterTable(TableMigration(directMessages));
-    await m.alterTable(TableMigration(conversations));
+    await m.alterTable(
+      TableMigration(
+        conversations,
+        newColumns: [
+          if (!(await _columnNames('conversations')).contains('is_dismissed'))
+            conversations.isDismissed,
+        ],
+      ),
+    );
 
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_dm_conversation_id '

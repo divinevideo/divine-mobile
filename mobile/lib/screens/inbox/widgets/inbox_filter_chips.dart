@@ -1,4 +1,4 @@
-// ABOUTME: All/Unread/Blocked filter chip row for the inbox Messages tab.
+// ABOUTME: All/Unread/Dismissed/Blocked filters for the inbox Messages tab.
 // ABOUTME: Narrows the conversation list, or swaps it for blocked chats.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -13,7 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 ///
 /// The Blocked chip renders only when [hasBlocked]. Most accounts have blocked
 /// nobody, and a chip that can only ever open an empty list is noise — so the
-/// row stays two chips wide until the first block exists.
+/// Blocked stays hidden until the first block exists.
 class InboxFilterChips extends StatelessWidget {
   const InboxFilterChips({
     required this.selected,
@@ -57,6 +57,11 @@ class InboxFilterChips extends StatelessWidget {
             label: context.l10n.inboxFilterUnread,
             selected: selected == InboxFilter.unread,
             onTap: () => onChanged(InboxFilter.unread),
+          ),
+          _FilterChip(
+            label: context.l10n.inboxRequestsDismissed,
+            selected: selected == InboxFilter.dismissed,
+            onTap: () => onChanged(InboxFilter.dismissed),
           ),
           if (hasBlocked)
             _FilterChip(

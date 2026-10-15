@@ -2361,7 +2361,7 @@ void main() {
         // handler, so it neither opens an empty sheet nor advertises a gesture
         // it cannot honour.
         testWidgets(
-          'a group that cannot be removed has no long-press',
+          'a protected group still offers mark as read',
           (tester) async {
             final actionsCubit = _MockConversationActionsCubit();
             final conversation = groupConversation(subject: 'Weekend trip');
@@ -2385,7 +2385,7 @@ void main() {
             final data = tester
                 .getSemantics(find.byType(ConversationTile))
                 .getSemanticsData();
-            expect(data.hasAction(SemanticsAction.longPress), isFalse);
+            expect(data.hasAction(SemanticsAction.longPress), isTrue);
           },
         );
 

@@ -155,6 +155,33 @@ void main() {
       return row!;
     }
 
+    test(
+      'a distinct same-second message resurfaces a dismissed thread',
+      () async {
+        final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 10;
+        await deliver(id: '1' * 64, createdAt: timestamp);
+        final id = DmRepository.computeConversationId([_owner, _peer]);
+        await repository.setConversationDismissed(id, dismissed: true);
+        await deliver(id: '2' * 64, createdAt: timestamp);
+        final conversation = (await repository.getConversation(id))!;
+        expect(conversation.isDismissed, isFalse);
+        expect(conversation.isRead, isFalse);
+        expect(await repository.getMessages(id), hasLength(2));
+      },
+    );
+
+    test('replaying or backfilling a message keeps dismissal intact', () async {
+      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 10;
+      await deliver(id: '1' * 64, createdAt: timestamp);
+      final id = DmRepository.computeConversationId([_owner, _peer]);
+      await repository.setConversationDismissed(id, dismissed: true);
+      await deliver(id: '1' * 64, createdAt: timestamp);
+      await deliver(id: '2' * 64, createdAt: timestamp - 1);
+      final conversation = (await repository.getConversation(id))!;
+      expect(conversation.isDismissed, isTrue);
+      expect(conversation.isRead, isTrue);
+    });
+
     test('its timestamp is bounded to now on the conversation row', () async {
       await deliver(id: 'a' * 64, createdAt: _year2100);
 

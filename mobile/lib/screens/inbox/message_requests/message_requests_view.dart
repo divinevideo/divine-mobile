@@ -1,5 +1,5 @@
 // ABOUTME: View for the message requests inbox list.
-// ABOUTME: Shows all pending message requests with bulk actions via "..." menu.
+// ABOUTME: Visible read/dismiss actions and recoverable dismissed requests.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,7 +21,7 @@ import 'package:openvine/utils/detached_future.dart';
 /// View for the message requests inbox.
 ///
 /// Displays a scrollable list of message request conversations with
-/// an app bar containing a back button, title, and bulk actions menu.
+/// visible read/dismiss controls and access to recoverable dismissed requests.
 class MessageRequestsView extends ConsumerWidget {
   const MessageRequestsView({super.key});
 
@@ -30,27 +30,45 @@ class MessageRequestsView extends ConsumerWidget {
     final authService = ref.watch(authServiceProvider);
     final currentPubkey = authService.currentPublicKeyHex ?? '';
 
-    return Scaffold(
-      backgroundColor: context.vineColors.surface,
-      appBar: DiVineAppBar(
-        title: context.l10n.inboxMessageRequestsTitle,
-        showBackButton: true,
-        onBackPressed: context.pop,
-        actions: [
-          DiVineAppBarAction(
-            icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
-            onPressed: () => _showBulkActions(context),
-            semanticLabel: context.l10n.profileMoreSemanticLabel,
-          ),
-        ],
-      ),
-      body: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(VineTheme.bottomSheetBorderRadius),
+    return BlocListener<MessageRequestActionsCubit, MessageRequestActionsState>(
+      listenWhen: (previous, current) => previous.status != current.status,
+      listener: (context, state) {
+        if (state.status == MessageRequestActionsStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              context.l10n.commonSomethingWentWrong,
+              error: true,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.vineColors.surface,
+        appBar: DiVineAppBar(
+          title: context.l10n.inboxMessageRequestsTitle,
+          showBackButton: true,
+          onBackPressed: context.pop,
+          actions: [
+            DiVineAppBarAction(
+              icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
+              onPressed: () => _showBulkActions(context),
+              semanticLabel: context.l10n.profileMoreSemanticLabel,
+            ),
+          ],
         ),
-        child: ColoredBox(
-          color: context.vineColors.surfaceContainerHigh,
-          child: _RequestList(currentPubkey: currentPubkey),
+        body: ClipRRect(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(VineTheme.bottomSheetBorderRadius),
+          ),
+          child: ColoredBox(
+            color: context.vineColors.surfaceContainerHigh,
+            child: Column(
+              children: [
+                const _RequestToolbar(),
+                Expanded(child: _RequestList(currentPubkey: currentPubkey)),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -60,10 +78,14 @@ class MessageRequestsView extends ConsumerWidget {
     final result = await RequestBulkActionsSheet.show(context);
     if (result == null || !context.mounted) return;
 
-    final requests = context
-        .read<ConversationListBloc>()
+    final listState = context.read<ConversationListBloc>().state;
+    final showDismissed = context
+        .read<MessageRequestActionsCubit>()
         .state
-        .requestConversations;
+        .showDismissed;
+    final requests = showDismissed
+        ? listState.dismissedRequestConversations
+        : listState.requestConversations;
     final ids = requests.map((c) => c.id).toList();
 
     if (!context.mounted) return;
@@ -104,6 +126,51 @@ class MessageRequestsView extends ConsumerWidget {
   }
 }
 
+class _RequestToolbar extends StatelessWidget {
+  const _RequestToolbar();
+
+  @override
+  Widget build(BuildContext context) {
+    final list = context.watch<ConversationListBloc>().state;
+    final actions = context.watch<MessageRequestActionsCubit>().state;
+    final cubit = context.read<MessageRequestActionsCubit>();
+    final processing = actions.status == MessageRequestActionsStatus.processing;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (!actions.showDismissed)
+            DivineButton(
+              label: context.l10n.inboxRequestsMarkAllReadShort,
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
+              leadingIcon: DivineIconName.checks,
+              onPressed: processing || list.requestUnreadCount == 0
+                  ? null
+                  : () => cubit.markAllRequestsAsRead(
+                      list.requestConversations.map((c) => c.id).toList(),
+                    ),
+            ),
+          if (list.dismissedRequestConversations.isNotEmpty ||
+              actions.showDismissed)
+            DivineButton(
+              label: actions.showDismissed
+                  ? context.l10n.inboxMessageRequestsTitle
+                  : context.l10n.inboxRequestsDismissed,
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
+              onPressed: () => cubit.showDismissedRequests(
+                show: !actions.showDismissed,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RequestList extends StatelessWidget {
   const _RequestList({required this.currentPubkey});
 
@@ -111,9 +178,12 @@ class _RequestList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final actions = context.watch<MessageRequestActionsCubit>().state;
     return BlocBuilder<ConversationListBloc, ConversationListState>(
       buildWhen: (prev, curr) =>
           prev.requestConversations != curr.requestConversations ||
+          prev.dismissedRequestConversations !=
+              curr.dismissedRequestConversations ||
           prev.requestsWithheld != curr.requestsWithheld ||
           prev.isRestoringHistory != curr.isRestoringHistory ||
           prev.status != curr.status,
@@ -127,7 +197,9 @@ class _RequestList extends StatelessWidget {
           );
         }
 
-        final requests = state.requestConversations;
+        final requests = actions.showDismissed
+            ? state.dismissedRequestConversations
+            : state.requestConversations;
         if (requests.isEmpty) {
           if (state.requestsWithheld && state.isRestoringHistory) {
             return Center(
@@ -155,7 +227,9 @@ class _RequestList extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                context.l10n.inboxMessageRequestsEmpty,
+                actions.showDismissed
+                    ? context.l10n.inboxRequestsDismissedEmpty
+                    : context.l10n.inboxMessageRequestsEmpty,
                 style: VineTheme.titleMediumFont(
                   color: context.vineColors.onSurfaceMuted,
                 ),
@@ -173,6 +247,16 @@ class _RequestList extends StatelessWidget {
               conversation: request,
               currentUserPubkey: currentPubkey,
               onTap: () => _onRequestTapped(context, request),
+              onDismiss:
+                  actions.status == MessageRequestActionsStatus.processing
+                  ? null
+                  : () => context
+                        .read<MessageRequestActionsCubit>()
+                        .setRequestDismissed(
+                          request.id,
+                          dismissed: !actions.showDismissed,
+                        ),
+              isDismissed: actions.showDismissed,
             );
           },
         );

@@ -332,7 +332,7 @@ class ConversationListBloc
         final recoveryComplete =
             _dmRepository.hasCompletedHistoryRecoveryBefore;
         final requestConversations = recoveryComplete
-            ? pin.requests
+            ? pin.requests.where((c) => !c.isDismissed).toList()
             : const <DmConversation>[];
 
         // A conversation can stream in while a name search is active whose
@@ -383,8 +383,13 @@ class ConversationListBloc
             limit: state.currentLimit,
           ),
           requestConversations: requestConversations,
+          dismissedRequestConversations: recoveryComplete
+              ? pin.requests.where((c) => c.isDismissed).toList()
+              : const [],
           potentialRequests: data.potentialRequests,
-          hasMore: pin.inbox.length > state.currentLimit,
+          hasMore:
+              pin.inbox.where((c) => !c.isDismissed).length >
+              state.currentLimit,
           isRestoringHistory: data.isRestoring,
           pinnedSupport: pin.pinned,
           clearPinnedSupport: pin.pinned == null,
@@ -423,7 +428,8 @@ class ConversationListBloc
           userPubkey: _dmRepository.userPubkey,
           limit: limit,
         ),
-        hasMore: state.conversations.length > limit,
+        hasMore:
+            state.conversations.where((c) => !c.isDismissed).length > limit,
       ),
     );
   }
@@ -762,14 +768,20 @@ class ConversationListBloc
         userPubkey: userPubkey,
       );
     }
+    final dismissedOnly = filter == InboxFilter.dismissed;
+    final selectedConversations = conversations
+        .where(
+          (conversation) => conversation.isDismissed == dismissedOnly,
+        )
+        .toList();
     final unreadOnly = filter == InboxFilter.unread;
-    if (!unreadOnly && query.isEmpty) {
-      return conversations.length > limit
-          ? conversations.sublist(0, limit)
-          : conversations;
+    if (!unreadOnly && !dismissedOnly && query.isEmpty) {
+      return selectedConversations.length > limit
+          ? selectedConversations.sublist(0, limit)
+          : selectedConversations;
     }
     return _applyFilters(
-      conversations,
+      selectedConversations,
       unreadOnly: unreadOnly,
       query: query,
       profileNames: profileNames,

@@ -1082,6 +1082,11 @@ class Conversations extends Table {
   BoolColumn get isRead =>
       boolean().withDefault(const Constant(true)).named('is_read')();
 
+  /// Locally dismissed request. Messages remain stored and recoverable.
+  /// A strictly newer message clears this marker.
+  BoolColumn get isDismissed =>
+      boolean().withDefault(const Constant(false)).named('is_dismissed')();
+
   /// Per-conversation read cursor (unix seconds) for cross-device read-state
   /// sync (#4977). Monotonic high-water mark of the newest message the user
   /// has read; published encrypted-to-self over Nostr and restored on

@@ -462,7 +462,7 @@ void main() {
           status: MessageRequestActionsStatus.success,
         );
 
-        expect(state.props, [MessageRequestActionsStatus.success]);
+        expect(state.props, [MessageRequestActionsStatus.success, false]);
       });
     });
   });

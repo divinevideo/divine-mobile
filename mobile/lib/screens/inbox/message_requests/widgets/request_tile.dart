@@ -26,12 +26,16 @@ class RequestTile extends ConsumerWidget {
     required this.conversation,
     required this.currentUserPubkey,
     required this.onTap,
+    this.onDismiss,
+    this.isDismissed = false,
     super.key,
   });
 
   final DmConversation conversation;
   final String currentUserPubkey;
   final VoidCallback onTap;
+  final VoidCallback? onDismiss;
+  final bool isDismissed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -202,6 +206,20 @@ class RequestTile extends ConsumerWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                      if (onDismiss != null &&
+                          (conversation.isGroup ||
+                              !isModerationAccount(namedPubkey)))
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: DivineButton(
+                            label: isDismissed
+                                ? context.l10n.inboxRequestRestore
+                                : context.l10n.inboxRequestDismiss,
+                            type: DivineButtonType.secondary,
+                            size: DivineButtonSize.small,
+                            onPressed: onDismiss,
+                          ),
                         ),
                     ],
                   ),

@@ -12,7 +12,7 @@ enum ConversationListStatus { initial, loading, loaded, error }
 /// authored from other Nostr clients). Adding a case means a new source list
 /// in `_computeVisible` and a new chip — no call-site churn.
 enum InboxFilter {
-  /// Every conversation except those with accounts the viewer blocked.
+  /// Active conversations except those with accounts the viewer blocked.
   all,
 
   /// [all], narrowed to conversations with unread messages.
@@ -21,6 +21,9 @@ enum InboxFilter {
   /// Conversations with accounts the viewer blocked — the only surface that
   /// shows them, so a block never costs the viewer their own message history.
   blocked,
+
+  /// Conversations put aside without deleting their history.
+  dismissed,
 }
 
 /// Navigation target emitted when the user requests to open a conversation.
@@ -75,6 +78,7 @@ class ConversationListState extends Equatable {
     this.vanishedPubkeys = const {},
     this.peerLabels,
     this.requestConversations = const [],
+    this.dismissedRequestConversations = const [],
     this.potentialRequests = const [],
     this.hasMore = true,
     this.isRestoringHistory = false,
@@ -146,6 +150,9 @@ class ConversationListState extends Equatable {
 
   /// Conversations shown in the Requests tab (non-followed, never replied).
   final List<DmConversation> requestConversations;
+
+  /// Requests put aside locally, still available to preview or restore.
+  final List<DmConversation> dismissedRequestConversations;
 
   /// Raw potential requests from DB (`currentUserHasSent == false`).
   ///
@@ -221,6 +228,7 @@ class ConversationListState extends Equatable {
     Set<String>? vanishedPubkeys,
     DmPeerLabels? peerLabels,
     List<DmConversation>? requestConversations,
+    List<DmConversation>? dismissedRequestConversations,
     List<DmConversation>? potentialRequests,
     bool? hasMore,
     bool? isRestoringHistory,
@@ -242,6 +250,8 @@ class ConversationListState extends Equatable {
       vanishedPubkeys: vanishedPubkeys ?? this.vanishedPubkeys,
       peerLabels: peerLabels ?? this.peerLabels,
       requestConversations: requestConversations ?? this.requestConversations,
+      dismissedRequestConversations:
+          dismissedRequestConversations ?? this.dismissedRequestConversations,
       potentialRequests: potentialRequests ?? this.potentialRequests,
       hasMore: hasMore ?? this.hasMore,
       isRestoringHistory: isRestoringHistory ?? this.isRestoringHistory,
@@ -268,6 +278,7 @@ class ConversationListState extends Equatable {
     vanishedPubkeys,
     peerLabels,
     requestConversations,
+    dismissedRequestConversations,
     potentialRequests,
     hasMore,
     isRestoringHistory,

@@ -777,7 +777,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     );
     final showingBlocked = filter == InboxFilter.blocked;
     final hasRequests = context.select<ConversationListBloc, bool>(
-      (bloc) => bloc.state.requestConversations.isNotEmpty,
+      (bloc) =>
+          bloc.state.requestConversations.isNotEmpty ||
+          bloc.state.dismissedRequestConversations.isNotEmpty,
     );
     final requestUnreadCount = context.select<ConversationListBloc, int>(
       (bloc) => bloc.state.requestUnreadCount,
@@ -901,11 +903,15 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
             child: _FilteredEmptyContent(
               title: searchQuery.isNotEmpty
                   ? context.l10n.inboxSearchEmptyTitle
+                  : filter == InboxFilter.dismissed
+                  ? context.l10n.inboxRequestsDismissedEmpty
                   : showingBlocked
                   ? context.l10n.inboxBlockedEmptyTitle
                   : context.l10n.inboxUnreadEmptyTitle,
               subtitle: searchQuery.isNotEmpty
                   ? context.l10n.inboxSearchEmptySubtitle
+                  : filter == InboxFilter.dismissed
+                  ? ''
                   : showingBlocked
                   ? context.l10n.inboxBlockedEmptySubtitle
                   : context.l10n.inboxUnreadEmptySubtitle,
@@ -932,15 +938,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
             // snackbar for work that did not happen.
             final isBlockedPlaceholder =
                 showingBlocked && conversation.lastMessageTimestamp == null;
-            // A row whose sheet would be empty offers no long-press at all,
-            // rather than one that opens nothing.
-            final hasActions = ConversationActionsSheet.hasActions(
-              isGroup: conversation.isGroup,
-              canRemove: !context
-                  .read<ConversationActionsCubit>()
-                  .isRemovalProtected(conversation),
-            );
-            return ConversationTile(
+            final tile = ConversationTile(
               conversation: conversation,
               currentUserPubkey: widget.currentUserPubkey,
               highlighted: conversation.id == _highlightedConversationId,
@@ -950,10 +948,41 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
               onTap: isBlockedPlaceholder
                   ? null
                   : () => _onConversationTapped(context, conversation),
-              onLongPress: isBlockedPlaceholder || !hasActions
+              onLongPress: isBlockedPlaceholder
                   ? null
                   : () =>
                         _onConversationLongPressed(context, ref, conversation),
+            );
+            if (!conversation.isDismissed) return tile;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                tile,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16, bottom: 8),
+                    child: DivineButton(
+                      label: context.l10n.inboxRequestRestore,
+                      type: DivineButtonType.secondary,
+                      size: DivineButtonSize.small,
+                      onPressed: () async {
+                        final success = await context
+                            .read<ConversationActionsCubit>()
+                            .setDismissed(conversation.id, dismissed: false);
+                        if (!success && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            DivineSnackbarContainer.snackBar(
+                              context.l10n.commonSomethingWentWrong,
+                              error: true,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -1009,7 +1038,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     // The Blocked slice is the viewer's blocked peers. The pin is the support
     // channel, not a blocked-account row, so it does not sit above that list
     // even when the viewer has blocked the moderation account (#7850).
-    if (filter == InboxFilter.blocked) return false;
+    if (filter == InboxFilter.blocked || filter == InboxFilter.dismissed) {
+      return false;
+    }
     if (filter == InboxFilter.unread && pinned.isRead) return false;
     if (query.isEmpty) return true;
     final needle = query.toLowerCase();
@@ -1160,11 +1191,28 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         // same moderation thread whenever a filter or search drops the pin.
         canRemove: !actionsCubit.isRemovalProtected(conversation),
         isGroup: isGroup,
+        isDismissed: conversation.isDismissed,
       );
 
       if (action == null || !context.mounted) return;
 
       switch (action) {
+        case ConversationAction.markRead:
+        case ConversationAction.dismiss:
+          final success = action == ConversationAction.markRead
+              ? await actionsCubit.markAsRead(conversation.id)
+              : await actionsCubit.setDismissed(
+                  conversation.id,
+                  dismissed: !conversation.isDismissed,
+                );
+          if (!success && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              DivineSnackbarContainer.snackBar(
+                context.l10n.commonSomethingWentWrong,
+                error: true,
+              ),
+            );
+          }
         case ConversationAction.report:
           // The same report form Report opens from inside the conversation:
           // the reporter picks a reason and can add a note, and the form

@@ -59,8 +59,9 @@ END
   ///
   /// * `participantPubkeys`, `isGroup` — always overwritten.
   /// * `isRead` — updated only when the incoming event becomes the stored
-  ///   latest message (strictly newer [lastMessageTimestamp]); otherwise
-  ///   preserved. Notably NOT written under [forceUpdateLastMessage]: a
+  ///   latest message (a newer timestamp, or a distinct [isNewMessage] at
+  ///   the same second); otherwise preserved. Notably NOT written under
+  ///   [forceUpdateLastMessage]: a
   ///   deletion preview refresh must not change read state. Flip read
   ///   state explicitly via [markAsRead] / [markMultipleAsRead].
   /// * `subject`, `dmProtocol` — updated only when the incoming value is
@@ -99,6 +100,7 @@ END
     String? ownerPubkey,
     String? dmProtocol,
     bool forceUpdateLastMessage = false,
+    bool isNewMessage = false,
   }) {
     final row = ConversationsCompanion.insert(
       id: id,
@@ -128,18 +130,30 @@ END
         final incomingIsNewer = excl.lastMessageTimestamp.isBiggerThan(
           coalesce([old.lastMessageTimestamp, const Constant(0)]),
         );
+        // Distinct messages can share a Nostr timestamp (whole seconds).
+        // Only ingestion after a successful insert may treat a tie as new;
+        // replay and preview repair keep dismissal/read state intact.
+        final advancesAttention =
+            incomingIsNewer |
+            (Constant(isNewMessage) &
+                excl.lastMessageTimestamp.equalsExp(old.lastMessageTimestamp));
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
-            : incomingIsNewer;
+            : advancesAttention;
 
         return ConversationsCompanion.custom(
           // Always updated.
           participantPubkeys: excl.participantPubkeys,
           isGroup: excl.isGroup,
+          // Relay backfill and preview repairs must not undo dismissal.
+          isDismissed: const Constant(false).iif(
+            forceUpdateLastMessage ? const Constant(false) : advancesAttention,
+            old.isDismissed,
+          ),
           // Read state only follows the latest message: gated on
-          // incomingIsNewer (not previewCondition) so a deletion
+          // advancesAttention (not previewCondition) so a deletion
           // force-refresh updates the preview without marking read.
-          isRead: excl.isRead.iif(incomingIsNewer, old.isRead),
+          isRead: excl.isRead.iif(advancesAttention, old.isRead),
           // Preserve existing non-null value; only update when incoming
           // value is non-null.
           subject: coalesce([excl.subject, old.subject]),
@@ -300,6 +314,32 @@ END
       updateKind: UpdateKind.update,
     );
     return rows > 0;
+  }
+
+  /// Dismiss or restore a conversation without deleting or accepting it.
+  /// Dismissal also advances the read cursor atomically.
+  Future<bool> setDismissed(
+    String id, {
+    required String ownerPubkey,
+    required bool dismissed,
+  }) async {
+    final query = update(conversations)
+      ..where(
+        (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+      );
+    final changed = await query.write(
+      dismissed
+          ? ConversationsCompanion.custom(
+              isDismissed: const Constant(true),
+              isRead: const Constant(true),
+              lastReadTimestamp: const CustomExpression<int>(
+                'MAX(COALESCE(last_read_timestamp, 0), '
+                'COALESCE(last_message_timestamp, 0))',
+              ),
+            )
+          : const ConversationsCompanion(isDismissed: Value(false)),
+    );
+    return changed > 0;
   }
 
   /// Clears a `'nip04'` protocol latch on [id], marking the thread NIP-17.
