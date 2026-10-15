@@ -453,14 +453,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
       return;
     }
     // Let the current rotation complete before stopping.
-    runDetached(
-      _rotationController.forward(from: _rotationController.value).then((_) {
-        if (mounted) _rotationController.stop();
-      }),
-      'finish bottom navigation refresh animation',
-      logName: 'VineBottomNav',
-      category: LogCategory.ui,
-    );
+    _rotationController.forward(from: _rotationController.value);
     _swapController.reverse();
   }
 
