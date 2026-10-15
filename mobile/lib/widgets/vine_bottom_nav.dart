@@ -179,7 +179,7 @@ class VineBottomNav extends ConsumerWidget {
                           entryPoint: CreationEntryPoint.bottomNav,
                         ),
                         'open camera from bottom navigation',
-                        logName: 'VineBottomNav',
+                        logName: 'Navigation',
                         category: LogCategory.ui,
                       );
                     },

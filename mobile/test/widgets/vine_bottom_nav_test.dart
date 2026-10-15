@@ -616,7 +616,7 @@ void main() {
 
           final logs = logCapture
               .getRecentLogs()
-              .where((entry) => entry.name == 'VineBottomNav')
+              .where((entry) => entry.name == 'Navigation')
               .where((entry) => entry.level == LogLevel.error);
           expect(logs, hasLength(1));
           expect(logs.single.category, LogCategory.ui);
