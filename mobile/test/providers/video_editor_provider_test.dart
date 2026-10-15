@@ -4301,6 +4301,31 @@ void main() {
       expect(await waiting, isFalse);
       expect(writes, hasLength(1));
     });
+
+    test(
+      'a new session can queue an autosave while the old save finishes',
+      () async {
+        final notifier = container.read(videoEditorProvider.notifier);
+
+        final running = notifier.autosaveChanges();
+        final oldWaiting = notifier.autosaveChanges();
+        await pumpEventQueue();
+        await notifier.reset(keepAutosavedDraft: true);
+        notifier.updateMetadata(title: 'New session');
+        final newWaiting = notifier.autosaveChanges();
+
+        expect(writes, hasLength(1));
+        writes.single.complete();
+        await pumpEventQueue();
+
+        expect(await running, isTrue);
+        expect(await oldWaiting, isFalse);
+        expect(writes, hasLength(2));
+        expect(savedDrafts.last.title, 'New session');
+        writes.last.complete();
+        expect(await newWaiting, isTrue);
+      },
+    );
   });
 
   group('VideoEditorProvider deferred file cleanup', () {

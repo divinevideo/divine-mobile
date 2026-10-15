@@ -341,6 +341,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
     _autosaveSession++;
+    // New-session requests must not reuse the cancelled session's follow-up.
+    // Keep the running save so new work still waits for it instead of overlaps.
+    _waitingAutosave = null;
     _ownedFilesMemo.forget();
     draftId = null;
     if (!keepAutosavedDraft) {
