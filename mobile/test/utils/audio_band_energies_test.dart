@@ -247,4 +247,19 @@ void main() {
       expect(levels.every((level) => level == 0), isTrue);
     });
   });
+
+  group('audioBandFrequency', () {
+    test('names the middle of the band bandEnergies puts that tone in', () {
+      // Below band 16 a band is narrower than the analysis can tell apart,
+      // so a tone spreads over its neighbours there.
+      for (var band = 16; band < audioBandCount; band++) {
+        final energies = bandEnergies(
+          _tone(audioBandFrequency(band)),
+          sampleRate: _sampleRate,
+        );
+
+        expect(_loudestBand(energies, 30), equals(band), reason: 'band $band');
+      }
+    });
+  });
 }
