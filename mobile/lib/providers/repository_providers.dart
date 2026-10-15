@@ -144,6 +144,7 @@ FollowRepository followRepository(Ref ref) {
     cacheUserEvent: personalEventCache.cacheUserEvent,
     funnelcakeApiClient: funnelcakeApiClient,
     profileStatsDao: profileStatsDao,
+    myFollowersDao: ref.watch(databaseProvider).myFollowersDao,
     indexerRelayUrls: env.indexerRelays,
     queryContactList: ContactListCompletionHelper.queryContactList,
     isOnline: () =>

@@ -9,6 +9,7 @@ import 'package:follow_repository/src/follower_stats.dart';
 import 'package:follow_repository/src/followers_snapshot.dart';
 import 'package:follow_repository/src/following_cache_record.dart';
 import 'package:follow_repository/src/following_snapshot.dart';
+import 'package:follow_repository/src/my_followers_sync_state.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
@@ -29,6 +30,16 @@ typedef _FollowerSourceResult = ({
   List<_FollowerRef> refs,
   Object? error,
   StackTrace? stackTrace,
+  bool anySourceFailed,
+});
+
+typedef _FollowerBatch = ({List<_FollowerRef> refs, bool anySourceFailed});
+
+typedef _OrderedFollowers = ({
+  List<String> pubkeys,
+  int datedCount,
+  List<_FollowerRef> refs,
+  bool anySourceFailed,
 });
 
 typedef _CachedFollowerStats = ({FollowerStats stats, DateTime cachedAt});
@@ -62,6 +73,8 @@ class FollowRepository {
     CacheUserEventCallback? cacheUserEvent,
     FunnelcakeApiClient? funnelcakeApiClient,
     ProfileStatsDao? profileStatsDao,
+    MyFollowersDao? myFollowersDao,
+    int Function()? nowSeconds,
     IsOnlineCallback? isOnline,
     QueueOfflineFollowCallback? queueOfflineAction,
     QueryContactListCallback? queryContactList,
@@ -77,6 +90,8 @@ class FollowRepository {
        _cacheUserEvent = cacheUserEvent,
        _funnelcakeApiClient = funnelcakeApiClient,
        _profileStatsDao = profileStatsDao,
+       _myFollowersDao = myFollowersDao,
+       _nowSeconds = nowSeconds ?? _currentSeconds,
        _isOnline = isOnline,
        _queueOfflineAction = queueOfflineAction,
        _indexerRelayUrls = indexerRelayUrls,
@@ -100,6 +115,22 @@ class FollowRepository {
 
   /// Drift DAO for persisting follower stats across sessions.
   final ProfileStatsDao? _profileStatsDao;
+  final MyFollowersDao? _myFollowersDao;
+  final int Function() _nowSeconds;
+  static int _currentSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  final _myFollowersSyncState = MyFollowersSyncState();
+  Future<void>? _myFollowersSyncFuture;
+  String? _myFollowersOwner;
+  bool _disposed = false;
+
+  /// Minimum interval between incremental follower queries.
+  static const myFollowersIncrementalInterval = Duration(minutes: 15);
+
+  /// Interval between complete follower reconciliations.
+  static const myFollowersReconcileInterval = Duration(days: 7);
+
+  /// Overlap retained when querying after the newest known contact list.
+  static const myFollowersSinceSkew = Duration(minutes: 10);
 
   /// Indexer relay URLs for direct WebSocket queries.
   /// Pass empty list in tests to prevent real network connections.
@@ -472,6 +503,7 @@ class FollowRepository {
   /// Dispose resources (idempotent — safe to call multiple times).
   Future<void> dispose() async {
     _isDisposed = true;
+    _disposed = true;
     unawaited(_contactListSubscription?.cancel());
     if (_contactListSubscriptionId != null) {
       await _nostrClient.unsubscribe(_contactListSubscriptionId!);
@@ -495,15 +527,15 @@ class FollowRepository {
   /// request. Returns [FollowRelationship.none] for the current user's own
   /// pubkey and for an empty [pubkey].
   ///
-  /// Before [getMyFollowers] has populated the follower cache, "follows you"
-  /// is unknowable, so a mutual reads as [FollowRelationship.youFollow] and a
-  /// one-way follower reads as [FollowRelationship.none]. That cold-cache
-  /// degradation only under-claims and upgrades as data arrives. It is not a
-  /// guarantee against a stale contact list, though: the following and
-  /// follower sets are unions across sources that are never pruned, so a
-  /// superseded kind 3 from one relay can still read as
-  /// [FollowRelationship.followsYou] or [FollowRelationship.mutual] after an
-  /// unfollow.
+  /// Before initialization loads persisted followers or a fetch completes,
+  /// "follows you" is unknown, so a mutual reads as
+  /// [FollowRelationship.youFollow] and a one-way follower reads as
+  /// [FollowRelationship.none]. The cache upgrades as data arrives.
+  /// A cached relationship can remain stale until a complete reconciliation.
+  /// Sources can also serve superseded kind 3 events, so a stale relay can
+  /// still report [FollowRelationship.followsYou] or
+  /// [FollowRelationship.mutual] after an unfollow. Partial queries preserve
+  /// existing followers until every source can answer.
   FollowRelationship relationshipTo(String pubkey) {
     if (pubkey.isEmpty || pubkey == _nostrClient.publicKey) {
       return FollowRelationship.none;
@@ -521,9 +553,10 @@ class FollowRepository {
 
   /// [_cachedMyFollowersPubkeys] as a set, rebuilt only when that list is
   /// replaced, so per-row membership tests stay O(1) on accounts with many
-  /// thousands of followers. Both writers assign a fresh list instance, which
+  /// thousands of followers. Every update assigns a fresh list instance, which
   /// is what makes the identity check a sufficient invalidation signal.
   Set<String> get _myFollowersLookup {
+    if (_myFollowersOwner != _nostrClient.publicKey) return const {};
     if (!identical(_myFollowersLookupSource, _cachedMyFollowersPubkeys)) {
       _myFollowersLookupSource = _cachedMyFollowersPubkeys;
       _myFollowersLookupCache = _cachedMyFollowersPubkeys.toSet();
@@ -548,10 +581,106 @@ class FollowRepository {
     if (pubkey.isEmpty) return (pubkeys: <String>[], datedCount: 0);
 
     final result = await _fetchOrderedFollowers(pubkey);
-    _cachedMyFollowersPubkeys = result.pubkeys;
-    _cachedMyFollowersDatedCount = result.datedCount;
+    await _persistMyFollowers(
+      pubkey,
+      result.refs,
+      replace: !result.anySourceFailed,
+    );
+    return (pubkeys: result.pubkeys, datedCount: result.datedCount);
+  }
+
+  bool _isCurrentFollowerOwner(String owner) =>
+      !_disposed && _nostrClient.hasKeys && _nostrClient.publicKey == owner;
+
+  void _cacheMyFollowers(String owner, Iterable<_FollowerRef> refs) {
+    final ordered = _newestFirst(refs);
+    _cachedMyFollowersPubkeys = ordered.pubkeys;
+    _cachedMyFollowersDatedCount = ordered.datedCount;
     _hasMyFollowersCache = true;
-    return result;
+    _myFollowersOwner = owner;
+  }
+
+  Future<void> _loadPersistedMyFollowers(String owner) async {
+    final dao = _myFollowersDao;
+    if (dao == null || owner.isEmpty) return;
+    final refs = await dao.followersOf(owner);
+    if (_isCurrentFollowerOwner(owner)) _cacheMyFollowers(owner, refs);
+  }
+
+  Future<void> _persistMyFollowers(
+    String owner,
+    List<_FollowerRef> refs, {
+    required bool replace,
+  }) async {
+    if (!_isCurrentFollowerOwner(owner)) return;
+    final dao = _myFollowersDao;
+    if (dao == null) {
+      _cacheMyFollowers(owner, refs);
+      return;
+    }
+    final write = replace ? dao.replaceAll : dao.upsertAll;
+    await write(ownerPubkey: owner, followers: refs, seenAt: _nowSeconds());
+    await _loadPersistedMyFollowers(owner);
+  }
+
+  /// Refreshes the owner's persisted followers, sharing concurrent work.
+  ///
+  /// Partial full queries only merge: a failed source cannot prove an unfollow.
+  Future<void> syncMyFollowers() {
+    if (_disposed ||
+        _myFollowersDao == null ||
+        !_nostrClient.hasKeys ||
+        _nostrClient.publicKey.isEmpty ||
+        !(_isOnline?.call() ?? true)) {
+      return Future<void>.value();
+    }
+    return _myFollowersSyncFuture ??= _syncMyFollowers(
+      _nostrClient.publicKey,
+    ).whenComplete(() => _myFollowersSyncFuture = null);
+  }
+
+  Future<void> _syncMyFollowers(String owner) async {
+    final dao = _myFollowersDao!;
+    final rows = await dao.followersOf(owner);
+    final state = await _myFollowersSyncState.read(owner);
+    if (!_isCurrentFollowerOwner(owner)) return;
+    final now = _nowSeconds();
+    if (rows.isEmpty ||
+        state.full == null ||
+        now - state.full! > myFollowersReconcileInterval.inSeconds) {
+      final result = await _fetchOrderedFollowers(owner);
+      if (!_isCurrentFollowerOwner(owner)) return;
+      await _persistMyFollowers(
+        owner,
+        result.refs,
+        replace: !result.anySourceFailed,
+      );
+      if (!_isCurrentFollowerOwner(owner)) return;
+      await _myFollowersSyncState.stampFull(owner, now);
+    } else if (state.incremental == null ||
+        now - state.incremental! > myFollowersIncrementalInterval.inSeconds) {
+      final highWater = min(await dao.newestFollowedAt(owner) ?? 0, now);
+      if (!_isCurrentFollowerOwner(owner)) return;
+      final events = await _nostrClient
+          .queryEvents([
+            Filter(
+              kinds: const [EventKind.contactList],
+              p: [owner],
+              since: highWater - myFollowersSinceSkew.inSeconds,
+            ),
+          ])
+          .timeout(_fetchFollowersTimeout);
+      if (!_isCurrentFollowerOwner(owner)) return;
+      await _persistMyFollowers(owner, [
+        for (final event in events)
+          (
+            pubkey: event.pubkey,
+            followedAt: _datableFollowedAt(event.createdAt),
+          ),
+      ], replace: false);
+      if (!_isCurrentFollowerOwner(owner)) return;
+      await _myFollowersSyncState.stampIncremental(owner, now);
+    }
   }
 
   /// Get the list of followers for another user.
@@ -608,7 +737,7 @@ class FollowRepository {
   /// `VideosRepository.searchVideos`.
   Stream<FollowersSnapshot> watchMyFollowers() async* {
     // Phase 1: Yield cached data immediately (if available)
-    if (_hasMyFollowersCache) {
+    if (_hasMyFollowersCache && _myFollowersOwner == _nostrClient.publicKey) {
       yield FollowersSnapshot(
         pubkeys: List<String>.unmodifiable(_cachedMyFollowersPubkeys),
         count: _cachedMyFollowerCount,
@@ -1560,11 +1689,16 @@ class FollowRepository {
   ///
   /// Snapshot builders need the boundary so `FollowersSnapshot.orderedBy` can
   /// flip the list without dragging the undated followers to the top.
-  Future<({List<String> pubkeys, int datedCount})> _fetchOrderedFollowers(
+  Future<_OrderedFollowers> _fetchOrderedFollowers(
     String pubkey,
   ) async {
     if (pubkey.isEmpty) {
-      return (pubkeys: <String>[], datedCount: 0);
+      return (
+        pubkeys: <String>[],
+        datedCount: 0,
+        refs: <_FollowerRef>[],
+        anySourceFailed: false,
+      );
     }
 
     // One unavailable source must not discard usable observations from the
@@ -1610,7 +1744,12 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    return merged;
+    return (
+      pubkeys: merged.pubkeys,
+      datedCount: merged.datedCount,
+      refs: [...apiFollowers, ...relayFollowers, ...indexerFollowers],
+      anySourceFailed: results.any((result) => result.anySourceFailed),
+    );
   }
 
   /// How far ahead of now a contact list's `created_at` may sit and still be
@@ -1633,9 +1772,9 @@ class FollowRepository {
   /// A future-dated contact list is demoted to the undated tail rather than
   /// clamped to now, because clamping would still leave it at the very top —
   /// which is the thing worth preventing.
-  static int? _datableFollowedAt(int? createdAt) {
+  int? _datableFollowedAt(int? createdAt) {
     if (createdAt == null) return null;
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final now = _nowSeconds();
     return createdAt > now + _maxFutureFollowSkewSeconds ? null : createdAt;
   }
 
@@ -1701,7 +1840,7 @@ class FollowRepository {
   /// because [_newestFirst] falls back to arrival order for the REST source,
   /// which carries no timestamp.
   /// Failures are *not* swallowed here; each caller applies its own policy.
-  List<Future<List<_FollowerRef>>> _followerSources(String pubkey) {
+  List<Future<_FollowerBatch>> _followerSources(String pubkey) {
     final apiFuture = (_funnelcakeApiClient?.isAvailable ?? false)
         ? _funnelcakeApiClient!
               .getFollowers(pubkey: pubkey, limit: 5000)
@@ -1714,18 +1853,27 @@ class FollowRepository {
         : Future<List<_FollowerRef>>.value(const []);
 
     return [
-      apiFuture,
+      apiFuture.then((refs) => (refs: refs, anySourceFailed: false)),
       _fetchFollowersFromRelays(pubkey),
       _fetchFollowerRefsFromIndexers(pubkey),
     ];
   }
 
   Future<_FollowerSourceResult> _guardFollowerSource(
-    Future<List<_FollowerRef>> source,
+    Future<_FollowerBatch> source,
   ) => source.then<_FollowerSourceResult>(
-    (refs) => (refs: refs, error: null, stackTrace: null),
-    onError: (Object error, StackTrace stackTrace) =>
-        (refs: const <_FollowerRef>[], error: error, stackTrace: stackTrace),
+    (result) => (
+      refs: result.refs,
+      error: null,
+      stackTrace: null,
+      anySourceFailed: result.anySourceFailed,
+    ),
+    onError: (Object error, StackTrace stackTrace) => (
+      refs: const <_FollowerRef>[],
+      error: error,
+      stackTrace: stackTrace,
+      anySourceFailed: true,
+    ),
   );
 
   /// Streams the current user's followers as each source resolves.
@@ -1760,13 +1908,15 @@ class FollowRepository {
     var lastOrdered = (pubkeys: const <String>[], datedCount: 0);
     Object? lastError;
     StackTrace? lastStackTrace;
+    var anySourceFailed = false;
 
     final guarded = _followerSources(pubkey).map(_guardFollowerSource);
 
     await for (final result in Stream<_FollowerSourceResult>.fromFutures(
       guarded,
     )) {
-      final (:refs, :error, :stackTrace) = result;
+      final (:refs, :error, :stackTrace, anySourceFailed: failed) = result;
+      anySourceFailed |= failed;
       if (error != null) {
         lastError = error;
         lastStackTrace = stackTrace;
@@ -1797,9 +1947,7 @@ class FollowRepository {
     }
 
     if (pubkey == _nostrClient.publicKey) {
-      _cachedMyFollowersPubkeys = List<String>.of(lastOrdered.pubkeys);
-      _cachedMyFollowersDatedCount = lastOrdered.datedCount;
-      _hasMyFollowersCache = true;
+      await _persistMyFollowers(pubkey, merged, replace: !anySourceFailed);
     }
   }
 
@@ -1816,7 +1964,8 @@ class FollowRepository {
   ///
   /// Carries each event's `created_at` through so [_newestFirst] can order
   /// the merged list; duplicates are collapsed there.
-  Future<List<_FollowerRef>> _fetchFollowersFromRelays(String pubkey) async {
+  Future<_FollowerBatch> _fetchFollowersFromRelays(String pubkey) async {
+    var failed = false;
     try {
       final events = await _nostrClient
           .queryEvents([
@@ -1825,30 +1974,32 @@ class FollowRepository {
           .timeout(
             _fetchFollowersTimeout,
             onTimeout: () {
+              failed = true;
               Log.warning(
-                'Followers relay query timed out '
-                'for ${pubkeyForLogs(pubkey)}',
+                'Followers relay query timed out for ${pubkeyForLogs(pubkey)}',
                 name: 'FollowRepository',
                 category: LogCategory.system,
               );
               return <Event>[];
             },
           );
-
-      return [
-        for (final event in events)
-          (
-            pubkey: event.pubkey,
-            followedAt: _datableFollowedAt(event.createdAt),
-          ),
-      ];
+      return (
+        refs: [
+          for (final event in events)
+            (
+              pubkey: event.pubkey,
+              followedAt: _datableFollowedAt(event.createdAt),
+            ),
+        ],
+        anySourceFailed: failed,
+      );
     } on TimeoutException {
       Log.warning(
         'Followers relay query timed out for ${pubkeyForLogs(pubkey)}',
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return [];
+      return (refs: <_FollowerRef>[], anySourceFailed: true);
     }
   }
 
@@ -1856,7 +2007,7 @@ class FollowRepository {
   ///
   /// Returns actual pubkeys (not just a count) so results can be merged
   /// with API and connected relay results.
-  Future<List<_FollowerRef>> _fetchFollowerRefsFromIndexers(
+  Future<_FollowerBatch> _fetchFollowerRefsFromIndexers(
     String pubkey,
   ) async {
     final results = await Future.wait(
@@ -1864,11 +2015,11 @@ class FollowRepository {
         (url) => _queryIndexerForFollowerRefs(
           url,
           pubkey,
-        ).catchError((_) => <_FollowerRef>[]),
+        ).catchError((_) => (refs: <_FollowerRef>[], anySourceFailed: true)),
       ),
     );
 
-    final refs = results.expand((indexerRefs) => indexerRefs).toList();
+    final refs = results.expand((result) => result.refs).toList();
 
     Log.debug(
       'Indexer follower pubkeys: '
@@ -1877,14 +2028,17 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    return refs;
+    return (
+      refs: refs,
+      anySourceFailed: results.any((result) => result.anySourceFailed),
+    );
   }
 
   /// Query a single indexer relay for kind 3 events mentioning pubkey.
   ///
   /// Returns each follower with the event's `created_at`, so [_newestFirst]
   /// can order them.
-  Future<List<_FollowerRef>> _queryIndexerForFollowerRefs(
+  Future<_FollowerBatch> _queryIndexerForFollowerRefs(
     String indexerUrl,
     String pubkey,
   ) async {
@@ -1893,6 +2047,7 @@ class FollowRepository {
     final relay = _relayFactory(indexerUrl, relayStatus);
     final completer = Completer<List<_FollowerRef>>();
     final followers = <_FollowerRef>[];
+    var failed = false;
     final subscriptionId = StringUtil.rndSecureNameStr(16);
 
     relay.onMessage = (relay, jsonMsg) async {
@@ -1931,14 +2086,17 @@ class FollowRepository {
         onTimeout: () => false,
       );
       if (!connected) {
-        return [];
+        return (refs: <_FollowerRef>[], anySourceFailed: true);
       }
 
       final result = await _awaitIndexerOperation<List<_FollowerRef>>(
         completer.future,
         deadline,
         cap: _fetchFollowersTimeout,
-        onTimeout: () => List<_FollowerRef>.of(followers),
+        onTimeout: () {
+          failed = true;
+          return List<_FollowerRef>.of(followers);
+        },
       );
 
       await _awaitIndexerOperation<bool>(
@@ -1946,14 +2104,14 @@ class FollowRepository {
         deadline,
         onTimeout: () => false,
       );
-      return result;
+      return (refs: result, anySourceFailed: failed);
     } catch (e) {
       Log.warning(
         'Error querying $indexerUrl for followers: $e',
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return List<_FollowerRef>.of(followers);
+      return (refs: List<_FollowerRef>.of(followers), anySourceFailed: true);
     } finally {
       await _disconnectIndexer(relay, indexerUrl, deadline);
     }
@@ -2054,6 +2212,8 @@ class FollowRepository {
     }
 
     try {
+      await _loadPersistedMyFollowers(_nostrClient.publicKey);
+
       // 1. Load from local storage first for immediate UI display
       await _loadFromLocalStorage();
 
