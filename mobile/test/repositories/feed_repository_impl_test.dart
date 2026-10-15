@@ -129,6 +129,37 @@ void main() {
       expect(hasMoreDone, isTrue);
     });
 
+    test(
+      'global feed bridge closes streams that already replayed a value',
+      () async {
+        final feed = container.read(
+          newVideosFeedProvider.notifier,
+        ) as _TestNewVideosFeed;
+        await container.read(newVideosFeedProvider.future);
+        feed.emit([_video('1')], hasMore: true);
+
+        final videos = <List<VideoEvent>>[];
+        final hasMoreValues = <bool>[];
+        var videosDone = false;
+        var hasMoreDone = false;
+        repository
+            .watchView(const NewVideosViewSource())
+            .listen(videos.add, onDone: () => videosDone = true);
+        repository
+            .watchHasMore(const NewVideosViewSource())
+            .listen(hasMoreValues.add, onDone: () => hasMoreDone = true);
+        await pumpEventQueue();
+        expect(videos.single.single.id, equals('1'));
+        expect(hasMoreValues, equals([true]));
+
+        container.dispose();
+        await pumpEventQueue();
+
+        expect(videosDone, isTrue);
+        expect(hasMoreDone, isTrue);
+      },
+    );
+
     // #6949. The bridge is created lazily on the first watchView, i.e. the
     // moment the user taps a grid tile. If that tap lands while the feed
     // provider is reloading, `asData` is null even though the grid is still
