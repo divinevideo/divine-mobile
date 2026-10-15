@@ -2506,8 +2506,8 @@ void main() {
           'and ends without a cursor when it stops',
           () async {
             // The client drops malformed rows, so a page shorter than `limit`
-            // is not the end. Only `has_more: false` is, and the cursor of the
-            // page before it must not leak out as the next page's start.
+            // is not the end; `has_more: false` is. The cursor of the page
+            // before it must not leak out as the next page's start.
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
             final requestedBefore = <int?>[];
             when(
