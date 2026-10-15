@@ -511,8 +511,15 @@ class VideosRepository {
         until: pageBefore == null ? null : pageBefore - 1,
       );
 
-      final events = await _nostrClient.queryEvents([filter]);
-      if (events.isEmpty) break;
+      // A read that runs out of time still returns what arrived, so only a
+      // read that finished can say the feed has nothing older.
+      final read = await _nostrClient.queryEventsDetailed([filter]);
+      final events = read.events;
+      if (events.isEmpty) {
+        // Ask for the same window again on the next page.
+        if (read.timedOut) nextBefore = pageBefore;
+        break;
+      }
 
       // Order on the clock this walk pages on, as Funnelcake does.
       final videos = _transformAndFilter(events, sortByCreatedAt: false)
@@ -522,9 +529,12 @@ class VideosRepository {
         await _hydrateVideosWithBulkStats(videos),
         seenVideoKeys: seenVideoKeys,
       );
-      if (events.length < limit) break;
-
       final oldest = events.map((event) => event.createdAt).reduce(min);
+      if (events.length < limit) {
+        if (read.timedOut) nextBefore = oldest;
+        break;
+      }
+
       if (oldest == pageBefore) break;
       pageBefore = oldest;
       nextBefore = oldest;

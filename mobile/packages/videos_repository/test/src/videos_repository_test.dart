@@ -2211,6 +2211,8 @@ void main() {
     });
 
     group('getHomeFeedVideos', () {
+      setUp(() => _answerDetailedReadsAsFinished(mockNostrClient));
+
       group('Funnelcake API first', () {
         late MockFunnelcakeApiClient mockFunnelcakeClient;
 
@@ -3821,6 +3823,79 @@ void main() {
       );
 
       test(
+        'keeps paging below a short relay page from a read that timed out',
+        () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (
+              events: [
+                _createVideoEvent(
+                  id: 'fast-relay-video',
+                  pubkey: 'followed-user',
+                  videoUrl: 'https://example.com/fast.mp4',
+                  createdAt: 1791990000,
+                ),
+              ],
+              timedOut: true,
+              noRelays: false,
+            ),
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 5,
+          );
+
+          expect(result.videos.map((video) => video.id), ['fast-relay-video']);
+          expect(result.paginationCursor, equals('1791990000'));
+          expect(result.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'asks for the same window again after an empty relay read that '
+        'timed out',
+        () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            cursor: '1792000000',
+          );
+
+          expect(result.videos, isEmpty);
+          expect(result.paginationCursor, equals('1792000000'));
+          expect(result.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'ends the feed on a short relay page from a read that finished',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEvent(
+                id: 'last-video',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/last.mp4',
+                createdAt: 1704067200,
+              ),
+            ],
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 5,
+          );
+
+          expect(result.videos.map((video) => video.id), ['last-video']);
+          expect(result.paginationCursor, isNull);
+          expect(result.hasMore, isFalse);
+        },
+      );
+
+      test(
         'pages and orders relay results on event created_at, not '
         'published_at',
         () async {
@@ -4032,6 +4107,8 @@ void main() {
     });
 
     group('getHomeFeedVideos with videoRefs', () {
+      setUp(() => _answerDetailedReadsAsFinished(mockNostrClient));
+
       test('empty videoRefs returns only following videos', () async {
         final event = _createVideoEvent(
           id: 'following-video',
@@ -7230,6 +7307,7 @@ void main() {
         when(
           () => mockNostrClient.queryEvents(any()),
         ).thenAnswer((_) async => [blockedEvent, allowedEvent]);
+        _answerDetailedReadsAsFinished(mockNostrClient);
 
         final result = await repositoryWithFilter.getHomeFeedVideos(
           authors: [blockedPubkey, allowedPubkey],
@@ -15404,6 +15482,24 @@ Event _createVideoEventWithDTag({
     'content': '',
     'sig': '',
   });
+}
+
+/// Answers [NostrClient.queryEventsDetailed] with whatever the test stubbed
+/// on [NostrClient.queryEvents], as a read that finished.
+///
+/// The Following relay walk reads through `queryEventsDetailed` so it can tell
+/// a read that ran out of time from one that found nothing older. Tests about
+/// timed-out reads stub `queryEventsDetailed` themselves.
+void _answerDetailedReadsAsFinished(MockNostrClient client) {
+  when(() => client.queryEventsDetailed(any())).thenAnswer(
+    (invocation) async => (
+      events: await client.queryEvents(
+        invocation.positionalArguments.first as List<Filter>,
+      ),
+      timedOut: false,
+      noRelays: false,
+    ),
+  );
 }
 
 /// Creates a mock VideoStats for testing Funnelcake API fallback.
