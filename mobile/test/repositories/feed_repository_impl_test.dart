@@ -114,14 +114,19 @@ void main() {
 
     test('global feed bridge closes its streams when disposed', () async {
       var videosDone = false;
+      var hasMoreDone = false;
       repository
           .watchView(const NewVideosViewSource())
           .listen(null, onDone: () => videosDone = true);
+      repository
+          .watchHasMore(const NewVideosViewSource())
+          .listen(null, onDone: () => hasMoreDone = true);
 
       container.dispose();
       await pumpEventQueue();
 
       expect(videosDone, isTrue);
+      expect(hasMoreDone, isTrue);
     });
 
     // #6949. The bridge is created lazily on the first watchView, i.e. the
