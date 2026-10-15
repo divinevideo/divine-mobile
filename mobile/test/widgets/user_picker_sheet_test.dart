@@ -688,15 +688,28 @@ void main() {
       testWidgets('ranking failure still excludes ineligible mutuals', (
         tester,
       ) async {
-        when(() => rankingLoader.load(any()))
-            .thenThrow(StateError('local signals'));
-        when(() => rankingLoader.isEligible(a)).thenReturn(false);
-        await pumpLocal(
-          tester,
-          profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
-        );
-        expect(rows(tester), ['Visible']);
-        expect(tester.takeException(), isNull);
+        final messages = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (message, {wrapWidth}) {
+          if (message != null) messages.add(message);
+        };
+        try {
+          when(() => rankingLoader.load(any()))
+              .thenThrow(StateError('local signals'));
+          when(() => rankingLoader.isEligible(a)).thenReturn(false);
+          await pumpLocal(
+            tester,
+            profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
+          );
+          expect(rows(tester), ['Visible']);
+          expect(tester.takeException(), isNull);
+          expect(
+            messages.single,
+            contains('Failed to load follow ranking: Bad state: local signals'),
+          );
+        } finally {
+          debugPrint = previousDebugPrint;
+        }
       });
     });
 
@@ -798,6 +811,87 @@ void main() {
               .whereType<String>()
               .toList();
           expect(names, ['Maria', 'Aaron']);
+        },
+      );
+
+      testWidgets(
+        'cache refresh failure removes newly ineligible and unfollowed rows',
+        (tester) async {
+          final capture = LogCaptureService();
+          await capture.clearAllLogs();
+          addTearDown(capture.clearAllLogs);
+          final c = 'c' * 64;
+          final profiles = [
+            profile(a, 'Blocked'),
+            profile(b, 'Unfollowed'),
+            profile(c, 'Visible'),
+          ];
+          final original = _createMockProfileRepository(
+            cachedProfiles: profiles,
+          );
+          final replacement = _createMockProfileRepository();
+          when(
+            () => replacement.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+          ).thenThrow(StateError('cache refresh'));
+          final follow = _createMockFollowRepository(
+            followingPubkeys: [a, b, c],
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWith(
+                  (ref) => ref.watch(_profileAvailability) == 0
+                      ? original
+                      : replacement,
+                ),
+                followRepositoryProvider.overrideWithValue(follow),
+                contentBlocklistRepositoryProvider.overrideWithValue(
+                  _createMockContentBlocklistRepository(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Title',
+                    filterMode: UserPickerFilterMode.mutualFollowsOnly,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Blocked'), findsOneWidget);
+          expect(find.text('Unfollowed'), findsOneWidget);
+          expect(find.text('Visible'), findsOneWidget);
+          when(() => follow.followingPubkeys).thenReturn([a, c]);
+          when(() => rankingLoader.isEligible(a)).thenReturn(false);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(UserPickerSheet)),
+          );
+          container.read(_profileAvailability.notifier).state = 1;
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {});
+          await tester.pumpAndSettle();
+          expect(find.text('Blocked'), findsNothing);
+          expect(find.text('Unfollowed'), findsNothing);
+          expect(find.text('Visible'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          expect(
+            capture
+                .getRecentLogs()
+                .where((entry) => entry.name == 'UserPickerSheet')
+                .map((entry) => entry.message),
+            contains(
+              'Failed to load user picker ranking: Bad state: cache refresh',
+            ),
+          );
         },
       );
 

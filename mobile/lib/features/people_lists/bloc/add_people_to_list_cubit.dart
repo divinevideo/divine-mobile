@@ -34,16 +34,62 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   ///
   /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
   /// the target list. Pass an empty list for a fresh list.
+  /// [initialState] may transfer a snapshot only within the same owner, list,
+  /// and follow source when constructor-injected dependencies are refreshed.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required ProfileRepository? profileRepository,
     required List<String> existingMemberPubkeys,
+    AddPeopleToListState initialState = const AddPeopleToListState(),
   }) : _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _profileRepository = profileRepository,
        _existingMembers = existingMemberPubkeys.toSet(),
-       super(const AddPeopleToListState());
+       super(
+         _eligibleSnapshot(
+           initialState,
+           rankingSignalsLoader,
+           existingMemberPubkeys,
+         ),
+       ) {
+    _candidatesByPubkey.addEntries(
+      state.candidates.map(
+        (candidate) => MapEntry(candidate.pubkey, candidate),
+      ),
+    );
+  }
+
+  /// Retained snapshots must come from the same owner, list, and follow source.
+  /// Revalidate before the replacement Cubit can expose any retained row.
+  static AddPeopleToListState _eligibleSnapshot(
+    AddPeopleToListState snapshot,
+    UserRankingSignalsLoader loader,
+    List<String> existingMembers,
+  ) {
+    final candidates = snapshot.candidates
+        .where((candidate) => loader.isEligible(candidate.pubkey))
+        .map(
+          (candidate) => candidate.copyWith(
+            isAlreadyInList:
+                candidate.isAlreadyInList ||
+                existingMembers.contains(candidate.pubkey),
+          ),
+        )
+        .toList();
+    final keys = candidates.map((candidate) => candidate.pubkey).toSet();
+    return snapshot.copyWith(
+      candidates: List.unmodifiable(candidates),
+      selectedPubkeys: Set.unmodifiable(
+        snapshot.selectedPubkeys.where(keys.contains),
+      ),
+      rankingSignals: Map.unmodifiable({
+        for (final entry in snapshot.rankingSignals.entries)
+          if (keys.contains(entry.key)) entry.key: entry.value,
+      }),
+      candidatePositions: Map.unmodifiable(snapshot.candidatePositions),
+    );
+  }
 
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
@@ -62,14 +108,13 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// [AddPeopleToListStatus.failure] on error.
   Future<void> started() async {
     if (isClosed) return;
-    final revision = state.loadRevision + 1;
+    final snapshot = state;
+    final revision = snapshot.loadRevision + 1;
     emitIfOpen(
       state.copyWith(
-        status: AddPeopleToListStatus.loading,
-        candidates: const [],
-        rankingSignals: const {},
-        candidatePositions: const {},
-        rankingCandidatePubkeys: const {},
+        status: snapshot.candidatePositions.isEmpty
+            ? AddPeopleToListStatus.loading
+            : AddPeopleToListStatus.ready,
         loadRevision: revision,
       ),
     );
@@ -80,8 +125,12 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       if (!_isCurrent(revision)) return;
       _candidatesByPubkey.clear();
       final initialFollowing = _followRepository.followingPubkeys;
+      final initialPubkeys = {
+        ...initialFollowing,
+        ...snapshot.candidates.map((candidate) => candidate.pubkey),
+      }.toList();
       final signals = await loadFollowListRankingSignals(
-        pubkeys: initialFollowing,
+        pubkeys: initialPubkeys,
         loader: _rankingSignalsLoader,
         logName: 'AddPeopleToListCubit',
         onError: (error, stackTrace) =>
@@ -97,24 +146,38 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       );
       if (!_isCurrent(revision)) return;
       final ranked = rankFollowListSnapshot(
-        pubkeys: initialFollowing,
+        pubkeys: initialPubkeys,
         signals: signals,
         names: names,
         isEligible: _rankingSignalsLoader.isEligible,
-        isSmartOrderReady: false,
-        previousSmartOrder: const [],
+        isSmartOrderReady: snapshot.candidatePositions.isNotEmpty,
+        previousSmartOrder:
+            (snapshot.candidatePositions.entries.toList()
+                  ..sort((a, b) => a.value.compareTo(b.value)))
+                .map((entry) => entry.key)
+                .toList(),
         now: DateTime.now(),
       );
+      for (final candidate in snapshot.candidates) {
+        if (ranked.eligible.contains(candidate.pubkey)) {
+          _candidatesByPubkey[candidate.pubkey] = candidate;
+        }
+      }
       for (final pubkey in ranked.smartOrder) {
-        _upsertCandidate(pubkey, isFollowing: true);
+        _upsertCandidate(
+          pubkey,
+          isFollowing: initialFollowing.contains(pubkey),
+        );
+      }
+      final positions = Map<String, int>.of(snapshot.candidatePositions);
+      for (final key in ranked.smartOrder) {
+        positions.putIfAbsent(key, () => positions.length);
       }
       emitIfOpen(
         state.copyWith(
           rankingSignals: Map.unmodifiable(signals),
-          rankingCandidatePubkeys: Set.unmodifiable(initialFollowing),
-          candidatePositions: Map.unmodifiable({
-            for (final (index, key) in ranked.smartOrder.indexed) key: index,
-          }),
+          rankingCandidatePubkeys: Set.unmodifiable(initialPubkeys),
+          candidatePositions: Map.unmodifiable(positions),
         ),
       );
       _followingSub = _followRepository.followingStream.listen(
@@ -192,9 +255,12 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
 
   @override
   Future<void> close() async {
+    // Mark the Cubit closed before subscription cancellation can yield, so a
+    // replacement never competes with pending profile/ranking work.
+    final closing = super.close();
     await _followingSub?.cancel();
     await _followerSub?.cancel();
-    return super.close();
+    return closing;
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -374,6 +440,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       state.copyWith(
         status: AddPeopleToListStatus.ready,
         candidates: candidates,
+        selectedPubkeys: Set.unmodifiable(
+          state.selectedPubkeys.where(
+            (key) => candidates.any((candidate) => candidate.pubkey == key),
+          ),
+        ),
         candidatePositions: Map.unmodifiable(positions),
       ),
     );
