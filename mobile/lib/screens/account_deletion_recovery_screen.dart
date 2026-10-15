@@ -116,10 +116,17 @@ class AccountDeletionRecoveryView extends StatelessWidget {
                 : context.l10n.minorAccountReviewCheckingStatusTitle,
           ),
         ),
-        body: const SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: _RecoveryStateContent(),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: _RecoveryStateContent(),
+                ),
+              ),
+            ),
           ),
         ),
       ),

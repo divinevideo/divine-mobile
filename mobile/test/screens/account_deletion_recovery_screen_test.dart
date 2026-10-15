@@ -28,6 +28,7 @@ Widget _app(
   AccountDeletionRecoveryCubit cubit, {
   Stream<AccountDeletionRecoveryState>? states,
   ThemeData? theme,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
   if (states != null) whenListen(cubit, states);
   final router = GoRouter(
@@ -55,6 +56,10 @@ Widget _app(
     ],
   );
   return MaterialApp.router(
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+      child: child!,
+    ),
     theme: theme,
     localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -482,6 +487,39 @@ void main() {
       await tester.tap(
         find.widgetWithText(DivineButton, l10n.supportContactSupport),
       );
+      await tester.pumpAndSettle();
+      expect(find.text('Support center'), findsOneWidget);
+      expect(cubit.state.attempt?.id, 'accepted');
+      verifyNever(cubit.cancel);
+    });
+
+    testWidgets('incomplete sign-out support stays reachable at 2x text', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      when(() => cubit.state).thenReturn(
+        const AccountDeletionRecoveryState(
+          status: AccountDeletionRecoveryStatus.signOutFailed,
+          attempt: AccountDeletionAttempt(
+            id: 'accepted',
+            status: AccountDeletionAttemptStatus.processing,
+          ),
+          failure: AccountDeletionRecoveryFailure.signOut,
+        ),
+      );
+      await tester.pumpWidget(
+        _app(cubit, textScaler: const TextScaler.linear(2)),
+      );
+      expect(tester.takeException(), isNull);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final support = find.widgetWithText(
+        DivineButton,
+        l10n.supportContactSupport,
+      );
+      await tester.scrollUntilVisible(support, 100);
+      await tester.pumpAndSettle();
+      await tester.tap(support);
       await tester.pumpAndSettle();
       expect(find.text('Support center'), findsOneWidget);
       expect(cubit.state.attempt?.id, 'accepted');
