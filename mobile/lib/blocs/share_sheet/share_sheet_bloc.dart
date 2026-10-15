@@ -152,6 +152,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         recentUsers = recentUsers
             .where((user) => snapshot.containsKey(user.pubkey))
             .toList();
+      } else {
+        recentUsers = recentUsers
+            .where((user) => _rankingSignalsLoader.isEligible(user.pubkey))
+            .toList();
+        followList.removeWhere(
+          (pubkey) => !_rankingSignalsLoader.isEligible(pubkey),
+        );
       }
       final recentPubkeys = recentUsers.map((u) => u.pubkey).toSet();
       var remainingPubkeys = (snapshot?.keys ?? followList)
@@ -182,7 +189,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       ];
 
       List<ShareableUser> mergeVisibleContacts(List<ShareableUser> base) {
-        final updates = {for (final contact in base) contact.pubkey: contact};
+        final updates = {
+          for (final contact in base)
+            if (snapshot != null ||
+                _rankingSignalsLoader.isEligible(contact.pubkey))
+              contact.pubkey: contact,
+        };
         final loadedPubkeys = {...recentPubkeys, ...remainingPubkeys};
         return [
           // Preserve the first visible order, including recipients selected
@@ -190,7 +202,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           // misses disappear after hydration; newly identified rows append.
           for (final contact in state.contacts)
             if (!_isSelf(contact.pubkey) &&
-                !excludedPubkeys.contains(contact.pubkey))
+                !excludedPubkeys.contains(contact.pubkey) &&
+                (snapshot != null ||
+                    _rankingSignalsLoader.isEligible(contact.pubkey)))
               if (updates.remove(contact.pubkey) case final updated?)
                 updated
               else if (!loadedPubkeys.contains(contact.pubkey) &&

@@ -41,6 +41,10 @@ void main() {
       mockProfileRepo = _MockProfileRepository();
       mockFollowRepo = _MockFollowRepository();
       rankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
       when(() => rankingSignalsLoader.load(any())).thenAnswer(
         (invocation) async => {
           for (final pubkey
@@ -358,6 +362,32 @@ void main() {
         verify: (bloc) =>
             expect(bloc.state.status, NewMessageSearchStatus.idle),
       );
+      final blockedFallbackFailure = Exception('local snapshot unavailable');
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'throwing loader fallback excludes blocked cached follows before reads and refresh',
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys)
+              .thenReturn([contacts[0].pubkey, contacts[1].pubkey]);
+          when(() => rankingSignalsLoader.load(any()))
+              .thenThrow(blockedFallbackFailure);
+          when(() => rankingSignalsLoader.isEligible(contacts[0].pubkey))
+              .thenReturn(false);
+        },
+        build: createBloc,
+        act: load,
+        errors: () => [blockedFallbackFailure],
+        verify: (bloc) {
+          expect(order(bloc), [contacts[1].pubkey]);
+          verifyNever(
+            () => mockProfileRepo.getCachedProfile(pubkey: contacts[0].pubkey),
+          );
+          verify(
+            () =>
+                rankingSignalsLoader.refreshInBackground([contacts[1].pubkey]),
+          ).called(1);
+        },
+      );
+
       final loadFailure = Exception('local snapshot unavailable');
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
         'load failure reports error and keeps usable alphabetic contacts',

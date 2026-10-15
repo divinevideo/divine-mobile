@@ -77,6 +77,10 @@ void main() {
       profileRepository = _MockProfileRepository();
       session = _TestNostrSession(currentUserPubkey);
       rankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
       when(() => rankingSignalsLoader.load(any())).thenAnswer(
         (invocation) async => {
           for (final pubkey

@@ -99,6 +99,9 @@ void main() {
     setUp(() {
       mockFollowRepository = _MockFollowRepository();
       mockRankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => mockRankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) => invocation.positionalArguments.first != ownPubkey,
+      );
       when(
         () => mockRankingSignalsLoader.load(
           any(),

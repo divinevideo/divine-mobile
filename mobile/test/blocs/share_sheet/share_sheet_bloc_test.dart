@@ -112,6 +112,10 @@ void main() {
       mockProfileRepository = _MockProfileRepository();
       mockFollowRepository = _MockFollowRepository();
       mockRankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => mockRankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
       when(
         () => mockRankingSignalsLoader.load(
           any(),
@@ -399,6 +403,44 @@ void main() {
           const ShareSheetState(status: ShareSheetStatus.loading),
           readyWith([]),
         ],
+      );
+
+      final fallbackFailure = Exception('local signal read failed');
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'throwing loader fallback excludes blocked recent shares and followed contacts',
+        setUp: () {
+          when(() => mockSharingService.recentlySharedWith).thenReturn([
+            ShareableUser(pubkey: bob, displayName: 'Blocked recent'),
+            ShareableUser(pubkey: dave, displayName: 'Eligible recent'),
+          ]);
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([alice, carol]);
+          when(
+            () => mockRankingSignalsLoader.load(
+              any(),
+              includeDmCounterparts: true,
+            ),
+          ).thenThrow(fallbackFailure);
+          when(() => mockRankingSignalsLoader.isEligible(alice))
+              .thenReturn(false);
+          when(() => mockRankingSignalsLoader.isEligible(bob))
+              .thenReturn(false);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([dave, carol]),
+        ],
+        errors: () => [fallbackFailure],
+        verify: (bloc) {
+          verify(
+            () => mockProfileRepository.getCachedProfiles(pubkeys: [carol]),
+          ).called(1);
+          verify(
+            () => mockRankingSignalsLoader.refreshInBackground([dave, carol]),
+          ).called(1);
+        },
       );
 
       for (final error in [

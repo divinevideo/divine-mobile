@@ -45,7 +45,11 @@ class UserRankingSignalsLoader {
   final bool Function(String pubkey)? _isBlocked;
   final DateTime Function() _now;
 
-  bool _isEligible(String pubkey) =>
+  /// Whether [pubkey] is eligible under the current owner and block policy.
+  ///
+  /// Synchronous and performs no I/O, so cached fallback paths can enforce
+  /// eligibility even when loading the local signal snapshot fails.
+  bool isEligible(String pubkey) =>
       pubkey != _currentUserPubkey && !(_isBlocked?.call(pubkey) ?? false);
 
   /// Loads only cached signals for [pubkeys], excluding self and blocked users.
@@ -57,7 +61,7 @@ class UserRankingSignalsLoader {
     Iterable<String> pubkeys, {
     bool includeDmCounterparts = false,
   }) async {
-    final candidates = pubkeys.where(_isEligible).toSet();
+    final candidates = pubkeys.where(isEligible).toSet();
     if (candidates.isEmpty && !includeDmCounterparts) return {};
 
     final conversations = await _dmRepository
@@ -74,7 +78,7 @@ class UserRankingSignalsLoader {
         continue;
       }
       for (final peer in conversation.participantPubkeys) {
-        if (!_isEligible(peer)) continue;
+        if (!isEligible(peer)) continue;
         if (includeDmCounterparts) candidates.add(peer);
         if (!candidates.contains(peer)) continue;
         final previous = interactions[peer];
@@ -109,7 +113,7 @@ class UserRankingSignalsLoader {
     return {
       for (final pubkey in keys)
         // A block may have arrived while the local queries were in flight.
-        if (_isEligible(pubkey))
+        if (isEligible(pubkey))
           pubkey: UserRankingSignals(
             pubkey: pubkey,
             lastInteractionAt: _timestamp(interactions[pubkey]),
