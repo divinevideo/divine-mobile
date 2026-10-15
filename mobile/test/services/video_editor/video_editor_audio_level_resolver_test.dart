@@ -7,13 +7,17 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show AudioEvent, EqualizerSettings;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show Layer, WidgetLayer, WidgetLayerExportConfigs;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../helpers/audio_samples.dart';
@@ -242,6 +246,79 @@ void main() {
       expect(parts[1].source.from, equals(_ms(500)));
       expect(parts[1].source.at, equals(Duration.zero));
       expect(parts[1].blendOut, equals(_dissolve));
+    });
+
+    test('fades the next clip in against silence after a muted one', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [
+          _clip('a', volume: 0, transition: _dissolve),
+          _clip('b'),
+        ],
+        videoEnd: _ms(3500),
+      );
+
+      expect(parts, hasLength(1));
+      expect(parts.single.source.from, equals(Duration.zero));
+      expect(parts.single.source.at, equals(_ms(1500)));
+      expect(parts.single.blendIn, equals(_dissolve));
+      expect(parts.single.blendOut, isNull);
+    });
+
+    test('blends the first clip in at the loop restart after a muted last '
+        'clip', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [
+          _clip('a'),
+          _clip('b', volume: 0, transition: _dissolve),
+        ],
+        videoEnd: _ms(3500),
+      );
+
+      expect(parts, hasLength(2));
+      // The head of the first clip fades in against the muted last clip.
+      expect(parts[0].source.from, equals(Duration.zero));
+      expect(parts[0].source.to, equals(_ms(500)));
+      expect(parts[0].source.at, equals(_ms(3000)));
+      expect(parts[0].blendIn, equals(_dissolve));
+      expect(parts[1].source.from, equals(_ms(500)));
+      expect(parts[1].source.at, equals(Duration.zero));
+      expect(parts[1].blendIn, isNull);
+      expect(parts[1].blendOut, isNull);
+    });
+  });
+
+  group(DetachedClipSound, () {
+    group('inLayers', () {
+      test('reads the detached clips among the layers, their files found '
+          'under the documents path', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip('detached'),
+          layerId: 'layer-1',
+          sourceOffset: _ms(200),
+        ).toMeta();
+
+        final sounds = DetachedClipSound.inLayers([
+          Layer(id: 'sticker'),
+          WidgetLayer(
+            widget: const SizedBox(),
+            startTime: _ms(500),
+            endTime: _ms(1500),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'detached', meta: meta),
+          ),
+        ], documentsPath: '/documents');
+
+        expect(sounds, hasLength(1));
+        expect(
+          sounds.single.clip.video?.file?.path,
+          equals('/documents/detached.mp4'),
+        );
+        expect(sounds.single.sourceOffset, equals(_ms(200)));
+        expect(sounds.single.startTime, equals(_ms(500)));
+        expect(sounds.single.endTime, equals(_ms(1500)));
+      });
     });
   });
 
