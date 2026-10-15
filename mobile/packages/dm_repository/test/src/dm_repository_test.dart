@@ -17482,9 +17482,12 @@ void main() {
       );
 
       /// Seeds an own, undeleted message of [messageKind] plus its
-      /// conversation, and stubs the preview refresh — the shared setup for
-      /// the delivery-outcome tests below.
-      void stubDeletableMessage({int messageKind = 14}) {
+      /// conversation with [participants], and stubs the preview refresh —
+      /// the shared setup for the delivery-outcome tests below.
+      void stubDeletableMessage({
+        int messageKind = 14,
+        List<String> participants = const [_validPubkeyA, _validPubkeyB],
+      }) {
         when(
           () => mockDirectMessagesDao.getMessageById(
             _rumorEventId,
@@ -17513,7 +17516,7 @@ void main() {
           (_) async => ConversationRow(
             ownerPubkey: '',
             id: conversationId,
-            participantPubkeys: '["$_validPubkeyA","$_validPubkeyB"]',
+            participantPubkeys: jsonEncode(participants),
             isGroup: false,
             createdAt: 1700000000,
             isRead: true,
@@ -17597,6 +17600,38 @@ void main() {
           await Future<void>.delayed(Duration.zero);
 
           expect(order, equals(['durable', 'wire']));
+        },
+      );
+
+      // #10013. Hex is case-insensitive and the stored participant list can
+      // hold the sender's own key in another casing.
+      test(
+        'leaves the sender out of the deletion whatever the case of its key',
+        () async {
+          stubDeletableMessage(
+            participants: [_validPubkeyA.toUpperCase(), _validPubkeyB],
+          );
+          final recipients = <String>[];
+          final addressedTo = <String>[];
+          stubSendRumor((rumorEvent, recipientPubkey) {
+            recipients.add(recipientPubkey);
+            addressedTo.addAll([
+              for (final tag in rumorEvent.tags)
+                if (tag.length >= 2 && tag[0] == 'p') tag[1],
+            ]);
+            return NIP17SendResult.success(
+              rumorEventId: rumorEvent.id,
+              messageEventId: _giftWrapEventId,
+              recipientPubkey: recipientPubkey,
+            );
+          });
+
+          final repo = createRepository();
+          await repo.deleteMessageForEveryone(_rumorEventId);
+          await pumpEventQueue();
+
+          expect(recipients, equals([_validPubkeyB]));
+          expect(addressedTo, equals([_validPubkeyB]));
         },
       );
 

@@ -8283,7 +8283,7 @@ class DmRepository {
       if (decoded is! List) return const [];
       return decoded
           .whereType<String>()
-          .where((p) => p != _userPubkey)
+          .where((p) => !_isSelf(p))
           .toList(growable: false);
     } on Object {
       return const [];
