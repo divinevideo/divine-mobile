@@ -13798,4 +13798,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Je laisse ça ici.';
+
+  @override
+  String get messagesDirect => 'Messages directs';
+
+  @override
+  String get messagesRooms => 'Salons';
+
+  @override
+  String get messagesPublicTestRooms => 'Salons de test publics';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Ces salons de test sont publics. Toute personne y ayant accès peut lire vos messages.';
+
+  @override
+  String get messagesNoRooms => 'Aucun salon pour le moment';
 }

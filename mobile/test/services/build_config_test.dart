@@ -134,6 +134,16 @@ void main() {
       );
     });
 
+    test('concordChat is off by default and maps to FF_CONCORD_CHAT', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.concordChat), isFalse);
+      expect(
+        config.getEnvironmentKey(FeatureFlag.concordChat),
+        equals('FF_CONCORD_CHAT'),
+      );
+    });
+
     test('integratedApps should map to FF_INTEGRATED_APPS env var', () {
       const config = BuildConfiguration();
 

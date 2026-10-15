@@ -5066,5 +5066,10 @@
   "ideasTitleFive": "بلا شرح طويل",
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
-  "ideasDescriptionSix": "أترك هذا هنا."
+  "ideasDescriptionSix": "أترك هذا هنا.",
+  "messagesDirect": "مباشرة",
+  "messagesRooms": "الغرف",
+  "messagesPublicTestRooms": "غرف اختبار عامة",
+  "messagesPublicTestDisclosure": "غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.",
+  "messagesNoRooms": "لا توجد غرف بعد"
 }

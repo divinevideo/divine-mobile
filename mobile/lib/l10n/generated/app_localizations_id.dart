@@ -13486,4 +13486,20 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
+
+  @override
+  String get messagesDirect => 'Langsung';
+
+  @override
+  String get messagesRooms => 'Ruang';
+
+  @override
+  String get messagesPublicTestRooms => 'Ruang uji publik';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Ruang uji ini bersifat publik. Siapa pun yang memiliki akses dapat membaca pesanmu.';
+
+  @override
+  String get messagesNoRooms => 'Belum ada ruang';
 }

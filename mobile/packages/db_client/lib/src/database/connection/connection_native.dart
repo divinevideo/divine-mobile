@@ -213,6 +213,9 @@ const _salvageSuffix = '.corruption_salvage';
 /// edit of an own video reads its raw tags here before asking a relay. It is
 /// bounded by `maxDurablePersonalEventsPerOwner`.
 ///
+/// `concord_store_entries` also holds signed, unsent room messages. Preserve
+/// the account-scoped store so recovery cannot discard the user's outbox.
+///
 /// This overlaps the [_localOnlyDataQueries] legacy-migration probe but is not
 /// identical: salvage drops `direct_messages` / `conversations` (re-drainable)
 /// and copies tables the probe does not check, such as `dm_message_reactions`
@@ -231,6 +234,7 @@ const salvageableLocalOnlyTables = <String>[
   'pending_reports',
   'pending_profile_saves',
   'outgoing_dms',
+  'concord_store_entries',
   'dm_message_reactions',
   'removed_conversations',
   'removed_message_ids',

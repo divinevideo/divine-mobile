@@ -9937,5 +9937,25 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
+  },
+  "messagesDirect": "Direct",
+  "messagesRooms": "Rooms",
+  "messagesPublicTestRooms": "Public test rooms",
+  "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
+  "messagesNoRooms": "No rooms yet",
+  "@messagesDirect": {
+    "description": "Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip."
+  },
+  "@messagesRooms": {
+    "description": "Label of the chip in the Messages tab that shows community chat rooms. Sits beside the Direct chip."
+  },
+  "@messagesPublicTestRooms": {
+    "description": "Heading above the room list in Messages while rooms are an internal public test."
+  },
+  "@messagesPublicTestDisclosure": {
+    "description": "Warning shown above the room list and inside every room: these test rooms are public, so anyone with access can read what is sent."
+  },
+  "@messagesNoRooms": {
+    "description": "Empty state of the room list in Messages when there is no room to show."
   }
 }

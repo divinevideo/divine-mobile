@@ -17,6 +17,8 @@ caption_generator 100
 categories_repository 100
 collaborator_repository 96
 comments_repository 80
+concord_protocol 85
+concord_repository 90
 content_blocklist_repository 100
 content_policy 100
 count_formatter 100

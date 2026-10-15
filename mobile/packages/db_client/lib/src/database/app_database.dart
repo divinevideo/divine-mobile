@@ -95,6 +95,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedCaptionStyles,
     SavedTitleStyles,
     ScheduledPosts,
+    ConcordStoreEntries,
   ],
   daos: [
     UserProfilesDao,
@@ -130,6 +131,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedCaptionStylesDao,
     SavedTitleStylesDao,
     ScheduledPostsDao,
+    ConcordStoreDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -140,7 +142,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -266,6 +268,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 22 && to >= 22) {
         await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
+      }
+      if (from < 23 && to >= 23) {
+        // Earlier chat previews used v22 without the DM environment column.
+        // Upgrades skip beforeOpen repair, so normalize both v22 shapes here.
+        await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
+        await m.createTable(concordStoreEntries);
       }
     },
     beforeOpen: (details) async {

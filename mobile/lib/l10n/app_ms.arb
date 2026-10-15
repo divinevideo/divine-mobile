@@ -6830,5 +6830,10 @@
   "ideasTitleFive": "Tanpa penjelasan panjang",
   "ideasDescriptionFive": "Cuma hendak berkongsi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
-  "ideasDescriptionSix": "Saya tinggalkan ini di sini."
+  "ideasDescriptionSix": "Saya tinggalkan ini di sini.",
+  "messagesDirect": "Langsung",
+  "messagesRooms": "Bilik",
+  "messagesPublicTestRooms": "Bilik ujian awam",
+  "messagesPublicTestDisclosure": "Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.",
+  "messagesNoRooms": "Belum ada bilik"
 }

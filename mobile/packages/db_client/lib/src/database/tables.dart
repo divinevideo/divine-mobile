@@ -2160,3 +2160,21 @@ class ScheduledPosts extends Table {
   @override
   Set<Column> get primaryKey => {eventId};
 }
+
+/// Account-scoped Concord ciphertext and delivery metadata.
+///
+/// Values must contain sealed events or non-secret delivery metadata only.
+/// The scope identifies the relay and channel; account deletion spans scopes.
+/// ConcordRepository keeps the latest 200 delivered wraps in each scope and
+/// prunes on restore and ingestion. Pending sends survive until delivered,
+/// explicitly expired, or removed with the account.
+@DataClassName('ConcordStoreRow')
+class ConcordStoreEntries extends Table {
+  TextColumn get account => text()();
+  TextColumn get scope => text()();
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {account, scope, key};
+}

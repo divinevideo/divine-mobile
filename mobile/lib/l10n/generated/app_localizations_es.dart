@@ -13738,4 +13738,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lo dejo por aquí.';
+
+  @override
+  String get messagesDirect => 'Directos';
+
+  @override
+  String get messagesRooms => 'Salas';
+
+  @override
+  String get messagesPublicTestRooms => 'Salas públicas de prueba';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Estas salas de prueba son públicas. Cualquiera con acceso puede leer tus mensajes.';
+
+  @override
+  String get messagesNoRooms => 'Todavía no hay salas';
 }

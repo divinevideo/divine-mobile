@@ -13580,4 +13580,20 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get messagesDirect => 'براہ راست';
+
+  @override
+  String get messagesRooms => 'کمرے';
+
+  @override
+  String get messagesPublicTestRooms => 'عوامی آزمائشی کمرے';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔';
+
+  @override
+  String get messagesNoRooms => 'ابھی کوئی کمرہ نہیں';
 }

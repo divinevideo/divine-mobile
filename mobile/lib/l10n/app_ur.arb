@@ -6830,5 +6830,10 @@
   "ideasTitleFive": "لمبی وضاحت کے بغیر",
   "ideasDescriptionFive": "بس شیئر کرنا تھا۔",
   "ideasTitleSix": "آج کا ایک حصہ",
-  "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔"
+  "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔",
+  "messagesDirect": "براہ راست",
+  "messagesRooms": "کمرے",
+  "messagesPublicTestRooms": "عوامی آزمائشی کمرے",
+  "messagesPublicTestDisclosure": "یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔",
+  "messagesNoRooms": "ابھی کوئی کمرہ نہیں"
 }

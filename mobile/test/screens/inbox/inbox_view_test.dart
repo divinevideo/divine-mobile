@@ -255,6 +255,34 @@ void main() {
         expect(toggle.notificationCount, equals(7));
       });
 
+      testWidgets('offers Direct and Rooms in Messages when the chat test '
+          'is on', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            // The chips and room rows are Material widgets; the app hosts
+            // the inbox inside the shell's Scaffold.
+            wrapInScaffold: true,
+            additionalOverrides: [
+              featureFlagStateProvider.overrideWithValue({
+                FeatureFlag.concordChat: true,
+              }),
+              isDmRestrictedProvider.overrideWithValue(false),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Messages'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.messagesRooms));
+        await tester.pump();
+        expect(find.text(l10n.messagesPublicTestRooms), findsOneWidget);
+        expect(find.text('general'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('renders $FollowingBar in messages tab', (tester) async {
         await tester.pumpWidget(buildSubject());
         await tester.pump();

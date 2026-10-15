@@ -22658,6 +22658,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get messagesDirect;
+
+  /// Label of the chip in the Messages tab that shows community chat rooms. Sits beside the Direct chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms'**
+  String get messagesRooms;
+
+  /// Heading above the room list in Messages while rooms are an internal public test.
+  ///
+  /// In en, this message translates to:
+  /// **'Public test rooms'**
+  String get messagesPublicTestRooms;
+
+  /// Warning shown above the room list and inside every room: these test rooms are public, so anyone with access can read what is sent.
+  ///
+  /// In en, this message translates to:
+  /// **'These test rooms are public. Anyone with access can read your messages.'**
+  String get messagesPublicTestDisclosure;
+
+  /// Empty state of the room list in Messages when there is no room to show.
+  ///
+  /// In en, this message translates to:
+  /// **'No rooms yet'**
+  String get messagesNoRooms;
 }
 
 class _AppLocalizationsDelegate

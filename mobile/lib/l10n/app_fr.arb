@@ -5066,5 +5066,10 @@
   "ideasTitleFive": "Pas de grande explication",
   "ideasDescriptionFive": "Juste envie de partager.",
   "ideasTitleSix": "Un peu d’aujourd’hui",
-  "ideasDescriptionSix": "Je laisse ça ici."
+  "ideasDescriptionSix": "Je laisse ça ici.",
+  "messagesDirect": "Messages directs",
+  "messagesRooms": "Salons",
+  "messagesPublicTestRooms": "Salons de test publics",
+  "messagesPublicTestDisclosure": "Ces salons de test sont publics. Toute personne y ayant accès peut lire vos messages.",
+  "messagesNoRooms": "Aucun salon pour le moment"
 }

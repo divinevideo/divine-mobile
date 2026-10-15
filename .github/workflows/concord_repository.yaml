@@ -1,0 +1,48 @@
+# ABOUTME: CI workflow for the concord_repository package.
+# ABOUTME: Runs tests, formatting, and analysis only when concord_repository files change.
+
+name: Concord Repository CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/concord_repository/**"
+      - ".github/workflows/concord_repository.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/concord_repository/**"
+      - ".github/workflows/concord_repository.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/concord_repository"
+      flutter_version: "3.47.2"
+      min_coverage: 90
+
+  browser:
+    name: Browser compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: mobile/packages/concord_repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Run protocol and transport tests in Chrome
+        run: dart test --platform chrome test/sealed_validation_test.dart test/sealed_outbox_test.dart test/websocket_relay_browser_test.dart

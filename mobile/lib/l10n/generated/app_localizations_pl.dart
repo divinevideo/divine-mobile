@@ -13870,4 +13870,20 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Zostawiam to tutaj.';
+
+  @override
+  String get messagesDirect => 'Bezpośrednie';
+
+  @override
+  String get messagesRooms => 'Pokoje';
+
+  @override
+  String get messagesPublicTestRooms => 'Publiczne pokoje testowe';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Te pokoje testowe są publiczne. Każdy, kto ma dostęp, może czytać Twoje wiadomości.';
+
+  @override
+  String get messagesNoRooms => 'Nie ma jeszcze pokoi';
 }

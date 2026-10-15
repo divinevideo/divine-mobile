@@ -13585,4 +13585,20 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
+
+  @override
+  String get messagesDirect => 'Langsung';
+
+  @override
+  String get messagesRooms => 'Bilik';
+
+  @override
+  String get messagesPublicTestRooms => 'Bilik ujian awam';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.';
+
+  @override
+  String get messagesNoRooms => 'Belum ada bilik';
 }
