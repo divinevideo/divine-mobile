@@ -494,8 +494,7 @@ class VideosRepository {
     // before follow list is ready).
     if (authors.isEmpty) return const _FollowingFetchResult(videos: []);
 
-    // A relay `until` is inclusive; the shared bound is exclusive.
-    var until = before == null ? null : before - 1;
+    var pageBefore = before;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     var pageCount = 0;
@@ -508,7 +507,8 @@ class VideosRepository {
         kinds: [_videoKind],
         authors: authors,
         limit: limit,
-        until: until,
+        // A relay `until` is inclusive; the shared bound is exclusive.
+        until: pageBefore == null ? null : pageBefore - 1,
       );
 
       final events = await _nostrClient.queryEvents([filter]);
@@ -524,10 +524,10 @@ class VideosRepository {
       );
       if (events.length < limit) break;
 
-      final nextUntil = _cursorBeforeOldestEvent(events);
-      if (nextUntil == null || nextUntil == until) break;
-      until = nextUntil;
-      nextBefore = nextUntil + 1;
+      final oldest = events.map((event) => event.createdAt).reduce(min);
+      if (oldest == pageBefore) break;
+      pageBefore = oldest;
+      nextBefore = oldest;
     }
 
     return _FollowingFetchResult(
