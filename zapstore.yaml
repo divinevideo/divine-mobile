@@ -1,4 +1,5 @@
 repository: https://github.com/divinevideo/divine-mobile
+match: ".*arm64.*\\.apk$"
 name: Divine
 description: |
     Divine is a new 6-second looping video app, inspired by Vine, with a
@@ -15,7 +16,6 @@ tags:
 license: MPL-2.0
 website: https://divine.video
 icon: ./mobile/assets/icon/app_icon.png
-match: ".*arm64.*\\.apk$"
 supported_nips:
     - "01"
     - "02"
