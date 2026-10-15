@@ -10,6 +10,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../cache_sync/test/fake_cache_dao.dart';
 
@@ -107,6 +109,60 @@ class _PartialRelay extends RelayBase {
   }) async => true;
   @override
   Future<void> disconnect() async {}
+}
+
+class _CompleteFollowerIndexer extends _PartialRelay {
+  _CompleteFollowerIndexer(super.url, super.relayStatus, super.follower);
+
+  @override
+  Future<bool> doConnect() async {
+    await super.doConnect();
+    await onMessage?.call(this, ['EOSE', 'test']);
+    return true;
+  }
+}
+
+// Only transport is scripted: the production SDK verifies frames and computes
+// the outcome metadata from the exact filter emitted by FollowRepository.
+class _FollowerContractRelay extends Relay {
+  _FollowerContractRelay()
+    : super('wss://followers.example', RelayStatus('wss://followers.example'));
+
+  late Completer<String> nextRequest;
+
+  @override
+  Future<bool> doConnect() async {
+    relayStatus.connected = ClientConnected.connected;
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async {
+    return true;
+  }
+
+  @override
+  void saveQuery(Subscription subscription) {
+    super.saveQuery(subscription);
+    nextRequest.complete(subscription.id);
+  }
+
+  Future<void> deliver(List<dynamic> message) async {
+    final handler = onMessage;
+    expect(handler, isNotNull);
+    final result = handler!(this, message);
+    if (result is Future) await result;
+  }
 }
 
 void main() {
@@ -699,6 +755,126 @@ void main() {
         expect(dao.rows[otherOwner], isEmpty);
       },
     );
+    group('production SDK relay completion contract', () {
+      late Nostr sdk;
+      late _FollowerContractRelay relay;
+      late Event followerEvent;
+      late List<QueryResult> outcomes;
+      late List<Filter> sentFilters;
+
+      setUp(() async {
+        sdk = Nostr(
+          LocalNostrSigner('1' * 64),
+          const [],
+          (url) => RelayBase(url, RelayStatus(url)),
+        );
+        relay = _FollowerContractRelay();
+        expect(await sdk.relayPool.add(relay), isTrue);
+        final author = await sdk.ensurePublicKey();
+        followerEvent = (await sdk.nostrSigner.signEvent(
+          contact(author, 100),
+        ))!;
+        outcomes = [];
+        sentFilters = [];
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer((call) async {
+          final filters = call.positionalArguments.single as List<Filter>;
+          sentFilters.addAll(filters);
+          relay.nextRequest = Completer<String>();
+          final pending = sdk.readEvents(
+            filters.map((filter) => filter.toJson()).toList(),
+            requireAllRelaysSettled: true,
+          );
+          final id = await relay.nextRequest.future;
+          await relay.deliver(['EVENT', id, followerEvent.toJson()]);
+          // Ordinary EOSE: no NIP-67 finish hint.
+          await relay.deliver(['EOSE', id]);
+          final result = await pending;
+          outcomes.add(result);
+          return result;
+        });
+      });
+      tearDown(() => sdk.close());
+
+      test(
+        'nonempty EOSE without NIP-11 completes bounded full reconciliation',
+        () async {
+          // Exercise the real merger with all three source adapters active.
+          await repository.dispose();
+          var indexerConnections = 0;
+          repository = build(
+            indexers: ['wss://indexer.example'],
+            relayFactory: (url, status) {
+              indexerConnections++;
+              return _CompleteFollowerIndexer(url, status, second);
+            },
+          );
+          when(() => api.isAvailable).thenReturn(true);
+          when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+            (_) async => PaginatedPubkeys(pubkeys: [first], total: 1),
+          );
+          dao.rows[owner] = {stale: 50};
+          expect(relay.info, isNull);
+          await repository.syncMyFollowers();
+          expect(outcomes.single.endedBy, QueryEnd.complete);
+          expect(outcomes.single.confirmedExhaustive, isFalse);
+          expect(outcomes.single.possiblyCapped, isFalse);
+          expect(sentFilters.single.limit, 5000);
+          expect(dao.rows[owner], {
+            first: null,
+            second: 100,
+            followerEvent.pubkey: 100,
+          });
+          expect(dao.replacements, 1);
+          final checkpoint = await MyFollowersSyncState().read(owner);
+          expect(checkpoint.full, now);
+          expect(checkpoint.incremental, now);
+          await repository.syncMyFollowers();
+          expect(outcomes, hasLength(1));
+          expect(indexerConnections, 1);
+          verify(() => api.getFollowers(pubkey: owner, limit: 5000)).called(1);
+          expect(dao.replacements, 1);
+        },
+      );
+
+      test(
+        'real capped EOSE merges and retries before claiming full completion',
+        () async {
+          relay.info = RelayInfo('', '', '', '', const [], '', '', maxLimit: 1);
+          dao.rows[owner] = {stale: 50};
+          await repository.syncMyFollowers();
+          expect(outcomes.single.endedBy, QueryEnd.complete);
+          expect(outcomes.single.possiblyCapped, isTrue);
+          expect(dao.rows[owner], {stale: 50, followerEvent.pubkey: 100});
+          expect(dao.replacements, 0);
+          final checkpoint = await MyFollowersSyncState().read(owner);
+          expect(checkpoint.full, isNull);
+          expect(checkpoint.incremental, isNull);
+          expect(checkpoint.attempt, now);
+          await repository.syncMyFollowers();
+          expect(outcomes, hasLength(1));
+          now += 901;
+          await repository.syncMyFollowers();
+          expect(outcomes, hasLength(2));
+          expect(outcomes.last.possiblyCapped, isTrue);
+          expect((await MyFollowersSyncState().read(owner)).full, isNull);
+          expect(dao.rows[owner], {stale: 50, followerEvent.pubkey: 100});
+          expect(dao.replacements, 0);
+
+          // A later uncapped response can authoritatively remove the old row.
+          relay.info = null;
+          now += 901;
+          await repository.syncMyFollowers();
+          expect(outcomes, hasLength(3));
+          expect(outcomes.last.possiblyCapped, isFalse);
+          expect(dao.rows[owner], {followerEvent.pubkey: 100});
+          expect(dao.replacements, 1);
+          expect((await MyFollowersSyncState().read(owner)).full, now);
+        },
+      );
+    });
+
     for (final outcome in [
       QueryEnd.deadline,
       QueryEnd.settledEarly,
