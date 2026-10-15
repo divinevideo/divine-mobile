@@ -847,6 +847,121 @@ void main() {
       );
 
       testWidgets(
+        'tombstone during profile unavailability updates restored search without resetting the flow',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final vanished = StreamController<Set<String>>();
+          addTearDown(() => unawaited(vanished.close()));
+          final repository = _createMockProfileRepository(
+            cachedProfiles: [
+              profile(a, 'Zoe').copyWith(nip05: 'zoe@example.invalid'),
+              profile(b, 'Maria'),
+            ],
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
+                vanishedProfilePubkeysProvider.overrideWith(
+                  (ref) => vanished.stream,
+                ),
+                profileRepositoryProvider.overrideWith(
+                  (ref) =>
+                      ref.watch(_profileAvailability) == 1 ? null : repository,
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(followingPubkeys: [a, b]),
+                ),
+                contentBlocklistRepositoryProvider.overrideWithValue(
+                  _createMockContentBlocklistRepository(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Title',
+                    maxCount: 3,
+                    filterMode: UserPickerFilterMode.mutualFollowsOnly,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          List<String> names() => tester
+              .widgetList<Text>(
+                find.descendant(
+                  of: find.byType(ListView),
+                  matching: find.byType(Text),
+                ),
+              )
+              .map((text) => text.data)
+              .whereType<String>()
+              .where(
+                (text) =>
+                    text == 'Maria' ||
+                    text == 'Zoe' ||
+                    text == l10n.profileDeletedAccountName,
+              )
+              .toList();
+          expect(names(), ['Maria', 'Zoe']);
+          await tester.tap(find.text('Maria'));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), 'Zoe');
+          await tester.pumpAndSettle();
+          expect(names(), ['Zoe']);
+          expect(find.text('1/3 Title'), findsOneWidget);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(UserPickerSheet)),
+          );
+          // Another mounted surface keeps the persistent identity stream active
+          // while this sheet temporarily has no profile-backed rows.
+          final identitySubscription = container.listen(
+            vanishedProfilePubkeysProvider,
+            (_, _) {},
+          );
+          addTearDown(identitySubscription.close);
+          container.read(_profileAvailability.notifier).state = 1;
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNothing);
+          vanished.add({a});
+          await tester.pumpAndSettle();
+          expect(container.read(vanishedProfilePubkeysProvider).value, {a});
+          container.read(_profileAvailability.notifier).state = 2;
+          await tester.pumpAndSettle();
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            'Zoe',
+          );
+          expect(find.text('1/3 Title'), findsOneWidget);
+          expect(names(), isEmpty);
+          await tester.enterText(find.byType(TextField), 'zoe@example.invalid');
+          await tester.pumpAndSettle();
+          expect(names(), isEmpty);
+          await tester.enterText(
+            find.byType(TextField),
+            l10n.profileDeletedAccountName,
+          );
+          await tester.pumpAndSettle();
+          expect(names(), [l10n.profileDeletedAccountName]);
+          await tester.enterText(find.byType(TextField), '');
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.userPickerRemoveSelectionSemantics('Maria'),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(names(), ['Maria', l10n.profileDeletedAccountName]);
+        },
+      );
+
+      testWidgets(
         'cache refresh failure removes newly ineligible and unfollowed rows',
         (tester) async {
           final capture = LogCaptureService();
