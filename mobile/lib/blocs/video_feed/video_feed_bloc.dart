@@ -150,19 +150,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// `createdAt` "until" timestamp.
   ///
   /// Pages carrying a cursor arrive in server-ranked order and must be appended
-  /// as-is (no `createdAt` re-sort). For You, Following and Classics are
-  /// cursor-only, so a null [HomeFeedResult.paginationCursor] signals
-  /// exhaustion there. New Videos prefers the cursor but still pages on
-  /// `until` when the repository returns no cursor (Funnelcake outage or a
-  /// legacy bare-list response).
+  /// as-is (no `createdAt` re-sort). New Videos prefers the cursor but still
+  /// pages on `until` when the repository returns no cursor (Funnelcake outage
+  /// or a legacy bare-list response); the rest are [_isCursorOnly].
+  bool _usesCursorPagination(VideoFeedSource source) =>
+      _isCursorOnly(source) || source.type == VideoFeedSourceType.newVideos;
+
+  /// Whether [source] pages only on its server cursor, so a page without one
+  /// has no next page.
   ///
   /// Following must never page on `until`: its feed is ordered by revision
   /// time, while [VideoEvent.createdAt] is the publication time. One edited
   /// old video on a page would move the next page's start back by weeks.
-  bool _usesCursorPagination(VideoFeedSource source) =>
+  bool _isCursorOnly(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
-      source.type == VideoFeedSourceType.newVideos ||
       source.type == VideoFeedSourceType.classic;
 
   bool _canEmitForSource(
@@ -444,9 +446,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     // the source is exhausted. New Videos also prefers the cursor, but its
     // repository can answer without one (Funnelcake outage or a legacy
     // bare-list response), and that fallback still pages by `until`.
-    if (_usesCursorPagination(state.source) &&
-        state.paginationCursor == null &&
-        state.source.type != VideoFeedSourceType.newVideos) {
+    if (_isCursorOnly(state.source) && state.paginationCursor == null) {
       emit(state.copyWith(hasMore: false));
       return;
     }
@@ -1049,15 +1049,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     required bool fallbackHasMore,
   }) {
     final upstreamHasMore = result.hasMore ?? fallbackHasMore;
-    if (!_usesCursorPagination(source)) {
-      return upstreamHasMore;
-    }
-
-    // New Videos can fall back to the repository's `until` pagination when the
-    // API returned no cursor; a cursor-less page there is not exhaustion.
-    if (source.type == VideoFeedSourceType.newVideos) {
-      return upstreamHasMore;
-    }
+    // New Videos falls back to `until` and subscribed lists never carry a
+    // cursor, so only a cursor-only feed reads a missing cursor as the end.
+    if (!_isCursorOnly(source)) return upstreamHasMore;
 
     return upstreamHasMore && result.paginationCursor != null;
   }
