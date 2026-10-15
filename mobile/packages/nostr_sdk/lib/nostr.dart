@@ -322,6 +322,8 @@ class Nostr {
         false, // if relay not connected, it will send after auth
     void Function()? onEose,
     void Function(String reason)? onClosed,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     return _pool.subscribe(
       filters,
@@ -333,6 +335,8 @@ class Nostr {
       sendAfterAuth: sendAfterAuth,
       onEose: onEose,
       onClosed: onClosed,
+      onStoredEventsStart: onStoredEventsStart,
+      onStoredEventsEnd: onStoredEventsEnd,
     );
   }
 

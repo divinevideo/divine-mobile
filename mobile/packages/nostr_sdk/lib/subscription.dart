@@ -52,6 +52,25 @@ class Subscription {
   /// its REQ with a `CLOSED` frame.
   void Function(String reason)? onClosed;
 
+  /// Callback invoked when stored events start arriving again: a relay
+  /// replays them after a reconnect or after the pool re-sent the REQ once
+  /// AUTH succeeded, or one arrives after the stored-events phase ended.
+  ///
+  /// The phase starts open when the subscription is created, so this does
+  /// not fire for a relay's first batch, unless that relay had already
+  /// answered or refused the REQ before it.
+  void Function()? onStoredEventsStart;
+
+  /// Callback invoked when the stored-events phase ends: every relay that
+  /// can still send this subscription stored events has answered its REQ
+  /// (EOSE or `CLOSED`), no relay owes the rest of a batch it started, and
+  /// every event received so far has been handed to [onEvent].
+  ///
+  /// Unlike [onEose], a relay that is not connected does not hold this up.
+  /// The argument is how many events [onEvent] has received for this
+  /// subscription, so a caller can tell when it has handled all of them.
+  void Function(int deliveredEventCount)? onStoredEventsEnd;
+
   /// [filters] parsed once at construction.
   ///
   /// [matchesEvent] runs on every inbound frame, and `Filter.fromJson` copies
@@ -81,6 +100,8 @@ class Subscription {
     String? id,
     this.onEose,
     this.onClosed,
+    this.onStoredEventsStart,
+    this.onStoredEventsEnd,
   }) : assert(
          id == null ||
              (id.isNotEmpty && id.length <= nip01MaxSubscriptionIdLength),

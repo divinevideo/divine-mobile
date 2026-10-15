@@ -207,6 +207,10 @@ class RelayPool {
   /// Armed silence probes, keyed by subscription id.
   final Map<String, Timer> _subscriptionSilenceProbes = {};
 
+  /// Stored-events phase of each live subscription that asked for
+  /// [Subscription.onStoredEventsEnd] or [Subscription.onStoredEventsStart].
+  final Map<String, _StoredEventsPhase> _storedEventsPhases = {};
+
   /// Whether teardown has begun. See [beginClose].
   bool _closed = false;
 
@@ -808,6 +812,9 @@ class RelayPool {
       _cacheRelays.remove(url);
     }
     _forgetRelayBookkeeping(url);
+    // After the caller's synchronous follow-up, so a reconnect that re-adds
+    // the same URL is judged on the replacement rather than on its absence.
+    scheduleMicrotask(() => _recheckStoredEventsPhasesFor(url));
   }
 
   Relay? getRelay(String url) {
@@ -1408,6 +1415,7 @@ class RelayPool {
   void _closeAuthGate(Relay relay) {
     _authHandshakeStartedAt.remove(relay.url);
     _authGateClosed.add(relay.url);
+    _recheckStoredEventsPhasesOf(relay);
     _settleQueriesBlockedBy(relay);
   }
 
@@ -1432,6 +1440,7 @@ class RelayPool {
       _authHandshakeStartedAt.remove(relay.url);
       _authGateClosed.remove(relay.url);
       _settleQueriesBlockedBy(relay);
+      _recheckStoredEventsPhasesOf(relay);
     };
   }
 
@@ -1630,6 +1639,10 @@ class RelayPool {
       log('📡 Raw message from ${relay.url}: $json');
     }
 
+    // A queued frame may be dispatched after the relay reconnected: it still
+    // belongs to the socket it arrived on.
+    final receivedOnGeneration = relay.connectionGeneration;
+
     // #5863: when an off-main verify worker is wired, serialize the frames
     // that carry or terminate a query per subscription so the asynchronous
     // verify preserves in-order delivery — a terminal frame must not complete
@@ -1650,10 +1663,187 @@ class RelayPool {
       return _enqueueOrdered(
         relay,
         json[1] as String,
-        () => _dispatchTypedFrame(relay, json, messageType),
+        () => _dispatchTypedFrame(
+          relay,
+          json,
+          messageType,
+          receivedOnGeneration: receivedOnGeneration,
+        ),
       );
     }
-    return _dispatchTypedFrame(relay, json, messageType);
+    return _dispatchTypedFrame(
+      relay,
+      json,
+      messageType,
+      receivedOnGeneration: receivedOnGeneration,
+    );
+  }
+
+  /// Records that [relay] handed over a valid event for [subId], just before
+  /// the subscription receives it.
+  ///
+  /// An event from a relay that has not answered every REQ on the
+  /// connection it arrived on is a stored event; that relay now owes the
+  /// rest of its batch, by URL, so a replacement relay object for the same
+  /// address inherits the debt. A relay starting a batch again, after a
+  /// reconnect or a REQ re-sent after AUTH, announces it through
+  /// [Subscription.onStoredEventsStart] and reopens the phase. Only a relay
+  /// that was sent the REQ counts.
+  void _storedEventsPhaseEventDelivered(
+    Relay relay,
+    String subId,
+    int generation,
+  ) {
+    final phase = _storedEventsPhases[subId];
+    if (phase == null) return;
+    phase.delivered++;
+    if (!relay.hasSubscriptionById(subId)) return;
+    phase.expected.add(relay.url);
+    final tookPart = phase.rounds.containsKey(relay.url);
+    final round = phase.roundFor(relay.url, generation);
+    if (round == null) {
+      // From an older connection, whose batch the current one replays and
+      // the phase waits for. The subscription must not take it as live.
+      if (!phase.open) _reopenStoredEventsPhase(phase, subId);
+      return;
+    }
+    if (round.answered) return;
+    final batch = (generation, round.resends);
+    final previous = phase.batches[relay.url];
+    if (previous == batch) return;
+    phase.batches[relay.url] = batch;
+    phase.sendingStored.add(relay.url);
+    if (!phase.open || tookPart) _reopenStoredEventsPhase(phase, subId);
+  }
+
+  void _reopenStoredEventsPhase(_StoredEventsPhase phase, String subId) {
+    phase.open = true;
+    _subscriptions[subId]?.onStoredEventsStart?.call();
+  }
+
+  /// Records that [relay] answered [subId] on the connection of
+  /// [generation], with EOSE when [completesBatch] and otherwise `CLOSED`.
+  /// [dropsRequest] marks a `CLOSED` after which the relay no longer holds
+  /// the REQ, so its own reconnect does not send it again.
+  ///
+  /// Each REQ is answered once: a further answer to one already answered,
+  /// such as a `CLOSED` after its EOSE, does not count toward the next. A
+  /// `CLOSED` after part of a batch leaves the rest of it owed, so the relay
+  /// keeps holding the phase open until a rebuilt connection replays it or
+  /// the subscriber stops waiting.
+  void _storedEventsPhaseAnswered(
+    Relay relay,
+    String subId,
+    int generation, {
+    required bool completesBatch,
+    bool dropsRequest = false,
+  }) {
+    final phase = _storedEventsPhases[subId];
+    if (phase == null) return;
+    phase.expected.add(relay.url);
+    if (dropsRequest) phase.refused.add(relay.url);
+    final round = phase.roundFor(relay.url, generation);
+    if (round == null) return;
+    if (!round.answered) round.answers++;
+    if (completesBatch && round.answered) {
+      phase.sendingStored.remove(relay.url);
+    }
+    _maybeEndStoredEventsPhase(subId);
+  }
+
+  /// Records that the pool re-sent [subId]'s REQ to [relay] on its current
+  /// connection. The relay answers it again, after replaying its stored
+  /// events.
+  void _storedEventsPhaseResent(Relay relay, String subId) {
+    final phase = _storedEventsPhases[subId];
+    if (phase == null) return;
+    phase.expected.add(relay.url);
+    phase.roundFor(relay.url, relay.connectionGeneration)?.resends++;
+  }
+
+  /// Ends [subId]'s stored-events phase when nothing it can still receive
+  /// from a stored replay is outstanding.
+  ///
+  /// Relays are followed by URL, because a reconnect can replace the relay
+  /// object for an address (`RelayManager` does for every relay on app
+  /// resume). An address holds the phase open while it owes the rest of a
+  /// batch it started sending, even disconnected, since its reconnect
+  /// replays that batch; while its NIP-42 handshake is live, since the pool
+  /// re-sends the REQ once it succeeds; and while its relay is connected or
+  /// still connecting and has not answered every REQ on its current
+  /// connection. An address that left the pool, refused our AUTH, dropped
+  /// before sending anything, or refused the REQ itself holds nothing open,
+  /// and neither does a temp relay another caller opened, which is never
+  /// sent this REQ. At least one
+  /// relay must have answered on its current connection, so a phase in which
+  /// nothing was reachable does not end.
+  ///
+  /// The count handed to [Subscription.onStoredEventsEnd] includes every
+  /// event the answering relays sent before their EOSE: a relay's EVENT and
+  /// EOSE frames reach this pool in order, through [_enqueueOrdered] when a
+  /// verify worker is set and through one suspension each otherwise.
+  void _maybeEndStoredEventsPhase(String subId) {
+    final phase = _storedEventsPhases[subId];
+    final subscription = _subscriptions[subId];
+    if (phase == null || subscription == null || !phase.open) return;
+    for (final relay in [
+      ..._relaysSnapshot(),
+      ..._tempRelaysSnapshot(),
+      ..._cacheRelaysSnapshot(),
+    ]) {
+      if (relay.hasSubscriptionById(subId)) phase.expected.add(relay.url);
+    }
+    var answered = false;
+    for (final url in phase.expected) {
+      final pooled = _relays[url];
+      final relay = pooled ?? _tempRelays[url] ?? _cacheRelays[url];
+      if (relay == null) continue;
+      if (pooled == null && !relay.hasSubscriptionById(subId)) continue;
+      if (phase.sendingStored.contains(url)) return;
+      if (phase.refused.contains(url) && !relay.hasSubscriptionById(subId)) {
+        continue;
+      }
+      final gateClosed = _authGateClosed.contains(url);
+      // No age limit here, unlike for queries: a remote signer can take
+      // longer, and the subscriber bounds its own wait.
+      if (!gateClosed && _authHandshakeStartedAt.containsKey(url)) return;
+      if (phase.answeredOn(url, relay.connectionGeneration)) {
+        answered = true;
+        continue;
+      }
+      if (gateClosed) continue;
+      final status = relay.relayStatus.connected;
+      if (relay.isSocketConnecting ||
+          status == ClientConnected.connected ||
+          status == ClientConnected.connecting) {
+        return;
+      }
+    }
+    if (!answered) return;
+    phase.open = false;
+    subscription.onStoredEventsEnd?.call(phase.delivered);
+  }
+
+  /// Re-checks the stored-events phases [relay] takes part in after its
+  /// connection state or AUTH gate changed: a relay that dropped before
+  /// sending anything, or whose AUTH was refused, stops holding them open.
+  void _recheckStoredEventsPhasesOf(Relay relay) {
+    for (final entry in _storedEventsPhases.entries.toList()) {
+      if (entry.value.expected.contains(relay.url) ||
+          relay.hasSubscriptionById(entry.key)) {
+        _maybeEndStoredEventsPhase(entry.key);
+      }
+    }
+  }
+
+  /// Re-checks the stored-events phases the relay at [url] took part in,
+  /// once it has left the pool.
+  void _recheckStoredEventsPhasesFor(String url) {
+    for (final entry in _storedEventsPhases.entries.toList()) {
+      if (entry.value.expected.contains(url)) {
+        _maybeEndStoredEventsPhase(entry.key);
+      }
+    }
   }
 
   /// Records that [relay] sent one-shot query [subId] an `EVENT` frame the
@@ -1669,8 +1859,9 @@ class RelayPool {
   Future<void> _dispatchTypedFrame(
     Relay relay,
     List<dynamic> json,
-    String messageType,
-  ) async {
+    String messageType, {
+    required int receivedOnGeneration,
+  }) async {
     if (messageType == 'EVENT') {
       try {
         final subId = _stringAt(relay, json, 1, 'EVENT subscription id');
@@ -1825,6 +2016,9 @@ class RelayPool {
         } else {
           event.sources.add(relay.url);
         }
+        if (poolSubscription != null) {
+          _storedEventsPhaseEventDelivered(relay, subId, receivedOnGeneration);
+        }
         subscription.onEvent(event);
       } catch (err) {
         log(err.toString());
@@ -1856,6 +2050,12 @@ class RelayPool {
       if (isQuery) {
         _fireQueryCompleteIfSettled(subId, afterTerminalFrame: true);
       } else {
+        _storedEventsPhaseAnswered(
+          relay,
+          subId,
+          receivedOnGeneration,
+          completesBatch: true,
+        );
         // Handle EOSE for long-running subscriptions
         final subscription = _subscriptions[subId];
         if (subscription != null && subscription.onEose != null) {
@@ -1991,6 +2191,7 @@ class RelayPool {
                 '🔐 AUTH post-auth: sending ${subscription.id} '
                 '${relay.url}',
               );
+              _storedEventsPhaseResent(relay, subscription.id);
               relay.send(subscription.toJson());
             }
           } else {
@@ -2163,10 +2364,20 @@ class RelayPool {
           relay.discardSubscription(subscriptionId)) {
         final subscription = _subscriptions[subscriptionId];
         final activeRelays = _getRelaysWithSubscription(subscriptionId);
+        if (subscription != null && activeRelays.isNotEmpty) {
+          _storedEventsPhaseAnswered(
+            relay,
+            subscriptionId,
+            receivedOnGeneration,
+            completesBatch: false,
+            dropsRequest: true,
+          );
+        }
         if (subscription != null && activeRelays.isEmpty) {
           _subscriptionSilenceProbes.remove(subscriptionId)?.cancel();
           _subscriptions.remove(subscriptionId);
           _subscriptionEoseRelays.remove(subscriptionId);
+          _storedEventsPhases.remove(subscriptionId);
           _subscriptionSentAt.remove(subscriptionId);
           subscription.onClosed?.call(reason);
         } else if (subscription != null && subscription.onEose != null) {
@@ -2192,6 +2403,13 @@ class RelayPool {
         if (relay.checkQuery(subscriptionId)) {
           _recordQueryClosed(relay, subscriptionId, reason);
         }
+        // It answers this REQ; the one re-sent after AUTH is answered anew.
+        _storedEventsPhaseAnswered(
+          relay,
+          subscriptionId,
+          receivedOnGeneration,
+          completesBatch: false,
+        );
         // The relay named the gate itself. With no live handshake nothing is
         // going to run that replay, and this refusal is the evidence
         // [_canStillSettleQuery] waits for before giving up on it. Judged on
@@ -2242,6 +2460,8 @@ class RelayPool {
         false, // if relay not connected, it will send after auth
     void Function()? onEose,
     void Function(String reason)? onClosed,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     if (filters.isEmpty) {
       throw ArgumentError("No filters given", "filters");
@@ -2256,8 +2476,13 @@ class RelayPool {
       id: id,
       onEose: onEose,
       onClosed: onClosed,
+      onStoredEventsStart: onStoredEventsStart,
+      onStoredEventsEnd: onStoredEventsEnd,
     );
     _subscriptions[subscription.id] = subscription;
+    if (onStoredEventsStart != null || onStoredEventsEnd != null) {
+      _storedEventsPhases[subscription.id] = _StoredEventsPhase();
+    }
     _subscriptionSentAt[subscription.id] = DateTime.now();
     final subscribedRelayIdentities = <String>{};
     log(
@@ -2409,6 +2634,7 @@ class RelayPool {
     final subscription = _subscriptions.remove(id);
     // Clean up EOSE tracking for this subscription
     _subscriptionEoseRelays.remove(id);
+    _storedEventsPhases.remove(id);
     if (subscription != null) {
       // A relay that still holds this REQ never served it, so offer it to the
       // zombie repair before the teardown sweep below drops that evidence.
@@ -3272,6 +3498,7 @@ class RelayPool {
       // The replacement is a different socket, so nothing the pool concluded
       // about the old one carries over.
       _forgetRelayBookkeeping(addr);
+      scheduleMicrotask(() => _recheckStoredEventsPhasesFor(addr));
       tempRelay = null;
     }
     if (tempRelay == null) {
@@ -3416,6 +3643,7 @@ class RelayPool {
       relay.dispose();
     }
     _forgetRelayBookkeeping(addr);
+    scheduleMicrotask(() => _recheckStoredEventsPhasesFor(addr));
     // Pairs with the arm in [checkAndGenTempRelay]: the sweep exists only to
     // serve entries in [_tempRelays], so it stops with the last one rather
     // than waiting for a tick to notice the map is empty.
@@ -3774,5 +4002,66 @@ class RelayPool {
     final host = uri?.host.toLowerCase();
     if (host == null || host.isEmpty) return false;
     return host == 'divine.video' || host.endsWith('.divine.video');
+  }
+}
+
+/// A relay's answers to one subscription on one connection.
+class _RelayRound {
+  _RelayRound(this.generation);
+
+  /// The [Relay.connectionGeneration] these answers were given on.
+  final int generation;
+
+  /// EOSE and `CLOSED` frames received on [generation].
+  int answers = 0;
+
+  /// REQs re-sent on [generation] after the first. The relay answers each
+  /// of them, after replaying its stored events again.
+  int resends = 0;
+
+  /// Whether the relay has answered every REQ it was sent on [generation].
+  bool get answered => answers > resends;
+}
+
+/// Where a live subscription stands in receiving stored events.
+class _StoredEventsPhase {
+  /// Relay URL -> its answers on the newest connection seen for it.
+  final Map<String, _RelayRound> rounds = {};
+
+  /// Relay URL -> the (generation, resends) of the batch it last started.
+  final Map<String, (int, int)> batches = {};
+
+  /// URLs of relays that sent stored events and have not answered since:
+  /// the rest of their batch is still owed, whichever relay object for that
+  /// address delivers it.
+  final Set<String> sendingStored = {};
+
+  /// Events handed to the subscription's `onEvent` so far.
+  int delivered = 0;
+
+  /// Whether stored events may still arrive.
+  bool open = true;
+
+  /// URLs of relays this subscription was sent to, or that took part in it.
+  final Set<String> expected = {};
+
+  /// URLs of relays that ended this REQ with `CLOSED` and dropped it. Their
+  /// own reconnect does not send it again.
+  final Set<String> refused = {};
+
+  /// [url]'s round for a frame from [generation], or null for a frame from
+  /// an older connection than the newest one seen.
+  _RelayRound? roundFor(String url, int generation) {
+    final round = rounds[url];
+    if (round == null || round.generation < generation) {
+      return rounds[url] = _RelayRound(generation);
+    }
+    return round.generation == generation ? round : null;
+  }
+
+  /// Whether [url] has answered every REQ sent on [generation].
+  bool answeredOn(String url, int generation) {
+    final round = rounds[url];
+    return round != null && round.generation == generation && round.answered;
   }
 }
