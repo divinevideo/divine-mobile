@@ -418,6 +418,145 @@ void main() {
         },
       );
 
+      test(
+        'inherited prefix survives incomplete cache replay until completion',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          final emitted = <UserSearchState>[];
+          final subscription = bloc.stream.listen(emitted.add);
+          addTearDown(subscription.cancel);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere(
+            (state) =>
+                state.sourceOutcomes.containsKey(SearchSource.localCache),
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[1]],
+              sources: const {
+                SearchSource.localCache: SearchSourceSuccess(
+                  resultCount: 1,
+                  latencyMs: 1,
+                ),
+              },
+              isComplete: false,
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, prefix);
+          expect(bloc.state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          final completed = bloc.stream.firstWhere(
+            (state) => state.status == UserSearchStatus.success,
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: prefix,
+              sources: const {},
+              isComplete: true,
+            ),
+          );
+          await stream.close();
+          await completed;
+          expect(emitted, isNotEmpty);
+          for (final state in emitted) {
+            expect(state.results, prefix);
+            expect(state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          }
+          verifyNever(() => loader.load(any()));
+        },
+      );
+
+      test(
+        'inherited rows lose blocked signals immediately and omitted signals on completion',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          when(() => loader.isEligible(prefix.first.pubkey)).thenReturn(false);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere(
+            (state) =>
+                state.sourceOutcomes.containsKey(SearchSource.localCache),
+          );
+          stream.add(
+            const ProgressiveSearchResult(
+              profiles: [],
+              isComplete: false,
+              sources: {
+                SearchSource.localCache: SearchSourceSuccess(
+                  resultCount: 0,
+                  latencyMs: 1,
+                ),
+              },
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, [prefix.last]);
+          expect(bloc.state.rankingSignals.keys, [prefix.last.pubkey]);
+          final completed = bloc.stream.firstWhere(
+            (state) => state.status == UserSearchStatus.success,
+          );
+          stream.add(
+            const ProgressiveSearchResult(
+              profiles: [],
+              sources: {},
+              isComplete: true,
+            ),
+          );
+          await stream.close();
+          await completed;
+          expect(bloc.state.results, isEmpty);
+          expect(bloc.state.rankingSignals, isEmpty);
+        },
+      );
+
       test('progressive prefix drops newly blocked and omitted rows', () async {
         final stream = StreamController<ProgressiveSearchResult>();
         addTearDown(stream.close);

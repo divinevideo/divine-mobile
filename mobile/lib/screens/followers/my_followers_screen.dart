@@ -43,7 +43,7 @@ class MyFollowersScreen extends ConsumerWidget {
     );
 
     return RetainedBlocProvider<MyFollowersBloc, MyFollowersState>(
-      key: ValueKey((sessionOwner, currentUserPubkey)),
+      key: ValueKey(sessionOwner),
       dependencies: (
         followRepository,
         blocklistRepository,
@@ -65,7 +65,11 @@ class MyFollowersScreen extends ConsumerWidget {
         )..add(const MyFollowingListLoadRequested()),
         child:
             RetainedBlocProvider<FollowListSearchBloc, FollowListSearchState>(
-              dependencies: (followRepository, profileRepository),
+              dependencies: (
+                followRepository,
+                profileRepository,
+                currentUserPubkey,
+              ),
               create: (snapshot) => FollowListSearchBloc(
                 followRepository: followRepository,
                 subjectPubkey: currentUserPubkey,

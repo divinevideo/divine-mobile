@@ -265,6 +265,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       final timedStream = searchTimeout == null
           ? searchStream
           : searchStream.timeout(searchTimeout!);
+      // An interrupted run may have shown remote rows absent from the new
+      // run's cache subset. Only completion can reconcile those omissions.
+      final inheritedPubkeys = retainedProfiles.map((p) => p.pubkey).toSet();
       var publishedProfiles = List<UserProfile>.of(retainedProfiles);
       var publishedSignals = Map<String, UserRankingSignals>.of(
         retainedSignals,
@@ -303,9 +306,11 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             };
             publishedProfiles = [
               for (final profile in publishedProfiles)
-                if (updates.containsKey(profile.pubkey) &&
+                if ((updates.containsKey(profile.pubkey) ||
+                        (!result.isComplete &&
+                            inheritedPubkeys.contains(profile.pubkey))) &&
                     _rankingSignalsLoader.isEligible(profile.pubkey))
-                  updates[profile.pubkey]!,
+                  updates[profile.pubkey] ?? profile,
               ...page.profiles.where(
                 (profile) => _rankingSignalsLoader.isEligible(profile.pubkey),
               ),
