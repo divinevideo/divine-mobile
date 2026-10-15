@@ -9,10 +9,14 @@ import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
@@ -38,6 +42,25 @@ class _FakeCameraPermissionBloc extends Fake implements CameraPermissionBloc {
 
   @override
   Future<void> close() async {}
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
 
 void main() {
@@ -135,6 +158,27 @@ void main() {
       );
       await tester.pump();
     }
+
+    Finder refreshArrow() => find.byWidgetPredicate(
+      (widget) =>
+          widget is DivineIcon && widget.icon == DivineIconName.arrowClockwise,
+    );
+
+    double refreshArrowOpacity(WidgetTester tester) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(of: refreshArrow(), matching: find.byType(Opacity))
+              .first,
+        )
+        .opacity;
+
+    Matrix4 refreshArrowRotation(WidgetTester tester) => tester
+        .widget<Transform>(
+          find
+              .ancestor(of: refreshArrow(), matching: find.byType(Transform))
+              .first,
+        )
+        .transform;
 
     testWidgets('icon and profile tabs have minimum interactive dimensions', (
       tester,
@@ -249,6 +293,61 @@ void main() {
           }),
         );
         expect(arrowOpacity.opacity, 1);
+      },
+    );
+
+    testWidgets(
+      'lets the refresh arrow finish its turn and fade out once the refresh '
+      'completes',
+      (tester) async {
+        retapCubit.request();
+        await pumpSubject(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(refreshArrowOpacity(tester), 1);
+        // Mid-turn, so finishing the turn, freezing and snapping upright all
+        // look different.
+        final midTurn = refreshArrowRotation(tester);
+        expect(midTurn, isNot(matrixMoreOrLessEquals(Matrix4.identity())));
+
+        retapCubit.completeRefresh();
+        await tester.pump();
+        expect(refreshArrowRotation(tester), matrixMoreOrLessEquals(midTurn));
+
+        await tester.pumpAndSettle();
+        expect(refreshArrowOpacity(tester), 0);
+        expect(
+          refreshArrowRotation(tester),
+          matrixMoreOrLessEquals(Matrix4.identity()),
+        );
+      },
+    );
+
+    testWidgets(
+      'stops and hides the refresh arrow at once when the refresh completes '
+      'under reduced motion',
+      (tester) async {
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        retapCubit.request();
+        await pumpSubject(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+          refreshArrowRotation(tester),
+          isNot(matrixMoreOrLessEquals(Matrix4.identity())),
+        );
+
+        // Reduced motion switched on while the arrow is still spinning.
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        retapCubit.completeRefresh();
+        await tester.pump();
+
+        expect(refreshArrowOpacity(tester), 0);
+        expect(
+          refreshArrowRotation(tester),
+          matrixMoreOrLessEquals(Matrix4.identity()),
+        );
       },
     );
 
@@ -490,6 +589,76 @@ void main() {
           handle.dispose();
         },
       );
+
+      group('when opening the camera fails', () {
+        late CrashReporter originalReporter;
+        late _RecordingCrashReporter reporter;
+        late LogCaptureService logCapture;
+
+        setUp(() async {
+          originalReporter = detachedFailureReporter;
+          reporter = _RecordingCrashReporter();
+          detachedFailureReporter = reporter;
+          logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+          when(
+            () => router.push<Object?>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async => throw StateError('push failed'));
+        });
+
+        tearDown(() async {
+          detachedFailureReporter = originalReporter;
+          await logCapture.clearAllLogs();
+        });
+
+        void expectFailureObserved(WidgetTester tester, String message) {
+          expect(tester.takeException(), isNull);
+
+          final logs = logCapture
+              .getRecentLogs()
+              .where((entry) => entry.name == 'Navigation')
+              .where((entry) => entry.level == LogLevel.error);
+          expect(logs, hasLength(1));
+          expect(logs.single.category, LogCategory.ui);
+          expect(logs.single.message, message);
+          expect(
+            reporter.recordedErrors.single,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<StateError>(),
+            ),
+          );
+        }
+
+        testWidgets('a tap logs and reports the failure', (tester) async {
+          await pumpSubjectWithRouter(tester, router);
+
+          await tester.tap(find.bySemanticsIdentifier('camera_button'));
+          await tester.pump();
+
+          expectFailureObserved(
+            tester,
+            'Failed to open camera from bottom navigation: '
+            'Bad state: push failed',
+          );
+        });
+
+        testWidgets('a press-and-hold logs and reports the failure', (
+          tester,
+        ) async {
+          await pumpSubjectWithRouter(tester, router);
+
+          await tester.longPress(find.bySemanticsIdentifier('camera_button'));
+          await tester.pump();
+
+          expectFailureObserved(
+            tester,
+            'Failed to open camera with auto-record from bottom navigation: '
+            'Bad state: push failed',
+          );
+        });
+      });
     });
 
     testWidgets(

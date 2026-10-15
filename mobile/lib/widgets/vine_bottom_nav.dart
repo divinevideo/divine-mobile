@@ -27,6 +27,7 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/camera_permission_check.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/notification_badge.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -173,8 +174,13 @@ class VineBottomNav extends ConsumerWidget {
                         name: 'Navigation',
                         category: LogCategory.ui,
                       );
-                      context.pushToCameraWithPermission(
-                        entryPoint: CreationEntryPoint.bottomNav,
+                      runDetached(
+                        context.pushToCameraWithPermission(
+                          entryPoint: CreationEntryPoint.bottomNav,
+                        ),
+                        'open camera from bottom navigation',
+                        logName: 'Navigation',
+                        category: LogCategory.ui,
                       );
                     },
                     onLongPress: () {
@@ -189,11 +195,14 @@ class VineBottomNav extends ConsumerWidget {
                       // recognised. Called directly: widgets may not import
                       // the service layer (check_ui_service_boundary).
                       unawaited(HapticFeedback.lightImpact());
-                      unawaited(
+                      runDetached(
                         context.pushToCameraWithPermission(
                           entryPoint: CreationEntryPoint.bottomNav,
                           autoRecord: true,
                         ),
+                        'open camera with auto-record from bottom navigation',
+                        logName: 'Navigation',
+                        category: LogCategory.ui,
                       );
                     },
                   ),
@@ -447,9 +456,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
       return;
     }
     // Let the current rotation complete before stopping.
-    _rotationController.forward(from: _rotationController.value).then((_) {
-      if (mounted) _rotationController.stop();
-    });
+    _rotationController.forward(from: _rotationController.value);
     _swapController.reverse();
   }
 
