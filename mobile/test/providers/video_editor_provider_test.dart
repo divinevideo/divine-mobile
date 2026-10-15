@@ -84,17 +84,24 @@ class _RecordingTrace implements PerformanceTrace {
 
 /// A clip manager whose shared chroma-key bake keys a take at once, or fails.
 class _BakingClipManager extends ClipManagerNotifier {
-  _BakingClipManager({required this.fails});
+  _BakingClipManager({required this.fails, this.writesBack = false});
 
   final bool fails;
+
+  /// Whether the bake is written into the session, as the real bake does.
+  final bool writesBack;
 
   @override
   Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) async {
     if (fails) throw StateError('bake failed');
-    return clip.copyWith(
+    final keyed = clip.copyWith(
       video: EditorVideo.file('/docs/keyed.mp4'),
       chromaKey: clip.captureChromaKey,
     );
+    if (writesBack) {
+      refreshClip(getClipById(clip.id)!.withCapturedChromaKeyBake(keyed));
+    }
+    return keyed;
   }
 }
 
@@ -742,7 +749,10 @@ void main() {
       /// bake keys it or fails as [bakeFails] says.
       Future<ProviderContainer> containerWithPendingTake({
         required bool bakeFails,
+        bool bakeWritesBack = false,
       }) async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
         final pendingContainer = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(
@@ -751,8 +761,12 @@ void main() {
             performanceMonitoringServiceProvider.overrideWithValue(
               _RecordingPerformanceMonitor(),
             ),
+            databaseProvider.overrideWithValue(database),
             clipManagerProvider.overrideWith(
-              () => _BakingClipManager(fails: bakeFails),
+              () => _BakingClipManager(
+                fails: bakeFails,
+                writesBack: bakeWritesBack,
+              ),
             ),
           ],
         );
@@ -793,6 +807,44 @@ void main() {
             .startRenderVideo();
 
         expect(rendered?.single.video?.file?.path, '/docs/keyed.mp4');
+      });
+
+      test('settles when the export writes back the bake it made', () async {
+        final pendingContainer = await containerWithPendingTake(
+          bakeFails: false,
+          bakeWritesBack: true,
+        );
+        var renders = 0;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              renders++;
+              return (
+                DivineVideoClip(
+                  id: 'rendered-$renders',
+                  video: EditorVideo.file('/docs/rendered-$renders.mp4'),
+                  duration: const Duration(seconds: 2),
+                  recordedAt: DateTime.now(),
+                  targetAspectRatio: .vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+                null,
+              );
+            };
+
+        await pendingContainer
+            .read(videoEditorProvider.notifier)
+            .startRenderVideo();
+        await pumpEventQueue();
+
+        final state = pendingContainer.read(videoEditorProvider);
+        expect(state.finalRenderedClip, isNotNull);
+        expect(state.isProcessing, isFalse);
+        expect(renders, lessThanOrEqualTo(2));
       });
 
       test(
@@ -1773,6 +1825,51 @@ void main() {
           await pumpEventQueue();
 
           expect(renderedHistories, hasLength(1));
+        });
+
+        group('while the new render runs', () {
+          late Completer<void> gate;
+          late List<List<DivineVideoClip>> renderedClips;
+
+          setUp(() {
+            gate = Completer<void>();
+            renderedClips = [];
+            final render = VideoEditorRenderService.renderVideoToClipOverride!;
+            VideoEditorRenderService.renderVideoToClipOverride =
+                ({
+                  required clips,
+                  required editorStateHistory,
+                  parameters,
+                  taskId,
+                }) async {
+                  renderedClips.add(clips);
+                  await gate.future;
+                  return render(
+                    clips: clips,
+                    editorStateHistory: editorStateHistory,
+                    parameters: parameters,
+                    taskId: taskId,
+                  );
+                };
+            final clipManager = postDetails.read(clipManagerProvider.notifier);
+            clipManager.refreshClip(
+              clipManager.clips.single.copyWith(
+                thumbnailPath: '/docs/thumb.jpg',
+              ),
+            );
+          });
+
+          test('renders a take proof that lands during it', () async {
+            await pumpEventQueue();
+
+            landTakeProof();
+            gate.complete();
+            await pumpEventQueue();
+
+            final state = postDetails.read(videoEditorProvider);
+            expect(renderedClips.last.single.proofManifestJson, isNotNull);
+            expect(state.finalRenderedClip?.id, 'rendered-3');
+          });
         });
       });
     });

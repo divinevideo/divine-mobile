@@ -194,6 +194,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// such as a take's provenance signing, lands after the export finished.
   bool _finalRenderAwaited = false;
 
+  /// Bumped by every [invalidateFinalRenderedClip], also while no finished
+  /// render exists, so a running render can tell that the edit changed under
+  /// it.
+  int _editRevision = 0;
+
   /// When true, [triggerAutosave] is a no-op.
   ///
   /// Set to `true` by [initFromPublishedVideo] and intentionally never reset.
@@ -234,6 +239,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// change, to ensure a re-render is required before publishing.
   /// Also deletes the rendered file from disk since it's stored in Documents.
   void invalidateFinalRenderedClip() {
+    _editRevision++;
     final clip = state.finalRenderedClip;
     if (clip == null) return;
 
@@ -252,8 +258,12 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
     state = state.copyWith(clearFinalRenderedClip: true);
     _renderAgainIfAwaited();
+    _deleteRenderedClipFiles(clip);
+  }
 
-    // Delete the old rendered file from disk to free up space
+  /// Deletes a rendered video the edit no longer uses. Renders are stored in
+  /// Documents, so nothing else frees the space.
+  void _deleteRenderedClipFiles(DivineVideoClip clip) {
     final db = ref.read(databaseProvider);
     _editorBackgroundWork.track(
       FileCleanupService.deleteRecordingClipFiles(
@@ -1483,6 +1493,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         ? null
         : _clips.first.targetAspectRatio.name;
     void tagOutcome(String outcome) => trace.putAttribute('outcome', outcome);
+    final editRevision = _editRevision;
 
     try {
       final renderParameters = _buildRenderParameters();
@@ -1514,6 +1525,29 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       tagOutcome('success');
 
       final (finalRenderedClip, proofManifestJson) = result;
+
+      // The edit changed while this render ran, for example a take's proof
+      // landed, so its video is out of date. It is left to finish rather than
+      // cancelled because cancelling does not stop its signing step, and two
+      // renders would then sign the same recordings at once.
+      if (editRevision != _editRevision) {
+        Log.info(
+          '🔄 Edit changed during the render, rendering again',
+          name: 'VideoEditorNotifier',
+          category: .video,
+        );
+        _deleteRenderedClipFiles(finalRenderedClip);
+        if (_finalRenderAwaited) {
+          runProviderDetached(
+            startRenderVideo(),
+            'render the edit that changed during the render',
+            logName: 'VideoEditorNotifier',
+          );
+        } else {
+          state = state.copyWith(isProcessing: false);
+        }
+        return;
+      }
 
       Log.info(
         '✅ Video rendered successfully - duration: '
