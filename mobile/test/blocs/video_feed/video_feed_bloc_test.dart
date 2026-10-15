@@ -354,9 +354,15 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: videos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         act: (bloc) =>
@@ -391,7 +397,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: [compactVideo]));
         },
@@ -459,7 +465,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: [compactVideo]));
           when(
@@ -541,7 +547,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: [compactVideo]));
         },
@@ -642,7 +648,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -692,7 +698,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -772,7 +778,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
 
@@ -801,7 +807,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -1114,7 +1120,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => const HomeFeedResult(videos: []));
         },
@@ -1174,7 +1180,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenThrow(Exception('Network error'));
         },
@@ -1203,9 +1209,15 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: videos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         act: (bloc) =>
@@ -1229,7 +1241,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => const HomeFeedResult(videos: []));
         },
@@ -1257,7 +1269,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -1279,7 +1291,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: 'user-pubkey',
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -1313,7 +1325,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
             callCount++;
@@ -1382,7 +1394,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(2);
         },
@@ -1419,7 +1431,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: followingVideos));
         },
@@ -1450,7 +1462,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -1473,7 +1485,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) => followingResult.future);
           when(
@@ -1523,7 +1535,7 @@ void main() {
               authors: ['pubkey'],
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => const HomeFeedResult(videos: []));
         },
@@ -1536,7 +1548,7 @@ void main() {
               authors: ['pubkey'],
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -1585,7 +1597,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -1777,7 +1789,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) => followingResult.future);
           when(
@@ -1850,7 +1862,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) => loadMoreResult.future);
           when(
@@ -1865,6 +1877,7 @@ void main() {
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           source: const VideoFeedSource.following(),
           videos: createTestVideos(3),
         ),
@@ -2049,7 +2062,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -2160,13 +2173,8 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'sorts merged following feed chronologically on load more',
+        'appends following pages in server order on load more',
         setUp: () {
-          final newerVideos = [
-            createTestVideo('newer-c', createdAt: 5000),
-            createTestVideo('newer-d', createdAt: 4999),
-          ];
-
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
           when(
             () => mockVideosRepository.getHomeFeedVideos(
@@ -2174,18 +2182,27 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: newerVideos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('recent-b', createdAt: 4000)],
+              paginationCursor: 'page-3',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           mode: FeedMode.following,
+          // An edit put a long-published video at the top of the
+          // revision-ordered feed; its publication time is the oldest here.
           videos: [
-            createTestVideo('old-a', createdAt: 1000),
-            createTestVideo('old-b', createdAt: 999),
+            createTestVideo('edited-old', createdAt: 1000),
+            createTestVideo('recent-a', createdAt: 5000),
           ],
+          paginationCursor: 'page-2',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
         expect: () => [
@@ -2199,13 +2216,16 @@ void main() {
               .having(
                 (s) => s.videos.map((v) => v.id).toList(),
                 'video ids',
-                equals(['newer-c', 'newer-d', 'old-a', 'old-b']),
-              ),
+                equals(['edited-old', 'recent-a', 'recent-b']),
+              )
+              .having((s) => s.paginationCursor, 'paginationCursor', 'page-3')
+              .having((s) => s.hasMore, 'hasMore', isTrue),
         ],
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'uses inclusive oldest timestamp when loading more following videos',
+        'loads more following videos from the repository cursor, not the '
+        'oldest publication time',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
           when(
@@ -2214,11 +2234,13 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
-              videos: [createTestVideo('same-second-c', createdAt: 1999)],
+              videos: [createTestVideo('recent-b', createdAt: 1791990000)],
+              paginationCursor: '1791980000',
+              hasMore: true,
             ),
           );
         },
@@ -2226,24 +2248,15 @@ void main() {
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           mode: FeedMode.following,
+          // Published two months before the rest of the page, but edited
+          // today, so the server ranks it with today's revisions.
           videos: [
-            createTestVideo('old-a', createdAt: 2000),
-            createTestVideo('old-b', createdAt: 1999),
+            createTestVideo('edited-old', createdAt: 1786800000),
+            createTestVideo('recent-a', createdAt: 1792000000),
           ],
+          paginationCursor: '1791995000',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
-        expect: () => [
-          isA<VideoFeedBlocState>().having(
-            (s) => s.isLoadingMore,
-            'isLoadingMore',
-            true,
-          ),
-          isA<VideoFeedBlocState>().having(
-            (s) => s.isLoadingMore,
-            'isLoadingMore',
-            false,
-          ),
-        ],
         verify: (_) {
           verify(
             () => mockVideosRepository.getHomeFeedVideos(
@@ -2251,14 +2264,14 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: 1999,
+              cursor: '1791995000',
             ),
           ).called(1);
         },
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'stops following pagination when load more returns only duplicates',
+        'stops following pagination when the repository returns no cursor',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
           when(
@@ -2267,11 +2280,12 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
-              videos: [createTestVideo('old-b', createdAt: 1999)],
+              videos: [createTestVideo('last-c', createdAt: 1998)],
+              hasMore: false,
             ),
           );
         },
@@ -2283,6 +2297,7 @@ void main() {
             createTestVideo('old-a', createdAt: 2000),
             createTestVideo('old-b', createdAt: 1999),
           ],
+          paginationCursor: 'page-2',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
         expect: () => [
@@ -2294,7 +2309,8 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.isLoadingMore, 'isLoadingMore', false)
               .having((s) => s.hasMore, 'hasMore', false)
-              .having((s) => s.videos.length, 'videos count', 2),
+              .having((s) => s.paginationCursor, 'paginationCursor', isNull)
+              .having((s) => s.videos.length, 'videos count', 3),
         ],
       );
 
@@ -2312,7 +2328,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -2340,6 +2356,7 @@ void main() {
               createdAt: 2000,
             ),
           ],
+          paginationCursor: 'page-2',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
         expect: () => [
@@ -2372,7 +2389,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -2399,6 +2416,7 @@ void main() {
               createdAt: 2000,
             ),
           ],
+          paginationCursor: 'page-2',
         ),
         act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
         expect: () => [
@@ -2414,18 +2432,9 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'stops forYou pagination when the current page has no cursor',
-        build: createBloc,
-        seed: () => VideoFeedBlocState(
-          status: VideoFeedStatus.success,
-          videos: createTestVideos(pageSize, startTimestamp: 2000),
-        ),
-        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
-        expect: () => [
-          isA<VideoFeedBlocState>().having((s) => s.hasMore, 'hasMore', false),
-        ],
-        verify: (_) {
-          verifyNever(
+        'reads the first forYou page when the cached window has no cursor',
+        setUp: () {
+          when(
             () => mockVideosRepository.getRecommendedVideos(
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
@@ -2434,7 +2443,40 @@ void main() {
               skipCache: any(named: 'skipCache'),
               revalidate: any(named: 'revalidate'),
             ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('rec-first', createdAt: 5000)],
+              paginationCursor: 'rec-page-2',
+              hasMore: true,
+            ),
           );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: createTestVideos(pageSize, startTimestamp: 2000),
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (s) => s.isLoadingMore,
+            'isLoadingMore',
+            true,
+          ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
+              .having((s) => s.videos.last.id, 'appended video', 'rec-first')
+              .having((s) => s.paginationCursor, 'cursor', 'rec-page-2')
+              .having((s) => s.hasMore, 'hasMore', isTrue),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).called(1);
         },
       );
 
@@ -2455,13 +2497,20 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: moreVideos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: moreVideos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
         ),
@@ -2484,7 +2533,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -2549,13 +2598,20 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: moreVideos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: moreVideos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
         ),
@@ -2583,13 +2639,14 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => const HomeFeedResult(videos: []));
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
         ),
@@ -2621,13 +2678,14 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) => paginationResponse.future);
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
         ),
@@ -2676,7 +2734,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -2703,13 +2761,20 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: overlappingVideos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: overlappingVideos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(
             3,
@@ -2742,13 +2807,14 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenThrow(Exception('Network error'));
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(5),
         ),
@@ -2779,9 +2845,15 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
-          ).thenAnswer((_) async => HomeFeedResult(videos: freshVideos));
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: freshVideos,
+              paginationCursor: 'next-page',
+              hasMore: true,
+            ),
+          );
         },
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -2806,7 +2878,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -2824,7 +2896,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -2857,7 +2929,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3045,7 +3117,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3088,7 +3160,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3135,7 +3207,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3170,7 +3242,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3227,7 +3299,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3263,7 +3335,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3285,7 +3357,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(1);
         },
@@ -3307,7 +3379,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
             callCount++;
@@ -3363,7 +3435,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(2);
         },
@@ -3384,7 +3456,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3409,7 +3481,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).called(2);
         },
@@ -3440,7 +3512,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -3561,7 +3633,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -3601,7 +3673,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3642,7 +3714,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           );
         },
@@ -3664,7 +3736,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -3679,6 +3751,7 @@ void main() {
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
+          paginationCursor: 'page-2',
           mode: FeedMode.following,
           videos: createTestVideos(pageSize, startTimestamp: 2000),
           videoListSources: const {
@@ -3718,7 +3791,7 @@ void main() {
             videoRefs: any(named: 'videoRefs'),
             userPubkey: any(named: 'userPubkey'),
             limit: any(named: 'limit'),
-            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -3794,7 +3867,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
         },
@@ -3817,7 +3890,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -3860,7 +3933,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenThrow(Exception('Network error'));
         },
@@ -3988,7 +4061,7 @@ void main() {
             videoRefs: any(named: 'videoRefs'),
             userPubkey: any(named: 'userPubkey'),
             limit: any(named: 'limit'),
-            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer((_) async => HomeFeedResult(videos: videos));
       }
@@ -4108,7 +4181,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenThrow(Exception('network error'));
         },
@@ -4388,7 +4461,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -4451,12 +4524,16 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
             callCount++;
             if (callCount == 1) {
-              return HomeFeedResult(videos: initialVideos);
+              return HomeFeedResult(
+                videos: initialVideos,
+                paginationCursor: 'page-2',
+                hasMore: true,
+              );
             }
             return HomeFeedResult(videos: moreVideos);
           });
@@ -4548,7 +4625,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer((_) async {
             callCount++;

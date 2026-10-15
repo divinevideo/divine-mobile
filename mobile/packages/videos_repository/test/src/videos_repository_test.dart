@@ -2211,6 +2211,8 @@ void main() {
     });
 
     group('getHomeFeedVideos', () {
+      setUp(() => _answerDetailedReadsAsFinished(mockNostrClient));
+
       group('Funnelcake API first', () {
         late MockFunnelcakeApiClient mockFunnelcakeClient;
 
@@ -2320,6 +2322,186 @@ void main() {
         );
 
         test(
+          "returns the server's revision-time cursor, not the oldest "
+          'publication time on the page',
+          () async {
+            // An edit republished a video first published two months ago,
+            // so the server ranks it with today's revisions. Paging from its
+            // publication time would skip everything in between.
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'edited-today',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-1',
+                    videoUrl: 'https://example.com/1.mp4',
+                    createdAt: 1792000000,
+                    publishedAt: 1786800000,
+                  ),
+                  _createVideoStats(
+                    id: 'posted-today',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-2',
+                    videoUrl: 'https://example.com/2.mp4',
+                    createdAt: 1791990000,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 1791990000,
+              ),
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+
+            expect(result.paginationCursor, equals('1791990000'));
+            expect(result.hasMore, isTrue);
+          },
+        );
+
+        test('returns no cursor once Funnelcake reports no more', () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockFunnelcakeClient.getHomeFeed(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResponse(
+              videos: [
+                _createVideoStats(
+                  id: 'last-video',
+                  pubkey: 'followed-user',
+                  dTag: 'dtag-1',
+                  videoUrl: 'https://example.com/1.mp4',
+                ),
+              ],
+              nextCursor: 1704067200,
+            ),
+          );
+
+          final repositoryWithApi = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repositoryWithApi.getHomeFeedVideos(
+            authors: ['followed-user'],
+            userPubkey: 'my-pubkey',
+            cursor: '1704067300',
+          );
+
+          expect(
+            result.videos.map((video) => video.id),
+            equals(['last-video']),
+          );
+          expect(result.paginationCursor, isNull);
+          expect(result.hasMore, isFalse);
+        });
+
+        test(
+          'keeps the over-fetched tail when topping up a reply-heavy page',
+          () async {
+            // The returned cursor resumes after the second page, so trimming
+            // the page to `limit` would drop `tail-video` for good.
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              final before = invocation.namedArguments[#before] as int?;
+              if (before == null) {
+                return HomeFeedResponse(
+                  videos: [
+                    _createVideoStats(
+                      id: 'reply-video',
+                      pubkey: 'followed-user',
+                      dTag: 'dtag-reply',
+                      videoUrl: 'https://example.com/reply.mp4',
+                      createdAt: 3000,
+                      rawTags: const {
+                        'E': 'root-event-id',
+                        'K': '34236',
+                        'P': 'root-author',
+                        'e': 'root-event-id',
+                        'k': '34236',
+                        'p': 'root-author',
+                      },
+                    ),
+                    _createVideoStats(
+                      id: 'first-video',
+                      pubkey: 'followed-user',
+                      dTag: 'dtag-1',
+                      videoUrl: 'https://example.com/1.mp4',
+                      createdAt: 2900,
+                    ),
+                  ],
+                  hasMore: true,
+                  nextCursor: 2900,
+                );
+              }
+              return HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'second-video',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-2',
+                    videoUrl: 'https://example.com/2.mp4',
+                    createdAt: 2800,
+                  ),
+                  _createVideoStats(
+                    id: 'tail-video',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-3',
+                    videoUrl: 'https://example.com/3.mp4',
+                    createdAt: 2700,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 2700,
+              );
+            });
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video', 'second-video', 'tail-video']),
+            );
+            expect(result.paginationCursor, equals('2700'));
+          },
+        );
+
+        test(
           'falls back to the revision-time cursor when the feed omits one',
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
@@ -2379,9 +2561,10 @@ void main() {
             );
 
             // The Following route pages on revision time, so the fallback
-            // cursor must step before the oldest `createdAt` (1900), not the
-            // oldest `publishedAt` (500).
-            expect(requestedBefore, equals([null, 1899]));
+            // cursor is the oldest `createdAt` (1900), not the oldest
+            // `publishedAt` (500). `before` is exclusive, so 1899 would skip
+            // every row revised in that second.
+            expect(requestedBefore, equals([null, 1900]));
           },
         );
 
@@ -2975,7 +3158,7 @@ void main() {
             authors: ['user1'],
             userPubkey: 'my-pubkey',
             limit: 10,
-            until: 1704067200,
+            cursor: '1704067200',
           );
 
           verify(
@@ -3536,8 +3719,6 @@ void main() {
                 videoUrl: 'https://example.com/video.mp4',
               ),
             ],
-            hasMore: true,
-            nextCursor: 1704067100,
           ),
         );
 
@@ -3620,21 +3801,209 @@ void main() {
         expect(filters.first.limit, equals(10));
       });
 
-      test('passes until parameter for pagination', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => <Event>[]);
+      test(
+        'passes the exclusive cursor to relays as an inclusive until',
+        () async {
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
-        const until = 1704067200;
-        await repository.getHomeFeedVideos(authors: ['pubkey1'], until: until);
+          await repository.getHomeFeedVideos(
+            authors: ['pubkey1'],
+            cursor: '1704067200',
+          );
 
-        final captured = verify(
-          () => mockNostrClient.queryEvents(captureAny()),
-        ).captured;
-        final filters = captured.first as List<Filter>;
+          final captured = verify(
+            () => mockNostrClient.queryEvents(captureAny()),
+          ).captured;
+          final filters = captured.first as List<Filter>;
 
-        expect(filters.first.until, equals(until));
+          expect(filters.first.until, equals(1704067199));
+        },
+      );
+
+      test(
+        'keeps paging below a short relay page from a read that timed out',
+        () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (
+              events: [
+                _createVideoEvent(
+                  id: 'fast-relay-video',
+                  pubkey: 'followed-user',
+                  videoUrl: 'https://example.com/fast.mp4',
+                  createdAt: 1791990000,
+                ),
+              ],
+              timedOut: true,
+              noRelays: false,
+            ),
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 5,
+          );
+
+          expect(result.videos.map((video) => video.id), ['fast-relay-video']);
+          expect(result.paginationCursor, equals('1791990000'));
+          expect(result.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'asks for the same window again after an empty relay read that '
+        'timed out',
+        () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            cursor: '1792000000',
+          );
+
+          expect(result.videos, isEmpty);
+          expect(result.paginationCursor, equals('1792000000'));
+          expect(result.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'ends the feed on a short relay page from a read that finished',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEvent(
+                id: 'last-video',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/last.mp4',
+                createdAt: 1704067200,
+              ),
+            ],
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 5,
+          );
+
+          expect(result.videos.map((video) => video.id), ['last-video']);
+          expect(result.paginationCursor, isNull);
+          expect(result.hasMore, isFalse);
+        },
+      );
+
+      test(
+        'ends a relay page at the newest events of the merged answer',
+        () async {
+          // A dense relay's two newest, plus the newest of a sparse relay
+          // that reaches far further back.
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEvent(
+                id: 'sparse-relay-video',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/sparse.mp4',
+                createdAt: 1786800000,
+              ),
+              _createVideoEvent(
+                id: 'dense-relay-video-1',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/dense-1.mp4',
+                createdAt: 1792000000,
+              ),
+              _createVideoEvent(
+                id: 'dense-relay-video-2',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/dense-2.mp4',
+                createdAt: 1791990000,
+              ),
+            ],
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 2,
+          );
+
+          expect(
+            result.videos.map((video) => video.id),
+            equals(['dense-relay-video-1', 'dense-relay-video-2']),
+          );
+          expect(result.paginationCursor, equals('1791990000'));
+        },
+      );
+
+      test('keeps relay events that share the page boundary second', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            for (final (id, createdAt) in [
+              ('newest', 1792000000),
+              ('boundary-a', 1791990000),
+              ('boundary-b', 1791990000),
+              ('older', 1786800000),
+            ])
+              _createVideoEvent(
+                id: id,
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/$id.mp4',
+                createdAt: createdAt,
+              ),
+          ],
+        );
+
+        final result = await repository.getHomeFeedVideos(
+          authors: ['followed-user'],
+          limit: 2,
+        );
+
+        expect(
+          result.videos.map((video) => video.id),
+          unorderedEquals(['newest', 'boundary-a', 'boundary-b']),
+        );
+        expect(result.paginationCursor, equals('1791990000'));
       });
+
+      test(
+        'pages and orders relay results on event created_at, not '
+        'published_at',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEvent(
+                id: 'posted-today',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/posted.mp4',
+                createdAt: 1791990000,
+              ),
+              // Edited today, first published two months earlier.
+              _createVideoEvent(
+                id: 'edited-today',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/edited.mp4',
+                createdAt: 1792000000,
+                extraTags: const [
+                  ['published_at', '1786800000'],
+                ],
+              ),
+            ],
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 2,
+          );
+
+          expect(
+            result.videos.map((video) => video.id),
+            equals(['edited-today', 'posted-today']),
+          );
+          expect(result.paginationCursor, equals('1791990000'));
+          expect(result.hasMore, isTrue);
+        },
+      );
 
       test('transforms and filters events correctly', () async {
         final event = _createVideoEvent(
@@ -3711,60 +4080,54 @@ void main() {
       test(
         'accumulates visible relay home videos across mixed reply-heavy pages',
         () async {
+          const replyTags = [
+            ['E', 'root-event-id', '', 'root-author'],
+            ['K', '34236'],
+            ['P', 'root-author'],
+            ['e', 'root-event-id', '', 'root-author'],
+            ['k', '34236'],
+            ['p', 'root-author'],
+          ];
+          final relayHistory = [
+            _createVideoEvent(
+              id: 'video-reply-1',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/reply-1.mp4',
+              createdAt: 1704070000,
+              extraTags: replyTags,
+            ),
+            _createVideoEvent(
+              id: 'video-reply-2',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/reply-2.mp4',
+              createdAt: 1704069999,
+              extraTags: replyTags,
+            ),
+            _createVideoEvent(
+              id: 'feed-video-1',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/feed-1.mp4',
+              createdAt: 1704069998,
+            ),
+            _createVideoEvent(
+              id: 'feed-video-2',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/feed-2.mp4',
+              createdAt: 1704068000,
+            ),
+          ];
+          // Answers like a relay: the newest `limit` events at or before
+          // `until`.
           when(() => mockNostrClient.queryEvents(any())).thenAnswer((
             invocation,
           ) async {
-            final filters =
-                invocation.positionalArguments.first as List<Filter>;
-            final filter = filters.single;
-
-            if (filter.until == null) {
-              return [
-                _createVideoEvent(
-                  id: 'video-reply-1',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/reply-1.mp4',
-                  createdAt: 1704070000,
-                  extraTags: const [
-                    ['E', 'root-event-id', '', 'root-author'],
-                    ['K', '34236'],
-                    ['P', 'root-author'],
-                    ['e', 'root-event-id', '', 'root-author'],
-                    ['k', '34236'],
-                    ['p', 'root-author'],
-                  ],
-                ),
-                _createVideoEvent(
-                  id: 'video-reply-2',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/reply-2.mp4',
-                  createdAt: 1704069999,
-                  extraTags: const [
-                    ['E', 'root-event-id', '', 'root-author'],
-                    ['K', '34236'],
-                    ['P', 'root-author'],
-                    ['e', 'root-event-id', '', 'root-author'],
-                    ['k', '34236'],
-                    ['p', 'root-author'],
-                  ],
-                ),
-                _createVideoEvent(
-                  id: 'feed-video-1',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/feed-1.mp4',
-                  createdAt: 1704069998,
-                ),
-              ];
-            }
-
-            return [
-              _createVideoEvent(
-                id: 'feed-video-2',
-                pubkey: 'followed-user',
-                videoUrl: 'https://example.com/feed-2.mp4',
-                createdAt: 1704068000,
-              ),
-            ];
+            final filter =
+                (invocation.positionalArguments.first as List<Filter>).single;
+            final until = filter.until;
+            return relayHistory
+                .where((event) => until == null || event.createdAt <= until)
+                .take(filter.limit!)
+                .toList();
           });
 
           final result = await repository.getHomeFeedVideos(
@@ -3809,6 +4172,8 @@ void main() {
     });
 
     group('getHomeFeedVideos with videoRefs', () {
+      setUp(() => _answerDetailedReadsAsFinished(mockNostrClient));
+
       test('empty videoRefs returns only following videos', () async {
         final event = _createVideoEvent(
           id: 'following-video',
@@ -7007,6 +7372,7 @@ void main() {
         when(
           () => mockNostrClient.queryEvents(any()),
         ).thenAnswer((_) async => [blockedEvent, allowedEvent]);
+        _answerDetailedReadsAsFinished(mockNostrClient);
 
         final result = await repositoryWithFilter.getHomeFeedVideos(
           authors: [blockedPubkey, allowedPubkey],
@@ -15181,6 +15547,24 @@ Event _createVideoEventWithDTag({
     'content': '',
     'sig': '',
   });
+}
+
+/// Answers [NostrClient.queryEventsDetailed] with whatever the test stubbed
+/// on [NostrClient.queryEvents], as a read that finished.
+///
+/// The Following relay walk reads through `queryEventsDetailed` so it can tell
+/// a read that ran out of time from one that found nothing older. Tests about
+/// timed-out reads stub `queryEventsDetailed` themselves.
+void _answerDetailedReadsAsFinished(MockNostrClient client) {
+  when(() => client.queryEventsDetailed(any())).thenAnswer(
+    (invocation) async => (
+      events: await client.queryEvents(
+        invocation.positionalArguments.first as List<Filter>,
+      ),
+      timedOut: false,
+      noRelays: false,
+    ),
+  );
 }
 
 /// Creates a mock VideoStats for testing Funnelcake API fallback.
