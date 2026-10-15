@@ -2,6 +2,7 @@
 // ABOUTME: Shows a searchable user list for picking one DM recipient, or
 // ABOUTME: several for a group. Uses NewMessageSearchBloc for its state.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/moderation_presentation.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -19,9 +21,12 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Widest a picked person's name runs on their chip before it is ellipsized,
 /// so one long name cannot push every other chip out of the strip.
@@ -827,23 +832,26 @@ class _CandidateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (isGroupMode, isSelected, isGroupFull) = context.select(
+    final (isGroupMode, isSelected, isGroupFull, signals) = context.select(
       (NewMessageSearchBloc bloc) => (
         bloc.state.isGroupMode,
         bloc.state.isSelected(profile.pubkey),
         bloc.state.isGroupFull,
+        bloc.state.rankingSignals[profile.pubkey],
       ),
     );
 
     if (!isGroupMode) {
       return _UserTile(
         profile: profile,
+        signals: signals,
         onTap: () => Navigator.of(context).pop(<UserProfile>[profile]),
       );
     }
 
     return _UserTile(
       profile: profile,
+      signals: signals,
       isSelected: isSelected,
       // A full group takes nobody new, but whoever is in it can still leave.
       onTap: isGroupFull && !isSelected
@@ -867,9 +875,11 @@ class _UserTile extends ConsumerWidget {
     required this.profile,
     required this.onTap,
     this.isSelected,
+    this.signals,
   });
 
   final UserProfile profile;
+  final UserRankingSignals? signals;
 
   /// What a tap does. Null makes the row inert and dims it.
   final VoidCallback? onTap;
@@ -903,6 +913,28 @@ class _UserTile extends ConsumerWidget {
           handle: profile.handle,
         ) ??
         '';
+    final suppressIndicators =
+        isVanished || moderation == ModerationPresentation.former;
+    final relationship = switch ((signals?.youFollow, signals?.followsYou)) {
+      (true, true) => FollowRelationship.mutual,
+      (true, _) => FollowRelationship.youFollow,
+      (_, true) => FollowRelationship.followsYou,
+      _ => FollowRelationship.none,
+    };
+    final indicators = UserIndicatorLine(
+      identifier: suppressIndicators
+          ? null
+          : resolveUserIdentifierLine(
+              l10n: context.l10n,
+              locale: Localizations.localeOf(context).toLanguageTag(),
+              handle: handle,
+            ),
+      relationship: suppressIndicators ? FollowRelationship.none : relationship,
+      videoCount: suppressIndicators ? null : signals?.videoCount,
+      lastPostedAt: suppressIndicators ? null : signals?.lastPostedAt,
+      now: clock.now(),
+      style: VineTheme.bodyMediumFont(color: context.vineColors.primaryText),
+    );
     final isSelected = this.isSelected;
 
     final content = Padding(
@@ -933,15 +965,7 @@ class _UserTile extends ConsumerWidget {
                     color: context.vineColors.primaryText,
                   ),
                 ),
-                if (handle.isNotEmpty)
-                  Text(
-                    handle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
+                if (indicators.hasContent) indicators,
               ],
             ),
           ),

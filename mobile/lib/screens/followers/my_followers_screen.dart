@@ -201,6 +201,10 @@ class _FollowersListBody extends StatelessWidget {
       return const _FollowersEmptyState();
     }
 
+    final rankingSignals = context.select(
+      (MyFollowersBloc bloc) => bloc.state.rankingSignals,
+    );
+
     return SearchableFollowList(
       pubkeys: followers,
       onRefresh: () async {
@@ -215,6 +219,8 @@ class _FollowersListBody extends StatelessWidget {
           builder: (context, isFollowing) {
             return UserProfileTile(
               pubkey: userPubkey,
+              videoCount: rankingSignals[userPubkey]?.videoCount,
+              lastPostedAt: rankingSignals[userPubkey]?.lastPostedAt,
               onTap: () => context.pushOtherProfile(userPubkey),
               isFollowing: isFollowing,
               onFollow: () => context.read<MyFollowingBloc>().add(

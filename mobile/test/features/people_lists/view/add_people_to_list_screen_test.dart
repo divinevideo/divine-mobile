@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -165,6 +166,40 @@ void main() {
         ),
       );
     }
+
+    testWidgets('passes cached ranking activity to candidate rows', (
+      tester,
+    ) async {
+      final list = _buildList(id: 'crew', name: 'Crew');
+      when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(
+        buildViewSubject(
+          userList: list,
+          cubitState: AddPeopleToListState(
+            status: AddPeopleToListStatus.ready,
+            candidates: [_candidate(_candidateA, displayName: 'Ada')],
+            rankingSignals: {
+              _candidateA: UserRankingSignals(
+                pubkey: _candidateA,
+                videoCount: 18,
+                lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+              ),
+            },
+          ),
+        ),
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       'partial batch failure keeps failed people selected and retry publishes only those people',

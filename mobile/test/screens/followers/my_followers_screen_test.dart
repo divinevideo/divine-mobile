@@ -2,6 +2,7 @@
 // ABOUTME: Ensures the app bar button opens the sheet and re-orders the list
 
 import 'package:cache_sync/cache_sync.dart';
+import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +13,13 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/followers/my_followers_screen.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+
+class _MockRankingLoader extends Mock implements UserRankingSignalsLoader {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -109,9 +114,13 @@ void main() {
       );
     });
 
-    Future<void> pumpScreen(WidgetTester tester) async {
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      UserRankingSignalsLoader? loader,
+    }) async {
       await tester.pumpWidget(
         testMaterialApp(
+          rankingSignalsLoader: loader,
           home: const MyFollowersScreen(displayName: 'Alice'),
           mockProfileRepository: createMockProfileRepository(),
           mockNostrService: mockNostrClient,
@@ -131,6 +140,36 @@ void main() {
         .widgetList<UserProfileTile>(find.byType(UserProfileTile))
         .map((tile) => tile.pubkey)
         .toList();
+
+    testWidgets('renders cached activity from the list ranking state', (
+      tester,
+    ) async {
+      final loader = _MockRankingLoader();
+      when(() => loader.isEligible(any())).thenReturn(true);
+      when(() => loader.loadCachedDisplayNames(any()))
+          .thenAnswer((_) async => {});
+      when(() => loader.load(any())).thenAnswer(
+        (_) async => {
+          newestFollower: UserRankingSignals(
+            pubkey: newestFollower,
+            videoCount: 18,
+            lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+          ),
+        },
+      );
+      await pumpScreen(tester, loader: loader);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('lists equal-score followers in deterministic Smart order', (
       tester,

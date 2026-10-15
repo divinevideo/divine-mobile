@@ -4,9 +4,11 @@
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -21,9 +23,11 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:user_ranking/user_ranking.dart';
@@ -766,6 +770,7 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
                 ? _LocalResults(
                     scrollController: widget.configuration.scrollController,
                     followListLoaded: _followListLoaded,
+                    rankingSignals: _rankingSignals,
                     followProfiles: _followProfiles,
                     filteredFollowProfiles: _filteredFollowProfiles,
                     onUserSelected: _onUserSelected,
@@ -803,12 +808,14 @@ class _UserSearchTile extends ConsumerWidget {
   const _UserSearchTile({
     required this.profile,
     required this.onTap,
+    this.signals,
     this.isDisabled = false,
     this.isSelected = false,
     super.key,
   });
 
   final UserProfile profile;
+  final UserRankingSignals? signals;
   final VoidCallback onTap;
   final bool isDisabled;
   final bool isSelected;
@@ -831,6 +838,28 @@ class _UserSearchTile extends ConsumerWidget {
     // `text_sanitizer` exists to prevent. It also renders `@rabble` rather than
     // the `_@rabble.divine.video` long form every other row avoids.
     final nip05 = isVanished ? null : profile.shortDisplayNip05;
+
+    final relationship = switch ((signals?.youFollow, signals?.followsYou)) {
+      (true, true) => FollowRelationship.mutual,
+      (true, _) => FollowRelationship.youFollow,
+      (_, true) => FollowRelationship.followsYou,
+      _ => FollowRelationship.none,
+    };
+    final identifier = isVanished
+        ? null
+        : resolveUserIdentifierLine(
+            l10n: context.l10n,
+            locale: Localizations.localeOf(context).toLanguageTag(),
+            handle: nip05,
+          );
+    final indicators = UserIndicatorLine(
+      identifier: identifier,
+      relationship: isVanished ? FollowRelationship.none : relationship,
+      videoCount: isVanished ? null : signals?.videoCount,
+      lastPostedAt: isVanished ? null : signals?.lastPostedAt,
+      now: clock.now(),
+      style: VineTheme.bodyMediumFont(color: textColor),
+    );
 
     return Semantics(
       button: true,
@@ -869,13 +898,7 @@ class _UserSearchTile extends ConsumerWidget {
                         overflow: .ellipsis,
                         style: VineTheme.titleMediumFont(color: textColor),
                       ),
-                      if (nip05 != null && nip05.isNotEmpty)
-                        Text(
-                          nip05,
-                          maxLines: 1,
-                          overflow: .ellipsis,
-                          style: VineTheme.bodyMediumFont(color: textColor),
-                        ),
+                      if (indicators.hasContent) indicators,
                     ],
                   ),
                 ),
@@ -1069,6 +1092,7 @@ class _ResultsList extends StatelessWidget {
     required this.scrollController,
     required this.results,
     required this.onUserSelected,
+    this.rankingSignals = const {},
     this.onNearEnd,
     this.onShowMore,
     this.isLoadingMore = false,
@@ -1080,6 +1104,7 @@ class _ResultsList extends StatelessWidget {
   final ScrollController? scrollController;
   final List<UserProfile> results;
   final ValueChanged<UserProfile> onUserSelected;
+  final Map<String, UserRankingSignals> rankingSignals;
   final VoidCallback? onNearEnd;
   final VoidCallback? onShowMore;
   final bool isLoadingMore;
@@ -1133,6 +1158,7 @@ class _ResultsList extends StatelessWidget {
           return _UserSearchTile(
             key: ValueKey('${profile.pubkey}_$isDisabled'),
             profile: profile,
+            signals: rankingSignals[profile.pubkey],
             isDisabled: isDisabled,
             isSelected: selectedPubkeys.contains(profile.pubkey),
             onTap: () => onUserSelected(profile),
@@ -1176,6 +1202,7 @@ class _NetworkResults extends StatelessWidget {
             _ResultsList(
               scrollController: scrollController,
               results: state.results,
+              rankingSignals: state.rankingSignals,
               onUserSelected: onUserSelected,
               excludePubkeys: excludePubkeys,
               selectedPubkeys: selectedPubkeys,
@@ -1192,6 +1219,7 @@ class _NetworkResults extends StatelessWidget {
           UserSearchStatus.success => _ResultsList(
             scrollController: scrollController,
             results: state.results,
+            rankingSignals: state.rankingSignals,
             onUserSelected: onUserSelected,
             onNearEnd: state.hasMore && !state.isLoadingMore ? loadMore : null,
             onShowMore: state.hasMore ? loadMore : null,
@@ -1213,6 +1241,7 @@ class _LocalResults extends StatelessWidget {
     required this.followProfiles,
     required this.filteredFollowProfiles,
     required this.onUserSelected,
+    this.rankingSignals = const {},
     this.excludePubkeys = const {},
     this.selectedPubkeys = const {},
     this.hidePubkeys = const {},
@@ -1223,6 +1252,7 @@ class _LocalResults extends StatelessWidget {
   final List<UserProfile> followProfiles;
   final List<UserProfile> filteredFollowProfiles;
   final ValueChanged<UserProfile> onUserSelected;
+  final Map<String, UserRankingSignals> rankingSignals;
   final Set<String> excludePubkeys;
   final Set<String> selectedPubkeys;
   final Set<String> hidePubkeys;
@@ -1265,6 +1295,7 @@ class _LocalResults extends StatelessWidget {
         return _UserSearchTile(
           key: ValueKey('${profile.pubkey}_$isDisabled'),
           profile: profile,
+          signals: rankingSignals[profile.pubkey],
           isDisabled: isDisabled,
           isSelected: selectedPubkeys.contains(profile.pubkey),
           onTap: () => onUserSelected(profile),

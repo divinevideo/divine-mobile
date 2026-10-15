@@ -3,6 +3,7 @@
 // ABOUTME: engagement lists all render, so the picker and the screens it feeds
 // ABOUTME: have to agree about who an account is (#8421 adjacent).
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -42,6 +43,8 @@ void main() {
     required bool isVanished,
     UserProfile? profile,
     FollowRelationship relationship = FollowRelationship.none,
+    int? videoCount,
+    DateTime? lastPostedAt,
   }) async {
     await tester.pumpWidget(
       testMaterialApp(
@@ -59,8 +62,13 @@ void main() {
               pubkey,
             ).overrideWith((ref) => Stream.value(profile)),
         ],
-        home: const Scaffold(
-          body: UserProfileTile(pubkey: pubkey, showFollowButton: false),
+        home: Scaffold(
+          body: UserProfileTile(
+            pubkey: pubkey,
+            showFollowButton: false,
+            videoCount: videoCount,
+            lastPostedAt: lastPostedAt,
+          ),
         ),
       ),
     );
@@ -120,6 +128,8 @@ void main() {
             isVanished: true,
             profile: profileWith(nip05: '_@aeontropy.divine.video'),
             relationship: FollowRelationship.mutual,
+            videoCount: 18,
+            lastPostedAt: clock.now(),
           );
 
           expect(find.text(l10n.socialProofMutual), findsNothing);

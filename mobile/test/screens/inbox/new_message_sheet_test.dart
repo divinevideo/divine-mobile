@@ -4,6 +4,7 @@
 
 import 'dart:ui' show SemanticsFlags, Tristate;
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -378,6 +379,55 @@ void main() {
         tester.getSemantics(finder).getSemanticsData().flagsCollection;
 
     group('renders', () {
+      testWidgets('shows cached activity on the recipient row', (tester) async {
+        when(() => rankingSignalsLoader.load(any())).thenAnswer(
+          (_) async => {
+            vanishedPubkey: UserRankingSignals(
+              pubkey: vanishedPubkey,
+              videoCount: 18,
+              lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+            ),
+          },
+        );
+        await pumpPickerWith(
+          tester,
+          contact: profileFor(vanishedPubkey, 'Ada'),
+        );
+        expect(
+          find.textContaining(l10n.searchUserVideoCount(18, '18')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('suppresses cached activity on a vanished recipient', (
+        tester,
+      ) async {
+        when(() => rankingSignalsLoader.load(any())).thenAnswer(
+          (_) async => {
+            vanishedPubkey: UserRankingSignals(
+              pubkey: vanishedPubkey,
+              videoCount: 18,
+              lastPostedAt: clock.now(),
+            ),
+          },
+        );
+        await pumpPickerWith(
+          tester,
+          contact: profileFor(vanishedPubkey, 'Ada'),
+          isVanished: true,
+        );
+        expect(
+          find.textContaining(l10n.searchUserVideoCount(18, '18')),
+          findsNothing,
+        );
+      });
+
       testWidgets('names a vanished peer "Deleted account", not their kind-0 '
           'name', (tester) async {
         await pumpPickerWith(
@@ -491,7 +541,10 @@ void main() {
             extraOverrides: [retiredKeyCustody(custody)],
           );
 
-          expect(find.text('@looks_official'), findsOneWidget);
+          expect(
+            find.text('${l10n.socialProofYouFollow} · @looks_official'),
+            findsOneWidget,
+          );
         });
       }
 
@@ -532,7 +585,11 @@ void main() {
 
         expect(
           tester.getSemantics(personRow('Alice')),
-          isSemantics(label: 'Alice', isButton: true, hasTapAction: true),
+          isSemantics(
+            label: 'Alice\n${l10n.socialProofYouFollow}',
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
         // Outside group mode a row has no selection to report.
         expect(flagsOf(tester, personRow('Alice')).isSelected, Tristate.none);
