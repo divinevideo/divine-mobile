@@ -1,8 +1,10 @@
 // ABOUTME: E2E regression for #8519 — a thread latched to 'nip04' published a
 // ABOUTME: cleartext kind 4 on every outbound message forever, even though the
 // ABOUTME: send path had already resolved the peer's kind-10050 to `found`.
+// ABOUTME: Also #8506: on a thread that keeps the kind 4, a relay that refuses
+// ABOUTME: or never confirms it must not lose the legacy peer's only copy.
 // ABOUTME: Asserts on the wire: what the relay was actually handed, not on a
-// ABOUTME: mock. The two arms differ ONLY in the resolution state.
+// ABOUTME: mock. The #8519 arms differ ONLY in the resolution state.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
 @Tags(['service'])
@@ -293,6 +295,338 @@ void main() {
         // prevent: it would permanently cut a genuine legacy peer off from
         // their only readable copy on the strength of a lookup that failed.
         expect(await storedProtocol(stack.db), 'nip04');
+      },
+    );
+  });
+
+  // #8506: on a thread still latched to NIP-04 the kind-4 copy is the only one
+  // a legacy peer can read, so a relay hiccup on it must not lose the message.
+  // Every arm uses a peer who advertises NO inbox (`absent`), the one state in
+  // which the copy is still published (ARM B above).
+  group('#8506 the legacy kind-4 copy survives a relay hiccup', () {
+    List<Map<dynamic, dynamic>> kind4Events(FakeRelay relay) => [
+      for (final frame in relay.receivedFrames)
+        if (frame.length >= 2 &&
+            frame[0] == 'EVENT' &&
+            frame[1] is Map &&
+            (frame[1] as Map)['kind'] == EventKind.directMessage)
+          frame[1] as Map,
+    ];
+
+    Set<Object?> kind4Ids(FakeRelay relay) => {
+      for (final event in kind4Events(relay)) event['id'],
+    };
+
+    /// The verdicts of the `OK`s the relay sent for [eventId], in order.
+    List<Object?> okVerdicts(FakeRelay relay, Object? eventId) => [
+      for (final ok in relay.sentOks)
+        if (ok.length >= 3 && ok[1] == eventId) ok[2],
+    ];
+
+    bool addressedTo(Map<String, dynamic> event, String pubkey) {
+      final tags = event['tags'];
+      return tags is List &&
+          tags.any(
+            (tag) =>
+                tag is List &&
+                tag.length >= 2 &&
+                tag[0] == 'p' &&
+                tag[1] == pubkey,
+          );
+    }
+
+    /// Waits until the relay was handed [count] kind-4 events or [timeout]
+    /// passes, and returns when each one was first seen.
+    ///
+    /// Asking for one more event than an arm expects is how the arm waits out
+    /// a retry that must not come.
+    Future<List<DateTime>> kind4Arrivals(
+      FakeRelay relay,
+      int count, {
+      required Duration timeout,
+    }) async {
+      final seen = <DateTime>[];
+      final deadline = DateTime.now().add(timeout);
+      while (true) {
+        final now = DateTime.now();
+        while (seen.length < kind4Events(relay).length) {
+          seen.add(now);
+        }
+        if (seen.length >= count || !now.isBefore(deadline)) return seen;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    }
+
+    Future<bool> eventually(
+      Future<bool> Function() check, {
+      required Duration timeout,
+    }) async {
+      final deadline = DateTime.now().add(timeout);
+      while (true) {
+        if (await check()) return true;
+        if (!DateTime.now().isBefore(deadline)) return false;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    }
+
+    /// The one send still queued, which is what the retry sweep re-drives.
+    Future<String> queuedRumorId(AppDatabase db) async {
+      final queued = await db.outgoingDmsDao.getAllForOwner(senderPubkey);
+      expect(queued, hasLength(1), reason: 'precondition: one queued send');
+      return queued.single.id;
+    }
+
+    testWidgets(
+      'CONTROL: a relay that accepts the copy is handed it exactly once',
+      (tester) async {
+        final relay = await FakeRelay.start();
+        addTearDown(relay.stop);
+        final stack = await buildLatchedStack(relay);
+
+        final result = await stack.repository.sendMessage(
+          recipientPubkey: recipientPubkey,
+          content: 'accepted on the first attempt',
+        );
+        expect(result.success, isTrue);
+
+        final arrivals = await kind4Arrivals(
+          relay,
+          2,
+          timeout: const Duration(seconds: 5),
+        );
+        expect(
+          arrivals,
+          hasLength(1),
+          reason: 'an accepted copy is not published again',
+        );
+        expect(okVerdicts(relay, kind4Ids(relay).single), [true]);
+      },
+    );
+
+    testWidgets(
+      'a relay that refuses the copy once is handed the same signed event '
+      'again, and the copy is delivered',
+      (tester) async {
+        var refusals = 1;
+        final relay = await FakeRelay.start(
+          okFor: (event) =>
+              event['kind'] == EventKind.directMessage && refusals-- > 0
+              ? const FakeOk.refuse('error: refused once by the test relay')
+              : null,
+        );
+        addTearDown(relay.stop);
+        final stack = await buildLatchedStack(relay);
+
+        final result = await stack.repository.sendMessage(
+          recipientPubkey: recipientPubkey,
+          content: 'refused once',
+        );
+        expect(result.success, isTrue, reason: 'the NIP-17 leg was accepted');
+
+        final first = await kind4Arrivals(
+          relay,
+          1,
+          timeout: const Duration(seconds: 3),
+        );
+        expect(first, hasLength(1), reason: 'precondition: the copy went out');
+        // The send is already final for the sender when the copy leaves: the
+        // message is stored and its queue row is gone, so nothing durable is
+        // left that a later sweep could retry the copy from.
+        final rumorId = result.rumorEventId!;
+        expect(
+          await stack.db.directMessagesDao.getMessageById(
+            rumorId,
+            ownerPubkey: senderPubkey,
+          ),
+          isNotNull,
+        );
+        expect(await stack.db.outgoingDmsDao.getById(rumorId), isNull);
+
+        final arrivals = await kind4Arrivals(
+          relay,
+          3,
+          timeout: const Duration(seconds: 6),
+        );
+        expect(
+          arrivals,
+          hasLength(2),
+          reason: 'a refused copy is published again rather than lost',
+        );
+        expect(
+          kind4Ids(relay),
+          hasLength(1),
+          reason: 'the retry republishes the same signed event, not a new one',
+        );
+        expect(okVerdicts(relay, kind4Ids(relay).single), [false, true]);
+        expect(await storedProtocol(stack.db), 'nip04');
+      },
+    );
+
+    testWidgets(
+      'a copy no relay accepts is published three times, 2 s and then 4 s '
+      'apart, and then given up',
+      (tester) async {
+        final relay = await FakeRelay.start(
+          okFor: (event) => event['kind'] == EventKind.directMessage
+              ? const FakeOk.refuse('error: refused every time by the relay')
+              : null,
+        );
+        addTearDown(relay.stop);
+        final stack = await buildLatchedStack(relay);
+
+        final result = await stack.repository.sendMessage(
+          recipientPubkey: recipientPubkey,
+          content: 'refused every time',
+        );
+        expect(result.success, isTrue);
+
+        final arrivals = await kind4Arrivals(
+          relay,
+          4,
+          timeout: const Duration(seconds: 11),
+        );
+        expect(arrivals, hasLength(3), reason: 'three attempts, then no more');
+        expect(kind4Ids(relay), hasLength(1));
+        expect(
+          arrivals[1].difference(arrivals[0]),
+          greaterThanOrEqualTo(const Duration(milliseconds: 1900)),
+        );
+        expect(
+          arrivals[2].difference(arrivals[1]),
+          greaterThanOrEqualTo(const Duration(milliseconds: 3900)),
+        );
+      },
+    );
+
+    testWidgets(
+      'a copy whose OK comes after the deadline is published again under the '
+      'same id',
+      (tester) async {
+        // The copy is published with publishEventAwaitOk's default 15 s wait.
+        // A relay that stores it but confirms only at 16 s has, as far as the
+        // client can tell, lost it, so the client republishes. Only the same
+        // signed event lets the relay answer `duplicate:` (01.md:169) instead
+        // of storing a second message.
+        var lateConfirmations = 1;
+        final relay = await FakeRelay.start(
+          okFor: (event) =>
+              event['kind'] == EventKind.directMessage &&
+                  lateConfirmations-- > 0
+              ? const FakeOk.accept(delay: Duration(seconds: 16))
+              : null,
+        );
+        addTearDown(relay.stop);
+        final stack = await buildLatchedStack(relay);
+
+        final result = await stack.repository.sendMessage(
+          recipientPubkey: recipientPubkey,
+          content: 'confirmed too late',
+        );
+        expect(result.success, isTrue);
+
+        final arrivals = await kind4Arrivals(
+          relay,
+          3,
+          timeout: const Duration(seconds: 24),
+        );
+        expect(
+          arrivals,
+          hasLength(2),
+          reason: 'a copy the client never heard confirmed is published again',
+        );
+        expect(kind4Ids(relay), hasLength(1));
+        expect(okVerdicts(relay, kind4Ids(relay).single), [true, true]);
+      },
+      timeout: const Timeout(Duration(minutes: 1)),
+    );
+
+    testWidgets('a message the retry sweep delivers gets its copy too', (
+      tester,
+    ) async {
+      var refusals = 1;
+      final relay = await FakeRelay.start(
+        okFor: (event) =>
+            event['kind'] == EventKind.giftWrap &&
+                addressedTo(event, recipientPubkey) &&
+                refusals-- > 0
+            ? const FakeOk.refuse('error: refused once by the test relay')
+            : null,
+      );
+      addTearDown(relay.stop);
+      final stack = await buildLatchedStack(relay);
+
+      final failed = await stack.repository.sendMessage(
+        recipientPubkey: recipientPubkey,
+        content: 'delivered by the retry sweep',
+      );
+      expect(failed.success, isFalse, reason: 'precondition: the send failed');
+      final rumorId = await queuedRumorId(stack.db);
+
+      // What OutgoingDmRetryService does with the failed row.
+      final recovered = await stack.repository.recoverFullSend(
+        rumorId: rumorId,
+      );
+      expect(recovered.success, isTrue);
+
+      final arrivals = await kind4Arrivals(
+        relay,
+        2,
+        timeout: const Duration(seconds: 5),
+      );
+      expect(
+        arrivals,
+        hasLength(1),
+        reason:
+            'the legacy peer gets the copy of a message the sweep delivered',
+      );
+    });
+
+    testWidgets(
+      'our own echo of a send held on an unreadable inbox keeps the thread '
+      'latched',
+      (tester) async {
+        // The recipient's kind-10050 lookup stalls, so the send is held
+        // (#7317) and stores nothing. The relay then hands our own self-wrap
+        // back on our subscription, as a real relay does, and the receive
+        // path is the first to store the message.
+        const content = 'held on an unreadable inbox';
+        final relay = await FakeRelay.start(
+          stallReqForAuthors: {recipientPubkey},
+          echoToPublisher: true,
+        );
+        addTearDown(relay.stop);
+        final stack = await buildLatchedStack(relay);
+        DmRepository.inboxResolutionBudget = const Duration(milliseconds: 800);
+        await stack.repository.startListening();
+
+        final held = await stack.repository.sendMessage(
+          recipientPubkey: recipientPubkey,
+          content: content,
+        );
+        expect(
+          held.retryablePending,
+          isTrue,
+          reason: 'precondition: the send is held',
+        );
+        await queuedRumorId(stack.db);
+
+        // The receive path writes the protocol in the same upsert as the
+        // preview, so the preview is what says the echo has been stored.
+        final echoStored = await eventually(
+          () async =>
+              (await stack.db.conversationsDao.getConversation(
+                conversationId,
+                ownerPubkey: senderPubkey,
+              ))?.lastMessageContent ==
+              content,
+          timeout: const Duration(seconds: 5),
+        );
+        expect(echoStored, isTrue, reason: 'precondition: the echo was stored');
+        expect(
+          await storedProtocol(stack.db),
+          'nip04',
+          reason: 'our own NIP-17 message proves nothing about the peer',
+        );
       },
     );
   });
