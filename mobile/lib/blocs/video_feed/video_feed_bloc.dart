@@ -128,6 +128,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   StreamSubscription<List<String>>? _followingSubscription;
   StreamSubscription<List<CuratedList>>? _curatedListsSubscription;
   int _sourceSelectionSequence = 0;
+  int _firstPageRequestSequence = 0;
 
   /// Tracks when the last successful load completed, used by
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
@@ -864,11 +865,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
   }) async {
-    // Returning to the same source does not revive its earlier request.
-    final selectionSequence = _sourceSelectionSequence;
+    // Only a new load supersedes the current one. A selection cancelled
+    // before loading must not strand the current feed in its loading state.
+    final requestSequence = ++_firstPageRequestSequence;
     bool canEmit() =>
         _canEmitForSource(source, emit) &&
-        selectionSequence == _sourceSelectionSequence;
+        requestSequence == _firstPageRequestSequence;
     try {
       final servedCache =
           prefetchedCachedVideos?.isNotEmpty ??

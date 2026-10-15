@@ -207,6 +207,70 @@ void main() {
       expect(bloc.state.source.type, VideoFeedSourceType.forYou);
     });
 
+    test(
+      'cancelled selection does not discard the current hashtag load',
+      () async {
+        await bloc.close();
+        await tags.follow('other');
+        final preferences = DelayedPreferences();
+        var saved = 'hashtag:lnic';
+        final writing = Completer<void>();
+        final release = Completer<void>();
+        when(() => preferences.getString(any())).thenAnswer((_) => saved);
+        when(() => preferences.remove(any())).thenAnswer((_) async => true);
+        when(() => preferences.setString(any(), any()))
+            .thenAnswer((call) async {
+              final value = call.positionalArguments[1] as String;
+              if (value == 'hashtag:other') {
+                writing.complete();
+                await release.future;
+              }
+              saved = value;
+              return true;
+            });
+        final requested = Completer<void>();
+        final response = Completer<HashtagFeedVideosResult>();
+        when(() => videos.getHashtagFeedVideos(hashtag: 'lnic'))
+            .thenAnswer((_) {
+              requested.complete();
+              return response.future;
+            });
+        bloc = VideoFeedBloc(
+          videosRepository: videos,
+          followRepository: follows,
+          curatedListRepository: lists,
+          hashtagSubscriptionRepository: tags,
+          sharedPreferences: preferences,
+          userPubkey: key,
+          serveCachedHomeFeed: false,
+        );
+        bloc.add(const VideoFeedStarted());
+        await requested.future;
+        bloc.add(
+          const VideoFeedSourceChanged(
+            VideoFeedSource.subscribedHashtag(
+              hashtag: 'other',
+              displayTag: 'other',
+            ),
+          ),
+        );
+        await writing.future;
+        final removed = bloc.stream.firstWhere(
+          (s) => s.followedHashtags.length == 1,
+        );
+        await tags.unfollow('other');
+        await removed;
+        release.complete();
+        await pumpEventQueue();
+        expect(bloc.state.source, source);
+        final video = createTestVideoEvent(id: '3' * 64);
+        response.complete(HashtagFeedVideosResult.success([video]));
+        await pumpEventQueue();
+        expect(bloc.state.status, VideoFeedStatus.success);
+        expect(bloc.state.videos.single.id, video.id);
+      },
+    );
+
     for (final staleResultFails in [false, true]) {
       test(
         'revisiting a hashtag ignores an earlier ${staleResultFails ? 'failed' : 'successful'} load',
