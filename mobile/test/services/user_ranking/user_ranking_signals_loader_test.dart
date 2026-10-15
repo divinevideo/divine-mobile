@@ -549,6 +549,23 @@ void main() {
     );
 
     test(
+      'stats refresh requests stale candidates without their ranked order',
+      () async {
+        final closest = _key(30);
+        final next = _key(20);
+        final refreshed = Completer<List<String>>();
+        when(() => profiles.refreshStatsForPubkeys(any()))
+            .thenAnswer((invocation) async {
+              refreshed.complete(
+                invocation.positionalArguments.first as List<String>,
+              );
+            });
+        loader.refreshInBackground([closest, next]);
+        expect(await refreshed.future, [next, closest]);
+      },
+    );
+
+    test(
       'empty refresh still syncs followers without requesting stats',
       () async {
         loader.refreshInBackground([]);
