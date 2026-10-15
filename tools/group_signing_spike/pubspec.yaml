@@ -1,0 +1,14 @@
+name: group_signing_spike
+publish_to: none
+environment:
+  sdk: ^3.12.0
+dependencies:
+  bip340: 0.3.0
+  coinlib: ^4.1.0
+  crypto: ^3.0.3
+  clock: ^1.1.2
+  hex: ^0.2.0
+  string_validator: ^1.1.0
+  frosty: 4.0.0
+dev_dependencies:
+  test: ^1.25.15
