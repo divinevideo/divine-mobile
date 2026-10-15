@@ -592,8 +592,9 @@ class NIP17MessageService {
   /// recipient wrap (`null` when the signer did not build one there) and the
   /// result reports `selfWrapPublished: false`. A caller that sends one rumor
   /// to several recipients uses it to publish the sender's copy once rather
-  /// than once per recipient, through [publishSelfWrap] (#8446). It must not
-  /// throw.
+  /// than once per recipient, through [publishSelfWrap] (#8446); a message
+  /// send uses it to drop the copy on an attempt it will hold rather than
+  /// count as delivered (#10012). It must not throw.
   ///
   /// [selfWrapBuildTimeout] bounds the self-wrap build, defaulting to the
   /// tight [DmSendBudget.selfWrapBuild] for callers that protect the full
