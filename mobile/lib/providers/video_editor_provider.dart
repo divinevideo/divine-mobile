@@ -186,6 +186,13 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   int _renderGeneration = 0;
   Future<void>? _activeRenderFuture;
 
+  /// Whether Post details is waiting on the final render: set when a render
+  /// is started for it, cleared when the user leaves it ([cancelRenderVideo]).
+  ///
+  /// Lets [invalidateFinalRenderedClip] render again when background work,
+  /// such as a take's provenance signing, lands after the export finished.
+  bool _finalRenderAwaited = false;
+
   /// When true, [triggerAutosave] is a no-op.
   ///
   /// Set to `true` by [initFromPublishedVideo] and intentionally never reset.
@@ -236,13 +243,14 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
     if (state.isProcessing) {
       runProviderDetached(
-        cancelRenderVideo(),
+        _cancelActiveRender(),
         'cancel the invalidated video render',
         logName: 'VideoEditorNotifier',
       );
     }
 
     state = state.copyWith(clearFinalRenderedClip: true);
+    _renderAgainIfAwaited();
 
     // Delete the old rendered file from disk to free up space
     final db = ref.read(databaseProvider);
@@ -253,6 +261,30 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         clipsDao: db.clipsDao,
       ),
     );
+  }
+
+  /// Renders again after [invalidateFinalRenderedClip] discarded the render
+  /// Post details was showing.
+  ///
+  /// The user cannot edit from Post details, so this is background work that
+  /// finished after the export, most often the take's provenance signing.
+  /// Without a new render the preview spins and Post stays disabled until the
+  /// app is restarted.
+  void _renderAgainIfAwaited() {
+    if (!_finalRenderAwaited) return;
+    final generation = _renderGeneration;
+    // Deferred past the caller: an invalidation is issued before the change
+    // it reports is written to the state the render reads.
+    scheduleMicrotask(() {
+      if (!ref.mounted || !_finalRenderAwaited) return;
+      if (generation != _renderGeneration) return;
+      if (state.finalRenderedClip != null || state.isPosting) return;
+      runProviderDetached(
+        startRenderVideo(),
+        'render the discarded final video again',
+        logName: 'VideoEditorNotifier',
+      );
+    });
   }
 
   /// Initialize the video editor with an optional draft.
@@ -271,6 +303,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       isSavingDraft: false,
       allowAudioReuse: audioSharingEnabled,
     );
+    _finalRenderAwaited = false;
 
     // If the editor screen is opened from a draft, we initialize it here.
     if (draftId != null && draftId.isNotEmpty) {
@@ -321,6 +354,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .read(audioSharingPreferenceServiceProvider)
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
+    _finalRenderAwaited = false;
     _autosaveTimer?.cancel();
     draftId = null;
     if (!keepAutosavedDraft) {
@@ -1401,6 +1435,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Combines all clips, applies audio settings, and creates the final
   /// rendered clip for publishing.
   Future<void> startRenderVideo() {
+    _finalRenderAwaited = true;
     if (state.finalRenderedClip != null) {
       setProcessing(false);
       return Future<void>.value();
@@ -1670,7 +1705,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   /// Cancel an ongoing video render operation.
-  Future<void> cancelRenderVideo() async {
+  ///
+  /// Called when the user leaves Post details, so a later change no longer
+  /// renders again on its own.
+  Future<void> cancelRenderVideo() {
+    _finalRenderAwaited = false;
+    return _cancelActiveRender();
+  }
+
+  Future<void> _cancelActiveRender() async {
     final generation = ++_renderGeneration;
     final activeRender = _activeRenderFuture;
     await VideoEditorRenderService.cancelTask(draftId);

@@ -1650,6 +1650,111 @@ void main() {
               'invalidate is a no-op when clip is null',
         );
       });
+
+      group('after Post details has the render', () {
+        late ProviderContainer postDetails;
+        late List<Map<String, dynamic>> renderedHistories;
+
+        setUp(() async {
+          final database = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(database.close);
+          postDetails = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(
+                await SharedPreferences.getInstance(),
+              ),
+              performanceMonitoringServiceProvider.overrideWithValue(
+                _RecordingPerformanceMonitor(),
+              ),
+              databaseProvider.overrideWithValue(database),
+            ],
+          );
+          addTearDown(postDetails.dispose);
+          addTearDown(
+            () => VideoEditorRenderService.renderVideoToClipOverride = null,
+          );
+
+          renderedHistories = [];
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) async {
+                renderedHistories.add(editorStateHistory);
+                return (
+                  DivineVideoClip(
+                    id: 'rendered-${renderedHistories.length}',
+                    video: EditorVideo.file(
+                      '/docs/rendered-${renderedHistories.length}.mp4',
+                    ),
+                    duration: const Duration(seconds: 2),
+                    recordedAt: DateTime.now(),
+                    targetAspectRatio: .vertical,
+                    originalAspectRatio: 9 / 16,
+                  ),
+                  null,
+                );
+              };
+
+          postDetails
+              .read(clipManagerProvider.notifier)
+              .addClip(
+                limitClipDuration: false,
+                video: EditorVideo.file('/docs/take.mp4'),
+                targetAspectRatio: .vertical,
+                originalAspectRatio: 9 / 16,
+                duration: const Duration(seconds: 2),
+              );
+          await postDetails
+              .read(videoEditorProvider.notifier)
+              .startRenderVideo();
+        });
+
+        /// What the take's provenance signing does when it finishes after the
+        /// export: it writes the proof onto the clip.
+        void landTakeProof() {
+          final clipManager = postDetails.read(clipManagerProvider.notifier);
+          clipManager.refreshClip(
+            clipManager.clips.single.copyWith(proofManifestJson: '{}'),
+          );
+        }
+
+        test('renders again so Post becomes available again', () async {
+          landTakeProof();
+          await pumpEventQueue();
+
+          final state = postDetails.read(videoEditorProvider);
+          expect(renderedHistories, hasLength(2));
+          expect(state.finalRenderedClip?.id, 'rendered-2');
+          expect(state.isProcessing, isFalse);
+        });
+
+        test('renders the change that discarded the render', () async {
+          postDetails
+              .read(videoEditorProvider.notifier)
+              .updateEditorStateHistory({'adopted': true});
+          await pumpEventQueue();
+
+          expect(renderedHistories.last, {'adopted': true});
+        });
+
+        test('does not render once the user has left Post details', () async {
+          await postDetails
+              .read(videoEditorProvider.notifier)
+              .cancelRenderVideo();
+
+          landTakeProof();
+          await pumpEventQueue();
+
+          expect(renderedHistories, hasLength(1));
+          expect(
+            postDetails.read(videoEditorProvider).finalRenderedClip,
+            isNull,
+          );
+        });
+      });
     });
 
     group('updateCover', () {
