@@ -34,7 +34,7 @@ void main() {
       expect(config.getDefault(FeatureFlag.debugTools), isTrue);
     });
 
-    test('videoReplies should be enabled by default in debug builds', () {
+    test('videoReplies should be enabled by default in all builds', () {
       const config = BuildConfiguration();
 
       expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
