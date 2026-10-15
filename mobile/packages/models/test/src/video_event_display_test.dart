@@ -138,6 +138,28 @@ void main() {
       );
     });
 
+    test('drops a chip hashtag line ended by a bare carriage return', () {
+      expect(
+        build(
+          content:
+              '#windowsxp #glenn\r\rOriginal stats: 3 loops - 2 likes'
+              '\r\r#windowsxp #glenn',
+          hashtags: const ['windowsxp', 'glenn'],
+        ).chipCaptionDescription,
+        equals('Original stats: 3 loops - 2 likes'),
+      );
+    });
+
+    test('keeps the line breaks of the remaining lines as written', () {
+      expect(
+        build(
+          content: 'First\r\n#glenn\r\nSecond\rThird',
+          hashtags: const ['glenn'],
+        ).chipCaptionDescription,
+        equals('First\r\nSecond\rThird'),
+      );
+    });
+
     test('drops the synthetic classic hashtag for an original Vine', () {
       expect(
         build(

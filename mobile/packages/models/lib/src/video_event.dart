@@ -1185,6 +1185,7 @@ class VideoEvent {
   String? get captionTitle =>
       isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
 
+  static final _lineBreak = RegExp('\r\n?|\n');
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
@@ -1199,10 +1200,10 @@ class VideoEvent {
   /// else is returned trimmed and otherwise as written.
   String descriptionWithoutChipLines(Iterable<String> chips) {
     final chipSet = {for (final tag in chips) tag.toLowerCase()};
-    final lines = <String>[];
+    final kept = StringBuffer();
     var lastKeptBlank = false;
     var dropBlankLine = false;
-    for (final line in displayContent.split('\n')) {
+    for (final (line, lineBreak) in _linesOf(displayContent)) {
       final tokens = _lineToken.allMatches(line);
       if (tokens.isNotEmpty &&
           tokens.every((token) => _isChipHashtag(token[0]!, chipSet))) {
@@ -1215,9 +1216,22 @@ class VideoEvent {
       }
       dropBlankLine = false;
       lastKeptBlank = tokens.isEmpty;
-      lines.add(line);
+      kept
+        ..write(line)
+        ..write(lineBreak);
     }
-    return lines.join('\n').trim();
+    return kept.toString().trim();
+  }
+
+  /// Each line of [text] with the break that ends it, so kept lines can be
+  /// joined back exactly as written.
+  static Iterable<(String, String)> _linesOf(String text) sync* {
+    var start = 0;
+    for (final lineBreak in _lineBreak.allMatches(text)) {
+      yield (text.substring(start, lineBreak.start), lineBreak[0]!);
+      start = lineBreak.end;
+    }
+    yield (text.substring(start), '');
   }
 
   static bool _isChipHashtag(String token, Set<String> chips) {
