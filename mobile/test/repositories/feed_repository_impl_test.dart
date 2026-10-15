@@ -53,7 +53,9 @@ void main() {
     late FeedRepository repository;
 
     setUp(() {
-      container = ProviderContainer();
+      container = ProviderContainer(
+        overrides: [newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new)],
+      );
       repository = container.read(feedRepositoryProvider);
     });
 
@@ -87,14 +89,6 @@ void main() {
     test(
       'global feed bridge replays latest state and re-emits updates',
       () async {
-        container.dispose();
-        container = ProviderContainer(
-          overrides: [
-            newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new),
-          ],
-        );
-        repository = container.read(feedRepositoryProvider);
-
         final feed = container.read(
           newVideosFeedProvider.notifier,
         ) as _TestNewVideosFeed;
@@ -118,6 +112,54 @@ void main() {
       },
     );
 
+    test('global feed bridge closes its streams when disposed', () async {
+      var videosDone = false;
+      var hasMoreDone = false;
+      repository
+          .watchView(const NewVideosViewSource())
+          .listen(null, onDone: () => videosDone = true);
+      repository
+          .watchHasMore(const NewVideosViewSource())
+          .listen(null, onDone: () => hasMoreDone = true);
+
+      container.dispose();
+      await pumpEventQueue();
+
+      expect(videosDone, isTrue);
+      expect(hasMoreDone, isTrue);
+    });
+
+    test(
+      'global feed bridge closes streams that already replayed a value',
+      () async {
+        final feed = container.read(
+          newVideosFeedProvider.notifier,
+        ) as _TestNewVideosFeed;
+        await container.read(newVideosFeedProvider.future);
+        feed.emit([_video('1')], hasMore: true);
+
+        final videos = <List<VideoEvent>>[];
+        final hasMoreValues = <bool>[];
+        var videosDone = false;
+        var hasMoreDone = false;
+        repository
+            .watchView(const NewVideosViewSource())
+            .listen(videos.add, onDone: () => videosDone = true);
+        repository
+            .watchHasMore(const NewVideosViewSource())
+            .listen(hasMoreValues.add, onDone: () => hasMoreDone = true);
+        await pumpEventQueue();
+        expect(videos.single.single.id, equals('1'));
+        expect(hasMoreValues, equals([true]));
+
+        container.dispose();
+        await pumpEventQueue();
+
+        expect(videosDone, isTrue);
+        expect(hasMoreDone, isTrue);
+      },
+    );
+
     // #6949. The bridge is created lazily on the first watchView, i.e. the
     // moment the user taps a grid tile. If that tap lands while the feed
     // provider is reloading, `asData` is null even though the grid is still
@@ -129,14 +171,6 @@ void main() {
       'global feed bridge replays the previous list when the feed is '
       'reloading at subscribe time',
       () async {
-        container.dispose();
-        container = ProviderContainer(
-          overrides: [
-            newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new),
-          ],
-        );
-        repository = container.read(feedRepositoryProvider);
-
         final feed = container.read(
           newVideosFeedProvider.notifier,
         ) as _TestNewVideosFeed;

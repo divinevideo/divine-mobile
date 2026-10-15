@@ -11,6 +11,7 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -282,7 +283,17 @@ class _GlobalFeedBridge {
   }
 
   void dispose() {
-    _videos.close();
-    _hasMore.close();
+    // close() fails only by throwing synchronously (during an addStream), so
+    // each subject is guarded on its own and still closes if the other throws.
+    runProviderDetached(
+      Future.sync(_videos.close),
+      'close global feed bridge videos stream',
+      logName: 'RiverpodFeedRepository',
+    );
+    runProviderDetached(
+      Future.sync(_hasMore.close),
+      'close global feed bridge hasMore stream',
+      logName: 'RiverpodFeedRepository',
+    );
   }
 }
