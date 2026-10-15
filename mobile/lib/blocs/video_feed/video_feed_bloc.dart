@@ -864,11 +864,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
   }) async {
+    // Returning to the same source does not revive its earlier request.
+    final selectionSequence = _sourceSelectionSequence;
+    bool canEmit() =>
+        _canEmitForSource(source, emit) &&
+        selectionSequence == _sourceSelectionSequence;
     try {
       final servedCache =
           prefetchedCachedVideos?.isNotEmpty ??
           await _maybeServeCachedFeed(source, emit, skipCache, feedLoad);
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       // `revalidate` serves the cached window *and* forces a fresh fetch.
       // `skipCache` alone cannot express that: it also suppresses the served
@@ -884,7 +889,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         skipCache: skipCache,
         revalidate: revalidate,
       );
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       // Filter out videos without valid URLs
       final validVideos = result.videos
@@ -966,7 +971,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         );
       }
     } catch (e) {
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       Log.error(
         'VideoFeedBloc: Failed to load videos - $e',

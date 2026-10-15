@@ -206,5 +206,51 @@ void main() {
       await pumpEventQueue();
       expect(bloc.state.source.type, VideoFeedSourceType.forYou);
     });
+
+    for (final staleResultFails in [false, true]) {
+      test(
+        'revisiting a hashtag ignores an earlier ${staleResultFails ? 'failed' : 'successful'} load',
+        () async {
+          final firstResponse = Completer<HashtagFeedVideosResult>();
+          final firstRequested = Completer<void>();
+          final oldVideo = createTestVideoEvent(id: '1' * 64);
+          final freshVideo = createTestVideoEvent(id: '2' * 64);
+          var requests = 0;
+          when(() => videos.getHashtagFeedVideos(hashtag: 'lnic')).thenAnswer((
+            _,
+          ) {
+            if (requests++ == 0) {
+              firstRequested.complete();
+              return firstResponse.future;
+            }
+            return Future.value(HashtagFeedVideosResult.success([freshVideo]));
+          });
+          bloc.add(const VideoFeedStarted());
+          await firstRequested.future;
+          final switched = bloc.stream.firstWhere(
+            (s) =>
+                s.source.type == VideoFeedSourceType.forYou &&
+                s.status == VideoFeedStatus.success,
+          );
+          bloc.add(const VideoFeedSourceChanged(VideoFeedSource.forYou()));
+          await switched;
+          final revisited = bloc.stream.firstWhere(
+            (s) => s.source == source && s.status == VideoFeedStatus.success,
+          );
+          bloc.add(const VideoFeedSourceChanged(source));
+          await revisited;
+          expect(bloc.state.videos.single.id, freshVideo.id);
+
+          firstResponse.complete(
+            staleResultFails
+                ? const HashtagFeedVideosResult.failure()
+                : HashtagFeedVideosResult.success([oldVideo]),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.videos.single.id, freshVideo.id);
+          expect(bloc.state.status, VideoFeedStatus.success);
+        },
+      );
+    }
   });
 }
