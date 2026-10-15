@@ -442,10 +442,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
-    // For You, Following and Classics are cursor-only: a missing cursor means
-    // the source is exhausted. New Videos also prefers the cursor, but its
-    // repository can answer without one (Funnelcake outage or a legacy
-    // bare-list response), and that fallback still pages by `until`.
+    // Every fresh page of a cursor-only feed clears `hasMore` when it brings
+    // no cursor, so arriving here without one means the cached window served
+    // at start or on a source switch is on screen. Pause until the fresh
+    // first page lands with a cursor.
     if (_isCursorOnly(state.source) && state.paginationCursor == null) {
       emit(state.copyWith(hasMore: false));
       return;
@@ -518,8 +518,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       emit(
         state.copyWith(
           videos: updatedVideos,
-          // Only stop pagination when the server returns nothing.
-          // Fewer than _pageSize can happen due to server-side filtering.
           hasMore: _hasMoreForSource(
             source,
             result,
@@ -857,8 +855,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           status: VideoFeedStatus.success,
           videos: displayedVideos,
           isLoadingMore: false,
-          // Only stop pagination when no results at all.
-          // Fewer than _pageSize can happen due to server-side filtering.
           hasMore: _hasMoreForSource(
             source,
             result,
@@ -1041,6 +1037,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
   }
 
+  /// Whether [source] has another page after [result].
+  ///
+  /// A short page is not the end: the client drops malformed rows. A
+  /// cursor-only feed ends when the repository returns no cursor; the rest
+  /// follow the repository's `hasMore`, or [fallbackHasMore] when it is unset.
   bool _hasMoreForSource(
     VideoFeedSource source,
     HomeFeedResult result, {
