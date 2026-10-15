@@ -12,7 +12,21 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    // Existing event-list fixtures describe complete reads. Individual tests
+    // override readEvents to model the real client's partial-result metadata.
+    when(() => readEvents(any(), requireAllRelaysSettled: true)).thenAnswer(
+      (invocation) async => QueryResult(
+        events: await queryEvents(
+          invocation.positionalArguments.single as List<Filter>,
+        ),
+        endedBy: QueryEnd.complete,
+        confirmedExhaustive: true,
+      ),
+    );
+  }
+}
 
 class _MockApi extends Mock implements FunnelcakeApiClient {}
 
@@ -459,5 +473,92 @@ void main() {
         expect(dao.rows[otherOwner], isEmpty);
       },
     );
+    for (final outcome in [
+      QueryEnd.deadline,
+      QueryEnd.settledEarly,
+      QueryEnd.socketDropped,
+      QueryEnd.relayClosed,
+      QueryEnd.noRelay,
+      QueryEnd.complete,
+    ]) {
+      test(
+        'returned $outcome relay outcome preserves known followers',
+        () async {
+          dao.rows[owner] = {stale: 50};
+          final events = outcome == QueryEnd.noRelay
+              ? <Event>[]
+              : [contact(first, 100), contact(second, 200)];
+          when(() => client.queryEvents(any())).thenAnswer((_) async => events);
+          when(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).thenAnswer(
+            (_) async => QueryResult(
+              events: events,
+              endedBy: outcome,
+              possiblyCapped: outcome == QueryEnd.complete,
+            ),
+          );
+          await repository.syncMyFollowers();
+          expect(dao.rows[owner], {
+            stale: 50,
+            if (events.isNotEmpty) first: 100,
+            if (events.isNotEmpty) second: 200,
+          });
+          expect(dao.replacements, 0);
+          verify(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).called(1);
+        },
+      );
+    }
+
+    for (final operation in ['get', 'stream']) {
+      test(
+        '$operation retains stored followers for a partial relay read',
+        () async {
+          dao.rows[owner] = {stale: 50};
+          final events = [contact(first, 100)];
+          when(() => client.queryEvents(any())).thenAnswer((_) async => events);
+          when(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).thenAnswer(
+            (_) async => QueryResult(
+              events: events,
+              endedBy: QueryEnd.deadline,
+            ),
+          );
+          if (operation == 'get') {
+            expect(await repository.getMyFollowers(), [first]);
+          } else {
+            expect(await repository.streamMyFollowers().toList(), [
+              [first],
+            ]);
+          }
+          expect(dao.rows[owner], {stale: 50, first: 100});
+          expect(dao.replacements, 0);
+        },
+      );
+    }
+
+    for (final hasMore in [true, false]) {
+      test(
+        'API page hasMore=$hasMore preserves followers beyond the page',
+        () async {
+          dao.rows[owner] = {stale: 50};
+          when(() => api.isAvailable).thenReturn(true);
+          when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+            (_) async => PaginatedPubkeys(
+              pubkeys: [first, second],
+              hasMore: hasMore,
+              total: hasMore ? 0 : 3,
+            ),
+          );
+          await repository.syncMyFollowers();
+          expect(dao.rows[owner], {stale: 50, first: null, second: null});
+          expect(dao.replacements, 0);
+          verify(() => api.getFollowers(pubkey: owner, limit: 5000)).called(1);
+        },
+      );
+    }
   });
 }
