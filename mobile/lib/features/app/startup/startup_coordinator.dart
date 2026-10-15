@@ -177,11 +177,13 @@ class StartupCoordinator {
           'Failed to initialize ${service.name}',
           name: 'StartupCoordinator',
           error: error,
+          stackTrace: stackTrace,
         );
       } else {
         Log.warning(
           'Optional service ${service.name} failed to initialize: $error',
           name: 'StartupCoordinator',
+          stackTrace: stackTrace,
         );
       }
 

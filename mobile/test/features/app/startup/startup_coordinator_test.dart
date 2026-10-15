@@ -459,7 +459,8 @@ void main() {
         });
       });
 
-      test('logs an optional service failure before its report completes', () {
+      test('logs an optional service failure with its stack trace before '
+          'its report completes', () {
         fakeAsync((async) {
           final crashReporter = _PendingCrashReporter();
           final coordinator = StartupCoordinator(crashReporter: crashReporter)
@@ -485,7 +486,8 @@ void main() {
                     'message',
                     'Optional service OptionalService failed to initialize: '
                         'Exception: Optional service failed',
-                  ),
+                  )
+                  .having((entry) => entry.stackTrace, 'stackTrace', isNotNull),
             ),
           );
 
@@ -494,7 +496,8 @@ void main() {
         });
       });
 
-      test('logs a required service failure before its report completes', () {
+      test('logs a required service failure with its stack trace before its '
+          'report completes', () {
         fakeAsync((async) {
           final crashReporter = _PendingCrashReporter();
           final coordinator = StartupCoordinator(crashReporter: crashReporter)
@@ -518,7 +521,8 @@ void main() {
                     (entry) => entry.message,
                     'message',
                     'Failed to initialize RequiredService',
-                  ),
+                  )
+                  .having((entry) => entry.stackTrace, 'stackTrace', isNotNull),
             ),
           );
 
