@@ -4072,6 +4072,88 @@ void main() {
         },
       );
 
+      group('relay walk across filtered rows', () {
+        // `no-url` is dropped by the client, so the first relay batch yields
+        // one visible video and the walk reads a second batch.
+        List<Event> firstBatch() => [
+          _createVideoEvent(
+            id: 'first-video',
+            pubkey: 'followed-user',
+            videoUrl: 'https://example.com/1.mp4',
+            createdAt: 3000,
+          ),
+          _createVideoEvent(
+            id: 'no-url',
+            pubkey: 'followed-user',
+            videoUrl: null,
+            createdAt: 2950,
+          ),
+        ];
+
+        test(
+          'ends without a cursor when a later relay batch comes back short',
+          () async {
+            // The first batch set a next bound; the short second batch ends
+            // the feed, and that earlier bound must not leak out as a cursor.
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+              invocation,
+            ) async {
+              final filters =
+                  invocation.positionalArguments.first as List<Filter>;
+              if (filters.first.until == null) return firstBatch();
+              return [
+                _createVideoEvent(
+                  id: 'last-video',
+                  pubkey: 'followed-user',
+                  videoUrl: 'https://example.com/2.mp4',
+                  createdAt: 2900,
+                ),
+              ];
+            });
+
+            final result = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: 2,
+            );
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video', 'last-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(result.hasMore, isFalse);
+          },
+        );
+
+        test(
+          'stops when a relay ignores until and repeats the same batch',
+          () async {
+            // Without the stall guard the walk would re-request the same
+            // bound forever, since repeated rows never grow the page. A third
+            // query fails the test instead of hanging it.
+            var queries = 0;
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+              _,
+            ) async {
+              if (++queries > 2) throw StateError('relay walk did not stop');
+              return firstBatch();
+            });
+
+            final result = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: 2,
+            );
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(queries, equals(2));
+          },
+        );
+      });
+
       test('transforms and filters events correctly', () async {
         final event = _createVideoEvent(
           id: 'home-video-123',
