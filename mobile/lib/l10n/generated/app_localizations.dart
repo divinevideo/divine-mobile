@@ -16265,6 +16265,96 @@ abstract class AppLocalizations {
   /// **'Set how see-through the selected layer is'**
   String get videoEditorOpacitySemanticLabel;
 
+  /// Caption of the button in the timeline controls of a clip, or of a layer (text, sticker, drawing or a clip detached onto the canvas), and title of the screen it opens, where the item is shown only inside a shape (circle, rectangle, heart) or faded out through a soft straight edge. Named to sit beside "Color mask" (videoEditorChromaKeyLabel), which hides a color instead: translate "mask" the same way that key does. Keep it short — it sits under a 52dp icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Shape mask'**
+  String get videoEditorShapeMaskLabel;
+
+  /// Accessibility label for the Shape mask button in the timeline controls of a clip or a layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the selected item inside a shape'**
+  String get videoEditorShapeMaskSemanticLabel;
+
+  /// Accessibility label of the shape mask screen's canvas, saying what the gestures on it do: one finger moves the shape, two fingers resize and turn it, and the round handles on its sides stretch it in one direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move the shape. Pinch to resize or turn it, or drag a handle to stretch it.'**
+  String get videoEditorShapeMaskHint;
+
+  /// Option on the shape mask screen that removes the mask, so the whole item shows. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get videoEditorShapeMaskNone;
+
+  /// Shape option on the shape mask screen: the item shows inside a circle, which can be stretched into an oval. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get videoEditorShapeMaskCircle;
+
+  /// Shape option on the shape mask screen: the item shows inside a rectangle whose corners can be rounded. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Rectangle'**
+  String get videoEditorShapeMaskRectangle;
+
+  /// Shape option on the shape mask screen: the item shows inside a heart. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart'**
+  String get videoEditorShapeMaskHeart;
+
+  /// Shape option on the shape mask screen: a straight line across the item; it shows on one side of the line, and softness turns the line into a gradient that fades it out. Use the term video editors use for this mask type. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Linear'**
+  String get videoEditorShapeMaskLinear;
+
+  /// Toggle on the shape mask screen that swaps inside and outside: the item shows everywhere except inside the shape. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Invert'**
+  String get videoEditorShapeMaskInvert;
+
+  /// Name of the slider on the shape mask screen that sets how soft the edge of the shape is, from a hard cut to a wide fade.
+  ///
+  /// In en, this message translates to:
+  /// **'Softness'**
+  String get videoEditorShapeMaskSoftnessLabel;
+
+  /// Label under the left end of the softness slider on the shape mask screen: a hard edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharp'**
+  String get videoEditorShapeMaskSoftnessSharp;
+
+  /// Label under the right end of the softness slider on the shape mask screen: a wide, gradual fade.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft'**
+  String get videoEditorShapeMaskSoftnessSoft;
+
+  /// Name of the slider on the shape mask screen that sets how round the corners of the rectangle shape are.
+  ///
+  /// In en, this message translates to:
+  /// **'Corners'**
+  String get videoEditorShapeMaskCornersLabel;
+
+  /// Label under the left end of the corners slider on the shape mask screen: square corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get videoEditorShapeMaskCornersSquare;
+
+  /// Label under the right end of the corners slider on the shape mask screen: fully rounded corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get videoEditorShapeMaskCornersRound;
+
   /// No description provided for @videoEditorChromaKeyAutoDetect.
   ///
   /// In en, this message translates to:

@@ -9843,6 +9843,53 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
 
   @override
+  String get videoEditorShapeMaskLabel => 'ఆకార మాస్క్';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'ఎంచుకున్న అంశాన్ని ఒక ఆకారంలో చూపించండి';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'ఆకారాన్ని కదిలించడానికి లాగండి. పరిమాణం మార్చడానికి లేదా తిప్పడానికి పించ్ చేయండి, లేదా సాగదీయడానికి హ్యాండిల్‌ను లాగండి.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'ఏదీ లేదు';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'వృత్తం';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'దీర్ఘచతురస్రం';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'హృదయం';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'రేఖీయ';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'విలోమం';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'మృదుత్వం';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'పదునైన';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'మృదువైన';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'మూలలు';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'చతురస్రం';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'గుండ్రని';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
 
   @override

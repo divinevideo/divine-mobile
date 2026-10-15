@@ -9776,6 +9776,53 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ustaw, jak bardzo przezroczysta ma być wybrana warstwa';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Maska kształtu';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Pokaż zaznaczony element w kształcie';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Przeciągnij, aby przesunąć kształt. Uszczypnij, aby zmienić jego rozmiar lub go obrócić, albo przeciągnij uchwyt, aby go rozciągnąć.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Brak';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Koło';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Prostokąt';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Serce';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Liniowa';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Odwróć';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Miękkość';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Ostra';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Miękka';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Rogi';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Proste';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Zaokrąglone';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
 
   @override

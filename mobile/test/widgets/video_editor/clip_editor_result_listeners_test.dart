@@ -130,6 +130,50 @@ void main() {
       );
     });
 
+    testWidgets('detaching a wide source keeps its timeline circle round', (
+      tester,
+    ) async {
+      const circle = LayerMask(
+        shape: LayerMaskShape.ellipse,
+        size: Size(0.5, 9 / 32),
+        feather: 0.2,
+      );
+      final source = _clip('b').copyWith(
+        originalAspectRatio: 16 / 9,
+        mask: circle,
+      );
+      whenListen(
+        clipBloc,
+        Stream.value(
+          ClipEditorState(
+            clips: [_clip('a')],
+            lastDetachResult: ClipDetachSuccess(
+              previousClips: [_clip('a'), source],
+              detachedClip: source,
+            ),
+          ),
+        ),
+        initialState: const ClipEditorState(),
+      );
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      final layer =
+          verify(
+                () => editor.addHistory(
+                  newLayer: captureAny(named: 'newLayer'),
+                  meta: any(named: 'meta'),
+                ),
+              ).captured.single
+              as Layer;
+      final mask = layer.mask!;
+      expect(mask.size.width * 16 / 9, closeTo(mask.size.height, 1e-9));
+      expect(mask.size.height, circle.size.height);
+      expect(mask.feather, closeTo(circle.feather * 9 / 16, 1e-9));
+      expect(source.mask, circle);
+    });
+
     testWidgets('every detach gets its own layer id, even for the same clip', (
       tester,
     ) async {

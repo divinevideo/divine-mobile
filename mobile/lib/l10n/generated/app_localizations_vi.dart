@@ -9539,6 +9539,53 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt mức trong suốt cho lớp đã chọn';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Mặt nạ hình dạng';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Hiển thị mục đã chọn bên trong một hình';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Kéo để di chuyển hình. Chụm hai ngón để đổi kích thước hoặc xoay, hoặc kéo tay nắm để kéo giãn.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Không';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Hình tròn';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Hình chữ nhật';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Trái tim';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Tuyến tính';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Đảo ngược';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Độ mềm';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Sắc nét';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Mềm';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Góc';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Vuông';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Bo tròn';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
 
   @override

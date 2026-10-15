@@ -9690,6 +9690,53 @@ class AppLocalizationsIt extends AppLocalizations {
       'Imposta quanto è trasparente il livello selezionato';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Maschera forma';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Mostra l\'elemento selezionato dentro una forma';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Trascina per spostare la forma. Pizzica per ridimensionarla o ruotarla, oppure trascina una maniglia per allungarla.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Nessuna';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cerchio';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rettangolo';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Cuore';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Lineare';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Inverti';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Morbidezza';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Netto';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Morbido';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Angoli';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Squadrati';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Arrotondati';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Rilevamento automatico';
 
   @override

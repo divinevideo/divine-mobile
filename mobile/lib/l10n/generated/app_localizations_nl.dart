@@ -9620,6 +9620,53 @@ class AppLocalizationsNl extends AppLocalizations {
       'Instellen hoe doorzichtig de geselecteerde laag is';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Vormmasker';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Toon het geselecteerde item in een vorm';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Sleep om de vorm te verplaatsen. Knijp om hem te vergroten, te verkleinen of te draaien, of sleep aan een greep om hem uit te rekken.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Geen';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cirkel';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rechthoek';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hart';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Lineair';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Omkeren';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Zachtheid';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Scherp';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Zacht';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Hoeken';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Recht';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rond';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';
 
   @override

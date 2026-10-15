@@ -9792,6 +9792,53 @@ class AppLocalizationsRo extends AppLocalizations {
       'Setează cât de transparent e stratul selectat';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Mască de formă';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Arată elementul selectat într-o formă';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Trage ca să muți forma. Ciupește ca să o redimensionezi sau să o rotești, ori trage de un mâner ca să o întinzi.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Niciuna';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cerc';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Dreptunghi';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Inimă';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Liniară';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Inversează';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Moliciune';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Clară';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Moale';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Colțuri';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Drepte';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rotunjite';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
 
   @override

@@ -17,6 +17,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -28,6 +29,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transf
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
@@ -153,6 +155,12 @@ class _LayerOverlayControls extends StatelessWidget {
             DetachedClipLayerData.hasChromaKey(
               DetachedClipLayerData.metaOf(layer),
             ),
+        // A shape mask, for every layer the export draws from what the canvas
+        // shows; see [canMaskLayer].
+        onShapeMask: canMaskLayer(layer)
+            ? () => _editShapeMask(context: context)
+            : null,
+        hasShapeMask: layer?.mask != null,
         // Opacity, for every layer but a hidden area, whose whole purpose is to
         // hide what is beneath it.
         onOpacity: layer == null || isCensorLayer(layer)
@@ -229,6 +237,12 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editDetachedClipChromaKey(context, layer);
+  }
+
+  Future<void> _editShapeMask({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editLayerMask(context, layer, item: item);
   }
 
   Future<void> _editOpacity({required BuildContext context}) async {

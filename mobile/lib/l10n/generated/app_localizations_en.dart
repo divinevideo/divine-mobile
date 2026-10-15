@@ -9669,6 +9669,53 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set how see-through the selected layer is';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Shape mask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Show the selected item inside a shape';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Drag to move the shape. Pinch to resize or turn it, or drag a handle to stretch it.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'None';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Circle';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rectangle';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Heart';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Invert';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Softness';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Sharp';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Soft';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Corners';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Square';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Round';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

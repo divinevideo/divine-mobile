@@ -13,16 +13,16 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Mirrors `pro_image_editor`'s `PaintLayerMergeManager.isMergeable`: a censor
 /// layer, a layer scheduled to a video-timeline window ([Layer.startTime] /
-/// [Layer.endTime]), or one carrying enter/leave animations or keyframes
-/// cannot be baked into a single static merged layer.
+/// [Layer.endTime]), or one carrying enter/leave animations, keyframes or a
+/// shape mask cannot be baked into a single static merged layer.
 bool isMergeableDrawLayer(Layer? layer) =>
     layer is PaintLayer && !layer.isCensor && _isStatic(layer);
 
 /// Whether [layer] is a sticker that can take part in a combine.
 ///
 /// The same rule as [isMergeableDrawLayer]: a layer with its own timeline
-/// window, animations or keyframes cannot share one with other stickers. A
-/// sticker that is already a combination can be combined again.
+/// window, animations, keyframes or shape mask cannot share one with other
+/// stickers. A sticker that is already a combination can be combined again.
 bool isMergeableStickerLayer(Layer? layer) =>
     layer is WidgetLayer &&
     isStickerLayerMeta(layer.exportConfigs.meta ?? layer.meta) &&
@@ -32,7 +32,8 @@ bool _isStatic(Layer layer) =>
     layer.startTime == null &&
     layer.endTime == null &&
     layer.animations.isEmpty &&
-    !layer.hasKeyframes;
+    !layer.hasKeyframes &&
+    layer.mask == null;
 
 /// The kinds of layer the timeline's multi-select can combine. Only layers
 /// of the same kind combine with each other.

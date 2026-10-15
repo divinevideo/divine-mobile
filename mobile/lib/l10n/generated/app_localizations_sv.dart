@@ -9575,6 +9575,53 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ställ in hur genomskinligt det valda lagret är';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Formmask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Visa det markerade objektet inuti en form';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Dra för att flytta formen. Nyp för att ändra storlek på den eller vrida den, eller dra i ett handtag för att sträcka ut den.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Ingen';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cirkel';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rektangel';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hjärta';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linjär';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Invertera';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Mjukhet';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Skarp';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Mjuk';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Hörn';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Raka';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rundade';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
 
   @override

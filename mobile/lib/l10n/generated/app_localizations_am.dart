@@ -9360,6 +9360,52 @@ class AppLocalizationsAm extends AppLocalizations {
       'የተመረጠው ንብርብር ምን ያህል እንደሚታይ ማዘጋጀት';
 
   @override
+  String get videoEditorShapeMaskLabel => 'የቅርጽ ጭንብል';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => 'የተመረጠውን ንጥል በቅርጽ ውስጥ ያሳዩ';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'ቅርጹን ለማንቀሳቀስ ይጎትቱ። መጠኑን ለመቀየር ወይም ለማዞር በሁለት ጣቶች ይቆንጥጡ፣ ወይም ለመዘርጋት መያዣውን ይጎትቱ።';
+
+  @override
+  String get videoEditorShapeMaskNone => 'ምንም';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'ክብ';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'አራት ማዕዘን';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'ልብ';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'መስመራዊ';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'መገልበጥ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'ልስላሴ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'ሹል';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'ለስላሳ';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'ማዕዘኖች';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'ካሬ';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'የተጠጋጋ';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
 
   @override

@@ -14,6 +14,8 @@ import 'package:openvine/services/video_editor/freeze_frame_render_service.dart'
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _FakePathProviderPlatform extends Fake
@@ -251,6 +253,22 @@ void main() {
         // system, while the file itself is already cropped to the target.
         expect(freeze.originalAspectRatio, 1);
         expect(freeze.videoAspectRatio, closeTo(9 / 16, 0.001));
+      });
+
+      test('keeps the source mask on the frozen frame', () async {
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          frame: Uint8List.fromList([1]),
+          probedDuration: FreezeFrameRenderService.reserveDuration,
+        );
+        const mask = LayerMask(shape: LayerMaskShape.heart, feather: 0.2);
+
+        final freeze = await FreezeFrameRenderService.render(
+          source: _clip().copyWith(mask: mask),
+          framePosition: Duration.zero,
+        );
+
+        expect(freeze, isNotNull);
+        expect(freeze!.mask, mask);
       });
 
       test('returns null and renders nothing without a frame', () async {

@@ -2,9 +2,11 @@
 // ABOUTME: Allows child widgets to call editor methods directly without callbacks.
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Provides access to the [ProImageEditorState] for descendant widgets.
@@ -42,6 +44,8 @@ class VideoEditorScope extends InheritedWidget {
     this.liveVolumeNotifier,
     this.cancelLiveVolumePreview,
     this.liveEqualizerNotifier,
+    this.liveClipMaskNotifier,
+    this.clipFrameTracker,
     this.onAddAudioVisualizer,
     super.child = const SizedBox.shrink(),
     super.key,
@@ -141,6 +145,15 @@ class VideoEditorScope extends InheritedWidget {
   /// The equalizer being changed in the equalizer sheet, null while none is.
   /// The canvas plays it before it is committed on confirm.
   final ValueNotifier<LiveEqualizer?>? liveEqualizerNotifier;
+
+  /// The timeline clip mask being changed in the mask editor, null while
+  /// none is. The preview draws it before it is committed on confirm.
+  final ValueNotifier<LiveClipMask?>? liveClipMaskNotifier;
+
+  /// Knows the box the preview frame fills on the canvas — the part of the
+  /// video the export keeps, which a timeline clip's mask is measured in.
+  /// Optional, like [canvasBodyKey].
+  final VideoEditorFrameTracker? clipFrameTracker;
 
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
@@ -272,5 +285,7 @@ class VideoEditorScope extends InheritedWidget {
       zoomMatrixNotifier != oldWidget.zoomMatrixNotifier ||
       liveVolumeNotifier != oldWidget.liveVolumeNotifier ||
       cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview ||
-      liveEqualizerNotifier != oldWidget.liveEqualizerNotifier;
+      liveEqualizerNotifier != oldWidget.liveEqualizerNotifier ||
+      liveClipMaskNotifier != oldWidget.liveClipMaskNotifier ||
+      clipFrameTracker != oldWidget.clipFrameTracker;
 }

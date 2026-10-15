@@ -21,6 +21,11 @@ bool _isDip(ClipTransitionType type) =>
 /// without overlapping, so the duration is unchanged.
 bool _shortensTimeline(ClipTransitionType type) => !_isDip(type);
 
+/// Whether a transition of [type] plays both clips at once, which is what
+/// shortens the timeline (see [TransitionTimelineMap]).
+bool transitionOverlapsClips(ClipTransitionType type) =>
+    _shortensTimeline(type);
+
 /// Per-side playback duration a [transition] consumes at the boundary between
 /// clips of playback durations [a] and [b].
 ///

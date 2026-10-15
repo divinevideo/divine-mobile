@@ -421,6 +421,10 @@ class TransitionSeamRenderService {
     return clip.copyWith(
       trimStart: visibleEnd - tailLen,
       transition: transition,
+      // The canvas draws timeline masks over playback, including seams.
+      // Baking a cover here applies it twice and persists a mask that the
+      // seam cache deliberately does not track when the mask changes.
+      clearMask: true,
     );
   }
 
@@ -429,6 +433,7 @@ class TransitionSeamRenderService {
     return clip.copyWith(
       trimEnd: clip.duration - (clip.trimStart + headLen),
       clearTransition: true,
+      clearMask: true,
     );
   }
 

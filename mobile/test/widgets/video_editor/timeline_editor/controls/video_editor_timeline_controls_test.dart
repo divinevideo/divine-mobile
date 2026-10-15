@@ -106,6 +106,79 @@ void main() {
       });
     });
 
+    group('shape mask', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Future<TimelineActionButton> pumpShapeMask(
+        WidgetTester tester, {
+        required VoidCallback onShapeMask,
+        required bool hasShapeMask,
+      }) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoEditorTimelineControls(
+                onChromaKey: () {},
+                onShapeMask: onShapeMask,
+                hasShapeMask: hasShapeMask,
+                onDone: () {},
+              ),
+            ),
+          ),
+        );
+        return tester.widget<TimelineActionButton>(
+          find.widgetWithText(
+            TimelineActionButton,
+            l10n.videoEditorShapeMaskLabel,
+          ),
+        );
+      }
+
+      testWidgets('sits right after the color mask and opens the editor', (
+        tester,
+      ) async {
+        var opened = 0;
+        await pumpShapeMask(
+          tester,
+          onShapeMask: () => opened++,
+          hasShapeMask: false,
+        );
+
+        final labels = [
+          for (final button in tester.widgetList<TimelineActionButton>(
+            find.byType(TimelineActionButton),
+          ))
+            button.label,
+        ];
+        expect(labels, [
+          l10n.videoEditorChromaKeyLabel,
+          l10n.videoEditorShapeMaskLabel,
+          l10n.videoEditorDoneLabel,
+        ]);
+
+        await tester.tap(find.text(l10n.videoEditorShapeMaskLabel));
+        expect(opened, 1);
+      });
+
+      testWidgets('shows as set while the item has a mask', (tester) async {
+        final unset = await pumpShapeMask(
+          tester,
+          onShapeMask: () {},
+          hasShapeMask: false,
+        );
+        expect(unset.type, isNot(TimelineActionButtonType.primary));
+
+        final set = await pumpShapeMask(
+          tester,
+          onShapeMask: () {},
+          hasShapeMask: true,
+        );
+        expect(set.type, TimelineActionButtonType.primary);
+      });
+    });
+
     testWidgets('triggers button callbacks', (tester) async {
       var doneCount = 0;
       var deleteCount = 0;

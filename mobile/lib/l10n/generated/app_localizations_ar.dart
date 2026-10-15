@@ -9557,6 +9557,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية الطبقة المحددة';
 
   @override
+  String get videoEditorShapeMaskLabel => 'قناع الشكل';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => 'عرض العنصر المحدد داخل شكل';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'السحب لتحريك الشكل، والقرص بإصبعين لتغيير حجمه أو تدويره، أو سحب مقبض لمدّه.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'بلا';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'دائرة';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'مستطيل';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'قلب';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'خطي';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'عكس';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'النعومة';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'حادة';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'ناعمة';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'الزوايا';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'مربعة';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'مستديرة';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
 
   @override

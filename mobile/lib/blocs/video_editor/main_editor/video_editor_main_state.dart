@@ -31,6 +31,7 @@ class VideoEditorMainState extends Equatable {
     this.isTimelineHiddenByUser = false,
     this.isMarkerMode = false,
     this.isPlacingSlidePoint = false,
+    this.isEditingMask = false,
     this.detachedClipOpacityPreview,
     this.audition,
     this.pausesAfterAudition = false,
@@ -112,6 +113,12 @@ class VideoEditorMainState extends Equatable {
   /// video fills the screen and every part of it can be tapped.
   final bool isPlacingSlidePoint;
 
+  /// Whether the shape mask editor is open over the canvas.
+  ///
+  /// While it is, the timeline and the editor's own actions step aside as for
+  /// [isPlacingSlidePoint]; the mask editor brings its own controls.
+  final bool isEditingMask;
+
   /// The opacity a detached clip shows while its slider is being dragged, or
   /// `null` when no clip is being adjusted.
   ///
@@ -139,9 +146,11 @@ class VideoEditorMainState extends Equatable {
   bool get isVoiceOverPreview => openSubEditor == SubEditorType.voiceOver;
 
   /// Whether the timeline and the editor's own actions step aside so the video
-  /// fills the screen: while a slide point is being placed, and while the
-  /// voice-over recorder shows the preview behind its own controls.
-  bool get isCanvasFullscreen => isPlacingSlidePoint || isVoiceOverPreview;
+  /// fills the screen: while a slide point is being placed or a shape mask
+  /// shaped, and while the voice-over recorder shows the preview behind its
+  /// own controls.
+  bool get isCanvasFullscreen =>
+      isPlacingSlidePoint || isEditingMask || isVoiceOverPreview;
 
   /// Creates a copy with the given fields replaced.
   ///
@@ -170,6 +179,7 @@ class VideoEditorMainState extends Equatable {
     bool? isTimelineHiddenByUser,
     bool? isMarkerMode,
     bool? isPlacingSlidePoint,
+    bool? isEditingMask,
     DetachedClipOpacityPreview? detachedClipOpacityPreview,
     bool clearDetachedClipOpacityPreview = false,
     PlaybackAudition? audition,
@@ -206,6 +216,7 @@ class VideoEditorMainState extends Equatable {
           isTimelineHiddenByUser ?? this.isTimelineHiddenByUser,
       isMarkerMode: isMarkerMode ?? this.isMarkerMode,
       isPlacingSlidePoint: isPlacingSlidePoint ?? this.isPlacingSlidePoint,
+      isEditingMask: isEditingMask ?? this.isEditingMask,
       detachedClipOpacityPreview: clearDetachedClipOpacityPreview
           ? null
           : (detachedClipOpacityPreview ?? this.detachedClipOpacityPreview),
@@ -238,6 +249,7 @@ class VideoEditorMainState extends Equatable {
     isTimelineHiddenByUser,
     isMarkerMode,
     isPlacingSlidePoint,
+    isEditingMask,
     detachedClipOpacityPreview,
     audition,
     pausesAfterAudition,

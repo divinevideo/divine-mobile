@@ -9576,6 +9576,53 @@ class AppLocalizationsUr extends AppLocalizations {
       'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
 
   @override
+  String get videoEditorShapeMaskLabel => 'شیپ ماسک';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'منتخب آئٹم کو ایک شکل کے اندر دکھائیں';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'شکل کو منتقل کرنے کے لیے گھسیٹیں۔ سائز بدلنے یا گھمانے کے لیے چٹکی لیں، یا کھینچنے کے لیے ہینڈل گھسیٹیں۔';
+
+  @override
+  String get videoEditorShapeMaskNone => 'کوئی نہیں';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'دائرہ';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'مستطیل';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'دل';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'لکیری';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'الٹ دیں';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'نرمی';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'تیز';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'نرم';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'کونے';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'چوکور';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'گول';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
 
   @override
