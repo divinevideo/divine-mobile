@@ -80,7 +80,9 @@ Future<RouteInformation> _undecodableState(WidgetTester tester) async {
     previous.routerDelegate.currentConfiguration,
   );
   await tester.pumpWidget(const SizedBox());
-  return state!;
+  // Reproduce the source URI stored by legacy builds, independently of the
+  // current policy that reports the visible pushed route.
+  return RouteInformation(uri: Uri.parse('/retired'), state: state!.state);
 }
 
 void main() {
@@ -88,6 +90,11 @@ void main() {
     testWidgets('survives a remount whose router state no longer decodes', (
       tester,
     ) async {
+      final previousPolicy = GoRouter.optionURLReflectsImperativeAPIs;
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      addTearDown(
+        () => GoRouter.optionURLReflectsImperativeAPIs = previousPolicy,
+      );
       final stale = await _undecodableState(tester);
       final router = _shellRouter(withRetiredRoute: false);
       addTearDown(router.dispose);
