@@ -1205,17 +1205,18 @@ class VideoEvent {
     var dropBlankLine = false;
     for (final (line, lineBreak) in _linesOf(displayContent)) {
       final tokens = _lineToken.allMatches(line);
-      if (tokens.isNotEmpty &&
+      final isBlank = tokens.isEmpty;
+      if (!isBlank &&
           tokens.every((token) => _isChipHashtag(token[0]!, chipSet))) {
         dropBlankLine = lastKeptBlank;
         continue;
       }
-      if (dropBlankLine && tokens.isEmpty) {
+      if (dropBlankLine && isBlank) {
         dropBlankLine = false;
         continue;
       }
       dropBlankLine = false;
-      lastKeptBlank = tokens.isEmpty;
+      lastKeptBlank = isBlank;
       kept
         ..write(line)
         ..write(lineBreak);
