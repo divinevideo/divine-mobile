@@ -152,11 +152,12 @@ void _runAdoption(Future<void> adoption) => runDetached(
   category: LogCategory.video,
 );
 
-/// Audio-select chip wired to the recorder's selected sound.
+/// Audio chip for the recorder's selected sound, which opens the timing
+/// screen to adjust or remove it.
 ///
-/// Pauses remote-triggered recording while the selection sheet is open so a
-/// remote start can't fire behind the picker, mirroring the recorder's
-/// existing audio-chip behavior.
+/// Pauses remote-triggered recording while that screen is open so a remote
+/// start can't fire behind it, mirroring the recorder's existing audio-chip
+/// behavior.
 class _LipSyncAudioButton extends ConsumerWidget {
   const _LipSyncAudioButton();
 

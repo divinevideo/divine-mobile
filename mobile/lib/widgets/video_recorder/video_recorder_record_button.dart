@@ -98,9 +98,6 @@ class RecordButton extends ConsumerWidget {
   }
 }
 
-/// Record button shown disabled (grayed) with a tap that reports a reason
-/// instead of starting recording. Used by lip-sync mode to require an audio
-/// selection before recording.
 /// The visual chrome of the record button: a 96px ring with an inner shape
 /// that morphs between the idle dot and the recording square, and a loading
 /// mark over the dot while a stopped recording is still being finalized.
