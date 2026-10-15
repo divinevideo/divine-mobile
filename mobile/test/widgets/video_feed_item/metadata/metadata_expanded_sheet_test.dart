@@ -530,6 +530,37 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
+      'shows an original Vine sentence without the hashtags its import '
+      'repeats',
+      (tester) async {
+        final video = _makeVideo(
+          title: 'Two startup sounds together. #windowsxp #outoftune',
+          content:
+              'Two startup sounds together. #windowsxp #outoftune'
+              '\n\nOriginal stats: 3 loops - 2 likes'
+              '\n\n#windowsxp #outoftune',
+          hashtags: const ['windowsxp', 'outoftune'],
+          rawTags: const {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(child: MetadataExpandedSheet(video: video)),
+        );
+
+        expect(
+          find.text(
+            'Two startup sounds together.\n\n'
+            'Original stats: 3 loops - 2 likes',
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(find.text('windowsxp'), findsOneWidget);
+        expect(find.text('outoftune'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'keeps a hashtag too long to be a chip in the description',
       (tester) async {
         final pastedList = 'VineHashtagsMasterList' * 10;

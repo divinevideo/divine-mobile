@@ -78,10 +78,10 @@ extension DisplayableHashtags on VideoEvent {
   List<String> get displayableHashtags =>
       allHashtags.where(HashtagExtractor.isWithinLengthLimit).toList();
 
-  /// The description without the lines that only repeat
+  /// The description without the hashtags it repeats from
   /// [displayableHashtags], which the chip row already shows.
   String get chipCaptionDescription =>
-      descriptionWithoutChipLines(displayableHashtags);
+      descriptionWithoutRepeatedChips(displayableHashtags);
 }
 
 /// A single tappable hashtag chip with green "#" prefix and bold tag name.
