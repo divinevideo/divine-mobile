@@ -18307,6 +18307,349 @@ class RemovedMessageIdsCompanion extends UpdateCompanion<RemovedMessageId> {
   }
 }
 
+class $MyFollowersTable extends MyFollowers
+    with TableInfo<$MyFollowersTable, MyFollower> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MyFollowersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _followerPubkeyMeta = const VerificationMeta(
+    'followerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> followerPubkey = GeneratedColumn<String>(
+    'follower_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _followedAtMeta = const VerificationMeta(
+    'followedAt',
+  );
+  @override
+  late final GeneratedColumn<int> followedAt = GeneratedColumn<int>(
+    'followed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSeenAtMeta = const VerificationMeta(
+    'lastSeenAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastSeenAt = GeneratedColumn<int>(
+    'last_seen_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerPubkey,
+    followerPubkey,
+    followedAt,
+    lastSeenAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'my_followers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MyFollower> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('follower_pubkey')) {
+      context.handle(
+        _followerPubkeyMeta,
+        followerPubkey.isAcceptableOrUnknown(
+          data['follower_pubkey']!,
+          _followerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_followerPubkeyMeta);
+    }
+    if (data.containsKey('followed_at')) {
+      context.handle(
+        _followedAtMeta,
+        followedAt.isAcceptableOrUnknown(data['followed_at']!, _followedAtMeta),
+      );
+    }
+    if (data.containsKey('last_seen_at')) {
+      context.handle(
+        _lastSeenAtMeta,
+        lastSeenAt.isAcceptableOrUnknown(
+          data['last_seen_at']!,
+          _lastSeenAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastSeenAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, followerPubkey};
+  @override
+  MyFollower map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MyFollower(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      followerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}follower_pubkey'],
+      )!,
+      followedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}followed_at'],
+      ),
+      lastSeenAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_seen_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MyFollowersTable createAlias(String alias) {
+    return $MyFollowersTable(attachedDatabase, alias);
+  }
+}
+
+class MyFollower extends DataClass implements Insertable<MyFollower> {
+  final String ownerPubkey;
+  final String followerPubkey;
+
+  /// Unix seconds of the newest known contact list including this owner.
+  final int? followedAt;
+
+  /// Unix seconds when the follower was last observed during a sync.
+  final int lastSeenAt;
+  const MyFollower({
+    required this.ownerPubkey,
+    required this.followerPubkey,
+    this.followedAt,
+    required this.lastSeenAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['follower_pubkey'] = Variable<String>(followerPubkey);
+    if (!nullToAbsent || followedAt != null) {
+      map['followed_at'] = Variable<int>(followedAt);
+    }
+    map['last_seen_at'] = Variable<int>(lastSeenAt);
+    return map;
+  }
+
+  MyFollowersCompanion toCompanion(bool nullToAbsent) {
+    return MyFollowersCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      followerPubkey: Value(followerPubkey),
+      followedAt: followedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(followedAt),
+      lastSeenAt: Value(lastSeenAt),
+    );
+  }
+
+  factory MyFollower.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MyFollower(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      followerPubkey: serializer.fromJson<String>(json['followerPubkey']),
+      followedAt: serializer.fromJson<int?>(json['followedAt']),
+      lastSeenAt: serializer.fromJson<int>(json['lastSeenAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'followerPubkey': serializer.toJson<String>(followerPubkey),
+      'followedAt': serializer.toJson<int?>(followedAt),
+      'lastSeenAt': serializer.toJson<int>(lastSeenAt),
+    };
+  }
+
+  MyFollower copyWith({
+    String? ownerPubkey,
+    String? followerPubkey,
+    Value<int?> followedAt = const Value.absent(),
+    int? lastSeenAt,
+  }) => MyFollower(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    followerPubkey: followerPubkey ?? this.followerPubkey,
+    followedAt: followedAt.present ? followedAt.value : this.followedAt,
+    lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+  );
+  MyFollower copyWithCompanion(MyFollowersCompanion data) {
+    return MyFollower(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      followerPubkey: data.followerPubkey.present
+          ? data.followerPubkey.value
+          : this.followerPubkey,
+      followedAt: data.followedAt.present
+          ? data.followedAt.value
+          : this.followedAt,
+      lastSeenAt: data.lastSeenAt.present
+          ? data.lastSeenAt.value
+          : this.lastSeenAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MyFollower(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('followerPubkey: $followerPubkey, ')
+          ..write('followedAt: $followedAt, ')
+          ..write('lastSeenAt: $lastSeenAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerPubkey, followerPubkey, followedAt, lastSeenAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MyFollower &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.followerPubkey == this.followerPubkey &&
+          other.followedAt == this.followedAt &&
+          other.lastSeenAt == this.lastSeenAt);
+}
+
+class MyFollowersCompanion extends UpdateCompanion<MyFollower> {
+  final Value<String> ownerPubkey;
+  final Value<String> followerPubkey;
+  final Value<int?> followedAt;
+  final Value<int> lastSeenAt;
+  final Value<int> rowid;
+  const MyFollowersCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.followerPubkey = const Value.absent(),
+    this.followedAt = const Value.absent(),
+    this.lastSeenAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MyFollowersCompanion.insert({
+    required String ownerPubkey,
+    required String followerPubkey,
+    this.followedAt = const Value.absent(),
+    required int lastSeenAt,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       followerPubkey = Value(followerPubkey),
+       lastSeenAt = Value(lastSeenAt);
+  static Insertable<MyFollower> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? followerPubkey,
+    Expression<int>? followedAt,
+    Expression<int>? lastSeenAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (followerPubkey != null) 'follower_pubkey': followerPubkey,
+      if (followedAt != null) 'followed_at': followedAt,
+      if (lastSeenAt != null) 'last_seen_at': lastSeenAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MyFollowersCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? followerPubkey,
+    Value<int?>? followedAt,
+    Value<int>? lastSeenAt,
+    Value<int>? rowid,
+  }) {
+    return MyFollowersCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      followerPubkey: followerPubkey ?? this.followerPubkey,
+      followedAt: followedAt ?? this.followedAt,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (followerPubkey.present) {
+      map['follower_pubkey'] = Variable<String>(followerPubkey.value);
+    }
+    if (followedAt.present) {
+      map['followed_at'] = Variable<int>(followedAt.value);
+    }
+    if (lastSeenAt.present) {
+      map['last_seen_at'] = Variable<int>(lastSeenAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MyFollowersCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('followerPubkey: $followerPubkey, ')
+          ..write('followedAt: $followedAt, ')
+          ..write('lastSeenAt: $lastSeenAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PendingProfileSavesTable extends PendingProfileSaves
     with TableInfo<$PendingProfileSavesTable, PendingProfileSaveRow> {
   @override
@@ -22472,6 +22815,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $RemovedConversationsTable(this);
   late final $RemovedMessageIdsTable removedMessageIds =
       $RemovedMessageIdsTable(this);
+  late final $MyFollowersTable myFollowers = $MyFollowersTable(this);
   late final $PendingProfileSavesTable pendingProfileSaves =
       $PendingProfileSavesTable(this);
   late final $IdentityEventsTable identityEvents = $IdentityEventsTable(this);
@@ -22634,6 +22978,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RemovedMessageIdsDao removedMessageIdsDao = RemovedMessageIdsDao(
     this as AppDatabase,
   );
+  late final MyFollowersDao myFollowersDao = MyFollowersDao(
+    this as AppDatabase,
+  );
   late final PendingProfileSavesDao pendingProfileSavesDao =
       PendingProfileSavesDao(this as AppDatabase);
   late final IdentityEventsDao identityEventsDao = IdentityEventsDao(
@@ -22690,6 +23037,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     processedGiftWraps,
     removedConversations,
     removedMessageIds,
+    myFollowers,
     pendingProfileSaves,
     identityEvents,
     identityVerifications,
@@ -31252,6 +31600,195 @@ typedef $$RemovedMessageIdsTableProcessedTableManager =
       RemovedMessageId,
       PrefetchHooks Function()
     >;
+typedef $$MyFollowersTableCreateCompanionBuilder =
+    MyFollowersCompanion Function({
+      required String ownerPubkey,
+      required String followerPubkey,
+      Value<int?> followedAt,
+      required int lastSeenAt,
+      Value<int> rowid,
+    });
+typedef $$MyFollowersTableUpdateCompanionBuilder =
+    MyFollowersCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> followerPubkey,
+      Value<int?> followedAt,
+      Value<int> lastSeenAt,
+      Value<int> rowid,
+    });
+
+class $$MyFollowersTableFilterComposer
+    extends Composer<_$AppDatabase, $MyFollowersTable> {
+  $$MyFollowersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get followerPubkey => $composableBuilder(
+    column: $table.followerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get followedAt => $composableBuilder(
+    column: $table.followedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MyFollowersTableOrderingComposer
+    extends Composer<_$AppDatabase, $MyFollowersTable> {
+  $$MyFollowersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get followerPubkey => $composableBuilder(
+    column: $table.followerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get followedAt => $composableBuilder(
+    column: $table.followedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MyFollowersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MyFollowersTable> {
+  $$MyFollowersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get followerPubkey => $composableBuilder(
+    column: $table.followerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get followedAt => $composableBuilder(
+    column: $table.followedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => column,
+  );
+}
+
+class $$MyFollowersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MyFollowersTable,
+          MyFollower,
+          $$MyFollowersTableFilterComposer,
+          $$MyFollowersTableOrderingComposer,
+          $$MyFollowersTableAnnotationComposer,
+          $$MyFollowersTableCreateCompanionBuilder,
+          $$MyFollowersTableUpdateCompanionBuilder,
+          (
+            MyFollower,
+            BaseReferences<_$AppDatabase, $MyFollowersTable, MyFollower>,
+          ),
+          MyFollower,
+          PrefetchHooks Function()
+        > {
+  $$MyFollowersTableTableManager(_$AppDatabase db, $MyFollowersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MyFollowersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MyFollowersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MyFollowersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> followerPubkey = const Value.absent(),
+                Value<int?> followedAt = const Value.absent(),
+                Value<int> lastSeenAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MyFollowersCompanion(
+                ownerPubkey: ownerPubkey,
+                followerPubkey: followerPubkey,
+                followedAt: followedAt,
+                lastSeenAt: lastSeenAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String followerPubkey,
+                Value<int?> followedAt = const Value.absent(),
+                required int lastSeenAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MyFollowersCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                followerPubkey: followerPubkey,
+                followedAt: followedAt,
+                lastSeenAt: lastSeenAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MyFollowersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MyFollowersTable,
+      MyFollower,
+      $$MyFollowersTableFilterComposer,
+      $$MyFollowersTableOrderingComposer,
+      $$MyFollowersTableAnnotationComposer,
+      $$MyFollowersTableCreateCompanionBuilder,
+      $$MyFollowersTableUpdateCompanionBuilder,
+      (
+        MyFollower,
+        BaseReferences<_$AppDatabase, $MyFollowersTable, MyFollower>,
+      ),
+      MyFollower,
+      PrefetchHooks Function()
+    >;
 typedef $$PendingProfileSavesTableCreateCompanionBuilder =
     PendingProfileSavesCompanion Function({
       required String userPubkey,
@@ -33563,6 +34100,8 @@ class $AppDatabaseManager {
       $$RemovedConversationsTableTableManager(_db, _db.removedConversations);
   $$RemovedMessageIdsTableTableManager get removedMessageIds =>
       $$RemovedMessageIdsTableTableManager(_db, _db.removedMessageIds);
+  $$MyFollowersTableTableManager get myFollowers =>
+      $$MyFollowersTableTableManager(_db, _db.myFollowers);
   $$PendingProfileSavesTableTableManager get pendingProfileSaves =>
       $$PendingProfileSavesTableTableManager(_db, _db.pendingProfileSaves);
   $$IdentityEventsTableTableManager get identityEvents =>
