@@ -5071,5 +5071,8 @@
   "messagesRooms": "Ruang",
   "messagesPublicTestRooms": "Ruang uji publik",
   "messagesPublicTestDisclosure": "Ruang uji ini bersifat publik. Siapa pun yang memiliki akses dapat membaca pesanmu.",
-  "messagesNoRooms": "Belum ada ruang"
+  "messagesNoRooms": "Belum ada ruang",
+  "followedHashtagsTitle": "Tagar yang diikuti",
+  "manageHashtags": "Kelola tagar",
+  "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini."
 }

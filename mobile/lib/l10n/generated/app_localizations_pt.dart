@@ -13720,4 +13720,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Ainda não há salas';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtags que você segue';
+
+  @override
+  String get manageHashtags => 'Gerenciar hashtags';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Siga uma hashtag na página dela para encontrá-la aqui.';
 }

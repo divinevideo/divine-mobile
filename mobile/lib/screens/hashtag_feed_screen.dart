@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
+import 'package:openvine/features/hashtag_follows/view/hashtag_follow_button.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -371,6 +372,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
       backgroundColor: context.vineColors.background,
       appBar: DiVineAppBar(
         title: '#${widget.hashtag}',
+        customActions: [HashtagFollowButton(hashtag: widget.hashtag)],
         showBackButton: true,
         onBackPressed: context.safePop,
       ),

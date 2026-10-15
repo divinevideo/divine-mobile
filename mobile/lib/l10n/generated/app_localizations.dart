@@ -22688,6 +22688,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No rooms yet'**
   String get messagesNoRooms;
+
+  /// Title of the account-scoped followed hashtags screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Followed hashtags'**
+  String get followedHashtagsTitle;
+
+  /// Home source picker action opening followed hashtag management.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage hashtags'**
+  String get manageHashtags;
+
+  /// Empty state explaining how to follow a hashtag.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a hashtag from its page to find it here.'**
+  String get followedHashtagsEmpty;
 }
 
 class _AppLocalizationsDelegate

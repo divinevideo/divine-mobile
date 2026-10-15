@@ -12784,4 +12784,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get messagesNoRooms => '暂无聊天室';
+
+  @override
+  String get followedHashtagsTitle => '已关注的话题标签';
+
+  @override
+  String get manageHashtags => '管理话题标签';
+
+  @override
+  String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
 }

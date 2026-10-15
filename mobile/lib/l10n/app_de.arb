@@ -5071,5 +5071,8 @@
   "messagesRooms": "Räume",
   "messagesPublicTestRooms": "Öffentliche Testräume",
   "messagesPublicTestDisclosure": "Diese Testräume sind öffentlich. Alle mit Zugang können deine Nachrichten lesen.",
-  "messagesNoRooms": "Noch keine Räume"
+  "messagesNoRooms": "Noch keine Räume",
+  "followedHashtagsTitle": "Abonnierte Hashtags",
+  "manageHashtags": "Hashtags verwalten",
+  "followedHashtagsEmpty": "Folge einem Hashtag auf seiner Seite, um ihn hier zu finden."
 }

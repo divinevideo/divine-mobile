@@ -5171,5 +5171,8 @@
   "messagesRooms": "ክፍሎች",
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
   "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
-  "messagesNoRooms": "ገና ምንም ክፍሎች የሉም"
+  "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",
+  "followedHashtagsTitle": "የተከተሏቸው ሃሽታጎች",
+  "manageHashtags": "ሃሽታጎችን ያስተዳድሩ",
+  "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።"
 }

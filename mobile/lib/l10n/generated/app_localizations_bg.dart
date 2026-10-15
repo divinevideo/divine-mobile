@@ -13733,4 +13733,14 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Все още няма стаи';
+
+  @override
+  String get followedHashtagsTitle => 'Следвани хаштагове';
+
+  @override
+  String get manageHashtags => 'Управление на хаштагове';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Последвайте хаштаг от страницата му, за да го намерите тук.';
 }

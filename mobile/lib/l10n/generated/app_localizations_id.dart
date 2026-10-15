@@ -13502,4 +13502,14 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Belum ada ruang';
+
+  @override
+  String get followedHashtagsTitle => 'Tagar yang diikuti';
+
+  @override
+  String get manageHashtags => 'Kelola tagar';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Ikuti tagar dari halamannya untuk menemukannya di sini.';
 }

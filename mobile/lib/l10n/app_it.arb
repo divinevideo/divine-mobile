@@ -5071,5 +5071,8 @@
   "messagesRooms": "Stanze",
   "messagesPublicTestRooms": "Stanze di prova pubbliche",
   "messagesPublicTestDisclosure": "Queste stanze di prova sono pubbliche. Chiunque abbia accesso può leggere i tuoi messaggi.",
-  "messagesNoRooms": "Ancora nessuna stanza"
+  "messagesNoRooms": "Ancora nessuna stanza",
+  "followedHashtagsTitle": "Hashtag seguiti",
+  "manageHashtags": "Gestisci hashtag",
+  "followedHashtagsEmpty": "Segui un hashtag dalla sua pagina per trovarlo qui."
 }

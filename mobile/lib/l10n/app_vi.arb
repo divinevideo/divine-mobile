@@ -6835,5 +6835,8 @@
   "messagesRooms": "Phòng",
   "messagesPublicTestRooms": "Phòng thử nghiệm công khai",
   "messagesPublicTestDisclosure": "Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.",
-  "messagesNoRooms": "Chưa có phòng nào"
+  "messagesNoRooms": "Chưa có phòng nào",
+  "followedHashtagsTitle": "Hashtag đang theo dõi",
+  "manageHashtags": "Quản lý hashtag",
+  "followedHashtagsEmpty": "Theo dõi hashtag từ trang của nó để tìm thấy ở đây."
 }

@@ -5195,5 +5195,8 @@
   "messagesRooms": "Стаи",
   "messagesPublicTestRooms": "Публични тестови стаи",
   "messagesPublicTestDisclosure": "Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.",
-  "messagesNoRooms": "Все още няма стаи"
+  "messagesNoRooms": "Все още няма стаи",
+  "followedHashtagsTitle": "Следвани хаштагове",
+  "manageHashtags": "Управление на хаштагове",
+  "followedHashtagsEmpty": "Последвайте хаштаг от страницата му, за да го намерите тук."
 }

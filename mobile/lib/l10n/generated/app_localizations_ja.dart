@@ -12938,4 +12938,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'まだルームはありません';
+
+  @override
+  String get followedHashtagsTitle => 'フォロー中のハッシュタグ';
+
+  @override
+  String get manageHashtags => 'ハッシュタグを管理';
+
+  @override
+  String get followedHashtagsEmpty => 'ハッシュタグのページでフォローすると、ここに表示されます。';
 }

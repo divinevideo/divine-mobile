@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -35,6 +36,7 @@ void main() {
     Widget buildTestWidget(String hashtag) {
       return ProviderScope(
         overrides: [
+          hashtagSubscriptionRepositoryProvider.overrideWithValue(null),
           hashtagServiceProvider.overrideWith((ref) => mockHashtagService),
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
         ],

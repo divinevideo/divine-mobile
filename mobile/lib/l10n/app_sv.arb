@@ -5071,5 +5071,8 @@
   "messagesRooms": "Rum",
   "messagesPublicTestRooms": "Offentliga testrum",
   "messagesPublicTestDisclosure": "Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.",
-  "messagesNoRooms": "Inga rum ännu"
+  "messagesNoRooms": "Inga rum ännu",
+  "followedHashtagsTitle": "Hashtaggar du följer",
+  "manageHashtags": "Hantera hashtaggar",
+  "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här."
 }

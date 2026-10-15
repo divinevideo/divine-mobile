@@ -13881,4 +13881,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Încă nu există camere';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtaguri urmărite';
+
+  @override
+  String get manageHashtags => 'Gestionează hashtagurile';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.';
 }

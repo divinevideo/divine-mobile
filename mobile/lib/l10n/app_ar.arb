@@ -5071,5 +5071,8 @@
   "messagesRooms": "الغرف",
   "messagesPublicTestRooms": "غرف اختبار عامة",
   "messagesPublicTestDisclosure": "غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.",
-  "messagesNoRooms": "لا توجد غرف بعد"
+  "messagesNoRooms": "لا توجد غرف بعد",
+  "followedHashtagsTitle": "الوسوم التي تتابعها",
+  "manageHashtags": "إدارة الوسوم",
+  "followedHashtagsEmpty": "تابع وسمًا من صفحته لتجده هنا."
 }
