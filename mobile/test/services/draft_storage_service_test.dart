@@ -2036,6 +2036,92 @@ void main() {
         );
       });
 
+      group('with an owned-files memo', () {
+        Future<void> replaceStoredRowWithUnreadableData() =>
+            database.draftsDao.upsertDraft(
+              id: 'draft_defer',
+              title: 'Defer draft',
+              description: '',
+              publishStatus: 'draft',
+              createdAt: DateTime(2025),
+              lastModified: DateTime(2025),
+              renderedFilePath: null,
+              renderedThumbnailPath: null,
+              data: 'not json',
+            );
+
+        test('takes the files a draft owned from its previous save', () async {
+          final oldVideo = writeVideo('old.mp4');
+          final newVideo = writeVideo('new.mp4');
+          final memo = DraftOwnedFilesMemo();
+
+          await service.saveDraft(
+            draftWithClip(oldVideo.path),
+            ownedFilesMemo: memo,
+          );
+          // Unreadable, so only the memo can still name the old clip.
+          await replaceStoredRowWithUnreadableData();
+
+          final deferred = <String>[];
+          await service.saveDraft(
+            draftWithClip(newVideo.path),
+            deferOrphanCleanup: (paths) =>
+                deferred.addAll(paths.whereType<String>()),
+            ownedFilesMemo: memo,
+          );
+
+          expect(deferred, [oldVideo.path]);
+        });
+
+        test('reads the stored row once the memo is forgotten', () async {
+          final oldVideo = writeVideo('old.mp4');
+          final newVideo = writeVideo('new.mp4');
+          final memo = DraftOwnedFilesMemo();
+
+          await service.saveDraft(
+            draftWithClip(oldVideo.path),
+            ownedFilesMemo: memo,
+          );
+          await replaceStoredRowWithUnreadableData();
+          memo.forget();
+
+          final deferred = <String>[];
+          await service.saveDraft(
+            draftWithClip(newVideo.path),
+            deferOrphanCleanup: (paths) =>
+                deferred.addAll(paths.whereType<String>()),
+            ownedFilesMemo: memo,
+          );
+
+          expect(
+            deferred,
+            isEmpty,
+            reason: 'an unreadable stored row names no files to orphan',
+          );
+        });
+
+        test('reads the stored row of a draft it did not save', () async {
+          final oldVideo = writeVideo('old.mp4');
+          final newVideo = writeVideo('new.mp4');
+          final memo = DraftOwnedFilesMemo();
+          await service.saveDraft(draftWithClip(oldVideo.path));
+          await service.saveDraft(
+            draftWithClip(newVideo.path).copyWith(id: 'other_draft'),
+            ownedFilesMemo: memo,
+          );
+
+          final deferred = <String>[];
+          await service.saveDraft(
+            draftWithClip(newVideo.path),
+            deferOrphanCleanup: (paths) =>
+                deferred.addAll(paths.whereType<String>()),
+            ownedFilesMemo: memo,
+          );
+
+          expect(deferred, [oldVideo.path]);
+        });
+      });
+
       test('keeps detached clip media across a draft save', () async {
         final detachedVideo = writeVideo('detached.mp4');
         final detachedThumbnail = writeVideo('detached.jpg');

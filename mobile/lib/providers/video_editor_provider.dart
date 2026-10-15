@@ -171,6 +171,24 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// autosave already in flight cannot add paths after the reaper has passed.
   final Set<Future<void>> _activeAutosaves = {};
 
+  /// The autosave writing now, and the one waiting for it to finish.
+  ///
+  /// Autosaves run one at a time. With a long editor history a save outlasts
+  /// the gap between edits, and saves that overlapped each held their own
+  /// copy of the whole history, so memory grew with every edit until the OS
+  /// killed the app. Every request made while one writes shares the single
+  /// waiting save, which writes the state as it is when it starts.
+  Future<bool>? _runningAutosave;
+  Future<bool>? _waitingAutosave;
+
+  /// Bumped by [reset], so a waiting autosave of the ended session never
+  /// writes the empty state that follows it.
+  int _autosaveSession = 0;
+
+  /// What this session's last write of its draft row owned, so the next
+  /// autosave need not read the row back to find the files it stops using.
+  final DraftOwnedFilesMemo _ownedFilesMemo = DraftOwnedFilesMemo();
+
   /// Get clip manager notifier.
   ClipManagerNotifier get _clipManager =>
       ref.read(clipManagerProvider.notifier);
@@ -322,6 +340,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
     _autosaveTimer?.cancel();
+    _autosaveSession++;
+    // New-session requests must not reuse the cancelled session's follow-up.
+    // Keep the running save so new work still waits for it instead of overlaps.
+    _waitingAutosave = null;
+    _ownedFilesMemo.forget();
     draftId = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
@@ -895,8 +918,40 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// to prevent data loss. Unlike [saveAsDraft], autosave of an unsaved
   /// session uses the fixed [VideoEditorConstants.autoSaveId] to maintain a
   /// single recovery point.
+  ///
+  /// Saves run one at a time: called while one writes, this returns the save
+  /// that starts after it (see [_runningAutosave]).
   Future<bool> autosaveChanges() {
-    final operation = _performAutosave();
+    final waiting = _waitingAutosave;
+    if (waiting != null) return waiting;
+
+    final running = _runningAutosave;
+    if (running == null) return _trackAutosave(_startAutosave());
+
+    final session = _autosaveSession;
+    late final Future<bool> next;
+    next = running
+        // The running save reports its own failure; this one runs regardless.
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .then((_) {
+          if (identical(_waitingAutosave, next)) _waitingAutosave = null;
+          if (session != _autosaveSession || !ref.mounted) return false;
+          return _startAutosave();
+        });
+    _waitingAutosave = next;
+    return _trackAutosave(next);
+  }
+
+  Future<bool> _startAutosave() {
+    late final Future<bool> operation;
+    operation = _performAutosave().whenComplete(() {
+      if (identical(_runningAutosave, operation)) _runningAutosave = null;
+    });
+    _runningAutosave = operation;
+    return operation;
+  }
+
+  Future<bool> _trackAutosave(Future<bool> operation) {
     late final Future<void> completion;
     // Session-end cleanup Future.waits on these to learn only that the autosave
     // finished, not whether it succeeded. Swallow errors so a rejected autosave
@@ -937,6 +992,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         draft,
         deferOrphanCleanup: (paths) =>
             _deferredFileCleanup.addAll(paths.whereType<String>()),
+        ownedFilesMemo: _ownedFilesMemo,
       );
 
       Log.info(
@@ -1060,6 +1116,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
 
     try {
+      // Written outside the autosave memo: the next autosave reads the row.
+      _ownedFilesMemo.forget();
       await _draftService
           .saveDraft(getActiveDraft(draftId: draftId))
           .timeout(VideoEditorConstants.draftSaveTimeout);
@@ -1333,6 +1391,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         return;
       }
       await _draftService.deleteDraft(VideoEditorConstants.autoSaveId);
+      _ownedFilesMemo.forget();
       Log.debug(
         '🗑️ Deleted autosaved draft',
         name: 'VideoEditorNotifier',

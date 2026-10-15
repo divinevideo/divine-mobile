@@ -174,6 +174,10 @@ class DraftStorageService {
   /// session would land undo/redo on a clip whose source file is gone
   /// (`COMPOSITION_ERROR`); the session reaps them once that history is gone.
   ///
+  /// A writer that saves the same draft repeatedly can pass one
+  /// [ownedFilesMemo] to each save; the files the row owns are then taken from
+  /// the save that wrote it instead of being read back from the row.
+  ///
   /// Throws a `SqliteException` if the underlying Drift read/write fails —
   /// e.g. the database is locked, the disk is full, or the file is corrupt.
   /// These are environmental IO failures (an `Exception`, not an `Error`), so
@@ -183,6 +187,7 @@ class DraftStorageService {
   Future<void> saveDraft(
     DivineVideoDraft draft, {
     void Function(List<String?> orphanPaths)? deferOrphanCleanup,
+    DraftOwnedFilesMemo? ownedFilesMemo,
   }) async {
     Log.debug(
       '💾 Saving draft: ${draft.id}',
@@ -197,14 +202,18 @@ class DraftStorageService {
     // so an owner-scoped read here would skip the cleanup for the very files
     // it just orphaned.
     final documentsPath = await getDocumentsPath();
-    final previouslyOwnedFilePaths = await _previouslyOwnedFilePaths(
-      draft.id,
-      documentsPath,
-    );
-    final newOwnedFilePaths = _ownedFilePaths(draft, documentsPath);
-    final detachedOwnedFilePaths = _detachedOwnedFilePaths(
+    final previouslyOwnedFilePaths =
+        ownedFilesMemo?._ownedFilePathsOf(draft.id) ??
+        await _previouslyOwnedFilePaths(draft.id, documentsPath);
+    final detachedOwnedFilePaths =
+        DetachedClipLayerData.ownedFilePathsInHistory(
+          draft.editorStateHistory,
+          documentsPath,
+        );
+    final newOwnedFilePaths = _ownedFilePaths(
       draft,
       documentsPath,
+      detachedOwnedFilePaths: detachedOwnedFilePaths,
     );
     // Both halves diff [DivineVideoClip.ownedFilePaths]. The local list this
     // replaced had fallen behind the model — no reverse caches, no ghost
@@ -273,6 +282,7 @@ class DraftStorageService {
       clipDataList: clipDataList,
       ownerPubkey: ownerPubkey,
     );
+    ownedFilesMemo?._remember(draft.id, newOwnedFilePaths);
 
     // Reap orphaned files only after the new draft/clip rows are committed, so
     // this draft's old indexed references no longer protect them. When the
@@ -358,8 +368,9 @@ class DraftStorageService {
 
   static Set<String> _ownedFilePaths(
     DivineVideoDraft draft,
-    String documentsPath,
-  ) => {
+    String documentsPath, {
+    Set<String>? detachedOwnedFilePaths,
+  }) => {
     for (final clip in draft.clips)
       ...clip.ownedFilePaths.whereType<String>().where(
         (path) => path.isNotEmpty,
@@ -369,19 +380,12 @@ class DraftStorageService {
         (path) => path.isNotEmpty,
       ),
     if (draft.customThumbnailPath case final path? when path.isNotEmpty) path,
-    ...DetachedClipLayerData.ownedFilePathsInHistory(
-      draft.editorStateHistory,
-      documentsPath,
-    ),
+    ...detachedOwnedFilePaths ??
+        DetachedClipLayerData.ownedFilePathsInHistory(
+          draft.editorStateHistory,
+          documentsPath,
+        ),
   };
-
-  Set<String> _detachedOwnedFilePaths(
-    DivineVideoDraft draft,
-    String documentsPath,
-  ) => DetachedClipLayerData.ownedFilePathsInHistory(
-    draft.editorStateHistory,
-    documentsPath,
-  );
 
   /// Get total count of drafts without loading their data.
   Future<int> getDraftCount() => _draftsDao.getCount(ownerPubkey: ownerPubkey);
@@ -929,5 +933,38 @@ class DraftStorageService {
           .savedSoundReferences()
           .filenames,
     );
+  }
+}
+
+/// The files a draft row owned when one writer last saved it.
+///
+/// Before overwriting a row, [DraftStorageService.saveDraft] needs the files
+/// the stored version owns, to find the ones the new version stops using.
+/// Reading them back means decoding the row's whole editor history, which
+/// grows with every edit, and the editor saves after each edit. A writer that
+/// passes the same memo to each save of a draft skips that read: the memo
+/// holds what its previous save wrote.
+///
+/// Only a writer that owns the row should keep one, and it calls [forget]
+/// when something else writes or deletes the row. A change it misses can
+/// leave a file out of the orphan candidates or offer one that is still in
+/// use; candidates are reference-checked before anything is deleted, so the
+/// worst case is a file kept that could have gone.
+class DraftOwnedFilesMemo {
+  String? _draftId;
+  Set<String>? _ownedFilePaths;
+
+  Set<String>? _ownedFilePathsOf(String draftId) =>
+      draftId == _draftId ? _ownedFilePaths : null;
+
+  void _remember(String draftId, Set<String> ownedFilePaths) {
+    _draftId = draftId;
+    _ownedFilePaths = ownedFilePaths;
+  }
+
+  /// Drops the remembered row, so the next save reads the stored one again.
+  void forget() {
+    _draftId = null;
+    _ownedFilePaths = null;
   }
 }
