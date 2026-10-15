@@ -29,6 +29,7 @@ final class UserSearchState extends Equatable {
     this.hasMore = false,
     this.isLoadingMore = false,
     this.sourceOutcomes = const {},
+    this.rankingSignals = const {},
   });
 
   /// The current status of the search
@@ -57,6 +58,9 @@ final class UserSearchState extends Equatable {
   /// Empty for [UserSearchStatus.initial].
   final Map<SearchSource, SearchSourceStatus> sourceOutcomes;
 
+  /// Local signal snapshot for visible rows, retained across pagination.
+  final Map<String, UserRankingSignals> rankingSignals;
+
   /// `true` when no results are available AND at least one source
   /// failed. UI surfaces a retry affordance in this state rather than
   /// the standard "No results found" empty state — distinguishing a
@@ -75,6 +79,7 @@ final class UserSearchState extends Equatable {
     bool? hasMore,
     bool? isLoadingMore,
     Map<SearchSource, SearchSourceStatus>? sourceOutcomes,
+    Map<String, UserRankingSignals>? rankingSignals,
   }) {
     return UserSearchState(
       status: status ?? this.status,
@@ -87,6 +92,7 @@ final class UserSearchState extends Equatable {
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       sourceOutcomes: sourceOutcomes ?? this.sourceOutcomes,
+      rankingSignals: rankingSignals ?? this.rankingSignals,
     );
   }
 
@@ -100,6 +106,7 @@ final class UserSearchState extends Equatable {
     hasMore,
     isLoadingMore,
     sourceOutcomes,
+    rankingSignals,
   ];
 
   static const Object _unset = Object();

@@ -18,12 +18,15 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -41,9 +44,26 @@ class _MockPeopleListsRepository extends Mock
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
 final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
+final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
 final _profileReadinessSelection = StateProvider<int>((ref) => 0);
 
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
 void main() {
+  late _MockRankingSignalsLoader rankingLoader;
+  setUp(() {
+    rankingLoader = _MockRankingSignalsLoader();
+    when(() => rankingLoader.isEligible(any())).thenReturn(true);
+    when(() => rankingLoader.load(any())).thenAnswer(
+      (invocation) async => {
+        for (final key
+            in invocation.positionalArguments.single as Iterable<String>)
+          key: UserRankingSignals(pubkey: key),
+      },
+    );
+    when(() => rankingLoader.refreshInBackground(any())).thenReturn(null);
+  });
   setUpAll(() {
     registerFallbackValue(defaultVideoSearchSort);
     registerFallbackValue(SearchCancellationToken('test-search'));
@@ -66,6 +86,7 @@ void main() {
 
     Widget createTestWidget({
       Override? profileRepositoryOverride,
+      Override? rankingLoaderOverride,
       Override? videosRepositoryOverride,
       Override? curatedRepositoryOverride,
       Override? listThumbnailPolicyOverride,
@@ -79,6 +100,8 @@ void main() {
             ? mockProfileRepository
             : null,
         additionalOverrides: [
+          rankingLoaderOverride ??
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
           videosRepositoryOverride ??
               videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           hashtagRepositoryProvider.overrideWithValue(mockHashtagRepository),
@@ -99,6 +122,36 @@ void main() {
         ],
       );
     }
+
+    testWidgets(
+      'recreates search blocs when the account ranking loader changes',
+      (tester) async {
+        final replacement = _MockRankingSignalsLoader();
+        await tester.pumpWidget(
+          createTestWidget(
+            rankingLoaderOverride: userRankingSignalsLoaderProvider
+                .overrideWith(
+                  (ref) => ref.watch(_rankingLoaderSelection)
+                      ? replacement
+                      : rankingLoader,
+                ),
+          ),
+        );
+        await tester.pump();
+        final context = tester.element(find.byType(SearchResultsView));
+        final original = context.read<UserSearchBloc>();
+        expect(original.isClosed, isFalse);
+        final container = ProviderScope.containerOf(context);
+        container.read(_rankingLoaderSelection.notifier).state = true;
+        await tester.pump();
+        await tester.pump();
+        expect(original.isClosed, isTrue);
+        expect(
+          tester.element(find.byType(SearchResultsView)).read<UserSearchBloc>(),
+          isNot(same(original)),
+        );
+      },
+    );
 
     testWidgets(
       'policy and readiness replacements preserve typed query and category',

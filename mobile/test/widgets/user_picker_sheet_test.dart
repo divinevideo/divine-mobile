@@ -3,26 +3,31 @@
 
 import 'dart:async';
 
+// Riverpod 3 exports `Override` from `misc.dart`, not the main entry point.
 import 'package:bloc/bloc.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
-// Riverpod 3 exports `Override` from `misc.dart`, not the main entry point.
 import 'package:riverpod/misc.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Mock for ProfileRepository
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -139,7 +144,25 @@ final _noVanishedProfiles = _vanishedProfiles(const {});
 Override _vanishedProfiles(Set<String> pubkeys) =>
     vanishedProfilePubkeysProvider.overrideWith((ref) => Stream.value(pubkeys));
 
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
+
 void main() {
+  late _MockRankingSignalsLoader rankingLoader;
+  setUp(() {
+    rankingLoader = _MockRankingSignalsLoader();
+    when(() => rankingLoader.isEligible(any())).thenReturn(true);
+    when(() => rankingLoader.load(any())).thenAnswer(
+      (invocation) async => {
+        for (final key
+            in invocation.positionalArguments.single as Iterable<String>)
+          key: UserRankingSignals(pubkey: key),
+      },
+    );
+    when(() => rankingLoader.refreshInBackground(any())).thenReturn(null);
+  });
   setUpAll(() {
     registerFallbackValue(SearchCancellationToken('test-search'));
   });
@@ -147,6 +170,61 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(UserPickerSheet, () {
+    group('account dependencies', () {
+      testWidgets(
+        'replaces search state when the account ranking loader changes',
+        (tester) async {
+          final replacement = _MockRankingSignalsLoader();
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                userRankingSignalsLoaderProvider.overrideWith(
+                  (ref) => ref.watch(_rankingLoaderSelection)
+                      ? replacement
+                      : rankingLoader,
+                ),
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWithValue(
+                  _createMockProfileRepository(),
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Title',
+                    filterMode: UserPickerFilterMode.allUsers,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.enterText(find.byType(TextField), 'before');
+          await tester.pump();
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            'before',
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(UserPickerSheet)),
+          );
+          container.read(_rankingLoaderSelection.notifier).state = true;
+          await tester.pump();
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            isEmpty,
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(searchDebounceDuration);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    });
+
     group('renders', () {
       testWidgets('header describes cancel and confirm actions', (
         tester,
@@ -154,6 +232,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -193,6 +272,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -238,6 +318,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -282,6 +363,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -316,6 +398,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -344,6 +427,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -379,6 +463,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -409,6 +494,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -462,6 +548,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [viewer, mutual]),
@@ -507,6 +594,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [viewer]),
@@ -557,6 +645,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [viewer, mutual]),
@@ -623,6 +712,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -660,6 +750,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -696,6 +787,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -748,6 +840,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -799,6 +892,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [profile]),
@@ -870,6 +964,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: profiles),
@@ -945,6 +1040,9 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(
                   _createMockProfileRepository(cachedProfiles: profiles),
@@ -1015,6 +1113,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [profile]),
@@ -1083,6 +1182,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1133,6 +1233,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: profiles),
@@ -1190,6 +1291,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(cachedProfiles: [profile]),
@@ -1254,6 +1356,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1307,6 +1410,9 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(mockProfileRepo),
                 profileReadRepositoryProvider.overrideWithValue(
@@ -1366,6 +1472,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1400,6 +1507,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -1431,6 +1539,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -1490,6 +1599,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1588,6 +1698,9 @@ void main() {
             await tester.pumpWidget(
               ProviderScope(
                 overrides: [
+                  userRankingSignalsLoaderProvider.overrideWithValue(
+                    rankingLoader,
+                  ),
                   _noVanishedProfiles,
                   profileRepositoryProvider.overrideWithValue(mockProfileRepo),
                   profileReadRepositoryProvider.overrideWithValue(
@@ -1681,6 +1794,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1796,6 +1910,9 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(mockProfileRepo),
                 profileReadRepositoryProvider.overrideWithValue(
@@ -1840,6 +1957,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -1930,6 +2048,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -1986,6 +2105,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -2016,6 +2136,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -2049,6 +2170,9 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(null),
                 profileReadRepositoryProvider.overrideWithValue(null),
@@ -2085,6 +2209,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(null),
               profileReadRepositoryProvider.overrideWithValue(null),
@@ -2147,6 +2272,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -2196,6 +2322,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               _noVanishedProfiles,
               profileRepositoryProvider.overrideWithValue(
                 _createMockProfileRepository(),
@@ -2270,6 +2397,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
             _vanishedProfiles(vanished),
             profileRepositoryProvider.overrideWithValue(
               _createMockProfileRepository(
@@ -2429,6 +2557,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
             _noVanishedProfiles,
             profileRepositoryProvider.overrideWithValue(
               _createMockProfileRepository(cachedProfiles: profiles),

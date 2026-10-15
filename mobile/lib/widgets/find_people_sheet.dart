@@ -12,7 +12,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -22,7 +24,7 @@ import 'package:openvine/widgets/user_avatar.dart';
 /// Shows [contacts] (pre-loaded by the calling BLoC) initially, with search
 /// functionality to find any Nostr user by name or npub.
 /// Returns a [ShareableUser] when a user is selected.
-class FindPeopleSheet extends ConsumerStatefulWidget {
+class FindPeopleSheet extends ConsumerWidget {
   const FindPeopleSheet({
     required this.contacts,
     required this.currentUserPubkey,
@@ -50,7 +52,22 @@ class FindPeopleSheet extends ConsumerStatefulWidget {
   static const double _sheetHeightFraction = 0.92;
 
   @override
-  ConsumerState<FindPeopleSheet> createState() => _FindPeopleSheetState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileRepository = ref.watch(profileRepositoryProvider);
+    final followRepository = ref.watch(followRepositoryProvider);
+    final rankingSignalsLoader = profileRepository == null
+        ? null
+        : ref.watch(userRankingSignalsLoaderProvider);
+    return _FindPeopleSheetView(
+      key: ValueKey((
+        profileRepository,
+        followRepository,
+        rankingSignalsLoader,
+      )),
+      configuration: this,
+      rankingSignalsLoader: rankingSignalsLoader,
+    );
+  }
 
   /// Show the find people sheet and return the selected user.
   ///
@@ -77,7 +94,21 @@ class FindPeopleSheet extends ConsumerStatefulWidget {
   }
 }
 
-class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
+class _FindPeopleSheetView extends ConsumerStatefulWidget {
+  const _FindPeopleSheetView({
+    required this.configuration,
+    required this.rankingSignalsLoader,
+    super.key,
+  });
+
+  final FindPeopleSheet configuration;
+  final UserRankingSignalsLoader? rankingSignalsLoader;
+
+  @override
+  ConsumerState<_FindPeopleSheetView> createState() => _FindPeopleSheetState();
+}
+
+class _FindPeopleSheetState extends ConsumerState<_FindPeopleSheetView> {
   final TextEditingController _searchController = TextEditingController();
   UserSearchBloc? _searchBloc;
   String _searchQuery = '';
@@ -89,8 +120,9 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
     if (profileRepo != null) {
       _searchBloc = UserSearchBloc(
         profileRepository: profileRepo,
-        searchTimeout: widget.searchTimeout,
-        excludedPubkey: widget.currentUserPubkey,
+        rankingSignalsLoader: widget.rankingSignalsLoader,
+        searchTimeout: widget.configuration.searchTimeout,
+        excludedPubkey: widget.configuration.currentUserPubkey,
       );
     }
   }
@@ -143,8 +175,8 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
             child: _ResultsList(
               searchQuery: _searchQuery,
               searchBloc: _searchBloc,
-              contacts: widget.contacts,
-              scrollController: widget.scrollController,
+              contacts: widget.configuration.contacts,
+              scrollController: widget.configuration.scrollController,
               onSelectUser: _selectUser,
             ),
           ),
