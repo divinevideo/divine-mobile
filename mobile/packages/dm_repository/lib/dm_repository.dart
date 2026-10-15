@@ -18,3 +18,4 @@ export 'src/nip17_message_service.dart'
     hide GiftWrapBuilder, IsolateGiftWrapBatchBuilder;
 export 'src/sound_request_message.dart';
 export 'src/sound_request_clients.dart';
+export 'src/sound_requests_repository.dart';
