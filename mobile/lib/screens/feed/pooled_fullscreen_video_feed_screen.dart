@@ -630,8 +630,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                         () => CommentsScreen.show(context, video),
                       ),
                       'open comments from fullscreen feed',
-                      logName: 'PooledFullscreenVideoFeedScreen',
-                      category: LogCategory.ui,
+                      logName: 'FullscreenFeedContent',
+                      category: LogCategory.video,
                     );
                   }
                 },

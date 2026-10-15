@@ -427,12 +427,12 @@ void main() {
             .getRecentLogs()
             .where(
               (entry) =>
-                  entry.name == 'PooledFullscreenVideoFeedScreen' &&
+                  entry.name == 'FullscreenFeedContent' &&
                   entry.level == LogLevel.error,
             )
             .toList();
         expect(failures, hasLength(1));
-        expect(failures.single.category, equals(LogCategory.ui));
+        expect(failures.single.category, equals(LogCategory.video));
         expect(
           failures.single.message,
           startsWith('Failed to open comments from fullscreen feed: '),
