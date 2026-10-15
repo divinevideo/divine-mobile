@@ -1,5 +1,7 @@
 // ABOUTME: Creates a fresh hashtag follows Cubit for the current account.
 // ABOUTME: Keeps account wiring outside reusable follow and management views.
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +33,12 @@ class HashtagFollowsScope extends ConsumerWidget {
     }
     return BlocProvider(
       key: ObjectKey(repository),
-      create: (_) => HashtagFollowsCubit(repository: repository)..initialize(),
+      create: (_) {
+        final cubit = HashtagFollowsCubit(repository: repository);
+        // Initialization errors are presented by the Cubit's retry state.
+        unawaited(cubit.initialize());
+        return cubit;
+      },
       child: BlocListener<HashtagFollowsCubit, HashtagFollowsState>(
         listenWhen: (previous, next) =>
             !previous.hasWriteError && next.hasWriteError,

@@ -7,24 +7,7 @@ import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.da
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class TestStore implements HashtagSubscriptionStore {
-  String? value;
-  bool fail = false;
-  Completer<void>? readGate;
-  Completer<void>? gate;
-  @override
-  Future<String?> read() async {
-    await readGate?.future;
-    return value;
-  }
-
-  @override
-  Future<void> write(String value) async {
-    await gate?.future;
-    if (fail) throw Exception('failed');
-    this.value = value;
-  }
-}
+import '../../helpers/hashtag_subscription_store.dart';
 
 class FailedPreferences extends Mock implements SharedPreferences {}
 

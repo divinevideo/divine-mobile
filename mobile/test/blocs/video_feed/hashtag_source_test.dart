@@ -9,8 +9,7 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
-import '../../features/hashtag_follows/hashtag_follows_cubit_test.dart'
-    show TestStore;
+import '../../helpers/hashtag_subscription_store.dart';
 import '../../test_data/video_test_data.dart';
 
 class Videos extends Mock implements VideosRepository {}

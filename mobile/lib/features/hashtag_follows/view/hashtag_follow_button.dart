@@ -46,13 +46,13 @@ class _HashtagFollowView extends StatelessWidget {
             isLoading: state.isLoading || pending,
             onPressed: state.isLoading || pending
                 ? null
-                : () {
+                : () async {
                     if (state.hasReadError) {
-                      cubit.initialize();
+                      await cubit.initialize();
                     } else if (followed) {
-                      cubit.unfollow(hashtag);
+                      await cubit.unfollow(hashtag);
                     } else {
-                      cubit.follow(hashtag);
+                      await cubit.follow(hashtag);
                     }
                   },
           );

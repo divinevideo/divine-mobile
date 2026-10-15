@@ -13,7 +13,7 @@ import 'package:openvine/providers/hashtag_subscription_repository_provider.dart
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 
-import 'hashtag_follows_cubit_test.dart' show TestStore;
+import '../../helpers/hashtag_subscription_store.dart';
 
 void main() {
   group('hashtag_follow_widgets_test', () {
