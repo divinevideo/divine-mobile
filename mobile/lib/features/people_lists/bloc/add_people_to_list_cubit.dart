@@ -123,7 +123,6 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       if (!_isCurrent(revision)) return;
       await _followerSub?.cancel();
       if (!_isCurrent(revision)) return;
-      _candidatesByPubkey.clear();
       final initialFollowing = _followRepository.followingPubkeys;
       final initialPubkeys = {
         ...initialFollowing,
@@ -158,11 +157,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
                 .toList(),
         now: DateTime.now(),
       );
-      for (final candidate in snapshot.candidates) {
-        if (ranked.eligible.contains(candidate.pubkey)) {
-          _candidatesByPubkey[candidate.pubkey] = candidate;
-        }
-      }
+      // Keep canonical rows live while refreshing; confirmation callbacks may
+      // have updated them since the initial snapshot was captured.
+      _candidatesByPubkey.removeWhere(
+        (key, _) => !ranked.eligible.contains(key),
+      );
       for (final pubkey in ranked.smartOrder) {
         _upsertCandidate(
           pubkey,
@@ -277,6 +276,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
         ? existing.copyWith(
             isFollowing: isFollowing ?? existing.isFollowing,
             isFollower: isFollower ?? existing.isFollower,
+            isAlreadyInList:
+                existing.isAlreadyInList || _existingMembers.contains(pubkey),
           )
         : PeopleListCandidate(
             pubkey: pubkey,
