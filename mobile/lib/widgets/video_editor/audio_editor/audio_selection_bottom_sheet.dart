@@ -40,16 +40,25 @@ final _featuredVineSounds = [
 
 class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   const AudioSelectionBottomSheet({
-    required this.scrollController,
+    this.scrollController,
     this.localAudioImportService,
     this.pickAudioFile,
     this.onSoundPicked,
     this.categoryBarLeading,
     @visibleForTesting this.audioService,
     super.key,
-  });
+  }) : assert(
+         (scrollController == null) != (onSoundPicked == null),
+         'Pass the sheet its scrollController, or embed it with onSoundPicked',
+       ),
+       assert(
+         categoryBarLeading == null || onSoundPicked != null,
+         'categoryBarLeading only shows when the picker is embedded',
+       );
 
-  final ScrollController scrollController;
+  /// The sheet's controller, which the lists drive so a drag on them closes
+  /// the sheet. Embedded, the picker scrolls on its own and takes none.
+  final ScrollController? scrollController;
   final LocalAudioImportService? localAudioImportService;
   final Future<XFile?> Function()? pickAudioFile;
   final AudioPlaybackService? audioService;
@@ -527,10 +536,9 @@ class _AudioSelectionBottomSheetState
             .toList();
     const searchEmptyState = _SearchEmptyState();
     final embedded = widget.onSoundPicked != null;
-    // Embedded, each list picks up the inner controller of the
-    // NestedScrollView below as its primary one; in the sheet they drive the
-    // sheet's own controller, which is what lets a drag close it.
-    final listScrollController = embedded ? null : widget.scrollController;
+    // Embedded, there is no controller, so each list picks up the inner
+    // controller of the NestedScrollView below as its primary one.
+    final listScrollController = widget.scrollController;
 
     final categoryBar = AudioCategoryBar(
       category: _category,
@@ -640,7 +648,6 @@ class _AudioSelectionBottomSheetState
                 categoryBar,
               Expanded(
                 child: NestedScrollView(
-                  controller: widget.scrollController,
                   floatHeaderSlivers: true,
                   headerSliverBuilder: (context, _) => [
                     SliverFloatingHeader(

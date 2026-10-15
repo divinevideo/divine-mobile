@@ -60,7 +60,6 @@ class _LipSyncSoundPicker extends ConsumerStatefulWidget {
 }
 
 class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
-  final _scrollController = ScrollController();
   late final VideoRecorderBloc _recorderBloc;
 
   /// The pick being adopted. Clearing the recorded clips for it keeps the
@@ -77,7 +76,6 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
   @override
   void dispose() {
     _recorderBloc.addIfOpen(const VideoRecorderRemoteRecordResumed());
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -105,7 +103,6 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
           child: Material(
             color: context.vineColors.surface,
             child: AudioSelectionBottomSheet(
-              scrollController: _scrollController,
               onSoundPicked: _onSoundPicked,
               // The viewfinder's top bar, and its close button, only shows once
               // a sound is picked.
