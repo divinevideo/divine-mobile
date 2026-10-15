@@ -9,6 +9,8 @@ may publish**, including in a three-admin group. Other admins need not be online
 Keycast backs up each admin's group-signing material by default so ordinary users
 can recover without managing shares. Groups can explicitly choose advanced
 self-management with no Keycast signing, storage or recovery dependency.
+The initial hosted path is custodial: Keycast holds the full group key and signs
+for authorized admins; it does not provide independent threshold custody.
 Higher quorums are an optional group capability, not the default content workflow.
 Every mode produces the ordinary NIP-01 event ID and 64-byte BIP-340 signature.
 Existing clients and relays need no threshold awareness. Relay events are the
@@ -61,9 +63,10 @@ content. “1-of-3” here describes one human approval among three admins; it d
 not require a distributed cryptographic ceremony for each edit.
 
 Confirmed default: Keycast-backed recovery for each admin's group-signing
-material. Proposed initial signing path: a hosted group key with separately
-authenticated, revocable signing authorizations; admin-held shares must also have a recoverable backup when
-used in a Keycast-assisted group. Mobile owns editing and the single-admin
+material. Proposed initial signing path: a hosted group key kept server-side only,
+with separately authenticated, revocable signing authorizations. If a later
+Keycast-assisted threshold path uses admin-held shares, those shares must also
+have a recoverable backup. Mobile owns editing and the single-admin
 publish action; Keycast checks authorization and signs as the group.
 Keycast already models teams, team-owned stored keys, policies and authorizations
 and can issue NIP-46 access to a team's stored key. These are reusable primitives,
@@ -83,7 +86,7 @@ The alternatives are:
 
 | Custody | Ordinary-content approval | Consequence |
 | --- | --- | --- |
-| Keycast-assisted group (default) | One authorized admin | Hosted signing and per-admin recovery; back up any device-held group key/share too. Service-recoverable material is custodial. |
+| Keycast-assisted group (default) | One authorized admin | Hosted signing with the full group key server-side only and per-admin access recovery. Service-recoverable material is custodial. |
 | Full group key on every admin device | Any one key holder | Works without a signing service; removing an admin cannot revoke their retained key without rotation. |
 | Independent FROST shares | An actual t-of-n signing quorum | Keep for groups choosing threshold custody; the tested implementation requires t >= 2. |
 | FROST with an automatic Keycast co-signer | One human admin plus the service | Potentially preserves one-admin UX with threshold custody; a separate design, not literal 1-of-n FROST. |
