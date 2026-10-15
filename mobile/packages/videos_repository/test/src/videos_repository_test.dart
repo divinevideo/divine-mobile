@@ -2544,6 +2544,9 @@ void main() {
                     createdAt: 2800,
                   ),
                 ],
+                // The flag that ends the walk is the value under test.
+                // ignore: avoid_redundant_argument_values
+                hasMore: false,
               );
             });
 
