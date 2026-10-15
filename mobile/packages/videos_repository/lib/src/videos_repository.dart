@@ -503,6 +503,9 @@ class VideosRepository {
     final seenVideoKeys = <String>{};
     var pageCount = 0;
     int? nextBefore;
+    // One row past the page, so a full read usually still fills it after its
+    // oldest second is left for the next read.
+    final readLimit = limit + 1;
 
     while (visible.length < limit) {
       nextBefore = null;
@@ -510,7 +513,7 @@ class VideosRepository {
       final filter = Filter(
         kinds: [_videoKind],
         authors: authors,
-        limit: limit,
+        limit: readLimit,
         // A relay `until` is inclusive; the shared bound is exclusive.
         until: pageBefore == null ? null : pageBefore - 1,
       );
@@ -524,11 +527,10 @@ class VideosRepository {
         break;
       }
 
-      // Each relay, and the local cache, answers with its own newest [limit]
-      // events, so only the newest [limit] of the merged answer are complete:
-      // below them a dense source stopped returning rows a sparse one reached.
-      // The page ends there and the older rows come back on the next page.
-      final events = _newestEventsWithTies(read.events, limit);
+      final page = read.events.length < readLimit
+          ? null
+          : _completeRelayRows(read.events, readLimit);
+      final events = page?.events ?? read.events;
 
       // Order on the clock this walk pages on, as Funnelcake does.
       final videos = _transformAndFilter(events, sortByCreatedAt: false)
@@ -538,15 +540,18 @@ class VideosRepository {
         await _hydrateVideosWithBulkStats(videos),
         seenVideoKeys: seenVideoKeys,
       );
-      final oldest = events.map((event) => event.createdAt).reduce(min);
-      if (read.events.length < limit) {
-        if (read.timedOut) nextBefore = oldest;
+      if (page == null) {
+        if (read.timedOut) {
+          nextBefore = events.map((event) => event.createdAt).reduce(min);
+        }
         break;
       }
 
-      if (oldest == pageBefore) break;
-      pageBefore = oldest;
-      nextBefore = oldest;
+      // NostrClient drops rows above `until`, so the bound always moves down
+      // there; this backstops a source that answers above it.
+      if (pageBefore != null && page.before >= pageBefore) break;
+      pageBefore = page.before;
+      nextBefore = page.before;
     }
 
     return _FollowingFetchResult(
@@ -2014,15 +2019,35 @@ class VideosRepository {
     }
   }
 
-  /// The newest [limit] of [events], plus any older event that shares the
-  /// [limit]-th one's `created_at`: the next page starts strictly before that
-  /// second, so an event left out at it would never be read.
-  List<Event> _newestEventsWithTies(List<Event> events, int limit) {
-    if (events.length <= limit) return events;
+  /// The rows of a full relay read to keep, and the exclusive bound the next
+  /// read starts from.
+  ///
+  /// Each relay, and the client, keeps only the newest [readLimit] rows, so a
+  /// full read can stop partway through the second of its [readLimit]-th row.
+  /// Rows newer than that second are complete, and the next read asks for
+  /// that second again. When nothing is newer, the read is all one second and
+  /// asking again would return it unchanged, so the walk keeps it and moves
+  /// below it. Rows beyond [readLimit] in one second are out of reach of an
+  /// `until`-and-`limit` read.
+  ({List<Event> events, int before}) _completeRelayRows(
+    List<Event> events,
+    int readLimit,
+  ) {
     final sorted = [...events]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final boundary = sorted[limit - 1].createdAt;
-    return sorted.where((event) => event.createdAt >= boundary).toList();
+    final boundary = sorted[readLimit - 1].createdAt;
+    final newer = [
+      for (final event in sorted)
+        if (event.createdAt > boundary) event,
+    ];
+    if (newer.isNotEmpty) return (events: newer, before: boundary + 1);
+    return (
+      events: [
+        for (final event in sorted)
+          if (event.createdAt == boundary) event,
+      ],
+      before: boundary,
+    );
   }
 
   /// The oldest revision time (`created_at`, in seconds) in [stats], or
