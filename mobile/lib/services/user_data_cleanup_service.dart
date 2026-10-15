@@ -6,6 +6,7 @@ import 'package:creator_sync/creator_sync.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -238,6 +239,9 @@ class UserDataCleanupService {
     }
 
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
+    await remove(
+      SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
+    );
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
     }
@@ -353,6 +357,7 @@ class UserDataCleanupService {
       }
 
       for (final key in [
+        SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
         FollowingCacheRecord.storageKey(userPubkey),
         followingPrefetchMarkerKey(userPubkey),
         MinorAccountReviewStatusStore.storageKey(userPubkey),

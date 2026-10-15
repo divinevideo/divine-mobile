@@ -4,6 +4,7 @@
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -816,6 +817,58 @@ void main() {
     });
 
     group('deleteAccountData', () {
+      test('removes only the deleted account hashtag follows', () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final deletedStore = SharedPreferencesHashtagSubscriptionStore(
+          prefs: prefs,
+          pubkey: deletedPubkey,
+        );
+        final otherStore = SharedPreferencesHashtagSubscriptionStore(
+          prefs: prefs,
+          pubkey: otherPubkey,
+        );
+        await deletedStore.write('["one"]');
+        await otherStore.write('["two"]');
+        await service.clearUserSpecificData(
+          isIdentityChange: true,
+          userPubkey: deletedPubkey,
+        );
+        expect(await deletedStore.read(), '["one"]');
+        expect(await otherStore.read(), '["two"]');
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+        expect(await deletedStore.read(), isNull);
+        expect(await otherStore.read(), '["two"]');
+      });
+
+      test(
+        'destructive session cleanup removes only that account follows',
+        () async {
+          final deletedPubkey = 'a' * 64;
+          final otherPubkey = 'b' * 64;
+          final deletedStore = SharedPreferencesHashtagSubscriptionStore(
+            prefs: prefs,
+            pubkey: deletedPubkey,
+          );
+          final otherStore = SharedPreferencesHashtagSubscriptionStore(
+            prefs: prefs,
+            pubkey: otherPubkey,
+          );
+          await deletedStore.write('["one"]');
+          await otherStore.write('["two"]');
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: deletedPubkey,
+          );
+          expect(await deletedStore.read(), isNull);
+          expect(await otherStore.read(), '["two"]');
+        },
+      );
+
       test(
         'deletes owner-scoped data without clearing shared preferences',
         () async {

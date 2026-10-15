@@ -9,7 +9,10 @@ class SharedPreferencesHashtagSubscriptionStore
     required SharedPreferences prefs,
     required String pubkey,
   }) : _prefs = prefs,
-       _key = 'followed_hashtags_$pubkey';
+       _key = storageKey(pubkey);
+
+  /// Account-qualified key shared with destructive account cleanup.
+  static String storageKey(String pubkey) => 'followed_hashtags_$pubkey';
 
   final SharedPreferences _prefs;
   final String _key;
