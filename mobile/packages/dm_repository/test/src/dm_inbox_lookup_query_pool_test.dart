@@ -303,7 +303,10 @@ void main() {
         final inconclusive = LogCaptureService()
             .getRecentLogs()
             .map((entry) => entry.message)
+            // Scoped to this recipient: CI runs every suite in one isolate,
+            // and another suite's lookup can log into this test's window.
             .where((message) => message.contains('lookup for'))
+            .where((message) => message.contains(recipient))
             .where((message) => message.contains('was inconclusive'))
             .toList();
         expect(inconclusive, hasLength(1));
@@ -371,6 +374,7 @@ void main() {
         final writeLeg = LogCaptureService()
             .getRecentLogs()
             .map((entry) => entry.message)
+            .where((message) => message.contains(recipient))
             .where((message) => message.contains('on their write relays'))
             .toList();
         expect(writeLeg, hasLength(1));
@@ -395,11 +399,14 @@ void main() {
       recipientPubkey: 'recipient',
     );
 
-    List<String> logLines(String containing) => LogCaptureService()
-        .getRecentLogs()
-        .map((entry) => entry.message)
-        .where((message) => message.contains(containing))
-        .toList();
+    // Scoped to [recipient] for the reason given in the pool-leg test above.
+    List<String> logLines(String recipient, String containing) =>
+        LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .where((message) => message.contains(recipient))
+            .where((message) => message.contains(containing))
+            .toList();
 
     test(
       'a recipient with no inbox list resolves absent when the lock refuses '
@@ -425,9 +432,9 @@ void main() {
           isA<NIP17SendSuccess>(),
           reason: 'an absent inbox does not hold the send pending',
         );
-        expect(logLines('was inconclusive'), isEmpty);
+        expect(logLines(recipient, 'was inconclusive'), isEmpty);
         expect(
-          logLines('not asking the indexer $_indexerUrl'),
+          logLines(recipient, 'not asking the indexer $_indexerUrl'),
           hasLength(1),
           reason: 'the skip is on the record',
         );
@@ -460,9 +467,9 @@ void main() {
           reason: 'the lock refuses the write relay',
         );
         expect(inbox.state, DmInboxResolution.absent);
-        expect(logLines('was inconclusive'), isEmpty);
+        expect(logLines(recipient, 'was inconclusive'), isEmpty);
         expect(
-          logLines('not asking their write relays $_outboxRelayUrl'),
+          logLines(recipient, 'not asking their write relays $_outboxRelayUrl'),
           hasLength(1),
           reason: 'the skip is on the record',
         );
