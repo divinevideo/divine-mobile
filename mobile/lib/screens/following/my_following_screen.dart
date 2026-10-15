@@ -80,19 +80,6 @@ class _MyFollowingView extends ConsumerWidget {
     ref.listen(blocklistVersionProvider, (_, _) {
       context.read<MyFollowingBloc>().add(const MyFollowingBlocklistChanged());
     });
-    ref.listen(profileRepositoryProvider, (_, repository) {
-      context.read<FollowListSearchBloc>().add(
-        FollowListSearchProfileRepositoryChanged(repository),
-      );
-    });
-    // The client is rebuilt when the key container changes, which is how the
-    // cold-start empty pubkey becomes the signed-in one. Without this the
-    // search BLoC would keep the empty one and never search server-side.
-    ref.listen(nostrServiceProvider, (_, client) {
-      context.read<FollowListSearchBloc>().add(
-        FollowListSearchSubjectPubkeyChanged(client.publicKey),
-      );
-    });
 
     final appBarTitle = displayName?.isNotEmpty == true
         ? context.l10n.followingTitleForName(displayName!)
