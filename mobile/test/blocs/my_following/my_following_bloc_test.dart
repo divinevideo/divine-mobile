@@ -8,7 +8,10 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+
+import '../../helpers/test_user_ranking_loader.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -17,6 +20,10 @@ class _MockContentBlocklistRepository extends Mock
 
 void main() {
   group(MyFollowingBloc, () {
+    test('default sort is smart', () {
+      expect(const MyFollowingState().sortOrder.name, 'smart');
+    });
+
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
 
@@ -42,6 +49,7 @@ void main() {
     });
 
     MyFollowingBloc createBloc() => MyFollowingBloc(
+      rankingSignalsLoader: testUserRankingLoader(),
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,
     );
@@ -241,10 +249,10 @@ void main() {
         act: (bloc) => bloc.add(const MyFollowingListLoadRequested()),
         verify: (bloc) {
           expect(bloc.state.status, MyFollowingStatus.success);
-          // Newest first by default, so the last `p` tag leads.
+          // Equal scores use a deterministic full-key tiebreak.
           expect(bloc.state.followingPubkeys, [
-            validPubkey('following2'),
             validPubkey('following1'),
+            validPubkey('following2'),
           ]);
           // The repository's follow order is kept intact for re-sorting.
           expect(bloc.state.rawFollowingPubkeys, [
@@ -362,8 +370,8 @@ void main() {
         verify: (bloc) {
           expect(bloc.state.status, MyFollowingStatus.success);
           expect(bloc.state.followingPubkeys, [
-            validPubkey('following2'),
             validPubkey('following1'),
+            validPubkey('following2'),
           ]);
         },
       );
@@ -721,8 +729,8 @@ void main() {
       expect(bloc.state.status, MyFollowingStatus.success);
       // A follow the repository appended is the newest, so it leads.
       expect(bloc.state.followingPubkeys, [
-        validPubkey('live2'),
         validPubkey('live1'),
+        validPubkey('live2'),
       ]);
     });
 
@@ -793,8 +801,8 @@ void main() {
           // Still newest first: oldestFirst is the raw contact-list order, so
           // only the default order shows whether the re-filter keeps the sort.
           expect(bloc.state.followingPubkeys, [
-            validPubkey('following2'),
             validPubkey('following1'),
+            validPubkey('following2'),
           ]);
         },
       );
@@ -827,8 +835,8 @@ void main() {
 
         // Newest follow first, with the blocked pubkey filtered out.
         expect(bloc.state.followingPubkeys, [
-          validPubkey('following2'),
           validPubkey('following1'),
+          validPubkey('following2'),
         ]);
       });
     });
@@ -860,11 +868,11 @@ void main() {
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.oldestFirst),
           );
         },
         verify: (bloc) {
-          expect(bloc.state.sortOrder, FollowSortOrder.oldestFirst);
+          expect(bloc.state.sortOrder, FollowListSort.oldestFirst);
           expect(bloc.state.followingPubkeys, [
             validPubkey('first'),
             validPubkey('second'),
@@ -881,7 +889,7 @@ void main() {
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
         },
@@ -898,7 +906,7 @@ void main() {
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.newestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.smart),
           );
         },
         skip: 1,
@@ -911,7 +919,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
           bloc.add(const MyFollowingListLoadRequested());
@@ -933,13 +941,13 @@ void main() {
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
           bloc.add(const MyFollowingBlocklistChanged());
         },
         verify: (bloc) {
-          expect(bloc.state.sortOrder, FollowSortOrder.oldestFirst);
+          expect(bloc.state.sortOrder, FollowListSort.oldestFirst);
           expect(bloc.state.followingPubkeys, [
             validPubkey('first'),
             validPubkey('second'),
@@ -963,7 +971,7 @@ void main() {
           bloc.add(const MyFollowingListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowingSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
           expect(controller.hasListener, isTrue);
@@ -976,7 +984,7 @@ void main() {
           ]);
           await pumpEventQueue();
 
-          expect(bloc.state.sortOrder, FollowSortOrder.oldestFirst);
+          expect(bloc.state.sortOrder, FollowListSort.oldestFirst);
           expect(bloc.state.followingPubkeys, [
             validPubkey('first'),
             validPubkey('second'),

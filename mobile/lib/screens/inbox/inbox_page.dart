@@ -15,6 +15,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/inbox_view.dart';
 
@@ -36,6 +37,7 @@ class InboxPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dmRepository = ref.watch(dmRepositoryProvider);
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     // Read once for constructor seeding; subsequent changes are handled by
@@ -112,6 +114,7 @@ class InboxPage extends ConsumerWidget {
         ),
         BlocProvider(
           create: (_) => MyFollowingBloc(
+            rankingSignalsLoader: rankingSignalsLoader,
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),

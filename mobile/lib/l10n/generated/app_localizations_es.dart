@@ -8003,6 +8003,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get followSortTitle => 'Ordenar por';
 
   @override
+  String get followSortSmart => 'Inteligente';
+
+  @override
   String get followSortNewest => 'Más recientes primero';
 
   @override

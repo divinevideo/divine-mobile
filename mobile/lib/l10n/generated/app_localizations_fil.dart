@@ -7982,6 +7982,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get followSortTitle => 'Ayusin ayon sa';
 
   @override
+  String get followSortSmart => 'Matalino';
+
+  @override
   String get followSortNewest => 'Pinakabago muna';
 
   @override

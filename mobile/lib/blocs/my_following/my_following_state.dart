@@ -24,10 +24,30 @@ final class MyFollowingState extends Equatable {
     this.status = MyFollowingStatus.initial,
     this.followingPubkeys = const [],
     this.rawFollowingPubkeys = const [],
-    this.sortOrder = FollowSortOrder.newestFirst,
+    this.sortOrder = FollowListSort.smart,
     this.isRefreshing = false,
+    this.smartOrder = const [],
+    this.rankingSignals = const {},
+    this.isSmartOrderReady = false,
+    this.eligibilityRevision = 0,
+    this.repositoryRevision = 0,
     this.hasLocalFollowEdit = false,
   });
+
+  /// Live membership revision used to discard older async ranking results.
+  final int repositoryRevision;
+
+  /// Block-policy version used to retry snapshots read during a policy change.
+  final int eligibilityRevision;
+
+  /// Frozen first-load ranking, with later arrivals appended.
+  final List<String> smartOrder;
+
+  /// Local signals for eligible rows, also available for row presentation.
+  final Map<String, UserRankingSignals> rankingSignals;
+
+  /// Whether the initial local ranking has completed, including empty lists.
+  final bool isSmartOrderReady;
 
   /// The current status of the following list.
   final MyFollowingStatus status;
@@ -43,7 +63,7 @@ final class MyFollowingState extends Equatable {
   final List<String> rawFollowingPubkeys;
 
   /// The order [followingPubkeys] is presented in.
-  final FollowSortOrder sortOrder;
+  final FollowListSort sortOrder;
 
   /// True while stale cache data is shown and a fresh fetch is in progress.
   final bool isRefreshing;
@@ -65,8 +85,13 @@ final class MyFollowingState extends Equatable {
     MyFollowingStatus? status,
     List<String>? followingPubkeys,
     List<String>? rawFollowingPubkeys,
-    FollowSortOrder? sortOrder,
+    FollowListSort? sortOrder,
     bool? isRefreshing,
+    List<String>? smartOrder,
+    Map<String, UserRankingSignals>? rankingSignals,
+    bool? isSmartOrderReady,
+    int? eligibilityRevision,
+    int? repositoryRevision,
     bool? hasLocalFollowEdit,
   }) {
     return MyFollowingState(
@@ -75,6 +100,11 @@ final class MyFollowingState extends Equatable {
       rawFollowingPubkeys: rawFollowingPubkeys ?? this.rawFollowingPubkeys,
       sortOrder: sortOrder ?? this.sortOrder,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      smartOrder: smartOrder ?? this.smartOrder,
+      rankingSignals: rankingSignals ?? this.rankingSignals,
+      isSmartOrderReady: isSmartOrderReady ?? this.isSmartOrderReady,
+      eligibilityRevision: eligibilityRevision ?? this.eligibilityRevision,
+      repositoryRevision: repositoryRevision ?? this.repositoryRevision,
       hasLocalFollowEdit: hasLocalFollowEdit ?? this.hasLocalFollowEdit,
     );
   }
@@ -86,6 +116,11 @@ final class MyFollowingState extends Equatable {
     rawFollowingPubkeys,
     sortOrder,
     isRefreshing,
+    smartOrder,
+    rankingSignals,
+    isSmartOrderReady,
+    eligibilityRevision,
+    repositoryRevision,
     hasLocalFollowEdit,
   ];
 }

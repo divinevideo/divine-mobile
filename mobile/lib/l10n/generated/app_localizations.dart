@@ -13405,6 +13405,12 @@ abstract class AppLocalizations {
   /// **'Sort by'**
   String get followSortTitle;
 
+  /// No description provided for @followSortSmart.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart'**
+  String get followSortSmart;
+
   /// Sort option showing the most recent follow at the top of the list. Shared by the followers and following lists.
   ///
   /// In en, this message translates to:

@@ -8003,6 +8003,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get followSortTitle => 'Сортиране по';
 
   @override
+  String get followSortSmart => 'Интелигентно';
+
+  @override
   String get followSortNewest => 'Първо най-новите';
 
   @override

@@ -7993,6 +7993,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get followSortTitle => 'Ordenar por';
 
   @override
+  String get followSortSmart => 'Inteligente';
+
+  @override
   String get followSortNewest => 'Mais recentes primeiro';
 
   @override

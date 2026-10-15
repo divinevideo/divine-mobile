@@ -27,6 +27,7 @@ import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -36,10 +37,13 @@ import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/services/og_diviner_eligibility_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_user_ranking_loader.dart';
 
 // Mock classes (public because they are imported by many test files)
 class _IneligibleOgDivinerService extends Fake
@@ -420,6 +424,7 @@ List<Override> getStandardTestOverrides({
   Nip05VerificationService? mockNip05VerificationService,
   ModerationLabelService? mockModerationLabelService,
   FollowRepository? mockFollowRepository,
+  UserRankingSignalsLoader? rankingSignalsLoader,
 }) {
   final mockPrefs = mockSharedPreferences ?? createMockSharedPreferences();
   final mockAuth = mockAuthService ?? createMockAuthService();
@@ -438,6 +443,9 @@ List<Override> getStandardTestOverrides({
   final mockFollow = mockFollowRepository ?? createMockFollowRepository();
 
   return [
+    userRankingSignalsLoaderProvider.overrideWithValue(
+      rankingSignalsLoader ?? testUserRankingLoader(),
+    ),
     // Mirror DeviceScope's required bootstrap overrides for test containers.
     appVersionProvider.overrideWithValue('test'),
     documentsPathProvider.overrideWithValue('/documents'),
@@ -539,6 +547,7 @@ Widget testProviderScope({
   Nip05VerificationService? mockNip05VerificationService,
   ModerationLabelService? mockModerationLabelService,
   FollowRepository? mockFollowRepository,
+  UserRankingSignalsLoader? rankingSignalsLoader,
   VideoEventService? mockVideoEventService,
 }) {
   return ProviderScope(
@@ -555,6 +564,7 @@ Widget testProviderScope({
         mockNip05VerificationService: mockNip05VerificationService,
         mockModerationLabelService: mockModerationLabelService,
         mockFollowRepository: mockFollowRepository,
+        rankingSignalsLoader: rankingSignalsLoader,
       ),
       if (!_overridesProvider(additionalOverrides, videoEventServiceProvider))
         videoEventServiceProvider.overrideWithValue(
@@ -602,6 +612,7 @@ Widget testMaterialApp({
   Nip05VerificationService? mockNip05VerificationService,
   ModerationLabelService? mockModerationLabelService,
   FollowRepository? mockFollowRepository,
+  UserRankingSignalsLoader? rankingSignalsLoader,
   VideoEventService? mockVideoEventService,
   ThemeData? theme,
   Locale? locale,
@@ -619,6 +630,7 @@ Widget testMaterialApp({
     mockNip05VerificationService: mockNip05VerificationService,
     mockModerationLabelService: mockModerationLabelService,
     mockFollowRepository: mockFollowRepository,
+    rankingSignalsLoader: rankingSignalsLoader,
     mockVideoEventService: mockVideoEventService,
     child: MaterialApp(
       locale: locale,

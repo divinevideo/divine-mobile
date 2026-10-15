@@ -5266,6 +5266,7 @@
   "@followSortTitle": {
     "description": "Header of the bottom sheet listing sort options. Shared by the followers and following lists."
   },
+  "followSortSmart": "Smart",
   "followSortNewest": "Newest first",
   "@followSortNewest": {
     "description": "Sort option showing the most recent follow at the top of the list. Shared by the followers and following lists."

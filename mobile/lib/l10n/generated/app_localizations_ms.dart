@@ -7933,6 +7933,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get followSortTitle => 'Isih mengikut';
 
   @override
+  String get followSortSmart => 'Pintar';
+
+  @override
   String get followSortNewest => 'Terbaharu dahulu';
 
   @override

@@ -6,7 +6,11 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
+import 'package:user_ranking/user_ranking.dart';
+
+import '../../helpers/test_user_ranking_loader.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -15,6 +19,10 @@ class _MockContentBlocklistRepository extends Mock
 
 void main() {
   group(MyFollowersBloc, () {
+    test('default sort is smart', () {
+      expect(const MyFollowersState().sortOrder.name, 'smart');
+    });
+
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
 
@@ -38,6 +46,7 @@ void main() {
     });
 
     MyFollowersBloc createBloc() => MyFollowersBloc(
+      rankingSignalsLoader: testUserRankingLoader(),
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,
     );
@@ -68,6 +77,19 @@ void main() {
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([
+              validPubkey('follower1'),
+              validPubkey('follower2'),
+            ]..sort()),
+            rankingSignals: {
+              for (final key in [
+                validPubkey('follower1'),
+                validPubkey('follower2'),
+              ])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [
               validPubkey('follower1'),
@@ -104,12 +126,32 @@ void main() {
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([validPubkey('old')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('old')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [validPubkey('old')],
             rawFollowersPubkeys: [validPubkey('old')],
             authoritativeFollowerCount: 1,
           ),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([
+              validPubkey('follower1'),
+              validPubkey('follower2'),
+            ]..sort()),
+            rankingSignals: {
+              for (final key in [
+                validPubkey('follower1'),
+                validPubkey('follower2'),
+              ])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [
               validPubkey('follower1'),
@@ -143,6 +185,13 @@ void main() {
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([validPubkey('follower1')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('follower1')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [validPubkey('follower1')],
             rawFollowersPubkeys: [validPubkey('follower1')],
@@ -168,7 +217,15 @@ void main() {
         act: (bloc) => bloc.add(const MyFollowersListLoadRequested()),
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
-          const MyFollowersState(status: MyFollowersStatus.success),
+          MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: (<String>[]..sort()),
+            rankingSignals: {
+              for (final key in <String>[])
+                key: UserRankingSignals(pubkey: key),
+            },
+            status: MyFollowersStatus.success,
+          ),
         ],
       );
 
@@ -208,6 +265,13 @@ void main() {
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([validPubkey('cached')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('cached')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [validPubkey('cached')],
             rawFollowersPubkeys: [validPubkey('cached')],
@@ -240,6 +304,13 @@ void main() {
         expect: () => [
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([validPubkey('blocked'), validPubkey('ok')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('blocked'), validPubkey('ok')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [validPubkey('ok')],
             rawFollowersPubkeys: [validPubkey('blocked'), validPubkey('ok')],
@@ -277,6 +348,14 @@ void main() {
         skip: 2, // skip loading + initial success
         expect: () => [
           MyFollowersState(
+            eligibilityRevision: 1,
+            isSmartOrderReady: true,
+            smartOrder: ([validPubkey('a'), validPubkey('b')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('a'), validPubkey('b')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
             followersPubkeys: [validPubkey('b')],
             rawFollowersPubkeys: [validPubkey('a'), validPubkey('b')],
@@ -286,10 +365,10 @@ void main() {
       );
 
       blocTest<MyFollowersBloc, MyFollowersState>(
-        'does nothing when not in success state',
+        'invalidates a pending ranking before the list reaches success',
         build: createBloc,
         act: (bloc) => bloc.add(const MyFollowersBlocklistChanged()),
-        expect: () => <MyFollowersState>[],
+        expect: () => [const MyFollowersState(eligibilityRevision: 1)],
       );
     });
 
@@ -321,14 +400,29 @@ void main() {
           bloc.add(const MyFollowersListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowersSortOrderChanged(FollowListSort.oldestFirst),
           );
         },
         skip: 2,
         expect: () => [
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([
+              validPubkey('newest'),
+              validPubkey('oldest'),
+              validPubkey('undated'),
+            ]..sort()),
+            rankingSignals: {
+              for (final key in [
+                validPubkey('newest'),
+                validPubkey('oldest'),
+                validPubkey('undated'),
+              ])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
-            sortOrder: FollowSortOrder.oldestFirst,
+            sortOrder: FollowListSort.oldestFirst,
             followersPubkeys: [
               validPubkey('oldest'),
               validPubkey('newest'),
@@ -353,7 +447,7 @@ void main() {
           bloc.add(const MyFollowersListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowersSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
         },
@@ -370,7 +464,7 @@ void main() {
           bloc.add(const MyFollowersListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowersSortOrderChanged(FollowSortOrder.newestFirst),
+            const MyFollowersSortOrderChanged(FollowListSort.smart),
           );
         },
         skip: 2,
@@ -383,7 +477,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(
-            const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowersSortOrderChanged(FollowListSort.oldestFirst),
           );
           await pumpEventQueue();
           bloc.add(const MyFollowersListLoadRequested());
@@ -391,8 +485,23 @@ void main() {
         skip: 2,
         expect: () => [
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([
+              validPubkey('newest'),
+              validPubkey('oldest'),
+              validPubkey('undated'),
+            ]..sort()),
+            rankingSignals: {
+              for (final key in [
+                validPubkey('newest'),
+                validPubkey('oldest'),
+                validPubkey('undated'),
+              ])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
-            sortOrder: FollowSortOrder.oldestFirst,
+            sortOrder: FollowListSort.oldestFirst,
             followersPubkeys: [
               validPubkey('oldest'),
               validPubkey('newest'),
@@ -422,14 +531,29 @@ void main() {
           bloc.add(const MyFollowersListLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
+            const MyFollowersSortOrderChanged(FollowListSort.oldestFirst),
           );
         },
         skip: 2,
         expect: () => [
           MyFollowersState(
+            isSmartOrderReady: true,
+            smartOrder: ([
+              validPubkey('newest'),
+              validPubkey('oldest'),
+              validPubkey('undated'),
+            ]..sort()),
+            rankingSignals: {
+              for (final key in [
+                validPubkey('newest'),
+                validPubkey('oldest'),
+                validPubkey('undated'),
+              ])
+                key: UserRankingSignals(pubkey: key),
+            },
+
             status: MyFollowersStatus.success,
-            sortOrder: FollowSortOrder.oldestFirst,
+            sortOrder: FollowListSort.oldestFirst,
             followersPubkeys: [
               validPubkey('oldest'),
               validPubkey('undated'),
@@ -497,9 +621,13 @@ void main() {
         ['pubkey1'],
         <String>[], // rawFollowersPubkeys
         0, // rawDatedCount
-        FollowSortOrder.newestFirst,
+        FollowListSort.smart,
         10,
-        false, // isRefreshing
+        false,
+        <String>[],
+        <String, UserRankingSignals>{},
+        false,
+        0, // isRefreshing
       ]);
     });
   });

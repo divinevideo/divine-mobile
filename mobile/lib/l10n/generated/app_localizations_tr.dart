@@ -7848,6 +7848,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get followSortTitle => 'Sıralama ölçütü';
 
   @override
+  String get followSortSmart => 'Akıllı';
+
+  @override
   String get followSortNewest => 'Önce en yeniler';
 
   @override

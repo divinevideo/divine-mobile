@@ -3985,6 +3985,7 @@
   "followersSortSemanticLabel": "排序粉丝",
   "followingSortSemanticLabel": "排序关注",
   "followSortTitle": "排序方式",
+  "followSortSmart": "智能",
   "followSortNewest": "最新优先",
   "followSortOldest": "最早优先",
   "newMessageTitle": "新消息",

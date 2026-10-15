@@ -25,5 +25,5 @@ final class MyFollowersSortOrderChanged extends MyFollowersEvent {
   const MyFollowersSortOrderChanged(this.sortOrder);
 
   /// The order the user picked.
-  final FollowSortOrder sortOrder;
+  final FollowListSort sortOrder;
 }

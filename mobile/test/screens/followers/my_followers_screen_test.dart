@@ -132,7 +132,7 @@ void main() {
         .map((tile) => tile.pubkey)
         .toList();
 
-    testWidgets('lists followers newest first before any sort is picked', (
+    testWidgets('lists equal-score followers in deterministic Smart order', (
       tester,
     ) async {
       await pumpScreen(tester);
@@ -149,6 +149,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel(l10n.followersSortSemanticLabel));
       await tester.pumpAndSettle();
 
+      expect(find.text(l10n.followSortSmart), findsOneWidget);
       expect(find.text(l10n.followSortTitle), findsOneWidget);
       expect(find.text(l10n.followSortNewest), findsOneWidget);
       expect(find.text(l10n.followSortOldest), findsOneWidget);

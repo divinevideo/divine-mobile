@@ -52,6 +52,24 @@ class UserRankingSignalsLoader {
   bool isEligible(String pubkey) =>
       pubkey != _currentUserPubkey && !(_isBlocked?.call(pubkey) ?? false);
 
+  /// Reads rendered names from the local profile cache without fetching.
+  Future<Map<String, String>> loadCachedDisplayNames(
+    Iterable<String> pubkeys,
+  ) async {
+    final keys = pubkeys.where(isEligible).toSet();
+    if (keys.isEmpty) return {};
+    final profiles =
+        await _profileRepository?.getCachedProfiles(
+          pubkeys: keys.toList(growable: false),
+        ) ??
+        const <UserProfile>[];
+    return {
+      for (final profile in profiles)
+        if (keys.contains(profile.pubkey) && isEligible(profile.pubkey))
+          profile.pubkey: profile.bestDisplayName,
+    };
+  }
+
   /// Loads only cached signals for [pubkeys], excluding self and blocked users.
   ///
   /// Share recipients can opt into including previously messaged contacts who
