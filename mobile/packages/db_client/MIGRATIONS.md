@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 22** (see `app_database.dart`).
+**Version: 23** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -182,6 +182,14 @@ idempotent `_addColumnIfMissing` and checks `to` as well as `from`, like the
 v20 step. The legacy normalization adds it as well, and the repair probe lists
 it, because the schema-parity test requires the recovery path to rebuild every
 column a fresh install has.
+
+Version 23 adds account-scoped `concord_store_entries` for sealed room history
+and the unsent outbox. Version 22 remains the main-branch DM environment schema.
+Earlier chat previews also reported version 22, but had Concord storage without
+`outgoing_dms.environment`. The v23 upgrade adds that column if missing before
+creating the Concord table idempotently, preserving both queues for either v22
+shape. Migration tests cover fresh v23 databases, the full legacy upgrade chain,
+main's v22, and the chat preview's v22 with queued data.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
