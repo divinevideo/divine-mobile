@@ -187,7 +187,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   Future<void>? _activeRenderFuture;
 
   /// Whether Post details is waiting on the final render: set when a render
-  /// is started for it, cleared when the user leaves it ([cancelRenderVideo]).
+  /// is started for it, cleared when the user leaves it ([cancelRenderVideo])
+  /// or a new editor session starts ([initialize], [reset]).
   ///
   /// Lets [invalidateFinalRenderedClip] render again when background work,
   /// such as a take's provenance signing, lands after the export finished.
