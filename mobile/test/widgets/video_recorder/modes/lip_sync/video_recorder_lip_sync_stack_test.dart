@@ -148,33 +148,35 @@ void main() {
       testWidgets('leaves the recorder from the close button left of the '
           'categories', (tester) async {
         final handle = tester.ensureSemantics();
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => const Scaffold(body: Text('feed')),
-            ),
-            GoRoute(
-              path: '/recorder',
-              builder: (_, _) =>
-                  const Scaffold(body: VideoRecorderLipSyncStack()),
-            ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(buildWidget(router: router));
-        unawaited(router.push('/recorder'));
-        await tester.pumpAndSettle();
+        try {
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => const Scaffold(body: Text('feed')),
+              ),
+              GoRoute(
+                path: '/recorder',
+                builder: (_, _) =>
+                    const Scaffold(body: VideoRecorderLipSyncStack()),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(buildWidget(router: router));
+          unawaited(router.push('/recorder'));
+          await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.bySemanticsIdentifier(SemanticIds.cameraCloseButton),
-        );
-        await tester.pumpAndSettle();
+          await tester.tap(
+            find.bySemanticsIdentifier(SemanticIds.cameraCloseButton),
+          );
+          await tester.pumpAndSettle();
 
-        expect(find.byType(VideoRecorderLipSyncStack), findsNothing);
-        expect(find.text('feed'), findsOneWidget);
-
-        handle.dispose();
+          expect(find.byType(VideoRecorderLipSyncStack), findsNothing);
+          expect(find.text('feed'), findsOneWidget);
+        } finally {
+          handle.dispose();
+        }
       });
 
       testWidgets('insets the close button from the leading screen edge in '
