@@ -717,7 +717,7 @@ class FollowRepository {
             Filter(
               kinds: const [EventKind.contactList],
               p: [owner],
-              since: highWater - myFollowersSinceSkew.inSeconds,
+              since: max(0, highWater - myFollowersSinceSkew.inSeconds),
             ),
           ])
           .timeout(_fetchFollowersTimeout);

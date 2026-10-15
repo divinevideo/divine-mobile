@@ -189,6 +189,12 @@ void main() {
 
     tearDown(() async => database.close());
 
+    test('preserves invariant errors from parallel local reads', () async {
+      when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
+          .thenAnswer((_) async => throw StateError('profile invariant'));
+      await expectLater(loader.load([followed]), throwsA(isA<StateError>()));
+    });
+
     test(
       'builds signals from local relationships, profiles and video cache',
       () async {

@@ -1514,6 +1514,17 @@ void main() {
           eventId: 'event1',
         );
 
+        when(() => rankingLoader.load(any())).thenAnswer(
+          (_) async => {
+            'pubkey1': const UserRankingSignals(
+              pubkey: 'pubkey1',
+              youFollow: true,
+              followsYou: true,
+              videoCount: 18,
+            ),
+          },
+        );
+
         final mockFollowRepo = _createMockFollowRepository(
           followingPubkeys: ['pubkey1'],
         );
@@ -1559,6 +1570,8 @@ void main() {
         // Two follows can share a display name; the handle is what tells
         // them apart, so it must survive the tile's ExcludeSemantics.
         expect(label, contains('user.one@example.com'));
+        expect(label, contains(l10n.socialProofMutual));
+        expect(label, contains(l10n.searchUserVideoCount(18, '18')));
 
         handle.dispose();
       });

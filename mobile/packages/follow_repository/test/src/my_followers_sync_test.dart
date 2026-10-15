@@ -717,7 +717,7 @@ void main() {
             (verify(() => client.queryEvents(captureAny())).captured.single
                     as List<Filter>)
                 .single;
-        expect(filter.since, -600);
+        expect(filter.since, 0);
         expect(dao.rows[owner], {first: null, second: null});
       },
     );
