@@ -118,6 +118,21 @@ void main() {
       },
     );
 
+    test('global feed bridge closes its streams when disposed', () async {
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new)],
+      );
+      repository = container.read(feedRepositoryProvider);
+
+      final stream = repository.watchView(const NewVideosViewSource());
+      final streamClosed = expectLater(stream, emitsDone);
+
+      container.dispose();
+
+      await streamClosed;
+    });
+
     // #6949. The bridge is created lazily on the first watchView, i.e. the
     // moment the user taps a grid tile. If that tap lands while the feed
     // provider is reloading, `asData` is null even though the grid is still
